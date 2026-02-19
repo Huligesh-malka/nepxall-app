@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
 /* LAYOUTS */
@@ -48,17 +48,44 @@ import AdminOwnerVerification from "./pages/admin/AdminOwnerVerification";
 import AdminPendingPGs from "./pages/admin/AdminPendingPGs";
 import AdminPGDetails from "./pages/admin/AdminPGDetails";
 
+/* ================= DEBUG CONFIG ================= */
+import { API_CONFIG, testBackendConnection } from "./config";
+
+// This will run once when the app starts
+console.log("🚀 APP STARTING");
+console.log("📊 Environment:", {
+  NODE_ENV: process.env.NODE_ENV,
+  MODE: import.meta.env.MODE,
+  DEV: import.meta.env.DEV,
+  PROD: import.meta.env.PROD
+});
+
+console.log("🔧 API Configuration:", API_CONFIG);
+
+// Test backend connection on app start
+testBackendConnection().then(result => {
+  if (result.success) {
+    console.log("✅ Backend connection verified");
+  } else {
+    console.error("❌ Backend connection failed:", result.error);
+    console.error("📡 Check if backend is running at:", API_CONFIG.API_URL);
+  }
+});
+
 function App() {
+  // Add a useEffect to log when routes change
+  useEffect(() => {
+    console.log("🔄 App mounted, current path:", window.location.pathname);
+  }, []);
+
   return (
     <Routes>
-
       {/* ================= AUTH ================= */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
       {/* ================= USER ================= */}
       <Route element={<MainLayout />}>
-
         <Route index element={<UserPGSearch />} />
         <Route path="pg/:id" element={<PGDetails />} />
         <Route path="booking/:pgId" element={<BookingForm />} />
@@ -76,12 +103,10 @@ function App() {
         <Route path="pg-chat/:pgId" element={<PgChat />} />
         <Route path="user/pg-announcements/:pgId" element={<PgAnnouncements />} />
         <Route path="chat/private/:userId" element={<PrivateChat />} />
-
       </Route>
 
       {/* ================= OWNER ================= */}
       <Route path="/owner" element={<OwnerLayout />}>
-
         <Route path="dashboard" element={<OwnerDashboard />} />
         <Route path="pgs" element={<OwnerDashboard />} />
         <Route path="bookings" element={<OwnerBookings />} />
@@ -110,7 +135,6 @@ function App() {
         <Route path="pg-chat/:pgId" element={<PgChat />} />
         <Route path="chat/private/:userId" element={<PrivateChat />} />
         <Route path="chats" element={<OwnerChatList />} />
-
       </Route>
 
       {/* ================= ADMIN ================= */}
@@ -122,7 +146,6 @@ function App() {
 
       {/* ================= FALLBACK ================= */}
       <Route path="*" element={<Navigate to="/" replace />} />
-
     </Routes>
   );
 }

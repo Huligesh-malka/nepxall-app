@@ -1,38 +1,63 @@
 import axios from "axios";
 import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { API_CONFIG } from "../config";
+
+
+/* =====================================================
+   🌍 BASE URL (AUTO SWITCH LOCAL ↔ PRODUCTION)
+===================================================== */
+
+const BASE_URL = API_CONFIG.API_URL;
+
+/* =====================================================
+   🚀 AXIOS INSTANCE
+===================================================== */
 
 const API = axios.create({
-  // Use /api to match your backend app.use("/api/...") configuration
-  baseURL: "http://localhost:5000/api", 
+  baseURL: BASE_URL,
+  withCredentials: true,
+  timeout: 60000, // for Render cold start
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-/* ---------------- HELPER: WAIT FOR FIREBASE ---------------- */
-// This ensures that if the page refreshes, we wait for Firebase to 
-// confirm the user is logged in before sending the request.
-const getCurrentUser = () => {
-  return new Promise((resolve, reject) => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      unsubscribe();
-      resolve(user);
-    }, reject);
-  });
-};
+/* =====================================================
+   🔐 WAIT FOR FIREBASE USER (ON REFRESH)
+===================================================== */
 
-/* ---------------- REQUEST INTERCEPTOR ---------------- */
+const getCurrentUser = () =>
+  new Promise((resolve, reject) => {
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (user) => {
+        unsubscribe();
+        resolve(user);
+      },
+      reject
+    );
+  });
+
+/* =====================================================
+   📤 REQUEST INTERCEPTOR → ATTACH TOKEN
+===================================================== */
+
 API.interceptors.request.use(
   async (config) => {
-    // 1. Get the current user (wait if initializing)
-    let user = auth.currentUser;
-    if (!user) {
-        user = await getCurrentUser();
-    }
+    try {
+      let user = auth.currentUser;
 
-    // 2. Attach token if user exists
-    if (user) {
-      const token = await user.getIdToken();
-      config.headers.Authorization = `Bearer ${token}`;
-      // console.log("✅ Token attached for:", user.email);
+      if (!user) {
+        user = await getCurrentUser();
+      }
+
+      if (user) {
+        const token = await user.getIdToken();
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (err) {
+      console.warn("⚠️ Token attach failed:", err.message);
     }
 
     return config;
@@ -40,19 +65,41 @@ API.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-/* ---------------- RESPONSE INTERCEPTOR ---------------- */
+/* =====================================================
+   📥 RESPONSE INTERCEPTOR
+===================================================== */
+
 API.interceptors.response.use(
-  (res) => res,
+  (response) => response,
+
   async (error) => {
-    // If the backend says the token is expired or invalid
-    if (error.response?.status === 401) {
-      console.warn("⚠️ Unauthorized! Logging out...");
+    /* 🔌 BACKEND NOT REACHABLE */
+    if (!error.response) {
+      console.error("🌐 Network error or server down");
+      return Promise.reject(error);
+    }
+
+    /* 🔐 TOKEN EXPIRED */
+    if (error.response.status === 401) {
+      console.warn("⚠️ Unauthorized → Logging out");
+
       await auth.signOut();
-      // Only redirect if we aren't already on the login page
+
       if (window.location.pathname !== "/login") {
         window.location.href = "/login";
       }
     }
+
+    /* ❌ FORBIDDEN */
+    if (error.response.status === 403) {
+      console.warn("⛔ Access forbidden");
+    }
+
+    /* 💥 SERVER ERROR */
+    if (error.response.status >= 500) {
+      console.error("🔥 Server error:", error.response.data);
+    }
+
     return Promise.reject(error);
   }
 );
