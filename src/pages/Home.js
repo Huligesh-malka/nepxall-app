@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/api";
 
+import { API_CONFIG } from "../config";
+
 const BACKEND_URL = import.meta.env.VITE_API_URL?.replace("/api", "") ||
   "http://localhost:5000";
 
