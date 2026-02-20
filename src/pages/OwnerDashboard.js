@@ -1,15 +1,17 @@
 // src/pages/OwnerDashboard.js
+
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { API_CONFIG } from "../config";
 
 import {
   Typography, Box, Button, Grid, Alert, Snackbar,
   CircularProgress, Paper, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow,
-  Chip, Avatar, Card, IconButton
+  Chip, Avatar, IconButton
 } from "@mui/material";
 
 import {
@@ -26,9 +28,9 @@ import {
 import StatCard from "../components/owner/StatCard";
 import PropertyCard from "../components/owner/PropertyCard";
 
-const API = "http://localhost:5000/api/pg";
-const BACKEND_URL = import.meta.env.VITE_API_URL?.replace("/api", "") ||
-  "http://localhost:5000";
+/* ✅ GLOBAL API */
+const API = `${API_CONFIG.API_URL}/pg`;
+const BACKEND_URL = API_CONFIG.BACKEND_URL;
 
 /* ---------------- HELPERS ---------------- */
 
@@ -78,7 +80,7 @@ const OwnerDashboard = () => {
         navigate("/login");
       } else {
         setAuthLoading(false);
-        await loadAllData();
+        loadAllData();
       }
     });
 
@@ -253,7 +255,7 @@ const OwnerDashboard = () => {
 
           <Button
             startIcon={<AddIcon />}
-            onClick={() => navigate("/owner/add")}
+            onClick={() => navigate("/owner/add-pg")}
             variant="contained"
           >
             Add PG
@@ -298,18 +300,7 @@ const OwnerDashboard = () => {
       <Grid container spacing={3} mb={4}>
         {pgs.map(pg => (
           <Grid item xs={12} key={pg.id}>
-            <PropertyCard
-              property={pg}
-              onView={() => navigate(`/pg/${pg.id}`)}
-              onEdit={() => navigate(`/owner/edit/${pg.id}`)}
-              onRooms={() => navigate(`/owner/rooms/${pg.id}`)}
-              onPhotos={() => navigate(`/owner/photos/${pg.id}`)}
-              onVideos={() => navigate(`/owner/videos/${pg.id}`)}
-              onChat={() => navigate(`/owner/pg-chat/${pg.id}`)}
-              onAnnouncement={() =>
-                navigate(`/owner/pg-chat/${pg.id}?mode=announcement`)
-              }
-            />
+            <PropertyCard property={pg} />
           </Grid>
         ))}
       </Grid>
