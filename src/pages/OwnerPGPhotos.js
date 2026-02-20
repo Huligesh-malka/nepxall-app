@@ -3,7 +3,8 @@ import axios from "axios";
 import { useParams } from "react-router-dom";
 import { auth } from "../firebase"; // ✅ ADD THIS
 
-const BACKEND_URL = "http://localhost:5000";
+const BACKEND_URL = import.meta.env.VITE_API_URL?.replace("/api", "") ||
+  "http://localhost:5000";
 const API = `${BACKEND_URL}/api/pg`;
 
 const OwnerPGPhotos = () => {

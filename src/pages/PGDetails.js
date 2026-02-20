@@ -9,7 +9,8 @@ import { auth } from "../firebase";
 
 
 
-const BACKEND_URL = "http://localhost:5000";
+const BACKEND_URL = import.meta.env.VITE_API_URL?.replace("/api", "") ||
+  "http://localhost:5000";
 const PG_API = `${BACKEND_URL}/api/pg`;
 
 /* ================= LEAFLET FIX ================= */

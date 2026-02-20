@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { useParams } from "react-router-dom";
 import { auth } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 
-const API = "http://localhost:5000/api/admin";
-const BASE_URL = "http://localhost:5000";
+const API = process.env.REACT_APP_API;
+const BASE_URL = process.env.REACT_APP_FILES;
 
 const AdminPGDetails = () => {
   const { id } = useParams();
@@ -34,46 +34,51 @@ const AdminPGDetails = () => {
   };
 
   /* ================= LOAD PG ================= */
-  const loadPG = async (user) => {
+  const loadPG = useCallback(async (user) => {
     try {
-      const token = await user.getIdToken(true);
-      const headers = { Authorization: `Bearer ${token}` };
+      setLoading(true);
 
-      const res = await axios.get(`${API}/pg/${id}`, { headers });
+      const token = await user.getIdToken(true);
+
+      const res = await axios.get(`${API}/pg/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
       setPG(res.data.data);
       setPhotos(normalizePhotos(res.data.data));
     } catch (err) {
       console.error("Load PG error:", err.message);
+      alert("Failed to load PG details");
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   /* ================= AUTH READY ================= */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        loadPG(user); // 🔥 only load AFTER auth ready
-      } else {
-        setLoading(false);
-      }
+      if (user) loadPG(user);
+      else setLoading(false);
     });
 
     return () => unsub();
-  }, [id]);
+  }, [loadPG]);
 
   /* ================= ACTIONS ================= */
   const approve = async () => {
     if (!window.confirm("Approve this property?")) return;
+
     try {
       setActionLoading(true);
+
       const token = await auth.currentUser.getIdToken(true);
+
       await axios.patch(
         `${API}/pg/${id}/approve`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       loadPG(auth.currentUser);
     } catch {
       alert("Approval failed");
@@ -84,15 +89,21 @@ const AdminPGDetails = () => {
 
   const reject = async () => {
     if (!rejectReason.trim()) return alert("Enter rejection reason");
+
     try {
       setActionLoading(true);
+
       const token = await auth.currentUser.getIdToken(true);
+
       await axios.patch(
         `${API}/pg/${id}/reject`,
         { reason: rejectReason },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       setShowReject(false);
+      setRejectReason("");
+
       loadPG(auth.currentUser);
     } catch {
       alert("Rejection failed");
@@ -100,6 +111,8 @@ const AdminPGDetails = () => {
       setActionLoading(false);
     }
   };
+
+  /* ================= UI ================= */
 
   if (loading) return <div className="p-10 text-center">Loading…</div>;
   if (!pg) return <div className="p-10 text-center">No data found</div>;
@@ -167,16 +180,19 @@ const AdminPGDetails = () => {
         {pg.status === "pending" && (
           <div className="flex justify-end gap-4 pt-4 border-t">
             <button
+              disabled={actionLoading}
               onClick={() => setShowReject(true)}
-              className="px-5 py-2 border border-red-500 text-red-600 rounded"
+              className="px-5 py-2 border border-red-500 text-red-600 rounded disabled:opacity-50"
             >
-              Reject
+              {actionLoading ? "Processing..." : "Reject"}
             </button>
+
             <button
+              disabled={actionLoading}
               onClick={approve}
-              className="px-5 py-2 bg-blue-600 text-white rounded"
+              className="px-5 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
             >
-              Approve
+              {actionLoading ? "Processing..." : "Approve"}
             </button>
           </div>
         )}
@@ -189,20 +205,24 @@ const AdminPGDetails = () => {
               className="w-full border p-2"
               rows="4"
               placeholder="Reason for rejection"
+              value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
             />
             <div className="mt-4 flex gap-3">
               <button
+                disabled={actionLoading}
                 onClick={() => setShowReject(false)}
                 className="flex-1 border rounded py-2"
               >
                 Cancel
               </button>
+
               <button
+                disabled={actionLoading}
                 onClick={reject}
                 className="flex-1 bg-red-600 text-white rounded py-2"
               >
-                Reject
+                {actionLoading ? "Processing..." : "Reject"}
               </button>
             </div>
           </div>

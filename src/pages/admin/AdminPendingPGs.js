@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 
-const API = "http://localhost:5000/api/admin";
+const API = process.env.REACT_APP_API;
 
 const AdminPendingPGs = () => {
   const [pgs, setPGs] = useState([]);
@@ -12,43 +12,63 @@ const AdminPendingPGs = () => {
   const [filter, setFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("newest");
+
   const navigate = useNavigate();
 
-  /* ================= AUTH ================= */
+  /* ================= AUTH HEADER ================= */
   const getAuthHeader = async (user) => {
     const token = await user.getIdToken(true);
     return { Authorization: `Bearer ${token}` };
   };
 
-  const loadPendingPGs = async (user) => {
-    try {
-      setLoading(true);
-      const headers = await getAuthHeader(user);
-      const res = await axios.get(`${API}/pgs/pending`, { headers });
-      setPGs(res.data.data || []);
-    } catch (err) {
-      if ([401, 403].includes(err.response?.status)) {
-        navigate("/login");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  /* ================= LOAD DATA ================= */
+  const loadPendingPGs = useCallback(
+    async (user) => {
+      try {
+        setLoading(true);
 
+        const headers = await getAuthHeader(user);
+
+        const res = await axios.get(`${API}/pgs/pending`, { headers });
+
+        setPGs(res.data.data || []);
+      } catch (err) {
+        console.error(err);
+
+        if ([401, 403].includes(err.response?.status)) {
+          navigate("/login");
+        } else {
+          alert("Failed to load pending PGs");
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [navigate]
+  );
+
+  /* ================= AUTH READY ================= */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) return navigate("/login");
-      loadPendingPGs(user);
+      if (!user) {
+        navigate("/login");
+      } else {
+        loadPendingPGs(user);
+      }
     });
+
     return () => unsub();
-  }, [navigate]);
+  }, [loadPendingPGs, navigate]);
 
   /* ================= FILTER / SORT ================= */
   const list = pgs
     .filter((pg) => {
       if (filter !== "all" && pg.pg_category !== filter) return false;
+
       if (!searchTerm) return true;
+
       const s = searchTerm.toLowerCase();
+
       return (
         pg.pg_name?.toLowerCase().includes(s) ||
         pg.city?.toLowerCase().includes(s) ||
@@ -57,8 +77,12 @@ const AdminPendingPGs = () => {
       );
     })
     .sort((a, b) => {
-      if (sortBy === "newest") return new Date(b.created_at) - new Date(a.created_at);
-      if (sortBy === "oldest") return new Date(a.created_at) - new Date(b.created_at);
+      if (sortBy === "newest")
+        return new Date(b.created_at) - new Date(a.created_at);
+
+      if (sortBy === "oldest")
+        return new Date(a.created_at) - new Date(b.created_at);
+
       return (a.pg_name || "").localeCompare(b.pg_name || "");
     });
 
@@ -149,6 +173,7 @@ const AdminPendingPGs = () => {
                   <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">
                     Pending
                   </span>
+
                   <span className="text-xs text-gray-400">
                     {new Date(pg.created_at).toLocaleDateString("en-IN")}
                   </span>

@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
-
 import { 
   Search, 
   Filter, 
@@ -70,8 +69,10 @@ import {
   Target
 } from "lucide-react";
 import api from "../api/api";
+import { API_CONFIG } from "../config";
 
-const BACKEND_URL = "http://localhost:5000";
+/* ================= USE CONFIG FOR BACKEND URL ================= */
+const BACKEND_URL = API_CONFIG.BACKEND_URL;
 
 /* ================= HELPERS ================= */
 const getPGCode = (id) => `PG-${String(id).padStart(5, "0")}`;

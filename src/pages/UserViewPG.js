@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import api from "../api/api";
 
-const BACKEND_URL = "http://localhost:5000";
+const BACKEND_URL = import.meta.env.VITE_API_URL?.replace("/api", "") ||
+  "http://localhost:5000";
 
 export default function UserViewPG() {
   const [code, setCode] = useState("");

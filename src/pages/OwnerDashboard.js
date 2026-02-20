@@ -27,7 +27,8 @@ import StatCard from "../components/owner/StatCard";
 import PropertyCard from "../components/owner/PropertyCard";
 
 const API = "http://localhost:5000/api/pg";
-const BACKEND_URL = "http://localhost:5000";
+const BACKEND_URL = import.meta.env.VITE_API_URL?.replace("/api", "") ||
+  "http://localhost:5000";
 
 /* ---------------- HELPERS ---------------- */
 
