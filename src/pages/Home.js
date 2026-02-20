@@ -1,159 +1,39 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/api";
 
-import { API_CONFIG } from "../config";
-
-const BACKEND_URL = import.meta.env.VITE_API_URL?.replace("/api", "") ||
-  "http://localhost:5000";
-
 export default function Home() {
   const navigate = useNavigate();
-
-  const [pgs, setPGs] = useState([]);
+  const [pgs, setPgs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  /* ================= LOAD PGs ================= */
-  const loadPGs = useCallback(async () => {
-    try {
-      setLoading(true);
-
-      const res = await api.get("/pg/search/advanced");
-
-      if (res.data?.data) {
-        setPGs(res.data.data);
-      } else {
-        setPGs([]);
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load PGs");
-      setPGs([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
-    loadPGs();
-  }, [loadPGs]);
+    api.get("/pg/search/advanced")
+      .then(res => {
+        if (res.data?.data) setPgs(res.data.data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
 
-  /* ================= HELPERS ================= */
-  const getImage = (photos) => {
-    try {
-      let parsed = photos;
-
-      if (typeof photos === "string") {
-        parsed = JSON.parse(photos);
-      }
-
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return BACKEND_URL + parsed[0];
-      }
-
-      return null;
-    } catch {
-      return null;
-    }
-  };
-
-  /* ================= STATES ================= */
-
-  if (loading) {
-    return <h3 style={{ textAlign: "center" }}>Loading PGs...</h3>;
-  }
-
-  if (error) {
-    return (
-      <div style={{ textAlign: "center", color: "red" }}>
-        {error}
-      </div>
-    );
-  }
-
-  /* ================= UI ================= */
+  if (loading) return <div>Loading...</div>;
 
   return (
-    <div style={{ maxWidth: 1000, margin: "auto", padding: 20 }}>
-      <h2>Available PGs</h2>
-
-      {pgs.length === 0 ? (
-        <p>No PGs available</p>
-      ) : (
-        pgs.map((pg) => {
-          const imageUrl = getImage(pg.photos);
-
-          return (
-            <div
-              key={pg.id}
-              onClick={() => navigate(`/pg/${pg.id}`)}
-              style={card}
-            >
-              {/* IMAGE */}
-              {imageUrl ? (
-                <img src={imageUrl} alt={pg.pg_name} style={img} />
-              ) : (
-                <div style={noImg}>No image</div>
-              )}
-
-              {/* DETAILS */}
-              <div>
-                <h3 style={{ margin: 0 }}>{pg.pg_name}</h3>
-
-                <p style={muted}>📍 {pg.location}</p>
-
-                <p style={{ fontWeight: "bold" }}>
-                  💰 ₹{pg.rent_amount}
-                </p>
-
-                {pg.available_beds !== undefined && (
-                  <p style={{ color: "green" }}>
-                    🛏 {pg.available_beds} beds available
-                  </p>
-                )}
-              </div>
-            </div>
-          );
-        })
-      )}
+    <div style={{ padding: 20 }}>
+      <h1>Properties</h1>
+      <div style={{ display: "grid", gap: 20 }}>
+        {pgs.map(pg => (
+          <div 
+            key={pg.id} 
+            onClick={() => navigate(`/pg/${pg.id}`)}
+            style={{ border: "1px solid #ccc", padding: 15, cursor: "pointer" }}
+          >
+            <h3>{pg.pg_name}</h3>
+            <p>{pg.location}</p>
+            <p>₹{pg.rent_amount}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
-
-/* ================= STYLES ================= */
-
-const card = {
-  display: "flex",
-  gap: 15,
-  background: "#fff",
-  padding: 15,
-  marginBottom: 15,
-  borderRadius: 10,
-  cursor: "pointer",
-  boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
-  transition: "0.2s",
-};
-
-const img = {
-  width: 150,
-  height: 100,
-  objectFit: "cover",
-  borderRadius: 6,
-};
-
-const noImg = {
-  width: 150,
-  height: 100,
-  background: "#f1f5f9",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  color: "#64748b",
-  borderRadius: 6,
-};
-
-const muted = {
-  color: "#64748b",
-  margin: "4px 0",
-};
