@@ -7,78 +7,60 @@ import { Button, Box, CircularProgress } from "@mui/material";
 
 const MainLayout = () => {
   const navigate = useNavigate();
+
   const [user, setUser] = useState(null);
-  const [role, setRole] = useState(localStorage.getItem("role"));
+  const [role, setRole] = useState(null);
   const [authReady, setAuthReady] = useState(false);
-  const [sidebarKey, setSidebarKey] = useState(Date.now());
+
+  /* 🔥 NORMALIZE ROLE */
+  const getStoredRole = () => {
+    const r = localStorage.getItem("role");
+    if (!r || r === "null" || r === "undefined") return null;
+    return r;
+  };
 
   /* ✅ FIREBASE AUTH LISTENER */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      
-      // Sync role from localStorage when auth changes
-      const storedRole = localStorage.getItem("role");
-      console.log("Auth state changed - User:", currentUser?.email, "Role:", storedRole);
-      setRole(storedRole);
-      
-      // Force sidebar to re-render
-      setSidebarKey(Date.now());
-      
+      setRole(getStoredRole());
       setAuthReady(true);
+
+      console.log("Auth changed:", currentUser?.email, getStoredRole());
     });
 
     return () => unsub();
   }, []);
 
-  /* ✅ SYNC ROLE ON STORAGE EVENT */
+  /* ✅ LISTEN ROLE UPDATE (same tab) */
   useEffect(() => {
-    const handleStorageChange = () => {
-      const newRole = localStorage.getItem("role");
-      console.log("Storage changed - New role:", newRole);
+    const updateRole = () => {
+      const newRole = getStoredRole();
+      console.log("Role updated:", newRole);
       setRole(newRole);
-      setSidebarKey(Date.now()); // Force re-render
     };
-    
-    window.addEventListener("storage", handleStorageChange);
-    
-    // Custom event for same-tab updates
-    const handleRoleUpdate = (event) => {
-      const newRole = localStorage.getItem("role");
-      console.log("Role updated event - New role:", newRole);
-      setRole(newRole);
-      setSidebarKey(Date.now()); // Force re-render
-    };
-    
-    window.addEventListener("role-updated", handleRoleUpdate);
-    
+
+    window.addEventListener("role-updated", updateRole);
+    window.addEventListener("storage", updateRole);
+
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("role-updated", handleRoleUpdate);
+      window.removeEventListener("role-updated", updateRole);
+      window.removeEventListener("storage", updateRole);
     };
   }, []);
 
+  /* ✅ LOGOUT */
   const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      localStorage.clear();
-      setUser(null);
-      setRole(null);
-      setSidebarKey(Date.now()); // Force re-render
-      
-      // Dispatch events
-      window.dispatchEvent(new Event("storage"));
-      window.dispatchEvent(new Event("role-updated"));
-      
-      navigate("/", { replace: true });
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
+    await signOut(auth);
+    localStorage.clear();
+    setUser(null);
+    setRole(null);
+    navigate("/", { replace: true });
   };
 
   if (!authReady) {
     return (
-      <Box height="100vh" display="flex" alignItems="center" justifyContent="center">
+      <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
         <CircularProgress />
       </Box>
     );
@@ -86,62 +68,52 @@ const MainLayout = () => {
 
   return (
     <div style={{ display: "flex" }}>
-      {/* Force sidebar to re-render with key */}
-      <Sidebar key={`sidebar-${sidebarKey}-${role || 'no-role'}`} />
+      <Sidebar role={role} />
 
-      <div style={{ 
-        marginLeft: 250, 
-        padding: 20, 
-        width: "calc(100% - 250px)", 
-        background: "#f8fafc", 
-        minHeight: "100vh" 
-      }}>
-        <Box sx={{ 
-          display: "flex", 
-          justifyContent: "flex-end", 
-          gap: 1, 
-          mb: 2,
-          alignItems: "center",
-          backgroundColor: "white",
-          padding: "10px 20px",
-          borderRadius: "8px",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
-        }}>
+      <div
+        style={{
+          marginLeft: 250,
+          padding: 20,
+          width: "calc(100% - 250px)",
+          background: "#f8fafc",
+          minHeight: "100vh"
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 1,
+            mb: 2,
+            alignItems: "center",
+            backgroundColor: "white",
+            padding: "10px 20px",
+            borderRadius: "8px",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
+          }}
+        >
           {user && (
             <span style={{ marginRight: "auto", color: "#64748b" }}>
-              Welcome, <strong>{user.email?.split('@')[0] || 'User'}!</strong>
+              Welcome, <strong>{user.email?.split("@")[0]}</strong>
             </span>
           )}
-          
+
           {!user ? (
             <>
-              <Button 
-                variant="outlined" 
-                onClick={() => navigate("/login")}
-                sx={{ textTransform: "none" }}
-              >
+              <Button onClick={() => navigate("/login")} variant="outlined">
                 Login
               </Button>
-              <Button 
-                variant="contained" 
-                onClick={() => navigate("/register")}
-                sx={{ textTransform: "none" }}
-              >
+              <Button onClick={() => navigate("/register")} variant="contained">
                 Register
               </Button>
             </>
           ) : (
-            <Button 
-              variant="contained" 
-              color="error" 
-              onClick={handleLogout}
-              sx={{ textTransform: "none" }}
-            >
+            <Button variant="contained" color="error" onClick={handleLogout}>
               Logout
             </Button>
           )}
         </Box>
-        
+
         <Outlet />
       </div>
     </div>
