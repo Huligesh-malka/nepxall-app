@@ -19,7 +19,8 @@ const UserBookingHistory = () => {
       setLoading(true);
       const res = await api.get("/bookings/user/history");
       setBookings(res.data || []);
-    } catch {
+    } catch (err) {
+      console.error(err);
       setError("Failed to load booking history");
     } finally {
       setLoading(false);
@@ -42,30 +43,49 @@ const UserBookingHistory = () => {
 
       setPayingId(booking.id);
 
-      const amount =
-        booking.total_amount ||
-        booking.rent_amount +
-          booking.security_deposit +
-          booking.maintenance_amount ||
-        booking.rent ||
-        1;
+      // ✅ SAFE AMOUNT CALCULATION
+      const rent = Number(booking.rent_amount || booking.rent || 0);
+      const deposit = Number(booking.security_deposit || 0);
+      const maintenance = Number(booking.maintenance_amount || 0);
 
+      const total =
+        Number(booking.total_amount) ||
+        rent + deposit + maintenance;
+
+      if (!total || total <= 0) {
+        alert("Invalid payment amount");
+        return;
+      }
+
+      // 🔥 CREATE ORDER FROM BACKEND
       const res = await api.post("/payments/create-order", {
         bookingId: booking.id,
-        amount,
+        amount: total,
       });
 
+      if (!res.data?.payment_session_id) {
+        alert("Failed to initialize payment session");
+        return;
+      }
+
       const cashfree = new window.Cashfree({
-        mode: API_CONFIG.CASHFREE.MODE,
+        mode:
+          API_CONFIG.CASHFREE.MODE === "production"
+            ? "production"
+            : "sandbox",
       });
 
       await cashfree.checkout({
         paymentSessionId: res.data.payment_session_id,
         redirectTarget: "_self",
       });
+
     } catch (err) {
-      console.error(err);
-      alert("Payment failed");
+      console.error("PAYMENT ERROR:", err.response?.data || err);
+      alert(
+        err.response?.data?.message ||
+          "Payment failed. Please try again."
+      );
     } finally {
       setPayingId(null);
     }
@@ -92,11 +112,11 @@ const UserBookingHistory = () => {
       <h2 style={title}>📜 My Bookings</h2>
 
       {bookings.map((b) => {
-        const rent = b.rent_amount || b.rent || 0;
-        const deposit = b.security_deposit || 0;
-        const maintenance = b.maintenance_amount || 0;
+        const rent = Number(b.rent_amount || b.rent || 0);
+        const deposit = Number(b.security_deposit || 0);
+        const maintenance = Number(b.maintenance_amount || 0);
         const total =
-          b.total_amount || rent + deposit + maintenance;
+          Number(b.total_amount) || rent + deposit + maintenance;
 
         return (
           <div key={b.id} style={card}>
@@ -111,18 +131,13 @@ const UserBookingHistory = () => {
             <p>📅 {new Date(b.check_in_date).toDateString()}</p>
             <p>🛏 {b.room_type}</p>
 
-            {/* 🏠 ROOM NUMBER */}
             {b.room_no && <p>🚪 Room No: {b.room_no}</p>}
 
-            {/* 💰 AMOUNT BREAKDOWN */}
             <p>💸 Rent: ₹{rent}</p>
             <p>🔐 Deposit: ₹{deposit}</p>
             <p>🧰 Maintenance: ₹{maintenance}</p>
-            <p>
-              <b>🧾 Total: ₹{total}</b>
-            </p>
+            <p><b>🧾 Total: ₹{total}</b></p>
 
-            {/* ✅ SHOW BUTTONS FOR APPROVED + CONFIRMED */}
             {(b.status === "approved" || b.status === "confirmed") && (
               <div style={btnRow}>
                 <button
@@ -159,7 +174,6 @@ const UserBookingHistory = () => {
               </div>
             )}
 
-            {/* 🟡 APPROVED → PAY */}
             {b.status === "approved" && (
               <button
                 style={payBtn}
@@ -172,7 +186,6 @@ const UserBookingHistory = () => {
               </button>
             )}
 
-            {/* 🟢 CONFIRMED */}
             {b.status === "confirmed" && (
               <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
                 <div style={paidBadge}>✅ Paid</div>
@@ -188,7 +201,6 @@ const UserBookingHistory = () => {
               </div>
             )}
 
-            {/* 🔴 REJECTED */}
             {b.status === "rejected" && (
               <button
                 style={rebookBtn}
@@ -206,10 +218,8 @@ const UserBookingHistory = () => {
 
 export default UserBookingHistory;
 
-
-
 //////////////////////////////////////////////////////
-// 🎨 STYLES (ADD THIS BELOW YOUR COMPONENT)
+// STYLES
 //////////////////////////////////////////////////////
 
 const container = { maxWidth: 900, margin: "auto", padding: 20 };
