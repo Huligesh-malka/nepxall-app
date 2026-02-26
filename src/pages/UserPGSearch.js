@@ -77,7 +77,7 @@ import {
 } from "lucide-react";
 import api from "../api/api";
 
-const BACKEND_URL = "http://localhost:5000";
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 /* ================= HELPERS ================= */
 const getPGCode = (id) => `PG-${String(id).padStart(5, "0")}`;

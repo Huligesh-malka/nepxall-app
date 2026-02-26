@@ -85,8 +85,8 @@ const RefundPolicy = () => {
           If you have any questions about our refund policy, please contact us at:
         </p>
         <div style={styles.contactDetails}>
-          <p style={styles.contactEmail}>📧 support@yourcompany.com</p>
-          <p style={styles.contactPhone}>📞 +1 (555) 123-4567</p>
+          <p style={styles.contactEmail}>📧 huligeshmalka@gmail.com</p>
+          <p style={styles.contactPhone}>📞 7483090510</p>
         </div>
       </div>
 
