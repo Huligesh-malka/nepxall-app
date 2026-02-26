@@ -24,7 +24,8 @@ import {
   Stop as DisableIcon,
   MeetingRoom as RoomsIcon,
   Star as StarIcon,
-  Campaign as AnnouncementIcon   // 🆕
+  Campaign as AnnouncementIcon,
+  PlaylistAdd as PlanIcon   // 🆕 Create Plan icon
 } from "@mui/icons-material";
 
 const BRAND_BLUE = "#0B5ED7";
@@ -46,7 +47,8 @@ const PropertyCard = ({
   onPhotos,
   onVideos,
   onToggleStatus,
-  onAnnouncement   // 🆕
+  onAnnouncement,
+  onCreatePlan   // 🆕 New prop for Create Plan
 }) => {
 
   const status = statusConfig[property.status] || statusConfig.pending;
@@ -94,6 +96,21 @@ const PropertyCard = ({
               <LocationIcon sx={{ fontSize: 18 }} />
               {property.area}, {property.city}
             </Typography>
+
+            {/* 🆕 Category Badge */}
+            {property.pg_category && (
+              <Chip
+                label={property.pg_category.toUpperCase()}
+                size="small"
+                sx={{
+                  mt: 1,
+                  bgcolor: property.pg_category === "coliving" ? "#e0f2fe" : "#f3e8ff",
+                  color: property.pg_category === "coliving" ? "#0369a1" : "#6b21a8",
+                  fontSize: "11px",
+                  height: 20
+                }}
+              />
+            )}
           </Box>
 
           <Chip
@@ -172,7 +189,28 @@ const PropertyCard = ({
             </Button>
           </Tooltip>
 
-          {/* 🆕 ANNOUNCEMENT BUTTON */}
+          {/* 🆕 CREATE PLAN BUTTON - Only for coliving */}
+          {property.pg_category === "coliving" && onCreatePlan && (
+            <Tooltip title="Create Membership Plan">
+              <Button
+                size="small"
+                variant="contained"
+                startIcon={<PlanIcon />}
+                onClick={onCreatePlan}
+                disabled={property.status !== "active"}
+                sx={{
+                  bgcolor: "#8b5cf6",
+                  "&:hover": { bgcolor: "#7c3aed" },
+                  textTransform: "none",
+                  borderRadius: 2
+                }}
+              >
+                Create Plan
+              </Button>
+            </Tooltip>
+          )}
+
+          {/* ANNOUNCEMENT BUTTON */}
           <Tooltip title="Send Announcement">
             <span>
               <Button

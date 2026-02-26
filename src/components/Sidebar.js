@@ -14,12 +14,11 @@ const Sidebar = () => {
     location.pathname === path ||
     location.pathname.startsWith(path + "/");
 
-  // Better check for logged in status
   const isLoggedIn = role && role !== "null" && role !== "undefined";
 
   return (
     <div style={sidebar}>
-      {/* ================= LOGO ================= */}
+      {/* LOGO */}
       <div style={companyHeader}>
         <img src={logo} alt="Nepxall logo" style={logoImage} />
         <div>
@@ -34,59 +33,20 @@ const Sidebar = () => {
       <hr style={divider} />
 
       <nav style={nav}>
-        {/* 🏡 HOME - Always visible */}
-        <Link style={linkStyle(isActive("/"))} to="/">
-          🏡 Home
-        </Link>
+        <Link style={linkStyle(isActive("/"))} to="/">🏡 Home</Link>
 
-        {/* Show tenant/user section if role is tenant or user */}
+        {/* ================= TENANT ================= */}
         {isLoggedIn && (role === "tenant" || role === "user") && (
           <>
             <hr style={divider} />
             <p style={sectionLabel}>TENANT</p>
 
-            <Link
-              style={linkStyle(isActive("/user/my-stay"))}
-              to="/user/my-stay"
-            >
-              🏠 My Stay
-            </Link>
-
-            <Link
-              style={linkStyle(isActive("/user/bookings"))}
-              to="/user/bookings"
-            >
-              📜 My Bookings
-            </Link>
-
-            <Link
-              style={linkStyle(isActive("/user/favorites"))}
-              to="/user/favorites"
-            >
-              ❤️ Favorites
-            </Link>
-
-            <Link
-              style={linkStyle(isActive("/user/profile"))}
-              to="/user/profile"
-            >
-              👤 Profile
-            </Link>
-
-            <Link
-  style={linkStyle(isActive("/user/aadhaar-kyc"))}
-  to="/user/aadhaar-kyc"
->
-  🛂 Aadhaar KYC
-</Link>
-
-
-            <Link
-              style={linkStyle(isActive("/"))}
-              to="/"
-            >
-              🔍 Browse Properties
-            </Link>
+            <Link style={linkStyle(isActive("/user/my-stay"))} to="/user/my-stay">🏠 My Stay</Link>
+            <Link style={linkStyle(isActive("/user/bookings"))} to="/user/bookings">📜 My Bookings</Link>
+            <Link style={linkStyle(isActive("/user/favorites"))} to="/user/favorites">❤️ Favorites</Link>
+            <Link style={linkStyle(isActive("/user/profile"))} to="/user/profile">👤 Profile</Link>
+            <Link style={linkStyle(isActive("/user/aadhaar-kyc"))} to="/user/aadhaar-kyc">🛂 Aadhaar KYC</Link>
+            <Link style={linkStyle(isActive("/"))} to="/">🔍 Browse Properties</Link>
           </>
         )}
 
@@ -96,56 +56,17 @@ const Sidebar = () => {
             <hr style={divider} />
             <p style={sectionLabel}>OWNER</p>
 
-            <Link
-              style={linkStyle(isActive("/owner/dashboard"))}
-              to="/owner/dashboard"
-            >
-              📊 Dashboard
-            </Link>
+            <Link style={linkStyle(isActive("/owner/dashboard"))} to="/owner/dashboard">📊 Dashboard</Link>
+            <Link style={linkStyle(isActive("/owner/bookings"))} to="/owner/bookings">📥 Booking Requests</Link>
+            <Link style={linkStyle(isActive("/owner/pgs"))} to="/owner/pgs">🏢 My PGs</Link>
+            <Link style={linkStyle(isActive("/owner/hotels"))} to="/owner/hotels">🏨 My Hotels</Link>
 
-            <Link
-              style={linkStyle(isActive("/owner/bookings"))}
-              to="/owner/bookings"
-            >
-              📥 Booking Requests
-            </Link>
+            <Link style={linkStyle(isActive("/owner/add"))} to="/owner/add">➕ Add PG</Link>
+            <Link style={linkStyle(isActive("/owner/add-hotel"))} to="/owner/add-hotel">➕ Add Hotel</Link>
 
-            {/* MY PROPERTIES SECTION */}
-            <Link
-              style={linkStyle(isActive("/owner/pgs"))}
-              to="/owner/pgs"
-            >
-              🏢 My PGs
-            </Link>
+            <Link style={linkStyle(isActive("/owner/bank"))} to="/owner/bank">🏦 Bank Details</Link>
 
-            <Link
-              style={linkStyle(isActive("/owner/hotels"))}
-              to="/owner/hotels"
-            >
-              
-            </Link>
-
-            {/* ADD PROPERTY SECTION */}
-            <Link
-              style={linkStyle(isActive("/owner/add-pg"))}
-              to="/owner/add-pg"
-            >
-              ➕ Add PG
-            </Link>
-
-            <Link
-              style={linkStyle(isActive("/owner/add-hotel"))}
-              to="/owner/add-hotel"
-            >
-              
-            </Link>
-
-            <Link
-              style={linkStyle(isActive("/owner/verification"))}
-              to="/owner/verification"
-            >
-              🛂 Verification
-            </Link>
+            <Link style={linkStyle(isActive("/owner/verification"))} to="/owner/verification">🛂 Verification</Link>
           </>
         )}
 
@@ -155,62 +76,43 @@ const Sidebar = () => {
             <hr style={divider} />
             <p style={sectionLabel}>ADMIN</p>
 
-            <Link
-              style={linkStyle(isActive("/admin/owner-verification"))}
-              to="/admin/owner-verification"
-            >
-              🛡️ Verify Owners
-            </Link>
+            <Link style={linkStyle(isActive("/admin/dashboard"))} to="/admin/dashboard">📊 Dashboard</Link>
+            <Link style={linkStyle(isActive("/admin/owner-verification"))} to="/admin/owner-verification">🛡️ Verify Owners</Link>
+            <Link style={linkStyle(isActive("/admin/users"))} to="/admin/users">👥 Manage Users</Link>
+            <Link style={linkStyle(isActive("/admin/properties"))} to="/admin/properties">🏘️ All Properties</Link>
 
-            <Link
-              style={linkStyle(isActive("/admin/users"))}
-              to="/admin/users"
-            >
-              👥 Manage Users
+            {/* ✅ NEW SETTLEMENT MENU */}
+            <Link style={linkStyle(isActive("/admin/settlements"))} to="/admin/settlements">
+              💰 Settlements
             </Link>
-
-            <Link
-              style={linkStyle(isActive("/admin/properties"))}
-              to="/admin/properties"
-            >
-              🏘️ All Properties
-            </Link>
-
-            <Link
-              style={linkStyle(isActive("/admin/dashboard"))}
-              to="/admin/dashboard"
-            >
-              📊 Admin Dashboard
-            </Link>
+            <Link style={linkStyle(isActive("/admin/finance"))} to="/admin/finance">💰 Finance</Link>
+            <Link style={linkStyle(isActive("/admin/settlement-history"))} to="/admin/settlement-history">📜 Settlement History</Link>
+            
           </>
         )}
 
-        {/* Show login/register links when not logged in */}
+        {/* ================= AUTH ================= */}
         {!isLoggedIn && (
           <>
             <hr style={divider} />
-            <Link style={linkStyle(isActive("/login"))} to="/login">
-              🔑 Login
-            </Link>
-            <Link style={linkStyle(isActive("/register"))} to="/register">
-              📝 Register
-            </Link>
+            <Link style={linkStyle(isActive("/login"))} to="/login">🔑 Login</Link>
+            <Link style={linkStyle(isActive("/register"))} to="/register">📝 Register</Link>
           </>
         )}
       </nav>
 
-      {/* Show user info if logged in */}
+      {/* USER INFO */}
       {isLoggedIn && (
         <div style={userInfoStyle}>
           <hr style={divider} />
           <p style={{ color: "#94a3b8", fontSize: 12, margin: 0 }}>
-            Logged in as:{" "}
+            Logged in as
             <span style={{ color: "#fff", fontWeight: "bold", textTransform: "capitalize" }}>
-              {role}
+              {" "}{role}
             </span>
           </p>
-          <p style={{ color: "#4CAF50", fontSize: 11, margin: "5px 0 0 0" }}>
-            {localStorage.getItem("email")?.split('@')[0] || 'User'}
+          <p style={{ color: "#4CAF50", fontSize: 11 }}>
+            {localStorage.getItem("email")?.split("@")[0] || "User"}
           </p>
         </div>
       )}
@@ -231,10 +133,9 @@ const sidebar = {
   position: "fixed",
   left: 0,
   top: 0,
-  overflowY: "auto",
   display: "flex",
   flexDirection: "column",
-  zIndex: 1000,
+  overflowY: "auto",
 };
 
 const companyHeader = {
@@ -244,52 +145,23 @@ const companyHeader = {
   marginBottom: 20,
 };
 
-const logoImage = {
-  width: 48,
-  height: 48,
-  borderRadius: 8,
-};
+const logoImage = { width: 48, height: 48, borderRadius: 8 };
 
-const companyName = {
-  fontSize: 20,
-  fontWeight: "bold",
-  margin: 0,
-  lineHeight: 1.1,
-};
+const companyName = { fontSize: 20, fontWeight: "bold", margin: 0 };
 
-const companyTagline = {
-  fontSize: 11,
-  margin: 0,
-  color: "#94a3b8",
-  letterSpacing: "0.4px",
-};
+const companyTagline = { fontSize: 11, color: "#94a3b8" };
 
-const nav = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 10,
-  flex: 1,
-};
+const nav = { display: "flex", flexDirection: "column", gap: 10, flex: 1 };
 
-const divider = {
-  borderTop: "1px solid #334155",
-  opacity: 0.4,
-  margin: "12px 0",
-};
+const divider = { borderTop: "1px solid #334155", margin: "12px 0" };
 
 const sectionLabel = {
   fontSize: 11,
   color: "#94a3b8",
-  marginBottom: 6,
-  marginTop: 6,
-  letterSpacing: "1px",
-  textTransform: "uppercase",
+  letterSpacing: 1,
 };
 
-const userInfoStyle = {
-  marginTop: "auto",
-  paddingTop: 10,
-};
+const userInfoStyle = { marginTop: "auto" };
 
 const linkStyle = (active) => ({
   color: "#e5e7eb",
@@ -297,13 +169,8 @@ const linkStyle = (active) => ({
   padding: "10px 14px",
   borderRadius: 8,
   background: active
-    ? "linear-gradient(90deg, #0B5ED7, #4CAF50)"
+    ? "linear-gradient(90deg,#0B5ED7,#4CAF50)"
     : "transparent",
   fontWeight: active ? "600" : "normal",
-  transition: "0.2s ease",
-  display: "block",
-  fontSize: 14,
-  "&:hover": {
-    background: active ? "linear-gradient(90deg, #0B5ED7, #4CAF50)" : "#1e293b",
-  },
+  transition: "0.3s",
 });

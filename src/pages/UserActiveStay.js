@@ -25,9 +25,7 @@ const UserActiveStay = () => {
 
       const token = await user.getIdToken();
 
-      const res = await api.get("/bookings/user/active-stay", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get("/bookings/user/active-stay");
 
       setStay(res.data);
 

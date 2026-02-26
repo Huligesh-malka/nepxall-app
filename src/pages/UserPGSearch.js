@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
+
 import { 
   Search, 
   Filter, 
@@ -66,13 +67,17 @@ import {
   Hash,
   Sliders,
   TrendingUp,
-  Target
+  Target,
+  Plus,
+  Minus,
+  BarChart,
+  Zap as ZapIcon,
+  BadgePercent,
+  Coins
 } from "lucide-react";
 import api from "../api/api";
-import { API_CONFIG } from "../config";
 
-/* ================= USE CONFIG FOR BACKEND URL ================= */
-const BACKEND_URL = API_CONFIG.BACKEND_URL;
+const BACKEND_URL = "http://localhost:5000";
 
 /* ================= HELPERS ================= */
 const getPGCode = (id) => `PG-${String(id).padStart(5, "0")}`;
@@ -107,6 +112,38 @@ const formatPrice = (price) => {
   } catch (error) {
     return numPrice.toString();
   }
+};
+
+/* ================= HELPER: GET PRICE RANGE BY PROPERTY TYPE ================= */
+const getPriceRangeByType = (pg) => {
+  const prices = [];
+  
+  if (pg.pg_category === "pg") {
+    // PG prices
+    if (pg.single_sharing > 0) prices.push(pg.single_sharing);
+    if (pg.double_sharing > 0) prices.push(pg.double_sharing);
+    if (pg.triple_sharing > 0) prices.push(pg.triple_sharing);
+    if (pg.four_sharing > 0) prices.push(pg.four_sharing);
+    if (pg.single_room > 0) prices.push(pg.single_room);
+    if (pg.double_room > 0) prices.push(pg.double_room);
+  } else if (pg.pg_category === "coliving") {
+    // Co-Living prices
+    if (pg.co_living_single_room > 0) prices.push(pg.co_living_single_room);
+    if (pg.co_living_double_room > 0) prices.push(pg.co_living_double_room);
+  } else if (pg.pg_category === "to_let") {
+    // To-Let prices
+    if (pg.price_1bhk > 0) prices.push(pg.price_1bhk);
+    if (pg.price_2bhk > 0) prices.push(pg.price_2bhk);
+    if (pg.price_3bhk > 0) prices.push(pg.price_3bhk);
+    if (pg.price_4bhk > 0) prices.push(pg.price_4bhk);
+  }
+
+  if (prices.length === 0) return { min: 0, max: 0 };
+  
+  return {
+    min: Math.min(...prices),
+    max: Math.max(...prices)
+  };
 };
 
 /* ================= HELPER: SINGLE PRICE GETTER ================= */
@@ -1804,6 +1841,230 @@ const Wrench = ({ size, color }) => (
   </svg>
 );
 
+/* ================= COMPARE MODAL COMPONENT ================= */
+const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
+  const [compareData, setCompareData] = useState([]);
+
+  useEffect(() => {
+    const propertiesToCompare = allPGs.filter(pg => selectedPGs.has(pg.id));
+    setCompareData(propertiesToCompare);
+  }, [selectedPGs, allPGs]);
+
+  if (compareData.length === 0) return null;
+
+  const getFeatureValue = (pg, feature) => {
+    switch(feature) {
+      case 'name':
+        return pg.pg_name;
+      case 'type':
+        return pg.pg_category === 'pg' ? 'PG' : 
+               pg.pg_category === 'coliving' ? 'Co-Living' : 'To-Let';
+      case 'price':
+        return `₹${formatPrice(getEffectiveRent(pg))}`;
+      case 'deposit':
+        return `₹${formatPrice(pg.deposit_amount || pg.security_deposit || 0)}`;
+      case 'location':
+        return pg.area || pg.city || 'N/A';
+      case 'food':
+        return pg.food_available ? 
+               (pg.food_type === 'veg' ? 'Vegetarian' : 
+                pg.food_type === 'non-veg' ? 'Non-Veg' : 'Both') : 'No';
+      case 'wifi':
+        return pg.wifi_available ? 'Yes' : 'No';
+      case 'ac':
+        return pg.ac_available ? 'Yes' : 'No';
+      case 'parking':
+        return pg.parking_available ? 'Yes' : 'No';
+      case 'attached_bathroom':
+        return pg.attached_bathroom ? 'Yes' : 'No';
+      case 'available_rooms':
+        return pg.available_rooms || 0;
+      case 'min_stay':
+        return pg.min_stay_months ? `${pg.min_stay_months} months` : 'N/A';
+      default:
+        return 'N/A';
+    }
+  };
+
+  const features = [
+    { key: 'name', label: 'Property Name' },
+    { key: 'type', label: 'Type' },
+    { key: 'price', label: 'Monthly Rent' },
+    { key: 'deposit', label: 'Deposit' },
+    { key: 'location', label: 'Location' },
+    { key: 'food', label: 'Food' },
+    { key: 'wifi', label: 'WiFi' },
+    { key: 'ac', label: 'AC' },
+    { key: 'parking', label: 'Parking' },
+    { key: 'attached_bathroom', label: 'Attached Bathroom' },
+    { key: 'available_rooms', label: 'Available Rooms' },
+    { key: 'min_stay', label: 'Min Stay' }
+  ];
+
+  return (
+    <div style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0, 0, 0, 0.8)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 3000,
+      padding: 20,
+      animation: "fadeIn 0.3s ease"
+    }}>
+      <div style={{
+        background: "#ffffff",
+        borderRadius: 20,
+        width: "100%",
+        maxWidth: 1200,
+        maxHeight: "90vh",
+        overflowY: "auto",
+        position: "relative",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute",
+            top: 16,
+            right: 16,
+            background: "rgba(255,255,255,0.9)",
+            border: "none",
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            zIndex: 100,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+          }}
+        >
+          <X size={24} />
+        </button>
+
+        <div style={{ padding: 30 }}>
+          <h2 style={{ 
+            fontSize: 28, 
+            fontWeight: 700, 
+            color: "#111827",
+            marginBottom: 8,
+            display: "flex",
+            alignItems: "center",
+            gap: 12
+          }}>
+            <BarChart size={28} />
+            Compare Properties
+          </h2>
+          <p style={{ 
+            fontSize: 14, 
+            color: "#6b7280",
+            marginBottom: 30 
+          }}>
+            Comparing {compareData.length} properties
+          </p>
+
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={{ 
+                    padding: "16px", 
+                    background: "#f3f4f6",
+                    textAlign: "left",
+                    borderRadius: "10px 0 0 0"
+                  }}>
+                    Features
+                  </th>
+                  {compareData.map((pg, idx) => (
+                    <th key={pg.id} style={{ 
+                      padding: "16px", 
+                      background: "#f3f4f6",
+                      textAlign: "center",
+                      minWidth: "200px",
+                      borderRadius: idx === compareData.length - 1 ? "0 10px 0 0" : "0"
+                    }}>
+                      <div style={{ fontWeight: 600, marginBottom: 8 }}>{pg.pg_name}</div>
+                      {pg.photos && pg.photos.length > 0 && (
+                        <img 
+                          src={`${BACKEND_URL}${pg.photos[0]}`}
+                          alt={pg.pg_name}
+                          style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 8 }}
+                        />
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {features.map((feature, featureIdx) => (
+                  <tr key={feature.key} style={{
+                    background: featureIdx % 2 === 0 ? "#ffffff" : "#f9fafb"
+                  }}>
+                    <td style={{ 
+                      padding: "14px 16px", 
+                      fontWeight: 600,
+                      borderBottom: "1px solid #e5e7eb"
+                    }}>
+                      {feature.label}
+                    </td>
+                    {compareData.map((pg) => (
+                      <td key={`${pg.id}-${feature.key}`} style={{ 
+                        padding: "14px 16px", 
+                        textAlign: "center",
+                        borderBottom: "1px solid #e5e7eb"
+                      }}>
+                        <span style={{
+                          background: feature.key === 'price' ? "#10b98120" : "transparent",
+                          color: feature.key === 'price' ? "#10b981" : "#374151",
+                          padding: feature.key === 'price' ? "6px 12px" : "0",
+                          borderRadius: feature.key === 'price' ? "20px" : "0",
+                          fontWeight: feature.key === 'price' ? 600 : 400
+                        }}>
+                          {getFeatureValue(pg, feature.key)}
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            marginTop: 24,
+            paddingTop: 16,
+            borderTop: "1px solid #e5e7eb"
+          }}>
+            <button
+              onClick={onClose}
+              style={{
+                padding: "12px 24px",
+                background: "#3b82f6",
+                color: "white",
+                border: "none",
+                borderRadius: 10,
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: "pointer"
+              }}
+            >
+              Close Comparison
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /* ================= MAIN COMPONENT ================= */
 function UserPGSearch() {
   const navigate = useNavigate();
@@ -1817,11 +2078,15 @@ function UserPGSearch() {
   const [quickViewPG, setQuickViewPG] = useState(null);
   const [bookingPG, setBookingPG] = useState(null);
   const [favorites, setFavorites] = useState(new Set());
-  const [showFavorites, setShowFavorites] = useState(false);
   const [notification, setNotification] = useState(null);
-  
-  // ✅ NEW: Category filter state
-  const [selectedCategory, setSelectedCategory] = useState("all"); // "all", "pg", "coliving", "to_let"
+
+  // Property Type Filter State
+  const [propertyType, setPropertyType] = useState("all");
+
+  // Compare Feature State
+  const [compareMode, setCompareMode] = useState(false);
+  const [selectedForCompare, setSelectedForCompare] = useState(new Set());
+  const [showCompareModal, setShowCompareModal] = useState(false);
 
   const [filters, setFilters] = useState({
     location: "",
@@ -1831,7 +2096,6 @@ function UserPGSearch() {
     ac: false,
     wifi: false,
     parking: false,
-    category: "",
     sort: "",
     nearMe: false,
     foodType: ""
@@ -1963,11 +2227,6 @@ function UserPGSearch() {
       },
       () => {
         showNotification("❌ Unable to get your location. Please check permissions.");
-      },
-      {
-        enableHighAccuracy: false,
-        timeout: 10000,
-        maximumAge: 0
       }
     );
   };
@@ -1976,9 +2235,9 @@ function UserPGSearch() {
   const applyFilters = useCallback(() => {
     let filtered = [...allPGs];
 
-    // ✅ Apply category filter first (from buttons)
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter(pg => pg.pg_category === selectedCategory);
+    // Property Type Filter (Quick Filter at top)
+    if (propertyType !== "all") {
+      filtered = filtered.filter((pg) => pg.pg_category === propertyType);
     }
 
     // Location search
@@ -1987,13 +2246,6 @@ function UserPGSearch() {
         `${pg.area || ""} ${pg.city || ""} ${pg.pg_name || ""}`
           .toLowerCase()
           .includes(filters.location.toLowerCase())
-      );
-    }
-
-    // Category filter from dropdown
-    if (filters.category) {
-      filtered = filtered.filter(
-        (pg) => pg.pg_category === filters.category
       );
     }
 
@@ -2015,7 +2267,7 @@ function UserPGSearch() {
       filtered = filtered.filter((pg) => pg.food_type === filters.foodType);
     }
 
-    // Nearby filter - only applied when user clicks the button
+    // Nearby filter
     if (filters.nearMe && userLocation) {
       filtered = filtered
         .map((pg) => {
@@ -2047,25 +2299,11 @@ function UserPGSearch() {
     }
 
     setPgs(filtered);
-  }, [allPGs, filters, userLocation, selectedCategory]);
+  }, [allPGs, filters, userLocation, propertyType]);
 
   useEffect(() => {
     applyFilters();
   }, [applyFilters]);
-
-  // ✅ NEW: Handle category button clicks
-  const handleCategoryChange = (category) => {
-    setSelectedCategory(category);
-    setShowFavorites(false); // Exit favorites view when changing categories
-    
-    let message = "";
-    if (category === "all") message = "Showing all properties";
-    else if (category === "pg") message = "Showing PG/Hostel properties";
-    else if (category === "coliving") message = "Showing Co-Living spaces";
-    else if (category === "to_let") message = "Showing To-Let homes";
-    
-    showNotification(message);
-  };
 
   const handleBudgetChange = (min, max) => {
     setFilters(prev => ({
@@ -2085,12 +2323,11 @@ function UserPGSearch() {
       ac: false,
       wifi: false,
       parking: false,
-      category: "",
       sort: "",
       nearMe: false,
       foodType: ""
     });
-    setSelectedCategory("all"); // Reset category buttons
+    setPropertyType("all");
     setUserLocation(null);
     setPgs(allPGs);
     showNotification("All filters reset");
@@ -2174,20 +2411,43 @@ function UserPGSearch() {
     navigate(`/pg/${pg.id}`);
   };
 
-  /* ================= STATS ================= */
-  const stats = {
-    total: allPGs.length,
-    available: pgs.length,
-    avgRent: allPGs.length > 0 
-      ? Math.round(allPGs.reduce((sum, pg) => sum + getEffectiveRent(pg), 0) / allPGs.length)
-      : 0,
-    favoritesCount: favorites.size,
-    nearbyCount: userLocation ? 
-      allPGs.filter(pg => {
-        if (!pg.latitude || !pg.longitude) return false;
-        const distance = getDistanceKm(userLocation.lat, userLocation.lng, pg.latitude, pg.longitude);
-        return distance <= 5;
-      }).length : 0
+  /* ================= COMPARE FEATURE HANDLERS ================= */
+  const toggleCompareMode = () => {
+    setCompareMode(!compareMode);
+    if (compareMode) {
+      // Clear selections when exiting compare mode
+      setSelectedForCompare(new Set());
+    }
+  };
+
+  const toggleSelectForCompare = (pgId, e) => {
+    e.stopPropagation();
+    const newSelected = new Set(selectedForCompare);
+    
+    if (newSelected.has(pgId)) {
+      newSelected.delete(pgId);
+    } else {
+      if (newSelected.size < 3) {
+        newSelected.add(pgId);
+      } else {
+        showNotification("You can compare up to 3 properties at a time");
+        return;
+      }
+    }
+    
+    setSelectedForCompare(newSelected);
+  };
+
+  const handleCompare = () => {
+    if (selectedForCompare.size < 2) {
+      showNotification("Please select at least 2 properties to compare");
+      return;
+    }
+    setShowCompareModal(true);
+  };
+
+  const clearCompareSelections = () => {
+    setSelectedForCompare(new Set());
   };
 
   const formatCardPrice = (value) => {
@@ -2203,6 +2463,17 @@ function UserPGSearch() {
 
   const getDisplayPrice = (pg) => {
     return getEffectiveRent(pg);
+  };
+
+  const getPriceRangeDisplay = (pg) => {
+    const range = getPriceRangeByType(pg);
+    if (range.min === 0 && range.max === 0) return "Price on request";
+    
+    if (range.min === range.max) {
+      return `₹${formatCardPrice(range.min)}`;
+    }
+    
+    return `₹${formatCardPrice(range.min)} – ₹${formatCardPrice(range.max)}`;
   };
 
   const getCardQuickInfo = (pg) => {
@@ -2284,19 +2555,6 @@ function UserPGSearch() {
     return info.slice(0, 3);
   };
 
-  // ✅ Get counts for category buttons
-  const getCategoryCounts = () => {
-    const counts = {
-      all: allPGs.length,
-      pg: allPGs.filter(pg => pg.pg_category === "pg").length,
-      coliving: allPGs.filter(pg => pg.pg_category === "coliving").length,
-      to_let: allPGs.filter(pg => pg.pg_category === "to_let").length
-    };
-    return counts;
-  };
-
-  const counts = getCategoryCounts();
-
   return (
     <div style={{ padding: 20, maxWidth: 1400, margin: "auto", minHeight: "100vh" }}>
       {/* Notification Toast */}
@@ -2329,16 +2587,19 @@ function UserPGSearch() {
           </h1>
           <button
             onClick={() => {
-              setShowFavorites(!showFavorites);
-              if (!showFavorites) setSelectedCategory("all"); // Reset category when showing favorites
+              if (favorites.size > 0) {
+                setPgs(allPGs.filter(pg => favorites.has(pg.id)));
+              } else {
+                setPgs(allPGs);
+              }
             }}
             style={{
               display: "flex",
               alignItems: "center",
               gap: 8,
               padding: "12px 20px",
-              background: showFavorites ? "#ec4899" : "#f3f4f6",
-              color: showFavorites ? "white" : "#374151",
+              background: favorites.size > 0 ? "#ec4899" : "#f3f4f6",
+              color: favorites.size > 0 ? "white" : "#374151",
               border: "none",
               borderRadius: 12,
               fontSize: 14,
@@ -2346,254 +2607,194 @@ function UserPGSearch() {
               cursor: "pointer"
             }}
           >
-            <Heart size={18} fill={showFavorites ? "white" : "none"} />
+            <Heart size={18} fill={favorites.size > 0 ? "white" : "none"} />
             Favorites ({favorites.size})
           </button>
         </div>
+        
+        {/* ================= NEW FEATURES BANNER ================= */}
+        <div style={{
+          display: "flex",
+          gap: 20,
+          flexWrap: "wrap",
+          marginBottom: 20,
+          padding: "16px 20px",
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          borderRadius: 16,
+          color: "white",
+          boxShadow: "0 8px 25px rgba(102, 126, 234, 0.3)",
+          alignItems: "center",
+          justifyContent: "center"
+        }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12
+          }}>
+            <div style={{
+              background: "rgba(255,255,255,0.2)",
+              padding: "10px",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}>
+              <ZapIcon size={24} />
+            </div>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>⚡ Instant Booking Available</div>
+              <div style={{ fontSize: 13, opacity: 0.9 }}>Book your room instantly with just one click</div>
+            </div>
+          </div>
+
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12
+          }}>
+            <div style={{
+              background: "rgba(255,255,255,0.2)",
+              padding: "10px",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}>
+              <BadgePercent size={24} />
+            </div>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>🆓 Free to Book </div>
+              <div style={{ fontSize: 13, opacity: 0.9 }}>Save up to ₹5,000 on booking fees</div>
+            </div>
+          </div>
+
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12
+          }}>
+            <div style={{
+              background: "rgba(255,255,255,0.2)",
+              padding: "10px",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}>
+              <Coins size={24} />
+            </div>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>💰 Zero Brokerage</div>
+              <div style={{ fontSize: 13, opacity: 0.9 }}>Direct owner listings, no middleman</div>
+            </div>
+          </div>
+        </div>
+
         <p style={{ color: "#6b7280", fontSize: 16 }}>
           Discover comfortable PGs, Co-living spaces, and rental homes
           {filters.nearMe && userLocation && " - Showing nearby properties"}
         </p>
       </div>
 
-      {/* ================= STATS CARDS ================= */}
+      {/* ================= PROPERTY TYPE QUICK FILTER ================= */}
       <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-        gap: 16,
-        marginBottom: 30
+        background: "#ffffff",
+        borderRadius: 16,
+        padding: 16,
+        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
+        marginBottom: 20,
+        border: "1px solid #e5e7eb"
       }}>
         <div style={{
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          color: "white",
-          padding: 20,
-          borderRadius: 16,
           display: "flex",
-          alignItems: "center",
-          gap: 16
+          gap: 10,
+          flexWrap: "wrap"
         }}>
-          <div style={{
-            background: "rgba(255,255,255,0.2)",
-            width: 50,
-            height: 50,
-            borderRadius: 12,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}>
-            <Home size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: 24, fontWeight: 700 }}>{stats.total}</div>
-            <div style={{ fontSize: 14, opacity: 0.9 }}>Total Properties</div>
-          </div>
-        </div>
-
-        <div style={{
-          background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-          color: "white",
-          padding: 20,
-          borderRadius: 16,
-          display: "flex",
-          alignItems: "center",
-          gap: 16
-        }}>
-          <div style={{
-            background: "rgba(255,255,255,0.2)",
-            width: 50,
-            height: 50,
-            borderRadius: 12,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}>
-            <DollarSign size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: 24, fontWeight: 700 }}>₹{formatCardPrice(stats.avgRent)}</div>
-            <div style={{ fontSize: 14, opacity: 0.9 }}>Avg. Monthly Rent</div>
-          </div>
-        </div>
-
-        {userLocation && (
-          <div style={{
-            background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
-            color: "white",
-            padding: 20,
-            borderRadius: 16,
-            display: "flex",
-            alignItems: "center",
-            gap: 16
-          }}>
-            <div style={{
-              background: "rgba(255,255,255,0.2)",
-              width: 50,
-              height: 50,
-              borderRadius: 12,
+          <button
+            onClick={() => setPropertyType("all")}
+            style={{
+              padding: "12px 24px",
+              background: propertyType === "all" ? "#3b82f6" : "#f3f4f6",
+              color: propertyType === "all" ? "white" : "#374151",
+              border: "none",
+              borderRadius: 30,
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: "pointer",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center"
-            }}>
-              <Target size={24} />
-            </div>
-            <div>
-              <div style={{ fontSize: 24, fontWeight: 700 }}>{stats.nearbyCount}</div>
-              <div style={{ fontSize: 14, opacity: 0.9 }}>Nearby Properties</div>
-            </div>
-          </div>
-        )}
-
-        <div style={{
-          background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
-          color: "white",
-          padding: 20,
-          borderRadius: 16,
-          display: "flex",
-          alignItems: "center",
-          gap: 16
-        }}>
-          <div style={{
-            background: "rgba(255,255,255,0.2)",
-            width: 50,
-            height: 50,
-            borderRadius: 12,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}>
-            <Calendar size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: 24, fontWeight: 700 }}>{pgs.length}</div>
-            <div style={{ fontSize: 14, opacity: 0.9 }}>Available Now</div>
-          </div>
+              gap: 8,
+              transition: "all 0.2s",
+              flex: "0 1 auto"
+            }}
+          >
+            <Home size={18} />
+            All
+          </button>
+          <button
+            onClick={() => setPropertyType("pg")}
+            style={{
+              padding: "12px 24px",
+              background: propertyType === "pg" ? "#3b82f6" : "#f3f4f6",
+              color: propertyType === "pg" ? "white" : "#374151",
+              border: "none",
+              borderRadius: 30,
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              transition: "all 0.2s",
+              flex: "0 1 auto"
+            }}
+          >
+            <DoorOpen size={18} />
+            PG
+          </button>
+          <button
+            onClick={() => setPropertyType("coliving")}
+            style={{
+              padding: "12px 24px",
+              background: propertyType === "coliving" ? "#3b82f6" : "#f3f4f6",
+              color: propertyType === "coliving" ? "white" : "#374151",
+              border: "none",
+              borderRadius: 30,
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              transition: "all 0.2s",
+              flex: "0 1 auto"
+            }}
+          >
+            <Users size={18} />
+            Co-Living
+          </button>
+          <button
+            onClick={() => setPropertyType("to_let")}
+            style={{
+              padding: "12px 24px",
+              background: propertyType === "to_let" ? "#3b82f6" : "#f3f4f6",
+              color: propertyType === "to_let" ? "white" : "#374151",
+              border: "none",
+              borderRadius: 30,
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              transition: "all 0.2s",
+              flex: "0 1 auto"
+            }}
+          >
+            <Building size={18} />
+            To-Let
+          </button>
         </div>
-
-        <div style={{
-          background: "linear-gradient(135deg, #ec4899 0%, #db2777 100%)",
-          color: "white",
-          padding: 20,
-          borderRadius: 16,
-          display: "flex",
-          alignItems: "center",
-          gap: 16
-        }}>
-          <div style={{
-            background: "rgba(255,255,255,0.2)",
-            width: 50,
-            height: 50,
-            borderRadius: 12,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}>
-            <Heart size={24} fill="white" />
-          </div>
-          <div>
-            <div style={{ fontSize: 24, fontWeight: 700 }}>{favorites.size}</div>
-            <div style={{ fontSize: 14, opacity: 0.9 }}>Saved Favorites</div>
-          </div>
-        </div>
-      </div>
-
-      {/* ================= CATEGORY BUTTONS ================= */}
-      <div style={{
-        display: "flex",
-        gap: 12,
-        marginBottom: 20,
-        flexWrap: "wrap"
-      }}>
-        <button
-          onClick={() => handleCategoryChange("all")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "14px 24px",
-            background: selectedCategory === "all" ? "#3b82f6" : "#f3f4f6",
-            color: selectedCategory === "all" ? "white" : "#374151",
-            border: "none",
-            borderRadius: 12,
-            fontSize: 16,
-            fontWeight: 600,
-            cursor: "pointer",
-            transition: "all 0.2s",
-            flex: 1,
-            justifyContent: "center"
-          }}
-        >
-          <Home size={20} />
-          All Properties ({counts.all})
-        </button>
-
-        <button
-          onClick={() => handleCategoryChange("pg")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "14px 24px",
-            background: selectedCategory === "pg" ? "#10b981" : "#f3f4f6",
-            color: selectedCategory === "pg" ? "white" : "#374151",
-            border: "none",
-            borderRadius: 12,
-            fontSize: 16,
-            fontWeight: 600,
-            cursor: "pointer",
-            transition: "all 0.2s",
-            flex: 1,
-            justifyContent: "center"
-          }}
-        >
-          <Bed size={20} />
-          PG/Hostel ({counts.pg})
-        </button>
-
-        <button
-          onClick={() => handleCategoryChange("coliving")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "14px 24px",
-            background: selectedCategory === "coliving" ? "#8b5cf6" : "#f3f4f6",
-            color: selectedCategory === "coliving" ? "white" : "#374151",
-            border: "none",
-            borderRadius: 12,
-            fontSize: 16,
-            fontWeight: 600,
-            cursor: "pointer",
-            transition: "all 0.2s",
-            flex: 1,
-            justifyContent: "center"
-          }}
-        >
-          <Users size={20} />
-          Co-Living ({counts.coliving})
-        </button>
-
-        <button
-          onClick={() => handleCategoryChange("to_let")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "14px 24px",
-            background: selectedCategory === "to_let" ? "#f97316" : "#f3f4f6",
-            color: selectedCategory === "to_let" ? "white" : "#374151",
-            border: "none",
-            borderRadius: 12,
-            fontSize: 16,
-            fontWeight: 600,
-            cursor: "pointer",
-            transition: "all 0.2s",
-            flex: 1,
-            justifyContent: "center"
-          }}
-        >
-          <Building size={20} />
-          To-Let ({counts.to_let})
-        </button>
       </div>
 
       {/* ================= MODERN FILTER BAR ================= */}
@@ -2602,7 +2803,7 @@ function UserPGSearch() {
         borderRadius: 16,
         padding: 20,
         boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
-        marginBottom: 30,
+        marginBottom: 20,
         border: "1px solid #e5e7eb",
         position: "sticky",
         top: 20,
@@ -2701,6 +2902,78 @@ function UserPGSearch() {
             <Navigation size={18} />
             Near Me
           </button>
+
+          {/* Compare Mode Toggle */}
+          <button
+            onClick={toggleCompareMode}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "14px 20px",
+              background: compareMode ? "#8b5cf6" : "#f3f4f6",
+              color: compareMode ? "#ffffff" : "#374151",
+              border: "none",
+              borderRadius: 12,
+              fontSize: 15,
+              fontWeight: 500,
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+          >
+            <BarChart size={18} />
+            Compare
+          </button>
+
+          {/* Compare Action Button (shows when in compare mode) */}
+          {compareMode && (
+            <>
+              <button
+                onClick={handleCompare}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "14px 20px",
+                  background: selectedForCompare.size >= 2 ? "#10b981" : "#9ca3af",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 12,
+                  fontSize: 15,
+                  fontWeight: 600,
+                  cursor: selectedForCompare.size >= 2 ? "pointer" : "not-allowed",
+                  transition: "all 0.2s"
+                }}
+                disabled={selectedForCompare.size < 2}
+              >
+                <Check size={18} />
+                Compare ({selectedForCompare.size}/3)
+              </button>
+              
+              {selectedForCompare.size > 0 && (
+                <button
+                  onClick={clearCompareSelections}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "14px 20px",
+                    background: "#ef4444",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 12,
+                    fontSize: 15,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  <X size={18} />
+                  Clear
+                </button>
+              )}
+            </>
+          )}
         </div>
 
         {/* Budget Summary */}
@@ -2817,39 +3090,6 @@ function UserPGSearch() {
               gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
               gap: 20
             }}>
-              <div>
-                <label style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  marginBottom: 10,
-                  color: "#4b5563",
-                  fontSize: 14,
-                  fontWeight: 500
-                }}>
-                  <Home size={16} />
-                  Property Type
-                </label>
-                <select
-                  value={filters.category}
-                  onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "12px 16px",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 10,
-                    fontSize: 14,
-                    background: "#ffffff",
-                    cursor: "pointer"
-                  }}
-                >
-                  <option value="">All Types</option>
-                  <option value="pg">PG Accommodation</option>
-                  <option value="coliving">Co-Living Space</option>
-                  <option value="to_let">To-Let Home</option>
-                </select>
-              </div>
-
               <div>
                 <label style={{
                   display: "block",
@@ -3025,41 +3265,14 @@ function UserPGSearch() {
       }}>
         <div>
           <h2 style={{ fontSize: 24, fontWeight: 600, color: "#111827", marginBottom: 4 }}>
-            {showFavorites ? "Your Favorite Properties" : 
-             filters.nearMe ? "Properties Near You" : 
-             selectedCategory === "all" ? "All Properties" :
-             selectedCategory === "pg" ? "PG/Hostel Properties" :
-             selectedCategory === "coliving" ? "Co-Living Spaces" :
-             selectedCategory === "to_let" ? "To-Let Homes" :
-             "Available Properties"}
+            {filters.nearMe ? "Properties Near You" : "Available Properties"}
           </h2>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ color: "#6b7280", fontSize: 14 }}>
-              Showing {showFavorites ? allPGs.filter(pg => favorites.has(pg.id)).length : pgs.length} properties
+              Showing {pgs.length} properties
               {filters.minBudget > 0 && filters.maxBudget < 50000 && 
                 ` within ₹${formatPrice(filters.minBudget)} - ₹${formatPrice(filters.maxBudget)}`}
             </span>
-            {favorites.size > 0 && !showFavorites && (
-              <button
-                onClick={() => setShowFavorites(true)}
-                style={{
-                  padding: "4px 12px",
-                  background: "#fce7f3",
-                  color: "#db2777",
-                  border: "none",
-                  borderRadius: 20,
-                  fontSize: 13,
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6
-                }}
-              >
-                <Heart size={12} fill="#db2777" />
-                View Favorites ({favorites.size})
-              </button>
-            )}
           </div>
         </div>
         <button
@@ -3110,13 +3323,11 @@ function UserPGSearch() {
             gap: 24,
           }}
         >
-          {(showFavorites 
-            ? allPGs.filter(pg => favorites.has(pg.id))
-            : pgs
-          ).map((pg) => {
+          {pgs.map((pg) => {
             const cardQuickInfo = getCardQuickInfo(pg);
-            const displayPrice = getDisplayPrice(pg);
+            const priceRange = getPriceRangeDisplay(pg);
             const depositAmount = pg.deposit_amount || pg.security_deposit || 0;
+            const isSelectedForCompare = selectedForCompare.has(pg.id);
             
             return (
               <div
@@ -3129,7 +3340,7 @@ function UserPGSearch() {
                   boxShadow: "0 2px 12px rgba(0,0,0,.08)",
                   cursor: "pointer",
                   transition: "all 0.3s ease",
-                  border: "1px solid #e5e7eb",
+                  border: isSelectedForCompare ? "2px solid #8b5cf6" : "1px solid #e5e7eb",
                   position: "relative"
                 }}
                 onMouseEnter={(e) => {
@@ -3141,6 +3352,34 @@ function UserPGSearch() {
                   e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,.08)";
                 }}
               >
+                {compareMode && (
+                  <button
+                    onClick={(e) => toggleSelectForCompare(pg.id, e)}
+                    style={{
+                      position: "absolute",
+                      top: 12,
+                      left: 12,
+                      background: "rgba(255,255,255,0.9)",
+                      border: "none",
+                      width: 36,
+                      height: 36,
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      zIndex: 20,
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+                    }}
+                  >
+                    {isSelectedForCompare ? (
+                      <Check size={18} color="#8b5cf6" />
+                    ) : (
+                      <Plus size={18} color="#374151" />
+                    )}
+                  </button>
+                )}
+
                 <button
                   onClick={(e) => handleQuickView(pg, e)}
                   style={{
@@ -3180,7 +3419,7 @@ function UserPGSearch() {
                   style={{
                     position: "absolute",
                     top: 12,
-                    left: 12,
+                    left: compareMode ? 56 : 12,
                     background: "rgba(255,255,255,0.9)",
                     border: "none",
                     width: 36,
@@ -3277,25 +3516,38 @@ function UserPGSearch() {
                     </span>
                   </div>
 
+                  {/* PRICE RANGE DISPLAY - UPDATED SECTION */}
                   <div style={{ 
                     display: "flex", 
                     justifyContent: "space-between", 
                     alignItems: "center",
-                    marginBottom: 12 
+                    marginBottom: 12,
+                    background: "#f0f9ff",
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: "1px solid #bae6fd"
                   }}>
                     <div>
-                      <div style={{ fontSize: 22, fontWeight: 700, color: "#111827" }}>
-                        ₹{formatCardPrice(displayPrice)}
+                      <div style={{ 
+                        fontSize: 16, 
+                        fontWeight: 600, 
+                        color: "#0369a1",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4
+                      }}>
+                        <DollarSign size={16} />
+                        {priceRange}
                       </div>
-                      <div style={{ fontSize: 12, color: "#6b7280" }}>
-                        per month
+                      <div style={{ fontSize: 11, color: "#6b7280" }}>
+                        Price Range
                       </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 14, color: "#4b5563" }}>
+                      <div style={{ fontSize: 13, color: "#4b5563" }}>
                         Deposit
                       </div>
-                      <div style={{ fontSize: 16, fontWeight: 600, color: "#111827" }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: "#111827" }}>
                         ₹{formatCardPrice(depositAmount)}
                       </div>
                     </div>
@@ -3432,47 +3684,26 @@ function UserPGSearch() {
         }}>
           <Search size={48} style={{ margin: "0 auto 16px", color: "#9ca3af" }} />
           <p style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>
-            {showFavorites ? "No favorite properties yet" : "No properties found"}
+            No properties found
           </p>
           <p style={{ fontSize: 14, marginBottom: 24 }}>
-            {showFavorites 
-              ? "Save properties by clicking the heart icon"
-              : "Try adjusting your filters or search terms"
-            }
+            Try adjusting your filters or search terms
           </p>
-          {showFavorites ? (
-            <button
-              onClick={() => setShowFavorites(false)}
-              style={{
-                padding: "12px 24px",
-                background: "#3b82f6",
-                color: "white",
-                border: "none",
-                borderRadius: 10,
-                fontSize: 15,
-                fontWeight: 500,
-                cursor: "pointer"
-              }}
-            >
-              Browse All Properties
-            </button>
-          ) : (
-            <button
-              onClick={resetFilters}
-              style={{
-                padding: "12px 24px",
-                background: "#3b82f6",
-                color: "white",
-                border: "none",
-                borderRadius: 10,
-                fontSize: 15,
-                fontWeight: 500,
-                cursor: "pointer"
-              }}
-            >
-              Reset All Filters
-            </button>
-          )}
+          <button
+            onClick={resetFilters}
+            style={{
+              padding: "12px 24px",
+              background: "#3b82f6",
+              color: "white",
+              border: "none",
+              borderRadius: 10,
+              fontSize: 15,
+              fontWeight: 500,
+              cursor: "pointer"
+            }}
+          >
+            Reset All Filters
+          </button>
         </div>
       )}
 
@@ -3500,6 +3731,18 @@ function UserPGSearch() {
           pg={bookingPG}
           onClose={() => setBookingPG(null)}
           onBook={handleBookingSubmit}
+        />
+      )}
+
+      {showCompareModal && (
+        <CompareModal
+          selectedPGs={selectedForCompare}
+          allPGs={allPGs}
+          onClose={() => {
+            setShowCompareModal(false);
+            setSelectedForCompare(new Set());
+            setCompareMode(false);
+          }}
         />
       )}
 

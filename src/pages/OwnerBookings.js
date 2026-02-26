@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import api from "../api/api";
@@ -12,12 +12,8 @@ const OwnerBookings = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  useEffect(() => {
-    loadOwnerBookings();
-  }, []);
-
   /* ================= LOAD BOOKINGS ================= */
-  const loadOwnerBookings = async () => {
+  const loadOwnerBookings = useCallback(async () => {
     try {
       const user = auth.currentUser;
 
@@ -41,7 +37,11 @@ const OwnerBookings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    loadOwnerBookings();
+  }, [loadOwnerBookings]);
 
   /* ================= APPROVE / REJECT ================= */
   const updateStatus = async (bookingId, status) => {
@@ -57,17 +57,27 @@ const OwnerBookings = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setBookings((prev) =>
-        prev.map((b) =>
-          b.id === bookingId ? { ...b, status } : b
-        )
-      );
-
       setSuccess(`Booking ${status.toUpperCase()} successfully`);
+      loadOwnerBookings();
+
       setTimeout(() => setSuccess(""), 2500);
 
     } catch (err) {
       console.error(err);
+
+      /* 🔐 OWNER NOT VERIFIED */
+      if (err.response?.data?.code === "OWNER_NOT_VERIFIED") {
+
+        alert("⚠️ Please complete owner verification before approving bookings.");
+
+        // ✅ CORRECT ROUTE
+        setTimeout(() => {
+          navigate("/owner/bank");
+        }, 800);
+
+        return;
+      }
+
       alert(err.response?.data?.message || "Action failed");
     } finally {
       setActionLoading(null);
@@ -78,12 +88,7 @@ const OwnerBookings = () => {
 
   if (loading) return <p style={{ padding: 20 }}>Loading bookings...</p>;
 
-  if (error)
-    return (
-      <div style={errorBox}>
-        {error}
-      </div>
-    );
+  if (error) return <div style={errorBox}>{error}</div>;
 
   return (
     <div style={container}>

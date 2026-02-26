@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../firebase";
 import api from "../api/api";
+import { API_CONFIG, isCashfreeLoaded } from "../config";
 
 const UserBookingHistory = () => {
   const navigate = useNavigate();
@@ -9,46 +9,72 @@ const UserBookingHistory = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [payingId, setPayingId] = useState(null);
 
-  /* ================= GET TOKEN ================= */
-  const getToken = async () => {
-    const user = auth.currentUser;
-    if (!user) {
-      navigate("/login");
-      return null;
-    }
-    return await user.getIdToken();
-  };
-
-  /* ================= LOAD BOOKINGS ================= */
+  //////////////////////////////////////////////////////
+  // LOAD BOOKINGS
+  //////////////////////////////////////////////////////
   const loadBookings = useCallback(async () => {
     try {
       setLoading(true);
-      setError("");
-
-      const token = await getToken();
-      if (!token) return;
-
-      const res = await api.get("/bookings/user/history", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
+      const res = await api.get("/bookings/user/history");
       setBookings(res.data || []);
-    } catch (err) {
-      console.error("BOOKING LOAD ERROR 👉", err.response?.data || err);
+    } catch {
       setError("Failed to load booking history");
     } finally {
       setLoading(false);
     }
-  }, [navigate]);
+  }, []);
 
   useEffect(() => {
     loadBookings();
   }, [loadBookings]);
 
-  /* ================= UI ================= */
+  //////////////////////////////////////////////////////
+  // 💳 PAY
+  //////////////////////////////////////////////////////
+  const handlePayNow = async (booking) => {
+    try {
+      if (!isCashfreeLoaded()) {
+        alert("Cashfree SDK not loaded");
+        return;
+      }
 
-  if (loading) return <p style={{ padding: 30 }}>Loading bookings...</p>;
+      setPayingId(booking.id);
+
+      const amount =
+        booking.total_amount ||
+        booking.rent_amount +
+          booking.security_deposit +
+          booking.maintenance_amount ||
+        booking.rent ||
+        1;
+
+      const res = await api.post("/payments/create-order", {
+        bookingId: booking.id,
+        amount,
+      });
+
+      const cashfree = new window.Cashfree({
+        mode: API_CONFIG.CASHFREE.MODE,
+      });
+
+      await cashfree.checkout({
+        paymentSessionId: res.data.payment_session_id,
+        redirectTarget: "_self",
+      });
+    } catch (err) {
+      console.error(err);
+      alert("Payment failed");
+    } finally {
+      setPayingId(null);
+    }
+  };
+
+  //////////////////////////////////////////////////////
+  // UI
+  //////////////////////////////////////////////////////
+  if (loading) return <p style={{ padding: 30 }}>Loading...</p>;
 
   if (error)
     return (
@@ -65,55 +91,56 @@ const UserBookingHistory = () => {
     <div style={container}>
       <h2 style={title}>📜 My Bookings</h2>
 
-      {bookings.length === 0 && (
-        <div style={emptyBox}>No bookings yet</div>
-      )}
+      {bookings.map((b) => {
+        const rent = b.rent_amount || b.rent || 0;
+        const deposit = b.security_deposit || 0;
+        const maintenance = b.maintenance_amount || 0;
+        const total =
+          b.total_amount || rent + deposit + maintenance;
 
-      {bookings.map((b) => (
-        <div key={b.id} style={card}>
-          <div style={topRow}>
-            <h3>{b.pg_name}</h3>
-            <span style={statusBadge(b.status)}>
-              {b.status?.toUpperCase()}
-            </span>
-          </div>
+        return (
+          <div key={b.id} style={card}>
+            <div style={topRow}>
+              <h3>{b.pg_name}</h3>
+              <span style={statusBadge(b.status)}>
+                {b.status?.toUpperCase()}
+              </span>
+            </div>
 
-          <p>📞 {b.phone || "N/A"}</p>
+            <p>📞 {b.phone || "N/A"}</p>
+            <p>📅 {new Date(b.check_in_date).toDateString()}</p>
+            <p>🛏 {b.room_type}</p>
 
-          <p>
-            📅{" "}
-            {b.check_in_date
-              ? new Date(b.check_in_date).toDateString()
-              : "N/A"}
-          </p>
+            {/* 🏠 ROOM NUMBER */}
+            {b.room_no && <p>🚪 Room No: {b.room_no}</p>}
 
-          <p>🛏 {b.room_type}</p>
+            {/* 💰 AMOUNT BREAKDOWN */}
+            <p>💸 Rent: ₹{rent}</p>
+            <p>🔐 Deposit: ₹{deposit}</p>
+            <p>🧰 Maintenance: ₹{maintenance}</p>
+            <p>
+              <b>🧾 Total: ₹{total}</b>
+            </p>
 
-          {/* ❌ REJECT REASON */}
-          {b.status === "rejected" && b.reject_reason && (
-            <p style={rejectText}>❌ {b.reject_reason}</p>
-          )}
+            {/* ✅ SHOW BUTTONS FOR APPROVED + CONFIRMED */}
+            {(b.status === "approved" || b.status === "confirmed") && (
+              <div style={btnRow}>
+                <button
+                  style={viewBtn}
+                  onClick={() => navigate(`/pg/${b.pg_id}`)}
+                >
+                  🏠 View PG
+                </button>
 
-          {/* ✅ APPROVED ACTIONS */}
-          {b.status === "approved" && (
-            <div style={btnRow}>
-              <button
-                style={viewBtn}
-                onClick={() => navigate(`/pg/${b.pg_id}`)}
-              >
-                🏠 View PG
-              </button>
+                <button
+                  style={announcementBtn}
+                  onClick={() =>
+                    navigate(`/user/pg-announcements/${b.pg_id}`)
+                  }
+                >
+                  📢 Announcements
+                </button>
 
-              <button
-                style={announcementBtn}
-                onClick={() =>
-                  navigate(`/user/pg-announcements/${b.pg_id}`)
-                }
-              >
-                📢 Announcements
-              </button>
-
-              {b.owner_id ? (
                 <button
                   style={chatBtn}
                   onClick={() =>
@@ -122,56 +149,71 @@ const UserBookingHistory = () => {
                 >
                   💬 Chat Owner
                 </button>
-              ) : (
-                <button style={disabledBtn} disabled>
-                  ❌ Owner Missing
-                </button>
-              )}
 
-              {b.agreement_available && (
                 <button
                   style={agreementBtn}
                   onClick={() => navigate(`/agreement/${b.id}`)}
                 >
-                  📄 Agreement
+                  📄 Preview Agreement
                 </button>
-              )}
-            </div>
-          )}
+              </div>
+            )}
 
-          {/* 🔄 REBOOK */}
-          {b.status === "rejected" && (
-            <button
-              style={rebookBtn}
-              onClick={() => navigate(`/pg/${b.pg_id}`)}
-            >
-              🔄 Re-Book
-            </button>
-          )}
-        </div>
-      ))}
+            {/* 🟡 APPROVED → PAY */}
+            {b.status === "approved" && (
+              <button
+                style={payBtn}
+                onClick={() => handlePayNow(b)}
+                disabled={payingId === b.id}
+              >
+                {payingId === b.id
+                  ? "Processing..."
+                  : `💳 Pay ₹${total}`}
+              </button>
+            )}
+
+            {/* 🟢 CONFIRMED */}
+            {b.status === "confirmed" && (
+              <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
+                <div style={paidBadge}>✅ Paid</div>
+
+                {!b.kyc_verified && (
+                  <button
+                    style={kycBtn}
+                    onClick={() => navigate("/user/aadhaar-kyc")}
+                  >
+                    🪪 Complete KYC
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* 🔴 REJECTED */}
+            {b.status === "rejected" && (
+              <button
+                style={rebookBtn}
+                onClick={() => navigate(`/pg/${b.pg_id}`)}
+              >
+                🔄 Re-Book
+              </button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };
 
 export default UserBookingHistory;
 
-/* ================= STYLES ================= */
 
-const container = {
-  maxWidth: 900,
-  margin: "auto",
-  padding: 20,
-};
 
+//////////////////////////////////////////////////////
+// 🎨 STYLES (ADD THIS BELOW YOUR COMPONENT)
+//////////////////////////////////////////////////////
+
+const container = { maxWidth: 900, margin: "auto", padding: 20 };
 const title = { marginBottom: 20 };
-
-const emptyBox = {
-  background: "#f9fafb",
-  padding: 30,
-  textAlign: "center",
-  borderRadius: 10,
-};
 
 const card = {
   background: "#fff",
@@ -195,16 +237,13 @@ const statusBadge = (status) => ({
   fontWeight: "bold",
   background:
     status === "approved"
+      ? "#2563eb"
+      : status === "confirmed"
       ? "#16a34a"
       : status === "rejected"
       ? "#dc2626"
-      : "#f59e0b",
+      : "#6b7280",
 });
-
-const rejectText = {
-  color: "#dc2626",
-  marginTop: 8,
-};
 
 const btnRow = {
   display: "flex",
@@ -213,11 +252,35 @@ const btnRow = {
   marginTop: 15,
 };
 
-const errorBox = {
-  padding: 30,
-  color: "red",
+const payBtn = {
+  marginTop: 14,
+  padding: "12px 18px",
+  background: "#e11d48",
+  color: "#fff",
+  border: "none",
+  borderRadius: 10,
+  fontWeight: "bold",
+  cursor: "pointer",
+};
+
+const paidBadge = {
+  background: "#16a34a",
+  color: "#fff",
+  padding: "8px 16px",
+  borderRadius: 20,
+};
+
+const kycBtn = {
+  background: "#0ea5e9",
+  color: "#fff",
+  border: "none",
+  padding: "10px 16px",
+  borderRadius: 8,
+  cursor: "pointer",
   fontWeight: "bold",
 };
+
+const errorBox = { padding: 30, color: "red", fontWeight: "bold" };
 
 const retryBtn = {
   marginTop: 10,
@@ -226,7 +289,6 @@ const retryBtn = {
   color: "#fff",
   border: "none",
   borderRadius: 6,
-  cursor: "pointer",
 };
 
 const viewBtn = btn("#2563eb");
@@ -234,14 +296,6 @@ const announcementBtn = btn("#f59e0b");
 const chatBtn = btn("#25d366");
 const agreementBtn = btn("#7c3aed");
 const rebookBtn = { ...btn("#16a34a"), marginTop: 12 };
-
-const disabledBtn = {
-  padding: "10px 16px",
-  background: "#9ca3af",
-  color: "#fff",
-  border: "none",
-  borderRadius: 8,
-};
 
 function btn(color) {
   return {

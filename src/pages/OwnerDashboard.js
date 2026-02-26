@@ -5,7 +5,6 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { API_CONFIG } from "../config";
 
 import {
   Typography, Box, Button, Grid, Alert, Snackbar,
@@ -28,9 +27,9 @@ import {
 import StatCard from "../components/owner/StatCard";
 import PropertyCard from "../components/owner/PropertyCard";
 
-/* ✅ GLOBAL API */
-const API = `${API_CONFIG.API_URL}/pg`;
-const BACKEND_URL = API_CONFIG.BACKEND_URL;
+const API = "http://localhost:5000/api/pg";
+const BACKEND_URL = import.meta.env.VITE_API_URL?.replace("/api", "") ||
+  "http://localhost:5000";
 
 /* ---------------- HELPERS ---------------- */
 
@@ -80,7 +79,7 @@ const OwnerDashboard = () => {
         navigate("/login");
       } else {
         setAuthLoading(false);
-        loadAllData();
+        await loadAllData();
       }
     });
 
@@ -255,7 +254,7 @@ const OwnerDashboard = () => {
 
           <Button
             startIcon={<AddIcon />}
-            onClick={() => navigate("/owner/add-pg")}
+            onClick={() => navigate("/owner/add")}
             variant="contained"
           >
             Add PG
@@ -300,7 +299,24 @@ const OwnerDashboard = () => {
       <Grid container spacing={3} mb={4}>
         {pgs.map(pg => (
           <Grid item xs={12} key={pg.id}>
-            <PropertyCard property={pg} />
+            <PropertyCard
+              property={pg}
+              onView={() => navigate(`/pg/${pg.id}`)}
+              onEdit={() => navigate(`/owner/edit/${pg.id}`)}
+              onRooms={() => navigate(`/owner/rooms/${pg.id}`)}
+              onPhotos={() => navigate(`/owner/photos/${pg.id}`)}
+              onVideos={() => navigate(`/owner/videos/${pg.id}`)}
+              onChat={() => navigate(`/owner/pg-chat/${pg.id}`)}
+              onAnnouncement={() =>
+                navigate(`/owner/pg-chat/${pg.id}?mode=announcement`)
+              }
+             
+              onCreatePlan={
+                pg.pg_category === "coliving"
+                  ? () => navigate(`/owner/property/${pg.id}/plans`)
+                  : null
+              }
+            />
           </Grid>
         ))}
       </Grid>

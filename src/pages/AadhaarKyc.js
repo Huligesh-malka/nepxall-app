@@ -1,103 +1,147 @@
 import React, { useState } from "react";
 import api from "../api/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const AadhaarKyc = () => {
   const navigate = useNavigate();
-  const role = localStorage.getItem("role");
+  const { state } = useLocation();
+  const bookingId = state?.bookingId;
 
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [aadhaar, setAadhaar] = useState("");
-  const [maskedAadhaar, setMaskedAadhaar] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
 
-  /* ================= VALIDATIONS ================= */
+  // ✅ CONSENTS
+  const [consentAadhaar, setConsentAadhaar] = useState(false);
+  const [consentPolicy, setConsentPolicy] = useState(false);
+  const [consentPolice, setConsentPolice] = useState(false);
 
-  const isValidAadhaar = (num) => /^[0-9]{12}$/.test(num);
-  const isValidOtp = (num) => /^[0-9]{6}$/.test(num);
+  //////////////////////////////////////////////////////
+  // VALIDATIONS
+  //////////////////////////////////////////////////////
+  const isValidPhone = /^[6-9]\d{9}$/.test(phone);
+  const isValidAadhaar = /^\d{12}$/.test(aadhaar);
 
-  const maskAadhaar = (num) => `XXXX XXXX ${num.slice(-4)}`;
-
-  /* ================= SEND OTP ================= */
-
+  //////////////////////////////////////////////////////
+  // SEND OTP
+  //////////////////////////////////////////////////////
   const sendOtp = async () => {
-    if (!isValidAadhaar(aadhaar)) {
-      return setMessage("Enter valid 12-digit Aadhaar");
+    if (!name || !isValidPhone || !isValidAadhaar) {
+      return alert("Enter valid details");
+    }
+
+    if (!consentAadhaar || !consentPolicy || !consentPolice) {
+      return alert("Please accept all consents");
     }
 
     try {
       setLoading(true);
-      setMessage("");
 
-      await api.post("/kyc/aadhaar/send-otp", { aadhaar });
+      await api.post("/kyc/aadhaar/send-otp", {
+        aadhaar,
+        name,
+        phone,
+      });
 
-      setMaskedAadhaar(maskAadhaar(aadhaar));
       setStep(2);
-      setMessage("OTP sent to Aadhaar linked mobile");
-
-    } catch (err) {
-      setMessage(err.response?.data?.error || "Failed to send OTP");
+    } catch {
+      alert("Failed to send OTP");
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= VERIFY OTP ================= */
-
+  //////////////////////////////////////////////////////
+  // VERIFY OTP
+  //////////////////////////////////////////////////////
   const verifyOtp = async () => {
-    if (!isValidOtp(otp)) {
-      return setMessage("Enter valid 6-digit OTP");
-    }
-
     try {
       setLoading(true);
-      setMessage("");
 
-      await api.post("/kyc/aadhaar/verify-otp", { otp });
+      await api.post("/kyc/aadhaar/verify-otp", {
+        otp,
+        bookingId,
+        name,
+        phone,
+      });
 
-      setMessage("✅ Aadhaar verified successfully!");
+      alert("KYC Completed ✅");
 
-      setTimeout(() => {
-        if (role === "owner") {
-          navigate("/owner/dashboard");
-        } else {
-          navigate("/");
-        }
-      }, 1500);
-
-    } catch (err) {
-      setMessage(err.response?.data?.error || "OTP verification failed");
+      navigate("/user/active-stay");
+    } catch {
+      alert("OTP verification failed");
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= RESEND OTP ================= */
-
-  const resendOtp = () => {
-    sendOtp();
-  };
-
+  //////////////////////////////////////////////////////
+  // UI
+  //////////////////////////////////////////////////////
   return (
     <div style={styles.container}>
       <div style={styles.card}>
+        <h2>KYC Verification</h2>
 
-        <h2>🔐 Aadhaar KYC Verification</h2>
+        <input
+          placeholder="Full Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          style={styles.input}
+        />
+
+        <input
+          placeholder="Mobile Number"
+          value={phone}
+          maxLength={10}
+          onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+          style={styles.input}
+        />
 
         {step === 1 && (
           <>
             <input
-              type="text"
-              placeholder="Enter 12-digit Aadhaar"
+              placeholder="Aadhaar Number"
               value={aadhaar}
               maxLength={12}
               onChange={(e) => setAadhaar(e.target.value.replace(/\D/g, ""))}
               style={styles.input}
             />
 
-            <button onClick={sendOtp} style={styles.button} disabled={loading}>
+            {/* ✅ CONSENTS */}
+            <div style={styles.checkboxContainer}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={consentAadhaar}
+                  onChange={() => setConsentAadhaar(!consentAadhaar)}
+                />
+                I confirm this Aadhaar belongs to me
+              </label>
+
+              <label>
+                <input
+                  type="checkbox"
+                  checked={consentPolicy}
+                  onChange={() => setConsentPolicy(!consentPolicy)}
+                />
+                I agree to Terms & Privacy Policy
+              </label>
+
+              <label>
+                <input
+                  type="checkbox"
+                  checked={consentPolice}
+                  onChange={() => setConsentPolice(!consentPolice)}
+                />
+                I consent for Police Verification
+              </label>
+            </div>
+
+            <button onClick={sendOtp} style={styles.button}>
               {loading ? "Sending..." : "Send OTP"}
             </button>
           </>
@@ -105,36 +149,29 @@ const AadhaarKyc = () => {
 
         {step === 2 && (
           <>
-            <p style={{ fontSize: 14 }}>
-              OTP sent to <strong>{maskedAadhaar}</strong>
-            </p>
-
             <input
-              type="text"
-              placeholder="Enter 6-digit OTP"
+              placeholder="Enter OTP"
               value={otp}
               maxLength={6}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
               style={styles.input}
             />
 
-            <button onClick={verifyOtp} style={styles.button} disabled={loading}>
-              {loading ? "Verifying..." : "Verify OTP"}
+            <button onClick={verifyOtp} style={styles.button}>
+              {loading ? "Verifying..." : "Verify & Complete"}
             </button>
-
-            <p style={styles.resend} onClick={resendOtp}>
-              🔄 Resend OTP
-            </p>
           </>
         )}
-
-        {message && <p style={styles.message}>{message}</p>}
       </div>
     </div>
   );
 };
 
-/* ================= STYLES ================= */
+export default AadhaarKyc;
+
+//////////////////////////////////////////////////////
+// 🎨 STYLES
+//////////////////////////////////////////////////////
 
 const styles = {
   container: {
@@ -142,15 +179,14 @@ const styles = {
     background: "#f1f5f9",
     display: "flex",
     justifyContent: "center",
-    alignItems: "center"
+    alignItems: "center",
   },
   card: {
-    width: 400,
+    width: 420,
     background: "#fff",
     padding: 30,
     borderRadius: 12,
     boxShadow: "0 8px 25px rgba(0,0,0,0.08)",
-    textAlign: "center"
   },
   input: {
     width: "100%",
@@ -158,7 +194,6 @@ const styles = {
     marginTop: 15,
     borderRadius: 8,
     border: "1px solid #cbd5e1",
-    fontSize: 14
   },
   button: {
     width: "100%",
@@ -169,19 +204,13 @@ const styles = {
     background: "linear-gradient(90deg, #0B5ED7, #4CAF50)",
     color: "#fff",
     fontWeight: "600",
-    cursor: "pointer"
+    cursor: "pointer",
   },
-  resend: {
+  checkboxContainer: {
     marginTop: 15,
-    fontSize: 13,
-    color: "#0B5ED7",
-    cursor: "pointer"
-  },
-  message: {
-    marginTop: 15,
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
     fontSize: 14,
-    fontWeight: 500
-  }
+  },
 };
-
-export default AadhaarKyc;

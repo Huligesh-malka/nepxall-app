@@ -1,102 +1,127 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { auth } from "../firebase";
+import api from "../api/api";
+import { API_CONFIG, isCashfreeLoaded } from "../config";
 
 const UserBookingHistory = () => {
-  const userId = 1; // 🔒 TEMP (replace after login)
   const navigate = useNavigate();
 
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [payingId, setPayingId] = useState(null);
+  const [error, setError] = useState("");
 
-  const loadBookings = async () => {
+  //////////////////////////////////////////////////////
+  // 🔐 TOKEN
+  //////////////////////////////////////////////////////
+  const getToken = useCallback(async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      navigate("/login");
+      return null;
+    }
+    return await user.getIdToken();
+  }, [navigate]);
+
+  //////////////////////////////////////////////////////
+  // 📦 LOAD BOOKINGS
+  //////////////////////////////////////////////////////
+  const loadBookings = useCallback(async () => {
     try {
-      const res = await axios.get(
-        `http://localhost:5000/api/bookings/user/${userId}`
-      );
+      const token = await getToken();
+      if (!token) return;
+
+      const res = await api.get("/bookings/user/history", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
       setBookings(res.data || []);
     } catch (err) {
       console.error(err);
-      alert("Failed to load booking history");
+      setError("Failed to load booking history");
     } finally {
       setLoading(false);
     }
-  };
+  }, [getToken]);
 
   useEffect(() => {
     loadBookings();
-  }, []);
+  }, [loadBookings]);
 
-  if (loading) {
-    return <p style={{ padding: 20 }}>Loading booking history...</p>;
-  }
+  //////////////////////////////////////////////////////
+  // 💳 PAYMENT
+  //////////////////////////////////////////////////////
+  const handlePayNow = async (booking) => {
+    try {
+      if (!isCashfreeLoaded()) {
+        alert("Cashfree SDK not loaded");
+        return;
+      }
+
+      setPayingId(booking.id);
+
+      const token = await getToken();
+
+      const res = await api.post(
+        "/payments/create-order",   // ✅ FIXED
+        {
+          bookingId: booking.id,
+          amount: booking.rent || 1,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      const cashfree = new window.Cashfree({
+        mode: API_CONFIG.CASHFREE.MODE,
+      });
+
+      await cashfree.checkout({
+        paymentSessionId: res.data.payment_session_id,
+        redirectTarget: "_self",
+      });
+
+    } catch (err) {
+      console.error("PAYMENT ERROR:", err.response?.data || err.message);
+      alert(err.response?.data?.error || "Payment failed");
+    } finally {
+      setPayingId(null);
+    }
+  };
+
+  //////////////////////////////////////////////////////
+  // UI
+  //////////////////////////////////////////////////////
+  if (loading) return <p style={{ padding: 30 }}>Loading...</p>;
+
+  if (error) return <p style={{ padding: 30 }}>{error}</p>;
 
   return (
     <div style={{ maxWidth: 900, margin: "auto", padding: 20 }}>
-      <h2>📜 My Booking History</h2>
-
-      {bookings.length === 0 && <p>No bookings yet</p>}
+      <h2>📜 My Bookings</h2>
 
       {bookings.map((b) => (
         <div key={b.id} style={card}>
-          <p><b>PG:</b> {b.pg_name}</p>
-          <p><b>Phone:</b> {b.phone}</p>
-          <p>
-            <b>Move-in:</b>{" "}
-            {b.move_in_date
-              ? new Date(b.move_in_date).toDateString()
-              : "-"}
-          </p>
+          <h3>{b.pg_name}</h3>
+          <p>📞 {b.phone}</p>
+          <p>📅 {new Date(b.check_in_date).toDateString()}</p>
 
-          <p>
-            <b>Status:</b>{" "}
-            {b.status === "pending" && "⏳ Pending approval"}
-            {b.status === "approved" && "✅ Approved"}
-            {b.status === "paid" && "💳 Paid"}
-          </p>
-
-          {b.room_no && (
-            <p style={{ color: "green" }}>
-              🏠 Room: <b>{b.room_no}</b>
-            </p>
-          )}
-
-          {/* PAYMENT SECTION */}
           {b.status === "approved" && (
-            <>
-              <p>💵 <b>Rent:</b> ₹{b.rent_amount}</p>
-              <p>🔐 <b>Deposit:</b> ₹{b.deposit_amount}</p>
-
-              <button
-                style={payBtn}
-                onClick={() => {
-                  if (!b.id) {
-                    alert("Invalid booking ID");
-                    return;
-                  }
-
-                  navigate(`/payment/${b.id}`, {
-                    state: {
-                      booking_id: b.id,
-                      pg_id: b.pg_id,
-                      pg_name: b.pg_name,
-                      room_no: b.room_no,
-                      rent_amount: b.rent_amount,
-                      deposit_amount: b.deposit_amount,
-                    },
-                  });
-                }}
-              >
-                💳 Pay ₹{b.rent_amount + b.deposit_amount}
-              </button>
-            </>
+            <button
+              style={payBtn}
+              onClick={() => handlePayNow(b)}
+              disabled={payingId === b.id}
+            >
+              {payingId === b.id
+                ? "Processing..."
+                : `💳 Pay ₹${b.rent || 1}`}
+            </button>
           )}
 
-          {/* ALREADY PAID */}
-          {b.status === "paid" && (
-            <p style={{ color: "#16a34a", fontWeight: "bold" }}>
-              ✅ Payment completed
-            </p>
+          {b.status === "confirmed" && (
+            <p style={{ color: "green" }}>✅ Payment completed</p>
           )}
         </div>
       ))}
@@ -104,25 +129,20 @@ const UserBookingHistory = () => {
   );
 };
 
-/* ===============================
-   STYLES
-================================ */
 const card = {
-  border: "1px solid #ddd",
+  background: "#fff",
   padding: 20,
   borderRadius: 10,
-  marginBottom: 16,
-  background: "#fff",
+  marginBottom: 15,
 };
 
 const payBtn = {
-  padding: "10px 16px",
-  background: "#2563eb",
+  padding: "12px 18px",
+  background: "#e11d48",
   color: "#fff",
   border: "none",
-  borderRadius: 6,
+  borderRadius: 8,
   cursor: "pointer",
-  marginTop: 10,
 };
 
 export default UserBookingHistory;

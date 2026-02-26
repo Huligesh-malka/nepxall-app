@@ -29,9 +29,11 @@ const AdminPendingPGs = () => {
 
         const headers = await getAuthHeader(user);
 
-        const res = await axios.get(`${API}/pgs/pending`, { headers });
+const res = await axios.get(`${API}/admin/pgs/pending`, {
+  headers
+});
 
-        setPGs(res.data.data || []);
+setPGs(res.data.data || []);
       } catch (err) {
         console.error(err);
 

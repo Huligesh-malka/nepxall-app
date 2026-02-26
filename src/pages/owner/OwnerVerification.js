@@ -1,232 +1,228 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
-import SignatureCanvas from "react-signature-canvas";
 import { auth } from "../../firebase";
+import { useNavigate } from "react-router-dom";
 
 const API = "http://localhost:5000/api/owner";
 
 export default function OwnerVerification() {
-  const [idType, setIdType] = useState("aadhaar");
-  const [files, setFiles] = useState({});
-  const [agree, setAgree] = useState(false);
+  const navigate = useNavigate();
+
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  const [status, setStatus] = useState("loading"); // not_started | pending | verified | rejected
-  const [rejectionReason, setRejectionReason] = useState("");
+  const [aadhaar, setAadhaar] = useState("");
+  const [maskedAadhaar, setMaskedAadhaar] = useState("");
+  const [otp, setOtp] = useState("");
+  const [verified, setVerified] = useState(false);
 
-  const sigRef = useRef();
+  /* ================= TOKEN ================= */
 
-  /* ================= FETCH STATUS ================= */
-  useEffect(() => {
-    const loadStatus = async () => {
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const res = await axios.get(`${API}/verification/status`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+  const getHeaders = async () => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Login required");
 
-        setStatus(res.data.status);
-        setRejectionReason(res.data.rejection_reason || "");
-      } catch {
-        setStatus("not_started");
-      }
+    const token = await user.getIdToken(true);
+
+    return {
+      headers: { Authorization: `Bearer ${token}` },
     };
+  };
 
-    loadStatus();
+  /* ================= STATUS CHECK ================= */
+
+  useEffect(() => {
+    checkStatus();
   }, []);
 
-  /* ================= UPLOAD ================= */
-  const uploadDocs = async () => {
-    if (!agree) {
-      alert("Please accept the agreement consent to continue.");
-      return;
-    }
+  const checkStatus = async () => {
+    try {
+      const config = await getHeaders();
+      const res = await axios.get(`${API}/verification/status`, config);
 
-    if (!files.id || !files.property || sigRef.current.isEmpty()) {
-      alert("All documents and digital signature are required.");
-      return;
+      if (res.data.aadhaar_verified) {
+        setVerified(true);
+        setStep(3);
+
+        // ✅ AUTO REDIRECT AFTER 2 SEC
+        setTimeout(() => navigate("/owner/bank"), 2000);
+      }
+    } catch (err) {
+      console.log("Not verified yet");
+    } finally {
+      setInitialLoading(false);
     }
+  };
+
+  /* ================= SEND OTP ================= */
+
+  const sendOtp = async () => {
+    if (aadhaar.length !== 12) return alert("Enter valid Aadhaar");
 
     try {
       setLoading(true);
-      const token = await auth.currentUser.getIdToken();
+      const config = await getHeaders();
 
-      const form = new FormData();
-      form.append("id_proof_type", idType);
-      form.append("id_proof", files.id);
-      form.append("property_proof", files.property);
-      form.append("auto_agreement_consent", agree);
+      const res = await axios.post(
+        `${API}/verification/aadhaar/send-otp`,
+        { aadhaar_number: aadhaar },
+        config
+      );
 
-      const signatureBlob = await fetch(
-        sigRef.current.toDataURL()
-      ).then(res => res.blob());
+      setMaskedAadhaar(`XXXX XXXX ${aadhaar.slice(-4)}`);
+      setStep(2);
+      alert(res.data.message || "OTP sent successfully");
 
-      form.append("digital_signature", signatureBlob, "signature.png");
-
-      await axios.post(`${API}/verification`, form, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setStatus("pending");
-      alert("✅ Documents submitted for verification");
     } catch (err) {
-      alert(err.response?.data?.message || "Upload failed");
+      alert(err?.response?.data?.message || "OTP send failed");
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= STATUS UI ================= */
-  if (status === "loading") {
-    return <div className="p-6">Loading verification status...</div>;
-  }
+  /* ================= VERIFY OTP ================= */
 
-  if (status === "pending") {
+  const verifyOtp = async () => {
+    if (otp.length < 4) return alert("Enter valid OTP");
+
+    try {
+      setLoading(true);
+      const config = await getHeaders();
+
+      const res = await axios.post(
+        `${API}/verification/aadhaar/verify-otp`,
+        { otp },
+        config
+      );
+
+      setVerified(true);
+      setStep(3);
+
+      alert(res.data.message || "Verification successful");
+
+      setTimeout(() => navigate("/owner/bank"), 2000);
+
+    } catch (err) {
+      alert(err?.response?.data?.message || "Invalid OTP");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ================= LOADING SCREEN ================= */
+
+  if (initialLoading) {
     return (
-      <div className="bg-white p-8 rounded-xl shadow max-w-3xl text-center">
-        <h2 className="text-2xl font-semibold mb-3">⏳ Verification Pending</h2>
-        <p className="text-gray-600">
-          Your documents are under admin review.
-        </p>
+      <div className="text-center py-20 font-semibold text-gray-500">
+        Checking verification status...
       </div>
     );
   }
 
-  if (status === "verified") {
-    return (
-      <div className="bg-white p-8 rounded-xl shadow max-w-3xl text-center">
-        <h2 className="text-2xl font-semibold text-green-600 mb-3">
-          ✅ Verification Approved
-        </h2>
-        <p className="text-gray-600">
-          Your documents and digital signature are verified.
-        </p>
+  /* ================= UI ================= */
 
-        <div className="mt-6 bg-blue-50 border border-blue-200 p-4 rounded text-sm text-blue-700">
-          🔒 These documents are locked and will be reused automatically for
-          all future rent agreements.
-        </div>
-      </div>
-    );
-  }
-
-  /* ================= FORM (not_started / rejected) ================= */
   return (
-    <div className="bg-white p-8 rounded-xl shadow max-w-3xl">
-      <h2 className="text-2xl font-semibold mb-8">Owner Verification</h2>
+    <div className="max-w-md mx-auto bg-white p-8 rounded-xl shadow space-y-6">
 
-      {status === "rejected" && (
-        <div className="mb-6 bg-red-50 border border-red-200 p-4 rounded">
-          <p className="text-red-600 font-medium">❌ Verification Rejected</p>
-          {rejectionReason && (
-            <p className="text-sm text-red-500 mt-1">
-              Reason: {rejectionReason}
-            </p>
-          )}
-        </div>
-      )}
+      <div className="text-center">
+        <h2 className="text-2xl font-bold">Owner KYC Verification</h2>
+        <p className="text-sm text-gray-500">
+          Required to add PG & receive payments
+        </p>
+      </div>
+
+      <StepIndicator step={step} />
 
       {/* STEP 1 */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="w-7 h-7 flex items-center justify-center rounded-full bg-blue-600 text-white text-sm">
-            1
-          </span>
-          <h3 className="font-medium">ID Proof</h3>
-        </div>
+      {step === 1 && (
+        <>
+          <Input
+            value={aadhaar}
+            maxLength={12}
+            placeholder="Enter Aadhaar Number"
+            onChange={(v) => setAadhaar(v.replace(/\D/g, ""))}
+          />
 
-        <select
-          className="w-full border rounded-lg px-4 py-2 mb-3"
-          value={idType}
-          onChange={e => setIdType(e.target.value)}
-        >
-          <option value="aadhaar">Aadhaar Card</option>
-          <option value="pan">PAN Card</option>
-        </select>
-
-        <input
-          type="file"
-          className="w-full border rounded-lg px-4 py-2"
-          onChange={e =>
-            setFiles(f => ({ ...f, id: e.target.files[0] }))
-          }
-        />
-      </div>
+          <Button
+            onClick={sendOtp}
+            loading={loading}
+            disabled={aadhaar.length !== 12}
+          >
+            Send OTP
+          </Button>
+        </>
+      )}
 
       {/* STEP 2 */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="w-7 h-7 flex items-center justify-center rounded-full bg-blue-600 text-white text-sm">
-            2
-          </span>
-          <h3 className="font-medium">Property Document</h3>
-        </div>
+      {step === 2 && (
+        <>
+          <p className="text-sm text-gray-500 text-center">
+            OTP sent to Aadhaar linked mobile <br />
+            <b>{maskedAadhaar}</b>
+          </p>
 
-        <input
-          type="file"
-          className="w-full border rounded-lg px-4 py-2"
-          onChange={e =>
-            setFiles(f => ({ ...f, property: e.target.files[0] }))
-          }
-        />
-      </div>
+          <Input
+            value={otp}
+            maxLength={6}
+            placeholder="Enter OTP"
+            onChange={(v) => setOtp(v.replace(/\D/g, ""))}
+          />
+
+          <Button onClick={verifyOtp} loading={loading}>
+            Verify Aadhaar
+          </Button>
+
+          <button
+            className="text-blue-600 text-xs underline w-full"
+            onClick={() => setStep(1)}
+          >
+            Change Aadhaar Number
+          </button>
+        </>
+      )}
 
       {/* STEP 3 */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="w-7 h-7 flex items-center justify-center rounded-full bg-blue-600 text-white text-sm">
-            3
-          </span>
-          <h3 className="font-medium">Digital Signature</h3>
+      {step === 3 && (
+        <div className="text-center text-green-600 font-semibold">
+          ✅ Aadhaar Verified <br />
+          Redirecting to Bank setup...
         </div>
-
-        <SignatureCanvas
-          ref={sigRef}
-          penColor="black"
-          canvasProps={{
-            width: 400,
-            height: 160,
-            className: "border rounded-lg w-full",
-          }}
-        />
-
-        <button
-          type="button"
-          className="mt-2 text-sm text-red-600"
-          onClick={() => sigRef.current.clear()}
-        >
-          Clear Signature
-        </button>
-      </div>
-
-      {/* CONSENT */}
-      <div className="mb-8 bg-gray-50 border rounded-lg p-4">
-        <label className="flex items-start gap-3 text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            checked={agree}
-            onChange={e => setAgree(e.target.checked)}
-            className="mt-1"
-          />
-          <span className="text-gray-700 leading-relaxed">
-            I confirm that this digital signature will be used to
-            automatically generate and digitally sign the rent
-            agreement with tenants on my behalf.
-          </span>
-        </label>
-      </div>
-
-      <button
-        onClick={uploadDocs}
-        disabled={loading || !agree}
-        className={`w-full py-3 rounded-lg text-white transition ${
-          agree
-            ? "bg-blue-600 hover:bg-blue-700"
-            : "bg-gray-400 cursor-not-allowed"
-        }`}
-      >
-        {loading ? "Uploading..." : "Submit Documents"}
-      </button>
+      )}
     </div>
   );
 }
+
+/* ================= UI COMPONENTS ================= */
+
+const Input = ({ value, onChange, ...props }) => (
+  <input
+    {...props}
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    className="w-full border p-3 rounded-lg text-center tracking-widest"
+  />
+);
+
+const Button = ({ children, loading, ...props }) => (
+  <button
+    {...props}
+    className="w-full bg-blue-600 text-white py-3 rounded-lg"
+  >
+    {loading ? "Please wait..." : children}
+  </button>
+);
+
+const StepIndicator = ({ step }) => {
+  const steps = ["Aadhaar", "OTP", "Done"];
+
+  return (
+    <div className="flex justify-between">
+      {steps.map((s, i) => (
+        <div key={i} className={`text-xs ${step >= i + 1 && "text-blue-600"}`}>
+          {s}
+        </div>
+      ))}
+    </div>
+  );
+};
