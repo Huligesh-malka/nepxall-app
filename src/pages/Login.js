@@ -1,227 +1,463 @@
-import React, { useState } from "react";
-import axios from "axios";
+import React, { useState, useEffect } from "react";
 import {
-  Box,
-  TextField,
-  Button,
-  Typography,
-  Paper,
-  Divider,
-  CircularProgress,
-  Alert
+  Box, TextField, Button, Typography, Paper,
+  CircularProgress, Alert, MenuItem, Snackbar
 } from "@mui/material";
-import {
-  signInWithEmailAndPassword,
-  GoogleAuthProvider,
-  signInWithPopup
-} from "firebase/auth";
 import { auth } from "../firebase";
-import { useNavigate, Link } from "react-router-dom";
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import { userAPI } from "../api/api";
+import { useNavigate } from "react-router-dom";
 
-const API = process.env.REACT_APP_API;
-
-const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+const PhoneLogin = () => {
+  // Form states
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [confirmObj, setConfirmObj] = useState(null);
+  const [firebaseUser, setFirebaseUser] = useState(null);
+  
+  // UI states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  
+  // User states
+  const [role, setRole] = useState("tenant");
+  const [isNewUser, setIsNewUser] = useState(false);
+  
+  // OTP timer
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [canResend, setCanResend] = useState(true);
+
   const navigate = useNavigate();
 
-  /* 🔐 FINAL REDIRECT HANDLER */
-  const redirectByRole = async (user) => {
-    try {
-      const firebaseToken = await user.getIdToken();
+  /* ================= SESSION RESTORE ================= */
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const savedRole = localStorage.getItem("role");
+    const savedName = localStorage.getItem("name");
+    
+    if (token && savedRole) {
+      console.log("🔄 Restoring session for:", savedName);
+      redirect(savedRole);
+    }
+  }, []);
 
-      const res = await axios.post(`${API}/auth/google`, {
-        idToken: firebaseToken
+  /* ================= OTP TIMER ================= */
+  useEffect(() => {
+    let timer;
+    if (otpTimer > 0) {
+      timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
+      setCanResend(false);
+    } else {
+      setCanResend(true);
+    }
+    return () => clearTimeout(timer);
+  }, [otpTimer]);
+
+  /* ================= INIT RECAPTCHA ONCE ================= */
+  useEffect(() => {
+    if (!window.recaptchaVerifier) {
+      try {
+        window.recaptchaVerifier = new RecaptchaVerifier(
+          auth,
+          "recaptcha-container",
+          {
+            size: "invisible",
+            callback: () => {
+              console.log("✅ Recaptcha verified");
+            }
+          }
+        );
+      } catch (err) {
+        console.error("❌ Recaptcha init error:", err);
+        setError("Failed to initialize verification. Please refresh.");
+      }
+    }
+  }, []);
+
+  /* ================= CLEANUP RECAPTCHA ================= */
+  useEffect(() => {
+    return () => {
+      if (window.recaptchaVerifier) {
+        try {
+          window.recaptchaVerifier.clear();
+          window.recaptchaVerifier = null;
+        } catch (err) {
+          console.error("❌ Recaptcha cleanup error:", err);
+        }
+      }
+    };
+  }, []);
+
+  /* ================= REDIRECT ================= */
+  const redirect = (role) => {
+    console.log("🚀 Redirecting with role:", role);
+    
+    if (role === "admin") {
+      navigate("/admin/dashboard");
+    } else if (role === "owner") {
+      navigate("/owner/dashboard");
+    } else {
+      navigate("/");
+    }
+  };
+
+  /* ================= BACKEND LOGIN ================= */
+  const syncUser = async (user, selectedRole) => {
+    try {
+      setLoading(true);
+      setError("");
+
+      console.log("🔄 Syncing user with backend...");
+      
+      // Get fresh token
+      const idToken = await user.getIdToken(true);
+      
+      console.log("🔑 Firebase token obtained");
+
+      const res = await userAPI.post("/auth/firebase", {
+        idToken,
+        role: selectedRole
       });
 
-      /* ✅ STORE DATA */
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("role", res.data.role);
-      localStorage.setItem("uid", user.uid);
-      localStorage.setItem("email", user.email);
+      console.log("✅ Backend response:", res.data);
 
-      /* 🔥 TRIGGER SIDEBAR RE-RENDER */
-      window.dispatchEvent(new Event("storage"));
-      window.dispatchEvent(new Event("role-updated"));
-
-      /* ✅ REDIRECT BY ROLE */
-      if (res.data.role === "admin") {
-        navigate("/admin/owner-verification", { replace: true });
-      } else if (res.data.role === "owner") {
-        navigate("/owner/dashboard", { replace: true });
+      if (res.data.success) {
+        // Store user data
+        localStorage.setItem("token", res.data.token);
+        localStorage.setItem("role", res.data.role);
+        localStorage.setItem("name", res.data.name);
+        localStorage.setItem("userId", res.data.user?.id || "");
+        
+        setSuccess(`Welcome ${res.data.name}!`);
+        
+        // Redirect after short delay
+        setTimeout(() => redirect(res.data.role), 1000);
       } else {
-        navigate("/", { replace: true });
+        throw new Error(res.data.message || "Backend login failed");
       }
 
     } catch (err) {
-      console.error("Backend Auth Error:", err);
-      setError(
-        err.response?.data?.message ||
-        "Server error: Could not verify user role."
-      );
+      console.error("❌ Backend sync error:", err);
+      
+      const errorMsg = err?.response?.data?.message || 
+                       err?.message || 
+                       "Backend login failed";
+      
+      setError(errorMsg);
+      
+      // If backend error, sign out from Firebase
+      await auth.signOut();
+      
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= GOOGLE LOGIN ================= */
-  const handleGoogleLogin = async () => {
+  /* ================= SEND OTP ================= */
+  const sendOtp = async () => {
+    // Validate phone
+    if (!phone || phone.length !== 10) {
+      return setError("Please enter a valid 10-digit mobile number");
+    }
+
+    // Validate recaptcha
+    if (!window.recaptchaVerifier) {
+      return setError("Verification not initialized. Please refresh.");
+    }
+
     try {
       setLoading(true);
       setError("");
+      setSuccess("");
 
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: "select_account" });
+      console.log("📱 Sending OTP to:", `+91${phone}`);
 
-      const result = await signInWithPopup(auth, provider);
-      await redirectByRole(result.user);
+      const confirmation = await signInWithPhoneNumber(
+        auth,
+        `+91${phone}`,
+        window.recaptchaVerifier
+      );
+
+      setConfirmObj(confirmation);
+      setSuccess(`OTP sent to +91 ${phone}`);
+      
+      // Start 60-second timer for resend
+      setOtpTimer(60);
+      
+      console.log("✅ OTP sent successfully");
 
     } catch (err) {
-      console.error("Google Login Error:", err);
-      setError("Google login failed. Please try again.");
+      console.error("❌ Send OTP error:", err);
+      
+      // Handle specific Firebase errors
+      if (err.code === 'auth/invalid-phone-number') {
+        setError("Invalid phone number format");
+      } else if (err.code === 'auth/too-many-requests') {
+        setError("Too many attempts. Please try again later.");
+      } else if (err.code === 'auth/quota-exceeded') {
+        setError("SMS quota exceeded. Please try email login.");
+      } else {
+        setError(err.message || "Failed to send OTP");
+      }
+      
+      // Reset recaptcha
+      if (window.recaptchaVerifier) {
+        try {
+          window.recaptchaVerifier.clear();
+          window.recaptchaVerifier = null;
+        } catch (clearErr) {
+          console.error("❌ Recaptcha clear error:", clearErr);
+        }
+      }
+      
+    } finally {
       setLoading(false);
     }
   };
 
-  /* ================= EMAIL LOGIN ================= */
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  /* ================= RESEND OTP ================= */
+  const resendOtp = async () => {
+    if (!canResend) return;
+    setOtp("");
+    await sendOtp();
+  };
 
-    if (!email || !password) {
-      setError("Please fill in all fields.");
-      return;
+  /* ================= VERIFY OTP ================= */
+  const verifyOtp = async () => {
+    if (!otp || otp.length !== 6) {
+      return setError("Please enter a valid 6-digit OTP");
+    }
+
+    if (!confirmObj) {
+      return setError("Session expired. Please request OTP again.");
     }
 
     try {
       setLoading(true);
       setError("");
+      setSuccess("");
 
-      const res = await signInWithEmailAndPassword(
-        auth,
-        email.trim(),
-        password
-      );
+      console.log("🔐 Verifying OTP...");
 
-      await redirectByRole(res.user);
+      const res = await confirmObj.confirm(otp);
+      
+      console.log("✅ Firebase verification successful");
+      console.log("👤 User:", res.user.uid);
+      console.log("🆕 Is new user:", res._tokenResponse?.isNewUser);
 
-    } catch (err) {
-      console.error("Firebase Auth Error:", err.code);
+      setFirebaseUser(res.user);
+      setSuccess("Phone verified successfully!");
 
-      if (err.code === "auth/invalid-credential") {
-        setError("Invalid email or password.");
-      } else if (err.code === "auth/user-not-found") {
-        setError("Account not found. Please register first.");
-      } else if (err.code === "auth/wrong-password") {
-        setError("Incorrect password.");
-      } else if (err.code === "auth/too-many-requests") {
-        setError("Too many failed attempts. Please try again later.");
-      } else if (err.code === "auth/network-request-failed") {
-        setError("Network error. Please check your connection.");
+      // Check if new user
+      if (res._tokenResponse?.isNewUser) {
+        console.log("🆕 New user - showing role selection");
+        setIsNewUser(true);
+        setLoading(false);
       } else {
-        setError("Login failed. Please try again.");
+        console.log("✅ Existing user - logging in");
+        await syncUser(res.user, "tenant");
       }
 
+    } catch (err) {
+      console.error("❌ OTP verification error:", err);
+      
+      if (err.code === 'auth/invalid-verification-code') {
+        setError("Invalid OTP. Please try again.");
+      } else if (err.code === 'auth/code-expired') {
+        setError("OTP expired. Please request again.");
+        setConfirmObj(null);
+        setOtp("");
+      } else {
+        setError(err.message || "Failed to verify OTP");
+      }
+      
+    } finally {
       setLoading(false);
     }
+  };
+
+  /* ================= COMPLETE REGISTRATION ================= */
+  const completeRegistration = async () => {
+    if (!firebaseUser) {
+      return setError("Session expired. Please start over.");
+    }
+    
+    await syncUser(firebaseUser, role);
+  };
+
+  /* ================= CANCEL AND START OVER ================= */
+  const startOver = () => {
+    setConfirmObj(null);
+    setIsNewUser(false);
+    setFirebaseUser(null);
+    setOtp("");
+    setError("");
+    setSuccess("");
   };
 
   return (
-    <Box
-      minHeight="100vh"
-      display="flex"
-      justifyContent="center"
-      alignItems="center"
-      bgcolor="#f1f5f9"
-      sx={{
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-      }}
-    >
-      <Paper sx={{
-        p: 4,
-        width: 380,
-        borderRadius: 3,
-        boxShadow: "0 10px 40px rgba(0,0,0,0.1)",
-        backdropFilter: "blur(10px)",
-        backgroundColor: "rgba(255, 255, 255, 0.95)"
-      }}>
-        <Typography variant="h5" mb={1} fontWeight="bold" color="#0B5ED7" align="center">
-          Welcome Back
+    <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+      <Paper sx={{ p: 4, width: 360, position: 'relative' }}>
+        
+        <Typography variant="h5" align="center" mb={2}>
+          {isNewUser ? "Complete Registration" : "Phone Login"}
         </Typography>
 
-        <Typography variant="body2" color="text.secondary" mb={3} align="center">
-          Login to access your account
-        </Typography>
-
+        {/* Error Alert */}
         {error && (
-          <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>
             {error}
           </Alert>
         )}
 
-        <Button
-          fullWidth
-          variant="outlined"
-          onClick={handleGoogleLogin}
-          disabled={loading}
-          sx={{
-            height: 45,
-            borderColor: "#dadce0",
-            color: "#3c4043",
-            backgroundColor: "white",
-            borderRadius: 2,
-            textTransform: "none",
-            fontSize: "16px",
-            fontWeight: 500
-          }}
-          startIcon={
-            <img
-              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-              alt="Google"
-              style={{ width: 20 }}
-            />
-          }
+        {/* Success Message */}
+        <Snackbar
+          open={!!success}
+          autoHideDuration={3000}
+          onClose={() => setSuccess("")}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         >
-          {loading ? <CircularProgress size={24} /> : "Continue with Google"}
-        </Button>
+          <Alert severity="success" onClose={() => setSuccess("")}>
+            {success}
+          </Alert>
+        </Snackbar>
 
-        <Divider sx={{ my: 3 }}>OR</Divider>
+        {/* Phone Input Step */}
+        {!confirmObj && !isNewUser && (
+          <>
+            <TextField
+              fullWidth
+              label="Mobile Number"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              margin="normal"
+              placeholder="10-digit mobile number"
+              disabled={loading}
+              InputProps={{
+                startAdornment: <Typography sx={{ mr: 1 }}>+91</Typography>
+              }}
+            />
 
-        <form onSubmit={handleLogin}>
-          <TextField fullWidth label="Email" margin="normal"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={loading}
-            size="small"
-          />
+            <Button 
+              fullWidth 
+              variant="contained" 
+              onClick={sendOtp} 
+              disabled={loading || phone.length !== 10}
+              sx={{ mt: 2 }}
+            >
+              {loading ? <CircularProgress size={24} /> : "Send OTP"}
+            </Button>
+          </>
+        )}
 
-          <TextField fullWidth label="Password" type="password" margin="normal"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={loading}
-            size="small"
-          />
+        {/* OTP Verification Step */}
+        {confirmObj && !isNewUser && (
+          <>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              OTP sent to <strong>+91 {phone}</strong>
+            </Typography>
 
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, height: 45 }}
-            disabled={loading}
-          >
-            {loading ? <CircularProgress size={24} color="inherit" /> : "Login"}
-          </Button>
-        </form>
+            <TextField
+              fullWidth
+              label="Enter 6-digit OTP"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              margin="normal"
+              placeholder="123456"
+              disabled={loading}
+            />
 
-        <Box mt={3} textAlign="center">
-          <Typography variant="body2">
-            Don't have an account? <Link to="/register">Register</Link>
-          </Typography>
-        </Box>
+            <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+              <Button 
+                fullWidth 
+                variant="contained" 
+                onClick={verifyOtp} 
+                disabled={loading || otp.length !== 6}
+              >
+                {loading ? <CircularProgress size={24} /> : "Verify OTP"}
+              </Button>
+              
+              <Button 
+                variant="outlined" 
+                onClick={startOver}
+                disabled={loading}
+              >
+                Change
+              </Button>
+            </Box>
+
+            {/* Resend OTP */}
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+              {otpTimer > 0 ? (
+                <Typography variant="caption" color="text.secondary">
+                  Resend OTP in {otpTimer}s
+                </Typography>
+              ) : (
+                <Button 
+                  size="small" 
+                  onClick={resendOtp}
+                  disabled={loading || !canResend}
+                >
+                  Resend OTP
+                </Button>
+              )}
+            </Box>
+          </>
+        )}
+
+        {/* New User Registration Step */}
+        {isNewUser && (
+          <>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              Welcome! Complete your registration
+            </Typography>
+
+            <TextField
+              select
+              fullWidth
+              label="Register as"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              margin="normal"
+              disabled={loading}
+            >
+              <MenuItem value="tenant">Tenant (Looking for PG)</MenuItem>
+              <MenuItem value="owner">Owner (List your PG)</MenuItem>
+            </TextField>
+
+            <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={completeRegistration}
+                disabled={loading}
+              >
+                {loading ? <CircularProgress size={24} /> : "Continue"}
+              </Button>
+              
+              <Button 
+                variant="outlined" 
+                onClick={startOver}
+                disabled={loading}
+              >
+                Back
+              </Button>
+            </Box>
+          </>
+        )}
+
+        {/* Recaptcha Container */}
+        <div id="recaptcha-container"></div>
+
+        {/* Help Text */}
+        <Typography variant="caption" display="block" align="center" sx={{ mt: 2 }} color="text.secondary">
+          By continuing, you agree to our Terms & Privacy Policy
+        </Typography>
+
       </Paper>
     </Box>
   );
 };
 
-export default Login;
+export default PhoneLogin;
