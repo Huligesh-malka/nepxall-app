@@ -41,12 +41,36 @@ const Sidebar = () => {
             <hr style={divider} />
             <p style={sectionLabel}>TENANT</p>
 
-            <Link style={linkStyle(isActive("/user/my-stay"))} to="/user/my-stay">🏠 My Stay</Link>
-            <Link style={linkStyle(isActive("/user/bookings"))} to="/user/bookings">📜 My Bookings</Link>
-            <Link style={linkStyle(isActive("/user/favorites"))} to="/user/favorites">❤️ Favorites</Link>
-            <Link style={linkStyle(isActive("/user/profile"))} to="/user/profile">👤 Profile</Link>
-            <Link style={linkStyle(isActive("/user/aadhaar-kyc"))} to="/user/aadhaar-kyc">🛂 Aadhaar KYC</Link>
-            <Link style={linkStyle(isActive("/"))} to="/">🔍 Browse Properties</Link>
+       <Link style={linkStyle(isActive("/user/my-stay"))} to="/user/my-stay">
+  🏠 My Stay
+</Link>
+
+<Link style={linkStyle(isActive("/user/bookings"))} to="/user/bookings">
+  📜 My Bookings
+</Link>
+
+<Link style={linkStyle(isActive("/user/aadhaar-kyc"))} to="/user/aadhaar-kyc">
+  🛂 Aadhaar KYC
+</Link>
+
+<Link style={linkStyle(isActive("/"))} to="/">
+  🔍 Browse Properties
+</Link>
+
+{/* ✅ Cashfree Required Links */}
+<hr style={{ margin: "15px 0", opacity: 0.2 }} />
+
+<Link style={linkStyle(isActive("/contact"))} to="/contact">
+  📞 Contact Us
+</Link>
+
+<Link style={linkStyle(isActive("/terms"))} to="/terms">
+  📄 Terms & Conditions
+</Link>
+
+<Link style={linkStyle(isActive("/refund-policy"))} to="/refund-policy">
+  💰 Refund Policy
+</Link>
           </>
         )}
 

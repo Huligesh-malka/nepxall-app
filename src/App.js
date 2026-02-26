@@ -24,6 +24,11 @@ import AadhaarKyc from "./pages/AadhaarKyc";
 import VisitSchedulePage from "./pages/VisitSchedulePage";
 import PublicAgreementPage from "./pages/PublicAgreementPage";
 
+/* CASHFREE REQUIRED PAGES */
+import Contact from "./pages/Contact";
+import Terms from "./pages/Terms";
+import RefundPolicy from "./pages/RefundPolicy";
+
 /* CHAT */
 import PgChat from "./pages/PgChat";
 import PrivateChat from "./pages/PrivateChat";
@@ -77,6 +82,7 @@ function App() {
 
       {/* ================= USER ================= */}
       <Route element={<MainLayout />}>
+
         <Route index element={<UserPGSearch />} />
         <Route path="pg/:id" element={<PGDetails />} />
         <Route path="booking/:pgId" element={<BookingForm />} />
@@ -88,14 +94,23 @@ function App() {
         <Route path="user/notifications" element={<NotificationBell />} />
         <Route path="user/visit-schedule/:bookingId" element={<VisitSchedulePage />} />
         <Route path="user/aadhaar-kyc" element={<AadhaarKyc />} />
-        <Route path="/public/agreement/:hash" element={<PublicAgreementPage />} />
+        <Route path="public/agreement/:hash" element={<PublicAgreementPage />} />
+
+        {/* CHAT */}
         <Route path="pg-chat/:pgId" element={<PgChat />} />
         <Route path="user/pg-announcements/:pgId" element={<PgAnnouncements />} />
         <Route path="chat/private/:userId" element={<PrivateChat />} />
+
+        {/* ✅ CASHFREE POLICY PAGES */}
+        <Route path="contact" element={<Contact />} />
+        <Route path="terms" element={<Terms />} />
+        <Route path="refund-policy" element={<RefundPolicy />} />
+
       </Route>
 
       {/* ================= OWNER ================= */}
       <Route path="/owner" element={<OwnerLayout />}>
+
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<OwnerDashboard />} />
         <Route path="pgs" element={<OwnerDashboard />} />
@@ -116,17 +131,16 @@ function App() {
         <Route path="pg-chat/:pgId" element={<PgChat />} />
         <Route path="chat/private/:userId" element={<PrivateChat />} />
         <Route path="chats" element={<OwnerChatList />} />
+
       </Route>
 
       {/* ================= ADMIN ================= */}
       <Route path="/admin" element={<AdminLayout />}>
 
         <Route index element={<Navigate to="finance" replace />} />
-
         <Route path="finance" element={<AdminFinanceDashboard />} />
         <Route path="settlements" element={<AdminSettlements />} />
         <Route path="settlement-history" element={<SettlementHistory />} />
-
         <Route path="pending-pgs" element={<AdminPendingPGs />} />
         <Route path="pg/:id" element={<AdminPGDetails />} />
         <Route path="owner-verification" element={<AdminOwnerVerification />} />
