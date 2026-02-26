@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { auth } from "../../firebase";
 import { useNavigate } from "react-router-dom";
+import { API_CONFIG } from "../../config";   // ✅ USE CONFIG
 
-const API = "http://localhost:5000/api/owner";
+const API = `${API_CONFIG.USER_API_URL}/owner`;  // ✅ AUTO SWITCH LOCAL/PROD
 
 export default function OwnerVerification() {
   const navigate = useNavigate();
@@ -39,16 +40,18 @@ export default function OwnerVerification() {
   const checkStatus = async () => {
     try {
       const config = await getHeaders();
-      const res = await axios.get(`${API}/verification/status`, config);
+
+      const res = await axios.get(
+        `${API}/verification/status`,
+        config
+      );
 
       if (res.data.aadhaar_verified) {
         setVerified(true);
         setStep(3);
-
-        // ✅ AUTO REDIRECT AFTER 2 SEC
         setTimeout(() => navigate("/owner/bank"), 2000);
       }
-    } catch (err) {
+    } catch {
       console.log("Not verified yet");
     } finally {
       setInitialLoading(false);
@@ -73,7 +76,6 @@ export default function OwnerVerification() {
       setMaskedAadhaar(`XXXX XXXX ${aadhaar.slice(-4)}`);
       setStep(2);
       alert(res.data.message || "OTP sent successfully");
-
     } catch (err) {
       alert(err?.response?.data?.message || "OTP send failed");
     } finally {
@@ -102,7 +104,6 @@ export default function OwnerVerification() {
       alert(res.data.message || "Verification successful");
 
       setTimeout(() => navigate("/owner/bank"), 2000);
-
     } catch (err) {
       alert(err?.response?.data?.message || "Invalid OTP");
     } finally {
@@ -110,7 +111,7 @@ export default function OwnerVerification() {
     }
   };
 
-  /* ================= LOADING SCREEN ================= */
+  /* ================= LOADING ================= */
 
   if (initialLoading) {
     return (
@@ -124,7 +125,6 @@ export default function OwnerVerification() {
 
   return (
     <div className="max-w-md mx-auto bg-white p-8 rounded-xl shadow space-y-6">
-
       <div className="text-center">
         <h2 className="text-2xl font-bold">Owner KYC Verification</h2>
         <p className="text-sm text-gray-500">
@@ -134,7 +134,6 @@ export default function OwnerVerification() {
 
       <StepIndicator step={step} />
 
-      {/* STEP 1 */}
       {step === 1 && (
         <>
           <Input
@@ -154,7 +153,6 @@ export default function OwnerVerification() {
         </>
       )}
 
-      {/* STEP 2 */}
       {step === 2 && (
         <>
           <p className="text-sm text-gray-500 text-center">
@@ -182,7 +180,6 @@ export default function OwnerVerification() {
         </>
       )}
 
-      {/* STEP 3 */}
       {step === 3 && (
         <div className="text-center text-green-600 font-semibold">
           ✅ Aadhaar Verified <br />
