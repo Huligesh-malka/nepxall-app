@@ -164,9 +164,26 @@ export const isCashfreeLoaded = () => {
 };
 
 /* =====================================================
+   🖼️ IMAGE URL HELPER
+===================================================== */
+export const getImageUrl = (imagePath) => {
+  if (!imagePath) return "/placeholder-image.jpg";
+  
+  // If it's already a full URL, return as is
+  if (imagePath.startsWith("http")) return imagePath;
+  
+  // Remove leading slash if present
+  const cleanPath = imagePath.startsWith("/") ? imagePath.slice(1) : imagePath;
+  
+  // Construct full URL using BACKEND_URL
+  return `${BACKEND_URL}/${cleanPath}`;
+};
+
+/* =====================================================
    🌐 GLOBAL DEBUG (DEV ONLY)
 ===================================================== */
 if (typeof window !== "undefined" && !IS_PRODUCTION) {
   window.API_CONFIG = API_CONFIG;
   window.testBackend = testBackendConnection;
+  window.getImageUrl = getImageUrl;
 }

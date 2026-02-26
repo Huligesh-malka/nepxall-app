@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { auth } from "../firebase";
 import { useNavigate } from "react-router-dom";
-
-// API Base URL - Move to one constant
-const API_BASE = "http://localhost:5000";
+import { pgAPI } from "../api/api"; // ✅ Using pgAPI convenience methods
+import { getImageUrl } from "../config"; // ✅ Image URL helper
 
 // Fix for default marker icons in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -227,7 +225,7 @@ function OwnerAddPG() {
   const [mapLoading, setMapLoading] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
-  const [user, setUser] = useState(null); // Store Firebase user object
+  const [user, setUser] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(initialLocation);
   const [photos, setPhotos] = useState([]);
   const [roomRates, setRoomRates] = useState(initialRoomRates);
@@ -241,7 +239,7 @@ function OwnerAddPG() {
   const isPG = form.pg_category === "pg";
   const isCoLiving = form.pg_category === "coliving";
 
-  // ✅ FIX 1: Add CSS animation properly
+  // Add CSS animation properly
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
@@ -251,11 +249,10 @@ function OwnerAddPG() {
       }
     `;
     document.head.appendChild(style);
-
     return () => document.head.removeChild(style);
   }, []);
 
-  // ✅ FIX 2: Store user from onAuthStateChanged
+  // Store user from onAuthStateChanged
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       if (currentUser) {
@@ -358,7 +355,6 @@ function OwnerAddPG() {
         }
       },
       {
-        // ✅ FIX 9: Disable high accuracy for production
         enableHighAccuracy: false,
         timeout: 10000,
         maximumAge: 0
@@ -366,15 +362,15 @@ function OwnerAddPG() {
     );
   };
 
-  // Fetch address from coordinates
+  // Fetch address from coordinates using OpenStreetMap Nominatim
   const fetchAddressFromCoordinates = async (lat, lng) => {
     try {
       setMapLoading(true);
-      const response = await axios.get(
+      const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`
       );
       
-      const data = response.data;
+      const data = await response.json();
       
       if (data) {
         const address = data.display_name || "";
@@ -422,12 +418,14 @@ function OwnerAddPG() {
     
     try {
       setMapLoading(true);
-      const response = await axios.get(
+      const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5`
       );
       
-      if (response.data && response.data.length > 0) {
-        const location = response.data[0];
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        const location = data[0];
         const lat = parseFloat(location.lat);
         const lng = parseFloat(location.lon);
         
@@ -535,7 +533,7 @@ function OwnerAddPG() {
     setSelectedLocation(initialLocation);
   };
 
-  // ✅ FIX 5: Validation function
+  // Validation function
   const validateForm = () => {
     if (!form.pg_name?.trim()) return "Enter property name";
     if (!selectedLocation.address?.trim()) return "Select location from map or enter manually";
@@ -556,23 +554,21 @@ function OwnerAddPG() {
     return null;
   };
 
-  // ✅ FIX 6: Helper to append only non-empty values
+  // Helper to append only non-empty values
   const appendIfValue = (formData, key, value) => {
     if (value !== "" && value !== null && value !== undefined) {
       formData.append(key, value.toString());
     }
   };
 
-  // Handle form submission
+  // Handle form submission using pgAPI convenience method
   const handleSubmit = async () => {
-    // ✅ FIX 2 & 7: Use stored user instead of auth.currentUser
     if (!user) {
       alert("Please log in to add a property");
       navigate("/login");
       return;
     }
 
-    // ✅ FIX 5: Run validation
     const validationError = validateForm();
     if (validationError) {
       alert(validationError);
@@ -595,6 +591,9 @@ function OwnerAddPG() {
       appendIfValue(formData, "road", selectedLocation.road);
       appendIfValue(formData, "landmark", selectedLocation.landmark);
       formData.append("city", selectedLocation.city);
+      appendIfValue(formData, "state", selectedLocation.state);
+      appendIfValue(formData, "pincode", selectedLocation.pincode);
+      appendIfValue(formData, "country", selectedLocation.country);
       
       // Coordinates
       const lat = parseCoordinate(selectedLocation.lat);
@@ -724,24 +723,15 @@ function OwnerAddPG() {
       });
 
       console.log("Submitting property data with owner UID:", user.uid);
+      console.log("API URL:", pgAPI.createProperty.toString()); // Debug log
       
-      // ✅ FIX 7: Use stored user for token
-      const token = await user.getIdToken();
-      const response = await axios.post(
-        `${API_BASE}/api/pg/add`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      // ✅ USING pgAPI CONVENIENCE METHOD
+      const response = await pgAPI.createProperty(formData);
 
       if (response.data.success) {
-        alert(`✅ ${isToLet ? 'House/Flat' : 'Property'} Created Successfully! ID: ${response.data.pg_id}`);
+        alert(`✅ ${isToLet ? 'House/Flat' : 'Property'} Created Successfully!`);
         
-        // ✅ FIX 4: Reset form using initial state
+        // Navigate to dashboard
         navigate("/owner/dashboard");
         
         // Reset all states
@@ -758,7 +748,16 @@ function OwnerAddPG() {
 
     } catch (err) {
       console.error("Error:", err.response?.data || err.message);
-      alert("❌ Failed to create property: " + (err.response?.data?.message || err.message || "Unknown error"));
+      
+      // Show more helpful error message
+      let errorMessage = "Unknown error";
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      alert(`❌ Failed to create property: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -1385,7 +1384,6 @@ function OwnerAddPG() {
     );
   }
 
-  // ✅ FIX 8: Enhanced disabled condition
   const isSubmitDisabled = loading || 
     !selectedLocation.address || 
     photos.length === 0 ||
