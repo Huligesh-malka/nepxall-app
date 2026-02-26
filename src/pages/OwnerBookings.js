@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
-import { pgAPI } from "../api/api"; // ✅ Using pgAPI instead of raw api
+import { pgAPI } from "../api/api";
 
 const OwnerBookings = () => {
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ const OwnerBookings = () => {
   const [actionLoading, setActionLoading] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [debugInfo, setDebugInfo] = useState("");
 
   /* ================= LOAD BOOKINGS ================= */
   const loadOwnerBookings = useCallback(async () => {
@@ -22,29 +23,53 @@ const OwnerBookings = () => {
         return;
       }
 
-      console.log("📡 Loading owner bookings...");
+      console.log("📡 Loading owner bookings for owner ID:", user.uid);
+      setDebugInfo(`Loading bookings for owner: ${user.uid}`);
       
       // ✅ Using pgAPI.getOwnerBookings()
       const res = await pgAPI.getOwnerBookings();
       
-      console.log("✅ Bookings loaded:", res.data);
+      console.log("✅ Bookings API Response:", res.data);
+      setDebugInfo(JSON.stringify(res.data, null, 2));
       
       // Handle different response formats
-      const bookingsData = Array.isArray(res.data) 
-        ? res.data 
-        : res.data?.bookings || [];
+      let bookingsData = [];
+      if (Array.isArray(res.data)) {
+        bookingsData = res.data;
+      } else if (res.data?.data && Array.isArray(res.data.data)) {
+        bookingsData = res.data.data;
+      } else if (res.data?.bookings && Array.isArray(res.data.bookings)) {
+        bookingsData = res.data.bookings;
+      } else if (res.data?.success && res.data?.bookings) {
+        bookingsData = res.data.bookings;
+      }
       
+      console.log("📊 Processed bookings:", bookingsData.length);
       setBookings(bookingsData);
       setError("");
       
     } catch (err) {
-      console.error("❌ Error loading bookings:", err.response?.data || err.message);
+      console.error("❌ Error loading bookings:", {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message
+      });
 
-      if (err.response?.status === 401) {
+      setDebugInfo(JSON.stringify({
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message
+      }, null, 2));
+
+      if (err.response?.status === 500) {
+        setError("Server error: Unable to load bookings. The backend service is having issues. Please try again later.");
+      } else if (err.response?.status === 401) {
         await auth.signOut();
         navigate("/login");
       } else if (err.response?.status === 403) {
         setError("You are not registered as an owner. Please complete your owner profile.");
+      } else if (err.response?.status === 404) {
+        setError("Bookings endpoint not found. Please check backend configuration.");
       } else {
         setError(err.response?.data?.message || "Failed to load bookings");
       }
@@ -66,7 +91,7 @@ const OwnerBookings = () => {
 
       console.log(`📡 Updating booking ${bookingId} to ${status}...`);
       
-      // ✅ Using pgAPI.updateBookingStatus()
+      // Using pgAPI.updateBookingStatus()
       await pgAPI.updateBookingStatus(bookingId, status);
 
       setSuccess(`Booking ${status} successfully!`);
@@ -74,32 +99,18 @@ const OwnerBookings = () => {
       // Reload bookings to show updated status
       await loadOwnerBookings();
 
-      // Clear success message after 3 seconds
       setTimeout(() => setSuccess(""), 3000);
 
     } catch (err) {
       console.error("❌ Error updating booking:", err.response?.data || err.message);
 
-      /* 🔐 OWNER NOT VERIFIED */
       if (err.response?.data?.code === "OWNER_NOT_VERIFIED") {
         alert("⚠️ Please complete owner verification before approving bookings.");
-        
-        setTimeout(() => {
-          navigate("/owner/bank");
-        }, 800);
+        setTimeout(() => navigate("/owner/bank"), 800);
         return;
       }
 
-      // Handle specific error cases
-      if (err.response?.status === 400) {
-        setError(err.response?.data?.message || "Invalid booking status update");
-      } else if (err.response?.status === 404) {
-        setError("Booking not found");
-      } else if (err.response?.status === 403) {
-        setError("You don't have permission to update this booking");
-      } else {
-        setError(err.response?.data?.message || "Failed to update booking");
-      }
+      setError(err.response?.data?.message || "Failed to update booking");
     } finally {
       setActionLoading(null);
     }
@@ -119,6 +130,13 @@ const OwnerBookings = () => {
     }
   };
 
+  /* ================= FORMAT CURRENCY ================= */
+  const formatCurrency = (amount) => {
+    if (!amount) return "₹0";
+    const num = Number(amount);
+    return isNaN(num) ? "₹0" : `₹${num.toLocaleString('en-IN')}`;
+  };
+
   /* ================= GET STATUS BADGE STYLE ================= */
   const getStatusStyle = (status) => {
     const baseStyle = {
@@ -131,20 +149,27 @@ const OwnerBookings = () => {
       textTransform: "uppercase"
     };
 
-    switch(status?.toLowerCase()) {
-      case 'approved':
-      case 'confirmed':
-        return { ...baseStyle, background: "#16a34a" };
-      case 'rejected':
-      case 'cancelled':
-        return { ...baseStyle, background: "#dc2626" };
-      case 'pending':
-        return { ...baseStyle, background: "#f59e0b" };
-      case 'completed':
-        return { ...baseStyle, background: "#2563eb" };
-      default:
-        return { ...baseStyle, background: "#6b7280" };
-    }
+    const statusMap = {
+      'pending': { bg: "#f59e0b", text: "PENDING" },
+      'approved': { bg: "#16a34a", text: "APPROVED" },
+      'agreement_ready': { bg: "#8b5cf6", text: "AGREEMENT READY" },
+      'kyc_pending': { bg: "#f97316", text: "KYC PENDING" },
+      'confirmed': { bg: "#2563eb", text: "CONFIRMED" },
+      'rejected': { bg: "#dc2626", text: "REJECTED" }
+    };
+
+    const statusKey = status?.toLowerCase() || 'pending';
+    const config = statusMap[statusKey] || statusMap.pending;
+    
+    return { ...baseStyle, background: config.bg };
+  };
+
+  /* ================= CALCULATE TOTAL AMOUNT ================= */
+  const calculateTotal = (booking) => {
+    const rent = Number(booking.rent_amount) || 0;
+    const deposit = Number(booking.security_deposit) || 0;
+    const maintenance = Number(booking.maintenance_amount) || 0;
+    return rent + deposit + maintenance;
   };
 
   /* ================= UI ================= */
@@ -154,6 +179,7 @@ const OwnerBookings = () => {
       <div style={loadingContainer}>
         <div style={spinner}></div>
         <p>Loading your bookings...</p>
+        {debugInfo && <pre style={debugStyle}>{debugInfo}</pre>}
       </div>
     );
   }
@@ -180,6 +206,12 @@ const OwnerBookings = () => {
       {error && (
         <div style={errorBox}>
           ❌ {error}
+          {debugInfo && (
+            <details style={{ marginTop: 10 }}>
+              <summary>Debug Info</summary>
+              <pre style={debugStyle}>{debugInfo}</pre>
+            </details>
+          )}
         </div>
       )}
 
@@ -194,6 +226,12 @@ const OwnerBookings = () => {
           <button style={reloadBtn} onClick={loadOwnerBookings}>
             🔄 Refresh
           </button>
+          {debugInfo && (
+            <details style={{ marginTop: 20 }}>
+              <summary>Debug Info</summary>
+              <pre style={debugStyle}>{debugInfo}</pre>
+            </details>
+          )}
         </div>
       ) : (
         <>
@@ -201,127 +239,138 @@ const OwnerBookings = () => {
             Showing {bookings.length} booking{bookings.length > 1 ? 's' : ''}
           </p>
           
-          {bookings.map((b) => (
-            <div key={b.id} style={card}>
-              <div style={cardHeader}>
-                <h3 style={pgName}>{b.pg_name}</h3>
-                <span style={getStatusStyle(b.status)}>
-                  {b.status?.toUpperCase() || 'PENDING'}
-                </span>
-              </div>
-
-              <div style={detailsGrid}>
-                <div style={detailItem}>
-                  <span style={detailLabel}>👤 Tenant:</span>
-                  <span style={detailValue}>{b.tenant_name || b.name || 'Unknown'}</span>
-                </div>
-
-                <div style={detailItem}>
-                  <span style={detailLabel}>📞 Phone:</span>
-                  <span style={detailValue}>{b.phone || b.tenant_phone || 'N/A'}</span>
-                </div>
-
-                <div style={detailItem}>
-                  <span style={detailLabel}>📧 Email:</span>
-                  <span style={detailValue}>{b.email || b.tenant_email || 'N/A'}</span>
-                </div>
-
-                <div style={detailItem}>
-                  <span style={detailLabel}>📅 Check-in:</span>
-                  <span style={detailValue}>{formatDate(b.check_in_date)}</span>
-                </div>
-
-                {b.check_out_date && (
-                  <div style={detailItem}>
-                    <span style={detailLabel}>📅 Check-out:</span>
-                    <span style={detailValue}>{formatDate(b.check_out_date)}</span>
-                  </div>
-                )}
-
-                <div style={detailItem}>
-                  <span style={detailLabel}>🛏️ Room Type:</span>
-                  <span style={detailValue}>{b.room_type || 'Standard'}</span>
-                </div>
-
-                <div style={detailItem}>
-                  <span style={detailLabel}>💰 Amount:</span>
-                  <span style={detailValue}>
-                    {b.amount ? `₹${Number(b.amount).toLocaleString()}` : 'N/A'}
+          {bookings.map((b) => {
+            const totalAmount = calculateTotal(b);
+            
+            return (
+              <div key={b.id} style={card}>
+                <div style={cardHeader}>
+                  <h3 style={pgName}>{b.pg_name || `Property #${b.pg_id}`}</h3>
+                  <span style={getStatusStyle(b.status)}>
+                    {b.status?.toUpperCase() || 'PENDING'}
                   </span>
                 </div>
 
-                <div style={detailItem}>
-                  <span style={detailLabel}>📝 Guests:</span>
-                  <span style={detailValue}>{b.guests || 1}</span>
+                <div style={detailsGrid}>
+                  <div style={detailItem}>
+                    <span style={detailLabel}>👤 Tenant:</span>
+                    <span style={detailValue}>{b.name || 'Unknown'}</span>
+                  </div>
+
+                  <div style={detailItem}>
+                    <span style={detailLabel}>📞 Phone:</span>
+                    <span style={detailValue}>{b.phone || 'N/A'}</span>
+                  </div>
+
+                  <div style={detailItem}>
+                    <span style={detailLabel}>📧 Email:</span>
+                    <span style={detailValue}>{b.email || 'N/A'}</span>
+                  </div>
+
+                  <div style={detailItem}>
+                    <span style={detailLabel}>📅 Check-in:</span>
+                    <span style={detailValue}>{formatDate(b.check_in_date)}</span>
+                  </div>
+
+                  <div style={detailItem}>
+                    <span style={detailLabel}>⏱️ Duration:</span>
+                    <span style={detailValue}>{b.duration || 6} months</span>
+                  </div>
+
+                  <div style={detailItem}>
+                    <span style={detailLabel}>🛏️ Room Type:</span>
+                    <span style={detailValue}>{b.room_type || 'Standard'}</span>
+                  </div>
+
+                  {b.rent_amount > 0 && (
+                    <div style={detailItem}>
+                      <span style={detailLabel}>💰 Rent:</span>
+                      <span style={detailValue}>{formatCurrency(b.rent_amount)}</span>
+                    </div>
+                  )}
+
+                  {b.security_deposit > 0 && (
+                    <div style={detailItem}>
+                      <span style={detailLabel}>🔒 Deposit:</span>
+                      <span style={detailValue}>{formatCurrency(b.security_deposit)}</span>
+                    </div>
+                  )}
+
+                  {b.maintenance_amount > 0 && (
+                    <div style={detailItem}>
+                      <span style={detailLabel}>🔧 Maintenance:</span>
+                      <span style={detailValue}>{formatCurrency(b.maintenance_amount)}</span>
+                    </div>
+                  )}
+
+                  <div style={detailItem}>
+                    <span style={detailLabel}>💵 Total Amount:</span>
+                    <span style={{...detailValue, fontWeight: 700, color: '#2563eb'}}>
+                      {formatCurrency(totalAmount)}
+                    </span>
+                  </div>
                 </div>
+
+                {b.message && (
+                  <div style={specialRequests}>
+                    <span style={detailLabel}>📝 Message:</span>
+                    <p style={requestsText}>{b.message}</p>
+                  </div>
+                )}
+
+                {b.status?.toLowerCase() === "pending" && (
+                  <div style={actionButtons}>
+                    <button
+                      style={approveBtn}
+                      disabled={actionLoading === b.id}
+                      onClick={() => updateStatus(b.id, "approved")}
+                    >
+                      {actionLoading === b.id ? "⏳ Processing..." : "✅ Approve"}
+                    </button>
+
+                    <button
+                      style={rejectBtn}
+                      disabled={actionLoading === b.id}
+                      onClick={() => updateStatus(b.id, "rejected")}
+                    >
+                      {actionLoading === b.id ? "⏳ Processing..." : "❌ Reject"}
+                    </button>
+                  </div>
+                )}
+
+                {b.status?.toLowerCase() === "approved" && (
+                  <div style={infoMessage}>
+                    ✅ Booking approved. Next step: Complete agreement.
+                  </div>
+                )}
+
+                {b.status?.toLowerCase() === "agreement_ready" && (
+                  <div style={infoMessage}>
+                    📄 Agreement ready. Waiting for tenant to sign.
+                  </div>
+                )}
+
+                {b.status?.toLowerCase() === "kyc_pending" && (
+                  <div style={infoMessage}>
+                    🆔 KYC verification pending from tenant.
+                  </div>
+                )}
+
+                {b.status?.toLowerCase() === "confirmed" && (
+                  <div style={infoMessage}>
+                    🎉 Booking confirmed! Tenant will check in on {formatDate(b.check_in_date)}.
+                  </div>
+                )}
+
+                {b.status?.toLowerCase() === "rejected" && (
+                  <div style={errorMessage}>
+                    ❌ Booking rejected.
+                    {b.reject_reason && <p style={{marginTop: 5}}>Reason: {b.reject_reason}</p>}
+                  </div>
+                )}
               </div>
-
-              {b.special_requests && (
-                <div style={specialRequests}>
-                  <span style={detailLabel}>📌 Special Requests:</span>
-                  <p style={requestsText}>{b.special_requests}</p>
-                </div>
-              )}
-
-              {b.status?.toLowerCase() === "pending" && (
-                <div style={actionButtons}>
-                  <button
-                    style={approveBtn}
-                    disabled={actionLoading === b.id}
-                    onClick={() => updateStatus(b.id, "approved")}
-                  >
-                    {actionLoading === b.id ? (
-                      <>⏳ Processing...</>
-                    ) : (
-                      <>✅ Approve Booking</>
-                    )}
-                  </button>
-
-                  <button
-                    style={rejectBtn}
-                    disabled={actionLoading === b.id}
-                    onClick={() => updateStatus(b.id, "rejected")}
-                  >
-                    {actionLoading === b.id ? (
-                      <>⏳ Processing...</>
-                    ) : (
-                      <>❌ Reject Booking</>
-                    )}
-                  </button>
-                </div>
-              )}
-
-              {b.status?.toLowerCase() === "approved" && (
-                <div style={infoMessage}>
-                  ✅ Booking approved. Contact tenant to confirm check-in details.
-                </div>
-              )}
-
-              {b.status?.toLowerCase() === "confirmed" && (
-                <div style={infoMessage}>
-                  🎉 Booking confirmed! Tenant will check in on {formatDate(b.check_in_date)}.
-                </div>
-              )}
-
-              {b.status?.toLowerCase() === "completed" && (
-                <div style={infoMessage}>
-                  ✨ Booking completed. Thank you for your service!
-                </div>
-              )}
-
-              {b.status?.toLowerCase() === "rejected" && (
-                <div style={errorMessage}>
-                  ❌ Booking rejected. The tenant has been notified.
-                </div>
-              )}
-
-              {b.status?.toLowerCase() === "cancelled" && (
-                <div style={errorMessage}>
-                  ❌ Booking cancelled by tenant.
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </>
       )}
     </div>
@@ -550,6 +599,18 @@ const summary = {
   color: "#6b7280",
   marginBottom: 20,
   fontSize: "14px",
+};
+
+const debugStyle = {
+  background: "#1e293b",
+  color: "#e2e8f0",
+  padding: 10,
+  borderRadius: 6,
+  fontSize: "12px",
+  overflow: "auto",
+  maxHeight: "200px",
+  marginTop: 10,
+  textAlign: "left",
 };
 
 // Add global animation
