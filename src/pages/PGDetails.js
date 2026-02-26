@@ -1,17 +1,10 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import api from "../api/api";
 import { auth } from "../firebase";
-
-
-
-const BACKEND_URL = import.meta.env.VITE_API_URL?.replace("/api", "") ||
-  "http://localhost:5000";
-const PG_API = `${BACKEND_URL}/api/pg`;
 
 /* ================= LEAFLET FIX ================= */
 delete L.Icon.Default.prototype._getIconUrl;
@@ -23,6 +16,9 @@ L.Icon.Default.mergeOptions({
   shadowUrl:
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
+
+// Base URL for images (from env, remove /api suffix)
+const BASE_URL = import.meta.env.VITE_API_URL?.replace("/api", "") || "";
 
 // Helper functions
 const getHighlightIcon = (category, type) => {
@@ -152,7 +148,6 @@ const PriceDetails = ({ pg }) => {
     return `₹${parseInt(price).toLocaleString('en-IN')}`;
   };
 
-  // Check if any price exists
   const hasAnyPrice = () => {
     if (!pg) return false;
     
@@ -177,7 +172,6 @@ const PriceDetails = ({ pg }) => {
 
   return (
     <div style={styles.priceDetailsContainer}>
-      {/* TO LET Prices */}
       {isToLet && (
         <div style={styles.priceSection}>
           <h4 style={styles.priceSectionTitle}>
@@ -246,7 +240,6 @@ const PriceDetails = ({ pg }) => {
         </div>
       )}
 
-      {/* CO-LIVING Prices */}
       {isCoLiving && (
         <div style={styles.priceSection}>
           <h4 style={styles.priceSectionTitle}>
@@ -289,7 +282,6 @@ const PriceDetails = ({ pg }) => {
         </div>
       )}
 
-      {/* PG/HOSTEL Prices */}
       {isPG && (
         <div style={styles.priceSection}>
           <h4 style={styles.priceSectionTitle}>
@@ -297,7 +289,6 @@ const PriceDetails = ({ pg }) => {
             PG/Hostel Room Prices
           </h4>
           
-          {/* Sharing Rooms */}
           {(pg.single_sharing || pg.double_sharing || pg.triple_sharing || pg.four_sharing) && (
             <div style={styles.priceCategory}>
               <div style={styles.priceCategoryTitle}>Sharing Rooms</div>
@@ -338,7 +329,6 @@ const PriceDetails = ({ pg }) => {
             </div>
           )}
 
-          {/* Private Rooms */}
           {(pg.single_room || pg.double_room || pg.triple_room) && (
             <div style={styles.priceCategory}>
               <div style={styles.priceCategoryTitle}>Private Rooms</div>
@@ -371,7 +361,6 @@ const PriceDetails = ({ pg }) => {
             </div>
           )}
 
-          {/* Additional Charges */}
           {(pg.security_deposit || pg.maintenance_charges || pg.advance_rent) && (
             <div style={styles.additionalCharges}>
               <h5 style={styles.additionalChargesTitle}>Additional Charges</h5>
@@ -406,7 +395,6 @@ const PriceDetails = ({ pg }) => {
         </div>
       )}
 
-      {/* Food Charges (if applicable) */}
       {pg.food_available && pg.food_charges && pg.food_charges !== "0" && pg.food_charges !== "" && (
         <div style={styles.foodCharges}>
           <span style={styles.foodChargesIcon}>🍽️</span>
@@ -489,9 +477,8 @@ const HighlightItem = ({ name, type, category, icon, onMapView, coordinates, col
   </div>
 );
 
-// Nearby PG Card Component - UPDATED
+// Nearby PG Card Component
 const NearbyPGCard = ({ pg, onClick, distance }) => {
-  // Get starting price
   const getStartingPrice = () => {
     if (!pg) return "—";
     
@@ -526,7 +513,7 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
         <div style={styles.nearbyPgImagePlaceholder}>
           {pg.photos && pg.photos.length > 0 ? (
             <img 
-              src={`${BACKEND_URL}${pg.photos[0]}`} 
+              src={BASE_URL + pg.photos[0]} 
               alt={pg.pg_name} 
               style={styles.nearbyPgImage}
             />
@@ -592,17 +579,14 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
   );
 };
 
-
 const showNotification = (message) => {
   alert(message);
 };
 
-// Helper function to calculate distance
 const calculateDistance = (coordinates) => {
   return Math.random() * 2 + 0.5;
 };
 
-// Helper function to calculate distance between coordinates
 const calculateDistanceBetweenCoords = (lat1, lon1, lat2, lon2) => {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -653,7 +637,6 @@ const NearbyHighlightsPanel = ({
 
   return (
     <div style={styles.highlightsPanel}>
-      {/* Categories Pills */}
       <div style={styles.categoriesPills}>
         {highlightCategories.map(category => {
           const count = category.id === "all" 
@@ -677,7 +660,6 @@ const NearbyHighlightsPanel = ({
         })}
       </div>
 
-      {/* Highlights List */}
       <div style={styles.highlightsList}>
         <div style={styles.highlightsListHeader}>
           <h4 style={styles.highlightsListTitle}>
@@ -778,6 +760,7 @@ export default function PGDetails() {
   const [loadingHighlights, setLoadingHighlights] = useState(false);
   const [loadingNearbyPGs, setLoadingNearbyPGs] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingData, setBookingData] = useState({
     name: "",
@@ -854,19 +837,22 @@ export default function PGDetails() {
     const fetchPGDetails = async () => {
       try {
         setLoading(true);
+        setError(null);
+        
         console.log("Fetching PG details for ID:", id);
-        const res = await axios.get(`${PG_API}/${id}`);
+        
+        // ✅ USE API INSTANCE (not axios directly)
+        const res = await api.get(`/pg/${id}`);
         
         if (!res.data?.success) {
-          console.error("Failed to fetch PG details");
-          return;
+          throw new Error(res.data?.message || "Failed to fetch property details");
         }
 
         const data = res.data.data;
         console.log("PG data received:", data.pg_name);
 
         const photos = Array.isArray(data.photos)
-          ? data.photos.map(p => ({ type: "photo", src: BACKEND_URL + p }))
+          ? data.photos.map(p => ({ type: "photo", src: BASE_URL + p }))
           : [];
 
         let videos = [];
@@ -874,7 +860,7 @@ export default function PGDetails() {
           if (data.videos) {
             videos = JSON.parse(data.videos || "[]").map(v => ({
               type: "video",
-              src: BACKEND_URL + v,
+              src: BASE_URL + v,
             }));
           }
         } catch (err) {
@@ -889,18 +875,23 @@ export default function PGDetails() {
         }
       } catch (err) {
         console.error("Error fetching PG details:", err);
+        setError(err.message || "Failed to load property details");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPGDetails();
+    if (id) {
+      fetchPGDetails();
+    } else {
+      setError("Invalid property ID");
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => {
     if (!pg?.latitude || !pg?.longitude) return;
 
-    // Process database highlights
     const processDBHighlights = () => {
       const highlights = [];
       
@@ -958,7 +949,6 @@ export default function PGDetails() {
 
     const dbHighlights = processDBHighlights();
     
-    // Fetch auto-generated highlights
     const fetchAutoHighlights = async () => {
       try {
         setLoadingHighlights(true);
@@ -1020,22 +1010,20 @@ export default function PGDetails() {
       }
     };
 
-    // Fetch nearby PGs
     const fetchNearbyPGs = async () => {
       try {
         setLoadingNearbyPGs(true);
         console.log("Fetching nearby PGs for:", pg.latitude, pg.longitude);
         
-        // Ensure id is valid
         if (!id || id === "undefined") {
           console.error("Invalid PG ID:", id);
           setNearbyPGs([]);
           return;
         }
 
-        const response = await axios.get(
-          `${PG_API}/nearby/${pg.latitude}/${pg.longitude}?radius=5&exclude=${id}`,
-          { timeout: 10000 }
+        // ✅ USE API INSTANCE
+        const response = await api.get(
+          `/pg/nearby/${pg.latitude}/${pg.longitude}?radius=5&exclude=${id}`
         );
         
         console.log("Nearby PGs API response:", response.data);
@@ -1086,7 +1074,6 @@ export default function PGDetails() {
     fetchNearbyPGs();
   }, [pg, id]);
 
-  // Property type helpers
   const isToLet = pg?.pg_category === "to_let";
   const isCoLiving = pg?.pg_category === "coliving";
   const isPG = !isToLet && !isCoLiving;
@@ -1094,7 +1081,6 @@ export default function PGDetails() {
   const hasContactPerson = pg?.contact_person && pg.contact_person.trim() !== "";
   const hasLocation = pg?.latitude && pg?.longitude;
 
-  // Helper function to get starting price
   const getStartingPrice = () => {
     if (!pg) return "—";
     
@@ -1119,59 +1105,55 @@ export default function PGDetails() {
       return "—";
     }
   };
-const handleBookNow = () => {
-  const user = auth.currentUser;
 
-  if (!user) {
-    navigate("/register", {
-      state: { redirectTo: `/pg/${id}` }
-    });
-    return;
-  }
-
-  setShowBookingModal(true);
-};
-
-
-
-
- const handleBookingSubmit = async (bookingData) => {
-  try {
+  const handleBookNow = () => {
     const user = auth.currentUser;
-
     if (!user) {
-      showNotification("Please register or login to continue");
-      navigate("/register");
+      navigate("/register", {
+        state: { redirectTo: `/pg/${id}` }
+      });
       return;
     }
+    setShowBookingModal(true);
+  };
 
-    const token = await user.getIdToken(true);
+  const handleBookingSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const user = auth.currentUser;
 
-    const payload = {
-      pg_id: id, // 👈 PG ID from params
-      name: bookingData.name,
-      phone: bookingData.phone,
-      email: bookingData.email,
-      check_in_date: bookingData.checkInDate,
-      duration: bookingData.duration,
-      message: bookingData.message
-    };
-
-    await api.post("/bookings", payload, {
-      headers: {
-        Authorization: `Bearer ${token}`
+      if (!user) {
+        showNotification("Please register or login to continue");
+        navigate("/register");
+        return;
       }
-    });
 
-    showNotification("✅ Booking request sent to owner");
-    setShowBookingModal(false);
+      const token = await user.getIdToken(true);
 
-  } catch (error) {
-    console.error(error);
-    showNotification("❌ Booking failed. Try again");
-  }
-};
+      const payload = {
+        pg_id: id,
+        name: bookingData.name,
+        phone: bookingData.phone,
+        email: bookingData.email,
+        check_in_date: bookingData.checkInDate,
+        duration: bookingData.duration,
+        message: bookingData.message
+      };
 
+      // ✅ USE API INSTANCE
+      await api.post("/bookings", payload, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      showNotification("✅ Booking request sent to owner");
+      setShowBookingModal(false);
+    } catch (error) {
+      console.error(error);
+      showNotification("❌ Booking failed. Try again");
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -1179,15 +1161,13 @@ const handleBookNow = () => {
   };
 
   const handleCallOwner = () => {
-  if (hasOwnerContact) {
-    window.location.href = `tel:${pg.contact_phone}`;
-  } else {
-    alert("Owner contact will be visible after booking approval");
-  }
-};
+    if (hasOwnerContact) {
+      window.location.href = `tel:${pg.contact_phone}`;
+    } else {
+      alert("Owner contact will be visible after booking approval");
+    }
+  };
 
-
-  // Handle view on map for a highlight
   const handleViewOnMap = (highlight) => {
     if (highlight.coordinates) {
       setMapCenter(highlight.coordinates);
@@ -1203,16 +1183,14 @@ const handleBookNow = () => {
     }
   };
 
-  // Handle view nearby PG
   const handleViewNearbyPG = (pgId) => {
     console.log("Navigating to PG:", pgId);
     if (pgId) {
       navigate(`/pg/${pgId}`);
-      window.location.reload(); // Force refresh to load new PG data
+      // ❌ REMOVED window.location.reload()
     }
   };
 
-  // Handle view all properties in area
   const handleViewAllProperties = () => {
     if (pg?.area) {
       navigate(`/properties?area=${encodeURIComponent(pg.area)}`);
@@ -1223,7 +1201,6 @@ const handleBookNow = () => {
     }
   };
 
-  // Toggle rules section
   const toggleRulesSection = (section) => {
     setExpandedRules(prev => ({
       ...prev,
@@ -1231,10 +1208,8 @@ const handleBookNow = () => {
     }));
   };
 
-  // Get ALL facilities
   const getAllFacilities = () => {
     return [
-      // ROOM FURNISHINGS
       { key: "cupboard_available", label: "Cupboard/Wardrobe", icon: "👔", category: "room" },
       { key: "table_chair_available", label: "Study Table & Chair", icon: "💺", category: "room" },
       { key: "dining_table_available", label: "Dining Table", icon: "🍽️", category: "kitchen" },
@@ -1244,8 +1219,6 @@ const handleBookNow = () => {
       { key: "bed_with_mattress", label: "Bed with Mattress", icon: "🛏️", category: "room" },
       { key: "fan_light", label: "Fan & Light", icon: "💡", category: "room" },
       { key: "kitchen_room", label: "Kitchen Room", icon: "🍳", category: "kitchen" },
-      
-      // OTHER FACILITIES
       { key: "food_available", label: "Food Available", icon: "🍽️", category: "basic" },
       { key: "ac_available", label: "Air Conditioner", icon: "❄️", category: "room" },
       { key: "wifi_available", label: "Wi-Fi / Internet", icon: "📶", category: "basic" },
@@ -1272,11 +1245,9 @@ const handleBookNow = () => {
     ];
   };
 
-  // Get filtered facilities based on category - ONLY SHOW TRUE VALUES
   const getFilteredFacilities = () => {
     const allFacilities = getAllFacilities();
     
-    // Filter to show only true facilities
     const trueFacilities = allFacilities.filter(facility => 
       pg && (pg[facility.key] === true || pg[facility.key] === "true")
     );
@@ -1288,7 +1259,6 @@ const handleBookNow = () => {
     return trueFacilities.filter(facility => facility.category === selectedFacilityCategory);
   };
 
-  // Get count of true facilities in a category
   const getTrueFacilitiesCountInCategory = (categoryId) => {
     const allFacilities = getAllFacilities();
     if (categoryId === "all") {
@@ -1301,7 +1271,6 @@ const handleBookNow = () => {
     ).length;
   };
 
-  // Check if section has content
   const hasRulesContent = () => {
     if (!pg) return false;
     
@@ -1328,7 +1297,6 @@ const handleBookNow = () => {
     return hasTrueFacilities || hasWaterType || hasAnyCategoryWithFacilities;
   };
 
-  // Check if has price details
   const hasPriceDetails = () => {
     if (!pg) return false;
     
@@ -1351,11 +1319,11 @@ const handleBookNow = () => {
     );
   }
 
-  if (!pg) {
+  if (error || !pg) {
     return (
       <div style={styles.errorContainer}>
         <h2>Property Not Found</h2>
-        <p>The property you're looking for doesn't exist or has been removed.</p>
+        <p>{error || "The property you're looking for doesn't exist or has been removed."}</p>
         <button style={styles.backButton} onClick={() => navigate("/")}>
           ← Back to Home
         </button>
@@ -1365,17 +1333,14 @@ const handleBookNow = () => {
 
   const current = media[index];
   
-  // Calculate available facilities count
   const availableFacilitiesCount = getTrueFacilitiesCountInCategory("all");
   const filteredFacilities = getFilteredFacilities();
 
-  // Check if we should show sections
   const shouldShowNearbyHighlights = hasLocation && (nearbyHighlights.length > 0 || loadingHighlights);
   const shouldShowNearbyPGs = nearbyPGs.length > 0 || loadingNearbyPGs;
 
   return (
     <div style={styles.page}>
-      {/* Breadcrumb */}
       <div style={styles.breadcrumb}>
         <span style={styles.breadcrumbLink} onClick={() => navigate("/")}>Home</span>
         <span style={styles.breadcrumbSeparator}>/</span>
@@ -1384,7 +1349,6 @@ const handleBookNow = () => {
         <span style={styles.breadcrumbCurrent}>{pg.pg_name}</span>
       </div>
 
-      {/* Media Slider */}
       {media.length > 0 ? (
         <div style={styles.slider}>
           {current.type === "photo" ? (
@@ -1420,7 +1384,6 @@ const handleBookNow = () => {
         </div>
       )}
 
-      {/* Main Property Info */}
       <div style={styles.mainCard}>
         <div style={styles.headerRow}>
           <div>
@@ -1431,7 +1394,7 @@ const handleBookNow = () => {
           <div style={styles.actionButtons}>
             <button
               style={styles.bookButton}
-              onClick={() => handleBookNow()}
+              onClick={handleBookNow}
             >
               🏠 Book Now
             </button>
@@ -1496,7 +1459,6 @@ const handleBookNow = () => {
           </span>
         </div>
 
-        {/* Quick Stats */}
         <div style={styles.statsGrid}>
           <div style={styles.statItem}>
             <div style={styles.statIcon}>💰</div>
@@ -1531,31 +1493,25 @@ const handleBookNow = () => {
         </div>
       </div>
 
-      {/* Detailed Sections */}
       <div style={styles.twoColumn}>
-        {/* LEFT COLUMN */}
         <div style={styles.leftColumn}>
-          {/* ABOUT PROPERTY */}
           {pg.description && (
             <Section title="📝 About this Property">
               <p style={styles.description}>{pg.description}</p>
             </Section>
           )}
 
-          {/* PRICE DETAILS SECTION - NEW */}
           {hasPriceDetails() && (
             <Section title="💰 Price Details">
               <PriceDetails pg={pg} />
             </Section>
           )}
 
-          {/* FACILITIES & AMENITIES */}
           {hasFacilitiesContent() && (
             <Section 
               title={`🏠 Facilities & Amenities`} 
               badgeCount={availableFacilitiesCount}
             >
-              {/* Facility Categories Filter */}
               <div style={styles.facilityCategories}>
                 {facilityCategories.map(category => {
                   const trueCount = getTrueFacilitiesCountInCategory(category.id);
@@ -1586,7 +1542,6 @@ const handleBookNow = () => {
                 })}
               </div>
 
-              {/* Interactive Facilities Grid */}
               {filteredFacilities.length > 0 ? (
                 <div style={styles.facilitiesGrid}>
                   {filteredFacilities.map((facility, index) => {
@@ -1611,7 +1566,6 @@ const handleBookNow = () => {
                 </div>
               )}
 
-              {/* Water Type Display */}
               {pg.water_type && (
                 <div style={styles.waterSource}>
                   <strong>💧 Water Source:</strong> {pg.water_type === "borewell" ? "Borewell" : 
@@ -1623,11 +1577,9 @@ const handleBookNow = () => {
             </Section>
           )}
 
-          {/* RULES & RESTRICTIONS */}
           {hasRulesContent() && (
             <Section title="📜 House Rules & Restrictions">
               <div style={styles.rulesContainer}>
-                {/* VISITOR RULES */}
                 {(pg.visitor_allowed || pg.couple_allowed || pg.family_allowed) && (
                   <div style={styles.rulesSection}>
                     <div style={styles.rulesSectionHeader} onClick={() => toggleRulesSection('visitors')}>
@@ -1670,7 +1622,6 @@ const handleBookNow = () => {
                   </div>
                 )}
 
-                {/* LIFESTYLE RULES */}
                 {(pg.smoking_allowed || pg.drinking_allowed || pg.outside_food_allowed || pg.parties_allowed) && (
                   <div style={styles.rulesSection}>
                     <div style={styles.rulesSectionHeader} onClick={() => toggleRulesSection('lifestyle')}>
@@ -1721,7 +1672,6 @@ const handleBookNow = () => {
                   </div>
                 )}
 
-                {/* PETS & ENTRY RULES */}
                 {(pg.pets_allowed || pg.late_night_entry_allowed || pg.entry_curfew_time) && (
                   <div style={styles.rulesSection}>
                     <div style={styles.rulesSectionHeader} onClick={() => toggleRulesSection('pets')}>
@@ -1764,7 +1714,6 @@ const handleBookNow = () => {
                   </div>
                 )}
 
-                {/* RESTRICTIONS */}
                 {(pg.loud_music_restricted || pg.office_going_only || pg.students_only || pg.boys_only || pg.girls_only || pg.subletting_allowed) && (
                   <div style={styles.rulesSection}>
                     <div style={styles.rulesSectionHeader} onClick={() => toggleRulesSection('restrictions')}>
@@ -1835,7 +1784,6 @@ const handleBookNow = () => {
                   </div>
                 )}
 
-                {/* LEGAL & DURATION */}
                 {(pg.min_stay_months || pg.agreement_mandatory || pg.id_proof_mandatory) && (
                   <div style={styles.rulesSection}>
                     <div style={styles.rulesSectionHeader} onClick={() => toggleRulesSection('legal')}>
@@ -1882,9 +1830,7 @@ const handleBookNow = () => {
           )}
         </div>
 
-        {/* RIGHT COLUMN */}
         <div style={styles.rightColumn}>
-          {/* LOCATION MAP */}
           {hasLocation && (
             <Section title="📍 Location">
               <div id="location-map" style={styles.mapContainer}>
@@ -1902,7 +1848,7 @@ const handleBookNow = () => {
                         <small style={styles.mapPopupAddress}>{pg.address}</small><br/>
                         <button 
                           style={styles.mapPopupButton}
-                          onClick={() => handleBookNow()}
+                          onClick={handleBookNow}
                         >
                           Book Now
                         </button>
@@ -1921,7 +1867,6 @@ const handleBookNow = () => {
             </Section>
           )}
 
-          {/* NEARBY HIGHLIGHTS SECTION */}
           {shouldShowNearbyHighlights && (
             <NearbyHighlightsPanel 
               highlights={nearbyHighlights}
@@ -1933,7 +1878,6 @@ const handleBookNow = () => {
             />
           )}
 
-          {/* NEARBY PGs SECTION */}
           {shouldShowNearbyPGs && (
             <NearbyPGsPanel
               nearbyPGs={nearbyPGs}
@@ -1942,7 +1886,6 @@ const handleBookNow = () => {
             />
           )}
 
-          {/* CONTACT INFORMATION */}
           {(hasOwnerContact || hasContactPerson || pg?.contact_email) && (
             <div style={styles.contactCard}>
               <h3 style={styles.contactTitle}>📞 Contact Information</h3>
@@ -1987,7 +1930,7 @@ const handleBookNow = () => {
               <div style={styles.contactButtons}>
                 <button
                   style={styles.bookButtonSmall}
-                  onClick={() => handleBookNow()}
+                  onClick={handleBookNow}
                 >
                   🏠 Book Now
                 </button>
@@ -2003,7 +1946,6 @@ const handleBookNow = () => {
             </div>
           )}
 
-          {/* ROOM AVAILABILITY */}
           {(pg.total_rooms || pg.available_rooms) && (
             <div style={styles.availabilityCard}>
               <h3 style={styles.availabilityTitle}>🛏 Availability Status</h3>
@@ -2034,7 +1976,6 @@ const handleBookNow = () => {
         </div>
       </div>
 
-      {/* Sticky Action Bar */}
       <div style={styles.stickyBar}>
         <div style={styles.stickyContent}>
           <div>
@@ -2046,7 +1987,7 @@ const handleBookNow = () => {
           <div style={styles.stickyActions}>
             <button
               style={styles.stickyBookButton}
-              onClick={() => handleBookNow()}
+              onClick={handleBookNow}
             >
               🏠 Book Now
             </button>
@@ -2062,7 +2003,6 @@ const handleBookNow = () => {
         </div>
       </div>
 
-      {/* Booking Modal */}
       {showBookingModal && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
@@ -2174,7 +2114,6 @@ const styles = {
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   },
 
-  // Loading
   loadingContainer: {
     display: "flex",
     flexDirection: "column",
@@ -2184,7 +2123,6 @@ const styles = {
     backgroundColor: "#f8fafc",
   },
 
-  // Error
   errorContainer: {
     display: "flex",
     flexDirection: "column",
@@ -2205,14 +2143,8 @@ const styles = {
     fontSize: "14px",
     fontWeight: "500",
     transition: "all 0.3s ease",
-    "&:hover": {
-      backgroundColor: "#5a6fd8",
-      transform: "translateY(-2px)",
-      boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
-    },
   },
 
-  // Breadcrumb
   breadcrumb: {
     display: "flex",
     alignItems: "center",
@@ -2228,10 +2160,6 @@ const styles = {
     textDecoration: "none",
     fontWeight: "500",
     transition: "all 0.2s",
-    "&:hover": {
-      color: "#5a6fd8",
-      textDecoration: "underline",
-    },
   },
   breadcrumbSeparator: {
     color: "#cbd5e1",
@@ -2241,7 +2169,6 @@ const styles = {
     fontWeight: "600",
   },
 
-  // Media Slider
   slider: {
     position: "relative",
     borderRadius: "16px",
@@ -2273,10 +2200,6 @@ const styles = {
     justifyContent: "center",
     boxShadow: "0 4px 15px rgba(0,0,0,0.2)",
     transition: "all 0.3s ease",
-    "&:hover": {
-      backgroundColor: "white",
-      transform: "translateY(-50%) scale(1.1)",
-    },
   },
   navBtnRight: {
     position: "absolute",
@@ -2295,10 +2218,6 @@ const styles = {
     justifyContent: "center",
     boxShadow: "0 4px 15px rgba(0,0,0,0.2)",
     transition: "all 0.3s ease",
-    "&:hover": {
-      backgroundColor: "white",
-      transform: "translateY(-50%) scale(1.1)",
-    },
   },
   mediaCounter: {
     position: "absolute",
@@ -2329,7 +2248,6 @@ const styles = {
     opacity: 0.8,
   },
 
-  // Main Card
   mainCard: {
     backgroundColor: "white",
     borderRadius: "16px",
@@ -2392,10 +2310,6 @@ const styles = {
     whiteSpace: "nowrap",
     transition: "all 0.3s ease",
     boxShadow: "0 4px 15px rgba(16, 185, 129, 0.3)",
-    "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 8px 25px rgba(16, 185, 129, 0.4)",
-    },
   },
   callButton: {
     padding: "12px 24px",
@@ -2412,10 +2326,6 @@ const styles = {
     whiteSpace: "nowrap",
     transition: "all 0.3s ease",
     boxShadow: "0 4px 15px rgba(59, 130, 246, 0.3)",
-    "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 8px 25px rgba(59, 130, 246, 0.4)",
-    },
   },
   directionButton: {
     padding: "12px 24px",
@@ -2432,13 +2342,8 @@ const styles = {
     whiteSpace: "nowrap",
     transition: "all 0.3s ease",
     boxShadow: "0 4px 15px rgba(139, 92, 246, 0.3)",
-    "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 8px 25px rgba(139, 92, 246, 0.4)",
-    },
   },
 
-  // Badges
   badgeRow: {
     display: "flex",
     flexWrap: "wrap",
@@ -2505,7 +2410,6 @@ const styles = {
     boxShadow: "0 2px 8px rgba(239, 68, 68, 0.3)",
   },
 
-  // Stats Grid
   statsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
@@ -2520,9 +2424,6 @@ const styles = {
     alignItems: "center",
     gap: "12px",
     transition: "all 0.3s ease",
-    "&:hover": {
-      transform: "translateY(-2px)",
-    },
   },
   statIcon: {
     fontSize: "24px",
@@ -2548,7 +2449,6 @@ const styles = {
     color: "#1e293b",
   },
 
-  // Price Details Styles
   priceDetailsContainer: {
     padding: "16px",
     backgroundColor: "#f8fafc",
@@ -2557,9 +2457,6 @@ const styles = {
   },
   priceSection: {
     marginBottom: "24px",
-    "&:last-child": {
-      marginBottom: "0",
-    },
   },
   priceSectionTitle: {
     fontSize: "18px",
@@ -2585,11 +2482,6 @@ const styles = {
     border: "1px solid #e2e8f0",
     textAlign: "center",
     transition: "all 0.3s ease",
-    "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 8px 25px rgba(0,0,0,0.1)",
-      borderColor: "#667eea",
-    },
   },
   priceType: {
     fontSize: "14px",
@@ -2664,9 +2556,6 @@ const styles = {
     alignItems: "center",
     padding: "8px 0",
     borderBottom: "1px solid #f1f5f9",
-    "&:last-child": {
-      borderBottom: "none",
-    },
   },
   chargeLabel: {
     fontSize: "14px",
@@ -2716,15 +2605,11 @@ const styles = {
     color: "#64748b",
   },
 
-  // Two Column Layout
   twoColumn: {
     display: "grid",
     gridTemplateColumns: "2fr 1fr",
     gap: "20px",
     marginBottom: "100px",
-    "@media (max-width: 1024px)": {
-      gridTemplateColumns: "1fr",
-    },
   },
   leftColumn: {
     display: "flex",
@@ -2737,7 +2622,6 @@ const styles = {
     gap: "20px",
   },
 
-  // Section
   section: {
     backgroundColor: "white",
     borderRadius: "16px",
@@ -2745,10 +2629,6 @@ const styles = {
     boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
     border: "1px solid #e2e8f0",
     transition: "all 0.3s ease",
-    "&:hover": {
-      boxShadow: "0 8px 30px rgba(0,0,0,0.08)",
-      transform: "translateY(-2px)",
-    },
   },
   sectionHeader: {
     display: "flex",
@@ -2778,7 +2658,6 @@ const styles = {
     textAlign: "center",
   },
 
-  // Description
   description: {
     fontSize: "15px",
     lineHeight: "1.7",
@@ -2786,7 +2665,6 @@ const styles = {
     margin: "0",
   },
 
-  // No facilities container
   noFacilitiesContainer: {
     textAlign: "center",
     padding: "40px 20px",
@@ -2807,7 +2685,6 @@ const styles = {
     marginBottom: "8px",
   },
 
-  // Facility Categories
   facilityCategories: {
     display: "flex",
     flexWrap: "wrap",
@@ -2826,10 +2703,6 @@ const styles = {
     alignItems: "center",
     gap: "6px",
     transition: "all 0.3s ease",
-    "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-    },
   },
   facilityCategoryIcon: {
     fontSize: "14px",
@@ -2838,7 +2711,6 @@ const styles = {
     fontSize: "12px",
   },
 
-  // Facilities
   facilitiesGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
@@ -2854,22 +2726,10 @@ const styles = {
     transition: "all 0.3s",
     cursor: "pointer",
     position: "relative",
-    "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 8px 20px rgba(0,0,0,0.08)",
-    },
   },
-  facilityItemActive: {
-    "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 8px 20px rgba(0,0,0,0.1)",
-    },
-  },
+  facilityItemActive: {},
   facilityItemInactive: {
     opacity: 0.6,
-    "&:hover": {
-      backgroundColor: "#f8fafc",
-    },
   },
   facilityIcon: {
     fontSize: "18px",
@@ -2907,7 +2767,6 @@ const styles = {
     border: "1px solid #7dd3fc",
   },
 
-  // Rules & Restrictions
   rulesContainer: {
     display: "flex",
     flexDirection: "column",
@@ -2927,9 +2786,6 @@ const styles = {
     cursor: "pointer",
     backgroundColor: "white",
     transition: "all 0.3s ease",
-    "&:hover": {
-      backgroundColor: "#f1f5f9",
-    },
   },
   rulesSectionTitle: {
     fontSize: "15px",
@@ -2963,10 +2819,6 @@ const styles = {
     borderRadius: "10px",
     border: "1px solid #e2e8f0",
     transition: "all 0.3s ease",
-    "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 4px 15px rgba(0,0,0,0.05)",
-    },
   },
   ruleIconContainer: {
     display: "flex",
@@ -3008,7 +2860,6 @@ const styles = {
     color: "white",
   },
 
-  // Map & Location
   mapContainer: {
     marginBottom: "20px",
   },
@@ -3037,9 +2888,6 @@ const styles = {
     fontWeight: "500",
     cursor: "pointer",
     marginTop: "8px",
-    "&:hover": {
-      backgroundColor: "#0da271",
-    },
   },
   locationDetails: {
     marginTop: "16px",
@@ -3053,15 +2901,8 @@ const styles = {
     borderBottom: "1px solid #e2e8f0",
     fontSize: "14px",
     color: "#475569",
-    "&:last-child": {
-      borderBottom: "none",
-    },
-    "& strong": {
-      color: "#334155",
-    },
   },
 
-  // Nearby PGs Panel
   nearbyPGsPanel: {
     backgroundColor: "white",
     borderRadius: "16px",
@@ -3122,15 +2963,8 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     gap: "8px",
-    "&:hover": {
-      backgroundColor: "#3b82f6",
-      color: "white",
-      transform: "translateY(-2px)",
-      boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
-    },
   },
 
-  // Nearby PG Card
   nearbyPgCard: {
     backgroundColor: "white",
     borderRadius: "12px",
@@ -3138,11 +2972,6 @@ const styles = {
     border: "1px solid #e2e8f0",
     cursor: "pointer",
     transition: "all 0.3s ease",
-    "&:hover": {
-      transform: "translateY(-4px)",
-      boxShadow: "0 8px 25px rgba(0,0,0,0.1)",
-      borderColor: "#3b82f6",
-    },
   },
   nearbyPgImageContainer: {
     position: "relative",
@@ -3254,13 +3083,8 @@ const styles = {
     fontWeight: "500",
     cursor: "pointer",
     transition: "all 0.3s ease",
-    "&:hover": {
-      backgroundColor: "#3b82f6",
-      color: "white",
-    },
   },
 
-  // Loading Nearby PGs
   loadingNearbyPGs: {
     display: "flex",
     flexDirection: "column",
@@ -3300,7 +3124,6 @@ const styles = {
     maxWidth: "300px",
   },
 
-  // Nearby Highlights Panel
   highlightsPanel: {
     backgroundColor: "white",
     borderRadius: "16px",
@@ -3329,18 +3152,6 @@ const styles = {
     gap: "6px",
     transition: "all 0.3s ease",
     whiteSpace: "nowrap",
-    "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-    },
-    "&:disabled": {
-      opacity: 0.5,
-      cursor: "not-allowed",
-      "&:hover": {
-        transform: "none",
-        boxShadow: "none",
-      },
-    },
   },
   highlightCategoryIcon: {
     fontSize: "14px",
@@ -3392,19 +3203,6 @@ const styles = {
   highlightsItemsContainer: {
     maxHeight: "400px",
     overflowY: "auto",
-    "&::-webkit-scrollbar": {
-      width: "6px",
-    },
-    "&::-webkit-scrollbar-track": {
-      background: "#f1f5f9",
-    },
-    "&::-webkit-scrollbar-thumb": {
-      background: "#cbd5e1",
-      borderRadius: "3px",
-    },
-    "&::-webkit-scrollbar-thumb:hover": {
-      background: "#94a3b8",
-    },
   },
   highlightItem: {
     display: "flex",
@@ -3415,12 +3213,6 @@ const styles = {
     backgroundColor: "white",
     transition: "all 0.3s ease",
     cursor: "pointer",
-    "&:hover": {
-      backgroundColor: "#f8fafc",
-    },
-    "&:last-child": {
-      borderBottom: "none",
-    },
   },
   highlightIconContainer: {
     width: "36px",
@@ -3474,13 +3266,8 @@ const styles = {
     transition: "all 0.3s",
     whiteSpace: "nowrap",
     boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-    "&:hover": {
-      transform: "scale(1.05)",
-      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-    },
   },
 
-  // Loading Highlights Panel
   loadingHighlightsPanel: {
     display: "flex",
     flexDirection: "column",
@@ -3520,7 +3307,6 @@ const styles = {
     maxWidth: "300px",
   },
 
-  // Contact Card
   contactCard: {
     backgroundColor: "white",
     borderRadius: "16px",
@@ -3543,9 +3329,6 @@ const styles = {
     gap: "12px",
     padding: "12px 0",
     borderBottom: "1px solid #f1f5f9",
-    "&:last-child": {
-      borderBottom: "none",
-    },
   },
   contactIcon: {
     fontSize: "20px",
@@ -3572,18 +3355,11 @@ const styles = {
     color: "#334155",
     textDecoration: "none",
     transition: "all 0.3s",
-    "&:hover": {
-      color: "#3b82f6",
-    },
   },
   emailLink: {
     color: "#3b82f6",
     textDecoration: "none",
     transition: "all 0.3s",
-    "&:hover": {
-      color: "#2563eb",
-      textDecoration: "underline",
-    },
   },
   contactButtons: {
     display: "flex",
@@ -3605,10 +3381,6 @@ const styles = {
     justifyContent: "center",
     gap: "6px",
     transition: "all 0.3s ease",
-    "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
-    },
   },
   callButtonSmall: {
     flex: "1",
@@ -3625,13 +3397,8 @@ const styles = {
     justifyContent: "center",
     gap: "6px",
     transition: "all 0.3s ease",
-    "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
-    },
   },
 
-  // Availability Card
   availabilityCard: {
     backgroundColor: "white",
     borderRadius: "16px",
@@ -3654,9 +3421,6 @@ const styles = {
     alignItems: "center",
     padding: "10px 0",
     borderBottom: "1px solid #f1f5f9",
-    "&:last-child": {
-      borderBottom: "none",
-    },
   },
   availabilityLabel: {
     fontSize: "14px",
@@ -3677,7 +3441,6 @@ const styles = {
     borderRadius: "8px",
   },
 
-  // Sticky Bar
   stickyBar: {
     position: "fixed",
     bottom: "0",
@@ -3728,10 +3491,6 @@ const styles = {
     whiteSpace: "nowrap",
     transition: "all 0.3s ease",
     boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
-    "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 8px 20px rgba(16, 185, 129, 0.4)",
-    },
   },
   stickyCallButton: {
     padding: "10px 20px",
@@ -3745,13 +3504,8 @@ const styles = {
     whiteSpace: "nowrap",
     transition: "all 0.3s ease",
     boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
-    "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 8px 20px rgba(59, 130, 246, 0.4)",
-    },
   },
 
-  // Booking Modal
   modalOverlay: {
     position: "fixed",
     top: "0",
@@ -3803,10 +3557,6 @@ const styles = {
     justifyContent: "center",
     borderRadius: "50%",
     transition: "all 0.3s",
-    "&:hover": {
-      backgroundColor: "#f1f5f9",
-      color: "#334155",
-    },
   },
   bookingForm: {
     padding: "20px",
@@ -3830,12 +3580,6 @@ const styles = {
     color: "#1e293b",
     backgroundColor: "#f8fafc",
     transition: "all 0.3s ease",
-    "&:focus": {
-      outline: "none",
-      borderColor: "#667eea",
-      boxShadow: "0 0 0 3px rgba(102, 126, 234, 0.1)",
-      backgroundColor: "white",
-    },
   },
   formTextarea: {
     width: "100%",
@@ -3848,12 +3592,6 @@ const styles = {
     resize: "vertical",
     minHeight: "80px",
     fontFamily: "inherit",
-    "&:focus": {
-      outline: "none",
-      borderColor: "#667eea",
-      boxShadow: "0 0 0 3px rgba(102, 126, 234, 0.1)",
-      backgroundColor: "white",
-    },
   },
   modalFooter: {
     display: "flex",
@@ -3871,10 +3609,6 @@ const styles = {
     fontWeight: "600",
     cursor: "pointer",
     transition: "all 0.3s ease",
-    "&:hover": {
-      backgroundColor: "#e2e8f0",
-      transform: "translateY(-2px)",
-    },
   },
   submitButton: {
     flex: "2",
@@ -3887,10 +3621,6 @@ const styles = {
     fontWeight: "600",
     cursor: "pointer",
     transition: "all 0.3s ease",
-    "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
-    },
   },
 };
 
