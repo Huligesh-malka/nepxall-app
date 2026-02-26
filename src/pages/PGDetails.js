@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios"; // ← FOR OVERPASS API
 import { useParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import api from "../api/api";
+import api from "../api/api"; // ← FOR YOUR BACKEND
 import { auth } from "../firebase";
 
 /* ================= LEAFLET FIX ================= */
