@@ -1,22 +1,25 @@
 import React, { useState } from "react";
 import {
-  Box, TextField, Button, Typography, Paper,
-  MenuItem, CircularProgress, Divider
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Paper,
+  MenuItem,
+  CircularProgress,
+  Divider,
 } from "@mui/material";
 import { Google as GoogleIcon } from "@mui/icons-material";
 import {
   createUserWithEmailAndPassword,
   signInWithPopup,
-  GoogleAuthProvider
+  GoogleAuthProvider,
 } from "firebase/auth";
 import { auth } from "../firebase";
-import axios from "axios";
+import { userAPI } from "../api/api";   // ✅ USE CENTRAL API
 import { useNavigate, Link } from "react-router-dom";
 
-const API = process.env.REACT_APP_API;
-
 const Register = () => {
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("tenant");
@@ -33,18 +36,25 @@ const Register = () => {
   };
 
   /* 🔗 BACKEND SYNC */
-  const syncUser = async (user) => {
-    const idToken = await user.getIdToken();
+  const syncUser = async (firebaseUser) => {
+    try {
+      const idToken = await firebaseUser.getIdToken(true);
 
-    const res = await axios.post(`${API}/auth/firebase`, {
-      idToken,
-      role
-    });
+      const res = await userAPI.post("/auth/firebase", {
+        idToken,
+        role,
+      });
 
-    localStorage.setItem("token", res.data.token);
-    localStorage.setItem("role", res.data.role);
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("role", res.data.role);
+      localStorage.setItem("name", res.data.name || "");
 
-    redirect(res.data.role);
+      redirect(res.data.role);
+    } catch (err) {
+      console.error(err);
+      setError(err?.response?.data?.message || "Registration failed");
+      setLoading(false);
+    }
   };
 
   /* 📧 EMAIL REGISTER */
@@ -61,14 +71,13 @@ const Register = () => {
       );
 
       await syncUser(res.user);
-
     } catch (err) {
       setError(err.message);
       setLoading(false);
     }
   };
 
-  /* 🔵 GOOGLE LOGIN */
+  /* 🔵 GOOGLE REGISTER */
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError("");
@@ -78,7 +87,6 @@ const Register = () => {
       const res = await signInWithPopup(auth, provider);
 
       await syncUser(res.user);
-
     } catch (err) {
       setError(err.message);
       setLoading(false);
@@ -86,15 +94,16 @@ const Register = () => {
   };
 
   return (
-    <Box sx={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      bgcolor: "#f0f2f5"
-    }}>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        bgcolor: "#f0f2f5",
+      }}
+    >
       <Paper sx={{ p: 4, width: 400 }}>
-
         <Typography variant="h5" align="center" mb={2}>
           Create Account
         </Typography>
@@ -102,11 +111,11 @@ const Register = () => {
         {error && <Typography color="error">{error}</Typography>}
 
         <form onSubmit={handleRegister}>
-
           <TextField
             fullWidth
             label="Email"
             margin="normal"
+            value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
 
@@ -115,6 +124,7 @@ const Register = () => {
             label="Password"
             type="password"
             margin="normal"
+            value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
 
@@ -128,6 +138,8 @@ const Register = () => {
           >
             <MenuItem value="tenant">Tenant</MenuItem>
             <MenuItem value="owner">Owner</MenuItem>
+
+            {/* ⚠️ In production you should remove admin from UI */}
             <MenuItem value="admin">Admin</MenuItem>
           </TextField>
 
@@ -140,7 +152,6 @@ const Register = () => {
           >
             {loading ? <CircularProgress size={24} /> : "Register"}
           </Button>
-
         </form>
 
         <Divider sx={{ my: 2 }}>OR</Divider>
@@ -158,7 +169,6 @@ const Register = () => {
         <Typography align="center" mt={2}>
           Already have an account? <Link to="/login">Login</Link>
         </Typography>
-
       </Paper>
     </Box>
   );
