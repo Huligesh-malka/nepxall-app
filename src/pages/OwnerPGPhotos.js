@@ -25,6 +25,7 @@ const OwnerPGPhotos = () => {
   const [dragIndex, setDragIndex] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState("");
+  const [previewUrls, setPreviewUrls] = useState([]);
 
   /* ================= LOAD PHOTOS ================= */
 
@@ -67,6 +68,17 @@ const OwnerPGPhotos = () => {
     if (id) loadPhotos();
   }, [id]);
 
+  /* ================= FILE HANDLING ================= */
+
+  const handleFileSelect = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    setFiles(selectedFiles);
+
+    // Create preview URLs
+    const urls = selectedFiles.map(file => URL.createObjectURL(file));
+    setPreviewUrls(urls);
+  };
+
   /* ================= UPLOAD ================= */
 
   const uploadPhotos = async () => {
@@ -107,7 +119,7 @@ const OwnerPGPhotos = () => {
 
       console.log("📤 Uploading photos to PG ID:", id);
       
-      await axios.post(`${API}/pg/${id}/upload-photos`, formData, {
+      const response = await axios.post(`${API}/pg/${id}/upload-photos`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
@@ -120,7 +132,13 @@ const OwnerPGPhotos = () => {
         },
       });
 
+      console.log("✅ Upload response:", response.data);
+
+      // Clear preview URLs to avoid memory leaks
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
+      
       setFiles([]);
+      setPreviewUrls([]);
       setUploadProgress(0);
       alert("Photos uploaded successfully!");
       await loadPhotos();
@@ -137,20 +155,26 @@ const OwnerPGPhotos = () => {
 
   /* ================= DELETE ================= */
 
-  const deletePhoto = async (photo) => {
+  const deletePhoto = async (photoUrl) => {
     if (!window.confirm("Are you sure you want to delete this photo?")) return;
 
     try {
-      const token = await auth.currentUser.getIdToken(true);
+      const user = auth.currentUser;
+      if (!user) {
+        alert("Please login again");
+        return;
+      }
+
+      const token = await user.getIdToken(true);
       
-      console.log("🗑️ Deleting photo:", photo);
+      console.log("🗑️ Deleting photo:", photoUrl);
 
       await axios.delete(`${API}/pg/${id}/photo`, {
         headers: { Authorization: `Bearer ${token}` },
-        data: { photo },
+        data: { photoUrl }, // Send as photoUrl to match backend expectation
       });
 
-      setPhotos((prev) => prev.filter((p) => p !== photo));
+      setPhotos((prev) => prev.filter((p) => p !== photoUrl));
       alert("Photo deleted successfully!");
 
     } catch (err) {
@@ -172,13 +196,21 @@ const OwnerPGPhotos = () => {
     setDragIndex(null);
 
     try {
-      const token = await auth.currentUser.getIdToken(true);
+      const user = auth.currentUser;
+      if (!user) {
+        alert("Please login again");
+        return;
+      }
+
+      const token = await user.getIdToken(true);
 
       await axios.put(
         `${API}/pg/${id}/photos/order`,
         { photos: updated },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
+      console.log("✅ Photo order updated");
 
     } catch (err) {
       console.error("❌ Reorder error:", err);
@@ -188,26 +220,29 @@ const OwnerPGPhotos = () => {
   };
 
   /* ================= IMAGE URL ================= */
-
-  const getImageUrl = (path) => {
-    if (!path) return "https://via.placeholder.com/400x300?text=No+Image";
-
-    // If it's already a full URL
-    if (path.startsWith("http")) return path;
-
-    // Handle paths that contain /uploads/
-    if (path.includes('/uploads/')) {
-      const uploadsIndex = path.indexOf('/uploads/');
-      if (uploadsIndex !== -1) {
-        const relativePath = path.substring(uploadsIndex);
-        return `${BACKEND_URL}${relativePath}`;
-      }
+  // UPDATED: Simplified for Cloudinary - just return the URL as-is since it's already a full Cloudinary URL
+  const getImageUrl = (photoUrl) => {
+    if (!photoUrl) {
+      return "https://via.placeholder.com/400x300?text=No+Image";
     }
 
-    // Handle relative paths
-    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-    return `${BACKEND_URL}${normalizedPath}`;
+    // Cloudinary URLs are already full HTTPS URLs, so return them directly
+    if (photoUrl.startsWith('http')) {
+      return photoUrl;
+    }
+
+    // Fallback for any non-URL strings (shouldn't happen with Cloudinary)
+    console.warn("Unexpected photo format:", photoUrl);
+    return "https://via.placeholder.com/400x300?text=Invalid+Image+Format";
   };
+
+  /* ================= CLEANUP ================= */
+  useEffect(() => {
+    // Cleanup preview URLs when component unmounts
+    return () => {
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
 
   /* ================= UI ================= */
 
@@ -245,7 +280,7 @@ const OwnerPGPhotos = () => {
             multiple
             accept="image/*"
             disabled={uploading}
-            onChange={(e) => setFiles([...e.target.files])}
+            onChange={handleFileSelect}
             style={{
               padding: 10,
               border: "1px solid #cbd5e1",
@@ -256,18 +291,51 @@ const OwnerPGPhotos = () => {
           />
         </div>
 
-        {files.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <p style={{ color: "#4b5563", marginBottom: 8 }}>
-              Selected: {files.length} file(s)
+        {/* Preview Section */}
+        {previewUrls.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <p style={{ color: "#4b5563", marginBottom: 12 }}>
+              Preview ({previewUrls.length} file(s)):
             </p>
-            <ul style={{ fontSize: 14, color: "#6b7280" }}>
-              {Array.from(files).map((file, i) => (
-                <li key={i}>
-                  {file.name} ({(file.size / 1024).toFixed(1)} KB)
-                </li>
+            <div style={{
+              display: "flex",
+              gap: 12,
+              flexWrap: "wrap"
+            }}>
+              {previewUrls.map((url, index) => (
+                <div key={index} style={{
+                  position: "relative",
+                  width: 100,
+                  height: 100,
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 8,
+                  overflow: "hidden"
+                }}>
+                  <img
+                    src={url}
+                    alt={`Preview ${index + 1}`}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover"
+                    }}
+                  />
+                  <div style={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    backgroundColor: "rgba(0,0,0,0.7)",
+                    color: "white",
+                    fontSize: 10,
+                    padding: "2px 4px",
+                    textAlign: "center"
+                  }}>
+                    {Math.round(files[index]?.size / 1024)} KB
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         )}
 
@@ -305,7 +373,8 @@ const OwnerPGPhotos = () => {
             fontSize: 16,
             fontWeight: 500,
             cursor: files.length === 0 ? "not-allowed" : "pointer",
-            opacity: files.length === 0 ? 0.5 : 1
+            opacity: files.length === 0 ? 0.5 : 1,
+            transition: "background-color 0.2s"
           }}
         >
           {uploading ? `Uploading (${uploadProgress}%)` : "Upload Photos"}
@@ -320,6 +389,15 @@ const OwnerPGPhotos = () => {
 
         {loading ? (
           <div style={{ textAlign: "center", padding: 40 }}>
+            <div style={{
+              width: 40,
+              height: 40,
+              border: "4px solid #e5e7eb",
+              borderTopColor: "#3b82f6",
+              borderRadius: "50%",
+              animation: "spin 1s linear infinite",
+              margin: "0 auto 16px"
+            }} />
             <p>Loading photos...</p>
           </div>
         ) : photos.length === 0 ? (
@@ -355,10 +433,15 @@ const OwnerPGPhotos = () => {
                   backgroundColor: "#f8fafc",
                   cursor: "grab",
                   boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                  transition: "transform 0.2s ease",
-                  ':hover': {
-                    transform: 'scale(1.02)'
-                  }
+                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "scale(1.02)";
+                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "scale(1)";
+                  e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)";
                 }}
               >
                 <img
@@ -371,7 +454,7 @@ const OwnerPGPhotos = () => {
                     display: "block"
                   }}
                   onError={(e) => {
-                    console.error("Image failed to load:", getImageUrl(photo));
+                    console.error("Image failed to load:", photo);
                     e.target.onerror = null;
                     e.target.src = "https://via.placeholder.com/400x300?text=Image+Error";
                   }}
@@ -389,12 +472,20 @@ const OwnerPGPhotos = () => {
                     borderRadius: "50%",
                     width: 32,
                     height: 32,
-                    fontSize: 16,
+                    fontSize: 18,
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                    transition: "background-color 0.2s",
+                    zIndex: 2
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#dc2626";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "#ef4444";
                   }}
                   title="Delete photo"
                 >
@@ -406,11 +497,12 @@ const OwnerPGPhotos = () => {
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  backgroundColor: "rgba(0,0,0,0.5)",
+                  background: "linear-gradient(to top, rgba(0,0,0,0.7), transparent)",
                   color: "white",
-                  padding: "4px 8px",
+                  padding: "8px",
                   fontSize: 12,
-                  textAlign: "center"
+                  textAlign: "center",
+                  pointerEvents: "none"
                 }}>
                   Drag to reorder
                 </div>
@@ -419,6 +511,14 @@ const OwnerPGPhotos = () => {
           </div>
         )}
       </div>
+
+      {/* CSS Animation */}
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };
