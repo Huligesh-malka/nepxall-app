@@ -22,7 +22,7 @@ import {
   Videocam as VideoIcon,
   PlayArrow as ActivateIcon,
   Stop as DisableIcon,
-  MeetingRoom as RoomsIcon,
+  MeetingRoom as RoomsIcon,  // ✅ Fixed: Using RoomsIcon instead of MeetingRoomIcon
   Star as StarIcon,
   Campaign as AnnouncementIcon,
   PlaylistAdd as PlanIcon,
@@ -211,7 +211,7 @@ const PropertyCard = ({
         {/* ROOMS INFO */}
         <Box display="flex" gap={3} mb={2} flexWrap="wrap">
           <Box display="flex" alignItems="center" gap={0.5}>
-            <MeetingRoomIcon sx={{ fontSize: 18, color: "#64748b" }} />
+            <RoomsIcon sx={{ fontSize: 18, color: "#64748b" }} />
             <Typography variant="body2" sx={{ fontWeight: 500 }}>
               {property.total_rooms || 0} Rooms
             </Typography>
@@ -282,7 +282,7 @@ const PropertyCard = ({
             <Button 
               size="small" 
               variant="outlined" 
-              startIcon={<MeetingRoomIcon />} 
+              startIcon={<RoomsIcon />} 
               onClick={onRooms}
               sx={{ textTransform: "none" }}
             >
@@ -387,4 +387,4 @@ const PropertyCard = ({
   );
 };
 
-export default PropertyCard;
+export default PropertyCard;y
