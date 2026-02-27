@@ -3,13 +3,12 @@ import axios from "axios";
 import { useParams } from "react-router-dom";
 import { auth } from "../firebase";
 
-/* ================= ENV (Vite + CRA support) ================= */
+/* ================= ENV ================= */
 const BACKEND_URL =
-  import.meta?.env?.VITE_API_URL?.replace("/api", "") ||
   process.env.REACT_APP_BACKEND_URL ||
   "https://nepxall-backend.onrender.com";
 
-const API = `${BACKEND_URL}/api/pg`;
+const API = process.env.REACT_APP_API_URL || `${BACKEND_URL}/api`;
 
 const OwnerPGPhotos = () => {
   const { id } = useParams();
@@ -21,11 +20,11 @@ const OwnerPGPhotos = () => {
   const [dragIndex, setDragIndex] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  /* ================= LOAD PHOTOS ================= */
+  /* ================= LOAD ================= */
   const loadPhotos = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API}/${id}`);
+      const res = await axios.get(`${API}/pg/${id}`);
       if (res.data?.success) {
         setPhotos(res.data.data.photos || []);
       }
@@ -63,25 +62,17 @@ const OwnerPGPhotos = () => {
     try {
       setUploading(true);
 
-      const res = await axios.post(
-        `${API}/${id}/upload-photos`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          onUploadProgress: (e) => {
-            const percent = Math.round((e.loaded * 100) / e.total);
-            setUploadProgress(percent);
-          },
-        }
-      );
+      await axios.post(`${API}/pg/${id}/upload-photos`, formData, {
+        headers: { Authorization: `Bearer ${token}` },
+        onUploadProgress: (e) => {
+          const percent = Math.round((e.loaded * 100) / e.total);
+          setUploadProgress(percent);
+        },
+      });
 
-      if (res.data.success) {
-        setFiles([]);
-        setUploadProgress(0);
-        loadPhotos();
-      }
+      setFiles([]);
+      setUploadProgress(0);
+      loadPhotos();
     } catch (err) {
       alert(err.response?.data?.message || "Upload failed");
     } finally {
@@ -96,7 +87,7 @@ const OwnerPGPhotos = () => {
     const token = await auth.currentUser.getIdToken(true);
 
     try {
-      await axios.delete(`${API}/${id}/photo`, {
+      await axios.delete(`${API}/pg/${id}/photo`, {
         headers: { Authorization: `Bearer ${token}` },
         data: { photo },
       });
@@ -121,22 +112,19 @@ const OwnerPGPhotos = () => {
     const token = await auth.currentUser.getIdToken(true);
 
     await axios.put(
-      `${API}/${id}/photos/order`,
+      `${API}/pg/${id}/photos/order`,
       { photos: updated },
       { headers: { Authorization: `Bearer ${token}` } }
     );
   };
 
-  /* ================= IMAGE URL FIX ================= */
+  /* ================= IMAGE URL ================= */
   const getImageUrl = (path) => {
     if (!path) return "/no-image.png";
 
     if (path.startsWith("http")) return path;
 
-    // remove render filesystem path
-    path = path.replace("/opt/render/project/src", "");
-
-    return `${BACKEND_URL}${path}`;
+    return `${process.env.REACT_APP_FILES_URL}${path}`;
   };
 
   /* ================= UI ================= */
@@ -145,7 +133,6 @@ const OwnerPGPhotos = () => {
     <div style={{ maxWidth: 1000, margin: "auto", padding: 20 }}>
       <h2>📷 Manage PG Photos</h2>
 
-      {/* UPLOAD */}
       <input
         type="file"
         multiple
@@ -160,7 +147,6 @@ const OwnerPGPhotos = () => {
         {uploading ? `Uploading ${uploadProgress}%` : "Upload"}
       </button>
 
-      {/* GALLERY */}
       {loading ? (
         <p>Loading...</p>
       ) : photos.length === 0 ? (
@@ -183,10 +169,7 @@ const OwnerPGPhotos = () => {
                 onError={(e) => (e.target.src = "/no-image.png")}
               />
 
-              <button
-                onClick={() => deletePhoto(p)}
-                style={deleteBtn}
-              >
+              <button onClick={() => deletePhoto(p)} style={deleteBtn}>
                 ❌
               </button>
             </div>
