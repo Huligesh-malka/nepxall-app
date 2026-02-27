@@ -4,11 +4,20 @@ import { useParams } from "react-router-dom";
 import { auth } from "../firebase";
 
 /* ================= ENV ================= */
+
 const BACKEND_URL =
   process.env.REACT_APP_BACKEND_URL ||
   "https://nepxall-backend.onrender.com";
 
-const API = process.env.REACT_APP_API_URL || `${BACKEND_URL}/api`;
+const API =
+  process.env.REACT_APP_API_URL ||
+  "https://nepxall-backend.onrender.com/api";
+
+const FILES_URL =
+  process.env.REACT_APP_FILES_URL ||
+  "https://nepxall-backend.onrender.com";
+
+/* ================= COMPONENT ================= */
 
 const OwnerPGPhotos = () => {
   const { id } = useParams();
@@ -20,11 +29,14 @@ const OwnerPGPhotos = () => {
   const [dragIndex, setDragIndex] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  /* ================= LOAD ================= */
+  /* ================= LOAD PHOTOS ================= */
+
   const loadPhotos = async () => {
     try {
       setLoading(true);
+
       const res = await axios.get(`${API}/pg/${id}`);
+
       if (res.data?.success) {
         setPhotos(res.data.data.photos || []);
       }
@@ -41,6 +53,7 @@ const OwnerPGPhotos = () => {
   }, [id]);
 
   /* ================= UPLOAD ================= */
+
   const uploadPhotos = async () => {
     if (!files.length) return alert("Select photos");
 
@@ -50,20 +63,23 @@ const OwnerPGPhotos = () => {
     for (const file of files) {
       if (!file.type.startsWith("image/"))
         return alert(`${file.name} is not an image`);
+
       if (file.size > 5 * 1024 * 1024)
         return alert(`${file.name} > 5MB`);
     }
 
-    const token = await user.getIdToken(true);
-
-    const formData = new FormData();
-    files.forEach((f) => formData.append("photos", f));
-
     try {
       setUploading(true);
 
+      const token = await user.getIdToken(true);
+
+      const formData = new FormData();
+      files.forEach((f) => formData.append("photos", f));
+
       await axios.post(`${API}/pg/${id}/upload-photos`, formData, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         onUploadProgress: (e) => {
           const percent = Math.round((e.loaded * 100) / e.total);
           setUploadProgress(percent);
@@ -81,12 +97,13 @@ const OwnerPGPhotos = () => {
   };
 
   /* ================= DELETE ================= */
+
   const deletePhoto = async (photo) => {
     if (!window.confirm("Delete photo?")) return;
 
-    const token = await auth.currentUser.getIdToken(true);
-
     try {
+      const token = await auth.currentUser.getIdToken(true);
+
       await axios.delete(`${API}/pg/${id}/photo`, {
         headers: { Authorization: `Bearer ${token}` },
         data: { photo },
@@ -99,6 +116,7 @@ const OwnerPGPhotos = () => {
   };
 
   /* ================= REORDER ================= */
+
   const onDrop = async (index) => {
     if (dragIndex === null) return;
 
@@ -109,22 +127,28 @@ const OwnerPGPhotos = () => {
     setPhotos(updated);
     setDragIndex(null);
 
-    const token = await auth.currentUser.getIdToken(true);
+    try {
+      const token = await auth.currentUser.getIdToken(true);
 
-    await axios.put(
-      `${API}/pg/${id}/photos/order`,
-      { photos: updated },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+      await axios.put(
+        `${API}/pg/${id}/photos/order`,
+        { photos: updated },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch {
+      alert("Reorder failed");
+    }
   };
 
   /* ================= IMAGE URL ================= */
+
   const getImageUrl = (path) => {
-    if (!path) return "/no-image.png";
+    if (!path)
+      return "https://placehold.co/400x300?text=No+Image";
 
     if (path.startsWith("http")) return path;
 
-    return `${process.env.REACT_APP_FILES_URL}${path}`;
+    return `${FILES_URL}${path}`;
   };
 
   /* ================= UI ================= */
@@ -132,6 +156,8 @@ const OwnerPGPhotos = () => {
   return (
     <div style={{ maxWidth: 1000, margin: "auto", padding: 20 }}>
       <h2>📷 Manage PG Photos</h2>
+
+      {/* UPLOAD */}
 
       <input
         type="file"
@@ -144,8 +170,12 @@ const OwnerPGPhotos = () => {
       <br />
 
       <button onClick={uploadPhotos} disabled={uploading}>
-        {uploading ? `Uploading ${uploadProgress}%` : "Upload"}
+        {uploading
+          ? `Uploading ${uploadProgress}%`
+          : "Upload"}
       </button>
+
+      {/* GALLERY */}
 
       {loading ? (
         <p>Loading...</p>
@@ -166,10 +196,16 @@ const OwnerPGPhotos = () => {
                 src={getImageUrl(p)}
                 alt=""
                 style={img}
-                onError={(e) => (e.target.src = "/no-image.png")}
+                onError={(e) =>
+                  (e.target.src =
+                    "https://placehold.co/400x300?text=No+Image")
+                }
               />
 
-              <button onClick={() => deletePhoto(p)} style={deleteBtn}>
+              <button
+                onClick={() => deletePhoto(p)}
+                style={deleteBtn}
+              >
                 ❌
               </button>
             </div>
