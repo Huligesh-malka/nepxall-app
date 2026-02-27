@@ -5,6 +5,10 @@ import { auth } from "../firebase";
 
 /* ================= ENV ================= */
 
+const BACKEND_URL =
+  process.env.REACT_APP_BACKEND_URL ||
+  "https://nepxall-backend.onrender.com";
+
 const API =
   process.env.REACT_APP_API_URL ||
   "https://nepxall-backend.onrender.com/api";
@@ -25,7 +29,7 @@ const OwnerPGPhotos = () => {
   const [dragIndex, setDragIndex] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  /* ================= LOAD ================= */
+  /* ================= LOAD PHOTOS ================= */
 
   const loadPhotos = async () => {
     try {
@@ -48,21 +52,13 @@ const OwnerPGPhotos = () => {
     if (id) loadPhotos();
   }, [id]);
 
-  /* ================= TOKEN HELPER ================= */
-
-  const getToken = async () => {
-    const user = auth.currentUser;
-    if (!user) {
-      alert("Please login again");
-      throw new Error("No user");
-    }
-    return await user.getIdToken(true);
-  };
-
   /* ================= UPLOAD ================= */
 
   const uploadPhotos = async () => {
     if (!files.length) return alert("Select photos");
+
+    const user = auth.currentUser;
+    if (!user) return alert("Login again");
 
     for (const file of files) {
       if (!file.type.startsWith("image/"))
@@ -75,13 +71,15 @@ const OwnerPGPhotos = () => {
     try {
       setUploading(true);
 
-      const token = await getToken();
+      const token = await user.getIdToken(true);
 
       const formData = new FormData();
       files.forEach((f) => formData.append("photos", f));
 
       await axios.post(`${API}/pg/${id}/upload-photos`, formData, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         onUploadProgress: (e) => {
           const percent = Math.round((e.loaded * 100) / e.total);
           setUploadProgress(percent);
@@ -104,7 +102,7 @@ const OwnerPGPhotos = () => {
     if (!window.confirm("Delete photo?")) return;
 
     try {
-      const token = await getToken();
+      const token = await auth.currentUser.getIdToken(true);
 
       await axios.delete(`${API}/pg/${id}/photo`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -130,7 +128,7 @@ const OwnerPGPhotos = () => {
     setDragIndex(null);
 
     try {
-      const token = await getToken();
+      const token = await auth.currentUser.getIdToken(true);
 
       await axios.put(
         `${API}/pg/${id}/photos/order`,
@@ -145,7 +143,8 @@ const OwnerPGPhotos = () => {
   /* ================= IMAGE URL ================= */
 
   const getImageUrl = (path) => {
-    if (!path) return "https://placehold.co/400x300?text=No+Image";
+    if (!path)
+      return "https://placehold.co/400x300?text=No+Image";
 
     if (path.startsWith("http")) return path;
 
@@ -158,6 +157,8 @@ const OwnerPGPhotos = () => {
     <div style={{ maxWidth: 1000, margin: "auto", padding: 20 }}>
       <h2>📷 Manage PG Photos</h2>
 
+      {/* UPLOAD */}
+
       <input
         type="file"
         multiple
@@ -169,8 +170,12 @@ const OwnerPGPhotos = () => {
       <br />
 
       <button onClick={uploadPhotos} disabled={uploading}>
-        {uploading ? `Uploading ${uploadProgress}%` : "Upload"}
+        {uploading
+          ? `Uploading ${uploadProgress}%`
+          : "Upload"}
       </button>
+
+      {/* GALLERY */}
 
       {loading ? (
         <p>Loading...</p>
