@@ -77,7 +77,7 @@ import {
 } from "lucide-react";
 import api from "../api/api";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://nepxall-backend.onrender.com";
 
 /* ================= HELPERS ================= */
 const getPGCode = (id) => `PG-${String(id).padStart(5, "0")}`;
@@ -112,6 +112,37 @@ const formatPrice = (price) => {
   } catch (error) {
     return numPrice.toString();
   }
+};
+
+// FIXED: Helper function to get correct image URL
+const getCorrectImageUrl = (photo) => {
+  if (!photo) return null;
+  
+  // If it's already a full URL
+  if (photo.startsWith('http')) {
+    return photo;
+  }
+  
+  // If it's a path containing /uploads/
+  if (photo.includes('/uploads/')) {
+    const uploadsIndex = photo.indexOf('/uploads/');
+    if (uploadsIndex !== -1) {
+      const relativePath = photo.substring(uploadsIndex);
+      return `${BACKEND_URL}${relativePath}`;
+    }
+  }
+  
+  // If it's a path starting with /opt/render
+  if (photo.includes('/opt/render/')) {
+    const uploadsMatch = photo.match(/\/uploads\/.*/);
+    if (uploadsMatch) {
+      return `${BACKEND_URL}${uploadsMatch[0]}`;
+    }
+  }
+  
+  // Default: prepend backend URL
+  const normalizedPath = photo.startsWith('/') ? photo : `/${photo}`;
+  return `${BACKEND_URL}${normalizedPath}`;
 };
 
 /* ================= HELPER: GET PRICE RANGE BY PROPERTY TYPE ================= */
@@ -843,7 +874,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   const getImages = () => {
     const images = [];
     if (Array.isArray(pg.photos) && pg.photos.length) {
-      images.push(...pg.photos.map(photo => `${BACKEND_URL}${photo}`));
+      images.push(...pg.photos.map(photo => getCorrectImageUrl(photo)));
     }
     if (images.length === 0) {
       images.push("https://via.placeholder.com/600x400?text=No+Images+Available");
@@ -1316,6 +1347,11 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
               width: "100%", 
               height: "100%", 
               objectFit: "cover" 
+            }}
+            onError={(e) => {
+              console.error("Image failed to load:", images[currentImageIndex]);
+              e.target.onerror = null;
+              e.target.src = "https://via.placeholder.com/600x400?text=Image+Not+Found";
             }}
           />
           
@@ -1992,9 +2028,13 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
                       <div style={{ fontWeight: 600, marginBottom: 8 }}>{pg.pg_name}</div>
                       {pg.photos && pg.photos.length > 0 && (
                         <img 
-                          src={`${BACKEND_URL}${pg.photos[0]}`}
+                          src={getCorrectImageUrl(pg.photos[0])}
                           alt={pg.pg_name}
                           style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 8 }}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "https://via.placeholder.com/400x200/6b7280/ffffff?text=No+Image";
+                          }}
                         />
                       )}
                     </th>
@@ -2333,10 +2373,13 @@ function UserPGSearch() {
     showNotification("All filters reset");
   };
 
-  const getImageUrl = (pg) =>
-    Array.isArray(pg.photos) && pg.photos.length
-      ? `${BACKEND_URL}${pg.photos[0]}`
-      : "https://via.placeholder.com/400x200/6b7280/ffffff?text=No+Image";
+  // FIXED: Updated getImageUrl function
+  const getImageUrl = (pg) => {
+    if (Array.isArray(pg.photos) && pg.photos.length) {
+      return getCorrectImageUrl(pg.photos[0]);
+    }
+    return "https://via.placeholder.com/400x200/6b7280/ffffff?text=No+Image";
+  };
 
   /* ================= INTERACTION HANDLERS ================= */
   const handleQuickView = (pg, e) => {
@@ -3445,6 +3488,10 @@ function UserPGSearch() {
                     src={getImageUrl(pg)}
                     alt={pg.pg_name}
                     style={{ width: "100%", height: 200, objectFit: "cover" }}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "https://via.placeholder.com/400x200/6b7280/ffffff?text=No+Image";
+                    }}
                   />
                   <div style={{
                     position: "absolute",
@@ -3516,7 +3563,7 @@ function UserPGSearch() {
                     </span>
                   </div>
 
-                  {/* PRICE RANGE DISPLAY - UPDATED SECTION */}
+                  {/* PRICE RANGE DISPLAY */}
                   <div style={{ 
                     display: "flex", 
                     justifyContent: "space-between", 
