@@ -1,77 +1,52 @@
 import React, { useEffect, useState, useCallback } from "react";
-import axios from "axios";
 import { useParams } from "react-router-dom";
-import { auth } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "../../firebase";
+import { adminPGAPI } from "../../api/api";
+import { API_CONFIG } from "../../config";
 
-const API = process.env.REACT_APP_API;
-const BASE_URL = process.env.REACT_APP_FILES;
+const FILES_BASE =
+  API_CONFIG?.FILES_URL ||
+  process.env.REACT_APP_FILES_URL ||
+  "https://nepxall-backend.onrender.com";
 
 const AdminPGDetails = () => {
   const { id } = useParams();
 
   const [pg, setPG] = useState(null);
   const [photos, setPhotos] = useState([]);
-  const [jwt, setJwt] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const [rejectReason, setRejectReason] = useState("");
   const [showReject, setShowReject] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
-
-  /* ================= LOGIN WITH BACKEND ================= */
-  const backendLogin = async (user) => {
-    const idToken = await user.getIdToken();
-
-    const res = await axios.post(`${API}/auth/firebase`, {
-      idToken,
-    });
-
-    setJwt(res.data.token);
-    return res.data.token;
-  };
 
   /* ================= LOAD PG ================= */
-  const loadPG = useCallback(
-    async (token) => {
-      try {
-        const res = await axios.get(`${API}/pg/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
 
-        setPG(res.data.data);
+  const loadPG = useCallback(async () => {
+    try {
+      setLoading(true);
 
-        if (Array.isArray(res.data.data.photos)) {
-          setPhotos(res.data.data.photos);
-        } else {
-          try {
-            setPhotos(JSON.parse(res.data.data.photos || "[]"));
-          } catch {
-            setPhotos([]);
-          }
-        }
-      } catch (err) {
-        console.error("Load PG error:", err);
-        alert("Failed to load PG details");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [id]
-  );
+      const res = await adminPGAPI.getPGById(id);
+
+      const data = res.data.data;
+
+      setPG(data);
+      setPhotos(Array.isArray(data.photos) ? data.photos : []);
+    } catch (err) {
+      console.error("Load PG error:", err);
+      alert("Failed to load PG details");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
   /* ================= AUTH READY ================= */
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) return setLoading(false);
 
-      try {
-        const token = await backendLogin(user);
-        await loadPG(token);
-      } catch (err) {
-        console.error("Admin auth failed", err);
-        setLoading(false);
-      }
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (!user) return setLoading(false);
+      loadPG();
     });
 
     return () => unsub();
@@ -84,14 +59,8 @@ const AdminPGDetails = () => {
 
     try {
       setActionLoading(true);
-
-      await axios.patch(
-        `${API}/admin/pg/${id}/approve`,
-        {},
-        { headers: { Authorization: `Bearer ${jwt}` } }
-      );
-
-      loadPG(jwt);
+      await adminPGAPI.approvePG(id);
+      await loadPG();
     } catch {
       alert("Approval failed");
     } finally {
@@ -104,16 +73,10 @@ const AdminPGDetails = () => {
 
     try {
       setActionLoading(true);
-
-      await axios.patch(
-        `${API}/admin/pg/${id}/reject`,
-        { reason: rejectReason },
-        { headers: { Authorization: `Bearer ${jwt}` } }
-      );
-
+      await adminPGAPI.rejectPG(id, rejectReason);
       setShowReject(false);
       setRejectReason("");
-      loadPG(jwt);
+      await loadPG();
     } catch {
       alert("Rejection failed");
     } finally {
@@ -145,7 +108,7 @@ const AdminPGDetails = () => {
               {photos.map((img, i) => (
                 <img
                   key={i}
-                  src={`${BASE_URL}${img}`}
+                  src={`${FILES_BASE}${img}`}
                   alt=""
                   className="h-40 w-full object-cover rounded"
                 />
@@ -156,7 +119,9 @@ const AdminPGDetails = () => {
 
         {pg.status === "pending" && (
           <div className="flex justify-end gap-4 border-t pt-4">
+
             <button
+              disabled={actionLoading}
               onClick={() => setShowReject(true)}
               className="border px-5 py-2 text-red-600"
             >
@@ -164,19 +129,40 @@ const AdminPGDetails = () => {
             </button>
 
             <button
+              disabled={actionLoading}
               onClick={approve}
               className="bg-blue-600 text-white px-5 py-2"
             >
-              Approve
+              {actionLoading ? "Processing..." : "Approve"}
             </button>
           </div>
         )}
+
+        {showReject && (
+          <div className="border-t pt-4 space-y-3">
+            <textarea
+              placeholder="Enter rejection reason"
+              className="w-full border p-2 rounded"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+            />
+
+            <button
+              onClick={reject}
+              className="bg-red-600 text-white px-5 py-2"
+            >
+              Submit Rejection
+            </button>
+          </div>
+        )}
+
       </div>
     </div>
   );
 };
 
 /* UI helpers */
+
 const Section = ({ title, children }) => (
   <div>
     <h3 className="font-semibold mb-3">{title}</h3>
