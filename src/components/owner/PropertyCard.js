@@ -22,7 +22,7 @@ import {
   Videocam as VideoIcon,
   PlayArrow as ActivateIcon,
   Stop as DisableIcon,
-  MeetingRoom as RoomsIcon,  // ✅ Fixed: Using RoomsIcon instead of MeetingRoomIcon
+  MeetingRoom as RoomsIcon,
   Star as StarIcon,
   Campaign as AnnouncementIcon,
   PlaylistAdd as PlanIcon,
@@ -70,10 +70,9 @@ const PropertyCard = ({
       return photo;
     }
     
-    // If it's a path starting with /uploads or /opt/render, serve from backend
-    // Extract just the filename or use the full path
+    // If it's a path containing /uploads/
     if (photo.includes('/uploads/')) {
-      // Get the part after /uploads/
+      // Extract everything after /uploads/
       const uploadsIndex = photo.indexOf('/uploads/');
       if (uploadsIndex !== -1) {
         const relativePath = photo.substring(uploadsIndex);
@@ -81,12 +80,24 @@ const PropertyCard = ({
       }
     }
     
-    // If it's a relative path, prepend backend URL
+    // If it's a relative path starting with /opt/render or similar
+    if (photo.includes('/opt/render/')) {
+      // Try to extract the /uploads/ part
+      const uploadsMatch = photo.match(/\/uploads\/.*/);
+      if (uploadsMatch) {
+        return `${BACKEND_URL}${uploadsMatch[0]}`;
+      }
+    }
+    
+    // Default: just prepend backend URL
     const normalizedPath = photo.startsWith('/') ? photo : `/${photo}`;
     return `${BACKEND_URL}${normalizedPath}`;
   };
 
   const imageUrl = getImageUrl();
+
+  // Log for debugging
+  console.log(`Property ${property.pg_name} image URL:`, imageUrl);
 
   return (
     <Card sx={{
@@ -122,14 +133,23 @@ const PropertyCard = ({
               e.target.style.display = "none";
               // Show fallback
               const parent = e.target.parentElement;
-              parent.innerHTML = `
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #94a3b8;">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span style="margin-top: 8px; font-size: 14px;">Image not available</span>
-                </div>
+              const fallbackDiv = document.createElement('div');
+              fallbackDiv.style.display = "flex";
+              fallbackDiv.style.flexDirection = "column";
+              fallbackDiv.style.alignItems = "center";
+              fallbackDiv.style.justifyContent = "center";
+              fallbackDiv.style.height = "100%";
+              fallbackDiv.style.color = "#94a3b8";
+              fallbackDiv.style.backgroundColor = "#f1f5f9";
+              fallbackDiv.style.width = "100%";
+              fallbackDiv.innerHTML = `
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span style="margin-top: 8px; font-size: 14px;">Image not available</span>
               `;
+              parent.innerHTML = '';
+              parent.appendChild(fallbackDiv);
             }}
             sx={{
               width: "100%",
@@ -387,4 +407,4 @@ const PropertyCard = ({
   );
 };
 
-export default PropertyCard;y
+export default PropertyCard;
