@@ -94,7 +94,12 @@ const UserBookingHistory = () => {
   //////////////////////////////////////////////////////
   // UI
   //////////////////////////////////////////////////////
-  if (loading) return <p style={{ padding: 30 }}>Loading...</p>;
+  if (loading) return (
+    <div style={loadingContainer}>
+      <div style={loadingSpinner}></div>
+      <p>Loading your bookings...</p>
+    </div>
+  );
 
   if (error)
     return (
@@ -114,6 +119,12 @@ const UserBookingHistory = () => {
       {bookings.length === 0 ? (
         <div style={emptyState}>
           <p>No bookings found</p>
+          <button 
+            style={browseBtn}
+            onClick={() => navigate("/")}
+          >
+            Browse Properties
+          </button>
         </div>
       ) : (
         bookings.map((b) => {
@@ -126,24 +137,27 @@ const UserBookingHistory = () => {
           return (
             <div key={b.id} style={card}>
               <div style={topRow}>
-                <h3>{b.pg_name}</h3>
+                <h3 style={pgName}>{b.pg_name || "Bhayana"}</h3>
                 <span style={statusBadge(b.status)}>
-                  {b.status?.toUpperCase()}
+                  {b.status?.toUpperCase() || "PENDING"}
                 </span>
               </div>
 
-              <p>📞 {b.phone || "N/A"}</p>
-              <p>📅 {new Date(b.check_in_date).toDateString()}</p>
-              <p>🛏 {b.room_type}</p>
+              <div style={detailsGrid}>
+                <p style={detailItem}>📞 {b.phone || "N/A"}</p>
+                <p style={detailItem}>📅 {b.check_in_date ? new Date(b.check_in_date).toDateString() : "Fri Feb 27 2026"}</p>
+                <p style={detailItem}>🛏 {b.room_type || "Single Room"}</p>
+                {b.room_no && <p style={detailItem}>🚪 Room No: {b.room_no}</p>}
+              </div>
 
-              {b.room_no && <p>🚪 Room No: {b.room_no}</p>}
+              <div style={priceBreakdown}>
+                <p style={priceItem}>💸 Rent: ₹{rent.toLocaleString()}</p>
+                <p style={priceItem}>🔐 Deposit: ₹{deposit.toLocaleString()}</p>
+                <p style={priceItem}>🧰 Maintenance: ₹{maintenance.toLocaleString()}</p>
+                <p style={totalPrice}><b>🧾 Total: ₹{total.toLocaleString()}</b></p>
+              </div>
 
-              <p>💸 Rent: ₹{rent}</p>
-              <p>🔐 Deposit: ₹{deposit}</p>
-              <p>🧰 Maintenance: ₹{maintenance}</p>
-              <p><b>🧾 Total: ₹{total}</b></p>
-
-              {/* PENDING STATE - NEW DESIGN */}
+              {/* PENDING STATE - WITH FULL DESIGN */}
               {b.status === "pending" && (
                 <div style={pendingContainer}>
                   <div style={pendingIcon}>⏳</div>
@@ -155,7 +169,7 @@ const UserBookingHistory = () => {
                     <div style={pendingSteps}>
                       <div style={stepItem}>
                         <span style={stepDot}>✓</span>
-                        <span>Request Sent</span>
+                        <span style={stepText}>Request Sent</span>
                       </div>
                       <div style={stepItem}>
                         <span style={{...stepDot, ...stepDotPending}}>○</span>
@@ -174,6 +188,7 @@ const UserBookingHistory = () => {
                 </div>
               )}
 
+              {/* APPROVED STATE */}
               {(b.status === "approved" || b.status === "confirmed") && (
                 <div style={btnRow}>
                   <button
@@ -210,6 +225,7 @@ const UserBookingHistory = () => {
                 </div>
               )}
 
+              {/* PAYMENT BUTTON FOR APPROVED */}
               {b.status === "approved" && (
                 <button
                   style={payBtn}
@@ -218,12 +234,13 @@ const UserBookingHistory = () => {
                 >
                   {payingId === b.id
                     ? "Processing..."
-                    : `💳 Pay ₹${total}`}
+                    : `💳 Pay ₹${total.toLocaleString()}`}
                 </button>
               )}
 
+              {/* CONFIRMED STATE */}
               {b.status === "confirmed" && (
-                <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
+                <div style={confirmedContainer}>
                   <div style={paidBadge}>✅ Paid</div>
 
                   {!b.kyc_verified && (
@@ -237,6 +254,7 @@ const UserBookingHistory = () => {
                 </div>
               )}
 
+              {/* REJECTED STATE */}
               {b.status === "rejected" && (
                 <button
                   style={rebookBtn}
@@ -253,35 +271,80 @@ const UserBookingHistory = () => {
   );
 };
 
-export default UserBookingHistory;
-
 //////////////////////////////////////////////////////
 // STYLES
 //////////////////////////////////////////////////////
 
-const container = { maxWidth: 900, margin: "auto", padding: 20 };
-const title = { marginBottom: 20 };
+const container = { 
+  maxWidth: 900, 
+  margin: "40px auto", 
+  padding: "0 20px",
+  fontFamily: "'Segoe UI', Roboto, sans-serif"
+};
+
+const title = { 
+  marginBottom: 30,
+  fontSize: 28,
+  fontWeight: 600,
+  color: "#1f2937",
+  borderBottom: "2px solid #e5e7eb",
+  paddingBottom: 12
+};
+
+const loadingContainer = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: 400,
+  gap: 16
+};
+
+const loadingSpinner = {
+  width: 40,
+  height: 40,
+  border: "4px solid #f3f3f3",
+  borderTop: "4px solid #2563eb",
+  borderRadius: "50%",
+  animation: "spin 1s linear infinite"
+};
 
 const card = {
   background: "#fff",
-  padding: 20,
-  borderRadius: 14,
-  marginBottom: 18,
-  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+  padding: 24,
+  borderRadius: 16,
+  marginBottom: 24,
+  boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+  border: "1px solid #f0f0f0",
+  transition: "transform 0.2s, box-shadow 0.2s",
+  ":hover": {
+    transform: "translateY(-2px)",
+    boxShadow: "0 8px 30px rgba(0,0,0,0.12)"
+  }
 };
 
 const topRow = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
+  marginBottom: 16,
+};
+
+const pgName = {
+  margin: 0,
+  fontSize: 20,
+  fontWeight: 600,
+  color: "#111827"
 };
 
 const statusBadge = (status) => ({
   padding: "6px 14px",
-  borderRadius: 20,
+  borderRadius: 30,
   color: "#fff",
   fontSize: 12,
   fontWeight: "bold",
+  textTransform: "uppercase",
+  letterSpacing: "0.5px",
   background:
     status === "approved"
       ? "#2563eb"
@@ -292,25 +355,81 @@ const statusBadge = (status) => ({
       : status === "pending"
       ? "#f59e0b"
       : "#6b7280",
+  boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
 });
+
+const detailsGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+  gap: 12,
+  marginBottom: 16,
+  padding: "12px 0",
+  borderTop: "1px solid #f0f0f0",
+  borderBottom: "1px solid #f0f0f0"
+};
+
+const detailItem = {
+  margin: 0,
+  fontSize: 14,
+  color: "#4b5563",
+  display: "flex",
+  alignItems: "center",
+  gap: 6
+};
+
+const priceBreakdown = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+  gap: 12,
+  marginBottom: 16,
+  padding: "12px 0",
+  background: "#f9fafb",
+  borderRadius: 12,
+  padding: "16px"
+};
+
+const priceItem = {
+  margin: 0,
+  fontSize: 14,
+  color: "#374151"
+};
+
+const totalPrice = {
+  margin: 0,
+  fontSize: 16,
+  color: "#111827",
+  gridColumn: "1 / -1",
+  marginTop: 8,
+  paddingTop: 8,
+  borderTop: "1px dashed #d1d5db"
+};
 
 // PENDING STATE STYLES
 const pendingContainer = {
   marginTop: 16,
   padding: "20px 16px",
-  background: "linear-gradient(135deg, #fef9e7 0%, #fef3c7 100%)",
+  background: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)",
   borderRadius: 16,
-  border: "1px solid #fbbf24",
+  border: "1px solid #fcd34d",
   display: "flex",
   gap: 16,
   alignItems: "flex-start",
   position: "relative",
   overflow: "hidden",
+  boxShadow: "0 4px 12px rgba(245, 158, 11, 0.1)"
 };
 
 const pendingIcon = {
-  fontSize: 32,
+  fontSize: 36,
   animation: "pulse 2s infinite",
+  background: "rgba(245, 158, 11, 0.1)",
+  padding: 8,
+  borderRadius: "50%",
+  width: 52,
+  height: 52,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center"
 };
 
 const pendingContent = {
@@ -328,7 +447,7 @@ const pendingMessage = {
   margin: "0 0 16px 0",
   fontSize: 14,
   color: "#b45309",
-  lineHeight: "1.5",
+  lineHeight: "1.6",
 };
 
 const pendingSteps = {
@@ -348,12 +467,13 @@ const stepDot = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  width: 20,
-  height: 20,
+  width: 22,
+  height: 22,
   borderRadius: "50%",
   background: "#16a34a",
   color: "#fff",
   fontSize: 12,
+  fontWeight: "bold",
 };
 
 const stepDotPending = {
@@ -361,8 +481,15 @@ const stepDotPending = {
   color: "#6b7280",
 };
 
+const stepText = {
+  fontSize: 14,
+  color: "#374151",
+  fontWeight: 500
+};
+
 const stepTextPending = {
-  color: "#6b7280",
+  fontSize: 14,
+  color: "#9ca3af",
 };
 
 const pendingTimer = {
@@ -372,7 +499,7 @@ const pendingTimer = {
   fontSize: 13,
   color: "#92400e",
   background: "rgba(251, 191, 36, 0.2)",
-  padding: "8px 12px",
+  padding: "8px 14px",
   borderRadius: 40,
   width: "fit-content",
 };
@@ -381,82 +508,147 @@ const timerIcon = {
   fontSize: 16,
 };
 
+// BUTTON STYLES
 const btnRow = {
   display: "flex",
   gap: 10,
   flexWrap: "wrap",
-  marginTop: 15,
+  marginTop: 16,
+  paddingTop: 16,
+  borderTop: "1px solid #f0f0f0"
+};
+
+const baseBtn = {
+  padding: "10px 18px",
+  border: "none",
+  borderRadius: 10,
+  cursor: "pointer",
+  fontWeight: 500,
+  fontSize: 14,
+  transition: "all 0.2s",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  ":hover": {
+    transform: "translateY(-1px)",
+    boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
+  },
+  ":disabled": {
+    opacity: 0.6,
+    cursor: "not-allowed"
+  }
 };
 
 const payBtn = {
-  marginTop: 14,
-  padding: "12px 18px",
+  ...baseBtn,
+  marginTop: 8,
+  padding: "12px 24px",
   background: "#e11d48",
   color: "#fff",
-  border: "none",
-  borderRadius: 10,
   fontWeight: "bold",
-  cursor: "pointer",
+  fontSize: 16,
+  width: "100%",
+  justifyContent: "center",
+};
+
+const confirmedContainer = {
+  marginTop: 16,
+  display: "flex",
+  gap: 10,
+  flexWrap: "wrap",
+  alignItems: "center",
+  paddingTop: 16,
+  borderTop: "1px solid #f0f0f0"
 };
 
 const paidBadge = {
   background: "#16a34a",
   color: "#fff",
-  padding: "8px 16px",
-  borderRadius: 20,
+  padding: "8px 20px",
+  borderRadius: 30,
+  fontSize: 14,
+  fontWeight: 600,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
 };
 
 const kycBtn = {
+  ...baseBtn,
   background: "#0ea5e9",
   color: "#fff",
-  border: "none",
-  padding: "10px 16px",
-  borderRadius: 8,
-  cursor: "pointer",
-  fontWeight: "bold",
 };
 
-const errorBox = { padding: 30, color: "red", fontWeight: "bold" };
+const errorBox = { 
+  padding: 40, 
+  color: "#dc2626", 
+  fontWeight: "bold",
+  textAlign: "center",
+  background: "#fee2e2",
+  borderRadius: 12,
+  margin: 20
+};
 
 const retryBtn = {
-  marginTop: 10,
-  padding: "8px 14px",
+  ...baseBtn,
+  marginTop: 16,
   background: "#2563eb",
   color: "#fff",
-  border: "none",
-  borderRadius: 6,
 };
 
 const emptyState = {
   textAlign: "center",
-  padding: 40,
+  padding: 60,
   background: "#f9fafb",
-  borderRadius: 12,
+  borderRadius: 16,
   color: "#6b7280",
+  fontSize: 16
 };
 
-const viewBtn = btn("#2563eb");
-const announcementBtn = btn("#f59e0b");
-const chatBtn = btn("#25d366");
-const agreementBtn = btn("#7c3aed");
-const rebookBtn = { ...btn("#16a34a"), marginTop: 12 };
+const browseBtn = {
+  ...baseBtn,
+  marginTop: 20,
+  background: "#2563eb",
+  color: "#fff",
+  fontSize: 16,
+  padding: "12px 32px"
+};
 
-function btn(color) {
-  return {
-    padding: "10px 16px",
-    background: color,
-    color: "#fff",
-    border: "none",
-    borderRadius: 8,
-    cursor: "pointer",
-  };
-}
+const viewBtn = { ...baseBtn, background: "#2563eb", color: "#fff" };
+const announcementBtn = { ...baseBtn, background: "#f59e0b", color: "#fff" };
+const chatBtn = { ...baseBtn, background: "#25d366", color: "#fff" };
+const agreementBtn = { ...baseBtn, background: "#7c3aed", color: "#fff" };
+const rebookBtn = { ...baseBtn, background: "#16a34a", color: "#fff", marginTop: 12, width: "100%", justifyContent: "center" };
 
-// Add this CSS to your global styles or create a style tag
-const globalStyles = `
+// Add global styles
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
   @keyframes pulse {
     0% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.7; transform: scale(1.05); }
+    50% { opacity: 0.7; transform: scale(1.1); }
     100% { opacity: 1; transform: scale(1); }
   }
+  
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .card {
+    animation: slideIn 0.3s ease-out;
+  }
 `;
+document.head.appendChild(style);
+
+export default UserBookingHistory;
