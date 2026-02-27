@@ -25,7 +25,7 @@ import {
   MeetingRoom as RoomsIcon,
   Star as StarIcon,
   Campaign as AnnouncementIcon,
-  PlaylistAdd as PlanIcon   // 🆕 Create Plan icon
+  PlaylistAdd as PlanIcon
 } from "@mui/icons-material";
 
 const BRAND_BLUE = "#0B5ED7";
@@ -48,14 +48,29 @@ const PropertyCard = ({
   onVideos,
   onToggleStatus,
   onAnnouncement,
-  onCreatePlan   // 🆕 New prop for Create Plan
+  onCreatePlan
 }) => {
 
   const status = statusConfig[property.status] || statusConfig.pending;
 
-  const imageUrl = property.photos?.length
-    ? `http://localhost:5000${property.photos[0]}`
-    : "https://via.placeholder.com/400x300?text=No+Image";
+  // ✅ FIXED: Handle both Cloudinary URLs and local paths
+  const getImageUrl = () => {
+    if (!property.photos?.length) {
+      return "https://via.placeholder.com/400x300?text=No+Image";
+    }
+    
+    const photo = property.photos[0];
+    
+    // If it's already a full URL (Cloudinary), use it directly
+    if (photo.startsWith('http')) {
+      return photo;
+    }
+    
+    // If it's a relative path, prepend local server URL
+    return `http://localhost:5000${photo}`;
+  };
+
+  const imageUrl = getImageUrl();
 
   return (
     <Card sx={{
@@ -71,6 +86,11 @@ const PropertyCard = ({
         component="img"
         image={imageUrl}
         alt={property.pg_name}
+        onError={(e) => {
+          console.error("Image failed to load:", imageUrl);
+          e.target.onerror = null;
+          e.target.src = "https://via.placeholder.com/400x300?text=Image+Not+Found";
+        }}
         sx={{
           width: { xs: "100%", md: 260 },
           height: { xs: 200, md: "auto" },
@@ -97,7 +117,7 @@ const PropertyCard = ({
               {property.area}, {property.city}
             </Typography>
 
-            {/* 🆕 Category Badge */}
+            {/* Category Badge */}
             {property.pg_category && (
               <Chip
                 label={property.pg_category.toUpperCase()}
@@ -189,7 +209,7 @@ const PropertyCard = ({
             </Button>
           </Tooltip>
 
-          {/* 🆕 CREATE PLAN BUTTON - Only for coliving */}
+          {/* CREATE PLAN BUTTON - Only for coliving */}
           {property.pg_category === "coliving" && onCreatePlan && (
             <Tooltip title="Create Membership Plan">
               <Button
