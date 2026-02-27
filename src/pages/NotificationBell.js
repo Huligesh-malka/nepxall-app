@@ -4,7 +4,7 @@ import { auth } from "../firebase";
 import api from "../api/api";
 
 const NotificationBell = () => {
-  const [userReady, setUserReady] = useState(false);
+  const [uid, setUid] = useState(null);
   const [list, setList] = useState([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -14,8 +14,8 @@ const NotificationBell = () => {
   /* ================= AUTH ================= */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) setUserReady(true);
-      else setUserReady(false);
+      if (user) setUid(user.uid);
+      else setUid(null);
     });
 
     return unsub;
@@ -23,27 +23,25 @@ const NotificationBell = () => {
 
   /* ================= LOAD ================= */
   const loadNotifications = useCallback(async () => {
-    if (!userReady) return;
+    if (!uid) return;
 
     try {
-      const res = await api.get("/notifications/my");
+      const res = await api.get(`/notifications/${uid}`);
       setList(res.data.data || []);
     } catch {
       setList([]);
     } finally {
       setLoading(false);
     }
-  }, [userReady]);
+  }, [uid]);
 
   /* ================= AUTO REFRESH ================= */
   useEffect(() => {
-    if (!userReady) return;
-
     loadNotifications();
-    const timer = setInterval(loadNotifications, 10000); // ⬅️ reduced load
 
+    const timer = setInterval(loadNotifications, 5000);
     return () => clearInterval(timer);
-  }, [loadNotifications, userReady]);
+  }, [loadNotifications]);
 
   /* ================= CLICK OUTSIDE ================= */
   useEffect(() => {
@@ -114,6 +112,46 @@ const NotificationBell = () => {
       )}
     </div>
   );
+};
+
+/* ================= STYLES ================= */
+
+const badge = {
+  background: "red",
+  color: "#fff",
+  borderRadius: "50%",
+  padding: "2px 6px",
+  fontSize: 12,
+  position: "absolute",
+  top: -5,
+  right: -5,
+};
+
+const bellBtn = {
+  background: "transparent",
+  border: "none",
+  fontSize: 22,
+  cursor: "pointer",
+  position: "relative",
+};
+
+const dropdown = {
+  position: "absolute",
+  right: 0,
+  top: 35,
+  width: 320,
+  background: "#fff",
+  boxShadow: "0 4px 12px rgba(0,0,0,.15)",
+  borderRadius: 8,
+  zIndex: 999,
+  maxHeight: 400,
+  overflowY: "auto",
+};
+
+const header = {
+  padding: 10,
+  borderBottom: "1px solid #eee",
+  fontWeight: "bold",
 };
 
 export default NotificationBell;
