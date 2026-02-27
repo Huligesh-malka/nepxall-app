@@ -7,6 +7,29 @@ import "leaflet/dist/leaflet.css";
 import api from "../api/api"; // ← FOR YOUR BACKEND
 import { auth } from "../firebase";
 
+// Import icons from lucide-react for better UI
+import { 
+  X, 
+  Check, 
+  Calendar,
+  BookOpen,
+  User,
+  Phone,
+  Mail,
+  MessageCircle,
+  MapPin,
+  Home,
+  Users,
+  Building,
+  DoorOpen,
+  DollarSign,
+  Shield,
+  Heart,
+  Share2,
+  Copy,
+  Eye
+} from "lucide-react";
+
 /* ================= LEAFLET FIX ================= */
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -20,6 +43,356 @@ L.Icon.Default.mergeOptions({
 
 // Base URL for images (from env, remove /api suffix)
 const BASE_URL = import.meta.env.VITE_API_URL?.replace("/api", "") || "";
+
+// Helper function for notifications
+const showNotification = (message, type = "success") => {
+  alert(message);
+};
+
+// Helper function to format price
+const formatPrice = (price) => {
+  if (!price || price === "" || price === "0") return "—";
+  return `₹${parseInt(price).toLocaleString('en-IN')}`;
+};
+
+// Helper function to get effective rent
+const getEffectiveRent = (pg) => {
+  if (!pg) return 0;
+  
+  if (pg.pg_category === "to_let") {
+    return pg.price_1bhk || pg.price_2bhk || pg.price_3bhk || pg.price_4bhk || 0;
+  } else if (pg.pg_category === "coliving") {
+    return pg.co_living_single_room || pg.co_living_double_room || 0;
+  } else {
+    return pg.single_sharing || pg.double_sharing || pg.triple_sharing || 
+           pg.four_sharing || pg.single_room || pg.double_room || pg.triple_room || 0;
+  }
+};
+
+// ================= ENHANCED BOOKING MODAL COMPONENT =================
+const BookingModal = ({ pg, onClose, onBook, isOpen }) => {
+  const [bookingData, setBookingData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    checkInDate: "",
+    roomType: "",
+    message: "",
+    duration: "6"
+  });
+
+  const [errors, setErrors] = useState({});
+
+  // Set default room type when modal opens
+  useEffect(() => {
+    if (pg) {
+      const defaultRoomType = getRoomTypes()[0]?.value || "";
+      setBookingData(prev => ({ ...prev, roomType: defaultRoomType }));
+    }
+  }, [pg]);
+
+  if (!isOpen || !pg) return null;
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setBookingData(prev => ({ ...prev, [name]: value }));
+    // Clear error for this field
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: null }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!bookingData.name.trim()) newErrors.name = "Name is required";
+    if (!bookingData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(bookingData.email)) {
+      newErrors.email = "Email is invalid";
+    }
+    if (!bookingData.phone.trim()) {
+      newErrors.phone = "Phone number is required";
+    } else if (!/^\d{10}$/.test(bookingData.phone)) {
+      newErrors.phone = "Phone number must be 10 digits";
+    }
+    if (!bookingData.checkInDate) newErrors.checkInDate = "Check-in date is required";
+    if (!bookingData.roomType) newErrors.roomType = "Please select a room type";
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (validateForm()) {
+      onBook(bookingData);
+    }
+  };
+
+  const getRoomTypes = () => {
+    const types = [];
+    
+    if (pg.pg_category === "pg") {
+      if (pg.single_sharing && pg.single_sharing > 0) types.push({ 
+        value: "Single Sharing", 
+        label: `Single Sharing - ${formatPrice(pg.single_sharing)}/month` 
+      });
+      if (pg.double_sharing && pg.double_sharing > 0) types.push({ 
+        value: "Double Sharing", 
+        label: `Double Sharing - ${formatPrice(pg.double_sharing)}/month` 
+      });
+      if (pg.triple_sharing && pg.triple_sharing > 0) types.push({ 
+        value: "Triple Sharing", 
+        label: `Triple Sharing - ${formatPrice(pg.triple_sharing)}/month` 
+      });
+      if (pg.four_sharing && pg.four_sharing > 0) types.push({ 
+        value: "Four Sharing", 
+        label: `Four Sharing - ${formatPrice(pg.four_sharing)}/month` 
+      });
+      if (pg.single_room && pg.single_room > 0) types.push({ 
+        value: "Single Room", 
+        label: `Single Room - ${formatPrice(pg.single_room)}/month` 
+      });
+      if (pg.double_room && pg.double_room > 0) types.push({ 
+        value: "Double Room", 
+        label: `Double Room - ${formatPrice(pg.double_room)}/month` 
+      });
+    } else if (pg.pg_category === "coliving") {
+      if (pg.co_living_single_room && pg.co_living_single_room > 0) types.push({ 
+        value: "Co-Living Single Room", 
+        label: `Co-Living Single Room - ${formatPrice(pg.co_living_single_room)}/month` 
+      });
+      if (pg.co_living_double_room && pg.co_living_double_room > 0) types.push({ 
+        value: "Co-Living Double Room", 
+        label: `Co-Living Double Room - ${formatPrice(pg.co_living_double_room)}/month` 
+      });
+    } else if (pg.pg_category === "to_let") {
+      if (pg.price_1bhk && pg.price_1bhk > 0) types.push({ 
+        value: "1 BHK", 
+        label: `1 BHK - ${formatPrice(pg.price_1bhk)}/month` 
+      });
+      if (pg.price_2bhk && pg.price_2bhk > 0) types.push({ 
+        value: "2 BHK", 
+        label: `2 BHK - ${formatPrice(pg.price_2bhk)}/month` 
+      });
+      if (pg.price_3bhk && pg.price_3bhk > 0) types.push({ 
+        value: "3 BHK", 
+        label: `3 BHK - ${formatPrice(pg.price_3bhk)}/month` 
+      });
+      if (pg.price_4bhk && pg.price_4bhk > 0) types.push({ 
+        value: "4 BHK", 
+        label: `4 BHK - ${formatPrice(pg.price_4bhk)}/month` 
+      });
+    }
+    
+    return types;
+  };
+
+  const roomTypes = getRoomTypes();
+  const minDate = new Date().toISOString().split('T')[0];
+
+  return (
+    <div style={styles.modalOverlay}>
+      <div style={styles.modalContent}>
+        {/* Header */}
+        <div style={styles.modalHeader}>
+          <div>
+            <h2 style={styles.modalTitle}>Book {pg.pg_name}</h2>
+            <p style={styles.modalSubtitle}>Fill in your details to book this property</p>
+          </div>
+          <button 
+            onClick={onClose}
+            style={styles.modalCloseButton}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Property Summary */}
+        <div style={styles.propertySummary}>
+          <div style={styles.propertySummaryItem}>
+            <MapPin size={16} />
+            <span>{pg.area || pg.city || "Location not specified"}</span>
+          </div>
+          <div style={styles.propertySummaryItem}>
+            <DollarSign size={16} />
+            <span>Starting from {formatPrice(getEffectiveRent(pg))}/month</span>
+          </div>
+        </div>
+
+        {/* Booking Form */}
+        <form onSubmit={handleSubmit} style={styles.bookingForm}>
+          {/* Full Name */}
+          <div style={styles.formGroup}>
+            <label style={styles.formLabel}>
+              <User size={16} />
+              Full Name *
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={bookingData.name}
+              onChange={handleInputChange}
+              style={{
+                ...styles.formInput,
+                borderColor: errors.name ? "#ef4444" : "#d1d5db"
+              }}
+              placeholder="Enter your full name"
+            />
+            {errors.name && <span style={styles.errorText}>{errors.name}</span>}
+          </div>
+
+          {/* Email */}
+          <div style={styles.formGroup}>
+            <label style={styles.formLabel}>
+              <Mail size={16} />
+              Email Address *
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={bookingData.email}
+              onChange={handleInputChange}
+              style={{
+                ...styles.formInput,
+                borderColor: errors.email ? "#ef4444" : "#d1d5db"
+              }}
+              placeholder="Enter your email"
+            />
+            {errors.email && <span style={styles.errorText}>{errors.email}</span>}
+          </div>
+
+          {/* Phone Number */}
+          <div style={styles.formGroup}>
+            <label style={styles.formLabel}>
+              <Phone size={16} />
+              Phone Number *
+            </label>
+            <input
+              type="tel"
+              name="phone"
+              value={bookingData.phone}
+              onChange={handleInputChange}
+              style={{
+                ...styles.formInput,
+                borderColor: errors.phone ? "#ef4444" : "#d1d5db"
+              }}
+              placeholder="10-digit mobile number"
+              maxLength="10"
+            />
+            {errors.phone && <span style={styles.errorText}>{errors.phone}</span>}
+          </div>
+
+          {/* Check-in Date */}
+          <div style={styles.formGroup}>
+            <label style={styles.formLabel}>
+              <Calendar size={16} />
+              Check-in Date *
+            </label>
+            <input
+              type="date"
+              name="checkInDate"
+              value={bookingData.checkInDate}
+              onChange={handleInputChange}
+              min={minDate}
+              style={{
+                ...styles.formInput,
+                borderColor: errors.checkInDate ? "#ef4444" : "#d1d5db"
+              }}
+            />
+            {errors.checkInDate && <span style={styles.errorText}>{errors.checkInDate}</span>}
+          </div>
+
+          {/* Room Type */}
+          {roomTypes.length > 0 && (
+            <div style={styles.formGroup}>
+              <label style={styles.formLabel}>
+                <DoorOpen size={16} />
+                {pg.pg_category === "to_let" ? "Select BHK Type *" : "Select Room Type *"}
+              </label>
+              <select
+                name="roomType"
+                value={bookingData.roomType}
+                onChange={handleInputChange}
+                style={{
+                  ...styles.formSelect,
+                  borderColor: errors.roomType ? "#ef4444" : "#d1d5db"
+                }}
+              >
+                <option value="">Select an option</option>
+                {roomTypes.map((type, index) => (
+                  <option key={index} value={type.value}>{type.label}</option>
+                ))}
+              </select>
+              {errors.roomType && <span style={styles.errorText}>{errors.roomType}</span>}
+            </div>
+          )}
+
+          {/* Duration (Optional) */}
+          <div style={styles.formGroup}>
+            <label style={styles.formLabel}>
+              <Calendar size={16} />
+              Duration (months)
+            </label>
+            <select
+              name="duration"
+              value={bookingData.duration}
+              onChange={handleInputChange}
+              style={styles.formSelect}
+            >
+              <option value="1">1 month</option>
+              <option value="3">3 months</option>
+              <option value="6">6 months</option>
+              <option value="12">12 months</option>
+              <option value="24">24 months</option>
+            </select>
+          </div>
+
+          {/* Additional Message */}
+          <div style={styles.formGroup}>
+            <label style={styles.formLabel}>
+              <MessageCircle size={16} />
+              Additional Message (Optional)
+            </label>
+            <textarea
+              name="message"
+              value={bookingData.message}
+              onChange={handleInputChange}
+              style={styles.formTextarea}
+              placeholder="Any special requirements or questions..."
+              rows="3"
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div style={styles.modalFooter}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={styles.cancelButton}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              style={styles.submitButton}
+            >
+              <BookOpen size={16} />
+              Submit Booking Request
+            </button>
+          </div>
+        </form>
+
+        {/* Terms */}
+        <p style={styles.termsText}>
+          By submitting this form, you agree to our terms and conditions. 
+          The owner will contact you shortly to confirm your booking.
+        </p>
+      </div>
+    </div>
+  );
+};
 
 // Helper functions
 const getHighlightIcon = (category, type) => {
@@ -580,10 +953,6 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
   );
 };
 
-const showNotification = (message) => {
-  alert(message);
-};
-
 const calculateDistance = (coordinates) => {
   return Math.random() * 2 + 0.5;
 };
@@ -763,14 +1132,8 @@ export default function PGDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [bookingData, setBookingData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    checkInDate: "",
-    duration: "6",
-    message: ""
-  });
+  const [showShareOptions, setShowShareOptions] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   const [selectedFacilityCategory, setSelectedFacilityCategory] = useState("all");
   const [selectedHighlightCategory, setSelectedHighlightCategory] = useState("all");
@@ -834,6 +1197,58 @@ export default function PGDetails() {
     nearby_restaurant: "food"
   };
 
+  // Load favorites from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("pg_favorites");
+      if (saved) {
+        const favorites = JSON.parse(saved);
+        setIsFavorite(favorites.includes(id));
+      }
+    } catch (error) {
+      console.error("Error loading favorites:", error);
+    }
+  }, [id]);
+
+  // Save favorite to localStorage
+  const toggleFavorite = () => {
+    try {
+      const saved = localStorage.getItem("pg_favorites");
+      let favorites = saved ? JSON.parse(saved) : [];
+      
+      if (isFavorite) {
+        favorites = favorites.filter(favId => favId !== id);
+        showNotification("Removed from favorites", "info");
+      } else {
+        favorites.push(id);
+        showNotification("Added to favorites", "success");
+      }
+      
+      localStorage.setItem("pg_favorites", JSON.stringify(favorites));
+      setIsFavorite(!isFavorite);
+    } catch (error) {
+      console.error("Error saving favorite:", error);
+    }
+  };
+
+  // Share property
+  const handleShare = () => {
+    setShowShareOptions(!showShareOptions);
+  };
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    showNotification("Link copied to clipboard!", "success");
+    setShowShareOptions(false);
+  };
+
+  const shareOnWhatsApp = () => {
+    const text = `Check out this property: ${pg.pg_name} - ${window.location.href}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    setShowShareOptions(false);
+  };
+
+  // Fetch PG details
   useEffect(() => {
     const fetchPGDetails = async () => {
       try {
@@ -842,7 +1257,6 @@ export default function PGDetails() {
         
         console.log("Fetching PG details for ID:", id);
         
-        // ✅ USE API INSTANCE (not axios directly)
         const res = await api.get(`/pg/${id}`);
         
         if (!res.data?.success) {
@@ -890,6 +1304,7 @@ export default function PGDetails() {
     }
   }, [id]);
 
+  // Fetch nearby highlights and PGs
   useEffect(() => {
     if (!pg?.latitude || !pg?.longitude) return;
 
@@ -1022,7 +1437,6 @@ export default function PGDetails() {
           return;
         }
 
-        // ✅ USE API INSTANCE
         const response = await api.get(
           `/pg/nearby/${pg.latitude}/${pg.longitude}?radius=5&exclude=${id}`
         );
@@ -1110,6 +1524,7 @@ export default function PGDetails() {
   const handleBookNow = () => {
     const user = auth.currentUser;
     if (!user) {
+      showNotification("Please register or login to continue", "info");
       navigate("/register", {
         state: { redirectTo: `/pg/${id}` }
       });
@@ -1118,13 +1533,12 @@ export default function PGDetails() {
     setShowBookingModal(true);
   };
 
-  const handleBookingSubmit = async (e) => {
-    e.preventDefault();
+  const handleBookingSubmit = async (bookingData) => {
     try {
       const user = auth.currentUser;
 
       if (!user) {
-        showNotification("Please register or login to continue");
+        showNotification("Please register or login to continue", "error");
         navigate("/register");
         return;
       }
@@ -1137,35 +1551,30 @@ export default function PGDetails() {
         phone: bookingData.phone,
         email: bookingData.email,
         check_in_date: bookingData.checkInDate,
+        room_type: bookingData.roomType,
         duration: bookingData.duration,
         message: bookingData.message
       };
 
-      // ✅ USE API INSTANCE
       await api.post("/bookings", payload, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
 
-      showNotification("✅ Booking request sent to owner");
+      showNotification("✅ Booking request sent to owner! They will contact you soon.", "success");
       setShowBookingModal(false);
     } catch (error) {
       console.error(error);
-      showNotification("❌ Booking failed. Try again");
+      showNotification("❌ Booking failed. Please try again.", "error");
     }
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setBookingData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleCallOwner = () => {
     if (hasOwnerContact) {
       window.location.href = `tel:${pg.contact_phone}`;
     } else {
-      alert("Owner contact will be visible after booking approval");
+      showNotification("Owner contact will be visible after booking approval", "info");
     }
   };
 
@@ -1188,7 +1597,6 @@ export default function PGDetails() {
     console.log("Navigating to PG:", pgId);
     if (pgId) {
       navigate(`/pg/${pgId}`);
-      // ❌ REMOVED window.location.reload()
     }
   };
 
@@ -1342,6 +1750,7 @@ export default function PGDetails() {
 
   return (
     <div style={styles.page}>
+      {/* Breadcrumb */}
       <div style={styles.breadcrumb}>
         <span style={styles.breadcrumbLink} onClick={() => navigate("/")}>Home</span>
         <span style={styles.breadcrumbSeparator}>/</span>
@@ -1350,6 +1759,44 @@ export default function PGDetails() {
         <span style={styles.breadcrumbCurrent}>{pg.pg_name}</span>
       </div>
 
+      {/* Action Buttons (Favorite & Share) */}
+      <div style={styles.topActions}>
+        <button
+          onClick={toggleFavorite}
+          style={styles.topActionButton}
+          title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+        >
+          <Heart 
+            size={20} 
+            color="#ef4444" 
+            fill={isFavorite ? "#ef4444" : "none"}
+          />
+        </button>
+        
+        <button
+          onClick={handleShare}
+          style={styles.topActionButton}
+          title="Share property"
+        >
+          <Share2 size={20} />
+        </button>
+      </div>
+
+      {/* Share Options Popup */}
+      {showShareOptions && (
+        <div style={styles.shareOptions}>
+          <button onClick={shareOnWhatsApp} style={styles.shareOption}>
+            <MessageCircle size={16} color="#25D366" />
+            WhatsApp
+          </button>
+          <button onClick={copyLink} style={styles.shareOption}>
+            <Copy size={16} color="#3b82f6" />
+            Copy Link
+          </button>
+        </div>
+      )}
+
+      {/* Media Slider */}
       {media.length > 0 ? (
         <div style={styles.slider}>
           {current.type === "photo" ? (
@@ -1385,26 +1832,37 @@ export default function PGDetails() {
         </div>
       )}
 
+      {/* Main Property Info */}
       <div style={styles.mainCard}>
         <div style={styles.headerRow}>
           <div>
             <h1 style={styles.title}>{pg.pg_name}</h1>
-            <p style={styles.address}>📍 {pg.address}</p>
-            {pg.landmark && <p style={styles.landmark}>🏷️ Near {pg.landmark}</p>}
+            <p style={styles.address}>
+              <MapPin size={16} style={{ marginRight: 4 }} />
+              {pg.address}
+            </p>
+            {pg.landmark && (
+              <p style={styles.landmark}>
+                <MapPin size={14} style={{ marginRight: 4 }} />
+                Near {pg.landmark}
+              </p>
+            )}
           </div>
           <div style={styles.actionButtons}>
             <button
               style={styles.bookButton}
               onClick={handleBookNow}
             >
-              🏠 Book Now
+              <BookOpen size={18} />
+              Book Now
             </button>
             {hasOwnerContact && (
               <button
                 style={styles.callButton}
                 onClick={handleCallOwner}
               >
-                📞 Call Owner
+                <Phone size={18} />
+                Call Owner
               </button>
             )}
             {hasLocation && (
@@ -1417,12 +1875,14 @@ export default function PGDetails() {
                   )
                 }
               >
-                🗺️ Get Directions
+                <MapPin size={18} />
+                Get Directions
               </button>
             )}
           </div>
         </div>
 
+        {/* Badges */}
         <div style={styles.badgeRow}>
           <span style={styles.typeBadge}>
             {isToLet ? "🏠 House/Flat" : 
@@ -1460,13 +1920,14 @@ export default function PGDetails() {
           </span>
         </div>
 
+        {/* Quick Stats */}
         <div style={styles.statsGrid}>
           <div style={styles.statItem}>
             <div style={styles.statIcon}>💰</div>
             <div>
               <div style={styles.statLabel}>Starting from</div>
               <div style={styles.statValue}>
-                ₹{getStartingPrice()} / month
+                {formatPrice(getStartingPrice())} / month
               </div>
             </div>
           </div>
@@ -1494,7 +1955,9 @@ export default function PGDetails() {
         </div>
       </div>
 
+      {/* Two Column Layout */}
       <div style={styles.twoColumn}>
+        {/* LEFT COLUMN */}
         <div style={styles.leftColumn}>
           {pg.description && (
             <Section title="📝 About this Property">
@@ -1831,6 +2294,7 @@ export default function PGDetails() {
           )}
         </div>
 
+        {/* RIGHT COLUMN */}
         <div style={styles.rightColumn}>
           {hasLocation && (
             <Section title="📍 Location">
@@ -1977,10 +2441,11 @@ export default function PGDetails() {
         </div>
       </div>
 
+      {/* Sticky Action Bar */}
       <div style={styles.stickyBar}>
         <div style={styles.stickyContent}>
           <div>
-            <div style={styles.stickyPrice}>₹{getStartingPrice()} / month</div>
+            <div style={styles.stickyPrice}>{formatPrice(getStartingPrice())} / month</div>
             <div style={styles.stickyInfo}>
               {pg.pg_name} • {pg.area || pg.city}
             </div>
@@ -1990,116 +2455,29 @@ export default function PGDetails() {
               style={styles.stickyBookButton}
               onClick={handleBookNow}
             >
-              🏠 Book Now
+              <BookOpen size={16} />
+              Book Now
             </button>
             {hasOwnerContact && (
               <button
                 style={styles.stickyCallButton}
                 onClick={handleCallOwner}
               >
-                📞 Call Owner
+                <Phone size={16} />
+                Call Owner
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {showBookingModal && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContent}>
-            <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>🏠 Book {pg.pg_name}</h2>
-              <button 
-                style={styles.modalCloseButton}
-                onClick={() => setShowBookingModal(false)}
-              >
-                ✕
-              </button>
-            </div>
-            
-            <form onSubmit={handleBookingSubmit} style={styles.bookingForm}>
-              <div style={styles.formGroup}>
-                <label style={styles.formLabel}>Full Name *</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={bookingData.name}
-                  onChange={handleInputChange}
-                  style={styles.formInput}
-                  placeholder="Enter your full name"
-                  required
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.formLabel}>Email Address *</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={bookingData.email}
-                  onChange={handleInputChange}
-                  style={styles.formInput}
-                  placeholder="Enter your email"
-                  required
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.formLabel}>Phone Number *</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={bookingData.phone}
-                  onChange={handleInputChange}
-                  style={styles.formInput}
-                  placeholder="Enter your phone number"
-                  required
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.formLabel}>Check-in Date *</label>
-                <input
-                  type="date"
-                  name="checkInDate"
-                  value={bookingData.checkInDate}
-                  onChange={handleInputChange}
-                  style={styles.formInput}
-                  required
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.formLabel}>Additional Message</label>
-                <textarea
-                  name="message"
-                  value={bookingData.message}
-                  onChange={handleInputChange}
-                  style={styles.formTextarea}
-                  placeholder="Any special requirements..."
-                  rows="3"
-                />
-              </div>
-
-              <div style={styles.modalFooter}>
-                <button
-                  type="button"
-                  style={styles.cancelButton}
-                  onClick={() => setShowBookingModal(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  style={styles.submitButton}
-                >
-                  Submit Request
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Booking Modal */}
+      <BookingModal
+        pg={pg}
+        isOpen={showBookingModal}
+        onClose={() => setShowBookingModal(false)}
+        onBook={handleBookingSubmit}
+      />
     </div>
   );
 }
@@ -2113,6 +2491,7 @@ const styles = {
     backgroundColor: "#f8fafc",
     minHeight: "100vh",
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    position: "relative",
   },
 
   loadingContainer: {
@@ -2168,6 +2547,63 @@ const styles = {
   breadcrumbCurrent: {
     color: "#334155",
     fontWeight: "600",
+  },
+
+  // Top Actions
+  topActions: {
+    position: "absolute",
+    top: "100px",
+    right: "30px",
+    display: "flex",
+    gap: "10px",
+    zIndex: 10,
+  },
+  topActionButton: {
+    background: "rgba(255,255,255,0.9)",
+    border: "none",
+    width: "40px",
+    height: "40px",
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+    transition: "all 0.2s",
+    backdropFilter: "blur(4px)",
+    "&:hover": {
+      transform: "scale(1.1)",
+      background: "white",
+    },
+  },
+  shareOptions: {
+    position: "absolute",
+    top: "150px",
+    right: "30px",
+    background: "white",
+    borderRadius: "12px",
+    padding: "8px",
+    boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
+    zIndex: 20,
+    animation: "slideDown 0.2s ease",
+    minWidth: "150px",
+  },
+  shareOption: {
+    width: "100%",
+    padding: "10px 16px",
+    background: "transparent",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: "500",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    transition: "all 0.2s",
+    "&:hover": {
+      background: "#f1f5f9",
+    },
   },
 
   slider: {
@@ -3507,121 +3943,182 @@ const styles = {
     boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
   },
 
+  // Enhanced Modal Styles
   modalOverlay: {
     position: "fixed",
-    top: "0",
-    left: "0",
-    right: "0",
-    bottom: "0",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: "2000",
+    zIndex: 2000,
     padding: "20px",
     animation: "fadeIn 0.3s ease",
+    backdropFilter: "blur(5px)",
   },
   modalContent: {
     backgroundColor: "white",
-    borderRadius: "16px",
+    borderRadius: "20px",
     width: "100%",
     maxWidth: "500px",
     maxHeight: "90vh",
     overflowY: "auto",
     boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
     animation: "slideUpModal 0.3s ease",
+    position: "relative",
   },
   modalHeader: {
-    padding: "20px",
+    padding: "24px",
     borderBottom: "1px solid #e2e8f0",
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
+    background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
+    borderRadius: "20px 20px 0 0",
   },
   modalTitle: {
-    fontSize: "20px",
-    fontWeight: "600",
-    color: "#1e293b",
+    fontSize: "22px",
+    fontWeight: "700",
+    color: "#111827",
+    margin: "0 0 8px 0",
+  },
+  modalSubtitle: {
+    fontSize: "14px",
+    color: "#64748b",
     margin: "0",
   },
   modalCloseButton: {
-    background: "none",
+    background: "white",
     border: "none",
-    fontSize: "20px",
-    cursor: "pointer",
-    color: "#64748b",
-    padding: "0",
-    width: "28px",
-    height: "28px",
+    width: "36px",
+    height: "36px",
+    borderRadius: "50%",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: "50%",
-    transition: "all 0.3s",
+    cursor: "pointer",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+    transition: "all 0.2s",
+  },
+  propertySummary: {
+    padding: "16px 24px",
+    background: "#f8fafc",
+    borderBottom: "1px solid #e2e8f0",
+    display: "flex",
+    gap: "20px",
+    flexWrap: "wrap",
+  },
+  propertySummaryItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    fontSize: "13px",
+    color: "#475569",
+    background: "white",
+    padding: "6px 12px",
+    borderRadius: "20px",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
   },
   bookingForm: {
-    padding: "20px",
+    padding: "24px",
   },
   formGroup: {
-    marginBottom: "16px",
+    marginBottom: "20px",
   },
   formLabel: {
-    display: "block",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
     marginBottom: "8px",
     fontSize: "14px",
-    fontWeight: "500",
-    color: "#334155",
+    fontWeight: "600",
+    color: "#374151",
   },
   formInput: {
     width: "100%",
-    padding: "10px 12px",
-    border: "1px solid #cbd5e1",
-    borderRadius: "8px",
+    padding: "12px 16px",
+    border: "1px solid #d1d5db",
+    borderRadius: "12px",
     fontSize: "14px",
     color: "#1e293b",
-    backgroundColor: "#f8fafc",
-    transition: "all 0.3s ease",
+    backgroundColor: "#f9fafb",
+    transition: "all 0.2s",
+    outline: "none",
+  },
+  formSelect: {
+    width: "100%",
+    padding: "12px 16px",
+    border: "1px solid #d1d5db",
+    borderRadius: "12px",
+    fontSize: "14px",
+    color: "#1e293b",
+    backgroundColor: "#f9fafb",
+    cursor: "pointer",
+    outline: "none",
   },
   formTextarea: {
     width: "100%",
-    padding: "10px 12px",
-    border: "1px solid #cbd5e1",
-    borderRadius: "8px",
+    padding: "12px 16px",
+    border: "1px solid #d1d5db",
+    borderRadius: "12px",
     fontSize: "14px",
     color: "#1e293b",
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#f9fafb",
     resize: "vertical",
     minHeight: "80px",
     fontFamily: "inherit",
+    outline: "none",
+  },
+  errorText: {
+    display: "block",
+    marginTop: "6px",
+    fontSize: "12px",
+    color: "#ef4444",
+    fontWeight: "500",
   },
   modalFooter: {
     display: "flex",
-    gap: "8px",
-    marginTop: "24px",
+    gap: "12px",
+    marginTop: "32px",
   },
   cancelButton: {
     flex: "1",
-    padding: "12px",
+    padding: "14px",
     backgroundColor: "#f1f5f9",
     color: "#64748b",
     border: "none",
-    borderRadius: "8px",
+    borderRadius: "12px",
     fontSize: "14px",
     fontWeight: "600",
     cursor: "pointer",
-    transition: "all 0.3s ease",
+    transition: "all 0.2s",
   },
   submitButton: {
     flex: "2",
-    padding: "12px",
+    padding: "14px",
     background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
     color: "white",
     border: "none",
-    borderRadius: "8px",
+    borderRadius: "12px",
     fontSize: "14px",
     fontWeight: "600",
     cursor: "pointer",
-    transition: "all 0.3s ease",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    transition: "all 0.2s",
+  },
+  termsText: {
+    padding: "16px 24px 24px",
+    fontSize: "12px",
+    color: "#94a3b8",
+    textAlign: "center",
+    borderTop: "1px solid #e2e8f0",
+    margin: "0",
   },
 };
 
@@ -3640,13 +4137,23 @@ animationStyle.textContent = `
     from { transform: translateY(30px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
   }
+  @keyframes slideDown {
+    from { transform: translateY(-10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
   .spinner {
     width: 40px;
     height: 40px;
     border: 4px solid #e5e7eb;
     border-top: 4px solid #667eea;
-    border-radius: 50%;
+    borderRadius: 50%;
     animation: spin 1s linear infinite;
+  }
+  
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 `;
 document.head.appendChild(animationStyle);
