@@ -9,27 +9,31 @@ const AuthContext = createContext();
 /* ================= SAFE HOOK ================= */
 export const useAuth = () => {
   const context = useContext(AuthContext);
-
   if (!context) {
     throw new Error("useAuth must be used inside AuthProvider");
   }
-
   return context;
 };
 
-/* ================= PROVIDER ================= */
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setTokenState] = useState(null);
-  const [userData, setUserData] = useState(null); // 🔥 backend user
+  const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /* ================= FETCH USER FROM BACKEND ================= */
+  /* ================= GET ROLE ================= */
+  const getStoredRole = () => {
+    return localStorage.getItem("role") || "tenant";
+  };
+
+  /* ================= FETCH BACKEND USER ================= */
   const fetchBackendUser = async (firebaseToken) => {
     try {
+      const role = getStoredRole();
+
       const res = await axios.post(
         "https://nepxall-backend.onrender.com/api/auth/firebase",
-        {},
+        { role }, // ✅ SEND ROLE
         {
           headers: {
             Authorization: `Bearer ${firebaseToken}`,
@@ -38,8 +42,14 @@ export const AuthProvider = ({ children }) => {
       );
 
       setUserData(res.data.user);
+
+      // ✅ store role from backend (truth source)
+      localStorage.setItem("role", res.data.user.role);
     } catch (err) {
-      console.error("❌ Backend user fetch failed", err);
+      console.error(
+        "❌ Backend user fetch failed:",
+        err.response?.data || err.message
+      );
     }
   };
 
@@ -48,7 +58,6 @@ export const AuthProvider = ({ children }) => {
     setTokenState(newToken);
     setAuthToken(newToken);
 
-    // used for silent refresh in api.js
     window.getFreshToken = async () => newToken;
   };
 
@@ -65,8 +74,9 @@ export const AuthProvider = ({ children }) => {
           await fetchBackendUser(firebaseToken);
         } else {
           setUser(null);
-          setToken(null);
           setUserData(null);
+          setToken(null);
+          localStorage.removeItem("role");
         }
       } catch (err) {
         console.error("🔥 Auth error:", err);
@@ -86,7 +96,7 @@ export const AuthProvider = ({ children }) => {
       const refreshedToken = await user.getIdToken(true);
       setToken(refreshedToken);
       console.log("🔄 Token refreshed");
-    }, 50 * 60 * 1000); // every 50 minutes
+    }, 50 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, [user]);
@@ -97,6 +107,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setUserData(null);
     setToken(null);
+    localStorage.removeItem("role");
   };
 
   /* ================= CONTEXT VALUE ================= */
