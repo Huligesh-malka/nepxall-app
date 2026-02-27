@@ -19,7 +19,38 @@ L.Icon.Default.mergeOptions({
 });
 
 // Base URL for images (from env, remove /api suffix)
-const BASE_URL = import.meta.env.VITE_API_URL?.replace("/api", "") || "";
+const BASE_URL = import.meta.env.VITE_API_URL?.replace("/api", "") || "https://nepxall-backend.onrender.com";
+
+// FIXED: Helper function to get correct image URL
+const getCorrectImageUrl = (photo) => {
+  if (!photo) return null;
+  
+  // If it's already a full URL
+  if (photo.startsWith('http')) {
+    return photo;
+  }
+  
+  // If it's a path containing /uploads/
+  if (photo.includes('/uploads/')) {
+    const uploadsIndex = photo.indexOf('/uploads/');
+    if (uploadsIndex !== -1) {
+      const relativePath = photo.substring(uploadsIndex);
+      return `${BASE_URL}${relativePath}`;
+    }
+  }
+  
+  // If it's a path starting with /opt/render
+  if (photo.includes('/opt/render/')) {
+    const uploadsMatch = photo.match(/\/uploads\/.*/);
+    if (uploadsMatch) {
+      return `${BASE_URL}${uploadsMatch[0]}`;
+    }
+  }
+  
+  // Default: prepend base URL
+  const normalizedPath = photo.startsWith('/') ? photo : `/${photo}`;
+  return `${BASE_URL}${normalizedPath}`;
+};
 
 // Helper functions
 const getHighlightIcon = (category, type) => {
@@ -508,15 +539,30 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
     }
   };
 
+  // FIXED: Get image URL using helper
+  const getImageUrl = () => {
+    if (pg.photos && pg.photos.length > 0) {
+      return getCorrectImageUrl(pg.photos[0]);
+    }
+    return null;
+  };
+
+  const imageUrl = getImageUrl();
+
   return (
     <div style={styles.nearbyPgCard} onClick={onClick}>
       <div style={styles.nearbyPgImageContainer}>
         <div style={styles.nearbyPgImagePlaceholder}>
-          {pg.photos && pg.photos.length > 0 ? (
+          {imageUrl ? (
             <img 
-              src={BASE_URL + pg.photos[0]} 
+              src={imageUrl} 
               alt={pg.pg_name} 
               style={styles.nearbyPgImage}
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.style.display = 'none';
+                e.target.parentElement.innerHTML = '<div style="font-size: 40px; color: #94a3b8;">🏠</div>';
+              }}
             />
           ) : (
             <div style={styles.nearbyPgNoImage}>🏠</div>
@@ -740,7 +786,7 @@ const NearbyPGsPanel = ({ nearbyPGs, isLoading, onViewPG }) => {
       </div>
       
       <div style={styles.nearbyPGsFooter}>
-        <button style={styles.viewAllPropertiesButton}>
+        <button style={styles.viewAllPropertiesButton} onClick={() => onViewPG('all')}>
           View All Properties in {nearbyPGs[0]?.area || nearbyPGs[0]?.city || "Area"} →
         </button>
       </div>
@@ -852,8 +898,12 @@ export default function PGDetails() {
         const data = res.data.data;
         console.log("PG data received:", data.pg_name);
 
+        // FIXED: Process photos using helper
         const photos = Array.isArray(data.photos)
-          ? data.photos.map(p => ({ type: "photo", src: BASE_URL + p }))
+          ? data.photos.map(p => ({ 
+              type: "photo", 
+              src: getCorrectImageUrl(p) 
+            }))
           : [];
 
         let videos = [];
@@ -861,7 +911,7 @@ export default function PGDetails() {
           if (data.videos) {
             videos = JSON.parse(data.videos || "[]").map(v => ({
               type: "video",
-              src: BASE_URL + v,
+              src: getCorrectImageUrl(v),
             }));
           }
         } catch (err) {
@@ -1150,6 +1200,14 @@ export default function PGDetails() {
 
       showNotification("✅ Booking request sent to owner");
       setShowBookingModal(false);
+      setBookingData({
+        name: "",
+        email: "",
+        phone: "",
+        checkInDate: "",
+        duration: "6",
+        message: ""
+      });
     } catch (error) {
       console.error(error);
       showNotification("❌ Booking failed. Try again");
@@ -1186,9 +1244,14 @@ export default function PGDetails() {
 
   const handleViewNearbyPG = (pgId) => {
     console.log("Navigating to PG:", pgId);
-    if (pgId) {
+    if (pgId && pgId !== 'all') {
       navigate(`/pg/${pgId}`);
-      // ❌ REMOVED window.location.reload()
+    } else if (pgId === 'all' && pg?.area) {
+      navigate(`/properties?area=${encodeURIComponent(pg.area)}`);
+    } else if (pgId === 'all' && pg?.city) {
+      navigate(`/properties?city=${encodeURIComponent(pg.city)}`);
+    } else {
+      navigate("/properties");
     }
   };
 
@@ -1250,7 +1313,7 @@ export default function PGDetails() {
     const allFacilities = getAllFacilities();
     
     const trueFacilities = allFacilities.filter(facility => 
-      pg && (pg[facility.key] === true || pg[facility.key] === "true")
+      pg && (pg[facility.key] === true || pg[facility.key] === "true" || pg[facility.key] === 1)
     );
 
     if (selectedFacilityCategory === "all") {
@@ -1264,11 +1327,11 @@ export default function PGDetails() {
     const allFacilities = getAllFacilities();
     if (categoryId === "all") {
       return allFacilities.filter(facility => 
-        pg && (pg[facility.key] === true || pg[facility.key] === "true")
+        pg && (pg[facility.key] === true || pg[facility.key] === "true" || pg[facility.key] === 1)
       ).length;
     }
     return allFacilities.filter(facility => 
-      facility.category === categoryId && pg && (pg[facility.key] === true || pg[facility.key] === "true")
+      facility.category === categoryId && pg && (pg[facility.key] === true || pg[facility.key] === "true" || pg[facility.key] === 1)
     ).length;
   };
 
@@ -1353,7 +1416,16 @@ export default function PGDetails() {
       {media.length > 0 ? (
         <div style={styles.slider}>
           {current.type === "photo" ? (
-            <img src={current.src} alt={pg.pg_name} style={styles.media} />
+            <img 
+              src={current.src} 
+              alt={pg.pg_name} 
+              style={styles.media}
+              onError={(e) => {
+                console.error("Image failed to load:", current.src);
+                e.target.onerror = null;
+                e.target.src = "https://via.placeholder.com/800x400?text=Image+Not+Found";
+              }}
+            />
           ) : (
             <video src={current.src} controls style={styles.media} />
           )}
@@ -2066,7 +2138,24 @@ export default function PGDetails() {
                   onChange={handleInputChange}
                   style={styles.formInput}
                   required
+                  min={new Date().toISOString().split('T')[0]}
                 />
+              </div>
+
+              <div style={styles.formGroup}>
+                <label style={styles.formLabel}>Duration (months)</label>
+                <select
+                  name="duration"
+                  value={bookingData.duration}
+                  onChange={handleInputChange}
+                  style={styles.formInput}
+                >
+                  <option value="1">1 month</option>
+                  <option value="3">3 months</option>
+                  <option value="6">6 months</option>
+                  <option value="12">12 months</option>
+                  <option value="24">24+ months</option>
+                </select>
               </div>
 
               <div style={styles.formGroup}>
