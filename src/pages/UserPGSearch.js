@@ -77,12 +77,13 @@ import {
 } from "lucide-react";
 import api from "../api/api";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://nepxall-backend.onrender.com';
 
 /* ================= HELPERS ================= */
 const getPGCode = (id) => `PG-${String(id).padStart(5, "0")}`;
 
 const getDistanceKm = (lat1, lon1, lat2, lon2) => {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return null;
   const toRad = (v) => (v * Math.PI) / 180;
   const R = 6371;
   const dLat = toRad(lat2 - lat1);
@@ -377,30 +378,6 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
                   height: 6,
                   background: "#3b82f6",
                   borderRadius: 3
-                }} />
-                <div style={{
-                  position: "absolute",
-                  left: `${(localMin / 50000) * 100}%`,
-                  top: "50%",
-                  transform: "translate(-50%, -50%)",
-                  width: 20,
-                  height: 20,
-                  background: "#3b82f6",
-                  borderRadius: "50%",
-                  border: "3px solid white",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
-                }} />
-                <div style={{
-                  position: "absolute",
-                  left: `${(localMax / 50000) * 100}%`,
-                  top: "50%",
-                  transform: "translate(-50%, -50%)",
-                  width: 20,
-                  height: 20,
-                  background: "#3b82f6",
-                  borderRadius: "50%",
-                  border: "3px solid white",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
                 }} />
               </div>
             </div>
@@ -843,7 +820,14 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   const getImages = () => {
     const images = [];
     if (Array.isArray(pg.photos) && pg.photos.length) {
-      images.push(...pg.photos.map(photo => `${BACKEND_URL}${photo}`));
+      images.push(...pg.photos.map(photo => {
+        // Handle different photo URL formats
+        if (photo.startsWith('http')) {
+          return photo;
+        } else {
+          return `${BACKEND_URL}${photo}`;
+        }
+      }));
     }
     if (images.length === 0) {
       images.push("https://via.placeholder.com/600x400?text=No+Images+Available");
@@ -1045,19 +1029,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
         icon: <Building size={16} />,
         color: "#d97706"
       });
-      
-      if (pg.bedrooms_1bhk) priceDetails.push({ 
-        label: "1 BHK - Bedrooms", 
-        value: `${pg.bedrooms_1bhk}`,
-        icon: <Bed size={16} />,
-        color: "#0ea5e9"
-      });
-      if (pg.bathrooms_1bhk) priceDetails.push({ 
-        label: "1 BHK - Bathrooms", 
-        value: `${pg.bathrooms_1bhk}`,
-        icon: <Bath size={16} />,
-        color: "#06b6d4"
-      });
     }
     
     if (pg.deposit_amount && pg.deposit_amount > 0) {
@@ -1075,15 +1046,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
         value: `₹${formatPrice(pg.security_deposit)}`,
         icon: <Shield size={16} />,
         color: "#f59e0b"
-      });
-    }
-    
-    if (pg.maintenance_amount && pg.maintenance_amount > 0) {
-      priceDetails.push({ 
-        label: "Maintenance", 
-        value: `₹${formatPrice(pg.maintenance_amount)}/month`,
-        icon: <Wrench size={16} />,
-        color: "#6b7280"
       });
     }
     
@@ -1140,15 +1102,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
         value: `${pg.min_stay_months} months`,
         icon: <Calendar size={16} />,
         color: "#8b5cf6"
-      });
-    }
-    
-    if (pg.notice_period) {
-      quickInfo.push({ 
-        label: "Notice Period", 
-        value: `${pg.notice_period} month${pg.notice_period > 1 ? 's' : ''}`,
-        icon: <Bell size={16} />,
-        color: "#6b7280"
       });
     }
     
@@ -1316,6 +1269,9 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
               width: "100%", 
               height: "100%", 
               objectFit: "cover" 
+            }}
+            onError={(e) => {
+              e.target.src = "https://via.placeholder.com/600x400?text=Image+Not+Available";
             }}
           />
           
@@ -1992,9 +1948,12 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
                       <div style={{ fontWeight: 600, marginBottom: 8 }}>{pg.pg_name}</div>
                       {pg.photos && pg.photos.length > 0 && (
                         <img 
-                          src={`${BACKEND_URL}${pg.photos[0]}`}
+                          src={pg.photos[0].startsWith('http') ? pg.photos[0] : `${BACKEND_URL}${pg.photos[0]}`}
                           alt={pg.pg_name}
                           style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 8 }}
+                          onError={(e) => {
+                            e.target.src = "https://via.placeholder.com/200x120?text=No+Image";
+                          }}
                         />
                       )}
                     </th>
@@ -2071,7 +2030,8 @@ function UserPGSearch() {
 
   const [allPGs, setAllPGs] = useState([]);
   const [pgs, setPgs] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showBudgetFilter, setShowBudgetFilter] = useState(false);
@@ -2110,11 +2070,28 @@ function UserPGSearch() {
   const loadPGs = async () => {
     try {
       setLoading(true);
+      setError(null);
+      console.log("Fetching PGs from API...");
+      
       const res = await api.get("/pg/search/advanced");
-      const data = res.data?.success ? res.data.data : [];
+      console.log("API Response:", res);
+      
+      // Check if response has data property
+      let data = [];
+      if (res.data && res.data.success && res.data.data) {
+        data = res.data.data;
+      } else if (Array.isArray(res.data)) {
+        data = res.data;
+      } else if (res.data && Array.isArray(res.data.data)) {
+        data = res.data.data;
+      } else {
+        console.warn("Unexpected API response format:", res.data);
+        data = [];
+      }
       
       const processedData = data.map(pg => ({
         ...pg,
+        id: pg.id || pg._id,
         deposit_amount: Number(pg.deposit_amount) || Number(pg.security_deposit) || 0,
         rent_amount: Number(pg.rent_amount) || 0,
         single_sharing: Number(pg.single_sharing) || 0,
@@ -2133,14 +2110,6 @@ function UserPGSearch() {
         maintenance_amount: Number(pg.maintenance_amount) || 0,
         available_rooms: Number(pg.available_rooms) || 0,
         total_rooms: Number(pg.total_rooms) || 0,
-        bedrooms_1bhk: Number(pg.bedrooms_1bhk) || 0,
-        bathrooms_1bhk: Number(pg.bathrooms_1bhk) || 0,
-        bedrooms_2bhk: Number(pg.bedrooms_2bhk) || 0,
-        bathrooms_2bhk: Number(pg.bathrooms_2bhk) || 0,
-        bedrooms_3bhk: Number(pg.bedrooms_3bhk) || 0,
-        bathrooms_3bhk: Number(pg.bathrooms_3bhk) || 0,
-        bedrooms_4bhk: Number(pg.bedrooms_4bhk) || 0,
-        bathrooms_4bhk: Number(pg.bathrooms_4bhk) || 0,
         food_available: pg.food_available === true || pg.food_available === 1 || pg.food_available === "true",
         ac_available: pg.ac_available === true || pg.ac_available === 1 || pg.ac_available === "true",
         wifi_available: pg.wifi_available === true || pg.wifi_available === 1 || pg.wifi_available === "true",
@@ -2162,12 +2131,15 @@ function UserPGSearch() {
         co_living_maintenance: pg.co_living_maintenance === true || pg.co_living_maintenance === 1 || pg.co_living_maintenance === "true",
       }));
       
+      console.log(`Processed ${processedData.length} properties`);
       setAllPGs(processedData);
       setPgs(processedData);
     } catch (error) {
       console.error("Error loading PGs:", error);
+      setError(error.message || "Failed to load properties");
       setAllPGs([]);
       setPgs([]);
+      showNotification("❌ Failed to load properties. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -2215,6 +2187,11 @@ function UserPGSearch() {
 
   /* ================= LOCATION DETECTION ================= */
   const detectLocation = () => {
+    if (!navigator.geolocation) {
+      showNotification("❌ Geolocation is not supported by your browser");
+      return;
+    }
+    
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const location = {
@@ -2225,7 +2202,8 @@ function UserPGSearch() {
         setFilters(prev => ({ ...prev, nearMe: true }));
         showNotification("📍 Location detected! Showing nearby properties");
       },
-      () => {
+      (error) => {
+        console.error("Geolocation error:", error);
         showNotification("❌ Unable to get your location. Please check permissions.");
       }
     );
@@ -2241,11 +2219,12 @@ function UserPGSearch() {
     }
 
     // Location search
-    if (filters.location) {
+    if (filters.location && filters.location.trim()) {
+      const searchTerm = filters.location.toLowerCase().trim();
       filtered = filtered.filter((pg) =>
         `${pg.area || ""} ${pg.city || ""} ${pg.pg_name || ""}`
           .toLowerCase()
-          .includes(filters.location.toLowerCase())
+          .includes(searchTerm)
       );
     }
 
@@ -2272,14 +2251,16 @@ function UserPGSearch() {
       filtered = filtered
         .map((pg) => {
           if (!pg.latitude || !pg.longitude) return null;
+          const distance = getDistanceKm(
+            userLocation.lat,
+            userLocation.lng,
+            pg.latitude,
+            pg.longitude
+          );
+          if (distance === null) return null;
           return {
             ...pg,
-            distance: getDistanceKm(
-              userLocation.lat,
-              userLocation.lng,
-              pg.latitude,
-              pg.longitude
-            ),
+            distance
           };
         })
         .filter(Boolean)
@@ -2293,7 +2274,7 @@ function UserPGSearch() {
     } else if (filters.sort === "high") {
       filtered.sort((a, b) => getEffectiveRent(b) - getEffectiveRent(a));
     } else if (filters.sort === "new") {
-      filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     } else if (filters.sort === "distance" && userLocation) {
       filtered.sort((a, b) => (a.distance || 999) - (b.distance || 999));
     }
@@ -2333,10 +2314,17 @@ function UserPGSearch() {
     showNotification("All filters reset");
   };
 
-  const getImageUrl = (pg) =>
-    Array.isArray(pg.photos) && pg.photos.length
-      ? `${BACKEND_URL}${pg.photos[0]}`
-      : "https://via.placeholder.com/400x200/6b7280/ffffff?text=No+Image";
+  const getImageUrl = (pg) => {
+    if (Array.isArray(pg.photos) && pg.photos.length) {
+      const photo = pg.photos[0];
+      if (photo.startsWith('http')) {
+        return photo;
+      } else {
+        return `${BACKEND_URL}${photo}`;
+      }
+    }
+    return "https://via.placeholder.com/400x200/6b7280/ffffff?text=No+Image";
+  };
 
   /* ================= INTERACTION HANDLERS ================= */
   const handleQuickView = (pg, e) => {
@@ -2389,7 +2377,7 @@ function UserPGSearch() {
       setBookingPG(null);
 
     } catch (error) {
-      console.error(error);
+      console.error("Booking error:", error);
       showNotification("❌ Booking failed. Try again");
     }
   };
@@ -2555,6 +2543,10 @@ function UserPGSearch() {
     return info.slice(0, 3);
   };
 
+  const retryLoad = () => {
+    loadPGs();
+  };
+
   return (
     <div style={{ padding: 20, maxWidth: 1400, margin: "auto", minHeight: "100vh" }}>
       {/* Notification Toast */}
@@ -2663,7 +2655,7 @@ function UserPGSearch() {
               <BadgePercent size={24} />
             </div>
             <div>
-              <div style={{ fontSize: 18, fontWeight: 700 }}>🆓 Free to Book </div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>🆓 Free to Book</div>
               <div style={{ fontSize: 13, opacity: 0.9 }}>Save up to ₹5,000 on booking fees</div>
             </div>
           </div>
@@ -3273,6 +3265,22 @@ function UserPGSearch() {
               {filters.minBudget > 0 && filters.maxBudget < 50000 && 
                 ` within ₹${formatPrice(filters.minBudget)} - ₹${formatPrice(filters.maxBudget)}`}
             </span>
+            {error && (
+              <button
+                onClick={retryLoad}
+                style={{
+                  padding: "4px 12px",
+                  background: "#ef4444",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 6,
+                  fontSize: 12,
+                  cursor: "pointer"
+                }}
+              >
+                Retry
+              </button>
+            )}
           </div>
         </div>
         <button
@@ -3314,6 +3322,70 @@ function UserPGSearch() {
             margin: "0 auto 16px"
           }} />
           <p style={{ fontSize: 16 }}>Loading properties...</p>
+        </div>
+      ) : error ? (
+        <div style={{ 
+          textAlign: "center", 
+          padding: "60px 20px",
+          color: "#ef4444",
+          background: "#fef2f2",
+          borderRadius: 16,
+          border: "1px solid #fee2e2"
+        }}>
+          <X size={48} style={{ margin: "0 auto 16px", color: "#ef4444" }} />
+          <p style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>
+            Failed to load properties
+          </p>
+          <p style={{ fontSize: 14, marginBottom: 16, color: "#6b7280" }}>
+            {error}
+          </p>
+          <button
+            onClick={retryLoad}
+            style={{
+              padding: "12px 24px",
+              background: "#3b82f6",
+              color: "white",
+              border: "none",
+              borderRadius: 10,
+              fontSize: 15,
+              fontWeight: 500,
+              cursor: "pointer"
+            }}
+          >
+            Try Again
+          </button>
+        </div>
+      ) : pgs.length === 0 ? (
+        <div style={{ 
+          textAlign: "center", 
+          padding: "60px 20px",
+          color: "#6b7280",
+          background: "#f9fafb",
+          borderRadius: 16,
+          border: "1px dashed #e5e7eb"
+        }}>
+          <Search size={48} style={{ margin: "0 auto 16px", color: "#9ca3af" }} />
+          <p style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>
+            No properties found
+          </p>
+          <p style={{ fontSize: 14, marginBottom: 24 }}>
+            Try adjusting your filters or search terms
+          </p>
+          <button
+            onClick={resetFilters}
+            style={{
+              padding: "12px 24px",
+              background: "#3b82f6",
+              color: "white",
+              border: "none",
+              borderRadius: 10,
+              fontSize: 15,
+              fontWeight: 500,
+              cursor: "pointer"
+            }}
+          >
+            Reset All Filters
+          </button>
         </div>
       ) : (
         <div
@@ -3445,6 +3517,9 @@ function UserPGSearch() {
                     src={getImageUrl(pg)}
                     alt={pg.pg_name}
                     style={{ width: "100%", height: 200, objectFit: "cover" }}
+                    onError={(e) => {
+                      e.target.src = "https://via.placeholder.com/400x200/6b7280/ffffff?text=No+Image";
+                    }}
                   />
                   <div style={{
                     position: "absolute",
@@ -3669,41 +3744,6 @@ function UserPGSearch() {
               </div>
             );
           })}
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!loading && pgs.length === 0 && (
-        <div style={{ 
-          textAlign: "center", 
-          padding: "60px 20px",
-          color: "#6b7280",
-          background: "#f9fafb",
-          borderRadius: 16,
-          border: "1px dashed #e5e7eb"
-        }}>
-          <Search size={48} style={{ margin: "0 auto 16px", color: "#9ca3af" }} />
-          <p style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>
-            No properties found
-          </p>
-          <p style={{ fontSize: 14, marginBottom: 24 }}>
-            Try adjusting your filters or search terms
-          </p>
-          <button
-            onClick={resetFilters}
-            style={{
-              padding: "12px 24px",
-              background: "#3b82f6",
-              color: "white",
-              border: "none",
-              borderRadius: 10,
-              fontSize: 15,
-              fontWeight: 500,
-              cursor: "pointer"
-            }}
-          >
-            Reset All Filters
-          </button>
         </div>
       )}
 
