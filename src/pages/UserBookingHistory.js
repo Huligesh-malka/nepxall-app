@@ -188,7 +188,7 @@ const UserBookingHistory = () => {
                 </div>
               )}
 
-              {/* APPROVED STATE */}
+              {/* APPROVED STATE - WITHOUT ANNOUNCEMENTS BUTTON */}
               {(b.status === "approved" || b.status === "confirmed") && (
                 <div style={btnRow}>
                   <button
@@ -196,15 +196,6 @@ const UserBookingHistory = () => {
                     onClick={() => navigate(`/pg/${b.pg_id}`)}
                   >
                     🏠 View PG
-                  </button>
-
-                  <button
-                    style={announcementBtn}
-                    onClick={() =>
-                      navigate(`/user/pg-announcements/${b.pg_id}`)
-                    }
-                  >
-                    📢 Announcements
                   </button>
 
                   <button
@@ -615,7 +606,6 @@ const browseBtn = {
 };
 
 const viewBtn = { ...baseBtn, background: "#2563eb", color: "#fff" };
-const announcementBtn = { ...baseBtn, background: "#f59e0b", color: "#fff" };
 const chatBtn = { ...baseBtn, background: "#25d366", color: "#fff" };
 const agreementBtn = { ...baseBtn, background: "#7c3aed", color: "#fff" };
 const rebookBtn = { ...baseBtn, background: "#16a34a", color: "#fff", marginTop: 12, width: "100%", justifyContent: "center" };
