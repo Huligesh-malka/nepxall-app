@@ -1,10 +1,8 @@
 import React, { useEffect, useState, useCallback } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
-
-const API = process.env.REACT_APP_API;
+import { auth } from "../../firebase";
+import { adminPGAPI } from "../../api/api";   // ✅ use this
 
 const AdminPendingPGs = () => {
   const [pgs, setPGs] = useState([]);
@@ -15,54 +13,41 @@ const AdminPendingPGs = () => {
 
   const navigate = useNavigate();
 
-  /* ================= AUTH HEADER ================= */
-  const getAuthHeader = async (user) => {
-    const token = await user.getIdToken(true);
-    return { Authorization: `Bearer ${token}` };
-  };
-
   /* ================= LOAD DATA ================= */
-  const loadPendingPGs = useCallback(
-    async (user) => {
-      try {
-        setLoading(true);
 
-        const headers = await getAuthHeader(user);
+  const loadPendingPGs = useCallback(async () => {
+    try {
+      setLoading(true);
 
-const res = await axios.get(`${API}/admin/pgs/pending`, {
-  headers
-});
+      const res = await adminPGAPI.getPendingPGs();
 
-setPGs(res.data.data || []);
-      } catch (err) {
-        console.error(err);
+      setPGs(res.data.data || []);
+    } catch (err) {
+      console.error(err);
 
-        if ([401, 403].includes(err.response?.status)) {
-          navigate("/login");
-        } else {
-          alert("Failed to load pending PGs");
-        }
-      } finally {
-        setLoading(false);
-      }
-    },
-    [navigate]
-  );
-
-  /* ================= AUTH READY ================= */
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) {
+      if ([401, 403].includes(err.response?.status)) {
         navigate("/login");
       } else {
-        loadPendingPGs(user);
+        alert("Failed to load pending PGs");
       }
+    } finally {
+      setLoading(false);
+    }
+  }, [navigate]);
+
+  /* ================= AUTH READY ================= */
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (!user) navigate("/login");
+      else loadPendingPGs();
     });
 
     return () => unsub();
   }, [loadPendingPGs, navigate]);
 
   /* ================= FILTER / SORT ================= */
+
   const list = pgs
     .filter((pg) => {
       if (filter !== "all" && pg.pg_category !== filter) return false;
@@ -89,6 +74,7 @@ setPGs(res.data.data || []);
     });
 
   /* ================= LOADER ================= */
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full py-20">
@@ -98,10 +84,10 @@ setPGs(res.data.data || []);
   }
 
   /* ================= UI ================= */
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
 
-      {/* HEADER */}
       <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">
@@ -117,38 +103,6 @@ setPGs(res.data.data || []);
         </span>
       </div>
 
-      {/* FILTER BAR */}
-      <div className="bg-white rounded-xl shadow p-4 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <input
-          placeholder="Search PG / City / Owner"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500"
-        />
-
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="border rounded-lg px-4 py-2"
-        >
-          <option value="all">All Categories</option>
-          <option value="pg">PG / Hostel</option>
-          <option value="coliving">Co-Living</option>
-          <option value="to_let">House / Flat</option>
-        </select>
-
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          className="border rounded-lg px-4 py-2"
-        >
-          <option value="newest">Newest First</option>
-          <option value="oldest">Oldest First</option>
-          <option value="name">Name A-Z</option>
-        </select>
-      </div>
-
-      {/* LIST */}
       {list.length === 0 ? (
         <div className="bg-white p-10 rounded-xl shadow text-center text-gray-500">
           No pending properties found

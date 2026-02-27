@@ -4,29 +4,33 @@ import { onAuthStateChanged } from "firebase/auth";
 import { API_CONFIG } from "../config";
 
 /* =====================================================
-   🌍 BASE URLS - WITH PRODUCTION FALLBACK
+   🌍 ENV DETECTION
 ===================================================== */
 
-// Force production URL if in production environment
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = process.env.NODE_ENV === "production";
 
-const USER_BASE_URL = isProduction 
-  ? "https://nepxall-backend.onrender.com/api"  // Hardcoded production URL as fallback
-  : API_CONFIG.USER_API_URL;
+/* =====================================================
+   🌍 BASE URL RESOLUTION (NEVER UNDEFINED)
+===================================================== */
 
-const ADMIN_BASE_URL = isProduction
-  ? "https://nepxall-backend.onrender.com/api/admin"
-  : API_CONFIG.ADMIN_API_URL;
+const USER_BASE_URL =
+  API_CONFIG?.USER_API_URL ||
+  process.env.REACT_APP_API_URL ||
+  "https://nepxall-backend.onrender.com/api";
 
-console.log("🌐 API Service Initialized:", {
-  environment: isProduction ? "PRODUCTION" : "DEVELOPMENT",
-  userBaseURL: USER_BASE_URL,
-  adminBaseURL: ADMIN_BASE_URL,
-  configURL: API_CONFIG.USER_API_URL
+const ADMIN_BASE_URL =
+  API_CONFIG?.ADMIN_API_URL ||
+  process.env.REACT_APP_ADMIN_API_URL ||
+  "https://nepxall-backend.onrender.com/api/admin";
+
+console.log("🌐 API CONFIG →", {
+  env: isProduction ? "PRODUCTION" : "DEVELOPMENT",
+  USER_BASE_URL,
+  ADMIN_BASE_URL,
 });
 
 /* =====================================================
-   🔐 WAIT FOR FIREBASE USER (ON REFRESH)
+   🔐 WAIT FOR FIREBASE USER (FOR PAGE REFRESH)
 ===================================================== */
 
 const getCurrentUser = () =>
@@ -42,14 +46,14 @@ const getCurrentUser = () =>
   });
 
 /* =====================================================
-   🚀 CREATE AXIOS INSTANCE
+   🚀 AXIOS FACTORY
 ===================================================== */
 
 const createApi = (baseURL) => {
   const instance = axios.create({
     baseURL,
-    withCredentials: true,
     timeout: 60000,
+    withCredentials: true,
     headers: {
       "Content-Type": "application/json",
     },
@@ -59,9 +63,8 @@ const createApi = (baseURL) => {
 
   instance.interceptors.request.use(async (config) => {
     try {
-      // Log the full URL being called (helpful for debugging)
-      console.log(`📡 API Request: ${config.baseURL}${config.url}`);
-      
+      console.log("📡 API Request →", `${baseURL}${config.url}`);
+
       let user = auth.currentUser;
 
       if (!user) user = await getCurrentUser();
@@ -83,22 +86,27 @@ const createApi = (baseURL) => {
     (res) => res,
     async (error) => {
       if (!error.response) {
-        console.error("🌐 Backend not reachable:", error.config?.baseURL);
-        console.error("❌ Failed URL:", error.config?.url);
+        console.error("🌐 Backend unreachable:", baseURL);
         return Promise.reject(error);
       }
 
-      if (error.response.status === 401) {
+      const status = error.response.status;
+
+      if (status === 401) {
         console.warn("⚠️ Session expired → logout");
         await auth.signOut();
         window.location.href = "/login";
       }
 
-      if (error.response.status === 403) {
-        console.warn("⛔ Forbidden");
+      if (status === 403) {
+        console.warn("⛔ Forbidden → Admin only?");
       }
 
-      if (error.response.status >= 500) {
+      if (status === 404) {
+        console.error("❌ API route not found →", error.config.url);
+      }
+
+      if (status >= 500) {
         console.error("🔥 Server error:", error.response.data);
       }
 
@@ -110,40 +118,60 @@ const createApi = (baseURL) => {
 };
 
 /* =====================================================
-   📦 EXPORT APIs
+   📦 EXPORT AXIOS INSTANCES
 ===================================================== */
 
 export const userAPI = createApi(USER_BASE_URL);
 export const adminAPI = createApi(ADMIN_BASE_URL);
 
 /* =====================================================
-   📦 PG/Property Endpoints (Convenience Methods)
+   🏠 PG / OWNER / BOOKING APIs
 ===================================================== */
 
 export const pgAPI = {
-  // Owner endpoints
-  getOwnerDashboard: () => {
-    console.log("📡 Calling getOwnerDashboard");
-    return userAPI.get("/pg/owner/dashboard");
-  },
+  /* OWNER DASHBOARD */
+  getOwnerDashboard: () => userAPI.get("/pg/owner/dashboard"),
+
   getOwnerProperties: () => userAPI.get("/pg/owner"),
+
   getProperty: (id) => userAPI.get(`/pg/${id}`),
-  createProperty: (formData) => {
-    console.log("📡 Calling createProperty with baseURL:", userAPI.defaults.baseURL);
-    return userAPI.post("/pg/add", formData, {
-      headers: { "Content-Type": "multipart/form-data" }
-    });
-  },
+
+  createProperty: (formData) =>
+    userAPI.post("/pg/add", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+
   updateProperty: (id, data) => userAPI.put(`/pg/${id}`, data),
+
   deleteProperty: (id) => userAPI.delete(`/pg/${id}`),
-  
-  // Booking endpoints
+
+  /* BOOKINGS */
   getOwnerBookings: () => userAPI.get("/owner/bookings"),
-  updateBookingStatus: (bookingId, status) => userAPI.put(`/bookings/${bookingId}`, { status }),
-  
-  // Public endpoints
+
+  updateBookingStatus: (bookingId, status) =>
+    userAPI.put(`/bookings/${bookingId}`, { status }),
+
+  /* PUBLIC SEARCH */
   searchProperties: (params) => userAPI.get("/pg/search", { params }),
 };
 
-/* ✅ DEFAULT EXPORT FOR OLD FILES */
+/* =====================================================
+   👑 ADMIN APIs
+===================================================== */
+
+export const adminPGAPI = {
+  getPendingPGs: () => adminAPI.get("/pgs/pending"),
+
+  getPGById: (id) => adminAPI.get(`/pg/${id}`),
+
+  approvePG: (id) => adminAPI.patch(`/pg/${id}/approve`),
+
+  rejectPG: (id, reason) =>
+    adminAPI.patch(`/pg/${id}/reject`, { reason }),
+};
+
+/* =====================================================
+   DEFAULT EXPORT (BACKWARD COMPATIBLE)
+===================================================== */
+
 export default userAPI;
