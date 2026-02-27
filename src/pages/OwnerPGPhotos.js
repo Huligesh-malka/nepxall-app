@@ -3,12 +3,13 @@ import axios from "axios";
 import { useParams } from "react-router-dom";
 import { auth } from "../firebase";
 
-// ✅ PRODUCTION URL CONFIGURATION
-const BACKEND_URL = import.meta.env.VITE_API_URL?.replace("/api", "") || "https://your-backend.com";
+// ✅ FIXED: Using your actual backend URL from .env
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://nepxall-backend.onrender.com";
 const API = `${BACKEND_URL}/api/pg`;
 
-// ✅ CLOUDINARY BASE URL (for production)
-const CLOUDINARY_BASE_URL = "https://res.cloudinary.com/your-cloud-name/image/upload/";
+// ✅ Debug log to verify correct URL
+console.log("🔧 Backend URL:", BACKEND_URL);
+console.log("🔧 API URL:", API);
 
 const OwnerPGPhotos = () => {
   const { id } = useParams();
@@ -19,18 +20,32 @@ const OwnerPGPhotos = () => {
   const [dragIndex, setDragIndex] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [error, setError] = useState(null);
 
   /* ================= LOAD PHOTOS ================= */
   const loadPhotos = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
+      console.log("📸 Loading photos for PG ID:", id);
+      console.log("📡 Fetching from:", `${API}/${id}`);
+      
       const res = await axios.get(`${API}/${id}`);
+      console.log("📥 Load response:", res.data);
+      
       if (res.data?.success) {
-        // ✅ Ensure we have an array of photo URLs
         setPhotos(res.data.data.photos || []);
       }
     } catch (err) {
-      console.error("Error loading photos:", err);
+      console.error("❌ Error loading photos:", err);
+      setError(err.message);
+      
+      if (err.code === 'ERR_NETWORK') {
+        console.error("🔴 Network error - Cannot reach backend at:", BACKEND_URL);
+        console.error("💡 Make sure your backend is running and CORS is enabled");
+      }
+      
       setPhotos([]);
     } finally {
       setLoading(false);
@@ -38,7 +53,9 @@ const OwnerPGPhotos = () => {
   };
 
   useEffect(() => {
-    loadPhotos();
+    if (id) {
+      loadPhotos();
+    }
   }, [id]);
 
   /* ================= UPLOAD PHOTOS ================= */
@@ -56,7 +73,6 @@ const OwnerPGPhotos = () => {
         return;
       }
       
-      // Check file type
       if (!file.type.startsWith('image/')) {
         alert(`File "${file.name}" is not an image`);
         return;
@@ -69,41 +85,48 @@ const OwnerPGPhotos = () => {
       return;
     }
 
-    const token = await user.getIdToken(true);
-
-    const formData = new FormData();
-    files.forEach((f) => formData.append("photos", f));
-
     try {
+      const token = await user.getIdToken(true);
+      console.log("🔑 Got auth token");
+
+      const formData = new FormData();
+      files.forEach((f) => formData.append("photos", f));
+
       setUploading(true);
       setUploadProgress(0);
       
-      // ✅ Upload with progress tracking
+      console.log("📤 Uploading to:", `${API}/${id}/upload-photos`);
+      
       const response = await axios.post(`${API}/${id}/upload-photos`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${token}`,
         },
         onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(percentCompleted);
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(percentCompleted);
+          }
         },
       });
+
+      console.log("📥 Upload response:", response.data);
 
       if (response.data.success) {
         setFiles([]);
         setUploadProgress(0);
-        await loadPhotos(); // Reload to get updated list
+        await loadPhotos();
         alert(`✅ ${response.data.message || "Photos uploaded successfully"}`);
       } else {
         alert(`❌ ${response.data.message || "Upload failed"}`);
       }
     } catch (err) {
-      console.error("Upload error:", err);
+      console.error("❌ Upload error:", err);
       
-      // ✅ Better error messages
       let errorMessage = "Photo upload failed ❌";
-      if (err.response?.status === 401) {
+      if (err.code === 'ERR_NETWORK') {
+        errorMessage = `Cannot connect to server at ${BACKEND_URL}. Is your backend running?`;
+      } else if (err.response?.status === 401) {
         errorMessage = "Authentication failed. Please login again.";
       } else if (err.response?.status === 413) {
         errorMessage = "Files too large. Maximum total size is 50MB.";
@@ -112,8 +135,6 @@ const OwnerPGPhotos = () => {
       }
       
       alert(errorMessage);
-      
-      // Clear file input on error
       setFiles([]);
       setUploadProgress(0);
     } finally {
@@ -131,9 +152,9 @@ const OwnerPGPhotos = () => {
       return;
     }
 
-    const token = await user.getIdToken(true);
-
     try {
+      const token = await user.getIdToken(true);
+      
       const response = await axios.delete(`${API}/${id}/photo`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -142,14 +163,13 @@ const OwnerPGPhotos = () => {
       });
 
       if (response.data.success) {
-        // Remove from local state immediately for better UX
         setPhotos(prev => prev.filter(p => p !== photoUrl));
         alert("✅ Photo deleted successfully");
       } else {
         alert(`❌ ${response.data.message || "Failed to delete photo"}`);
       }
     } catch (err) {
-      console.error("Delete error:", err);
+      console.error("❌ Delete error:", err);
       alert(err.response?.data?.message || "Failed to delete photo ❌");
     }
   };
@@ -167,7 +187,6 @@ const OwnerPGPhotos = () => {
       return;
     }
 
-    // Update local state immediately for smooth UI
     const updated = [...photos];
     const dragged = updated.splice(dragIndex, 1)[0];
     updated.splice(index, 0, dragged);
@@ -178,9 +197,9 @@ const OwnerPGPhotos = () => {
     const user = auth.currentUser;
     if (!user) return;
 
-    const token = await user.getIdToken(true);
-
     try {
+      const token = await user.getIdToken(true);
+
       await axios.put(
         `${API}/${id}/photos/order`,
         { photos: updated },
@@ -191,42 +210,18 @@ const OwnerPGPhotos = () => {
         }
       );
     } catch (err) {
-      console.error("Failed to save photo order:", err);
-      // Revert on error? Optional
-      // loadPhotos();
+      console.error("❌ Failed to save photo order:", err);
     }
   };
 
-  /* ================= HELPER: Get Optimized Image URL ================= */
-  const getOptimizedImageUrl = (path, options = {}) => {
+  /* ================= HELPER: Get Image URL ================= */
+  const getImageUrl = (path) => {
     if (!path) return "";
     
-    // If it's already a full URL (Cloudinary), optimize it
-    if (path.includes('cloudinary.com')) {
-      // Add Cloudinary transformations for optimization
-      const transformations = [];
-      
-      // Resize to appropriate dimensions
-      if (options.width) {
-        transformations.push(`w_${options.width}`);
-      }
-      if (options.height) {
-        transformations.push(`h_${options.height}`);
-      }
-      
-      // Maintain aspect ratio and auto-optimize
-      transformations.push('c_fill');
-      transformations.push('f_auto'); // Automatic format (WebP if supported)
-      transformations.push('q_auto'); // Automatic quality
-      
-      const transformationString = transformations.join(',');
-      
-      // Insert transformations into Cloudinary URL
-      // Format: https://res.cloudinary.com/cloud-name/image/upload/v12345/path
-      return path.replace('/upload/', `/upload/${transformationString}/`);
-    }
+    // If it's already a full URL (Cloudinary), return as-is
+    if (path.startsWith("http")) return path;
     
-    // For local files (development), return as-is
+    // For local files (development), prepend backend URL
     return `${BACKEND_URL}${path}`;
   };
 
@@ -234,7 +229,6 @@ const OwnerPGPhotos = () => {
   const clearSelectedFiles = () => {
     setFiles([]);
     setUploadProgress(0);
-    // Reset file input
     const fileInput = document.getElementById('photo-upload');
     if (fileInput) fileInput.value = '';
   };
@@ -253,7 +247,7 @@ const OwnerPGPhotos = () => {
             }}
           />
         </div>
-        <span style={progressText}>{uploadProgress}% Uploaded</span>
+        <span style={progressText}>{uploadProgress}%</span>
       </div>
     );
   };
@@ -291,13 +285,11 @@ const OwnerPGPhotos = () => {
                 const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
                 const isValid = file.type.startsWith('image/');
                 const isOverSize = file.size > 5 * 1024 * 1024;
-                const fileStatus = !isValid ? 'invalid' : isOverSize ? 'oversize' : 'valid';
                 
                 return (
                   <li key={idx} style={{
                     ...fileListItem,
-                    color: fileStatus === 'valid' ? '#333' : 
-                           fileStatus === 'invalid' ? '#dc3545' : '#ff9800'
+                    color: !isValid || isOverSize ? '#dc3545' : '#333'
                   }}>
                     {file.name} ({fileSizeMB} MB)
                     {!isValid && " ⚠️ Invalid format"}
@@ -369,7 +361,7 @@ const OwnerPGPhotos = () => {
                 }}
               >
                 <img
-                  src={getOptimizedImageUrl(photo, { width: 400, height: 300 })}
+                  src={getImageUrl(photo)}
                   alt={`PG ${index + 1}`}
                   style={img}
                   loading="lazy"
@@ -396,7 +388,6 @@ const OwnerPGPhotos = () => {
         )}
       </div>
 
-      {/* Add CSS animation for spinner */}
       <style>
         {`
           @keyframes spin {
@@ -414,7 +405,6 @@ const container = {
   maxWidth: 1000,
   margin: "auto",
   padding: 20,
-  fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
 };
 
 const title = {
@@ -431,8 +421,7 @@ const uploadSection = {
   borderRadius: 12,
   padding: 24,
   marginBottom: 30,
-  background: "linear-gradient(145deg, #f9f7ff 0%, #ffffff 100%)",
-  boxShadow: "0 4px 12px rgba(111, 66, 193, 0.1)",
+  background: "#f9f7ff",
 };
 
 const fileListContainer = {
@@ -440,7 +429,6 @@ const fileListContainer = {
   padding: 15,
   background: "#f8f9fa",
   borderRadius: 8,
-  border: "1px solid #e9ecef",
 };
 
 const fileListHeader = {
@@ -457,9 +445,6 @@ const clearButton = {
   cursor: "pointer",
   fontSize: 14,
   textDecoration: "underline",
-  padding: "4px 8px",
-  borderRadius: 4,
-  transition: "all 0.2s",
 };
 
 const fileList = {
@@ -472,7 +457,6 @@ const fileList = {
 const fileListItem = {
   fontSize: 14,
   marginBottom: 4,
-  padding: "2px 0",
 };
 
 const uploadNote = {
@@ -482,7 +466,6 @@ const uploadNote = {
   padding: "8px 12px",
   background: "#e9ecef",
   borderRadius: 6,
-  display: "inline-block",
 };
 
 const uploadActions = {
@@ -500,7 +483,6 @@ const uploadButton = {
   borderRadius: 8,
   fontWeight: "bold",
   fontSize: "16px",
-  transition: "all 0.2s",
 };
 
 const progressContainer = {
@@ -520,14 +502,14 @@ const progressBarContainer = {
 
 const progressBarFill = {
   height: "100%",
-  background: "linear-gradient(90deg, #6f42c1, #9b7bff)",
+  background: "#6f42c1",
   transition: "width 0.3s ease",
 };
 
 const progressText = {
   fontSize: 14,
   color: "#666",
-  minWidth: 80,
+  minWidth: 45,
 };
 
 const galleryTitle = {
@@ -589,12 +571,7 @@ const card = {
   overflow: "hidden",
   border: "1px solid #e0e0e0",
   background: "#fff",
-  transition: "transform 0.2s, box-shadow 0.2s",
   boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-  ":hover": {
-    transform: "translateY(-4px)",
-    boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
-  },
 };
 
 const img = {
@@ -602,7 +579,6 @@ const img = {
   height: "180px",
   objectFit: "cover",
   display: "block",
-  transition: "transform 0.3s",
 };
 
 const photoIndex = {
@@ -615,7 +591,6 @@ const photoIndex = {
   borderRadius: 20,
   fontSize: 12,
   fontWeight: "bold",
-  backdropFilter: "blur(4px)",
 };
 
 const deleteBtn = {
@@ -633,13 +608,6 @@ const deleteBtn = {
   alignItems: "center",
   justifyContent: "center",
   fontSize: 16,
-  transition: "all 0.2s",
-  opacity: 0.9,
-  ":hover": {
-    opacity: 1,
-    transform: "scale(1.1)",
-    background: "#dc3545",
-  },
 };
 
 export default OwnerPGPhotos;
