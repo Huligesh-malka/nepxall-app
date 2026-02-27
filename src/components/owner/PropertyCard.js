@@ -25,7 +25,8 @@ import {
   MeetingRoom as RoomsIcon,
   Star as StarIcon,
   Campaign as AnnouncementIcon,
-  PlaylistAdd as PlanIcon
+  PlaylistAdd as PlanIcon,
+  Image as ImageIcon
 } from "@mui/icons-material";
 
 const BRAND_BLUE = "#0B5ED7";
@@ -38,6 +39,9 @@ const statusConfig = {
   rejected: { label: "REJECTED", bg: "#fee2e2", text: "#991b1b" },
   closed: { label: "CLOSED", bg: "#e2e8f0", text: "#334155" }
 };
+
+// Backend URL from environment
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://nepxall-backend.onrender.com";
 
 const PropertyCard = ({
   property,
@@ -53,21 +57,33 @@ const PropertyCard = ({
 
   const status = statusConfig[property.status] || statusConfig.pending;
 
-  // ✅ FIXED: Handle both Cloudinary URLs and local paths
+  // Get image URL with fallback
   const getImageUrl = () => {
     if (!property.photos?.length) {
-      return "https://via.placeholder.com/400x300?text=No+Image";
+      return null;
     }
     
     const photo = property.photos[0];
     
-    // If it's already a full URL (Cloudinary), use it directly
+    // If it's already a full URL (Cloudinary or other), use it directly
     if (photo.startsWith('http')) {
       return photo;
     }
     
-    // If it's a relative path, prepend local server URL
-    return `http://localhost:5000${photo}`;
+    // If it's a path starting with /uploads or /opt/render, serve from backend
+    // Extract just the filename or use the full path
+    if (photo.includes('/uploads/')) {
+      // Get the part after /uploads/
+      const uploadsIndex = photo.indexOf('/uploads/');
+      if (uploadsIndex !== -1) {
+        const relativePath = photo.substring(uploadsIndex);
+        return `${BACKEND_URL}${relativePath}`;
+      }
+    }
+    
+    // If it's a relative path, prepend backend URL
+    const normalizedPath = photo.startsWith('/') ? photo : `/${photo}`;
+    return `${BACKEND_URL}${normalizedPath}`;
   };
 
   const imageUrl = getImageUrl();
@@ -78,25 +94,70 @@ const PropertyCard = ({
       flexDirection: { xs: "column", md: "row" },
       borderRadius: 2,
       boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-      border: "1px solid #e2e8f0"
+      border: "1px solid #e2e8f0",
+      height: "100%"
     }}>
 
-      {/* IMAGE */}
-      <CardMedia
-        component="img"
-        image={imageUrl}
-        alt={property.pg_name}
-        onError={(e) => {
-          console.error("Image failed to load:", imageUrl);
-          e.target.onerror = null;
-          e.target.src = "https://via.placeholder.com/400x300?text=Image+Not+Found";
-        }}
+      {/* IMAGE SECTION */}
+      <Box
         sx={{
           width: { xs: "100%", md: 260 },
           height: { xs: 200, md: "auto" },
-          objectFit: "cover"
+          bgcolor: "#f8fafc",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          position: "relative",
+          overflow: "hidden"
         }}
-      />
+      >
+        {imageUrl ? (
+          <Box
+            component="img"
+            src={imageUrl}
+            alt={property.pg_name}
+            onError={(e) => {
+              console.error("Image failed to load:", imageUrl);
+              e.target.onerror = null;
+              e.target.style.display = "none";
+              // Show fallback
+              const parent = e.target.parentElement;
+              parent.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #94a3b8;">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span style="margin-top: 8px; font-size: 14px;">Image not available</span>
+                </div>
+              `;
+            }}
+            sx={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover"
+            }}
+          />
+        ) : (
+          // Fallback when no image
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "100%",
+              color: "#94a3b8",
+              bgcolor: "#f1f5f9",
+              width: "100%"
+            }}
+          >
+            <ImageIcon sx={{ fontSize: 48, color: "#cbd5e1", mb: 1 }} />
+            <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+              No Image
+            </Typography>
+          </Box>
+        )}
+      </Box>
 
       <CardContent sx={{ flex: 1, p: 3 }}>
 
@@ -111,7 +172,8 @@ const PropertyCard = ({
               color: "#64748b",
               display: "flex",
               alignItems: "center",
-              gap: 0.5
+              gap: 0.5,
+              mt: 0.5
             }}>
               <LocationIcon sx={{ fontSize: 18 }} />
               {property.area}, {property.city}
@@ -127,7 +189,8 @@ const PropertyCard = ({
                   bgcolor: property.pg_category === "coliving" ? "#e0f2fe" : "#f3e8ff",
                   color: property.pg_category === "coliving" ? "#0369a1" : "#6b21a8",
                   fontSize: "11px",
-                  height: 20
+                  height: 20,
+                  fontWeight: 600
                 }}
               />
             )}
@@ -146,20 +209,24 @@ const PropertyCard = ({
         </Box>
 
         {/* ROOMS INFO */}
-        <Box display="flex" gap={3} mb={2}>
+        <Box display="flex" gap={3} mb={2} flexWrap="wrap">
           <Box display="flex" alignItems="center" gap={0.5}>
-            <RoomsIcon sx={{ fontSize: 18 }} />
-            <Typography>{property.total_rooms || 0} Rooms</Typography>
+            <MeetingRoomIcon sx={{ fontSize: 18, color: "#64748b" }} />
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+              {property.total_rooms || 0} Rooms
+            </Typography>
           </Box>
 
-          <Typography sx={{ color: BRAND_GREEN, fontWeight: 600 }}>
-            {property.available_rooms || 0} Available
-          </Typography>
+          <Box display="flex" alignItems="center" gap={0.5}>
+            <Typography variant="body2" sx={{ color: BRAND_GREEN, fontWeight: 600 }}>
+              {property.available_rooms || 0} Available
+            </Typography>
+          </Box>
 
           {property.avg_rating > 0 && (
             <Box display="flex" alignItems="center" gap={0.5}>
               <StarIcon sx={{ fontSize: 18, color: "#fbbf24" }} />
-              <Typography>{property.avg_rating.toFixed(1)}</Typography>
+              <Typography variant="body2">{property.avg_rating.toFixed(1)}</Typography>
             </Box>
           )}
         </Box>
@@ -167,10 +234,18 @@ const PropertyCard = ({
         {/* PENDING STATUS */}
         {property.status === "pending" && (
           <Box mb={2}>
-            <Typography variant="caption" sx={{ color: "#f59e0b" }}>
+            <Typography variant="caption" sx={{ color: "#f59e0b", display: "block", mb: 0.5 }}>
               ⏳ Under admin review
             </Typography>
-            <LinearProgress sx={{ borderRadius: 1, bgcolor: "#fef3c7" }} />
+            <LinearProgress 
+              sx={{ 
+                borderRadius: 1, 
+                bgcolor: "#fef3c7",
+                '& .MuiLinearProgress-bar': {
+                  bgcolor: "#f59e0b"
+                }
+              }} 
+            />
           </Box>
         )}
 
@@ -180,31 +255,61 @@ const PropertyCard = ({
         <Box display="flex" gap={1} flexWrap="wrap">
 
           <Tooltip title="View">
-            <Button size="small" variant="outlined" startIcon={<ViewIcon />} onClick={onView}>
+            <Button 
+              size="small" 
+              variant="outlined" 
+              startIcon={<ViewIcon />} 
+              onClick={onView}
+              sx={{ textTransform: "none" }}
+            >
               View
             </Button>
           </Tooltip>
 
           <Tooltip title="Edit">
-            <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={onEdit}>
+            <Button 
+              size="small" 
+              variant="outlined" 
+              startIcon={<EditIcon />} 
+              onClick={onEdit}
+              sx={{ textTransform: "none" }}
+            >
               Edit
             </Button>
           </Tooltip>
 
           <Tooltip title="Rooms">
-            <Button size="small" variant="outlined" startIcon={<RoomsIcon />} onClick={onRooms}>
+            <Button 
+              size="small" 
+              variant="outlined" 
+              startIcon={<MeetingRoomIcon />} 
+              onClick={onRooms}
+              sx={{ textTransform: "none" }}
+            >
               Rooms
             </Button>
           </Tooltip>
 
           <Tooltip title="Photos">
-            <Button size="small" variant="outlined" startIcon={<PhotoIcon />} onClick={onPhotos}>
+            <Button 
+              size="small" 
+              variant="outlined" 
+              startIcon={<PhotoIcon />} 
+              onClick={onPhotos}
+              sx={{ textTransform: "none" }}
+            >
               Photos
             </Button>
           </Tooltip>
 
           <Tooltip title="Videos">
-            <Button size="small" variant="outlined" startIcon={<VideoIcon />} onClick={onVideos}>
+            <Button 
+              size="small" 
+              variant="outlined" 
+              startIcon={<VideoIcon />} 
+              onClick={onVideos}
+              sx={{ textTransform: "none" }}
+            >
               Videos
             </Button>
           </Tooltip>
@@ -259,6 +364,7 @@ const PropertyCard = ({
               variant="outlined"
               startIcon={<DisableIcon />}
               onClick={onToggleStatus}
+              sx={{ textTransform: "none" }}
             >
               Disable
             </Button>
@@ -269,6 +375,7 @@ const PropertyCard = ({
               variant="outlined"
               startIcon={<ActivateIcon />}
               onClick={onToggleStatus}
+              sx={{ textTransform: "none" }}
             >
               Activate
             </Button>

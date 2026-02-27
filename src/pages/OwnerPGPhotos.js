@@ -13,10 +13,6 @@ const API =
   process.env.REACT_APP_API_URL ||
   "https://nepxall-backend.onrender.com/api";
 
-const FILES_URL =
-  process.env.REACT_APP_FILES_URL ||
-  "https://nepxall-backend.onrender.com";
-
 /* ================= COMPONENT ================= */
 
 const OwnerPGPhotos = () => {
@@ -46,25 +42,17 @@ const OwnerPGPhotos = () => {
       let photosArray = [];
       
       if (res.data?.success && res.data.data) {
-        // Structure: { success: true, data: { photos: [...] } }
         photosArray = res.data.data.photos || [];
       } else if (res.data?.data) {
-        // Structure: { data: { photos: [...] } }
         photosArray = res.data.data.photos || [];
       } else if (Array.isArray(res.data)) {
-        // Structure: [...] (direct array)
         photosArray = res.data;
       } else if (res.data?.photos) {
-        // Structure: { photos: [...] }
         photosArray = res.data.photos;
       }
 
       console.log("📸 Photos extracted:", photosArray);
       setPhotos(photosArray);
-
-      if (photosArray.length === 0) {
-        console.log("⚠️ No photos found in response");
-      }
 
     } catch (err) {
       console.error("❌ Load error:", err);
@@ -119,7 +107,7 @@ const OwnerPGPhotos = () => {
 
       console.log("📤 Uploading photos to PG ID:", id);
       
-      const response = await axios.post(`${API}/pg/${id}/upload-photos`, formData, {
+      await axios.post(`${API}/pg/${id}/upload-photos`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
@@ -128,21 +116,13 @@ const OwnerPGPhotos = () => {
           if (progressEvent.total) {
             const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
             setUploadProgress(percent);
-            console.log(`📊 Upload progress: ${percent}%`);
           }
         },
       });
 
-      console.log("✅ Upload response:", response.data);
-
-      // Clear file input
       setFiles([]);
       setUploadProgress(0);
-      
-      // Show success message
       alert("Photos uploaded successfully!");
-      
-      // Reload photos
       await loadPhotos();
 
     } catch (err) {
@@ -170,11 +150,7 @@ const OwnerPGPhotos = () => {
         data: { photo },
       });
 
-      console.log("✅ Photo deleted");
-      
-      // Update local state
       setPhotos((prev) => prev.filter((p) => p !== photo));
-      
       alert("Photo deleted successfully!");
 
     } catch (err) {
@@ -204,28 +180,33 @@ const OwnerPGPhotos = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      console.log("✅ Order updated");
-
     } catch (err) {
       console.error("❌ Reorder error:", err);
       alert("Failed to update photo order");
-      // Revert on error
-      loadPhotos();
+      loadPhotos(); // Revert on error
     }
   };
 
   /* ================= IMAGE URL ================= */
 
   const getImageUrl = (path) => {
-    if (!path) return "https://placehold.co/400x300?text=No+Image";
+    if (!path) return "https://via.placeholder.com/400x300?text=No+Image";
 
-    // If it's already a full URL (Cloudinary or other)
+    // If it's already a full URL
     if (path.startsWith("http")) return path;
 
-    // If it's a relative path, prepend the files URL
-    // Make sure path starts with /
-    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-    return `${FILES_URL}${normalizedPath}`;
+    // Handle paths that contain /uploads/
+    if (path.includes('/uploads/')) {
+      const uploadsIndex = path.indexOf('/uploads/');
+      if (uploadsIndex !== -1) {
+        const relativePath = path.substring(uploadsIndex);
+        return `${BACKEND_URL}${relativePath}`;
+      }
+    }
+
+    // Handle relative paths
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    return `${BACKEND_URL}${normalizedPath}`;
   };
 
   /* ================= UI ================= */
@@ -264,10 +245,7 @@ const OwnerPGPhotos = () => {
             multiple
             accept="image/*"
             disabled={uploading}
-            onChange={(e) => {
-              setFiles([...e.target.files]);
-              console.log("📁 Selected files:", e.target.files.length);
-            }}
+            onChange={(e) => setFiles([...e.target.files])}
             style={{
               padding: 10,
               border: "1px solid #cbd5e1",
@@ -378,8 +356,8 @@ const OwnerPGPhotos = () => {
                   cursor: "grab",
                   boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                   transition: "transform 0.2s ease",
-                  ":hover": {
-                    transform: "scale(1.02)"
+                  ':hover': {
+                    transform: 'scale(1.02)'
                   }
                 }}
               >
@@ -395,7 +373,7 @@ const OwnerPGPhotos = () => {
                   onError={(e) => {
                     console.error("Image failed to load:", getImageUrl(photo));
                     e.target.onerror = null;
-                    e.target.src = "https://placehold.co/400x300?text=Image+Error";
+                    e.target.src = "https://via.placeholder.com/400x300?text=Image+Error";
                   }}
                 />
                 
