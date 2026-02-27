@@ -1,11 +1,56 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios"; // ← FOR OVERPASS API
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import api from "../api/api"; // ← FOR YOUR BACKEND
+import api from "../api/api";
 import { auth } from "../firebase";
+
+// Import icons from lucide-react for consistency with search page
+import {
+  X,
+  MapPin,
+  Phone,
+  Home,
+  Users,
+  Bed,
+  Bath,
+  Wifi,
+  Car,
+  Shield,
+  Calendar,
+  Clock,
+  UserCheck,
+  BookOpen,
+  Info,
+  Heart,
+  Share2,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  Coffee,
+  Utensils,
+  Snowflake,
+  Navigation,
+  Star,
+  DollarSign,
+  Key,
+  DoorOpen,
+  Sofa,
+  Flame,
+  Leaf,
+  Zap,
+  Building,
+  Hash,
+  Sun,
+  Moon,
+  Tv,
+  Wind,
+  Sparkles,
+  Pill,
+  Dumbbell,
+  Wrench
+} from "lucide-react";
 
 /* ================= LEAFLET FIX ================= */
 delete L.Icon.Default.prototype._getIconUrl;
@@ -18,80 +63,361 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
-// Base URL for images (from env, remove /api suffix)
-const BASE_URL = import.meta.env.VITE_API_URL?.replace("/api", "") || "https://nepxall-backend.onrender.com";
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://nepxall-backend.onrender.com";
 
-// FIXED: Helper function to get correct image URL
+/* ================= HELPER FUNCTIONS ================= */
 const getCorrectImageUrl = (photo) => {
   if (!photo) return null;
   
-  // If it's already a full URL
   if (photo.startsWith('http')) {
     return photo;
   }
   
-  // If it's a path containing /uploads/
   if (photo.includes('/uploads/')) {
     const uploadsIndex = photo.indexOf('/uploads/');
     if (uploadsIndex !== -1) {
       const relativePath = photo.substring(uploadsIndex);
-      return `${BASE_URL}${relativePath}`;
+      return `${BACKEND_URL}${relativePath}`;
     }
   }
   
-  // If it's a path starting with /opt/render
   if (photo.includes('/opt/render/')) {
     const uploadsMatch = photo.match(/\/uploads\/.*/);
     if (uploadsMatch) {
-      return `${BASE_URL}${uploadsMatch[0]}`;
+      return `${BACKEND_URL}${uploadsMatch[0]}`;
     }
   }
   
-  // Default: prepend base URL
   const normalizedPath = photo.startsWith('/') ? photo : `/${photo}`;
-  return `${BASE_URL}${normalizedPath}`;
+  return `${BACKEND_URL}${normalizedPath}`;
 };
 
-// Helper functions
-const getHighlightIcon = (category, type) => {
-  const categoryIcons = {
-    education: "🎓",
-    transport: "🚌",
-    healthcare: "🏥",
-    shopping: "🛒",
-    finance: "🏦",
-    recreation: "🏃",
-    worship: "🛐",
-    safety: "👮",
-    food: "🍽️"
+const formatPrice = (price) => {
+  if (price === null || price === undefined || price === "") {
+    return "0";
+  }
+  
+  const numPrice = Number(price);
+  
+  if (isNaN(numPrice)) {
+    return "0";
+  }
+  
+  try {
+    return numPrice.toLocaleString('en-IN');
+  } catch (error) {
+    return numPrice.toString();
+  }
+};
+
+const getPGCode = (id) => `PG-${String(id).padStart(5, "0")}`;
+
+/* ================= BOOKING MODAL COMPONENT ================= */
+const BookingModal = ({ pg, onClose, onBook }) => {
+  const [bookingData, setBookingData] = useState({
+    name: "",
+    phone: "",
+    checkInDate: "",
+    roomType: pg?.single_sharing ? "Single Sharing" : "Single Room"
+  });
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setBookingData(prev => ({ ...prev, [name]: value }));
   };
-  
-  if (type === "college" || type === "nearby_college") return "🏫";
-  if (type === "school" || type === "nearby_school") return "📚";
-  if (type === "hospital" || type === "nearby_hospital") return "🏥";
-  if (type === "clinic" || type === "nearby_clinic") return "🩺";
-  if (type === "pharmacy" || type === "nearby_pharmacy") return "💊";
-  if (type === "bank" || type === "nearby_bank") return "🏦";
-  if (type === "atm" || type === "nearby_atm") return "🏧";
-  if (type === "police" || type === "nearby_police_station") return "👮";
-  if (type === "restaurant" || type === "nearby_restaurant") return "🍽️";
-  if (type === "supermarket" || type === "nearby_supermarket") return "🛒";
-  if (type === "grocery" || type === "nearby_grocery_store") return "🥦";
-  if (type === "bus" || type === "nearby_bus_stop") return "🚌";
-  if (type === "railway" || type === "nearby_railway_station") return "🚆";
-  if (type === "metro" || type === "nearby_metro") return "🚇";
-  if (type === "gym" || type === "nearby_gym") return "🏋️";
-  if (type === "park" || type === "nearby_park") return "🌳";
-  if (type === "mall" || type === "nearby_mall") return "🏬";
-  if (type === "post_office" || type === "nearby_post_office") return "📮";
-  if (type === "temple" || type === "nearby_temple") return "🛕";
-  if (type === "mosque" || type === "nearby_mosque") return "🕌";
-  if (type === "church" || type === "nearby_church") return "⛪";
-  if (type === "it_park" || type === "nearby_it_park") return "💻";
-  if (type === "office_hub" || type === "nearby_office_hub") return "🏢";
-  if (type === "main_road" || type === "distance_main_road") return "🛣️";
-  
-  return categoryIcons[category] || "📍";
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onBook(bookingData);
+  };
+
+  const getRoomTypes = () => {
+    const types = [];
+    
+    if (pg?.pg_category === "pg") {
+      if (pg.single_sharing) types.push({ 
+        value: "Single Sharing", 
+        label: `Single Sharing - ₹${formatPrice(pg.single_sharing)}` 
+      });
+      if (pg.double_sharing) types.push({ 
+        value: "Double Sharing", 
+        label: `Double Sharing - ₹${formatPrice(pg.double_sharing)}` 
+      });
+      if (pg.triple_sharing) types.push({ 
+        value: "Triple Sharing", 
+        label: `Triple Sharing - ₹${formatPrice(pg.triple_sharing)}` 
+      });
+      if (pg.four_sharing) types.push({ 
+        value: "Four Sharing", 
+        label: `Four Sharing - ₹${formatPrice(pg.four_sharing)}` 
+      });
+      if (pg.single_room) types.push({ 
+        value: "Single Room", 
+        label: `Single Room - ₹${formatPrice(pg.single_room)}` 
+      });
+      if (pg.double_room) types.push({ 
+        value: "Double Room", 
+        label: `Double Room - ₹${formatPrice(pg.double_room)}` 
+      });
+    } else if (pg?.pg_category === "coliving") {
+      if (pg.co_living_single_room) types.push({ 
+        value: "Co-Living Single Room", 
+        label: `Co-Living Single Room - ₹${formatPrice(pg.co_living_single_room)}` 
+      });
+      if (pg.co_living_double_room) types.push({ 
+        value: "Co-Living Double Room", 
+        label: `Co-Living Double Room - ₹${formatPrice(pg.co_living_double_room)}` 
+      });
+    } else if (pg?.pg_category === "to_let") {
+      if (pg.price_1bhk) types.push({ 
+        value: "1 BHK", 
+        label: `1 BHK - ₹${formatPrice(pg.price_1bhk)}` 
+      });
+      if (pg.price_2bhk) types.push({ 
+        value: "2 BHK", 
+        label: `2 BHK - ₹${formatPrice(pg.price_2bhk)}` 
+      });
+      if (pg.price_3bhk) types.push({ 
+        value: "3 BHK", 
+        label: `3 BHK - ₹${formatPrice(pg.price_3bhk)}` 
+      });
+      if (pg.price_4bhk) types.push({ 
+        value: "4 BHK", 
+        label: `4 BHK - ₹${formatPrice(pg.price_4bhk)}` 
+      });
+    }
+    
+    return types;
+  };
+
+  return (
+    <div style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0, 0, 0, 0.8)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 3000,
+      padding: 20,
+      animation: "fadeIn 0.3s ease"
+    }}>
+      <div style={{
+        background: "#ffffff",
+        borderRadius: 20,
+        width: "100%",
+        maxWidth: 500,
+        maxHeight: "90vh",
+        overflowY: "auto",
+        position: "relative",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute",
+            top: 16,
+            right: 16,
+            background: "rgba(255,255,255,0.9)",
+            border: "none",
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            zIndex: 100,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+          }}
+        >
+          <X size={24} />
+        </button>
+
+        <div style={{ padding: 30 }}>
+          <h2 style={{ 
+            fontSize: 24, 
+            fontWeight: 700, 
+            color: "#111827",
+            marginBottom: 8 
+          }}>
+            🏠 Book {pg?.pg_name}
+          </h2>
+          <p style={{ 
+            fontSize: 14, 
+            color: "#6b7280",
+            marginBottom: 24 
+          }}>
+            Fill in your details to book this property
+          </p>
+
+          <form onSubmit={handleSubmit}>
+            {/* Full Name */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{
+                display: "block",
+                marginBottom: 8,
+                fontSize: 14,
+                fontWeight: 500,
+                color: "#374151"
+              }}>
+                Full Name *
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={bookingData.name}
+                onChange={handleInputChange}
+                required
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: 10,
+                  fontSize: 14,
+                  background: "#f9fafb"
+                }}
+                placeholder="Enter your full name"
+              />
+            </div>
+
+            {/* Phone Number */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{
+                display: "block",
+                marginBottom: 8,
+                fontSize: 14,
+                fontWeight: 500,
+                color: "#374151"
+              }}>
+                Phone Number *
+              </label>
+              <input
+                type="tel"
+                name="phone"
+                value={bookingData.phone}
+                onChange={handleInputChange}
+                required
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: 10,
+                  fontSize: 14,
+                  background: "#f9fafb"
+                }}
+                placeholder="Enter your phone number"
+              />
+            </div>
+
+            {/* Check-in Date */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{
+                display: "block",
+                marginBottom: 8,
+                fontSize: 14,
+                fontWeight: 500,
+                color: "#374151"
+              }}>
+                Check-in Date *
+              </label>
+              <input
+                type="date"
+                name="checkInDate"
+                value={bookingData.checkInDate}
+                onChange={handleInputChange}
+                required
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: 10,
+                  fontSize: 14,
+                  background: "#f9fafb"
+                }}
+              />
+            </div>
+
+            {/* Room Type */}
+            <div style={{ marginBottom: 24 }}>
+              <label style={{
+                display: "block",
+                marginBottom: 8,
+                fontSize: 14,
+                fontWeight: 500,
+                color: "#374151"
+              }}>
+                {pg?.pg_category === "to_let" ? "BHK Type *" : "Room Type *"}
+              </label>
+              <select
+                name="roomType"
+                value={bookingData.roomType}
+                onChange={handleInputChange}
+                required
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: 10,
+                  fontSize: 14,
+                  background: "#f9fafb"
+                }}
+              >
+                {getRoomTypes().map((type, index) => (
+                  <option key={index} value={type.value}>{type.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  flex: 1,
+                  padding: "14px",
+                  background: "#f3f4f6",
+                  color: "#374151",
+                  border: "none",
+                  borderRadius: 10,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: "pointer"
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                style={{
+                  flex: 2,
+                  padding: "14px",
+                  background: "#10b981",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 10,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8
+                }}
+              >
+                <BookOpen size={18} />
+                Submit Booking
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // Helper Components
@@ -189,7 +515,7 @@ const PriceDetails = ({ pg }) => {
       return pg.co_living_single_room || pg.co_living_double_room;
     } else {
       return pg.single_sharing || pg.double_sharing || pg.triple_sharing || 
-             pg.four_sharing || pg.single_room || pg.double_room || pg.triple_room;
+             pg.four_sharing || pg.single_room || pg.double_room;
     }
   };
 
@@ -361,7 +687,7 @@ const PriceDetails = ({ pg }) => {
             </div>
           )}
 
-          {(pg.single_room || pg.double_room || pg.triple_room) && (
+          {(pg.single_room || pg.double_room) && (
             <div style={styles.priceCategory}>
               <div style={styles.priceCategoryTitle}>Private Rooms</div>
               <div style={styles.priceGrid}>
@@ -378,14 +704,6 @@ const PriceDetails = ({ pg }) => {
                     <div style={styles.priceType}>Double Room</div>
                     <div style={styles.priceValue}>
                       {formatPrice(pg.double_room)}/month
-                    </div>
-                  </div>
-                )}
-                {pg.triple_room && pg.triple_room !== "0" && pg.triple_room !== "" && (
-                  <div style={styles.priceItem}>
-                    <div style={styles.priceType}>Triple Room</div>
-                    <div style={styles.priceValue}>
-                      {formatPrice(pg.triple_room)}/month
                     </div>
                   </div>
                 )}
@@ -440,360 +758,6 @@ const PriceDetails = ({ pg }) => {
   );
 };
 
-// Highlight Category Button
-const HighlightCategoryButton = ({ 
-  category, 
-  icon, 
-  label, 
-  count, 
-  isActive, 
-  onClick,
-  color 
-}) => (
-  <button
-    style={{
-      ...styles.highlightCategoryBtn,
-      background: isActive 
-        ? `linear-gradient(135deg, ${color}, ${color}dd)` 
-        : 'white',
-      color: isActive ? 'white' : '#374151',
-      boxShadow: isActive ? `0 4px 15px ${color}40` : '0 2px 10px rgba(0,0,0,0.05)',
-      ...(count === 0 ? styles.highlightCategoryBtnEmpty : {})
-    }}
-    onClick={onClick}
-    disabled={count === 0}
-  >
-    <span style={styles.highlightCategoryIcon}>{icon}</span>
-    <span style={styles.highlightCategoryLabel}>
-      {label} {count > 0 && <span style={styles.highlightCategoryCount}>{count}</span>}
-    </span>
-  </button>
-);
-
-// Highlight Item Component
-const HighlightItem = ({ name, type, category, icon, onMapView, coordinates, color }) => (
-  <div 
-    style={{
-      ...styles.highlightItem,
-      borderLeft: `4px solid ${color}`
-    }}
-    onClick={onMapView}
-  >
-    <div style={{
-      ...styles.highlightIconContainer,
-      background: `linear-gradient(135deg, ${color}, ${color}dd)`
-    }}>
-      <span style={styles.highlightIcon}>{icon}</span>
-    </div>
-    <div style={styles.highlightContent}>
-      <div style={styles.highlightName}>{name}</div>
-      <div style={styles.highlightType}>{type.replace(/_/g, ' ').replace('nearby ', '')}</div>
-      {coordinates && (
-        <div style={styles.highlightDistance}>
-          📏 {calculateDistance(coordinates).toFixed(1)} km away
-        </div>
-      )}
-    </div>
-    <button 
-      style={{
-        ...styles.viewOnMapButton,
-        background: `linear-gradient(135deg, ${color}, ${color}dd)`
-      }} 
-      onClick={(e) => {
-        e.stopPropagation();
-        onMapView();
-      }}
-    >
-      🗺️ View
-    </button>
-  </div>
-);
-
-// Nearby PG Card Component
-const NearbyPGCard = ({ pg, onClick, distance }) => {
-  const getStartingPrice = () => {
-    if (!pg) return "—";
-    
-    const isToLet = pg.pg_category === "to_let";
-    const isCoLiving = pg.pg_category === "coliving";
-    
-    if (isToLet) {
-      if (pg.price_1bhk && parseInt(pg.price_1bhk) > 0) return pg.price_1bhk;
-      if (pg.price_2bhk && parseInt(pg.price_2bhk) > 0) return pg.price_2bhk;
-      if (pg.price_3bhk && parseInt(pg.price_3bhk) > 0) return pg.price_3bhk;
-      if (pg.price_4bhk && parseInt(pg.price_4bhk) > 0) return pg.price_4bhk;
-      return "—";
-    } else if (isCoLiving) {
-      if (pg.co_living_single_room && parseInt(pg.co_living_single_room) > 0) return pg.co_living_single_room;
-      if (pg.co_living_double_room && parseInt(pg.co_living_double_room) > 0) return pg.co_living_double_room;
-      return "—";
-    } else {
-      if (pg.single_sharing && parseInt(pg.single_sharing) > 0) return pg.single_sharing;
-      if (pg.double_sharing && parseInt(pg.double_sharing) > 0) return pg.double_sharing;
-      if (pg.triple_sharing && parseInt(pg.triple_sharing) > 0) return pg.triple_sharing;
-      if (pg.four_sharing && parseInt(pg.four_sharing) > 0) return pg.four_sharing;
-      if (pg.single_room && parseInt(pg.single_room) > 0) return pg.single_room;
-      if (pg.double_room && parseInt(pg.double_room) > 0) return pg.double_room;
-      if (pg.triple_room && parseInt(pg.triple_room) > 0) return pg.triple_room;
-      return "—";
-    }
-  };
-
-  // FIXED: Get image URL using helper
-  const getImageUrl = () => {
-    if (pg.photos && pg.photos.length > 0) {
-      return getCorrectImageUrl(pg.photos[0]);
-    }
-    return null;
-  };
-
-  const imageUrl = getImageUrl();
-
-  return (
-    <div style={styles.nearbyPgCard} onClick={onClick}>
-      <div style={styles.nearbyPgImageContainer}>
-        <div style={styles.nearbyPgImagePlaceholder}>
-          {imageUrl ? (
-            <img 
-              src={imageUrl} 
-              alt={pg.pg_name} 
-              style={styles.nearbyPgImage}
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.style.display = 'none';
-                e.target.parentElement.innerHTML = '<div style="font-size: 40px; color: #94a3b8;">🏠</div>';
-              }}
-            />
-          ) : (
-            <div style={styles.nearbyPgNoImage}>🏠</div>
-          )}
-        </div>
-        <div style={styles.nearbyPgBadges}>
-          <span style={styles.nearbyPgTypeBadge}>
-            {pg.pg_category === "to_let" ? "🏠 House" : 
-             pg.pg_category === "coliving" ? "🤝 Co-Living" : 
-             "🏢 PG"}
-          </span>
-          {distance && (
-            <span style={styles.nearbyPgDistanceBadge}>
-              📏 {distance.toFixed(1)} km
-            </span>
-          )}
-        </div>
-      </div>
-      
-      <div style={styles.nearbyPgContent}>
-        <h4 style={styles.nearbyPgTitle}>{pg.pg_name}</h4>
-        <p style={styles.nearbyPgAddress}>
-          📍 {pg.address ? `${pg.address.substring(0, 40)}...` : pg.area || pg.city}
-        </p>
-        
-        <div style={styles.nearbyPgStats}>
-          <div style={styles.nearbyPgStat}>
-            <span style={styles.nearbyPgStatIcon}>💰</span>
-            <span style={styles.nearbyPgStatText}>
-              ₹{getStartingPrice()}/month
-            </span>
-          </div>
-          <div style={styles.nearbyPgStat}>
-            <span style={styles.nearbyPgStatIcon}>🏠</span>
-            <span style={styles.nearbyPgStatText}>
-              {pg.available_rooms || pg.total_rooms || 0} rooms
-            </span>
-          </div>
-        </div>
-        
-        <div style={styles.nearbyPgFacilities}>
-          {pg.ac_available && <span style={styles.nearbyPgFacility}>❄️</span>}
-          {pg.wifi_available && <span style={styles.nearbyPgFacility}>📶</span>}
-          {pg.food_available && <span style={styles.nearbyPgFacility}>🍽️</span>}
-          {pg.parking_available && <span style={styles.nearbyPgFacility}>🚗</span>}
-          {pg.cctv && <span style={styles.nearbyPgFacility}>📹</span>}
-          {pg.laundry_available && <span style={styles.nearbyPgFacility}>🧺</span>}
-        </div>
-        
-        <button 
-          style={styles.nearbyPgViewButton}
-          onClick={(e) => {
-            e.stopPropagation();
-            onClick();
-          }}
-        >
-          View Details →
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const showNotification = (message) => {
-  alert(message);
-};
-
-const calculateDistance = (coordinates) => {
-  return Math.random() * 2 + 0.5;
-};
-
-const calculateDistanceBetweenCoords = (lat1, lon1, lat2, lon2) => {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
-};
-
-// Interactive Nearby Highlights Panel
-const NearbyHighlightsPanel = ({ 
-  highlights, 
-  selectedCategory, 
-  onCategoryChange, 
-  onViewOnMap,
-  isLoading,
-  highlightCategories 
-}) => {
-  if (isLoading) {
-    return (
-      <div style={styles.loadingHighlightsPanel}>
-        <div className="spinner"></div>
-        <p>Finding nearby places...</p>
-      </div>
-    );
-  }
-
-  if (highlights.length === 0) {
-    return (
-      <div style={styles.noHighlightsPanel}>
-        <div style={styles.noHighlightsIcon}>📍</div>
-        <h4 style={styles.noHighlightsTitle}>No Nearby Places Found</h4>
-        <p style={styles.noHighlightsText}>
-          We couldn't find any nearby places in our database for this location.
-        </p>
-      </div>
-    );
-  }
-
-  const filteredHighlights = selectedCategory === "all" 
-    ? highlights 
-    : highlights.filter(h => h.category === selectedCategory);
-
-  const selectedColor = highlightCategories.find(c => c.id === selectedCategory)?.color || '#667eea';
-
-  return (
-    <div style={styles.highlightsPanel}>
-      <div style={styles.categoriesPills}>
-        {highlightCategories.map(category => {
-          const count = category.id === "all" 
-            ? highlights.length 
-            : highlights.filter(h => h.category === category.id).length;
-          
-          if (count === 0) return null;
-          
-          return (
-            <HighlightCategoryButton
-              key={category.id}
-              category={category.id}
-              icon={category.icon}
-              label={category.label}
-              count={count}
-              isActive={selectedCategory === category.id}
-              onClick={() => onCategoryChange(category.id)}
-              color={category.color}
-            />
-          );
-        })}
-      </div>
-
-      <div style={styles.highlightsList}>
-        <div style={styles.highlightsListHeader}>
-          <h4 style={styles.highlightsListTitle}>
-            <span style={{
-              ...styles.categoryIndicator,
-              background: selectedColor
-            }}></span>
-            {selectedCategory === "all" 
-              ? `All Nearby Places` 
-              : `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)}`
-            }
-          </h4>
-          <span style={styles.highlightsCount}>{filteredHighlights.length} places</span>
-        </div>
-        
-        <div style={styles.highlightsItemsContainer}>
-          {filteredHighlights.map((highlight, index) => (
-            <HighlightItem
-              key={index}
-              name={highlight.name}
-              type={highlight.type}
-              category={highlight.category}
-              icon={highlight.icon}
-              coordinates={highlight.coordinates}
-              onMapView={() => onViewOnMap(highlight)}
-              color={highlightCategories.find(c => c.id === highlight.category)?.color || '#667eea'}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Nearby PGs Panel Component
-const NearbyPGsPanel = ({ nearbyPGs, isLoading, onViewPG }) => {
-  if (isLoading) {
-    return (
-      <div style={styles.loadingNearbyPGs}>
-        <div className="spinner"></div>
-        <p>Finding nearby properties...</p>
-      </div>
-    );
-  }
-
-  if (nearbyPGs.length === 0) {
-    return (
-      <div style={styles.noNearbyPGs}>
-        <div style={styles.noNearbyPGsIcon}>🏠</div>
-        <h4 style={styles.noNearbyPGsTitle}>No Nearby Properties</h4>
-        <p style={styles.noNearbyPGsText}>
-          We couldn't find other properties in this area.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div style={styles.nearbyPGsPanel}>
-      <div style={styles.nearbyPGsHeader}>
-        <h3 style={styles.nearbyPGsTitle}>
-          <span style={styles.nearbyPGsIcon}>🏘️</span>
-          Nearby Properties
-        </h3>
-        <span style={styles.nearbyPGsCount}>{nearbyPGs.length} properties</span>
-      </div>
-      
-      <div style={styles.nearbyPGsGrid}>
-        {nearbyPGs.map((nearbyPG, index) => (
-          <NearbyPGCard
-            key={nearbyPG.id || index}
-            pg={nearbyPG}
-            onClick={() => onViewPG(nearbyPG.id)}
-            distance={nearbyPG.distance}
-          />
-        ))}
-      </div>
-      
-      <div style={styles.nearbyPGsFooter}>
-        <button style={styles.viewAllPropertiesButton} onClick={() => onViewPG('all')}>
-          View All Properties in {nearbyPGs[0]?.area || nearbyPGs[0]?.city || "Area"} →
-        </button>
-      </div>
-    </div>
-  );
-};
-
 // Main Component
 export default function PGDetails() {
   const { id } = useParams();
@@ -802,25 +766,11 @@ export default function PGDetails() {
   const [pg, setPG] = useState(null);
   const [media, setMedia] = useState([]);
   const [index, setIndex] = useState(0);
-  const [nearbyHighlights, setNearbyHighlights] = useState([]);
-  const [nearbyPGs, setNearbyPGs] = useState([]);
-  const [loadingHighlights, setLoadingHighlights] = useState(false);
-  const [loadingNearbyPGs, setLoadingNearbyPGs] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [bookingData, setBookingData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    checkInDate: "",
-    duration: "6",
-    message: ""
-  });
-
+  const [notification, setNotification] = useState(null);
   const [selectedFacilityCategory, setSelectedFacilityCategory] = useState("all");
-  const [selectedHighlightCategory, setSelectedHighlightCategory] = useState("all");
-  const [mapZoom, setMapZoom] = useState(15);
   const [mapCenter, setMapCenter] = useState([0, 0]);
   const [expandedRules, setExpandedRules] = useState({
     visitors: true,
@@ -831,19 +781,6 @@ export default function PGDetails() {
   });
 
   // Color themes
-  const highlightCategories = [
-    { id: "all", label: "All", icon: "📍", color: "#667eea" },
-    { id: "education", label: "Education", icon: "🎓", color: "#8b5cf6" },
-    { id: "transport", label: "Transport", icon: "🚌", color: "#3b82f6" },
-    { id: "healthcare", label: "Healthcare", icon: "🏥", color: "#ef4444" },
-    { id: "shopping", label: "Shopping", icon: "🛒", color: "#f59e0b" },
-    { id: "finance", label: "Finance", icon: "🏦", color: "#10b981" },
-    { id: "recreation", label: "Recreation", icon: "🏃", color: "#ec4899" },
-    { id: "worship", label: "Worship", icon: "🛐", color: "#8b5cf6" },
-    { id: "safety", label: "Safety", icon: "👮", color: "#6366f1" },
-    { id: "food", label: "Food", icon: "🍽️", color: "#f97316" }
-  ];
-
   const facilityCategories = [
     { id: "all", label: "All", icon: "🏢", color: "#667eea" },
     { id: "room", label: "Room", icon: "🛏️", color: "#8b5cf6" },
@@ -853,31 +790,9 @@ export default function PGDetails() {
     { id: "basic", label: "Basic", icon: "💧", color: "#3b82f6" },
   ];
 
-  const typeToCategory = {
-    nearby_college: "education",
-    nearby_school: "education",
-    nearby_it_park: "education",
-    nearby_office_hub: "education",
-    nearby_metro: "transport",
-    nearby_bus_stop: "transport",
-    nearby_railway_station: "transport",
-    distance_main_road: "transport",
-    nearby_hospital: "healthcare",
-    nearby_clinic: "healthcare",
-    nearby_pharmacy: "healthcare",
-    nearby_supermarket: "shopping",
-    nearby_grocery_store: "shopping",
-    nearby_mall: "shopping",
-    nearby_bank: "finance",
-    nearby_atm: "finance",
-    nearby_post_office: "finance",
-    nearby_gym: "recreation",
-    nearby_park: "recreation",
-    nearby_temple: "worship",
-    nearby_mosque: "worship",
-    nearby_church: "worship",
-    nearby_police_station: "safety",
-    nearby_restaurant: "food"
+  const showNotification = (message) => {
+    setNotification(message);
+    setTimeout(() => setNotification(null), 3000);
   };
 
   useEffect(() => {
@@ -888,7 +803,6 @@ export default function PGDetails() {
         
         console.log("Fetching PG details for ID:", id);
         
-        // ✅ USE API INSTANCE (not axios directly)
         const res = await api.get(`/pg/${id}`);
         
         if (!res.data?.success) {
@@ -898,7 +812,6 @@ export default function PGDetails() {
         const data = res.data.data;
         console.log("PG data received:", data.pg_name);
 
-        // FIXED: Process photos using helper
         const photos = Array.isArray(data.photos)
           ? data.photos.map(p => ({ 
               type: "photo", 
@@ -940,191 +853,6 @@ export default function PGDetails() {
     }
   }, [id]);
 
-  useEffect(() => {
-    if (!pg?.latitude || !pg?.longitude) return;
-
-    const processDBHighlights = () => {
-      const highlights = [];
-      
-      const highlightFields = [
-        'nearby_college', 'nearby_school', 'nearby_it_park', 'nearby_office_hub',
-        'nearby_metro', 'nearby_bus_stop', 'nearby_railway_station', 'distance_main_road',
-        'nearby_hospital', 'nearby_clinic', 'nearby_pharmacy',
-        'nearby_supermarket', 'nearby_grocery_store', 'nearby_restaurant', 'nearby_mall',
-        'nearby_bank', 'nearby_atm', 'nearby_post_office',
-        'nearby_gym', 'nearby_park', 'nearby_temple', 'nearby_mosque', 
-        'nearby_church', 'nearby_police_station'
-      ];
-      
-      highlightFields.forEach(field => {
-        if (pg[field] && pg[field].trim() !== "") {
-          highlights.push({
-            name: pg[field],
-            type: field,
-            category: typeToCategory[field] || "other",
-            icon: getHighlightIcon(typeToCategory[field], field),
-            source: "database",
-            coordinates: generateRandomCoordinates(pg.latitude, pg.longitude, 2)
-          });
-        }
-      });
-      
-      return highlights;
-    };
-
-    const generateRandomCoordinates = (lat, lon, maxDistanceKm) => {
-      const R = 6371;
-      const maxDistance = maxDistanceKm / R;
-      
-      const bearing = Math.random() * 2 * Math.PI;
-      const distance = Math.random() * maxDistance;
-      
-      const lat1 = lat * Math.PI / 180;
-      const lon1 = lon * Math.PI / 180;
-      
-      const lat2 = Math.asin(
-        Math.sin(lat1) * Math.cos(distance) +
-        Math.cos(lat1) * Math.sin(distance) * Math.cos(bearing)
-      );
-      
-      const lon2 = lon1 + Math.atan2(
-        Math.sin(bearing) * Math.sin(distance) * Math.cos(lat1),
-        Math.cos(distance) - Math.sin(lat1) * Math.sin(lat2)
-      );
-      
-      return [
-        lat2 * 180 / Math.PI,
-        lon2 * 180 / Math.PI
-      ];
-    };
-
-    const dbHighlights = processDBHighlights();
-    
-    const fetchAutoHighlights = async () => {
-      try {
-        setLoadingHighlights(true);
-        const query = `
-          [out:json];
-          (
-            node(around:1200,${pg.latitude},${pg.longitude})["amenity"="hospital"];
-            node(around:1200,${pg.latitude},${pg.longitude})["amenity"="school"];
-            node(around:1200,${pg.latitude},${pg.longitude})["amenity"="college"];
-            node(around:1200,${pg.latitude},${pg.longitude})["amenity"="bank"];
-            node(around:1200,${pg.latitude},${pg.longitude})["amenity"="atm"];
-            node(around:1200,${pg.latitude},${pg.longitude})["amenity"="police"];
-            node(around:1200,${pg.latitude},${pg.longitude})["railway"="station"];
-            node(around:1200,${pg.latitude},${pg.longitude})["highway"="bus_stop"];
-            node(around:1200,${pg.latitude},${pg.longitude})["shop"="supermarket"];
-            node(around:1200,${pg.latitude},${pg.longitude})["amenity"="restaurant"];
-            node(around:1200,${pg.latitude},${pg.longitude})["leisure"="park"];
-            node(around:1200,${pg.latitude},${pg.longitude})["amenity"="place_of_worship"];
-          );
-          out tags 15;
-        `;
-
-        const res = await axios.post(
-          "https://overpass-api.de/api/interpreter",
-          query,
-          { headers: { "Content-Type": "text/plain" } }
-        );
-
-        const autoPlaces = res.data.elements
-          .map(el => {
-            const type = el.tags?.amenity || el.tags?.shop || el.tags?.railway || 
-                        el.tags?.highway || el.tags?.leisure || "other";
-            const category = Object.keys(typeToCategory).find(key => 
-              type.includes(key.replace("nearby_", ""))
-            ) || "other";
-            
-            return {
-              name: el.tags?.name || `Unknown ${type}`,
-              type: type,
-              category: typeToCategory[category] || "other",
-              icon: getHighlightIcon(typeToCategory[category], type),
-              source: "osm",
-              coordinates: el.lat && el.lon ? [el.lat, el.lon] : null
-            };
-          })
-          .filter(p => p.name && p.name !== "Unknown other");
-
-        const allHighlights = [...dbHighlights, ...autoPlaces];
-        const uniqueHighlights = Array.from(
-          new Map(allHighlights.map(item => [item.name, item])).values()
-        );
-        
-        setNearbyHighlights(uniqueHighlights);
-      } catch (err) {
-        console.error("Auto location highlights error", err);
-        setNearbyHighlights(dbHighlights);
-      } finally {
-        setLoadingHighlights(false);
-      }
-    };
-
-    const fetchNearbyPGs = async () => {
-      try {
-        setLoadingNearbyPGs(true);
-        console.log("Fetching nearby PGs for:", pg.latitude, pg.longitude);
-        
-        if (!id || id === "undefined") {
-          console.error("Invalid PG ID:", id);
-          setNearbyPGs([]);
-          return;
-        }
-
-        // ✅ USE API INSTANCE
-        const response = await api.get(
-          `/pg/nearby/${pg.latitude}/${pg.longitude}?radius=5&exclude=${id}`
-        );
-        
-        console.log("Nearby PGs API response:", response.data);
-        
-        if (response.data?.success) {
-          const pgsWithDistance = response.data.data.map(otherPG => {
-            let distance = 0;
-            if (otherPG.latitude && otherPG.longitude) {
-              distance = calculateDistanceBetweenCoords(
-                pg.latitude, 
-                pg.longitude, 
-                otherPG.latitude, 
-                otherPG.longitude
-              );
-            }
-            return {
-              ...otherPG,
-              distance
-            };
-          });
-          
-          const sortedPGs = pgsWithDistance
-            .sort((a, b) => a.distance - b.distance)
-            .slice(0, 4);
-          
-          console.log("Sorted nearby PGs:", sortedPGs);
-          setNearbyPGs(sortedPGs);
-        } else {
-          console.error("API returned unsuccessful:", response.data);
-          setNearbyPGs([]);
-        }
-      } catch (err) {
-        console.error("Error fetching nearby PGs:", err);
-        console.error("Error details:", err.response?.data);
-        setNearbyPGs([]);
-      } finally {
-        setLoadingNearbyPGs(false);
-      }
-    };
-
-    if (dbHighlights.length > 0) {
-      setNearbyHighlights(dbHighlights);
-      fetchAutoHighlights();
-    } else {
-      fetchAutoHighlights();
-    }
-    
-    fetchNearbyPGs();
-  }, [pg, id]);
-
   const isToLet = pg?.pg_category === "to_let";
   const isCoLiving = pg?.pg_category === "coliving";
   const isPG = !isToLet && !isCoLiving;
@@ -1152,24 +880,25 @@ export default function PGDetails() {
       if (pg.four_sharing && parseInt(pg.four_sharing) > 0) return pg.four_sharing;
       if (pg.single_room && parseInt(pg.single_room) > 0) return pg.single_room;
       if (pg.double_room && parseInt(pg.double_room) > 0) return pg.double_room;
-      if (pg.triple_room && parseInt(pg.triple_room) > 0) return pg.triple_room;
       return "—";
     }
   };
 
   const handleBookNow = () => {
     const user = auth.currentUser;
+
     if (!user) {
+      showNotification("Please register or login to book this property");
       navigate("/register", {
         state: { redirectTo: `/pg/${id}` }
       });
       return;
     }
+
     setShowBookingModal(true);
   };
 
-  const handleBookingSubmit = async (e) => {
-    e.preventDefault();
+  const handleBookingSubmit = async (bookingData) => {
     try {
       const user = auth.currentUser;
 
@@ -1180,43 +909,31 @@ export default function PGDetails() {
       }
 
       const token = await user.getIdToken(true);
-
+      
       const payload = {
-        pg_id: id,
         name: bookingData.name,
         phone: bookingData.phone,
-        email: bookingData.email,
         check_in_date: bookingData.checkInDate,
-        duration: bookingData.duration,
-        message: bookingData.message
+        room_type: bookingData.roomType
       };
 
-      // ✅ USE API INSTANCE
-      await api.post("/bookings", payload, {
-        headers: {
-          Authorization: `Bearer ${token}`
+      await api.post(
+        `/bookings/${id}`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         }
-      });
+      );
 
       showNotification("✅ Booking request sent to owner");
       setShowBookingModal(false);
-      setBookingData({
-        name: "",
-        email: "",
-        phone: "",
-        checkInDate: "",
-        duration: "6",
-        message: ""
-      });
+
     } catch (error) {
       console.error(error);
       showNotification("❌ Booking failed. Try again");
     }
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setBookingData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleCallOwner = () => {
@@ -1224,44 +941,6 @@ export default function PGDetails() {
       window.location.href = `tel:${pg.contact_phone}`;
     } else {
       alert("Owner contact will be visible after booking approval");
-    }
-  };
-
-  const handleViewOnMap = (highlight) => {
-    if (highlight.coordinates) {
-      setMapCenter(highlight.coordinates);
-      setMapZoom(17);
-      setSelectedHighlightCategory(highlight.category);
-      
-      setTimeout(() => {
-        document.getElementById("location-map")?.scrollIntoView({ 
-          behavior: 'smooth',
-          block: 'center'
-        });
-      }, 100);
-    }
-  };
-
-  const handleViewNearbyPG = (pgId) => {
-    console.log("Navigating to PG:", pgId);
-    if (pgId && pgId !== 'all') {
-      navigate(`/pg/${pgId}`);
-    } else if (pgId === 'all' && pg?.area) {
-      navigate(`/properties?area=${encodeURIComponent(pg.area)}`);
-    } else if (pgId === 'all' && pg?.city) {
-      navigate(`/properties?city=${encodeURIComponent(pg.city)}`);
-    } else {
-      navigate("/properties");
-    }
-  };
-
-  const handleViewAllProperties = () => {
-    if (pg?.area) {
-      navigate(`/properties?area=${encodeURIComponent(pg.area)}`);
-    } else if (pg?.city) {
-      navigate(`/properties?city=${encodeURIComponent(pg.city)}`);
-    } else {
-      navigate("/properties");
     }
   };
 
@@ -1370,7 +1049,7 @@ export default function PGDetails() {
       return pg.co_living_single_room || pg.co_living_double_room;
     } else {
       return pg.single_sharing || pg.double_sharing || pg.triple_sharing || 
-             pg.four_sharing || pg.single_room || pg.double_room || pg.triple_room;
+             pg.four_sharing || pg.single_room || pg.double_room;
     }
   };
 
@@ -1400,17 +1079,37 @@ export default function PGDetails() {
   const availableFacilitiesCount = getTrueFacilitiesCountInCategory("all");
   const filteredFacilities = getFilteredFacilities();
 
-  const shouldShowNearbyHighlights = hasLocation && (nearbyHighlights.length > 0 || loadingHighlights);
-  const shouldShowNearbyPGs = nearbyPGs.length > 0 || loadingNearbyPGs;
-
   return (
     <div style={styles.page}>
+      {/* Notification Toast */}
+      {notification && (
+        <div style={{
+          position: "fixed",
+          top: 20,
+          right: 20,
+          background: "#10b981",
+          color: "white",
+          padding: "12px 24px",
+          borderRadius: 10,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+          zIndex: 4000,
+          animation: "slideIn 0.3s ease",
+          display: "flex",
+          alignItems: "center",
+          gap: 8
+        }}>
+          <Check size={18} />
+          {notification}
+        </div>
+      )}
+
       <div style={styles.breadcrumb}>
         <span style={styles.breadcrumbLink} onClick={() => navigate("/")}>Home</span>
         <span style={styles.breadcrumbSeparator}>/</span>
         <span style={styles.breadcrumbLink} onClick={() => navigate("/properties")}>Properties</span>
         <span style={styles.breadcrumbSeparator}>/</span>
         <span style={styles.breadcrumbCurrent}>{pg.pg_name}</span>
+        <span style={styles.propertyCode}>{getPGCode(pg.id)}</span>
       </div>
 
       {media.length > 0 ? (
@@ -1436,13 +1135,13 @@ export default function PGDetails() {
                 style={styles.navBtnLeft}
                 onClick={() => setIndex(i => (i === 0 ? media.length - 1 : i - 1))}
               >
-                ‹
+                <ChevronLeft size={24} />
               </button>
               <button
                 style={styles.navBtnRight}
                 onClick={() => setIndex(i => (i + 1) % media.length)}
               >
-                ›
+                <ChevronRight size={24} />
               </button>
               <div style={styles.mediaCounter}>
                 {index + 1} / {media.length}
@@ -1461,22 +1160,30 @@ export default function PGDetails() {
         <div style={styles.headerRow}>
           <div>
             <h1 style={styles.title}>{pg.pg_name}</h1>
-            <p style={styles.address}>📍 {pg.address}</p>
-            {pg.landmark && <p style={styles.landmark}>🏷️ Near {pg.landmark}</p>}
+            <p style={styles.address}>
+              <MapPin size={16} /> {pg.address || `${pg.area}, ${pg.city}, ${pg.state}`}
+            </p>
+            {pg.landmark && (
+              <p style={styles.landmark}>
+                <Navigation size={14} /> Near {pg.landmark}
+              </p>
+            )}
           </div>
           <div style={styles.actionButtons}>
             <button
               style={styles.bookButton}
               onClick={handleBookNow}
             >
-              🏠 Book Now
+              <BookOpen size={18} />
+              Book Now
             </button>
             {hasOwnerContact && (
               <button
                 style={styles.callButton}
                 onClick={handleCallOwner}
               >
-                📞 Call Owner
+                <Phone size={18} />
+                Call Owner
               </button>
             )}
             {hasLocation && (
@@ -1489,7 +1196,8 @@ export default function PGDetails() {
                   )
                 }
               >
-                🗺️ Get Directions
+                <Navigation size={18} />
+                Directions
               </button>
             )}
           </div>
@@ -1506,21 +1214,13 @@ export default function PGDetails() {
             <span style={styles.genderBadge}>
               {pg.pg_type === "boys" ? "👨 Boys Only" : 
                pg.pg_type === "girls" ? "👩 Girls Only" : 
-               pg.pg_type === "coliving" ? "🤝 Co-Living" : "Mixed"}
+               "Mixed"}
             </span>
           )}
           
           {isToLet && pg.bhk_type && (
             <span style={styles.bhkBadge}>
               {pg.bhk_type === "4+" ? "4+ BHK" : `${pg.bhk_type} BHK`}
-            </span>
-          )}
-          
-          {isToLet && pg.furnishing_type && (
-            <span style={styles.furnishingBadge}>
-              {pg.furnishing_type === "fully_furnished" ? "🛋️ Fully Furnished" :
-               pg.furnishing_type === "semi_furnished" ? "🛋️ Semi-Furnished" :
-               "🛋️ Unfurnished"}
             </span>
           )}
           
@@ -1538,7 +1238,7 @@ export default function PGDetails() {
             <div>
               <div style={styles.statLabel}>Starting from</div>
               <div style={styles.statValue}>
-                ₹{getStartingPrice()} / month
+                ₹{formatPrice(getStartingPrice())} / month
               </div>
             </div>
           </div>
@@ -1554,13 +1254,6 @@ export default function PGDetails() {
             <div>
               <div style={styles.statLabel}>Facilities</div>
               <div style={styles.statValue}>{availableFacilitiesCount}+</div>
-            </div>
-          </div>
-          <div style={styles.statItem}>
-            <div style={styles.statIcon}>📍</div>
-            <div>
-              <div style={styles.statLabel}>Nearby Places</div>
-              <div style={styles.statValue}>{nearbyHighlights.length}+</div>
             </div>
           </div>
         </div>
@@ -1909,16 +1602,16 @@ export default function PGDetails() {
               <div id="location-map" style={styles.mapContainer}>
                 <MapContainer
                   center={mapCenter}
-                  zoom={mapZoom}
+                  zoom={15}
                   style={{ height: "250px", width: "100%", borderRadius: "12px" }}
-                  key={`${mapCenter[0]}-${mapCenter[1]}-${mapZoom}`}
+                  key={`${mapCenter[0]}-${mapCenter[1]}`}
                 >
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                   <Marker position={[pg.latitude, pg.longitude]}>
                     <Popup>
                       <div style={styles.mapPopup}>
                         <strong style={styles.mapPopupTitle}>{pg.pg_name}</strong><br/>
-                        <small style={styles.mapPopupAddress}>{pg.address}</small><br/>
+                        <small style={styles.mapPopupAddress}>{pg.address || pg.area}</small><br/>
                         <button 
                           style={styles.mapPopupButton}
                           onClick={handleBookNow}
@@ -1938,25 +1631,6 @@ export default function PGDetails() {
                 </div>
               </div>
             </Section>
-          )}
-
-          {shouldShowNearbyHighlights && (
-            <NearbyHighlightsPanel 
-              highlights={nearbyHighlights}
-              selectedCategory={selectedHighlightCategory}
-              onCategoryChange={setSelectedHighlightCategory}
-              onViewOnMap={handleViewOnMap}
-              isLoading={loadingHighlights}
-              highlightCategories={highlightCategories}
-            />
-          )}
-
-          {shouldShowNearbyPGs && (
-            <NearbyPGsPanel
-              nearbyPGs={nearbyPGs}
-              isLoading={loadingNearbyPGs}
-              onViewPG={handleViewNearbyPG}
-            />
           )}
 
           {(hasOwnerContact || hasContactPerson || pg?.contact_email) && (
@@ -2005,14 +1679,16 @@ export default function PGDetails() {
                   style={styles.bookButtonSmall}
                   onClick={handleBookNow}
                 >
-                  🏠 Book Now
+                  <BookOpen size={16} />
+                  Book Now
                 </button>
                 {hasOwnerContact && (
                   <button
                     style={styles.callButtonSmall}
                     onClick={handleCallOwner}
                   >
-                    📞 Call Now
+                    <Phone size={16} />
+                    Call Now
                   </button>
                 )}
               </div>
@@ -2052,7 +1728,7 @@ export default function PGDetails() {
       <div style={styles.stickyBar}>
         <div style={styles.stickyContent}>
           <div>
-            <div style={styles.stickyPrice}>₹{getStartingPrice()} / month</div>
+            <div style={styles.stickyPrice}>₹{formatPrice(getStartingPrice())} / month</div>
             <div style={styles.stickyInfo}>
               {pg.pg_name} • {pg.area || pg.city}
             </div>
@@ -2062,14 +1738,16 @@ export default function PGDetails() {
               style={styles.stickyBookButton}
               onClick={handleBookNow}
             >
-              🏠 Book Now
+              <BookOpen size={18} />
+              Book Now
             </button>
             {hasOwnerContact && (
               <button
                 style={styles.stickyCallButton}
                 onClick={handleCallOwner}
               >
-                📞 Call Owner
+                <Phone size={18} />
+                Call Owner
               </button>
             )}
           </div>
@@ -2077,118 +1755,35 @@ export default function PGDetails() {
       </div>
 
       {showBookingModal && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContent}>
-            <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>🏠 Book {pg.pg_name}</h2>
-              <button 
-                style={styles.modalCloseButton}
-                onClick={() => setShowBookingModal(false)}
-              >
-                ✕
-              </button>
-            </div>
-            
-            <form onSubmit={handleBookingSubmit} style={styles.bookingForm}>
-              <div style={styles.formGroup}>
-                <label style={styles.formLabel}>Full Name *</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={bookingData.name}
-                  onChange={handleInputChange}
-                  style={styles.formInput}
-                  placeholder="Enter your full name"
-                  required
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.formLabel}>Email Address *</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={bookingData.email}
-                  onChange={handleInputChange}
-                  style={styles.formInput}
-                  placeholder="Enter your email"
-                  required
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.formLabel}>Phone Number *</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={bookingData.phone}
-                  onChange={handleInputChange}
-                  style={styles.formInput}
-                  placeholder="Enter your phone number"
-                  required
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.formLabel}>Check-in Date *</label>
-                <input
-                  type="date"
-                  name="checkInDate"
-                  value={bookingData.checkInDate}
-                  onChange={handleInputChange}
-                  style={styles.formInput}
-                  required
-                  min={new Date().toISOString().split('T')[0]}
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.formLabel}>Duration (months)</label>
-                <select
-                  name="duration"
-                  value={bookingData.duration}
-                  onChange={handleInputChange}
-                  style={styles.formInput}
-                >
-                  <option value="1">1 month</option>
-                  <option value="3">3 months</option>
-                  <option value="6">6 months</option>
-                  <option value="12">12 months</option>
-                  <option value="24">24+ months</option>
-                </select>
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.formLabel}>Additional Message</label>
-                <textarea
-                  name="message"
-                  value={bookingData.message}
-                  onChange={handleInputChange}
-                  style={styles.formTextarea}
-                  placeholder="Any special requirements..."
-                  rows="3"
-                />
-              </div>
-
-              <div style={styles.modalFooter}>
-                <button
-                  type="button"
-                  style={styles.cancelButton}
-                  onClick={() => setShowBookingModal(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  style={styles.submitButton}
-                >
-                  Submit Request
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <BookingModal
+          pg={pg}
+          onClose={() => setShowBookingModal(false)}
+          onBook={handleBookingSubmit}
+        />
       )}
+
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        .spinner {
+          width: 40px;
+          height: 40px;
+          border: 4px solid #e5e7eb;
+          border-top: 4px solid #667eea;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+      `}</style>
     </div>
   );
 }
@@ -2243,6 +1838,7 @@ const styles = {
     fontSize: "14px",
     color: "#666",
     padding: "10px 0",
+    flexWrap: "wrap",
   },
   breadcrumbLink: {
     color: "#667eea",
@@ -2257,6 +1853,15 @@ const styles = {
   breadcrumbCurrent: {
     color: "#334155",
     fontWeight: "600",
+  },
+  propertyCode: {
+    marginLeft: "auto",
+    background: "#f1f5f9",
+    padding: "4px 10px",
+    borderRadius: "6px",
+    fontSize: "12px",
+    color: "#64748b",
+    fontWeight: "500",
   },
 
   slider: {
@@ -2283,7 +1888,6 @@ const styles = {
     width: "40px",
     height: "40px",
     borderRadius: "50%",
-    fontSize: "20px",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
@@ -2301,7 +1905,6 @@ const styles = {
     width: "40px",
     height: "40px",
     borderRadius: "50%",
-    fontSize: "20px",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
@@ -2475,18 +2078,6 @@ const styles = {
     alignItems: "center",
     gap: "6px",
     boxShadow: "0 2px 8px rgba(139, 92, 246, 0.3)",
-  },
-  furnishingBadge: {
-    background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-    color: "white",
-    padding: "6px 12px",
-    borderRadius: "20px",
-    fontSize: "12px",
-    fontWeight: "600",
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    boxShadow: "0 2px 8px rgba(245, 158, 11, 0.3)",
   },
   availabilityBadge: {
     color: "white",
@@ -2993,410 +2584,6 @@ const styles = {
     color: "#475569",
   },
 
-  nearbyPGsPanel: {
-    backgroundColor: "white",
-    borderRadius: "16px",
-    padding: "20px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
-    border: "1px solid #e2e8f0",
-  },
-  nearbyPGsHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: "20px",
-    paddingBottom: "12px",
-    borderBottom: "2px solid #f1f5f9",
-  },
-  nearbyPGsTitle: {
-    fontSize: "18px",
-    fontWeight: "600",
-    color: "#1e293b",
-    margin: "0",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  nearbyPGsIcon: {
-    fontSize: "20px",
-  },
-  nearbyPGsCount: {
-    fontSize: "12px",
-    color: "#64748b",
-    fontWeight: "500",
-    backgroundColor: "#f1f5f9",
-    padding: "4px 8px",
-    borderRadius: "6px",
-  },
-  nearbyPGsGrid: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px",
-  },
-  nearbyPGsFooter: {
-    marginTop: "20px",
-    paddingTop: "16px",
-    borderTop: "1px solid #e2e8f0",
-  },
-  viewAllPropertiesButton: {
-    width: "100%",
-    padding: "12px",
-    backgroundColor: "transparent",
-    color: "#3b82f6",
-    border: "1px solid #3b82f6",
-    borderRadius: "8px",
-    fontSize: "14px",
-    fontWeight: "500",
-    cursor: "pointer",
-    transition: "all 0.3s ease",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "8px",
-  },
-
-  nearbyPgCard: {
-    backgroundColor: "white",
-    borderRadius: "12px",
-    overflow: "hidden",
-    border: "1px solid #e2e8f0",
-    cursor: "pointer",
-    transition: "all 0.3s ease",
-  },
-  nearbyPgImageContainer: {
-    position: "relative",
-    height: "140px",
-    overflow: "hidden",
-  },
-  nearbyPgImagePlaceholder: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#f1f5f9",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  nearbyPgImage: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-  },
-  nearbyPgNoImage: {
-    fontSize: "40px",
-    color: "#94a3b8",
-  },
-  nearbyPgBadges: {
-    position: "absolute",
-    top: "10px",
-    left: "10px",
-    right: "10px",
-    display: "flex",
-    justifyContent: "space-between",
-  },
-  nearbyPgTypeBadge: {
-    backgroundColor: "rgba(59, 130, 246, 0.9)",
-    color: "white",
-    padding: "4px 8px",
-    borderRadius: "6px",
-    fontSize: "11px",
-    fontWeight: "500",
-    backdropFilter: "blur(4px)",
-  },
-  nearbyPgDistanceBadge: {
-    backgroundColor: "rgba(16, 185, 129, 0.9)",
-    color: "white",
-    padding: "4px 8px",
-    borderRadius: "6px",
-    fontSize: "11px",
-    fontWeight: "500",
-    backdropFilter: "blur(4px)",
-  },
-  nearbyPgContent: {
-    padding: "16px",
-  },
-  nearbyPgTitle: {
-    fontSize: "16px",
-    fontWeight: "600",
-    color: "#1e293b",
-    margin: "0 0 8px 0",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  nearbyPgAddress: {
-    fontSize: "12px",
-    color: "#64748b",
-    margin: "0 0 12px 0",
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-  },
-  nearbyPgStats: {
-    display: "flex",
-    justifyContent: "space-between",
-    marginBottom: "12px",
-  },
-  nearbyPgStat: {
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-  },
-  nearbyPgStatIcon: {
-    fontSize: "14px",
-    color: "#64748b",
-  },
-  nearbyPgStatText: {
-    fontSize: "12px",
-    color: "#334155",
-    fontWeight: "500",
-  },
-  nearbyPgFacilities: {
-    display: "flex",
-    gap: "8px",
-    marginBottom: "12px",
-    flexWrap: "wrap",
-  },
-  nearbyPgFacility: {
-    fontSize: "16px",
-    backgroundColor: "#f1f5f9",
-    padding: "4px",
-    borderRadius: "4px",
-  },
-  nearbyPgViewButton: {
-    width: "100%",
-    padding: "8px",
-    backgroundColor: "#f1f5f9",
-    color: "#334155",
-    border: "none",
-    borderRadius: "6px",
-    fontSize: "12px",
-    fontWeight: "500",
-    cursor: "pointer",
-    transition: "all 0.3s ease",
-  },
-
-  loadingNearbyPGs: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "40px 20px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "12px",
-    textAlign: "center",
-    border: "1px dashed #cbd5e1",
-  },
-  noNearbyPGs: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "40px 20px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "12px",
-    textAlign: "center",
-    border: "1px dashed #cbd5e1",
-  },
-  noNearbyPGsIcon: {
-    fontSize: "48px",
-    marginBottom: "16px",
-    opacity: 0.5,
-  },
-  noNearbyPGsTitle: {
-    fontSize: "16px",
-    fontWeight: "600",
-    color: "#334155",
-    marginBottom: "8px",
-  },
-  noNearbyPGsText: {
-    fontSize: "14px",
-    color: "#64748b",
-    maxWidth: "300px",
-  },
-
-  highlightsPanel: {
-    backgroundColor: "white",
-    borderRadius: "16px",
-    overflow: "hidden",
-    border: "1px solid #e2e8f0",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
-  },
-  categoriesPills: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "8px",
-    padding: "16px",
-    backgroundColor: "#f8fafc",
-    borderBottom: "1px solid #e2e8f0",
-  },
-  highlightCategoryBtn: {
-    padding: "8px 12px",
-    backgroundColor: "white",
-    border: "1px solid #e2e8f0",
-    borderRadius: "20px",
-    cursor: "pointer",
-    fontSize: "12px",
-    fontWeight: "500",
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    transition: "all 0.3s ease",
-    whiteSpace: "nowrap",
-  },
-  highlightCategoryIcon: {
-    fontSize: "14px",
-  },
-  highlightCategoryLabel: {
-    fontSize: "12px",
-  },
-  highlightCategoryCount: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    padding: "2px 6px",
-    borderRadius: "10px",
-    fontSize: "10px",
-    fontWeight: "600",
-  },
-  highlightsList: {
-    padding: "0",
-  },
-  highlightsListHeader: {
-    padding: "16px",
-    borderBottom: "1px solid #f1f5f9",
-    backgroundColor: "white",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  highlightsListTitle: {
-    fontSize: "16px",
-    fontWeight: "600",
-    color: "#1e293b",
-    margin: "0",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  categoryIndicator: {
-    width: "8px",
-    height: "8px",
-    borderRadius: "50%",
-    display: "inline-block",
-  },
-  highlightsCount: {
-    fontSize: "12px",
-    color: "#64748b",
-    fontWeight: "500",
-    backgroundColor: "#f1f5f9",
-    padding: "4px 8px",
-    borderRadius: "6px",
-  },
-  highlightsItemsContainer: {
-    maxHeight: "400px",
-    overflowY: "auto",
-  },
-  highlightItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    padding: "12px 16px",
-    borderBottom: "1px solid #f1f5f9",
-    backgroundColor: "white",
-    transition: "all 0.3s ease",
-    cursor: "pointer",
-  },
-  highlightIconContainer: {
-    width: "36px",
-    height: "36px",
-    borderRadius: "8px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-  },
-  highlightIcon: {
-    fontSize: "18px",
-    color: "white",
-  },
-  highlightContent: {
-    flex: 1,
-    minWidth: 0,
-  },
-  highlightName: {
-    fontSize: "14px",
-    fontWeight: "500",
-    color: "#334155",
-    marginBottom: "4px",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  highlightType: {
-    fontSize: "11px",
-    color: "#64748b",
-    backgroundColor: "#f1f5f9",
-    padding: "2px 6px",
-    borderRadius: "10px",
-    display: "inline-block",
-    textTransform: "capitalize",
-  },
-  highlightDistance: {
-    fontSize: "11px",
-    color: "#64748b",
-    display: "block",
-    marginTop: "4px",
-  },
-  viewOnMapButton: {
-    padding: "6px 12px",
-    color: "white",
-    border: "none",
-    borderRadius: "6px",
-    fontSize: "12px",
-    fontWeight: "500",
-    cursor: "pointer",
-    transition: "all 0.3s",
-    whiteSpace: "nowrap",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-  },
-
-  loadingHighlightsPanel: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "40px 20px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "12px",
-    textAlign: "center",
-    border: "1px dashed #cbd5e1",
-  },
-  noHighlightsPanel: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "40px 20px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "12px",
-    textAlign: "center",
-    border: "1px dashed #cbd5e1",
-  },
-  noHighlightsIcon: {
-    fontSize: "48px",
-    marginBottom: "16px",
-    opacity: 0.5,
-  },
-  noHighlightsTitle: {
-    fontSize: "16px",
-    fontWeight: "600",
-    color: "#334155",
-    marginBottom: "8px",
-  },
-  noHighlightsText: {
-    fontSize: "14px",
-    color: "#64748b",
-    maxWidth: "300px",
-  },
-
   contactCard: {
     backgroundColor: "white",
     borderRadius: "16px",
@@ -3595,147 +2782,4 @@ const styles = {
     transition: "all 0.3s ease",
     boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
   },
-
-  modalOverlay: {
-    position: "fixed",
-    top: "0",
-    left: "0",
-    right: "0",
-    bottom: "0",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: "2000",
-    padding: "20px",
-    animation: "fadeIn 0.3s ease",
-  },
-  modalContent: {
-    backgroundColor: "white",
-    borderRadius: "16px",
-    width: "100%",
-    maxWidth: "500px",
-    maxHeight: "90vh",
-    overflowY: "auto",
-    boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-    animation: "slideUpModal 0.3s ease",
-  },
-  modalHeader: {
-    padding: "20px",
-    borderBottom: "1px solid #e2e8f0",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  modalTitle: {
-    fontSize: "20px",
-    fontWeight: "600",
-    color: "#1e293b",
-    margin: "0",
-  },
-  modalCloseButton: {
-    background: "none",
-    border: "none",
-    fontSize: "20px",
-    cursor: "pointer",
-    color: "#64748b",
-    padding: "0",
-    width: "28px",
-    height: "28px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "50%",
-    transition: "all 0.3s",
-  },
-  bookingForm: {
-    padding: "20px",
-  },
-  formGroup: {
-    marginBottom: "16px",
-  },
-  formLabel: {
-    display: "block",
-    marginBottom: "8px",
-    fontSize: "14px",
-    fontWeight: "500",
-    color: "#334155",
-  },
-  formInput: {
-    width: "100%",
-    padding: "10px 12px",
-    border: "1px solid #cbd5e1",
-    borderRadius: "8px",
-    fontSize: "14px",
-    color: "#1e293b",
-    backgroundColor: "#f8fafc",
-    transition: "all 0.3s ease",
-  },
-  formTextarea: {
-    width: "100%",
-    padding: "10px 12px",
-    border: "1px solid #cbd5e1",
-    borderRadius: "8px",
-    fontSize: "14px",
-    color: "#1e293b",
-    backgroundColor: "#f8fafc",
-    resize: "vertical",
-    minHeight: "80px",
-    fontFamily: "inherit",
-  },
-  modalFooter: {
-    display: "flex",
-    gap: "8px",
-    marginTop: "24px",
-  },
-  cancelButton: {
-    flex: "1",
-    padding: "12px",
-    backgroundColor: "#f1f5f9",
-    color: "#64748b",
-    border: "none",
-    borderRadius: "8px",
-    fontSize: "14px",
-    fontWeight: "600",
-    cursor: "pointer",
-    transition: "all 0.3s ease",
-  },
-  submitButton: {
-    flex: "2",
-    padding: "12px",
-    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-    color: "white",
-    border: "none",
-    borderRadius: "8px",
-    fontSize: "14px",
-    fontWeight: "600",
-    cursor: "pointer",
-    transition: "all 0.3s ease",
-  },
 };
-
-// Add CSS animation
-const animationStyle = document.createElement('style');
-animationStyle.textContent = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  @keyframes slideUpModal {
-    from { transform: translateY(30px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-  }
-  .spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #e5e7eb;
-    border-top: 4px solid #667eea;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-`;
-document.head.appendChild(animationStyle);
