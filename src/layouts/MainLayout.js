@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { auth } from "../firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -7,36 +7,45 @@ import { Button, Box, CircularProgress } from "@mui/material";
 
 const MainLayout = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(undefined); // undefined = not checked yet
   const [role, setRole] = useState(null);
-  const [authReady, setAuthReady] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  /* 🔥 NORMALIZE ROLE */
+  /* 🔥 SAFE ROLE FETCH */
   const getStoredRole = () => {
     const r = localStorage.getItem("role");
     if (!r || r === "null" || r === "undefined") return null;
     return r;
   };
 
-  /* ✅ FIREBASE AUTH LISTENER */
+  /* ✅ FIREBASE AUTH */
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setRole(getStoredRole());
-      setAuthReady(true);
+    const unsub = onAuthStateChanged(auth, async (currentUser) => {
+      console.log("🔥 Auth state:", currentUser?.email);
 
-      console.log("Auth changed:", currentUser?.email, getStoredRole());
+      if (currentUser) {
+        setUser(currentUser);
+
+        const storedRole = getStoredRole();
+        setRole(storedRole);
+      } else {
+        setUser(null);
+        setRole(null);
+      }
+
+      setLoading(false);
     });
 
     return () => unsub();
   }, []);
 
-  /* ✅ LISTEN ROLE UPDATE (same tab) */
+  /* ✅ ROLE LISTENER */
   useEffect(() => {
     const updateRole = () => {
       const newRole = getStoredRole();
-      console.log("Role updated:", newRole);
+      console.log("🔄 Role updated:", newRole);
       setRole(newRole);
     };
 
@@ -55,10 +64,11 @@ const MainLayout = () => {
     localStorage.clear();
     setUser(null);
     setRole(null);
-    navigate("/", { replace: true });
+    navigate("/login", { replace: true });
   };
 
-  if (!authReady) {
+  /* ⏳ GLOBAL LOADER (only while checking auth) */
+  if (loading) {
     return (
       <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
         <CircularProgress />
@@ -66,15 +76,22 @@ const MainLayout = () => {
     );
   }
 
+  /* 🚫 NOT LOGGED IN → redirect */
+  const publicRoutes = ["/login", "/register", "/"];
+  if (!user && !publicRoutes.includes(location.pathname)) {
+    navigate("/login", { replace: true });
+    return null;
+  }
+
   return (
     <div style={{ display: "flex" }}>
-      <Sidebar role={role} />
+      {user && <Sidebar role={role} />}
 
       <div
         style={{
-          marginLeft: 250,
+          marginLeft: user ? 250 : 0,
           padding: 20,
-          width: "calc(100% - 250px)",
+          width: "100%",
           background: "#f8fafc",
           minHeight: "100vh"
         }}
