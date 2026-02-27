@@ -1,4 +1,5 @@
 import axios from "axios";
+import { auth } from "../firebase";
 import { API_CONFIG } from "../config";
 
 /* =====================================================
@@ -15,35 +16,7 @@ const ADMIN_BASE_URL =
   process.env.REACT_APP_ADMIN_API_URL ||
   "https://nepxall-backend.onrender.com/api/admin";
 
-const isDev = process.env.NODE_ENV !== "production";
-
-/* =====================================================
-   🔐 GLOBAL TOKEN STORE
-===================================================== */
-
-let authToken = null;
-
-export const setAuthToken = (token) => {
-  authToken = token;
-};
-
-/* =====================================================
-   🔥 BACKEND WAKEUP (RENDER COLD START FIX)
-===================================================== */
-
-let backendWoken = false;
-
-const wakeBackend = async () => {
-  if (backendWoken) return;
-
-  try {
-    await fetch(`${USER_BASE_URL}/health`);
-    backendWoken = true;
-    isDev && console.log("🔥 Backend awakened");
-  } catch {
-    isDev && console.log("⚠️ Wakeup failed (ignored)");
-  }
-};
+console.log("🌐 API CONFIG →", { USER_BASE_URL, ADMIN_BASE_URL });
 
 /* =====================================================
    🚀 AXIOS FACTORY
@@ -53,18 +26,25 @@ const createApi = (baseURL) => {
   const api = axios.create({
     baseURL,
     timeout: 60000,
+    withCredentials: false,
   });
 
   /* ================= REQUEST ================= */
 
   api.interceptors.request.use(async (config) => {
-    await wakeBackend();
+    try {
+      console.log("📡", `${baseURL}${config.url}`);
 
-    if (authToken) {
-      config.headers.Authorization = `Bearer ${authToken}`;
+      const user = auth.currentUser;
+
+      // ✅ DO NOT WAIT FOR FIREBASE
+      if (user) {
+        const token = await user.getIdToken();
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (err) {
+      console.warn("⚠️ Token error:", err.message);
     }
-
-    isDev && console.log("📡", `${baseURL}${config.url}`);
 
     return config;
   });
@@ -74,44 +54,38 @@ const createApi = (baseURL) => {
   api.interceptors.response.use(
     (res) => res,
     async (error) => {
-      const originalRequest = error.config;
-
-      /* 🌐 NETWORK / COLD START RETRY */
-      if (!error.response && !originalRequest._retryNetwork) {
-        originalRequest._retryNetwork = true;
-
-        isDev && console.log("🔁 Retrying request after cold start...");
-
-        await new Promise((r) => setTimeout(r, 2000));
-        return api(originalRequest);
+      if (!error.response) {
+        console.error("🌐 Backend unreachable:", baseURL);
+        return Promise.reject(error);
       }
 
-      /* 🔐 TOKEN EXPIRED RETRY */
-      if (error.response?.status === 401 && !originalRequest._retryAuth) {
-        originalRequest._retryAuth = true;
+      const originalRequest = error.config;
+
+      /* 🔁 RETRY ON 401 ONCE */
+      if (error.response.status === 401 && !originalRequest._retry) {
+        originalRequest._retry = true;
 
         try {
-          const newToken = await window.getFreshToken?.();
-
-          if (newToken) {
-            setAuthToken(newToken);
+          const user = auth.currentUser;
+          if (user) {
+            const newToken = await user.getIdToken(true);
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
             return api(originalRequest);
           }
-        } catch {
-          console.warn("🔐 Silent refresh failed");
+        } catch (err) {
+          console.warn("🔐 Re-auth failed");
         }
 
+        await auth.signOut();
         window.location.href = "/login";
       }
 
-      /* 🧯 ERROR LOGGING */
-      if (error.response?.status >= 500) {
+      if (error.response.status >= 500) {
         console.error("🔥 Server error:", error.response.data);
       }
 
-      if (error.response?.status === 404) {
-        console.error("❌ API route not found:", originalRequest.url);
+      if (error.response.status === 404) {
+        console.error("❌ Route not found:", originalRequest.url);
       }
 
       return Promise.reject(error);
@@ -134,9 +108,7 @@ export const adminAPI = createApi(ADMIN_BASE_URL);
 
 export const pgAPI = {
   getOwnerDashboard: () => userAPI.get("/pg/owner/dashboard"),
-
   getOwnerProperties: () => userAPI.get("/pg/owner"),
-
   getProperty: (id) => userAPI.get(`/pg/${id}`),
 
   createProperty: (formData) =>
@@ -145,7 +117,6 @@ export const pgAPI = {
     }),
 
   updateProperty: (id, data) => userAPI.put(`/pg/${id}`, data),
-
   deleteProperty: (id) => userAPI.delete(`/pg/${id}`),
 
   getOwnerBookings: () => userAPI.get("/owner/bookings"),
@@ -153,7 +124,6 @@ export const pgAPI = {
   updateBookingStatus: (bookingId, status) =>
     userAPI.put(`/bookings/${bookingId}`, { status }),
 
-  /* 🌍 PUBLIC SEARCH */
   searchProperties: (params) =>
     userAPI.get("/pg/search", { params }),
 };
@@ -164,11 +134,8 @@ export const pgAPI = {
 
 export const adminPGAPI = {
   getPendingPGs: () => adminAPI.get("/pgs/pending"),
-
   getPGById: (id) => adminAPI.get(`/pg/${id}`),
-
   approvePG: (id) => adminAPI.patch(`/pg/${id}/approve`),
-
   rejectPG: (id, reason) =>
     adminAPI.patch(`/pg/${id}/reject`, { reason }),
 };
