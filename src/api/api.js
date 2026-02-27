@@ -1,16 +1,8 @@
 import axios from "axios";
-import { auth } from "../firebase";
-import { onAuthStateChanged } from "firebase/auth";
 import { API_CONFIG } from "../config";
 
 /* =====================================================
-   🌍 ENV DETECTION
-===================================================== */
-
-const isProduction = process.env.NODE_ENV === "production";
-
-/* =====================================================
-   🌍 BASE URL RESOLUTION (NEVER UNDEFINED)
+   🌍 BASE URL
 ===================================================== */
 
 const USER_BASE_URL =
@@ -23,113 +15,124 @@ const ADMIN_BASE_URL =
   process.env.REACT_APP_ADMIN_API_URL ||
   "https://nepxall-backend.onrender.com/api/admin";
 
-console.log("🌐 API CONFIG →", {
-  env: isProduction ? "PRODUCTION" : "DEVELOPMENT",
-  USER_BASE_URL,
-  ADMIN_BASE_URL,
-});
+const isDev = process.env.NODE_ENV !== "production";
 
 /* =====================================================
-   🔐 WAIT FOR FIREBASE USER (FOR PAGE REFRESH)
+   🔐 GLOBAL TOKEN STORE
 ===================================================== */
 
-const getCurrentUser = () =>
-  new Promise((resolve, reject) => {
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (user) => {
-        unsubscribe();
-        resolve(user);
-      },
-      reject
-    );
-  });
+let authToken = null;
+
+export const setAuthToken = (token) => {
+  authToken = token;
+};
+
+/* =====================================================
+   🔥 BACKEND WAKEUP (RENDER COLD START FIX)
+===================================================== */
+
+let backendWoken = false;
+
+const wakeBackend = async () => {
+  if (backendWoken) return;
+
+  try {
+    await fetch(`${USER_BASE_URL}/health`);
+    backendWoken = true;
+    isDev && console.log("🔥 Backend awakened");
+  } catch {
+    isDev && console.log("⚠️ Wakeup failed (ignored)");
+  }
+};
 
 /* =====================================================
    🚀 AXIOS FACTORY
 ===================================================== */
 
 const createApi = (baseURL) => {
-  const instance = axios.create({
+  const api = axios.create({
     baseURL,
     timeout: 60000,
-    withCredentials: true,
-    headers: {
-      "Content-Type": "application/json",
-    },
   });
 
-  /* ================= REQUEST INTERCEPTOR ================= */
+  /* ================= REQUEST ================= */
 
-  instance.interceptors.request.use(async (config) => {
-    try {
-      console.log("📡 API Request →", `${baseURL}${config.url}`);
+  api.interceptors.request.use(async (config) => {
+    await wakeBackend();
 
-      let user = auth.currentUser;
-
-      if (!user) user = await getCurrentUser();
-
-      if (user) {
-        const token = await user.getIdToken();
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    } catch (err) {
-      console.warn("⚠️ Token attach failed:", err.message);
+    if (authToken) {
+      config.headers.Authorization = `Bearer ${authToken}`;
     }
+
+    isDev && console.log("📡", `${baseURL}${config.url}`);
 
     return config;
   });
 
-  /* ================= RESPONSE INTERCEPTOR ================= */
+  /* ================= RESPONSE ================= */
 
-  instance.interceptors.response.use(
+  api.interceptors.response.use(
     (res) => res,
     async (error) => {
-      if (!error.response) {
-        console.error("🌐 Backend unreachable:", baseURL);
-        return Promise.reject(error);
+      const originalRequest = error.config;
+
+      /* 🌐 NETWORK / COLD START RETRY */
+      if (!error.response && !originalRequest._retryNetwork) {
+        originalRequest._retryNetwork = true;
+
+        isDev && console.log("🔁 Retrying request after cold start...");
+
+        await new Promise((r) => setTimeout(r, 2000));
+        return api(originalRequest);
       }
 
-      const status = error.response.status;
+      /* 🔐 TOKEN EXPIRED RETRY */
+      if (error.response?.status === 401 && !originalRequest._retryAuth) {
+        originalRequest._retryAuth = true;
 
-      if (status === 401) {
-        console.warn("⚠️ Session expired → logout");
-        await auth.signOut();
+        try {
+          const newToken = await window.getFreshToken?.();
+
+          if (newToken) {
+            setAuthToken(newToken);
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            return api(originalRequest);
+          }
+        } catch {
+          console.warn("🔐 Silent refresh failed");
+        }
+
         window.location.href = "/login";
       }
 
-      if (status === 403) {
-        console.warn("⛔ Forbidden → Admin only?");
-      }
-
-      if (status === 404) {
-        console.error("❌ API route not found →", error.config.url);
-      }
-
-      if (status >= 500) {
+      /* 🧯 ERROR LOGGING */
+      if (error.response?.status >= 500) {
         console.error("🔥 Server error:", error.response.data);
+      }
+
+      if (error.response?.status === 404) {
+        console.error("❌ API route not found:", originalRequest.url);
       }
 
       return Promise.reject(error);
     }
   );
 
-  return instance;
+  return api;
 };
 
 /* =====================================================
-   📦 EXPORT AXIOS INSTANCES
+   📦 INSTANCES
 ===================================================== */
 
 export const userAPI = createApi(USER_BASE_URL);
 export const adminAPI = createApi(ADMIN_BASE_URL);
 
 /* =====================================================
-   🏠 PG / OWNER / BOOKING APIs
+   🏠 PG APIs
 ===================================================== */
 
 export const pgAPI = {
-  /* OWNER DASHBOARD */
   getOwnerDashboard: () => userAPI.get("/pg/owner/dashboard"),
 
   getOwnerProperties: () => userAPI.get("/pg/owner"),
@@ -145,14 +148,14 @@ export const pgAPI = {
 
   deleteProperty: (id) => userAPI.delete(`/pg/${id}`),
 
-  /* BOOKINGS */
   getOwnerBookings: () => userAPI.get("/owner/bookings"),
 
   updateBookingStatus: (bookingId, status) =>
     userAPI.put(`/bookings/${bookingId}`, { status }),
 
-  /* PUBLIC SEARCH */
-  searchProperties: (params) => userAPI.get("/pg/search", { params }),
+  /* 🌍 PUBLIC SEARCH */
+  searchProperties: (params) =>
+    userAPI.get("/pg/search", { params }),
 };
 
 /* =====================================================
@@ -169,9 +172,5 @@ export const adminPGAPI = {
   rejectPG: (id, reason) =>
     adminAPI.patch(`/pg/${id}/reject`, { reason }),
 };
-
-/* =====================================================
-   DEFAULT EXPORT (BACKWARD COMPATIBLE)
-===================================================== */
 
 export default userAPI;

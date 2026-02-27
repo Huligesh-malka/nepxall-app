@@ -1,12 +1,19 @@
 import React, { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
+/* 🔐 AUTH */
+import { useAuth } from "./context/AuthProvider";
+import { setAuthToken } from "./api/api";
+
+/* 🔥 BACKEND WAKEUP */
+import { useBackendWakeup } from "./hooks/useBackendWakeup";
+
 /* LAYOUTS */
 import MainLayout from "./layouts/MainLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import OwnerLayout from "./layouts/OwnerLayout";
 
-/* AUTH */
+/* AUTH PAGES */
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
@@ -24,7 +31,7 @@ import AadhaarKyc from "./pages/AadhaarKyc";
 import VisitSchedulePage from "./pages/VisitSchedulePage";
 import PublicAgreementPage from "./pages/PublicAgreementPage";
 
-/* CASHFREE REQUIRED PAGES */
+/* CASHFREE */
 import Contact from "./pages/Contact";
 import Terms from "./pages/Terms";
 import RefundPolicy from "./pages/RefundPolicy";
@@ -61,17 +68,37 @@ import AdminSettlements from "./pages/admin/AdminSettlements";
 import AdminFinanceDashboard from "./pages/admin/AdminFinanceDashboard";
 import SettlementHistory from "./pages/admin/SettlementHistory";
 
-/* CONFIG */
-import { testBackendConnection } from "./config";
+/* ================= PROTECTED ROUTE ================= */
+
+const ProtectedRoute = ({ children, role }) => {
+  const { user, loading, userData } = useAuth();
+
+  if (loading) return <div className="loader">Loading...</div>;
+
+  if (!user) return <Navigate to="/login" replace />;
+
+  if (role && userData?.role !== role) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
 
 function App() {
+  const { token } = useAuth();
 
+  /* 🔥 Wake backend on app start */
+  useBackendWakeup();
+
+  /* 🔐 Attach token to API */
   useEffect(() => {
-    testBackendConnection().then((result) => {
-      if (result.success) console.log("✅ Backend connected");
-      else console.error("❌ Backend error:", result.error);
-    });
-  }, []);
+    if (token) {
+      setAuthToken(token);
+
+      // for silent refresh retry
+      window.getFreshToken = async () => token;
+    }
+  }, [token]);
 
   return (
     <Routes>
@@ -82,35 +109,95 @@ function App() {
 
       {/* ================= USER ================= */}
       <Route element={<MainLayout />}>
-
         <Route index element={<UserPGSearch />} />
         <Route path="pg/:id" element={<PGDetails />} />
-        <Route path="booking/:pgId" element={<BookingForm />} />
-        <Route path="user/bookings" element={<UserBookingHistory />} />
+
+        <Route
+          path="booking/:pgId"
+          element={
+            <ProtectedRoute>
+              <BookingForm />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="user/bookings"
+          element={
+            <ProtectedRoute>
+              <UserBookingHistory />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="payment-success" element={<PaymentSuccess />} />
-        <Route path="payment/:bookingId" element={<PaymentPage />} />
-        <Route path="agreement/:bookingId" element={<AgreementPage />} />
-        <Route path="user/my-stay" element={<UserActiveStay />} />
-        <Route path="user/notifications" element={<NotificationBell />} />
-        <Route path="user/visit-schedule/:bookingId" element={<VisitSchedulePage />} />
-        <Route path="user/aadhaar-kyc" element={<AadhaarKyc />} />
+
+        <Route
+          path="payment/:bookingId"
+          element={
+            <ProtectedRoute>
+              <PaymentPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="agreement/:bookingId"
+          element={
+            <ProtectedRoute>
+              <AgreementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="user/my-stay"
+          element={
+            <ProtectedRoute>
+              <UserActiveStay />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="user/notifications"
+          element={
+            <ProtectedRoute>
+              <NotificationBell />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="user/aadhaar-kyc"
+          element={
+            <ProtectedRoute>
+              <AadhaarKyc />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="public/agreement/:hash" element={<PublicAgreementPage />} />
 
         {/* CHAT */}
-        <Route path="pg-chat/:pgId" element={<PgChat />} />
-        <Route path="user/pg-announcements/:pgId" element={<PgAnnouncements />} />
-        <Route path="chat/private/:userId" element={<PrivateChat />} />
+        <Route path="pg-chat/:pgId" element={<ProtectedRoute><PgChat /></ProtectedRoute>} />
+        <Route path="chat/private/:userId" element={<ProtectedRoute><PrivateChat /></ProtectedRoute>} />
 
-        {/* ✅ CASHFREE POLICY PAGES */}
+        {/* CASHFREE */}
         <Route path="contact" element={<Contact />} />
         <Route path="terms" element={<Terms />} />
         <Route path="refund-policy" element={<RefundPolicy />} />
-
       </Route>
 
       {/* ================= OWNER ================= */}
-      <Route path="/owner" element={<OwnerLayout />}>
-
+      <Route
+        path="/owner"
+        element={
+          <ProtectedRoute role="owner">
+            <OwnerLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<OwnerDashboard />} />
         <Route path="pgs" element={<OwnerDashboard />} />
@@ -131,12 +218,17 @@ function App() {
         <Route path="pg-chat/:pgId" element={<PgChat />} />
         <Route path="chat/private/:userId" element={<PrivateChat />} />
         <Route path="chats" element={<OwnerChatList />} />
-
       </Route>
 
       {/* ================= ADMIN ================= */}
-      <Route path="/admin" element={<AdminLayout />}>
-
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute role="admin">
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<Navigate to="finance" replace />} />
         <Route path="finance" element={<AdminFinanceDashboard />} />
         <Route path="settlements" element={<AdminSettlements />} />
@@ -144,12 +236,10 @@ function App() {
         <Route path="pending-pgs" element={<AdminPendingPGs />} />
         <Route path="pg/:id" element={<AdminPGDetails />} />
         <Route path="owner-verification" element={<AdminOwnerVerification />} />
-
       </Route>
 
       {/* ================= FALLBACK ================= */}
       <Route path="*" element={<Navigate to="/" replace />} />
-
     </Routes>
   );
 }
