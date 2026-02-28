@@ -7,23 +7,25 @@ class SocketManager {
   constructor() {
     this.socket = null;
     this.connected = false;
-    this.userId = null;
+    this.firebaseUid = null;
+    this.databaseId = null;
     this.eventHandlers = new Map();
   }
 
-  connect(userId) {
-    if (this.socket?.connected && this.userId === userId) {
+  connect(firebaseUid, databaseId = null) {
+    if (this.socket?.connected && this.firebaseUid === firebaseUid) {
       console.log("🟢 Socket already connected");
       return this.socket;
     }
 
-    this.userId = userId;
+    this.firebaseUid = firebaseUid;
+    this.databaseId = databaseId;
 
     if (this.socket) {
       this.socket.disconnect();
     }
 
-    console.log("🔌 Connecting socket for user:", userId);
+    console.log("🔌 Connecting socket for user:", { firebaseUid, databaseId });
 
     this.socket = io(SOCKET_URL, {
       transports: ["websocket", "polling"],
@@ -47,9 +49,16 @@ class SocketManager {
       console.log("🟢 Socket connected successfully:", this.socket.id);
       this.connected = true;
       
-      if (this.userId) {
-        console.log("📝 Registering user:", this.userId);
-        this.socket.emit("register", this.userId);
+      if (this.firebaseUid) {
+        console.log("📝 Registering user:", { 
+          firebaseUid: this.firebaseUid, 
+          databaseId: this.databaseId 
+        });
+        // Send both Firebase UID and database ID
+        this.socket.emit("register", { 
+          firebaseUid: this.firebaseUid,
+          databaseId: this.databaseId 
+        });
       }
     });
 
@@ -68,7 +77,7 @@ class SocketManager {
       
       if (reason === "io server disconnect" || reason === "transport close") {
         setTimeout(() => {
-          if (this.userId && this.socket) {
+          if (this.firebaseUid && this.socket) {
             this.socket.connect();
           }
         }, 1000);
@@ -79,9 +88,20 @@ class SocketManager {
       console.log("🟢 Socket reconnected after", attemptNumber, "attempts");
       this.connected = true;
       
-      if (this.userId) {
-        this.socket.emit("register", this.userId);
+      if (this.firebaseUid) {
+        this.socket.emit("register", { 
+          firebaseUid: this.firebaseUid,
+          databaseId: this.databaseId 
+        });
       }
+    });
+
+    this.socket.on("reconnect_error", (error) => {
+      console.error("🔴 Reconnect error:", error);
+    });
+
+    this.socket.on("reconnect_failed", () => {
+      console.error("🔴 Reconnect failed");
     });
   }
 
@@ -123,13 +143,22 @@ class SocketManager {
       this.socket.disconnect();
       this.socket = null;
       this.connected = false;
-      this.userId = null;
+      this.firebaseUid = null;
+      this.databaseId = null;
       this.eventHandlers.clear();
     }
   }
 
   isConnected() {
     return this.socket?.connected || false;
+  }
+
+  getDatabaseId() {
+    return this.databaseId;
+  }
+
+  getFirebaseUid() {
+    return this.firebaseUid;
   }
 }
 

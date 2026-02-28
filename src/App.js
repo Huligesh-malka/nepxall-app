@@ -30,7 +30,7 @@ import Terms from "./pages/Terms";
 import RefundPolicy from "./pages/RefundPolicy";
 
 /* CHAT */
-import PgChat from "./pages/PgChat";
+
 import PrivateChat from "./pages/PrivateChat";
 
 /* OWNER */
@@ -45,7 +45,7 @@ import OwnerReviewReply from "./pages/OwnerReviewReply";
 import OwnerNotifications from "./pages/OwnerNotifications";
 import OwnerBankDetails from "./pages/owner/OwnerBankDetails";
 import OwnerVerificationPage from "./pages/owner/OwnerVerification";
-import PgAnnouncements from "./pages/PgAnnouncements";
+
 import OwnerChatList from "./pages/OwnerChatList";
 import CreatePlan from "./pages/CreatePlan";
 
@@ -97,8 +97,8 @@ function App() {
         <Route path="public/agreement/:hash" element={<PublicAgreementPage />} />
 
         {/* CHAT */}
-        <Route path="pg-chat/:pgId" element={<PgChat />} />
-        <Route path="user/pg-announcements/:pgId" element={<PgAnnouncements />} />
+       
+        
         <Route path="chat/private/:userId" element={<PrivateChat />} />
 
         {/* ✅ CASHFREE POLICY PAGES */}

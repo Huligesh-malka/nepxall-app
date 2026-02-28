@@ -23,6 +23,7 @@ export default function OwnerChatList() {
   const [onlineStatus, setOnlineStatus] = useState({});
   const [error, setError] = useState(null);
   const [connected, setConnected] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
 
   const loadChats = useCallback(async () => {
@@ -43,6 +44,19 @@ export default function OwnerChatList() {
     }
   }, []);
 
+  const loadCurrentUser = useCallback(async (fbUser) => {
+    try {
+      const token = await fbUser.getIdToken();
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const res = await api.get("/private-chat/me", config);
+      setCurrentUser(res.data);
+      return res.data;
+    } catch (err) {
+      console.error("Failed to load current user:", err);
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
     let unsubscribe;
     let mounted = true;
@@ -54,9 +68,17 @@ export default function OwnerChatList() {
       }
 
       try {
+        // Load current user to get database ID
+        const userData = await loadCurrentUser(fbUser);
+        
+        if (!userData) {
+          throw new Error("Failed to load user data");
+        }
+
         await loadChats();
 
-        const socket = socketManager.connect(fbUser.uid);
+        // Connect socket with both Firebase UID and database ID
+        const socket = socketManager.connect(fbUser.uid, userData.id);
 
         socketManager.on("connect", () => {
           console.log("🟢 Socket connected in chat list");
@@ -89,17 +111,17 @@ export default function OwnerChatList() {
           }
         });
 
-        socketManager.on("user_online", ({ userId }) => {
-          console.log("🟢 User online:", userId);
+        socketManager.on("user_online", ({ userId, databaseId }) => {
+          console.log("🟢 User online:", { userId, databaseId });
           if (mounted) {
-            setOnlineStatus(prev => ({ ...prev, [userId]: true }));
+            setOnlineStatus(prev => ({ ...prev, [userId || databaseId]: true }));
           }
         });
 
-        socketManager.on("user_offline", ({ userId }) => {
-          console.log("🔴 User offline:", userId);
+        socketManager.on("user_offline", ({ userId, databaseId }) => {
+          console.log("🔴 User offline:", { userId, databaseId });
           if (mounted) {
-            setOnlineStatus(prev => ({ ...prev, [userId]: false }));
+            setOnlineStatus(prev => ({ ...prev, [userId || databaseId]: false }));
           }
         });
 
@@ -123,10 +145,11 @@ export default function OwnerChatList() {
       socketManager.off("user_online");
       socketManager.off("user_offline");
     };
-  }, [navigate, loadChats]);
+  }, [navigate, loadChats, loadCurrentUser]);
 
   const isUserOnline = (user) => {
-    return onlineStatus[user.firebase_uid] || false;
+    // Check by both Firebase UID and database ID
+    return onlineStatus[user.firebase_uid] || onlineStatus[user.id] || false;
   };
 
   const handleCloseError = () => {
@@ -135,8 +158,8 @@ export default function OwnerChatList() {
 
   const handleRetry = () => {
     loadChats();
-    if (auth.currentUser) {
-      socketManager.connect(auth.currentUser.uid);
+    if (auth.currentUser && currentUser) {
+      socketManager.connect(auth.currentUser.uid, currentUser.id);
     }
   };
 
