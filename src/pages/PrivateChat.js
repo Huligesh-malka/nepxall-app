@@ -1,519 +1,206 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/api";
-import socketManager from "../socket";
-import {
-  Box,
-  TextField,
-  IconButton,
-  Typography,
-  Avatar,
-  Paper,
-  CircularProgress,
-  Alert,
-} from "@mui/material";
-import SendIcon from "@mui/icons-material/Send";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { io } from "socket.io-client";
+
+const socket = io("https://nepxall-backend.onrender.com", {
+  autoConnect: false,
+  transports: ["websocket"],
+});
 
 export default function PrivateChat() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const bottomRef = useRef();
-  const typingTimeoutRef = useRef();
+
   const [messages, setMessages] = useState([]);
   const [me, setMe] = useState(null);
   const [otherUser, setOtherUser] = useState(null);
   const [text, setText] = useState("");
   const [typing, setTyping] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState(null);
-  const [connected, setConnected] = useState(false);
-  const [inputFocused, setInputFocused] = useState(false);
 
-  const scrollToBottom = useCallback(() => {
-    setTimeout(() => {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
-  }, []);
+  /* ================= SCROLL ================= */
+  const scrollBottom = () =>
+    setTimeout(
+      () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
+      100
+    );
 
-  const loadMessages = useCallback(async (token, userId) => {
-    try {
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      
-      // Fix: Use correct endpoints
-      console.log("📡 Loading me data...");
-      const meRes = await api.get("/private-chat/me", config);
-      
-      console.log("📡 Loading other user...");
-      const userRes = await api.get(`/private-chat/user/${userId}`, config);
-      
-      console.log("📡 Loading messages...");
-      const msgRes = await api.get(`/private-chat/messages/${userId}`, config);
-
-      console.log("👤 Me:", meRes.data);
-      console.log("👤 Other user:", userRes.data);
-      console.log("💬 Messages:", msgRes.data);
-
-      setMe(meRes.data);
-      setOtherUser(userRes.data);
-      setMessages(msgRes.data || []);
-      
-      return meRes.data;
-    } catch (err) {
-      console.error("❌ Failed to load messages:", err);
-      throw err;
-    }
-  }, []);
-
+  /* ================= LOAD DATA ================= */
   useEffect(() => {
-    let mounted = true;
     let unsubscribe;
 
-    const initializeChat = async (fbUser) => {
-      if (!fbUser) {
-        navigate("/login");
-        return;
-      }
+    unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      if (!fbUser) return navigate("/login");
 
       try {
-        setLoading(true);
-        setError(null);
-
         const token = await fbUser.getIdToken();
-        const meData = await loadMessages(token, userId);
+        const config = { headers: { Authorization: `Bearer ${token}` } };
 
-        if (!mounted || !meData) return;
+        const [meRes, userRes, msgRes] = await Promise.all([
+          api.get("/private-chat/me", config),
+          api.get(`/private-chat/user/${userId}`, config),
+          api.get(`/private-chat/messages/${userId}`, config),
+        ]);
 
-        console.log("🔌 Connecting socket with:", { 
-          firebaseUid: fbUser.uid, 
-          databaseId: meData.id 
-        });
-        
-        socketManager.connect(fbUser.uid, meData.id);
+        setMe(meRes.data);
+        setOtherUser(userRes.data);
+        setMessages(msgRes.data);
 
-        socketManager.on("connect", () => {
-          console.log("🟢 Socket connected");
-          setConnected(true);
-          
-          if (meData?.id && userId) {
-            console.log("🚪 Joining room:", { userA: meData.id, userB: userId });
-            socketManager.emit("join_private_room", {
-              userA: meData.id,
-              userB: userId,
-            });
-          }
-        });
+        /* SOCKET CONNECT */
+        if (!socket.connected) socket.connect();
 
-        socketManager.on("disconnect", () => {
-          console.log("🔴 Socket disconnected");
-          setConnected(false);
-        });
+        /* REGISTER USER */
+        socket.emit("register", fbUser.uid);
 
-        socketManager.on("receive_private_message", (message) => {
-          console.log("📩 Received message:", message);
-          if (mounted) {
-            setMessages(prev => {
-              const exists = prev.some(m => m.id === message.id);
-              if (exists) return prev;
-              return [...prev, message];
-            });
-            scrollToBottom();
-          }
-        });
-
-        socketManager.on("message_sent_confirmation", (message) => {
-          console.log("✅ Message confirmed:", message);
-          if (mounted) {
-            setMessages(prev =>
-              prev.map(m => 
-                m.id === message.id ? { ...m, status: "delivered" } : m
-              )
-            );
-          }
-        });
-
-        socketManager.on("user_typing", ({ userId: typingUserId, isTyping }) => {
-          if (mounted && typingUserId === otherUser?.id) {
-            setTyping(isTyping);
-          }
-        });
-
-        setLoading(false);
-        scrollToBottom();
-
-      } catch (err) {
-        console.error("❌ Chat initialization failed:", err);
-        if (mounted) {
-          setError("Failed to load chat. Please refresh the page.");
-          setLoading(false);
-        }
-      }
-    };
-
-    unsubscribe = onAuthStateChanged(auth, initializeChat);
-
-    return () => {
-      mounted = false;
-      unsubscribe();
-      
-      socketManager.off("connect");
-      socketManager.off("disconnect");
-      socketManager.off("receive_private_message");
-      socketManager.off("message_sent_confirmation");
-      socketManager.off("user_typing");
-      
-      if (me?.id && userId) {
-        socketManager.emit("leave_private_room", {
-          userA: me.id,
+        /* JOIN ROOM */
+        socket.emit("join_private_room", {
+          userA: meRes.data.id,
           userB: userId,
         });
+
+        /* MARK AS READ */
+        socket.emit("mark_messages_read", {
+          userA: meRes.data.id,
+          userB: userId,
+        });
+
+        scrollBottom();
+      } catch (err) {
+        console.error("Chat load failed", err);
       }
-      
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
+    });
+
+    return () => {
+      unsubscribe?.();
+      socket.emit("leave_private_room", {
+        userA: me?.id,
+        userB: userId,
+      });
+      socket.disconnect();
     };
-  }, [userId, navigate, loadMessages, scrollToBottom]);
+  }, [userId]);
 
+  /* ================= SOCKET LISTENERS ================= */
+  useEffect(() => {
+    socket.on("receive_private_message", (msg) => {
+      setMessages((prev) => [...prev, msg]);
+      scrollBottom();
+    });
+
+    socket.on("message_sent_confirmation", (msg) => {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === msg.id ? { ...m, status: "✔✔" } : m))
+      );
+    });
+
+    socket.on("user_typing", ({ isTyping }) => {
+      setTyping(isTyping);
+    });
+
+    return () => {
+      socket.off("receive_private_message");
+      socket.off("message_sent_confirmation");
+      socket.off("user_typing");
+    };
+  }, []);
+
+  /* ================= SEND MESSAGE ================= */
   const sendMessage = async () => {
-    if (!text.trim() || !me || sending) {
-      console.log("❌ Cannot send:", { text: text.trim(), me: !!me, sending });
-      return;
-    }
-
-    const messageText = text.trim();
-    setText("");
-    setSending(true);
+    if (!text.trim()) return;
 
     try {
       const token = await auth.currentUser.getIdToken();
-      
-      console.log("📤 Sending message to API:", { 
-        receiver_id: userId, 
-        message: messageText 
-      });
-      
-      // Fix: Use correct endpoint
+
       const res = await api.post(
-        "/private-chat/send",  // ✅ Correct endpoint
-        { 
-          receiver_id: userId, 
-          message: messageText 
-        },
+        "/private-chat/send",
+        { receiver_id: userId, message: text },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      console.log("✅ Message sent to API:", res.data);
+      socket.emit("send_private_message", res.data);
 
-      const messageWithIds = {
-        ...res.data,
-        sender_firebase_uid: me.firebase_uid,
-        receiver_firebase_uid: otherUser?.firebase_uid,
-        status: "sent"
-      };
-
-      setMessages(prev => [...prev, messageWithIds]);
-      
-      console.log("📤 Emitting via socket:", messageWithIds);
-      socketManager.emit("send_private_message", messageWithIds);
-
-      scrollToBottom();
+      setMessages((prev) => [...prev, { ...res.data, status: "✔" }]);
+      setText("");
+      scrollBottom();
     } catch (err) {
-      console.error("❌ Send failed:", err);
-      setError("Failed to send message. Please try again.");
-      setText(messageText);
-      
-      setTimeout(() => setError(null), 3000);
-    } finally {
-      setSending(false);
+      console.error("Send failed", err);
     }
   };
 
+  /* ================= TYPING ================= */
   const handleTyping = (value) => {
     setText(value);
 
-    if (!me || !otherUser) return;
+    socket.emit("typing", {
+      userA: me?.id,
+      userB: userId,
+      isTyping: true,
+    });
 
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    if (value.trim()) {
-      socketManager.emit("typing", {
-        userA: me.id,
+    setTimeout(() => {
+      socket.emit("typing", {
+        userA: me?.id,
         userB: userId,
-        userId: me.id,
-        isTyping: true,
-      });
-    }
-
-    typingTimeoutRef.current = setTimeout(() => {
-      socketManager.emit("typing", {
-        userA: me.id,
-        userB: userId,
-        userId: me.id,
         isTyping: false,
       });
     }, 1000);
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
-  const formatTime = (timestamp) => {
-    return new Date(timestamp).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  if (loading) {
-    return (
-      <Box sx={loaderContainer}>
-        <CircularProgress sx={{ color: "#667eea" }} />
-        <Typography sx={{ mt: 2, color: "#667eea" }}>
-          Loading chat...
-        </Typography>
-      </Box>
-    );
-  }
-
+  /* ================= UI ================= */
   return (
-    <Box sx={chatContainer}>
-      {/* Header */}
-      <Box sx={header}>
-        <IconButton onClick={() => navigate(-1)} sx={{ color: "#fff" }}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Avatar sx={headerAvatar}>
-          {otherUser?.name?.charAt(0) || "U"}
-        </Avatar>
-        <Box sx={{ ml: 1, flex: 1 }}>
-          <Typography sx={headerName}>{otherUser?.name || "User"}</Typography>
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <Box
-              sx={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                bgcolor: connected ? "#44b700" : "#ff4d4f",
-                mr: 1,
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+      {/* HEADER */}
+      <div style={{ background: "#4f46e5", color: "#fff", padding: 12 }}>
+        <span onClick={() => navigate(-1)} style={{ cursor: "pointer" }}>
+          ←
+        </span>
+        <b style={{ marginLeft: 10 }}>{otherUser?.name}</b>
+      </div>
+
+      {/* MESSAGES */}
+      <div style={{ flex: 1, overflowY: "auto", padding: 15 }}>
+        {messages.map((m) => (
+          <div
+            key={m.id}
+            style={{
+              textAlign: m.sender_id === me?.id ? "right" : "left",
+              marginBottom: 10,
+            }}
+          >
+            <span
+              style={{
+                background: "#fff",
+                padding: 10,
+                borderRadius: 10,
+                display: "inline-block",
               }}
-            />
-            <Typography sx={headerStatus}>
-              {typing ? "Typing..." : (connected ? "Online" : "Offline")}
-            </Typography>
-          </Box>
-        </Box>
-      </Box>
+            >
+              {m.message}
+              {m.sender_id === me?.id && (
+                <div style={{ fontSize: 10 }}>{m.status || "✔"}</div>
+              )}
+            </span>
+          </div>
+        ))}
 
-      {/* Error Alert */}
-      {error && (
-        <Alert severity="error" sx={{ m: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+        {typing && <div>Typing...</div>}
 
-      {/* Messages */}
-      <Box sx={messagesContainer}>
-        {messages.length === 0 ? (
-          <Box sx={emptyMessages}>
-            <Typography sx={emptyMessagesText}>
-              No messages yet. Start a conversation!
-            </Typography>
-          </Box>
-        ) : (
-          messages.map((msg, index) => {
-            const isMe = msg.sender_id === me?.id;
-            return (
-              <Box
-                key={msg.id || index}
-                sx={{
-                  display: "flex",
-                  justifyContent: isMe ? "flex-end" : "flex-start",
-                  mb: 2,
-                }}
-              >
-                <Paper
-                  sx={{
-                    p: 2,
-                    maxWidth: "70%",
-                    background: isMe
-                      ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                      : "#fff",
-                    color: isMe ? "#fff" : "#000",
-                    borderRadius: isMe
-                      ? "20px 20px 5px 20px"
-                      : "20px 20px 20px 5px",
-                    boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-                  }}
-                >
-                  <Typography variant="body1" sx={{ wordWrap: "break-word" }}>
-                    {msg.message}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      display: "block",
-                      textAlign: "right",
-                      mt: 0.5,
-                      opacity: 0.8,
-                    }}
-                  >
-                    {formatTime(msg.created_at)}
-                    {isMe && (
-                      <span style={{ marginLeft: 5 }}>
-                        {msg.status === "delivered" ? "✓✓" : "✓"}
-                      </span>
-                    )}
-                  </Typography>
-                </Paper>
-              </Box>
-            );
-          })
-        )}
-        
-        {typing && (
-          <Box sx={{ display: "flex", justifyContent: "flex-start", mb: 2 }}>
-            <Paper sx={{ p: 2, background: "#f0f0f0", borderRadius: "20px" }}>
-              <Typography sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                <span>●</span>
-                <span>●</span>
-                <span>●</span>
-              </Typography>
-            </Paper>
-          </Box>
-        )}
-        
         <div ref={bottomRef} />
-      </Box>
+      </div>
 
-      {/* Input */}
-      <Box sx={inputContainer}>
-        <TextField
-          fullWidth
-          multiline
-          maxRows={3}
+      {/* INPUT */}
+      <div style={{ display: "flex", padding: 10 }}>
+        <input
           value={text}
           onChange={(e) => handleTyping(e.target.value)}
-          onKeyPress={handleKeyPress}
-          onFocus={() => setInputFocused(true)}
-          onBlur={() => setInputFocused(false)}
-          placeholder={connected ? "Type a message..." : "Connecting..."}
-          variant="outlined"
-          size="small"
-          disabled={!connected || sending}
-          sx={inputField}
-          autoFocus
+          style={{ flex: 1 }}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
         />
-        <IconButton
-          onClick={sendMessage}
-          disabled={!text.trim() || !connected || sending}
-          sx={sendButton}
-        >
-          <SendIcon />
-        </IconButton>
-      </Box>
-    </Box>
+        <button onClick={sendMessage}>Send</button>
+      </div>
+    </div>
   );
 }
-
-/* ================= STYLES ================= */
-
-const chatContainer = {
-  height: "100vh",
-  display: "flex",
-  flexDirection: "column",
-  background: "#f5f5f5",
-};
-
-const loaderContainer = {
-  height: "100vh",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "center",
-  alignItems: "center",
-  background: "#f5f5f5",
-};
-
-const header = {
-  display: "flex",
-  alignItems: "center",
-  p: 2,
-  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-  color: "#fff",
-  boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-};
-
-const headerAvatar = {
-  width: 40,
-  height: 40,
-  ml: 1,
-  background: "#fff",
-  color: "#667eea",
-};
-
-const headerName = {
-  fontWeight: 600,
-  fontSize: "1rem",
-};
-
-const headerStatus = {
-  fontSize: "0.75rem",
-  opacity: 0.9,
-};
-
-const messagesContainer = {
-  flex: 1,
-  overflowY: "auto",
-  p: 3,
-  background: "#f5f5f5",
-};
-
-const emptyMessages = {
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  height: "100%",
-};
-
-const emptyMessagesText = {
-  color: "#999",
-  fontSize: "0.9rem",
-};
-
-const inputContainer = {
-  display: "flex",
-  p: 2,
-  gap: 1,
-  background: "#fff",
-  borderTop: "1px solid #e0e0e0",
-};
-
-const inputField = {
-  "& .MuiOutlinedInput-root": {
-    borderRadius: "25px",
-    backgroundColor: "#f5f5f5",
-  },
-};
-
-const sendButton = {
-  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-  color: "#fff",
-  "&:hover": {
-    background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
-  },
-  "&:disabled": {
-    background: "#ccc",
-  },
-  borderRadius: "50%",
-  width: 48,
-  height: 48,
-};
