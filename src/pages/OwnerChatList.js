@@ -8,6 +8,7 @@ import {
   Container,
   Alert,
   Snackbar,
+  Button,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
@@ -53,14 +54,10 @@ export default function OwnerChatList() {
       }
 
       try {
-        // Load chats first
         await loadChats();
 
-        // Connect socket after loading chats
-        console.log("🔌 Initializing socket for user:", fbUser.uid);
         const socket = socketManager.connect(fbUser.uid);
 
-        // Set up socket event listeners
         socketManager.on("connect", () => {
           console.log("🟢 Socket connected in chat list");
           setConnected(true);
@@ -71,22 +68,20 @@ export default function OwnerChatList() {
           setConnected(false);
         });
 
-        // Listen for new messages
         socketManager.on("receive_private_message", (message) => {
           console.log("📩 New message received in chat list:", message);
           if (mounted) {
-            loadChats(); // Refresh chat list
+            loadChats();
           }
         });
 
         socketManager.on("message_sent_confirmation", (message) => {
           console.log("✅ Message sent confirmation:", message);
           if (mounted) {
-            loadChats(); // Refresh chat list
+            loadChats();
           }
         });
 
-        // Listen for chat list updates
         socketManager.on("chat_list_update", () => {
           console.log("📋 Chat list update received");
           if (mounted) {
@@ -94,7 +89,6 @@ export default function OwnerChatList() {
           }
         });
 
-        // Online/Offline status
         socketManager.on("user_online", ({ userId }) => {
           console.log("🟢 User online:", userId);
           if (mounted) {
@@ -121,7 +115,6 @@ export default function OwnerChatList() {
       mounted = false;
       unsubscribe();
       
-      // Clean up socket listeners
       socketManager.off("connect");
       socketManager.off("disconnect");
       socketManager.off("receive_private_message");
@@ -129,8 +122,6 @@ export default function OwnerChatList() {
       socketManager.off("chat_list_update");
       socketManager.off("user_online");
       socketManager.off("user_offline");
-      
-      // Don't disconnect here as other components might be using socket
     };
   }, [navigate, loadChats]);
 
