@@ -7,6 +7,7 @@ import { io } from "socket.io-client";
 
 const socket = io("https://nepxall-backend.onrender.com", {
   autoConnect: false,
+  withCredentials: true,
 });
 
 const PrivateChat = () => {
@@ -23,7 +24,10 @@ const PrivateChat = () => {
   const scrollBottom = () =>
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
 
+  /* ================= LOAD CHAT ================= */
   useEffect(() => {
+    let mounted = true;
+
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
       if (!fbUser) return navigate("/login");
 
@@ -37,19 +41,27 @@ const PrivateChat = () => {
           api.get(`/private-chat/messages/${userId}`, config),
         ]);
 
+        if (!mounted) return;
+
         setMe(meRes.data);
         setOtherUser(userRes.data);
         setMessages(msgRes.data);
 
+        /* ✅ CONNECT SOCKET */
         if (!socket.connected) socket.connect();
 
+        /* ✅ REGISTER USER */
+        socket.emit("register", fbUser.uid);
+
+        /* ✅ JOIN ROOM WITH MYSQL IDS */
         socket.emit("join_private_room", {
-          user1: meRes.data.id,
-          user2: userId,
+          userA: meRes.data.id,
+          userB: userId,
         });
 
         scrollBottom();
       } catch (err) {
+        console.error(err);
         alert("Chat load failed");
       } finally {
         setLoading(false);
@@ -57,11 +69,21 @@ const PrivateChat = () => {
     });
 
     return () => {
+      mounted = false;
+
+      /* ✅ LEAVE ROOM ONLY */
+      if (me?.id && userId) {
+        socket.emit("leave_private_room", {
+          userA: me.id,
+          userB: userId,
+        });
+      }
+
       unsub();
-      socket.disconnect();
     };
   }, [userId, navigate]);
 
+  /* ================= RECEIVE REALTIME ================= */
   useEffect(() => {
     socket.on("receive_private_message", (msg) => {
       setMessages((prev) => [...prev, msg]);
@@ -71,6 +93,7 @@ const PrivateChat = () => {
     return () => socket.off("receive_private_message");
   }, []);
 
+  /* ================= SEND MESSAGE ================= */
   const sendMessage = async () => {
     if (!text.trim()) return;
 
@@ -85,7 +108,12 @@ const PrivateChat = () => {
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    socket.emit("send_private_message", res.data);
+    /* ✅ EMIT REALTIME */
+    socket.emit("send_private_message", {
+      ...res.data,
+      sender_id: me.id,
+      receiver_id: userId,
+    });
 
     setMessages((prev) => [...prev, res.data]);
     setText("");
@@ -107,7 +135,7 @@ const PrivateChat = () => {
       <div style={{ flex: 1, overflowY: "auto", padding: 15 }}>
         {messages.map((m) => (
           <div
-            key={m.id}
+            key={m.id || Math.random()}
             style={{
               textAlign: m.sender_id === me.id ? "right" : "left",
               marginBottom: 10,
