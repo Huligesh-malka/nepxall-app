@@ -54,7 +54,6 @@ class SocketManager {
           firebaseUid: this.firebaseUid, 
           databaseId: this.databaseId 
         });
-        // Send both Firebase UID and database ID
         this.socket.emit("register", { 
           firebaseUid: this.firebaseUid,
           databaseId: this.databaseId 
@@ -94,14 +93,6 @@ class SocketManager {
           databaseId: this.databaseId 
         });
       }
-    });
-
-    this.socket.on("reconnect_error", (error) => {
-      console.error("🔴 Reconnect error:", error);
-    });
-
-    this.socket.on("reconnect_failed", () => {
-      console.error("🔴 Reconnect failed");
     });
   }
 
@@ -162,6 +153,5 @@ class SocketManager {
   }
 }
 
-// Create and export singleton instance
 const socketManager = new SocketManager();
 export default socketManager;

@@ -47,6 +47,10 @@ export default function PrivateChat() {
         api.get(`/private-chat/messages/${userId}`, config),
       ]);
 
+      console.log("👤 Me:", meRes.data);
+      console.log("👤 Other user:", userRes.data);
+      console.log("💬 Messages:", msgRes.data);
+
       setMe(meRes.data);
       setOtherUser(userRes.data);
       setMessages(msgRes.data);
@@ -77,8 +81,8 @@ export default function PrivateChat() {
 
         if (!mounted) return;
 
-        // Connect socket
-        const socket = socketManager.connect(fbUser.uid);
+        // Connect socket with both Firebase UID and database ID
+        socketManager.connect(fbUser.uid, meData.id);
 
         // Set up socket listeners
         socketManager.on("connect", () => {
@@ -87,7 +91,7 @@ export default function PrivateChat() {
           
           // Join room after connection
           if (meData?.id && userId) {
-            console.log("🚪 Joining room:", meData.id, userId);
+            console.log("🚪 Joining room:", { userA: meData.id, userB: userId });
             socketManager.emit("join_private_room", {
               userA: meData.id,
               userB: userId,
@@ -102,8 +106,13 @@ export default function PrivateChat() {
 
         socketManager.on("receive_private_message", (message) => {
           console.log("📩 Received message:", message);
-          if (mounted && message.sender_id === parseInt(userId)) {
-            setMessages(prev => [...prev, message]);
+          if (mounted) {
+            setMessages(prev => {
+              // Check if message already exists
+              const exists = prev.some(m => m.id === message.id);
+              if (exists) return prev;
+              return [...prev, message];
+            });
             scrollToBottom();
           }
         });
@@ -119,8 +128,8 @@ export default function PrivateChat() {
           }
         });
 
-        socketManager.on("user_typing", ({ isTyping }) => {
-          if (mounted) {
+        socketManager.on("user_typing", ({ userId: typingUserId, isTyping }) => {
+          if (mounted && typingUserId === otherUser?.id) {
             setTyping(isTyping);
           }
         });
@@ -143,14 +152,12 @@ export default function PrivateChat() {
       mounted = false;
       unsubscribe();
       
-      // Clean up socket listeners
       socketManager.off("connect");
       socketManager.off("disconnect");
       socketManager.off("receive_private_message");
       socketManager.off("message_sent_confirmation");
       socketManager.off("user_typing");
       
-      // Leave room
       if (me?.id && userId) {
         socketManager.emit("leave_private_room", {
           userA: me.id,
@@ -162,17 +169,23 @@ export default function PrivateChat() {
         clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [userId, navigate, loadMessages, scrollToBottom]);
+  }, [userId, navigate, loadMessages, scrollToBottom, otherUser?.id]);
 
   const sendMessage = async () => {
-    if (!text.trim() || !me || sending) return;
+    if (!text.trim() || !me || sending) {
+      console.log("Cannot send:", { text: text.trim(), me, sending });
+      return;
+    }
 
     const messageText = text.trim();
+    const currentText = text;
     setText("");
     setSending(true);
 
     try {
       const token = await auth.currentUser.getIdToken();
+      
+      console.log("📤 Sending message:", { receiver_id: userId, message: messageText });
       
       const res = await api.post(
         "/private-chat/send",
@@ -180,22 +193,29 @@ export default function PrivateChat() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      console.log("Message sent:", res.data);
+      console.log("✅ Message sent to API:", res.data);
 
-      // Add to local state
-      const newMessage = { ...res.data, status: "sent" };
-      setMessages(prev => [...prev, newMessage]);
+      // Add sender's Firebase UID and receiver's Firebase UID to the message
+      const messageWithIds = {
+        ...res.data,
+        sender_firebase_uid: me.firebase_uid,
+        receiver_firebase_uid: otherUser?.firebase_uid,
+        status: "sent"
+      };
+
+      // Add to local state immediately
+      setMessages(prev => [...prev, messageWithIds]);
 
       // Emit via socket
-      socketManager.emit("send_private_message", res.data);
+      console.log("📤 Emitting via socket:", messageWithIds);
+      socketManager.emit("send_private_message", messageWithIds);
 
       scrollToBottom();
     } catch (err) {
-      console.error("Send failed:", err);
+      console.error("❌ Send failed:", err);
       setError("Failed to send message. Please try again.");
-      setText(messageText); // Restore text
+      setText(currentText); // Restore text
       
-      // Clear error after 3 seconds
       setTimeout(() => setError(null), 3000);
     } finally {
       setSending(false);
@@ -207,20 +227,25 @@ export default function PrivateChat() {
 
     if (!me || !otherUser) return;
 
-    socketManager.emit("typing", {
-      userA: me.id,
-      userB: userId,
-      isTyping: true,
-    });
-
+    // Clear previous timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
+    // Emit typing start
+    socketManager.emit("typing", {
+      userA: me.id,
+      userB: userId,
+      userId: me.id,
+      isTyping: true,
+    });
+
+    // Set timeout to emit typing stop
     typingTimeoutRef.current = setTimeout(() => {
       socketManager.emit("typing", {
         userA: me.id,
         userB: userId,
+        userId: me.id,
         isTyping: false,
       });
     }, 1000);
