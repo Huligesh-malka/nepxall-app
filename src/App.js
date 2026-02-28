@@ -30,7 +30,6 @@ import Terms from "./pages/Terms";
 import RefundPolicy from "./pages/RefundPolicy";
 
 /* CHAT */
-
 import PrivateChat from "./pages/PrivateChat";
 
 /* OWNER */
@@ -45,7 +44,6 @@ import OwnerReviewReply from "./pages/OwnerReviewReply";
 import OwnerNotifications from "./pages/OwnerNotifications";
 import OwnerBankDetails from "./pages/owner/OwnerBankDetails";
 import OwnerVerificationPage from "./pages/owner/OwnerVerification";
-
 import OwnerChatList from "./pages/OwnerChatList";
 import CreatePlan from "./pages/CreatePlan";
 
@@ -97,8 +95,6 @@ function App() {
         <Route path="public/agreement/:hash" element={<PublicAgreementPage />} />
 
         {/* CHAT */}
-       
-        
         <Route path="chat/private/:userId" element={<PrivateChat />} />
 
         {/* ✅ CASHFREE POLICY PAGES */}
@@ -127,10 +123,10 @@ function App() {
         <Route path="reviews/:pgId" element={<OwnerReviewReply />} />
         <Route path="property/:propertyId/plans" element={<CreatePlan />} />
         <Route path="notifications" element={<OwnerNotifications />} />
-        <Route path="pg-announcements/:pgId" element={<PgAnnouncements />} />
-        <Route path="pg-chat/:pgId" element={<PgChat />} />
-        <Route path="chat/private/:userId" element={<PrivateChat />} />
+        
+        {/* CHAT ROUTES - Updated */}
         <Route path="chats" element={<OwnerChatList />} />
+        <Route path="chat/private/:userId" element={<PrivateChat />} />
 
       </Route>
 
