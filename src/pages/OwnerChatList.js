@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -19,8 +19,29 @@ const SOCKET_URL = "https://nepxall-backend.onrender.com";
 export default function OwnerChatList() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [connected, setConnected] = useState(false);
+
   const navigate = useNavigate();
   const socketRef = useRef(null);
+
+  /* ================= LOAD CHATS ================= */
+
+  const loadChats = useCallback(async () => {
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await api.get("/private-chat/list", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setUsers(res.data || []);
+    } catch (err) {
+      console.error("Chat list error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /* ================= AUTH + SOCKET ================= */
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -28,23 +49,23 @@ export default function OwnerChatList() {
 
       await loadChats();
 
-      // ✅ create socket once
       if (!socketRef.current) {
         socketRef.current = io(SOCKET_URL, {
           transports: ["websocket"],
         });
+
+        socketRef.current.on("connect", () => setConnected(true));
+        socketRef.current.on("disconnect", () => setConnected(false));
       }
 
       const socket = socketRef.current;
 
-      // ✅ REGISTER OWNER
       socket.emit("register", user.uid);
 
-      // ✅ when new message comes → refresh list
       socket.on("receive_private_message", loadChats);
       socket.on("message_sent_confirmation", loadChats);
+      socket.on("chat_list_update", loadChats);
 
-      // ✅ ONLINE USERS
       socket.on("user_online", ({ userId }) => {
         setUsers((prev) =>
           prev.map((u) =>
@@ -68,22 +89,34 @@ export default function OwnerChatList() {
       if (socketRef.current) {
         socketRef.current.off("receive_private_message");
         socketRef.current.off("message_sent_confirmation");
+        socketRef.current.off("chat_list_update");
         socketRef.current.off("user_online");
         socketRef.current.off("user_offline");
       }
     };
-  }, []);
+  }, [loadChats, navigate]);
 
-  const loadChats = async () => {
-    try {
-      const res = await api.get("/private-chat/list");
-      setUsers(res.data || []);
-    } catch (err) {
-      console.error("Failed to fetch chats:", err);
-    } finally {
-      setLoading(false);
+  /* ================= TIME FORMAT ================= */
+
+  const formatTime = (time) => {
+    if (!time) return "";
+
+    const date = new Date(time);
+    const now = new Date();
+
+    const isToday = date.toDateString() === now.toDateString();
+
+    if (isToday) {
+      return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
     }
+
+    return date.toLocaleDateString();
   };
+
+  /* ================= LOADER ================= */
 
   if (loading) {
     return (
@@ -93,11 +126,25 @@ export default function OwnerChatList() {
     );
   }
 
+  /* ================= UI ================= */
+
   return (
     <Box sx={mainContainer}>
       <Container maxWidth="sm">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <Typography sx={headerTitle}>Messages</Typography>
+          <Box display="flex" justifyContent="space-between">
+            <Typography sx={headerTitle}>Messages</Typography>
+
+            <Typography
+              sx={{
+                fontSize: 12,
+                color: connected ? "#4caf50" : "#ff4d4f",
+              }}
+            >
+              {connected ? "● Online" : "● Offline"}
+            </Typography>
+          </Box>
+
           <Typography sx={subTitle}>
             {users.length} Active Conversations
           </Typography>
@@ -109,8 +156,8 @@ export default function OwnerChatList() {
               users.map((u, index) => (
                 <motion.div
                   key={u.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
                   <Box
@@ -123,7 +170,7 @@ export default function OwnerChatList() {
                       sx={u.online ? onlineBadge : offlineBadge}
                     >
                       <Avatar sx={avatarStyle}>
-                        {u.name?.charAt(0) || "U"}
+                        {u.name?.charAt(0)}
                       </Avatar>
                     </Badge>
 
@@ -135,20 +182,13 @@ export default function OwnerChatList() {
                       >
                         <Typography sx={nameText}>{u.name}</Typography>
                         <Typography sx={timeText}>
-                          {u.last_time
-                            ? new Date(u.last_time).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : ""}
+                          {formatTime(u.last_time)}
                         </Typography>
                       </Box>
 
                       <Typography sx={msgText} noWrap>
                         {u.last_sender === "me" && (
-                          <span style={{ color: "#00d2ff", fontWeight: 700 }}>
-                            You:{" "}
-                          </span>
+                          <span style={{ color: "#00d2ff" }}>You: </span>
                         )}
                         {u.last_message}
                       </Typography>
@@ -161,7 +201,7 @@ export default function OwnerChatList() {
                 </motion.div>
               ))
             ) : (
-              <Typography sx={{ textAlign: "center", color: "#fff", mt: 10 }}>
+              <Typography sx={emptyState}>
                 No conversations yet.
               </Typography>
             )}
@@ -179,7 +219,6 @@ const mainContainer = {
   background:
     "radial-gradient(circle at top left, #1a2a6c, #b21f1f, #fdbb2d)",
   pt: 6,
-  pb: 10,
 };
 
 const loaderContainer = {
@@ -210,6 +249,12 @@ const chatCard = {
   borderRadius: "20px",
   cursor: "pointer",
   background: "rgba(255,255,255,0.08)",
+  backdropFilter: "blur(10px)",
+  transition: "0.3s",
+  "&:hover": {
+    transform: "translateY(-4px)",
+    background: "rgba(255,255,255,0.12)",
+  },
 };
 
 const avatarStyle = {
@@ -250,13 +295,15 @@ const unreadBadge = {
 };
 
 const onlineBadge = {
-  "& .MuiBadge-badge": {
-    backgroundColor: "#44b700",
-  },
+  "& .MuiBadge-badge": { backgroundColor: "#44b700" },
 };
 
 const offlineBadge = {
-  "& .MuiBadge-badge": {
-    backgroundColor: "#999",
-  },
+  "& .MuiBadge-badge": { backgroundColor: "#999" },
+};
+
+const emptyState = {
+  textAlign: "center",
+  color: "#fff",
+  mt: 10,
 };

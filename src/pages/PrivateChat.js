@@ -20,19 +20,14 @@ export default function PrivateChat() {
   const [otherUser, setOtherUser] = useState(null);
   const [text, setText] = useState("");
   const [typing, setTyping] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  /* ================= SCROLL ================= */
   const scrollBottom = () =>
-    setTimeout(
-      () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
-      100
-    );
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
 
-  /* ================= LOAD DATA ================= */
+  /* ================= LOAD ================= */
   useEffect(() => {
-    let unsubscribe;
-
-    unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+    const unsub = onAuthStateChanged(auth, async (fbUser) => {
       if (!fbUser) return navigate("/login");
 
       try {
@@ -48,42 +43,30 @@ export default function PrivateChat() {
         setMe(meRes.data);
         setOtherUser(userRes.data);
         setMessages(msgRes.data);
+        setLoading(false);
 
-        /* SOCKET CONNECT */
         if (!socket.connected) socket.connect();
 
-        /* REGISTER USER */
         socket.emit("register", fbUser.uid);
 
-        /* JOIN ROOM */
         socket.emit("join_private_room", {
-          userA: meRes.data.id,
-          userB: userId,
-        });
-
-        /* MARK AS READ */
-        socket.emit("mark_messages_read", {
           userA: meRes.data.id,
           userB: userId,
         });
 
         scrollBottom();
       } catch (err) {
-        console.error("Chat load failed", err);
+        console.error(err);
       }
     });
 
     return () => {
-      unsubscribe?.();
-      socket.emit("leave_private_room", {
-        userA: me?.id,
-        userB: userId,
-      });
+      unsub?.();
       socket.disconnect();
     };
   }, [userId]);
 
-  /* ================= SOCKET LISTENERS ================= */
+  /* ================= SOCKET ================= */
   useEffect(() => {
     socket.on("receive_private_message", (msg) => {
       setMessages((prev) => [...prev, msg]);
@@ -96,9 +79,7 @@ export default function PrivateChat() {
       );
     });
 
-    socket.on("user_typing", ({ isTyping }) => {
-      setTyping(isTyping);
-    });
+    socket.on("user_typing", ({ isTyping }) => setTyping(isTyping));
 
     return () => {
       socket.off("receive_private_message");
@@ -107,100 +88,175 @@ export default function PrivateChat() {
     };
   }, []);
 
-  /* ================= SEND MESSAGE ================= */
+  /* ================= SEND ================= */
   const sendMessage = async () => {
     if (!text.trim()) return;
 
-    try {
-      const token = await auth.currentUser.getIdToken();
+    const token = await auth.currentUser.getIdToken();
 
-      const res = await api.post(
-        "/private-chat/send",
-        { receiver_id: userId, message: text },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+    const res = await api.post(
+      "/private-chat/send",
+      { receiver_id: userId, message: text },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-      socket.emit("send_private_message", res.data);
+    socket.emit("send_private_message", res.data);
 
-      setMessages((prev) => [...prev, { ...res.data, status: "✔" }]);
-      setText("");
-      scrollBottom();
-    } catch (err) {
-      console.error("Send failed", err);
-    }
-  };
-
-  /* ================= TYPING ================= */
-  const handleTyping = (value) => {
-    setText(value);
-
-    socket.emit("typing", {
-      userA: me?.id,
-      userB: userId,
-      isTyping: true,
-    });
-
-    setTimeout(() => {
-      socket.emit("typing", {
-        userA: me?.id,
-        userB: userId,
-        isTyping: false,
-      });
-    }, 1000);
+    setMessages((prev) => [...prev, { ...res.data, status: "✔" }]);
+    setText("");
+    scrollBottom();
   };
 
   /* ================= UI ================= */
+
+  if (loading) return <div style={styles.loader}>Loading chat...</div>;
+
   return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+    <div style={styles.container}>
       {/* HEADER */}
-      <div style={{ background: "#4f46e5", color: "#fff", padding: 12 }}>
-        <span onClick={() => navigate(-1)} style={{ cursor: "pointer" }}>
+      <div style={styles.header}>
+        <span onClick={() => navigate(-1)} style={styles.back}>
           ←
         </span>
-        <b style={{ marginLeft: 10 }}>{otherUser?.name}</b>
+        <div>
+          <div style={styles.name}>{otherUser?.name}</div>
+          <div style={styles.status}>online</div>
+        </div>
       </div>
 
       {/* MESSAGES */}
-      <div style={{ flex: 1, overflowY: "auto", padding: 15 }}>
+      <div style={styles.chatBody}>
         {messages.map((m) => (
           <div
             key={m.id}
             style={{
-              textAlign: m.sender_id === me?.id ? "right" : "left",
-              marginBottom: 10,
+              ...styles.msgRow,
+              justifyContent:
+                m.sender_id === me?.id ? "flex-end" : "flex-start",
             }}
           >
-            <span
+            <div
               style={{
-                background: "#fff",
-                padding: 10,
-                borderRadius: 10,
-                display: "inline-block",
+                ...styles.bubble,
+                background:
+                  m.sender_id === me?.id
+                    ? "linear-gradient(135deg,#667eea,#764ba2)"
+                    : "#fff",
+                color: m.sender_id === me?.id ? "#fff" : "#000",
               }}
             >
               {m.message}
+
               {m.sender_id === me?.id && (
-                <div style={{ fontSize: 10 }}>{m.status || "✔"}</div>
+                <div style={styles.tick}>{m.status || "✔"}</div>
               )}
-            </span>
+            </div>
           </div>
         ))}
 
-        {typing && <div>Typing...</div>}
+        {typing && <div style={styles.typing}>Typing...</div>}
 
         <div ref={bottomRef} />
       </div>
 
       {/* INPUT */}
-      <div style={{ display: "flex", padding: 10 }}>
+      <div style={styles.inputArea}>
         <input
           value={text}
-          onChange={(e) => handleTyping(e.target.value)}
-          style={{ flex: 1 }}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Type a message..."
+          style={styles.input}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
         />
-        <button onClick={sendMessage}>Send</button>
+        <button onClick={sendMessage} style={styles.sendBtn}>
+          ➤
+        </button>
       </div>
     </div>
   );
 }
+
+/* ================= STYLES ================= */
+
+const styles = {
+  container: {
+    height: "100vh",
+    display: "flex",
+    flexDirection: "column",
+    background: "#f1f5f9",
+  },
+
+  header: {
+    background: "linear-gradient(135deg,#667eea,#764ba2)",
+    color: "#fff",
+    padding: "12px 15px",
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  back: { cursor: "pointer", fontSize: 20 },
+
+  name: { fontWeight: "bold" },
+  status: { fontSize: 12, opacity: 0.8 },
+
+  chatBody: {
+    flex: 1,
+    overflowY: "auto",
+    padding: 15,
+  },
+
+  msgRow: { display: "flex", marginBottom: 10 },
+
+  bubble: {
+    padding: "10px 14px",
+    borderRadius: 15,
+    maxWidth: "70%",
+    position: "relative",
+  },
+
+  tick: {
+    fontSize: 10,
+    marginTop: 5,
+    textAlign: "right",
+    opacity: 0.8,
+  },
+
+  typing: {
+    fontSize: 12,
+    marginLeft: 10,
+    color: "#555",
+  },
+
+  inputArea: {
+    display: "flex",
+    padding: 10,
+    background: "#fff",
+    borderTop: "1px solid #eee",
+  },
+
+  input: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 25,
+    border: "1px solid #ddd",
+    outline: "none",
+  },
+
+  sendBtn: {
+    marginLeft: 10,
+    background: "linear-gradient(135deg,#667eea,#764ba2)",
+    color: "#fff",
+    border: "none",
+    padding: "0 18px",
+    borderRadius: "50%",
+    cursor: "pointer",
+  },
+
+  loader: {
+    height: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+};
