@@ -133,10 +133,8 @@ export default function PrivateChat() {
 
   if (loading) return <div style={styles.loader}>Loading chat...</div>;
 
-  /* ================= HEADER NAME LOGIC ================= */
-  const headerTitle = otherUser?.pg_name
-    ? `${otherUser.pg_name} • ${otherUser.name}`
-    : otherUser?.name;
+  /* ✅ SHOW ONLY ROLE-BASED NAME FROM BACKEND */
+  const headerTitle = otherUser?.name || "Chat";
 
   /* ================= UI ================= */
   return (
