@@ -19,6 +19,7 @@ const SOCKET_URL = "https://nepxall-backend.onrender.com";
 export default function OwnerChatList() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [onlineStatus, setOnlineStatus] = useState({});
   const navigate = useNavigate();
   const socketRef = useRef(null);
 
@@ -28,61 +29,80 @@ export default function OwnerChatList() {
 
       await loadChats();
 
-      // ✅ create socket once
+      // Create socket connection
       if (!socketRef.current) {
         socketRef.current = io(SOCKET_URL, {
           transports: ["websocket"],
+          autoConnect: true
         });
       }
 
       const socket = socketRef.current;
 
-      // ✅ REGISTER OWNER
+      // Register user with firebase UID
       socket.emit("register", user.uid);
 
-      // ✅ when new message comes → refresh list
-      socket.on("receive_private_message", loadChats);
-      socket.on("message_sent_confirmation", loadChats);
+      // Listen for new messages
+      socket.on("receive_private_message", (message) => {
+        console.log("📩 New message received:", message);
+        loadChats(); // Refresh chat list
+      });
 
-      // ✅ ONLINE USERS
+      socket.on("message_sent_confirmation", (message) => {
+        console.log("✅ Message sent confirmation:", message);
+        loadChats(); // Refresh chat list
+      });
+
+      // Listen for chat list updates
+      socket.on("chat_list_update", () => {
+        console.log("📋 Chat list update received");
+        loadChats();
+      });
+
+      // Online/Offline status
       socket.on("user_online", ({ userId }) => {
-        setUsers((prev) =>
-          prev.map((u) =>
-            u.firebase_uid === userId ? { ...u, online: true } : u
-          )
-        );
+        console.log("🟢 User online:", userId);
+        setOnlineStatus(prev => ({ ...prev, [userId]: true }));
       });
 
       socket.on("user_offline", ({ userId }) => {
-        setUsers((prev) =>
-          prev.map((u) =>
-            u.firebase_uid === userId ? { ...u, online: false } : u
-          )
-        );
+        console.log("🔴 User offline:", userId);
+        setOnlineStatus(prev => ({ ...prev, [userId]: false }));
       });
+
+      // Cleanup on unmount
+      return () => {
+        socket.off("receive_private_message");
+        socket.off("message_sent_confirmation");
+        socket.off("chat_list_update");
+        socket.off("user_online");
+        socket.off("user_offline");
+      };
     });
 
     return () => {
       unsubscribe();
-
       if (socketRef.current) {
-        socketRef.current.off("receive_private_message");
-        socketRef.current.off("message_sent_confirmation");
-        socketRef.current.off("user_online");
-        socketRef.current.off("user_offline");
+        socketRef.current.disconnect();
       }
     };
   }, []);
 
   const loadChats = async () => {
     try {
+      setLoading(true);
       const res = await api.get("/private-chat/list");
+      console.log("📋 Chat list loaded:", res.data);
       setUsers(res.data || []);
     } catch (err) {
       console.error("Failed to fetch chats:", err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const isUserOnline = (user) => {
+    return onlineStatus[user.firebase_uid] || false;
   };
 
   if (loading) {
@@ -120,7 +140,7 @@ export default function OwnerChatList() {
                     <Badge
                       overlap="circular"
                       variant="dot"
-                      sx={u.online ? onlineBadge : offlineBadge}
+                      sx={isUserOnline(u) ? onlineBadge : offlineBadge}
                     >
                       <Avatar sx={avatarStyle}>
                         {u.name?.charAt(0) || "U"}
@@ -150,12 +170,12 @@ export default function OwnerChatList() {
                             You:{" "}
                           </span>
                         )}
-                        {u.last_message}
+                        {u.last_message || "No messages yet"}
                       </Typography>
                     </Box>
 
-                    {u.unread > 0 && (
-                      <Box sx={unreadBadge}>{u.unread}</Box>
+                    {u.unread_count > 0 && (
+                      <Box sx={unreadBadge}>{u.unread_count}</Box>
                     )}
                   </Box>
                 </motion.div>
@@ -210,6 +230,11 @@ const chatCard = {
   borderRadius: "20px",
   cursor: "pointer",
   background: "rgba(255,255,255,0.08)",
+  transition: "all 0.3s ease",
+  "&:hover": {
+    background: "rgba(255,255,255,0.15)",
+    transform: "translateX(5px)",
+  },
 };
 
 const avatarStyle = {
@@ -229,6 +254,7 @@ const nameText = {
 const msgText = {
   fontSize: "0.85rem",
   color: "rgba(255,255,255,0.7)",
+  maxWidth: "200px",
 };
 
 const timeText = {
@@ -247,16 +273,41 @@ const unreadBadge = {
   fontSize: "0.7rem",
   fontWeight: 800,
   color: "#fff",
+  ml: 1,
 };
 
 const onlineBadge = {
   "& .MuiBadge-badge": {
     backgroundColor: "#44b700",
+    color: "#44b700",
+    boxShadow: "0 0 0 2px #fff",
+    "&::after": {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: "100%",
+      borderRadius: "50%",
+      animation: "ripple 1.2s infinite ease-in-out",
+      border: "1px solid currentColor",
+      content: '""',
+    },
+  },
+  "@keyframes ripple": {
+    "0%": {
+      transform: "scale(.8)",
+      opacity: 1,
+    },
+    "100%": {
+      transform: "scale(2.4)",
+      opacity: 0,
+    },
   },
 };
 
 const offlineBadge = {
   "& .MuiBadge-badge": {
     backgroundColor: "#999",
+    color: "#999",
   },
 };
