@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/api";
-import { io } from "socket.io-client";
+import socketManager from "../socket";
 import {
   Box,
   TextField,
@@ -12,143 +12,168 @@ import {
   Avatar,
   Paper,
   CircularProgress,
+  Alert,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-
-const SOCKET_URL = "https://nepxall-backend.onrender.com";
-const socket = io(SOCKET_URL, {
-  autoConnect: false,
-  transports: ["websocket"],
-});
 
 export default function PrivateChat() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const bottomRef = useRef();
   const typingTimeoutRef = useRef();
-
   const [messages, setMessages] = useState([]);
   const [me, setMe] = useState(null);
   const [otherUser, setOtherUser] = useState(null);
   const [text, setText] = useState("");
   const [typing, setTyping] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState(null);
+  const [connected, setConnected] = useState(false);
 
-  /* ================= SCROLL ================= */
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     setTimeout(() => {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 100);
-  };
+  }, []);
 
-  /* ================= LOAD DATA ================= */
+  const loadMessages = useCallback(async (token, userId) => {
+    try {
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const [meRes, userRes, msgRes] = await Promise.all([
+        api.get("/private-chat/me", config),
+        api.get(`/private-chat/user/${userId}`, config),
+        api.get(`/private-chat/messages/${userId}`, config),
+      ]);
+
+      setMe(meRes.data);
+      setOtherUser(userRes.data);
+      setMessages(msgRes.data);
+      
+      return meRes.data;
+    } catch (err) {
+      console.error("Failed to load messages:", err);
+      throw err;
+    }
+  }, []);
+
   useEffect(() => {
+    let mounted = true;
     let unsubscribe;
 
-    unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      if (!fbUser) return navigate("/login");
+    const initializeChat = async (fbUser) => {
+      if (!fbUser) {
+        navigate("/login");
+        return;
+      }
 
       try {
+        setLoading(true);
+        setError(null);
+
         const token = await fbUser.getIdToken();
-        const config = { headers: { Authorization: `Bearer ${token}` } };
+        const meData = await loadMessages(token, userId);
 
-        console.log("Loading chat data for user:", userId);
+        if (!mounted) return;
 
-        const [meRes, userRes, msgRes] = await Promise.all([
-          api.get("/private-chat/me", config),
-          api.get(`/private-chat/user/${userId}`, config),
-          api.get(`/private-chat/messages/${userId}`, config),
-        ]);
+        // Connect socket
+        const socket = socketManager.connect(fbUser.uid);
 
-        console.log("Me:", meRes.data);
-        console.log("Other user:", userRes.data);
-        console.log("Messages:", msgRes.data);
+        // Set up socket listeners
+        socketManager.on("connect", () => {
+          console.log("🟢 Socket connected in private chat");
+          setConnected(true);
+          
+          // Join room after connection
+          if (meData?.id && userId) {
+            console.log("🚪 Joining room:", meData.id, userId);
+            socketManager.emit("join_private_room", {
+              userA: meData.id,
+              userB: userId,
+            });
+          }
+        });
 
-        setMe(meRes.data);
-        setOtherUser(userRes.data);
-        setMessages(msgRes.data);
+        socketManager.on("disconnect", () => {
+          console.log("🔴 Socket disconnected in private chat");
+          setConnected(false);
+        });
+
+        socketManager.on("receive_private_message", (message) => {
+          console.log("📩 Received message:", message);
+          if (mounted && message.sender_id === parseInt(userId)) {
+            setMessages(prev => [...prev, message]);
+            scrollToBottom();
+          }
+        });
+
+        socketManager.on("message_sent_confirmation", (message) => {
+          console.log("✅ Message confirmed:", message);
+          if (mounted) {
+            setMessages(prev =>
+              prev.map(m => 
+                m.id === message.id ? { ...m, status: "delivered" } : m
+              )
+            );
+          }
+        });
+
+        socketManager.on("user_typing", ({ isTyping }) => {
+          if (mounted) {
+            setTyping(isTyping);
+          }
+        });
+
         setLoading(false);
-
-        /* SOCKET CONNECT */
-        if (!socket.connected) {
-          socket.connect();
-        }
-
-        /* REGISTER USER */
-        socket.emit("register", fbUser.uid);
-
-        /* JOIN ROOM */
-        setTimeout(() => {
-          socket.emit("join_private_room", {
-            userA: meRes.data.id,
-            userB: userId,
-          });
-          console.log("Joined room with:", meRes.data.id, userId);
-        }, 500);
-
         scrollToBottom();
+
       } catch (err) {
-        console.error("Chat load failed", err);
-        setLoading(false);
+        console.error("Chat initialization failed:", err);
+        if (mounted) {
+          setError("Failed to load chat. Please refresh the page.");
+          setLoading(false);
+        }
       }
-    });
+    };
+
+    unsubscribe = onAuthStateChanged(auth, initializeChat);
 
     return () => {
-      unsubscribe?.();
-      if (me) {
-        socket.emit("leave_private_room", {
+      mounted = false;
+      unsubscribe();
+      
+      // Clean up socket listeners
+      socketManager.off("connect");
+      socketManager.off("disconnect");
+      socketManager.off("receive_private_message");
+      socketManager.off("message_sent_confirmation");
+      socketManager.off("user_typing");
+      
+      // Leave room
+      if (me?.id && userId) {
+        socketManager.emit("leave_private_room", {
           userA: me.id,
           userB: userId,
         });
       }
+      
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
-      socket.disconnect();
     };
-  }, [userId]);
+  }, [userId, navigate, loadMessages, scrollToBottom]);
 
-  /* ================= SOCKET LISTENERS ================= */
-  useEffect(() => {
-    const handleReceiveMessage = (msg) => {
-      console.log("📩 Received message:", msg);
-      setMessages((prev) => [...prev, msg]);
-      scrollToBottom();
-    };
-
-    const handleMessageConfirmation = (msg) => {
-      console.log("✅ Message sent confirmation:", msg);
-      setMessages((prev) =>
-        prev.map((m) => (m.id === msg.id ? { ...m, status: "delivered" } : m))
-      );
-    };
-
-    const handleTyping = ({ isTyping }) => {
-      setTyping(isTyping);
-    };
-
-    socket.on("receive_private_message", handleReceiveMessage);
-    socket.on("message_sent_confirmation", handleMessageConfirmation);
-    socket.on("user_typing", handleTyping);
-
-    return () => {
-      socket.off("receive_private_message", handleReceiveMessage);
-      socket.off("message_sent_confirmation", handleMessageConfirmation);
-      socket.off("user_typing", handleTyping);
-    };
-  }, []);
-
-  /* ================= SEND MESSAGE ================= */
   const sendMessage = async () => {
-    if (!text.trim() || !me) return;
+    if (!text.trim() || !me || sending) return;
 
     const messageText = text.trim();
     setText("");
+    setSending(true);
 
     try {
       const token = await auth.currentUser.getIdToken();
-
+      
       const res = await api.post(
         "/private-chat/send",
         { receiver_id: userId, message: messageText },
@@ -157,25 +182,32 @@ export default function PrivateChat() {
 
       console.log("Message sent:", res.data);
 
-      // Emit via socket
-      socket.emit("send_private_message", res.data);
-
       // Add to local state
-      setMessages((prev) => [...prev, { ...res.data, status: "sent" }]);
+      const newMessage = { ...res.data, status: "sent" };
+      setMessages(prev => [...prev, newMessage]);
+
+      // Emit via socket
+      socketManager.emit("send_private_message", res.data);
+
       scrollToBottom();
     } catch (err) {
-      console.error("Send failed", err);
-      setText(messageText); // Restore text on error
+      console.error("Send failed:", err);
+      setError("Failed to send message. Please try again.");
+      setText(messageText); // Restore text
+      
+      // Clear error after 3 seconds
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setSending(false);
     }
   };
 
-  /* ================= TYPING ================= */
   const handleTyping = (value) => {
     setText(value);
 
     if (!me || !otherUser) return;
 
-    socket.emit("typing", {
+    socketManager.emit("typing", {
       userA: me.id,
       userB: userId,
       isTyping: true,
@@ -186,7 +218,7 @@ export default function PrivateChat() {
     }
 
     typingTimeoutRef.current = setTimeout(() => {
-      socket.emit("typing", {
+      socketManager.emit("typing", {
         userA: me.id,
         userB: userId,
         isTyping: false,
@@ -211,15 +243,17 @@ export default function PrivateChat() {
   if (loading) {
     return (
       <Box sx={loaderContainer}>
-        <CircularProgress />
+        <CircularProgress sx={{ color: "#667eea" }} />
+        <Typography sx={{ mt: 2, color: "#667eea" }}>
+          Loading chat...
+        </Typography>
       </Box>
     );
   }
 
-  /* ================= UI ================= */
   return (
     <Box sx={chatContainer}>
-      {/* HEADER */}
+      {/* Header */}
       <Box sx={header}>
         <IconButton onClick={() => navigate(-1)} sx={{ color: "#fff" }}>
           <ArrowBackIcon />
@@ -227,15 +261,33 @@ export default function PrivateChat() {
         <Avatar sx={headerAvatar}>
           {otherUser?.name?.charAt(0) || "U"}
         </Avatar>
-        <Box sx={{ ml: 1 }}>
+        <Box sx={{ ml: 1, flex: 1 }}>
           <Typography sx={headerName}>{otherUser?.name || "User"}</Typography>
-          <Typography sx={headerStatus}>
-            {typing ? "Typing..." : "Online"}
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <Box
+              sx={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                bgcolor: connected ? "#44b700" : "#ff4d4f",
+                mr: 1,
+              }}
+            />
+            <Typography sx={headerStatus}>
+              {typing ? "Typing..." : (connected ? "Online" : "Offline")}
+            </Typography>
+          </Box>
         </Box>
       </Box>
 
-      {/* MESSAGES */}
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ m: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
+      {/* Messages */}
       <Box sx={messagesContainer}>
         {messages.map((msg, index) => {
           const isMe = msg.sender_id === me?.id;
@@ -259,9 +311,12 @@ export default function PrivateChat() {
                   borderRadius: isMe
                     ? "20px 20px 5px 20px"
                     : "20px 20px 20px 5px",
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
                 }}
               >
-                <Typography variant="body1">{msg.message}</Typography>
+                <Typography variant="body1" sx={{ wordWrap: "break-word" }}>
+                  {msg.message}
+                </Typography>
                 <Typography
                   variant="caption"
                   sx={{
@@ -282,17 +337,23 @@ export default function PrivateChat() {
             </Box>
           );
         })}
+        
         {typing && (
           <Box sx={{ display: "flex", justifyContent: "flex-start", mb: 2 }}>
-            <Paper sx={{ p: 2, background: "#f0f0f0" }}>
-              <Typography>Typing...</Typography>
+            <Paper sx={{ p: 2, background: "#f0f0f0", borderRadius: "20px" }}>
+              <Typography sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                <span>●</span>
+                <span>●</span>
+                <span>●</span>
+              </Typography>
             </Paper>
           </Box>
         )}
+        
         <div ref={bottomRef} />
       </Box>
 
-      {/* INPUT */}
+      {/* Input */}
       <Box sx={inputContainer}>
         <TextField
           fullWidth
@@ -301,14 +362,15 @@ export default function PrivateChat() {
           value={text}
           onChange={(e) => handleTyping(e.target.value)}
           onKeyPress={handleKeyPress}
-          placeholder="Type a message..."
+          placeholder={connected ? "Type a message..." : "Connecting..."}
           variant="outlined"
           size="small"
+          disabled={!connected || sending}
           sx={inputField}
         />
         <IconButton
           onClick={sendMessage}
-          disabled={!text.trim()}
+          disabled={!text.trim() || !connected || sending}
           sx={sendButton}
         >
           <SendIcon />
@@ -330,8 +392,10 @@ const chatContainer = {
 const loaderContainer = {
   height: "100vh",
   display: "flex",
+  flexDirection: "column",
   justifyContent: "center",
   alignItems: "center",
+  background: "#f5f5f5",
 };
 
 const header = {
@@ -379,6 +443,7 @@ const inputContainer = {
 const inputField = {
   "& .MuiOutlinedInput-root": {
     borderRadius: "25px",
+    backgroundColor: "#f5f5f5",
   },
 };
 
