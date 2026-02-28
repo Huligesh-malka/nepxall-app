@@ -19,25 +19,62 @@ const ADMIN_BASE_URL =
 console.log("🌐 API CONFIG →", { USER_BASE_URL, ADMIN_BASE_URL });
 
 /* =====================================================
+   🔥 BACKEND WAKEUP SYSTEM
+===================================================== */
+
+let backendReady = false;
+let wakePromise = null;
+
+const wakeBackend = async () => {
+  if (backendReady) return;
+
+  if (!wakePromise) {
+    console.log("⏳ Waking backend...");
+
+    wakePromise = new Promise(async (resolve) => {
+      const start = Date.now();
+
+      while (Date.now() - start < 120000) {
+        try {
+          await fetch(`${USER_BASE_URL}/health`);
+          backendReady = true;
+          console.log("✅ Backend awake");
+          resolve(true);
+          return;
+        } catch {
+          console.log("⌛ waiting for backend...");
+          await new Promise((r) => setTimeout(r, 4000));
+        }
+      }
+
+      console.error("❌ Backend wake failed");
+      resolve(false);
+    });
+  }
+
+  return wakePromise;
+};
+
+/* =====================================================
    🚀 AXIOS FACTORY
 ===================================================== */
 
 const createApi = (baseURL) => {
   const api = axios.create({
     baseURL,
-    timeout: 60000,
-    withCredentials: false,
+    timeout: 120000,
   });
 
   /* ================= REQUEST ================= */
 
   api.interceptors.request.use(async (config) => {
+    await wakeBackend();
+
     try {
       console.log("📡", `${baseURL}${config.url}`);
 
       const user = auth.currentUser;
 
-      // ✅ DO NOT WAIT FOR FIREBASE
       if (user) {
         const token = await user.getIdToken();
         config.headers.Authorization = `Bearer ${token}`;
@@ -56,28 +93,28 @@ const createApi = (baseURL) => {
     async (error) => {
       if (!error.response) {
         console.error("🌐 Backend unreachable:", baseURL);
+        backendReady = false; // force re-wake
         return Promise.reject(error);
       }
 
       const originalRequest = error.config;
 
-      /* 🔁 RETRY ON 401 ONCE */
+      /* 🔁 RETRY ON 401 */
       if (error.response.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
 
         try {
           const user = auth.currentUser;
+
           if (user) {
             const newToken = await user.getIdToken(true);
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
             return api(originalRequest);
           }
-        } catch (err) {
-          console.warn("🔐 Re-auth failed");
+        } catch {
+          await auth.signOut();
+          window.location.href = "/login";
         }
-
-        await auth.signOut();
-        window.location.href = "/login";
       }
 
       if (error.response.status >= 500) {
