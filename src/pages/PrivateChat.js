@@ -51,8 +51,8 @@ export default function PrivateChat() {
         socket.emit("register", fbUser.uid);
 
         socket.emit("join_private_room", {
-          userA: meRes.data.id,
-          userB: userId,
+          userA: Number(meRes.data.id),
+          userB: Number(userId),
         });
 
         scrollBottom();
@@ -65,7 +65,7 @@ export default function PrivateChat() {
       unsub?.();
       socket.disconnect();
     };
-  }, [userId]);
+  }, [userId, navigate]);
 
   /* ================= SOCKET ================= */
   useEffect(() => {
@@ -101,7 +101,7 @@ export default function PrivateChat() {
 
     const res = await api.post(
       "/private-chat/send",
-      { receiver_id: userId, message: text },
+      { receiver_id: Number(userId), message: text },
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
@@ -118,20 +118,25 @@ export default function PrivateChat() {
 
     socket.emit("typing", {
       userA: me?.id,
-      userB: userId,
+      userB: Number(userId),
       isTyping: true,
     });
 
     setTimeout(() => {
       socket.emit("typing", {
         userA: me?.id,
-        userB: userId,
+        userB: Number(userId),
         isTyping: false,
       });
     }, 800);
   };
 
   if (loading) return <div style={styles.loader}>Loading chat...</div>;
+
+  /* ================= HEADER NAME LOGIC ================= */
+  const headerTitle = otherUser?.pg_name
+    ? `${otherUser.pg_name} • ${otherUser.name}`
+    : otherUser?.name;
 
   /* ================= UI ================= */
   return (
@@ -141,12 +146,7 @@ export default function PrivateChat() {
         <span onClick={() => navigate(-1)} style={styles.back}>←</span>
 
         <div>
-          <div style={styles.name}>
-            {otherUser?.pg_name
-              ? `${otherUser.pg_name} • ${otherUser.name}`
-              : otherUser?.name}
-          </div>
-
+          <div style={styles.name}>{headerTitle}</div>
           <div style={styles.status}>
             {online ? "🟢 online" : "⚪ offline"}
           </div>
