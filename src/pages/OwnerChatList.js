@@ -143,3 +143,94 @@ export default function OwnerChatList() {
     </Box>
   );
 }
+
+
+
+// ================= STYLES =================
+
+const mainContainer = {
+  minHeight: "100vh",
+  background: "radial-gradient(circle at top left, #1a2a6c, #b21f1f, #fdbb2d)",
+  pt: 6,
+  pb: 10,
+};
+
+const loaderContainer = {
+  height: "100vh",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  background: "#0f0c29",
+};
+
+const headerTitle = {
+  fontSize: "2.2rem",
+  fontWeight: 800,
+  color: "#fff",
+};
+
+const subTitle = {
+  fontSize: "0.9rem",
+  color: "rgba(255,255,255,0.6)",
+};
+
+const chatCard = {
+  display: "flex",
+  alignItems: "center",
+  gap: 2,
+  p: "18px",
+  mb: 2,
+  borderRadius: "20px",
+  cursor: "pointer",
+  background: "rgba(255,255,255,0.08)",
+};
+
+const avatarStyle = {
+  width: 55,
+  height: 55,
+  fontSize: "1.2rem",
+  fontWeight: 700,
+  background: "linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)",
+};
+
+const nameText = {
+  fontSize: "1.05rem",
+  fontWeight: 700,
+  color: "#fff",
+};
+
+const msgText = {
+  fontSize: "0.85rem",
+  color: "rgba(255,255,255,0.7)",
+};
+
+const timeText = {
+  fontSize: "0.7rem",
+  color: "rgba(255,255,255,0.4)",
+};
+
+const unreadBadge = {
+  background: "#ff4d4f",
+  minWidth: "22px",
+  height: "22px",
+  borderRadius: "11px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "0.7rem",
+  fontWeight: 800,
+  color: "#fff",
+};
+
+const onlineBadge = {
+  "& .MuiBadge-badge": {
+    backgroundColor: "#44b700",
+    color: "#44b700",
+  },
+};
+
+const offlineBadge = {
+  "& .MuiBadge-badge": {
+    backgroundColor: "#999",
+  },
+};
