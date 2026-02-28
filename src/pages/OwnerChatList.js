@@ -1,5 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { Box, Typography, Avatar, Badge, CircularProgress, Container } from "@mui/material";
+import React, { useEffect, useState, useRef } from "react";
+import {
+  Box,
+  Typography,
+  Avatar,
+  Badge,
+  CircularProgress,
+  Container,
+} from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -7,51 +14,65 @@ import api from "../api/api";
 import { io } from "socket.io-client";
 import { motion, AnimatePresence } from "framer-motion";
 
-const socket = io("https://nepxall-backend.onrender.com", {
-  autoConnect: false,
-});
+const SOCKET_URL = "https://nepxall-backend.onrender.com";
 
 export default function OwnerChatList() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const socketRef = useRef(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) init(user);
-      else navigate("/login");
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) return navigate("/login");
+
+      await loadChats();
+
+      // ✅ create socket once
+      if (!socketRef.current) {
+        socketRef.current = io(SOCKET_URL, {
+          transports: ["websocket"],
+        });
+      }
+
+      const socket = socketRef.current;
+
+      // ✅ REGISTER OWNER
+      socket.emit("register", user.uid);
+
+      // ✅ when new message comes → refresh list
+      socket.on("receive_private_message", loadChats);
+      socket.on("message_sent_confirmation", loadChats);
+
+      // ✅ ONLINE USERS
+      socket.on("user_online", ({ userId }) => {
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.firebase_uid === userId ? { ...u, online: true } : u
+          )
+        );
+      });
+
+      socket.on("user_offline", ({ userId }) => {
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.firebase_uid === userId ? { ...u, online: false } : u
+          )
+        );
+      });
     });
 
     return () => {
       unsubscribe();
-      socket.disconnect();
+
+      if (socketRef.current) {
+        socketRef.current.off("receive_private_message");
+        socketRef.current.off("message_sent_confirmation");
+        socketRef.current.off("user_online");
+        socketRef.current.off("user_offline");
+      }
     };
   }, []);
-
-  const init = async (firebaseUser) => {
-    await loadChats();
-
-    if (!socket.connected) socket.connect();
-
-    // ⭐ REGISTER OWNER
-    socket.emit("register", firebaseUser.uid);
-
-    // ⭐ LIVE CHAT LIST UPDATE
-    socket.on("chat_list_update", loadChats);
-
-    // ⭐ ONLINE USERS
-    socket.on("user_online", ({ userId }) => {
-      setUsers((prev) =>
-        prev.map((u) => (u.firebase_uid === userId ? { ...u, online: true } : u))
-      );
-    });
-
-    socket.on("user_offline", ({ userId }) => {
-      setUsers((prev) =>
-        prev.map((u) => (u.firebase_uid === userId ? { ...u, online: false } : u))
-      );
-    });
-  };
 
   const loadChats = async () => {
     try {
@@ -75,9 +96,11 @@ export default function OwnerChatList() {
   return (
     <Box sx={mainContainer}>
       <Container maxWidth="sm">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <Typography sx={headerTitle}>Messages</Typography>
-          <Typography sx={subTitle}>{users.length} Active Conversations</Typography>
+          <Typography sx={subTitle}>
+            {users.length} Active Conversations
+          </Typography>
         </motion.div>
 
         <Box sx={{ mt: 4 }}>
@@ -96,7 +119,6 @@ export default function OwnerChatList() {
                   >
                     <Badge
                       overlap="circular"
-                      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
                       variant="dot"
                       sx={u.online ? onlineBadge : offlineBadge}
                     >
@@ -106,7 +128,11 @@ export default function OwnerChatList() {
                     </Badge>
 
                     <Box sx={{ flex: 1, ml: 1 }}>
-                      <Box display="flex" justifyContent="space-between">
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                        alignItems="center"
+                      >
                         <Typography sx={nameText}>{u.name}</Typography>
                         <Typography sx={timeText}>
                           {u.last_time
@@ -128,7 +154,9 @@ export default function OwnerChatList() {
                       </Typography>
                     </Box>
 
-                    {u.unread > 0 && <Box sx={unreadBadge}>{u.unread}</Box>}
+                    {u.unread > 0 && (
+                      <Box sx={unreadBadge}>{u.unread}</Box>
+                    )}
                   </Box>
                 </motion.div>
               ))
@@ -144,13 +172,12 @@ export default function OwnerChatList() {
   );
 }
 
-
-
-// ================= STYLES =================
+/* ================= STYLES ================= */
 
 const mainContainer = {
   minHeight: "100vh",
-  background: "radial-gradient(circle at top left, #1a2a6c, #b21f1f, #fdbb2d)",
+  background:
+    "radial-gradient(circle at top left, #1a2a6c, #b21f1f, #fdbb2d)",
   pt: 6,
   pb: 10,
 };
@@ -225,7 +252,6 @@ const unreadBadge = {
 const onlineBadge = {
   "& .MuiBadge-badge": {
     backgroundColor: "#44b700",
-    color: "#44b700",
   },
 };
 
