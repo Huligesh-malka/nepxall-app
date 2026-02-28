@@ -1,4 +1,4 @@
-// src/socket.js - CREATE THIS NEW FILE
+// src/socket.js
 import { io } from "socket.io-client";
 
 const SOCKET_URL = "https://nepxall-backend.onrender.com";
@@ -41,6 +41,8 @@ class SocketManager {
   }
 
   setupListeners() {
+    if (!this.socket) return;
+
     this.socket.on("connect", () => {
       console.log("🟢 Socket connected successfully:", this.socket.id);
       this.connected = true;
@@ -54,7 +56,7 @@ class SocketManager {
     this.socket.on("connect_error", (error) => {
       console.error("🔴 Socket connection error:", error.message);
       
-      if (this.socket.io.opts.transports[0] === "websocket") {
+      if (this.socket && this.socket.io?.opts?.transports[0] === "websocket") {
         console.log("🔄 Falling back to polling transport");
         this.socket.io.opts.transports = ["polling", "websocket"];
       }
@@ -66,7 +68,7 @@ class SocketManager {
       
       if (reason === "io server disconnect" || reason === "transport close") {
         setTimeout(() => {
-          if (this.userId) {
+          if (this.userId && this.socket) {
             this.socket.connect();
           }
         }, 1000);
@@ -84,7 +86,7 @@ class SocketManager {
   }
 
   on(event, callback) {
-    if (!this.socket) return;
+    if (!this.socket) return this;
     
     if (this.eventHandlers.has(event)) {
       this.socket.off(event, this.eventHandlers.get(event));
@@ -92,15 +94,17 @@ class SocketManager {
     
     this.eventHandlers.set(event, callback);
     this.socket.on(event, callback);
+    return this;
   }
 
   off(event) {
-    if (!this.socket) return;
+    if (!this.socket) return this;
     
     if (this.eventHandlers.has(event)) {
       this.socket.off(event, this.eventHandlers.get(event));
       this.eventHandlers.delete(event);
     }
+    return this;
   }
 
   emit(event, data) {
@@ -129,5 +133,6 @@ class SocketManager {
   }
 }
 
+// Create and export singleton instance
 const socketManager = new SocketManager();
 export default socketManager;
