@@ -1,5 +1,7 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "./firebase";
 
 /* LAYOUTS */
 import MainLayout from "./layouts/MainLayout";
@@ -23,11 +25,6 @@ import UserActiveStay from "./pages/UserActiveStay";
 import AadhaarKyc from "./pages/AadhaarKyc";
 import VisitSchedulePage from "./pages/VisitSchedulePage";
 import PublicAgreementPage from "./pages/PublicAgreementPage";
-
-/* CASHFREE REQUIRED PAGES */
-import Contact from "./pages/Contact";
-import Terms from "./pages/Terms";
-import RefundPolicy from "./pages/RefundPolicy";
 
 /* CHAT */
 import PrivateChat from "./pages/PrivateChat";
@@ -63,23 +60,33 @@ import SettlementHistory from "./pages/admin/SettlementHistory";
 import { testBackendConnection } from "./config";
 
 function App() {
+  const [user, setUser] = useState(undefined);
 
   useEffect(() => {
-    testBackendConnection().then((result) => {
-      if (result.success) console.log("✅ Backend connected");
-      else console.error("❌ Backend error:", result.error);
-    });
+    testBackendConnection().then((r) =>
+      r.success
+        ? console.log("✅ Backend connected")
+        : console.error("❌ Backend error:", r.error)
+    );
+
+    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
+    return unsub;
   }, []);
+
+  /* ⏳ WAIT FOR AUTH */
+  if (user === undefined) return null;
+
+  const PrivateRoute = ({ children }) =>
+    user ? children : <Navigate to="/login" replace />;
 
   return (
     <Routes>
-
       {/* ================= AUTH ================= */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
       {/* ================= USER ================= */}
-      <Route element={<MainLayout />}>
+      <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
 
         <Route index element={<UserPGSearch />} />
         <Route path="pg/:id" element={<PGDetails />} />
@@ -97,15 +104,10 @@ function App() {
         {/* CHAT */}
         <Route path="chat/private/:userId" element={<PrivateChat />} />
 
-        {/* ✅ CASHFREE POLICY PAGES */}
-        <Route path="contact" element={<Contact />} />
-        <Route path="terms" element={<Terms />} />
-        <Route path="refund-policy" element={<RefundPolicy />} />
-
       </Route>
 
       {/* ================= OWNER ================= */}
-      <Route path="/owner" element={<OwnerLayout />}>
+      <Route path="/owner" element={<PrivateRoute><OwnerLayout /></PrivateRoute>}>
 
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<OwnerDashboard />} />
@@ -123,15 +125,15 @@ function App() {
         <Route path="reviews/:pgId" element={<OwnerReviewReply />} />
         <Route path="property/:propertyId/plans" element={<CreatePlan />} />
         <Route path="notifications" element={<OwnerNotifications />} />
-        
-        {/* CHAT ROUTES - Updated */}
+
+        {/* CHAT */}
         <Route path="chats" element={<OwnerChatList />} />
         <Route path="chat/private/:userId" element={<PrivateChat />} />
 
       </Route>
 
       {/* ================= ADMIN ================= */}
-      <Route path="/admin" element={<AdminLayout />}>
+      <Route path="/admin" element={<PrivateRoute><AdminLayout /></PrivateRoute>}>
 
         <Route index element={<Navigate to="finance" replace />} />
         <Route path="finance" element={<AdminFinanceDashboard />} />
@@ -145,7 +147,6 @@ function App() {
 
       {/* ================= FALLBACK ================= */}
       <Route path="*" element={<Navigate to="/" replace />} />
-
     </Routes>
   );
 }
