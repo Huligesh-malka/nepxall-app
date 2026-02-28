@@ -198,14 +198,21 @@ const UserBookingHistory = () => {
                     🏠 View PG
                   </button>
 
-                  <button
-                    style={chatBtn}
-                    onClick={() =>
-                      navigate(`/chat/private/${b.owner_id}`)
-                    }
-                  >
-                    💬 Chat Owner
-                  </button>
+                 <button
+  style={chatBtn}
+  onClick={() => {
+    console.log("OWNER ID →", b.owner_id); // 🔍 debug
+
+    if (!b.owner_id) {
+      alert("Owner not available for chat");
+      return;
+    }
+
+    navigate(`/chat/private/${b.owner_id}`);
+  }}
+>
+  💬 Chat Owner
+</button>
 
                   <button
                     style={agreementBtn}
