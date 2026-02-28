@@ -31,6 +31,7 @@ export default function PrivateChat() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
   const [connected, setConnected] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
@@ -41,11 +42,16 @@ export default function PrivateChat() {
   const loadMessages = useCallback(async (token, userId) => {
     try {
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      const [meRes, userRes, msgRes] = await Promise.all([
-        api.get("/private-chat/me", config),
-        api.get(`/private-chat/user/${userId}`, config),
-        api.get(`/private-chat/messages/${userId}`, config),
-      ]);
+      
+      // Fix: Use correct endpoints
+      console.log("📡 Loading me data...");
+      const meRes = await api.get("/private-chat/me", config);
+      
+      console.log("📡 Loading other user...");
+      const userRes = await api.get(`/private-chat/user/${userId}`, config);
+      
+      console.log("📡 Loading messages...");
+      const msgRes = await api.get(`/private-chat/messages/${userId}`, config);
 
       console.log("👤 Me:", meRes.data);
       console.log("👤 Other user:", userRes.data);
@@ -53,11 +59,11 @@ export default function PrivateChat() {
 
       setMe(meRes.data);
       setOtherUser(userRes.data);
-      setMessages(msgRes.data);
+      setMessages(msgRes.data || []);
       
       return meRes.data;
     } catch (err) {
-      console.error("Failed to load messages:", err);
+      console.error("❌ Failed to load messages:", err);
       throw err;
     }
   }, []);
@@ -79,17 +85,19 @@ export default function PrivateChat() {
         const token = await fbUser.getIdToken();
         const meData = await loadMessages(token, userId);
 
-        if (!mounted) return;
+        if (!mounted || !meData) return;
 
-        // Connect socket with both Firebase UID and database ID
+        console.log("🔌 Connecting socket with:", { 
+          firebaseUid: fbUser.uid, 
+          databaseId: meData.id 
+        });
+        
         socketManager.connect(fbUser.uid, meData.id);
 
-        // Set up socket listeners
         socketManager.on("connect", () => {
-          console.log("🟢 Socket connected in private chat");
+          console.log("🟢 Socket connected");
           setConnected(true);
           
-          // Join room after connection
           if (meData?.id && userId) {
             console.log("🚪 Joining room:", { userA: meData.id, userB: userId });
             socketManager.emit("join_private_room", {
@@ -100,7 +108,7 @@ export default function PrivateChat() {
         });
 
         socketManager.on("disconnect", () => {
-          console.log("🔴 Socket disconnected in private chat");
+          console.log("🔴 Socket disconnected");
           setConnected(false);
         });
 
@@ -108,7 +116,6 @@ export default function PrivateChat() {
           console.log("📩 Received message:", message);
           if (mounted) {
             setMessages(prev => {
-              // Check if message already exists
               const exists = prev.some(m => m.id === message.id);
               if (exists) return prev;
               return [...prev, message];
@@ -138,7 +145,7 @@ export default function PrivateChat() {
         scrollToBottom();
 
       } catch (err) {
-        console.error("Chat initialization failed:", err);
+        console.error("❌ Chat initialization failed:", err);
         if (mounted) {
           setError("Failed to load chat. Please refresh the page.");
           setLoading(false);
@@ -169,33 +176,38 @@ export default function PrivateChat() {
         clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [userId, navigate, loadMessages, scrollToBottom, otherUser?.id]);
+  }, [userId, navigate, loadMessages, scrollToBottom]);
 
   const sendMessage = async () => {
     if (!text.trim() || !me || sending) {
-      console.log("Cannot send:", { text: text.trim(), me, sending });
+      console.log("❌ Cannot send:", { text: text.trim(), me: !!me, sending });
       return;
     }
 
     const messageText = text.trim();
-    const currentText = text;
     setText("");
     setSending(true);
 
     try {
       const token = await auth.currentUser.getIdToken();
       
-      console.log("📤 Sending message:", { receiver_id: userId, message: messageText });
+      console.log("📤 Sending message to API:", { 
+        receiver_id: userId, 
+        message: messageText 
+      });
       
+      // Fix: Use correct endpoint
       const res = await api.post(
-        "/private-chat/send",
-        { receiver_id: userId, message: messageText },
+        "/private-chat/send",  // ✅ Correct endpoint
+        { 
+          receiver_id: userId, 
+          message: messageText 
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       console.log("✅ Message sent to API:", res.data);
 
-      // Add sender's Firebase UID and receiver's Firebase UID to the message
       const messageWithIds = {
         ...res.data,
         sender_firebase_uid: me.firebase_uid,
@@ -203,10 +215,8 @@ export default function PrivateChat() {
         status: "sent"
       };
 
-      // Add to local state immediately
       setMessages(prev => [...prev, messageWithIds]);
-
-      // Emit via socket
+      
       console.log("📤 Emitting via socket:", messageWithIds);
       socketManager.emit("send_private_message", messageWithIds);
 
@@ -214,7 +224,7 @@ export default function PrivateChat() {
     } catch (err) {
       console.error("❌ Send failed:", err);
       setError("Failed to send message. Please try again.");
-      setText(currentText); // Restore text
+      setText(messageText);
       
       setTimeout(() => setError(null), 3000);
     } finally {
@@ -227,20 +237,19 @@ export default function PrivateChat() {
 
     if (!me || !otherUser) return;
 
-    // Clear previous timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Emit typing start
-    socketManager.emit("typing", {
-      userA: me.id,
-      userB: userId,
-      userId: me.id,
-      isTyping: true,
-    });
+    if (value.trim()) {
+      socketManager.emit("typing", {
+        userA: me.id,
+        userB: userId,
+        userId: me.id,
+        isTyping: true,
+      });
+    }
 
-    // Set timeout to emit typing stop
     typingTimeoutRef.current = setTimeout(() => {
       socketManager.emit("typing", {
         userA: me.id,
@@ -314,54 +323,62 @@ export default function PrivateChat() {
 
       {/* Messages */}
       <Box sx={messagesContainer}>
-        {messages.map((msg, index) => {
-          const isMe = msg.sender_id === me?.id;
-          return (
-            <Box
-              key={msg.id || index}
-              sx={{
-                display: "flex",
-                justifyContent: isMe ? "flex-end" : "flex-start",
-                mb: 2,
-              }}
-            >
-              <Paper
+        {messages.length === 0 ? (
+          <Box sx={emptyMessages}>
+            <Typography sx={emptyMessagesText}>
+              No messages yet. Start a conversation!
+            </Typography>
+          </Box>
+        ) : (
+          messages.map((msg, index) => {
+            const isMe = msg.sender_id === me?.id;
+            return (
+              <Box
+                key={msg.id || index}
                 sx={{
-                  p: 2,
-                  maxWidth: "70%",
-                  background: isMe
-                    ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                    : "#fff",
-                  color: isMe ? "#fff" : "#000",
-                  borderRadius: isMe
-                    ? "20px 20px 5px 20px"
-                    : "20px 20px 20px 5px",
-                  boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+                  display: "flex",
+                  justifyContent: isMe ? "flex-end" : "flex-start",
+                  mb: 2,
                 }}
               >
-                <Typography variant="body1" sx={{ wordWrap: "break-word" }}>
-                  {msg.message}
-                </Typography>
-                <Typography
-                  variant="caption"
+                <Paper
                   sx={{
-                    display: "block",
-                    textAlign: "right",
-                    mt: 0.5,
-                    opacity: 0.8,
+                    p: 2,
+                    maxWidth: "70%",
+                    background: isMe
+                      ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                      : "#fff",
+                    color: isMe ? "#fff" : "#000",
+                    borderRadius: isMe
+                      ? "20px 20px 5px 20px"
+                      : "20px 20px 20px 5px",
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
                   }}
                 >
-                  {formatTime(msg.created_at)}
-                  {isMe && (
-                    <span style={{ marginLeft: 5 }}>
-                      {msg.status === "delivered" ? "✓✓" : "✓"}
-                    </span>
-                  )}
-                </Typography>
-              </Paper>
-            </Box>
-          );
-        })}
+                  <Typography variant="body1" sx={{ wordWrap: "break-word" }}>
+                    {msg.message}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: "block",
+                      textAlign: "right",
+                      mt: 0.5,
+                      opacity: 0.8,
+                    }}
+                  >
+                    {formatTime(msg.created_at)}
+                    {isMe && (
+                      <span style={{ marginLeft: 5 }}>
+                        {msg.status === "delivered" ? "✓✓" : "✓"}
+                      </span>
+                    )}
+                  </Typography>
+                </Paper>
+              </Box>
+            );
+          })
+        )}
         
         {typing && (
           <Box sx={{ display: "flex", justifyContent: "flex-start", mb: 2 }}>
@@ -387,11 +404,14 @@ export default function PrivateChat() {
           value={text}
           onChange={(e) => handleTyping(e.target.value)}
           onKeyPress={handleKeyPress}
+          onFocus={() => setInputFocused(true)}
+          onBlur={() => setInputFocused(false)}
           placeholder={connected ? "Type a message..." : "Connecting..."}
           variant="outlined"
           size="small"
           disabled={!connected || sending}
           sx={inputField}
+          autoFocus
         />
         <IconButton
           onClick={sendMessage}
@@ -455,6 +475,18 @@ const messagesContainer = {
   overflowY: "auto",
   p: 3,
   background: "#f5f5f5",
+};
+
+const emptyMessages = {
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  height: "100%",
+};
+
+const emptyMessagesText = {
+  color: "#999",
+  fontSize: "0.9rem",
 };
 
 const inputContainer = {
