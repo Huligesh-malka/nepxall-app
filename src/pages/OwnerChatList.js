@@ -28,7 +28,10 @@ export default function OwnerChatList() {
 
   const loadChats = useCallback(async () => {
     try {
+      if (!auth.currentUser) return;
+
       const token = await auth.currentUser.getIdToken();
+
       const res = await api.get("/private-chat/list", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -50,9 +53,7 @@ export default function OwnerChatList() {
       await loadChats();
 
       if (!socketRef.current) {
-        socketRef.current = io(SOCKET_URL, {
-          transports: ["websocket"],
-        });
+        socketRef.current = io(SOCKET_URL, { transports: ["websocket"] });
 
         socketRef.current.on("connect", () => setConnected(true));
         socketRef.current.on("disconnect", () => setConnected(false));
@@ -87,9 +88,9 @@ export default function OwnerChatList() {
       unsubscribe();
 
       if (socketRef.current) {
-        socketRef.current.off("receive_private_message");
-        socketRef.current.off("message_sent_confirmation");
-        socketRef.current.off("chat_list_update");
+        socketRef.current.off("receive_private_message", loadChats);
+        socketRef.current.off("message_sent_confirmation", loadChats);
+        socketRef.current.off("chat_list_update", loadChats);
         socketRef.current.off("user_online");
         socketRef.current.off("user_offline");
       }
@@ -162,7 +163,7 @@ export default function OwnerChatList() {
                 >
                   <Box
                     sx={chatCard}
-                    onClick={() => navigate(`/chat/private/${u.id}`)}
+                    onClick={() => navigate(`/owner/chat/private/${u.id}`)}
                   >
                     <Badge
                       overlap="circular"
@@ -180,7 +181,12 @@ export default function OwnerChatList() {
                         justifyContent="space-between"
                         alignItems="center"
                       >
-                        <Typography sx={nameText}>{u.name}</Typography>
+                        <Typography sx={nameText}>
+                          {u.pg_name
+                            ? `${u.pg_name} • ${u.name}`
+                            : u.name}
+                        </Typography>
+
                         <Typography sx={timeText}>
                           {formatTime(u.last_time)}
                         </Typography>

@@ -20,6 +20,7 @@ export default function PrivateChat() {
   const [otherUser, setOtherUser] = useState(null);
   const [text, setText] = useState("");
   const [typing, setTyping] = useState(false);
+  const [online, setOnline] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const scrollBottom = () =>
@@ -80,11 +81,15 @@ export default function PrivateChat() {
     });
 
     socket.on("user_typing", ({ isTyping }) => setTyping(isTyping));
+    socket.on("user_online", () => setOnline(true));
+    socket.on("user_offline", () => setOnline(false));
 
     return () => {
       socket.off("receive_private_message");
       socket.off("message_sent_confirmation");
       socket.off("user_typing");
+      socket.off("user_online");
+      socket.off("user_offline");
     };
   }, []);
 
@@ -107,20 +112,44 @@ export default function PrivateChat() {
     scrollBottom();
   };
 
-  /* ================= UI ================= */
+  /* ================= TYPING ================= */
+  const handleTyping = (value) => {
+    setText(value);
+
+    socket.emit("typing", {
+      userA: me?.id,
+      userB: userId,
+      isTyping: true,
+    });
+
+    setTimeout(() => {
+      socket.emit("typing", {
+        userA: me?.id,
+        userB: userId,
+        isTyping: false,
+      });
+    }, 800);
+  };
 
   if (loading) return <div style={styles.loader}>Loading chat...</div>;
 
+  /* ================= UI ================= */
   return (
     <div style={styles.container}>
       {/* HEADER */}
       <div style={styles.header}>
-        <span onClick={() => navigate(-1)} style={styles.back}>
-          ←
-        </span>
+        <span onClick={() => navigate(-1)} style={styles.back}>←</span>
+
         <div>
-          <div style={styles.name}>{otherUser?.name}</div>
-          <div style={styles.status}>online</div>
+          <div style={styles.name}>
+            {otherUser?.pg_name
+              ? `${otherUser.pg_name} • ${otherUser.name}`
+              : otherUser?.name}
+          </div>
+
+          <div style={styles.status}>
+            {online ? "🟢 online" : "⚪ offline"}
+          </div>
         </div>
       </div>
 
@@ -163,14 +192,12 @@ export default function PrivateChat() {
       <div style={styles.inputArea}>
         <input
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => handleTyping(e.target.value)}
           placeholder="Type a message..."
           style={styles.input}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
         />
-        <button onClick={sendMessage} style={styles.sendBtn}>
-          ➤
-        </button>
+        <button onClick={sendMessage} style={styles.sendBtn}>➤</button>
       </div>
     </div>
   );
@@ -179,12 +206,7 @@ export default function PrivateChat() {
 /* ================= STYLES ================= */
 
 const styles = {
-  container: {
-    height: "100vh",
-    display: "flex",
-    flexDirection: "column",
-    background: "#f1f5f9",
-  },
+  container: { height: "100vh", display: "flex", flexDirection: "column", background: "#f1f5f9" },
 
   header: {
     background: "linear-gradient(135deg,#667eea,#764ba2)",
@@ -198,13 +220,9 @@ const styles = {
   back: { cursor: "pointer", fontSize: 20 },
 
   name: { fontWeight: "bold" },
-  status: { fontSize: 12, opacity: 0.8 },
+  status: { fontSize: 12, opacity: 0.9 },
 
-  chatBody: {
-    flex: 1,
-    overflowY: "auto",
-    padding: 15,
-  },
+  chatBody: { flex: 1, overflowY: "auto", padding: 15 },
 
   msgRow: { display: "flex", marginBottom: 10 },
 
@@ -215,18 +233,9 @@ const styles = {
     position: "relative",
   },
 
-  tick: {
-    fontSize: 10,
-    marginTop: 5,
-    textAlign: "right",
-    opacity: 0.8,
-  },
+  tick: { fontSize: 10, marginTop: 5, textAlign: "right", opacity: 0.8 },
 
-  typing: {
-    fontSize: 12,
-    marginLeft: 10,
-    color: "#555",
-  },
+  typing: { fontSize: 12, marginLeft: 10, color: "#555" },
 
   inputArea: {
     display: "flex",
