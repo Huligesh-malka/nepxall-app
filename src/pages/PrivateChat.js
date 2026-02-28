@@ -77,8 +77,8 @@ export default function PrivateChat() {
 
         if (!mounted) return;
 
-        // Connect socket with both Firebase UID and database ID
-        const socket = socketManager.connect(fbUser.uid, meData.id);
+        // Connect socket
+        const socket = socketManager.connect(fbUser.uid);
 
         // Set up socket listeners
         socketManager.on("connect", () => {
@@ -102,13 +102,9 @@ export default function PrivateChat() {
 
         socketManager.on("receive_private_message", (message) => {
           console.log("📩 Received message:", message);
-          if (mounted) {
-            // Always add message if it's for this chat
-            if (message.sender_id === parseInt(userId) || 
-                message.receiver_id === parseInt(userId)) {
-              setMessages(prev => [...prev, message]);
-              scrollToBottom();
-            }
+          if (mounted && message.sender_id === parseInt(userId)) {
+            setMessages(prev => [...prev, message]);
+            scrollToBottom();
           }
         });
 
@@ -123,8 +119,8 @@ export default function PrivateChat() {
           }
         });
 
-        socketManager.on("user_typing", ({ userId: typingUserId, isTyping }) => {
-          if (mounted && typingUserId === otherUser?.id) {
+        socketManager.on("user_typing", ({ isTyping }) => {
+          if (mounted) {
             setTyping(isTyping);
           }
         });
@@ -166,7 +162,7 @@ export default function PrivateChat() {
         clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [userId, navigate, loadMessages, scrollToBottom, otherUser?.id]);
+  }, [userId, navigate, loadMessages, scrollToBottom]);
 
   const sendMessage = async () => {
     if (!text.trim() || !me || sending) return;
@@ -186,19 +182,12 @@ export default function PrivateChat() {
 
       console.log("Message sent:", res.data);
 
-      // Add sender's Firebase UID and receiver's Firebase UID to the message
-      const messageWithIds = {
-        ...res.data,
-        sender_firebase_uid: me.firebase_uid,
-        receiver_firebase_uid: otherUser?.firebase_uid
-      };
-
       // Add to local state
-      const newMessage = { ...messageWithIds, status: "sent" };
+      const newMessage = { ...res.data, status: "sent" };
       setMessages(prev => [...prev, newMessage]);
 
-      // Emit via socket with both IDs
-      socketManager.emit("send_private_message", messageWithIds);
+      // Emit via socket
+      socketManager.emit("send_private_message", res.data);
 
       scrollToBottom();
     } catch (err) {
@@ -221,7 +210,6 @@ export default function PrivateChat() {
     socketManager.emit("typing", {
       userA: me.id,
       userB: userId,
-      userId: me.id, // Add userId for typing indicator
       isTyping: true,
     });
 
@@ -233,7 +221,6 @@ export default function PrivateChat() {
       socketManager.emit("typing", {
         userA: me.id,
         userB: userId,
-        userId: me.id,
         isTyping: false,
       });
     }, 1000);
