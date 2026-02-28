@@ -23,22 +23,43 @@ export default function OwnerChatList() {
   const [onlineStatus, setOnlineStatus] = useState({});
   const [error, setError] = useState(null);
   const [connected, setConnected] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [authError, setAuthError] = useState(false);
   const navigate = useNavigate();
 
   const loadChats = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+      setAuthError(false);
       
       console.log("📋 Loading chat list...");
-      const res = await api.get("/private-chat/list");
+      
+      // Get fresh token
+      const user = auth.currentUser;
+      if (!user) {
+        console.log("🚫 No user logged in");
+        setAuthError(true);
+        setLoading(false);
+        return;
+      }
+
+      const token = await user.getIdToken(true); // Force refresh token
+      
+      const res = await api.get("/private-chat/list", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
       console.log("📋 Chat list loaded:", res.data);
       setUsers(res.data || []);
     } catch (err) {
       console.error("Failed to fetch chats:", err);
-      setError("Failed to load conversations. Please refresh the page.");
+      
+      if (err.response?.status === 401) {
+        setAuthError(true);
+        setError("Authentication failed. Please log out and log in again.");
+      } else {
+        setError("Failed to load conversations. Please refresh the page.");
+      }
     } finally {
       setLoading(false);
     }
@@ -46,13 +67,16 @@ export default function OwnerChatList() {
 
   const loadCurrentUser = useCallback(async (fbUser) => {
     try {
-      const token = await fbUser.getIdToken();
+      const token = await fbUser.getIdToken(true);
       const config = { headers: { Authorization: `Bearer ${token}` } };
       const res = await api.get("/private-chat/me", config);
-      setCurrentUser(res.data);
+      console.log("👤 Current user data:", res.data);
       return res.data;
     } catch (err) {
       console.error("Failed to load current user:", err);
+      if (err.response?.status === 401) {
+        setAuthError(true);
+      }
       return null;
     }
   }, []);
@@ -60,14 +84,18 @@ export default function OwnerChatList() {
   useEffect(() => {
     let unsubscribe;
     let mounted = true;
+    let reconnectTimer;
 
     const initializeChat = async (fbUser) => {
       if (!fbUser) {
+        console.log("🚫 No Firebase user, redirecting to login");
         navigate("/login");
         return;
       }
 
       try {
+        console.log("👤 Firebase user authenticated:", fbUser.uid);
+        
         // Load current user to get database ID
         const userData = await loadCurrentUser(fbUser);
         
@@ -75,6 +103,9 @@ export default function OwnerChatList() {
           throw new Error("Failed to load user data");
         }
 
+        console.log("✅ User data loaded:", userData);
+
+        // Load chats with fresh token
         await loadChats();
 
         // Connect socket with both Firebase UID and database ID
@@ -83,11 +114,21 @@ export default function OwnerChatList() {
         socketManager.on("connect", () => {
           console.log("🟢 Socket connected in chat list");
           setConnected(true);
+          setAuthError(false);
         });
 
-        socketManager.on("disconnect", () => {
-          console.log("🔴 Socket disconnected in chat list");
+        socketManager.on("disconnect", (reason) => {
+          console.log("🔴 Socket disconnected in chat list:", reason);
           setConnected(false);
+          
+          // Try to reconnect
+          if (reason === "io server disconnect" || reason === "transport close") {
+            reconnectTimer = setTimeout(() => {
+              if (fbUser) {
+                socketManager.connect(fbUser.uid, userData.id);
+              }
+            }, 3000);
+          }
         });
 
         socketManager.on("receive_private_message", (message) => {
@@ -127,7 +168,9 @@ export default function OwnerChatList() {
 
       } catch (err) {
         console.error("Failed to initialize chat:", err);
-        setError("Failed to connect to chat service. Please refresh the page.");
+        if (mounted) {
+          setError("Failed to connect to chat service. Please refresh the page.");
+        }
       }
     };
 
@@ -136,6 +179,10 @@ export default function OwnerChatList() {
     return () => {
       mounted = false;
       unsubscribe();
+      
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
       
       socketManager.off("connect");
       socketManager.off("disconnect");
@@ -148,18 +195,26 @@ export default function OwnerChatList() {
   }, [navigate, loadChats, loadCurrentUser]);
 
   const isUserOnline = (user) => {
-    // Check by both Firebase UID and database ID
     return onlineStatus[user.firebase_uid] || onlineStatus[user.id] || false;
-  };
-
-  const handleCloseError = () => {
-    setError(null);
   };
 
   const handleRetry = () => {
     loadChats();
-    if (auth.currentUser && currentUser) {
-      socketManager.connect(auth.currentUser.uid, currentUser.id);
+    if (auth.currentUser) {
+      loadCurrentUser(auth.currentUser).then(userData => {
+        if (userData) {
+          socketManager.connect(auth.currentUser.uid, userData.id);
+        }
+      });
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      navigate("/login");
+    } catch (err) {
+      console.error("Logout failed:", err);
     }
   };
 
@@ -201,7 +256,21 @@ export default function OwnerChatList() {
           </Typography>
         </motion.div>
 
-        {error && (
+        {authError && (
+          <Alert 
+            severity="error" 
+            sx={{ mt: 2, mb: 2 }}
+            action={
+              <Button color="inherit" size="small" onClick={handleLogout}>
+                Logout
+              </Button>
+            }
+          >
+            Authentication failed. Please log out and log in again.
+          </Alert>
+        )}
+
+        {error && !authError && (
           <Alert 
             severity="error" 
             sx={{ mt: 2, mb: 2 }}
@@ -294,9 +363,8 @@ export default function OwnerChatList() {
       </Container>
 
       <Snackbar
-        open={!connected && !loading}
+        open={!connected && !loading && !authError}
         autoHideDuration={6000}
-        onClose={() => {}}
         message="Connecting to chat server..."
       />
     </Box>
