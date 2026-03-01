@@ -31,34 +31,30 @@ export default function PrivateChat() {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
       if (!fbUser) return navigate("/login");
 
-      try {
-        const token = await fbUser.getIdToken();
-        const config = { headers: { Authorization: `Bearer ${token}` } };
+      const token = await fbUser.getIdToken();
+      const config = { headers: { Authorization: `Bearer ${token}` } };
 
-        const [meRes, userRes, msgRes] = await Promise.all([
-          api.get("/private-chat/me", config),
-          api.get(`/private-chat/user/${userId}`, config),
-          api.get(`/private-chat/messages/${userId}`, config),
-        ]);
+      const [meRes, userRes, msgRes] = await Promise.all([
+        api.get("/private-chat/me", config),
+        api.get(`/private-chat/user/${userId}`, config),
+        api.get(`/private-chat/messages/${userId}`, config),
+      ]);
 
-        setMe(meRes.data);
-        setOtherUser(userRes.data);
-        setMessages(msgRes.data);
-        setLoading(false);
+      setMe(meRes.data);
+      setOtherUser(userRes.data);
+      setMessages(msgRes.data);
+      setLoading(false);
 
-        if (!socket.connected) socket.connect();
+      if (!socket.connected) socket.connect();
 
-        socket.emit("register", fbUser.uid);
+      socket.emit("register", fbUser.uid);
 
-        socket.emit("join_private_room", {
-          userA: Number(meRes.data.id),
-          userB: Number(userId),
-        });
+      socket.emit("join_private_room", {
+        userA: Number(meRes.data.id),
+        userB: Number(userId),
+      });
 
-        scrollBottom();
-      } catch (err) {
-        console.error(err);
-      }
+      scrollBottom();
     });
 
     return () => {
@@ -80,6 +76,11 @@ export default function PrivateChat() {
       );
     });
 
+    /* 🗑 REALTIME DELETE */
+    socket.on("message_deleted", (id) => {
+      setMessages((prev) => prev.filter((m) => m.id !== id));
+    });
+
     socket.on("user_typing", ({ isTyping }) => setTyping(isTyping));
     socket.on("user_online", () => setOnline(true));
     socket.on("user_offline", () => setOnline(false));
@@ -87,6 +88,7 @@ export default function PrivateChat() {
     return () => {
       socket.off("receive_private_message");
       socket.off("message_sent_confirmation");
+      socket.off("message_deleted");
       socket.off("user_typing");
       socket.off("user_online");
       socket.off("user_offline");
@@ -112,6 +114,19 @@ export default function PrivateChat() {
     scrollBottom();
   };
 
+  /* ================= DELETE MESSAGE ================= */
+  const deleteMessage = async (id) => {
+    const token = await auth.currentUser.getIdToken();
+
+    await api.delete(`/private-chat/delete/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    socket.emit("delete_message", id); // realtime
+
+    setMessages((prev) => prev.filter((m) => m.id !== id));
+  };
+
   /* ================= TYPING ================= */
   const handleTyping = (value) => {
     setText(value);
@@ -133,13 +148,12 @@ export default function PrivateChat() {
 
   if (loading) return <div style={styles.loader}>Loading chat...</div>;
 
-  /* ✅ SHOW ONLY ROLE-BASED NAME FROM BACKEND */
+  /* ROLE BASED HEADER */
   const headerTitle =
-  me?.role === "owner"
-    ? otherUser?.name || "User"        // 👑 OWNER → USER NAME
-    : otherUser?.pg_name || otherUser?.name || "PG";  // 👤 TENANT → PG NAME
+    me?.role === "owner"
+      ? otherUser?.name || "User"
+      : otherUser?.pg_name || otherUser?.name || "PG";
 
-  /* ================= UI ================= */
   return (
     <div style={styles.container}>
       {/* HEADER */}
@@ -177,8 +191,19 @@ export default function PrivateChat() {
             >
               {m.message}
 
+              {/* ✔ TICKS */}
               {m.sender_id === me?.id && (
                 <div style={styles.tick}>{m.status || "✔"}</div>
+              )}
+
+              {/* 🗑 DELETE ICON */}
+              {m.sender_id === me?.id && (
+                <div
+                  style={styles.delete}
+                  onClick={() => deleteMessage(m.id)}
+                >
+                  🗑
+                </div>
               )}
             </div>
           </div>
@@ -221,7 +246,7 @@ const styles = {
   back: { cursor: "pointer", fontSize: 20 },
 
   name: { fontWeight: "bold" },
-  status: { fontSize: 12, opacity: 0.9 },
+  status: { fontSize: 12 },
 
   chatBody: { flex: 1, overflowY: "auto", padding: 15 },
 
@@ -234,9 +259,18 @@ const styles = {
     position: "relative",
   },
 
-  tick: { fontSize: 10, marginTop: 5, textAlign: "right", opacity: 0.8 },
+  tick: { fontSize: 10, marginTop: 5, textAlign: "right" },
 
-  typing: { fontSize: 12, marginLeft: 10, color: "#555" },
+  delete: {
+    position: "absolute",
+    top: 4,
+    right: -18,
+    cursor: "pointer",
+    fontSize: 12,
+    color: "red",
+  },
+
+  typing: { fontSize: 12, marginLeft: 10 },
 
   inputArea: {
     display: "flex",
