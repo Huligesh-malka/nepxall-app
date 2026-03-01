@@ -1531,55 +1531,58 @@ export default function PGDetails() {
     }
   };
 
-  const handleBookingSubmit = async (bookingData) => {
-  try {
+  const handleBookNow = () => {
     const user = auth.currentUser;
 
     if (!user) {
-      showNotification("Please register or login to continue");
-      navigate("/register");
+      showNotificationMessage("Please register or login to book this property");
+      navigate("/register", {
+        state: { redirectTo: `/pg/${id}` }
+      });
       return;
     }
 
-    const token = await user.getIdToken(true);
+    setShowBookingModal(true);
+  };
 
-    const payload = {
-      name: bookingData.name,
-      phone: bookingData.phone,
-      check_in_date: bookingData.checkInDate,
-      room_type: bookingData.roomType
-    };
+  const handleBookingSubmit = async (bookingData) => {
+    try {
+      const user = auth.currentUser;
 
-    const res = await api.post(
-      `/bookings/${bookingPG.id}`,
-      payload,
-      {
-        headers: { Authorization: `Bearer ${token}` }
+      if (!user) {
+        showNotificationMessage("Please register or login to continue");
+        navigate("/register");
+        return;
       }
-    );
 
-    // ✅ HANDLE ALREADY BOOKED
-    if (res.data?.alreadyBooked) {
-      showNotification(res.data.message);
-      setBookingPG(null);
-      return;
+      const token = await user.getIdToken(true);
+      
+      const payload = {
+        name: bookingData.name,
+        phone: bookingData.phone,
+        check_in_date: bookingData.checkInDate,
+        room_type: bookingData.roomType
+      };
+
+      await api.post(
+        `/bookings/${id}`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      showNotificationMessage("✅ Booking request sent to owner");
+      setShowBookingModal(false);
+
+    } catch (error) {
+      console.error(error);
+      showNotificationMessage("❌ Booking failed. Try again");
     }
+  };
 
-    // ✅ SUCCESS
-    showNotification(res.data.message || "✅ Booking request sent to owner");
-    setBookingPG(null);
-
-  } catch (error) {
-    console.log("BOOKING ERROR:", error.response?.data);
-
-    // ✅ SHOW BACKEND MESSAGE
-    if (error.response?.data?.message) {
-      showNotification(error.response.data.message);
-    } else {
-      showNotification("❌ Something went wrong. Try again");
-    }
-  }
-};
   const handleCallOwner = () => {
     if (hasOwnerContact) {
       window.location.href = `tel:${pg.contact_phone}`;

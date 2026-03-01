@@ -2399,7 +2399,7 @@ function UserPGSearch() {
     setBookingPG(pg);
   };
 
- const handleBookingSubmit = async (bookingData) => {
+  const handleBookingSubmit = async (bookingData) => {
   try {
     const user = auth.currentUser;
 
@@ -2448,7 +2448,6 @@ function UserPGSearch() {
     }
   }
 };
-
   const handleSaveFavorite = (pgId, isFavorite) => {
     const newFavorites = new Set(favorites);
     if (isFavorite) {
