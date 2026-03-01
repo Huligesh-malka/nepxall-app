@@ -1531,27 +1531,39 @@ export default function PGDetails() {
     }
   };
 
-  const handleBookNow = () => {
-    const user = auth.currentUser;
+  //////////////////////////////////////////////////////
+// 🏷 BOOK NOW CLICK
+//////////////////////////////////////////////////////
+const handleBookNow = () => {
+  const user = auth.currentUser;
 
-    if (!user) {
-      showNotificationMessage("Please register or login to book this property");
-      navigate("/register", {
-        state: { redirectTo: `/pg/${id}` }
-      });
-      return;
-    }
+  if (!user) {
+    showNotificationMessage("Please register or login to book this property");
 
-    setShowBookingModal(true);
-  };
+    navigate("/register", {
+      state: { redirectTo: `/pg/${id}` }
+    });
 
-  const handleBookingSubmit = async (bookingData) => {
+    return;
+  }
+
+  setShowBookingModal(true);
+};
+
+//////////////////////////////////////////////////////
+// 📝 BOOKING SUBMIT
+//////////////////////////////////////////////////////
+const handleBookingSubmit = async (bookingData) => {
   try {
+    if (bookingLoading) return; // 🚫 prevent double click
+
+    setBookingLoading(true);
+
     const user = auth.currentUser;
 
     if (!user) {
-      showNotification("Please register or login to continue");
-      navigate("/register");
+      showNotificationMessage("Please login to continue");
+      navigate("/login");
       return;
     }
 
@@ -1565,43 +1577,53 @@ export default function PGDetails() {
     };
 
     const res = await api.post(
-      `/bookings/${bookingPG.id}`,
+      `/bookings/${id}`,
       payload,
       {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       }
     );
 
-    // ✅ HANDLE ALREADY BOOKED
-    if (res.data?.alreadyBooked) {
-      showNotification(res.data.message);
-      setBookingPG(null);
-      return;
-    }
-
+    //////////////////////////////////////////////////////
     // ✅ SUCCESS
-    showNotification(res.data.message || "✅ Booking request sent to owner");
-    setBookingPG(null);
+    //////////////////////////////////////////////////////
+    showNotificationMessage(
+      res.data?.message || "✅ Booking request sent to owner"
+    );
+
+    setShowBookingModal(false);
 
   } catch (error) {
-    console.log("BOOKING ERROR:", error.response?.data);
+    console.log("BOOKING ERROR:", error?.response?.data);
 
-    // ✅ SHOW BACKEND MESSAGE
-    if (error.response?.data?.message) {
-      showNotification(error.response.data.message);
+    //////////////////////////////////////////////////////
+    // ⚠️ REAL BACKEND MESSAGE
+    //////////////////////////////////////////////////////
+    if (error?.response?.data?.message) {
+      showNotificationMessage(error.response.data.message);
     } else {
-      showNotification("❌ Something went wrong. Try again");
+      showNotificationMessage("❌ Booking failed. Try again");
     }
+
+  } finally {
+    setBookingLoading(false);
   }
 };
 
-  const handleCallOwner = () => {
-    if (hasOwnerContact) {
-      window.location.href = `tel:${pg.contact_phone}`;
-    } else {
-      alert("Owner contact will be visible after booking approval");
-    }
-  };
+//////////////////////////////////////////////////////
+// 📞 CALL OWNER
+//////////////////////////////////////////////////////
+const handleCallOwner = () => {
+  if (hasOwnerContact && pg?.contact_phone) {
+    window.location.href = `tel:${pg.contact_phone}`;
+  } else {
+    showNotificationMessage(
+      "Owner contact will be visible after booking approval"
+    );
+  }
+};
 
   const handleViewOnMap = (highlight) => {
     if (highlight.coordinates) {
