@@ -12,6 +12,8 @@ const OwnerBookings = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  /* ================= LOAD BOOKINGS ================= */
+
   const loadOwnerBookings = useCallback(async () => {
     try {
       setLoading(true);
@@ -32,7 +34,7 @@ const OwnerBookings = () => {
 
       setBookings(res.data || []);
     } catch (err) {
-      console.error("LOAD BOOKINGS ERROR:", err);
+      console.error(err);
 
       if (err.response?.status === 403) {
         setError("You are not registered as an owner.");
@@ -44,14 +46,18 @@ const OwnerBookings = () => {
     }
   }, [navigate]);
 
+  /* ================= AUTH ================= */
+
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsub = auth.onAuthStateChanged((user) => {
       if (user) loadOwnerBookings();
       else navigate("/login");
     });
 
-    return unsubscribe;
+    return () => unsub();
   }, [loadOwnerBookings, navigate]);
+
+  /* ================= UPDATE STATUS ================= */
 
   const updateStatus = async (bookingId, status) => {
     try {
@@ -71,7 +77,7 @@ const OwnerBookings = () => {
 
       setTimeout(() => setSuccess(""), 2500);
     } catch (err) {
-      console.error("UPDATE STATUS ERROR:", err);
+      console.error(err);
 
       if (err.response?.data?.code === "ONBOARDING_PENDING") {
         alert("⚠️ Please complete owner verification first");
@@ -84,6 +90,8 @@ const OwnerBookings = () => {
       setActionLoading(null);
     }
   };
+
+  /* ================= UI ================= */
 
   if (loading) return <p style={{ padding: 20 }}>Loading bookings...</p>;
   if (error) return <div style={errorBox}>{error}</div>;
@@ -106,8 +114,19 @@ const OwnerBookings = () => {
         bookings.map((b) => (
           <div key={b.id} style={card}>
             <p><b>PG:</b> {b.pg_name}</p>
+
             <p><b>Tenant:</b> {b.tenant_name}</p>
-            <p><b>Phone:</b> {b.phone}</p>
+
+            <p>
+              <b>Phone:</b>{" "}
+              {b.tenant_phone ? (
+                b.tenant_phone
+              ) : (
+                <span style={{ color: "#f59e0b" }}>
+                  🔒 Hidden until approval
+                </span>
+              )}
+            </p>
 
             <p>
               <b>Check-in:</b>{" "}
