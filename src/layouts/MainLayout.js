@@ -32,7 +32,7 @@ const MainLayout = () => {
     return () => unsub();
   }, []);
 
-  /* ✅ LISTEN ROLE UPDATE */
+  /* ✅ LISTEN ROLE UPDATE (same tab) */
   useEffect(() => {
     const updateRole = () => {
       const newRole = getStoredRole();
@@ -58,7 +58,6 @@ const MainLayout = () => {
     navigate("/", { replace: true });
   };
 
-  /* ⏳ WAIT FOR AUTH */
   if (!authReady) {
     return (
       <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
@@ -66,9 +65,6 @@ const MainLayout = () => {
       </Box>
     );
   }
-
-  /* ✅ FULL LOGIN CHECK */
-  const isFullyLoggedIn = user && role;
 
   return (
     <div style={{ display: "flex" }}>
@@ -83,7 +79,6 @@ const MainLayout = () => {
           minHeight: "100vh"
         }}
       >
-        {/* 🔝 TOP BAR */}
         <Box
           sx={{
             display: "flex",
@@ -97,18 +92,17 @@ const MainLayout = () => {
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
           }}
         >
-          {isFullyLoggedIn && (
+          {user && (
             <span style={{ marginRight: "auto", color: "#64748b" }}>
               Welcome, <strong>{user.email?.split("@")[0]}</strong>
             </span>
           )}
 
-          {!isFullyLoggedIn ? (
+          {!user ? (
             <>
               <Button onClick={() => navigate("/login")} variant="outlined">
                 Login
               </Button>
-
               <Button onClick={() => navigate("/register")} variant="contained">
                 Register
               </Button>
