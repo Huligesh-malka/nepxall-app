@@ -49,7 +49,6 @@ export default function PrivateChat() {
       setLoading(false);
 
       if (!socket.connected) socket.connect();
-
       socket.emit("register", fbUser.uid);
 
     });
@@ -60,7 +59,6 @@ export default function PrivateChat() {
 
   /* ================= JOIN ROOM ================= */
   useEffect(() => {
-
     if (!me) return;
 
     socket.emit("join_private_room", {
@@ -176,7 +174,6 @@ export default function PrivateChat() {
     });
   };
 
-  /* ================= STATUS DOT ================= */
   const getStatusDot = (status) => {
 
     if (status === "sent")
@@ -212,16 +209,13 @@ export default function PrivateChat() {
       </div>
 
       <div style={styles.chatBody}>
-
         {messages.map((m) => (
           <div key={m.id}
                style={{
                  ...styles.msgRow,
                  justifyContent: m.sender_id === me?.id ? "flex-end" : "flex-start",
                }}>
-
             <div style={{ position: "relative" }}>
-
               <div style={{
                 ...styles.bubble,
                 background: m.sender_id === me?.id
@@ -229,7 +223,6 @@ export default function PrivateChat() {
                   : "#fff",
                 color: m.sender_id === me?.id ? "#fff" : "#000",
               }}>
-
                 {m.message}
 
                 {m.sender_id === me?.id &&
@@ -245,14 +238,12 @@ export default function PrivateChat() {
                   🗑
                 </span>
               }
-
             </div>
           </div>
         ))}
 
         {typing && <div style={styles.typing}>Typing...</div>}
         <div ref={bottomRef} />
-
       </div>
 
       <div style={styles.inputArea}>
@@ -269,3 +260,91 @@ export default function PrivateChat() {
     </div>
   );
 }
+
+/* ================= STYLES ================= */
+
+const styles = {
+
+  container: { height: "100vh", display: "flex", flexDirection: "column", background: "#f1f5f9" },
+
+  header: {
+    background: "linear-gradient(135deg,#667eea,#764ba2)",
+    color: "#fff",
+    padding: "12px 15px",
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  back: { cursor: "pointer", fontSize: 20 },
+
+  name: { fontWeight: "bold" },
+  status: { fontSize: 12, opacity: 0.9 },
+
+  chatBody: { flex: 1, overflowY: "auto", padding: 15 },
+
+  msgRow: { display: "flex", marginBottom: 10 },
+
+  bubble: {
+    padding: "10px 14px",
+    borderRadius: 15,
+    maxWidth: "70%",
+    position: "relative",
+  },
+
+  tick: { marginTop: 5, textAlign: "right" },
+
+  dot: {
+    height: 8,
+    width: 8,
+    borderRadius: "50%",
+    display: "inline-block",
+  },
+
+  typing: { fontSize: 12, marginLeft: 10, color: "#555" },
+
+  deleteBtn: {
+    position: "absolute",
+    top: -8,
+    right: -8,
+    cursor: "pointer",
+    fontSize: 14,
+    background: "#fff",
+    borderRadius: "50%",
+    padding: "2px 5px",
+    boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+  },
+
+  inputArea: {
+    display: "flex",
+    padding: 10,
+    background: "#fff",
+    borderTop: "1px solid #eee",
+  },
+
+  input: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 25,
+    border: "1px solid #ddd",
+    outline: "none",
+  },
+
+  sendBtn: {
+    marginLeft: 10,
+    background: "linear-gradient(135deg,#667eea,#764ba2)",
+    color: "#fff",
+    border: "none",
+    padding: "0 18px",
+    borderRadius: "50%",
+    cursor: "pointer",
+  },
+
+  loader: {
+    height: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+};
