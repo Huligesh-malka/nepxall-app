@@ -12,7 +12,7 @@ import OwnerLayout from "./layouts/OwnerLayout";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
-/* STATIC PAGES ✅ */
+/* STATIC PAGES */
 import Contact from "./pages/Contact";
 import Terms from "./pages/Terms";
 import RefundPolicy from "./pages/RefundPolicy";
@@ -69,7 +69,6 @@ function App() {
 
   useEffect(() => {
     testBackendConnection();
-
     const unsub = onAuthStateChanged(auth, (u) => setUser(u));
     return unsub;
   }, []);
@@ -82,7 +81,13 @@ function App() {
   return (
     <Routes>
 
-      {/* ================= PUBLIC PAGES ✅ ================= */}
+      {/* ================= PUBLIC WITH LAYOUT ✅ ================= */}
+      <Route element={<MainLayout />}>
+        <Route index element={<UserPGSearch />} />
+        <Route path="pg/:id" element={<PGDetails />} />
+      </Route>
+
+      {/* ================= PUBLIC PAGES ================= */}
       <Route path="/contact" element={<Contact />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/refund-policy" element={<RefundPolicy />} />
@@ -91,11 +96,14 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* ================= USER ================= */}
-      <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
-
-        <Route index element={<UserPGSearch />} />
-        <Route path="pg/:id" element={<PGDetails />} />
+      {/* ================= PRIVATE USER ================= */}
+      <Route
+        element={
+          <PrivateRoute>
+            <MainLayout />
+          </PrivateRoute>
+        }
+      >
         <Route path="booking/:pgId" element={<BookingForm />} />
         <Route path="user/bookings" element={<UserBookingHistory />} />
         <Route path="payment-success" element={<PaymentSuccess />} />
@@ -103,18 +111,21 @@ function App() {
         <Route path="agreement/:bookingId" element={<AgreementPage />} />
         <Route path="user/my-stay" element={<UserActiveStay />} />
         <Route path="user/notifications" element={<NotificationBell />} />
-        <Route path="user/visit-schedule/:bookingId" element={<VisitSchedulePage />} />
         <Route path="user/aadhaar-kyc" element={<AadhaarKyc />} />
+        <Route path="user/visit-schedule/:bookingId" element={<VisitSchedulePage />} />
         <Route path="public/agreement/:hash" element={<PublicAgreementPage />} />
-
-        {/* CHAT */}
         <Route path="chat/private/:userId" element={<PrivateChat />} />
-
       </Route>
 
       {/* ================= OWNER ================= */}
-      <Route path="/owner" element={<PrivateRoute><OwnerLayout /></PrivateRoute>}>
-
+      <Route
+        path="/owner"
+        element={
+          <PrivateRoute>
+            <OwnerLayout />
+          </PrivateRoute>
+        }
+      >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<OwnerDashboard />} />
         <Route path="pgs" element={<OwnerDashboard />} />
@@ -131,14 +142,19 @@ function App() {
         <Route path="reviews/:pgId" element={<OwnerReviewReply />} />
         <Route path="property/:propertyId/plans" element={<CreatePlan />} />
         <Route path="notifications" element={<OwnerNotifications />} />
-
         <Route path="chats" element={<OwnerChatList />} />
         <Route path="chat/private/:userId" element={<PrivateChat />} />
-
       </Route>
 
       {/* ================= ADMIN ================= */}
-      <Route path="/admin" element={<PrivateRoute><AdminLayout /></PrivateRoute>}>
+      <Route
+        path="/admin"
+        element={
+          <PrivateRoute>
+            <AdminLayout />
+          </PrivateRoute>
+        }
+      >
         <Route index element={<Navigate to="finance" replace />} />
         <Route path="finance" element={<AdminFinanceDashboard />} />
         <Route path="settlements" element={<AdminSettlements />} />
@@ -149,8 +165,7 @@ function App() {
       </Route>
 
       {/* ================= FALLBACK ================= */}
-      <Route path="*" element={<Navigate to="/" />} />
-
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
