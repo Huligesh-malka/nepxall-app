@@ -134,7 +134,10 @@ export default function PrivateChat() {
   if (loading) return <div style={styles.loader}>Loading chat...</div>;
 
   /* ✅ SHOW ONLY ROLE-BASED NAME FROM BACKEND */
-  const headerTitle = otherUser?.name || "Chat";
+  const headerTitle =
+  me?.role === "owner"
+    ? otherUser?.name || "User"        // 👑 OWNER → USER NAME
+    : otherUser?.pg_name || otherUser?.name || "PG";  // 👤 TENANT → PG NAME
 
   /* ================= UI ================= */
   return (
