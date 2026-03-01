@@ -120,7 +120,7 @@ const formatPrice = (price) => {
 const getPGCode = (id) => `PG-${String(id).padStart(5, "0")}`;
 
 /* ================= BOOKING MODAL COMPONENT ================= */
-const BookingModal = ({ pg, onClose, onBook }) => {
+const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
   const [bookingData, setBookingData] = useState({
     name: "",
     phone: "",
@@ -224,6 +224,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
       }}>
         <button
           onClick={onClose}
+          disabled={bookingLoading}
           style={{
             position: "absolute",
             top: 16,
@@ -236,9 +237,10 @@ const BookingModal = ({ pg, onClose, onBook }) => {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            cursor: "pointer",
+            cursor: bookingLoading ? "not-allowed" : "pointer",
             zIndex: 100,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            opacity: bookingLoading ? 0.5 : 1
           }}
         >
           <X size={24} />
@@ -279,13 +281,15 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                 value={bookingData.name}
                 onChange={handleInputChange}
                 required
+                disabled={bookingLoading}
                 style={{
                   width: "100%",
                   padding: "12px 16px",
                   border: "1px solid #d1d5db",
                   borderRadius: 10,
                   fontSize: 14,
-                  background: "#f9fafb"
+                  background: bookingLoading ? "#f3f4f6" : "#f9fafb",
+                  cursor: bookingLoading ? "not-allowed" : "text"
                 }}
                 placeholder="Enter your full name"
               />
@@ -308,13 +312,15 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                 value={bookingData.phone}
                 onChange={handleInputChange}
                 required
+                disabled={bookingLoading}
                 style={{
                   width: "100%",
                   padding: "12px 16px",
                   border: "1px solid #d1d5db",
                   borderRadius: 10,
                   fontSize: 14,
-                  background: "#f9fafb"
+                  background: bookingLoading ? "#f3f4f6" : "#f9fafb",
+                  cursor: bookingLoading ? "not-allowed" : "text"
                 }}
                 placeholder="Enter your phone number"
               />
@@ -337,13 +343,15 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                 value={bookingData.checkInDate}
                 onChange={handleInputChange}
                 required
+                disabled={bookingLoading}
                 style={{
                   width: "100%",
                   padding: "12px 16px",
                   border: "1px solid #d1d5db",
                   borderRadius: 10,
                   fontSize: 14,
-                  background: "#f9fafb"
+                  background: bookingLoading ? "#f3f4f6" : "#f9fafb",
+                  cursor: bookingLoading ? "not-allowed" : "text"
                 }}
                 min={new Date().toISOString().split('T')[0]}
               />
@@ -365,13 +373,15 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                 value={bookingData.roomType}
                 onChange={handleInputChange}
                 required
+                disabled={bookingLoading}
                 style={{
                   width: "100%",
                   padding: "12px 16px",
                   border: "1px solid #d1d5db",
                   borderRadius: 10,
                   fontSize: 14,
-                  background: "#f9fafb"
+                  background: bookingLoading ? "#f3f4f6" : "#f9fafb",
+                  cursor: bookingLoading ? "not-allowed" : "pointer"
                 }}
               >
                 {getRoomTypes().map((type, index) => (
@@ -385,6 +395,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
               <button
                 type="button"
                 onClick={onClose}
+                disabled={bookingLoading}
                 style={{
                   flex: 1,
                   padding: "14px",
@@ -394,13 +405,15 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                   borderRadius: 10,
                   fontSize: 14,
                   fontWeight: 600,
-                  cursor: "pointer"
+                  cursor: bookingLoading ? "not-allowed" : "pointer",
+                  opacity: bookingLoading ? 0.5 : 1
                 }}
               >
                 Cancel
               </button>
               <button
                 type="submit"
+                disabled={bookingLoading}
                 style={{
                   flex: 2,
                   padding: "14px",
@@ -410,15 +423,32 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                   borderRadius: 10,
                   fontSize: 14,
                   fontWeight: 600,
-                  cursor: "pointer",
+                  cursor: bookingLoading ? "not-allowed" : "pointer",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: 8
+                  gap: 8,
+                  opacity: bookingLoading ? 0.7 : 1
                 }}
               >
-                <BookOpen size={18} />
-                Submit Booking
+                {bookingLoading ? (
+                  <>
+                    <div className="spinner-small" style={{
+                      width: 18,
+                      height: 18,
+                      border: "2px solid rgba(255,255,255,0.3)",
+                      borderTop: "2px solid white",
+                      borderRadius: "50%",
+                      animation: "spin 1s linear infinite"
+                    }}></div>
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <BookOpen size={18} />
+                    Submit Booking
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -1186,6 +1216,8 @@ export default function PGDetails() {
   const [error, setError] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [notification, setNotification] = useState(null);
+  // ✅ ADD THIS STATE
+  const [bookingLoading, setBookingLoading] = useState(false);
 
   const [selectedFacilityCategory, setSelectedFacilityCategory] = useState("all");
   const [selectedHighlightCategory, setSelectedHighlightCategory] = useState("all");
@@ -1532,98 +1564,98 @@ export default function PGDetails() {
   };
 
   //////////////////////////////////////////////////////
-// 🏷 BOOK NOW CLICK
-//////////////////////////////////////////////////////
-const handleBookNow = () => {
-  const user = auth.currentUser;
-
-  if (!user) {
-    showNotificationMessage("Please register or login to book this property");
-
-    navigate("/register", {
-      state: { redirectTo: `/pg/${id}` }
-    });
-
-    return;
-  }
-
-  setShowBookingModal(true);
-};
-
-//////////////////////////////////////////////////////
-// 📝 BOOKING SUBMIT
-//////////////////////////////////////////////////////
-const handleBookingSubmit = async (bookingData) => {
-  try {
-    if (bookingLoading) return; // 🚫 prevent double click
-
-    setBookingLoading(true);
-
+  // 🏷 BOOK NOW CLICK
+  //////////////////////////////////////////////////////
+  const handleBookNow = () => {
     const user = auth.currentUser;
 
     if (!user) {
-      showNotificationMessage("Please login to continue");
-      navigate("/login");
+      showNotificationMessage("Please register or login to book this property");
+
+      navigate("/register", {
+        state: { redirectTo: `/pg/${id}` }
+      });
+
       return;
     }
 
-    const token = await user.getIdToken(true);
+    setShowBookingModal(true);
+  };
 
-    const payload = {
-      name: bookingData.name,
-      phone: bookingData.phone,
-      check_in_date: bookingData.checkInDate,
-      room_type: bookingData.roomType
-    };
+  //////////////////////////////////////////////////////
+  // 📝 BOOKING SUBMIT
+  //////////////////////////////////////////////////////
+  const handleBookingSubmit = async (bookingData) => {
+    try {
+      if (bookingLoading) return; // 🚫 prevent double click
 
-    const res = await api.post(
-      `/bookings/${id}`,
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+      setBookingLoading(true);
+
+      const user = auth.currentUser;
+
+      if (!user) {
+        showNotificationMessage("Please login to continue");
+        navigate("/login");
+        return;
       }
-    );
 
-    //////////////////////////////////////////////////////
-    // ✅ SUCCESS
-    //////////////////////////////////////////////////////
-    showNotificationMessage(
-      res.data?.message || "✅ Booking request sent to owner"
-    );
+      const token = await user.getIdToken(true);
 
-    setShowBookingModal(false);
+      const payload = {
+        name: bookingData.name,
+        phone: bookingData.phone,
+        check_in_date: bookingData.checkInDate,
+        room_type: bookingData.roomType
+      };
 
-  } catch (error) {
-    console.log("BOOKING ERROR:", error?.response?.data);
+      const res = await api.post(
+        `/bookings/${id}`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
 
-    //////////////////////////////////////////////////////
-    // ⚠️ REAL BACKEND MESSAGE
-    //////////////////////////////////////////////////////
-    if (error?.response?.data?.message) {
-      showNotificationMessage(error.response.data.message);
-    } else {
-      showNotificationMessage("❌ Booking failed. Try again");
+      //////////////////////////////////////////////////////
+      // ✅ SUCCESS
+      //////////////////////////////////////////////////////
+      showNotificationMessage(
+        res.data?.message || "✅ Booking request sent to owner"
+      );
+
+      setShowBookingModal(false);
+
+    } catch (error) {
+      console.log("BOOKING ERROR:", error?.response?.data);
+
+      //////////////////////////////////////////////////////
+      // ⚠️ REAL BACKEND MESSAGE
+      //////////////////////////////////////////////////////
+      if (error?.response?.data?.message) {
+        showNotificationMessage(error.response.data.message);
+      } else {
+        showNotificationMessage("❌ Booking failed. Try again");
+      }
+
+    } finally {
+      setBookingLoading(false);
     }
+  };
 
-  } finally {
-    setBookingLoading(false);
-  }
-};
-
-//////////////////////////////////////////////////////
-// 📞 CALL OWNER
-//////////////////////////////////////////////////////
-const handleCallOwner = () => {
-  if (hasOwnerContact && pg?.contact_phone) {
-    window.location.href = `tel:${pg.contact_phone}`;
-  } else {
-    showNotificationMessage(
-      "Owner contact will be visible after booking approval"
-    );
-  }
-};
+  //////////////////////////////////////////////////////
+  // 📞 CALL OWNER
+  //////////////////////////////////////////////////////
+  const handleCallOwner = () => {
+    if (hasOwnerContact && pg?.contact_phone) {
+      window.location.href = `tel:${pg.contact_phone}`;
+    } else {
+      showNotificationMessage(
+        "Owner contact will be visible after booking approval"
+      );
+    }
+  };
 
   const handleViewOnMap = (highlight) => {
     if (highlight.coordinates) {
@@ -1799,7 +1831,7 @@ const handleCallOwner = () => {
           position: "fixed",
           top: 20,
           right: 20,
-          background: "#10b981",
+          background: notification.includes("❌") ? "#ef4444" : "#10b981",
           color: "white",
           padding: "12px 24px",
           borderRadius: 10,
@@ -1810,7 +1842,9 @@ const handleCallOwner = () => {
           alignItems: "center",
           gap: 8
         }}>
-          <Check size={18} />
+          {notification.includes("✅") ? <Check size={18} /> : 
+           notification.includes("❌") ? <X size={18} /> : 
+           <Info size={18} />}
           {notification}
         </div>
       )}
@@ -2424,6 +2458,7 @@ const handleCallOwner = () => {
                 <button
                   style={styles.bookButtonSmall}
                   onClick={handleBookNow}
+                  disabled={bookingLoading}
                 >
                   <BookOpen size={16} />
                   Book Now
@@ -2432,6 +2467,7 @@ const handleCallOwner = () => {
                   <button
                     style={styles.callButtonSmall}
                     onClick={handleCallOwner}
+                    disabled={bookingLoading}
                   >
                     <Phone size={16} />
                     Call Now
@@ -2483,6 +2519,7 @@ const handleCallOwner = () => {
             <button
               style={styles.stickyBookButton}
               onClick={handleBookNow}
+              disabled={bookingLoading}
             >
               <BookOpen size={18} />
               Book Now
@@ -2491,6 +2528,7 @@ const handleCallOwner = () => {
               <button
                 style={styles.stickyCallButton}
                 onClick={handleCallOwner}
+                disabled={bookingLoading}
               >
                 <Phone size={18} />
                 Call Owner
@@ -2505,6 +2543,7 @@ const handleCallOwner = () => {
           pg={pg}
           onClose={() => setShowBookingModal(false)}
           onBook={handleBookingSubmit}
+          bookingLoading={bookingLoading}
         />
       )}
 
@@ -2526,6 +2565,14 @@ const handleCallOwner = () => {
           height: 40px;
           border: 4px solid #e5e7eb;
           border-top: 4px solid #667eea;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+        .spinner-small {
+          width: 18px;
+          height: 18px;
+          border: 2px solid rgba(255,255,255,0.3);
+          border-top: 2px solid white;
           border-radius: 50%;
           animation: spin 1s linear infinite;
         }
