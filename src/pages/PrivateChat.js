@@ -26,6 +26,10 @@ export default function PrivateChat() {
   const scrollBottom = () =>
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
 
+  const roomId = me && userId
+    ? [Number(me.id), Number(userId)].sort().join("_")
+    : null;
+
   /* ================= LOAD ================= */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
@@ -80,6 +84,11 @@ export default function PrivateChat() {
       );
     });
 
+    /* 🗑 REALTIME DELETE */
+    socket.on("message_deleted", ({ messageId }) => {
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    });
+
     socket.on("user_typing", ({ isTyping }) => setTyping(isTyping));
     socket.on("user_online", () => setOnline(true));
     socket.on("user_offline", () => setOnline(false));
@@ -87,6 +96,7 @@ export default function PrivateChat() {
     return () => {
       socket.off("receive_private_message");
       socket.off("message_sent_confirmation");
+      socket.off("message_deleted");
       socket.off("user_typing");
       socket.off("user_online");
       socket.off("user_offline");
@@ -112,6 +122,27 @@ export default function PrivateChat() {
     scrollBottom();
   };
 
+  /* ================= DELETE ================= */
+  const deleteMessage = async (id) => {
+    try {
+      const token = await auth.currentUser.getIdToken();
+
+      await api.delete(`/private-chat/message/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setMessages((prev) => prev.filter((m) => m.id !== id));
+
+      socket.emit("delete_private_message", {
+        messageId: id,
+        room: roomId,
+      });
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   /* ================= TYPING ================= */
   const handleTyping = (value) => {
     setText(value);
@@ -133,19 +164,16 @@ export default function PrivateChat() {
 
   if (loading) return <div style={styles.loader}>Loading chat...</div>;
 
-  /* ✅ SHOW ONLY ROLE-BASED NAME FROM BACKEND */
   const headerTitle =
-  me?.role === "owner"
-    ? otherUser?.name || "User"        // 👑 OWNER → USER NAME
-    : otherUser?.pg_name || otherUser?.name || "PG";  // 👤 TENANT → PG NAME
+    me?.role === "owner"
+      ? otherUser?.name || "User"
+      : otherUser?.pg_name || otherUser?.name || "PG";
 
   /* ================= UI ================= */
   return (
     <div style={styles.container}>
-      {/* HEADER */}
       <div style={styles.header}>
         <span onClick={() => navigate(-1)} style={styles.back}>←</span>
-
         <div>
           <div style={styles.name}>{headerTitle}</div>
           <div style={styles.status}>
@@ -154,7 +182,6 @@ export default function PrivateChat() {
         </div>
       </div>
 
-      {/* MESSAGES */}
       <div style={styles.chatBody}>
         {messages.map((m) => (
           <div
@@ -165,20 +192,32 @@ export default function PrivateChat() {
                 m.sender_id === me?.id ? "flex-end" : "flex-start",
             }}
           >
-            <div
-              style={{
-                ...styles.bubble,
-                background:
-                  m.sender_id === me?.id
-                    ? "linear-gradient(135deg,#667eea,#764ba2)"
-                    : "#fff",
-                color: m.sender_id === me?.id ? "#fff" : "#000",
-              }}
-            >
-              {m.message}
+            <div style={{ position: "relative" }}>
+              <div
+                style={{
+                  ...styles.bubble,
+                  background:
+                    m.sender_id === me?.id
+                      ? "linear-gradient(135deg,#667eea,#764ba2)"
+                      : "#fff",
+                  color: m.sender_id === me?.id ? "#fff" : "#000",
+                }}
+              >
+                {m.message}
 
+                {m.sender_id === me?.id && (
+                  <div style={styles.tick}>{m.status || "✔"}</div>
+                )}
+              </div>
+
+              {/* 🗑 DELETE BUTTON (ONLY MY MESSAGE) */}
               {m.sender_id === me?.id && (
-                <div style={styles.tick}>{m.status || "✔"}</div>
+                <span
+                  onClick={() => deleteMessage(m.id)}
+                  style={styles.deleteBtn}
+                >
+                  🗑
+                </span>
               )}
             </div>
           </div>
@@ -189,7 +228,6 @@ export default function PrivateChat() {
         <div ref={bottomRef} />
       </div>
 
-      {/* INPUT */}
       <div style={styles.inputArea}>
         <input
           value={text}
@@ -208,7 +246,6 @@ export default function PrivateChat() {
 
 const styles = {
   container: { height: "100vh", display: "flex", flexDirection: "column", background: "#f1f5f9" },
-
   header: {
     background: "linear-gradient(135deg,#667eea,#764ba2)",
     color: "#fff",
@@ -217,34 +254,36 @@ const styles = {
     alignItems: "center",
     gap: 10,
   },
-
   back: { cursor: "pointer", fontSize: 20 },
-
   name: { fontWeight: "bold" },
   status: { fontSize: 12, opacity: 0.9 },
-
   chatBody: { flex: 1, overflowY: "auto", padding: 15 },
-
   msgRow: { display: "flex", marginBottom: 10 },
-
   bubble: {
     padding: "10px 14px",
     borderRadius: 15,
     maxWidth: "70%",
     position: "relative",
   },
-
   tick: { fontSize: 10, marginTop: 5, textAlign: "right", opacity: 0.8 },
-
   typing: { fontSize: 12, marginLeft: 10, color: "#555" },
-
+  deleteBtn: {
+    position: "absolute",
+    top: -8,
+    right: -8,
+    cursor: "pointer",
+    fontSize: 14,
+    background: "#fff",
+    borderRadius: "50%",
+    padding: "2px 5px",
+    boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+  },
   inputArea: {
     display: "flex",
     padding: 10,
     background: "#fff",
     borderTop: "1px solid #eee",
   },
-
   input: {
     flex: 1,
     padding: 12,
@@ -252,7 +291,6 @@ const styles = {
     border: "1px solid #ddd",
     outline: "none",
   },
-
   sendBtn: {
     marginLeft: 10,
     background: "linear-gradient(135deg,#667eea,#764ba2)",
@@ -262,7 +300,6 @@ const styles = {
     borderRadius: "50%",
     cursor: "pointer",
   },
-
   loader: {
     height: "100vh",
     display: "flex",
