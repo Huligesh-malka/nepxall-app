@@ -26,52 +26,45 @@ export default function PrivateChat() {
   const scrollBottom = () =>
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
 
-  const roomId = me && userId
-    ? [Number(me.id), Number(userId)].sort().join("_")
-    : null;
-
-  /* ================= LOAD ================= */
+  /* ================= AUTH + LOAD ================= */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
       if (!fbUser) return navigate("/login");
 
-      try {
-        const token = await fbUser.getIdToken();
-        const config = { headers: { Authorization: `Bearer ${token}` } };
+      const token = await fbUser.getIdToken();
+      const config = { headers: { Authorization: `Bearer ${token}` } };
 
-        const [meRes, userRes, msgRes] = await Promise.all([
-          api.get("/private-chat/me", config),
-          api.get(`/private-chat/user/${userId}`, config),
-          api.get(`/private-chat/messages/${userId}`, config),
-        ]);
+      const [meRes, userRes, msgRes] = await Promise.all([
+        api.get("/private-chat/me", config),
+        api.get(`/private-chat/user/${userId}`, config),
+        api.get(`/private-chat/messages/${userId}`, config),
+      ]);
 
-        setMe(meRes.data);
-        setOtherUser(userRes.data);
-        setMessages(msgRes.data);
-        setLoading(false);
+      setMe(meRes.data);
+      setOtherUser(userRes.data);
+      setMessages(msgRes.data);
+      setLoading(false);
 
-        if (!socket.connected) socket.connect();
+      if (!socket.connected) socket.connect();
 
-        socket.emit("register", fbUser.uid);
-
-        socket.emit("join_private_room", {
-          userA: Number(meRes.data.id),
-          userB: Number(userId),
-        });
-
-        scrollBottom();
-      } catch (err) {
-        console.error(err);
-      }
+      socket.emit("register", fbUser.uid);
     });
 
-    return () => {
-      unsub?.();
-      socket.disconnect();
-    };
+    return () => unsub?.();
   }, [userId, navigate]);
 
-  /* ================= SOCKET ================= */
+  /* ================= JOIN ROOM (VERY IMPORTANT) ================= */
+  useEffect(() => {
+    if (!me || !userId) return;
+
+    socket.emit("join_private_room", {
+      userA: Number(me.id),
+      userB: Number(userId),
+    });
+
+  }, [me, userId]);
+
+  /* ================= SOCKET EVENTS ================= */
   useEffect(() => {
     socket.on("receive_private_message", (msg) => {
       setMessages((prev) => [...prev, msg]);
@@ -84,7 +77,6 @@ export default function PrivateChat() {
       );
     });
 
-    /* 🗑 REALTIME DELETE */
     socket.on("message_deleted", ({ messageId }) => {
       setMessages((prev) => prev.filter((m) => m.id !== messageId));
     });
@@ -124,42 +116,19 @@ export default function PrivateChat() {
 
   /* ================= DELETE ================= */
   const deleteMessage = async (id) => {
-    try {
-      const token = await auth.currentUser.getIdToken();
+    const token = await auth.currentUser.getIdToken();
 
-      await api.delete(`/private-chat/message/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setMessages((prev) => prev.filter((m) => m.id !== id));
-
-      socket.emit("delete_private_message", {
-        messageId: id,
-        room: roomId,
-      });
-
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  /* ================= TYPING ================= */
-  const handleTyping = (value) => {
-    setText(value);
-
-    socket.emit("typing", {
-      userA: me?.id,
-      userB: Number(userId),
-      isTyping: true,
+    await api.delete(`/private-chat/message/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
     });
 
-    setTimeout(() => {
-      socket.emit("typing", {
-        userA: me?.id,
-        userB: Number(userId),
-        isTyping: false,
-      });
-    }, 800);
+    setMessages((prev) => prev.filter((m) => m.id !== id));
+
+    socket.emit("delete_private_message", {
+      messageId: id,
+      sender_id: me.id,
+      receiver_id: Number(userId),
+    });
   };
 
   if (loading) return <div style={styles.loader}>Loading chat...</div>;
@@ -174,6 +143,7 @@ export default function PrivateChat() {
     <div style={styles.container}>
       <div style={styles.header}>
         <span onClick={() => navigate(-1)} style={styles.back}>←</span>
+
         <div>
           <div style={styles.name}>{headerTitle}</div>
           <div style={styles.status}>
@@ -210,7 +180,6 @@ export default function PrivateChat() {
                 )}
               </div>
 
-              {/* 🗑 DELETE BUTTON (ONLY MY MESSAGE) */}
               {m.sender_id === me?.id && (
                 <span
                   onClick={() => deleteMessage(m.id)}
@@ -224,14 +193,13 @@ export default function PrivateChat() {
         ))}
 
         {typing && <div style={styles.typing}>Typing...</div>}
-
         <div ref={bottomRef} />
       </div>
 
       <div style={styles.inputArea}>
         <input
           value={text}
-          onChange={(e) => handleTyping(e.target.value)}
+          onChange={(e) => setText(e.target.value)}
           placeholder="Type a message..."
           style={styles.input}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
