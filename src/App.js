@@ -12,6 +12,11 @@ import OwnerLayout from "./layouts/OwnerLayout";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
+/* STATIC PAGES ✅ */
+import Contact from "./pages/Contact";
+import Terms from "./pages/Terms";
+import RefundPolicy from "./pages/RefundPolicy";
+
 /* USER */
 import UserPGSearch from "./pages/UserPGSearch";
 import PGDetails from "./pages/PGDetails";
@@ -63,17 +68,12 @@ function App() {
   const [user, setUser] = useState(undefined);
 
   useEffect(() => {
-    testBackendConnection().then((r) =>
-      r.success
-        ? console.log("✅ Backend connected")
-        : console.error("❌ Backend error:", r.error)
-    );
+    testBackendConnection();
 
     const unsub = onAuthStateChanged(auth, (u) => setUser(u));
     return unsub;
   }, []);
 
-  /* ⏳ WAIT FOR AUTH */
   if (user === undefined) return null;
 
   const PrivateRoute = ({ children }) =>
@@ -81,6 +81,12 @@ function App() {
 
   return (
     <Routes>
+
+      {/* ================= PUBLIC PAGES ✅ ================= */}
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/refund-policy" element={<RefundPolicy />} />
+
       {/* ================= AUTH ================= */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
@@ -126,7 +132,6 @@ function App() {
         <Route path="property/:propertyId/plans" element={<CreatePlan />} />
         <Route path="notifications" element={<OwnerNotifications />} />
 
-        {/* CHAT */}
         <Route path="chats" element={<OwnerChatList />} />
         <Route path="chat/private/:userId" element={<PrivateChat />} />
 
@@ -134,7 +139,6 @@ function App() {
 
       {/* ================= ADMIN ================= */}
       <Route path="/admin" element={<PrivateRoute><AdminLayout /></PrivateRoute>}>
-
         <Route index element={<Navigate to="finance" replace />} />
         <Route path="finance" element={<AdminFinanceDashboard />} />
         <Route path="settlements" element={<AdminSettlements />} />
@@ -142,11 +146,11 @@ function App() {
         <Route path="pending-pgs" element={<AdminPendingPGs />} />
         <Route path="pg/:id" element={<AdminPGDetails />} />
         <Route path="owner-verification" element={<AdminOwnerVerification />} />
-
       </Route>
 
       {/* ================= FALLBACK ================= */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/" />} />
+
     </Routes>
   );
 }
