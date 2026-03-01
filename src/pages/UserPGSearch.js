@@ -2399,43 +2399,55 @@ function UserPGSearch() {
     setBookingPG(pg);
   };
 
-  const handleBookingSubmit = async (bookingData) => {
-    try {
-      const user = auth.currentUser;
+ const handleBookingSubmit = async (bookingData) => {
+  try {
+    const user = auth.currentUser;
 
-      if (!user) {
-        showNotification("Please register or login to continue");
-        navigate("/register");
-        return;
-      }
-
-      const token = await user.getIdToken(true);
-      
-      const payload = {
-        name: bookingData.name,
-        phone: bookingData.phone,
-        check_in_date: bookingData.checkInDate,
-        room_type: bookingData.roomType
-      };
-
-      await api.post(
-        `/bookings/${bookingPG.id}`,
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      showNotification("✅ Booking request sent to owner");
-      setBookingPG(null);
-
-    } catch (error) {
-      console.error(error);
-      showNotification("❌ Booking failed. Try again");
+    if (!user) {
+      showNotification("Please register or login to continue");
+      navigate("/register");
+      return;
     }
-  };
+
+    const token = await user.getIdToken(true);
+
+    const payload = {
+      name: bookingData.name,
+      phone: bookingData.phone,
+      check_in_date: bookingData.checkInDate,
+      room_type: bookingData.roomType
+    };
+
+    const res = await api.post(
+      `/bookings/${bookingPG.id}`,
+      payload,
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+
+    // ✅ HANDLE ALREADY BOOKED
+    if (res.data?.alreadyBooked) {
+      showNotification(res.data.message);
+      setBookingPG(null);
+      return;
+    }
+
+    // ✅ SUCCESS
+    showNotification(res.data.message || "✅ Booking request sent to owner");
+    setBookingPG(null);
+
+  } catch (error) {
+    console.log("BOOKING ERROR:", error.response?.data);
+
+    // ✅ SHOW BACKEND MESSAGE
+    if (error.response?.data?.message) {
+      showNotification(error.response.data.message);
+    } else {
+      showNotification("❌ Something went wrong. Try again");
+    }
+  }
+};
 
   const handleSaveFavorite = (pgId, isFavorite) => {
     const newFavorites = new Set(favorites);
