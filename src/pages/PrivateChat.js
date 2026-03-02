@@ -1,76 +1,145 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/api";
 import { io } from "socket.io-client";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  Send, 
+  ChevronLeft, 
+  MoreVertical, 
+  Trash2, 
+  Check, 
+  CheckCheck, 
+  Image as ImageIcon, 
+  Paperclip,
+  Smile,
+  ShieldCheck,
+  Clock
+} from "lucide-react";
+import { format, isSameDay } from "date-fns";
 
+// Initialize Socket outside or in a provider to prevent multiple connections
 const socket = io("https://nepxall-backend.onrender.com", {
   autoConnect: false,
   transports: ["websocket"],
+  reconnectionAttempts: 5,
 });
+
+/**
+ * Modern Private Chat Component
+ * Features:
+ * - Real-time status updates (Online/Offline/Typing)
+ * - Message read/delivery receipts with visual icons
+ * - Grouped messages by date
+ * - Smooth framer-motion animations
+ * - Responsive glassmorphism design
+ * - Optimized message rendering
+ */
+
+/* ================= SUB-COMPONENTS ================= */
+
+const MessageStatus = ({ status }) => {
+  switch (status) {
+    case "sent":
+      return <Check size={14} className="text-gray-400" />;
+    case "delivered":
+      return <CheckCheck size={14} className="text-gray-400" />;
+    case "read":
+      return <CheckCheck size={14} className="text-blue-400" />;
+    default:
+      return <Clock size={12} className="text-gray-300" />;
+  }
+};
+
+const DateSeparator = ({ date }) => (
+  <div style={styles.dateSeparator}>
+    <span>{format(new Date(date), "MMMM dd, yyyy")}</span>
+  </div>
+);
+
+/* ================= MAIN COMPONENT ================= */
 
 export default function PrivateChat() {
   const { userId } = useParams();
   const navigate = useNavigate();
-  const bottomRef = useRef();
-  const inputRef = useRef();
+  const bottomRef = useRef(null);
+  const inputRef = useRef(null);
 
+  // State Management
   const [messages, setMessages] = useState([]);
   const [me, setMe] = useState(null);
   const [otherUser, setOtherUser] = useState(null);
   const [text, setText] = useState("");
-  const [typing, setTyping] = useState(false);
-  const [online, setOnline] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [remoteTyping, setRemoteTyping] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
+  const [error, setError] = useState(null);
+  const [showOptions, setShowOptions] = useState(null); // Track which message ID shows delete
 
-  const scrollBottom = () =>
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  // Auto-scroll logic
+  const scrollBottom = useCallback((behavior = "smooth") => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior });
+    }
+  }, []);
 
-  /* ================= AUTH LOAD ================= */
+  /* ================= AUTH & INITIALIZATION ================= */
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (fbUser) => {
-      if (!fbUser) return navigate("/login");
+    let isMounted = true;
 
-      const token = await fbUser.getIdToken();
-      const config = { headers: { Authorization: `Bearer ${token}` } };
+    const unsub = onAuthStateChanged(auth, async (fbUser) => {
+      if (!fbUser) {
+        return navigate("/login");
+      }
 
       try {
+        const token = await fbUser.getIdToken();
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+
         const [meRes, userRes, msgRes] = await Promise.all([
           api.get("/private-chat/me", config),
           api.get(`/private-chat/user/${userId}`, config),
           api.get(`/private-chat/messages/${userId}`, config),
         ]);
 
-        setMe(meRes.data);
-        setOtherUser(userRes.data);
-        setMessages(msgRes.data);
-        setLoading(false);
+        if (isMounted) {
+          setMe(meRes.data);
+          setOtherUser(userRes.data);
+          setMessages(msgRes.data);
+          setLoading(false);
 
-        if (!socket.connected) socket.connect();
-        socket.emit("register", fbUser.uid);
-      } catch (error) {
-        console.error("Error loading chat:", error);
-        navigate(-1);
+          if (!socket.connected) socket.connect();
+          socket.emit("register", fbUser.uid);
+        }
+      } catch (err) {
+        console.error("Initialization error:", err);
+        setError("Failed to load conversation. Please try again.");
+        setLoading(false);
       }
     });
 
-    return () => unsub?.();
+    return () => {
+      isMounted = false;
+      unsub?.();
+    };
   }, [userId, navigate]);
 
-  /* ================= JOIN ROOM ================= */
+  /* ================= ROOM LOGIC ================= */
   useEffect(() => {
-    if (!me) return;
-    socket.emit("join_private_room", {
-      userA: me.id,
-      userB: Number(userId),
-    });
+    if (me && userId) {
+      socket.emit("join_private_room", {
+        userA: me.id,
+        userB: Number(userId),
+      });
+    }
   }, [me, userId]);
 
-  /* ================= AUTO MARK READ ================= */
+  /* ================= MESSAGE READ LOGIC ================= */
   useEffect(() => {
-    if (!me) return;
+    if (!me || messages.length === 0) return;
 
     const hasUnread = messages.some(
       (m) => m.sender_id !== me.id && !m.is_read
@@ -84,75 +153,96 @@ export default function PrivateChat() {
     }
   }, [messages, me, userId]);
 
-  /* ================= SOCKET EVENTS ================= */
+  /* ================= SOCKET EVENT LISTENERS ================= */
   useEffect(() => {
-    const receiveMessage = (msg) => {
+    const handleReceive = (msg) => {
       setMessages((prev) => [...prev, msg]);
       scrollBottom();
     };
 
-    const delivered = (msg) => {
+    const handleDelivered = (msg) => {
       setMessages((prev) =>
         prev.map((m) => (m.id === msg.id ? { ...m, status: "delivered" } : m))
       );
     };
 
-    const read = () => {
+    const handleRead = () => {
       setMessages((prev) =>
-        prev.map((m) =>
-          m.sender_id === me?.id ? { ...m, status: "read" } : m
-        )
+        prev.map((m) => (m.sender_id === me?.id ? { ...m, status: "read" } : m))
       );
     };
 
-    const deleted = ({ messageId }) => {
+    const handleDeleted = ({ messageId }) => {
       setMessages((prev) => prev.filter((m) => m.id !== messageId));
     };
 
-    socket.on("receive_private_message", receiveMessage);
-    socket.on("message_sent_confirmation", delivered);
-    socket.on("messages_read", read);
-    socket.on("message_deleted", deleted);
-    socket.on("user_online", () => setOnline(true));
-    socket.on("user_offline", () => setOnline(false));
-    socket.on("user_typing", ({ isTyping }) => setTyping(isTyping));
+    const handleTyping = ({ isTyping: typingStatus, senderId }) => {
+      if (Number(senderId) === Number(userId)) {
+        setRemoteTyping(typingStatus);
+      }
+    };
+
+    socket.on("receive_private_message", handleReceive);
+    socket.on("message_sent_confirmation", handleDelivered);
+    socket.on("messages_read", handleRead);
+    socket.on("message_deleted", handleDeleted);
+    socket.on("user_online", ({ userId: id }) => Number(id) === Number(userId) && setIsOnline(true));
+    socket.on("user_offline", ({ userId: id }) => Number(id) === Number(userId) && setIsOnline(false));
+    socket.on("user_typing", handleTyping);
 
     return () => {
-      socket.off("receive_private_message", receiveMessage);
-      socket.off("message_sent_confirmation", delivered);
-      socket.off("messages_read", read);
-      socket.off("message_deleted", deleted);
+      socket.off("receive_private_message", handleReceive);
+      socket.off("message_sent_confirmation", handleDelivered);
+      socket.off("messages_read", handleRead);
+      socket.off("message_deleted", handleDeleted);
       socket.off("user_online");
       socket.off("user_offline");
       socket.off("user_typing");
     };
-  }, [me]);
+  }, [me, userId, scrollBottom]);
 
-  /* ================= SEND ================= */
-  const sendMessage = async () => {
-    if (!text.trim() || sending) return;
+  /* ================= ACTIONS ================= */
 
-    setSending(true);
+  const handleTypingIndicator = (e) => {
+    setText(e.target.value);
+    if (!isTyping) {
+      setIsTyping(true);
+      socket.emit("typing", { receiverId: userId, isTyping: true });
+    }
+
+    // Debounce typing stop
+    clearTimeout(window.typingTimeout);
+    window.typingTimeout = setTimeout(() => {
+      setIsTyping(false);
+      socket.emit("typing", { receiverId: userId, isTyping: false });
+    }, 2000);
+  };
+
+  const sendMessage = async (e) => {
+    e?.preventDefault();
+    if (!text.trim()) return;
+
+    const messageContent = text;
+    setText(""); // Optimistic clear
+    
     try {
       const token = await auth.currentUser.getIdToken();
       const res = await api.post(
         "/private-chat/send",
-        { receiver_id: Number(userId), message: text },
+        { receiver_id: Number(userId), message: messageContent },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       socket.emit("send_private_message", res.data);
       setMessages((prev) => [...prev, { ...res.data, status: "sent" }]);
-      setText("");
       scrollBottom();
-    } catch (error) {
-      console.error("Error sending message:", error);
-    } finally {
-      setSending(false);
+    } catch (err) {
+      console.error("Send failed", err);
+      // Revert text on failure
+      setText(messageContent);
     }
   };
 
-  /* ================= DELETE ================= */
   const deleteMessage = async (id) => {
     try {
       const token = await auth.currentUser.getIdToken();
@@ -166,536 +256,397 @@ export default function PrivateChat() {
         sender_id: me.id,
         receiver_id: Number(userId),
       });
-    } catch (error) {
-      console.error("Error deleting message:", error);
+      setShowOptions(null);
+    } catch (err) {
+      alert("Failed to delete message");
     }
   };
 
-  /* ================= TYPING ================= */
-  const handleTyping = (e) => {
-    setText(e.target.value);
-    socket.emit("typing", {
-      userA: me?.id,
-      userB: Number(userId),
-      isTyping: e.target.value.length > 0,
+  /* ================= HELPERS ================= */
+
+  const groupedMessages = useMemo(() => {
+    const groups = [];
+    messages.forEach((msg, idx) => {
+      const prevMsg = messages[idx - 1];
+      const showDate = !prevMsg || !isSameDay(new Date(msg.created_at), new Date(prevMsg.created_at));
+      
+      if (showDate) groups.push({ type: "date", date: msg.created_at });
+      groups.push({ type: "message", ...msg });
     });
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "sent":
-        return <span style={styles.statusIcon}>✓</span>;
-      case "delivered":
-        return <span style={{ ...styles.statusIcon, color: "#FFC107" }}>✓✓</span>;
-      case "read":
-        return (
-          <span style={{ ...styles.statusIcon, color: "#4CAF50" }}>
-            <span style={styles.doubleTick}>✓✓</span>
-          </span>
-        );
-      default:
-        return null;
-    }
-  };
-
-  const formatTime = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  };
+    return groups;
+  }, [messages]);
 
   if (loading) {
     return (
-      <div style={styles.loaderContainer}>
-        <div style={styles.loader}>
-          <div style={styles.loaderSpinner}></div>
-          <p style={styles.loaderText}>Loading chat...</p>
-        </div>
+      <div style={styles.loadingContainer}>
+        <motion.div 
+          animate={{ rotate: 360 }} 
+          transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+          style={styles.spinner} 
+        />
+        <p>Securing connection...</p>
       </div>
     );
   }
 
-  const headerTitle =
-    me?.role === "owner"
-      ? otherUser?.name || "User"
-      : otherUser?.pg_name || otherUser?.name || "PG";
-
-  const headerSubtitle = otherUser?.email || otherUser?.phone || "";
+  const headerTitle = me?.role === "owner" 
+    ? otherUser?.name || "Guest User" 
+    : otherUser?.pg_name || otherUser?.name || "Property Manager";
 
   return (
     <div style={styles.container}>
-      {/* Header */}
-      <div style={styles.header}>
-        <button onClick={() => navigate(-1)} style={styles.backButton}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-        
-        <div style={styles.headerAvatar}>
-          {otherUser?.name?.charAt(0) || "U"}
-        </div>
-        
-        <div style={styles.headerInfo}>
-          <div style={styles.headerName}>{headerTitle}</div>
-          <div style={styles.headerSubtitle}>
-            {headerSubtitle && <span style={styles.headerEmail}>{headerSubtitle}</span>}
+      {/* HEADER */}
+      <header style={styles.header}>
+        <div style={styles.headerLeft}>
+          <button onClick={() => navigate(-1)} style={styles.iconBtn}>
+            <ChevronLeft size={24} />
+          </button>
+          <div style={styles.avatar}>
+            {headerTitle.charAt(0).toUpperCase()}
+            {isOnline && <div style={styles.onlineBadge} />}
+          </div>
+          <div style={styles.headerInfo}>
+            <h3 style={styles.headerName}>{headerTitle}</h3>
             <span style={styles.headerStatus}>
-              <span style={{ ...styles.statusDot, backgroundColor: online ? "#4CAF50" : "#9E9E9E" }} />
-              {online ? "Online" : "Offline"}
+              {isOnline ? "Active now" : "Offline"}
             </span>
           </div>
         </div>
-      </div>
+        <div style={styles.headerRight}>
+          <button style={styles.iconBtn}><ShieldCheck size={20} /></button>
+          <button style={styles.iconBtn}><MoreVertical size={20} /></button>
+        </div>
+      </header>
 
-      {/* Chat Body */}
+      {/* CHAT BODY */}
       <div style={styles.chatBody}>
-        {messages.length === 0 ? (
-          <div style={styles.emptyState}>
-            <div style={styles.emptyStateIcon}>💬</div>
-            <p style={styles.emptyStateText}>No messages yet</p>
-            <p style={styles.emptyStateSubtext}>Say hello to start chatting!</p>
-          </div>
-        ) : (
-          messages.map((m, index) => {
-            const isMe = m.sender_id === me?.id;
-            const showDate = index === 0 || 
-              new Date(m.created_at).toDateString() !== new Date(messages[index - 1]?.created_at).toDateString();
+        <div style={styles.safetyNotice}>
+          🔒 Messages are encrypted. Keep your payments within NepXall for safety.
+        </div>
 
-            return (
-              <React.Fragment key={m.id}>
-                {showDate && (
-                  <div style={styles.dateDivider}>
-                    <span style={styles.dateText}>
-                      {new Date(m.created_at).toLocaleDateString([], { 
-                        weekday: "long", 
-                        year: "numeric", 
-                        month: "long", 
-                        day: "numeric" 
-                      })}
-                    </span>
-                  </div>
-                )}
+        {groupedMessages.map((item, index) => {
+          if (item.type === "date") {
+            return <DateSeparator key={`date-${index}`} date={item.date} />;
+          }
+
+          const isMe = item.sender_id === me?.id;
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              key={item.id}
+              style={{
+                ...styles.msgRow,
+                justifyContent: isMe ? "flex-end" : "flex-start",
+              }}
+            >
+              <div 
+                style={styles.bubbleContainer}
+                onMouseEnter={() => setShowOptions(item.id)}
+                onMouseLeave={() => setShowOptions(null)}
+              >
+                {!isMe && <div style={styles.smallAvatar}>{headerTitle.charAt(0)}</div>}
                 
-                <div style={{ ...styles.messageRow, justifyContent: isMe ? "flex-end" : "flex-start" }}>
-                  {!isMe && (
-                    <div style={styles.otherAvatar}>
-                      {otherUser?.name?.charAt(0) || "U"}
-                    </div>
-                  )}
+                <div style={{
+                  ...styles.bubble,
+                  background: isMe ? "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)" : "#ffffff",
+                  color: isMe ? "#ffffff" : "#1e293b",
+                  borderBottomRightRadius: isMe ? 4 : 16,
+                  borderBottomLeftRadius: isMe ? 16 : 4,
+                  boxShadow: isMe ? "0 4px 15px rgba(99, 102, 241, 0.2)" : "0 2px 8px rgba(0,0,0,0.05)",
+                }}>
+                  <p style={styles.msgText}>{item.message}</p>
                   
-                  <div style={{ maxWidth: "70%" }}>
-                    <div style={styles.messageContainer}>
-                      <div style={{ ...styles.messageBubble, ...(isMe ? styles.myMessage : styles.otherMessage) }}>
-                        <p style={styles.messageText}>{m.message}</p>
-                        <div style={styles.messageFooter}>
-                          <span style={styles.messageTime}>{formatTime(m.created_at)}</span>
-                          {isMe && getStatusIcon(m.status)}
-                        </div>
-                      </div>
-                      
-                      {isMe && (
-                        <button
-                          onClick={() => deleteMessage(m.id)}
-                          style={styles.deleteButton}
-                          title="Delete message"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
+                  <div style={styles.msgMeta}>
+                    <span style={{...styles.msgTime, color: isMe ? "rgba(255,255,255,0.7)" : "#94a3b8"}}>
+                      {format(new Date(item.created_at), "HH:mm")}
+                    </span>
+                    {isMe && <MessageStatus status={item.status} />}
                   </div>
                 </div>
-              </React.Fragment>
-            );
-          })
-        )}
 
-        {typing && (
-          <div style={styles.typingIndicator}>
-            <div style={styles.typingAvatar}>{otherUser?.name?.charAt(0) || "U"}</div>
-            <div style={styles.typingDots}>
-              <span style={styles.dot}></span>
-              <span style={styles.dot}></span>
-              <span style={styles.dot}></span>
-            </div>
-          </div>
+                {/* Context Actions */}
+                <AnimatePresence>
+                  {showOptions === item.id && isMe && (
+                    <motion.button
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      onClick={() => deleteMessage(item.id)}
+                      style={styles.deleteAction}
+                    >
+                      <Trash2 size={14} color="#ef4444" />
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          );
+        })}
+
+        {remoteTyping && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.typingIndicator}>
+            <div className="dot-pulse" />
+            <span>{headerTitle} is typing...</span>
+          </motion.div>
         )}
-        
         <div ref={bottomRef} />
       </div>
 
-      {/* Input Area */}
-      <div style={styles.inputContainer}>
-        <input
-          ref={inputRef}
-          value={text}
-          onChange={handleTyping}
-          placeholder="Type a message..."
-          style={styles.input}
-          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-          disabled={sending}
-        />
-        <button
-          onClick={sendMessage}
-          style={{ ...styles.sendButton, opacity: text.trim() && !sending ? 1 : 0.5 }}
-          disabled={!text.trim() || sending}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-          </svg>
-        </button>
+      {/* INPUT AREA */}
+      <div style={styles.footer}>
+        <div style={styles.inputWrapper}>
+          <button style={styles.footerIconBtn}><Smile size={22} /></button>
+          <input
+            ref={inputRef}
+            value={text}
+            onChange={handleTypingIndicator}
+            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+            placeholder="Write a message..."
+            style={styles.input}
+          />
+          <button style={styles.footerIconBtn}><Paperclip size={22} /></button>
+          <button 
+            onClick={sendMessage} 
+            disabled={!text.trim()}
+            style={{
+              ...styles.sendBtn,
+              opacity: text.trim() ? 1 : 0.6,
+              transform: text.trim() ? "scale(1)" : "scale(0.9)",
+            }}
+          >
+            <Send size={18} />
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-/* ================= STYLES ================= */
+/* ================= THEME & STYLES ================= */
+
 const styles = {
   container: {
     height: "100vh",
     display: "flex",
     flexDirection: "column",
-    background: "#f8fafc",
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    backgroundColor: "#f8fafc",
+    fontFamily: "'Inter', sans-serif",
   },
 
-  // Header Styles
   header: {
-    background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
-    color: "#fff",
-    padding: "12px 16px",
+    height: "70px",
+    background: "#ffffff",
+    padding: "0 20px",
     display: "flex",
     alignItems: "center",
-    gap: "12px",
-    boxShadow: "0 4px 12px rgba(99, 102, 241, 0.2)",
+    justifyContent: "space-between",
+    borderBottom: "1px solid #e2e8f0",
+    zIndex: 10,
   },
 
-  backButton: {
-    background: "rgba(255, 255, 255, 0.2)",
-    border: "none",
-    borderRadius: "50%",
-    width: "40px",
-    height: "40px",
+  headerLeft: { display: "flex", alignItems: "center", gap: "12px" },
+
+  avatar: {
+    width: "42px",
+    height: "42px",
+    borderRadius: "12px",
+    background: "linear-gradient(135deg, #6366f1, #a855f7)",
+    color: "#fff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    cursor: "pointer",
-    color: "#fff",
-    transition: "background 0.2s",
-    outline: "none",
-  },
-
-  headerAvatar: {
-    width: "45px",
-    height: "45px",
-    borderRadius: "50%",
-    background: "rgba(255, 255, 255, 0.3)",
-    backdropFilter: "blur(10px)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+    fontWeight: "bold",
     fontSize: "18px",
-    fontWeight: "600",
-    color: "#fff",
-    border: "2px solid rgba(255, 255, 255, 0.5)",
+    position: "relative",
   },
 
-  headerInfo: {
-    flex: 1,
-  },
-
-  headerName: {
-    fontSize: "16px",
-    fontWeight: "600",
-    marginBottom: "4px",
-  },
-
-  headerSubtitle: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    fontSize: "12px",
-    opacity: 0.9,
-  },
-
-  headerEmail: {
-    fontSize: "12px",
-  },
-
-  headerStatus: {
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-  },
-
-  statusDot: {
-    width: "8px",
-    height: "8px",
+  onlineBadge: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: "12px",
+    height: "12px",
     borderRadius: "50%",
-    display: "inline-block",
-    marginRight: "4px",
+    background: "#22c55e",
+    border: "2px solid #fff",
   },
 
-  // Chat Body Styles
+  headerInfo: { display: "flex", flexDirection: "column" },
+  headerName: { margin: 0, fontSize: "16px", color: "#1e293b", fontWeight: 600 },
+  headerStatus: { fontSize: "12px", color: "#64748b" },
+
+  iconBtn: {
+    background: "none",
+    border: "none",
+    padding: "8px",
+    borderRadius: "8px",
+    cursor: "pointer",
+    color: "#64748b",
+    display: "flex",
+    alignItems: "center",
+    transition: "background 0.2s",
+  },
+
   chatBody: {
     flex: 1,
     overflowY: "auto",
-    padding: "20px 16px",
-    background: "#f8fafc",
-  },
-
-  emptyState: {
-    height: "100%",
+    padding: "20px",
     display: "flex",
     flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#94a3b8",
-  },
-
-  emptyStateIcon: {
-    fontSize: "48px",
-    marginBottom: "16px",
-  },
-
-  emptyStateText: {
-    fontSize: "16px",
-    fontWeight: "500",
-    marginBottom: "8px",
-  },
-
-  emptyStateSubtext: {
-    fontSize: "14px",
-  },
-
-  dateDivider: {
-    display: "flex",
-    justifyContent: "center",
-    margin: "20px 0",
-  },
-
-  dateText: {
-    background: "#e2e8f0",
-    padding: "6px 12px",
-    borderRadius: "20px",
-    fontSize: "12px",
-    color: "#64748b",
-  },
-
-  messageRow: {
-    display: "flex",
-    marginBottom: "16px",
-    alignItems: "flex-end",
-  },
-
-  otherAvatar: {
-    width: "32px",
-    height: "32px",
-    borderRadius: "50%",
-    background: "linear-gradient(135deg, #94a3b8 0%, #64748b 100%)",
-    color: "#fff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "12px",
-    fontWeight: "600",
-    marginRight: "8px",
-    flexShrink: 0,
-  },
-
-  messageContainer: {
-    position: "relative",
-    display: "flex",
-    alignItems: "center",
     gap: "4px",
   },
 
-  messageBubble: {
-    padding: "12px 16px",
-    borderRadius: "20px",
+  safetyNotice: {
+    textAlign: "center",
+    fontSize: "12px",
+    color: "#94a3b8",
+    background: "#f1f5f9",
+    padding: "8px",
+    borderRadius: "8px",
+    marginBottom: "20px",
+  },
+
+  dateSeparator: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    margin: "20px 0",
+    fontSize: "12px",
+    color: "#94a3b8",
     position: "relative",
-    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
   },
 
-  myMessage: {
-    background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
-    color: "#fff",
-    borderBottomRightRadius: "4px",
+  msgRow: { display: "flex", width: "100%", marginBottom: "2px" },
+
+  bubbleContainer: {
+    position: "relative",
+    display: "flex",
+    alignItems: "flex-end",
+    gap: "8px",
+    maxWidth: "80%",
   },
 
-  otherMessage: {
-    background: "#fff",
-    color: "#1e293b",
-    borderBottomLeftRadius: "4px",
+  smallAvatar: {
+    width: "28px",
+    height: "28px",
+    borderRadius: "50%",
+    background: "#e2e8f0",
+    fontSize: "10px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: "4px",
   },
 
-  messageText: {
-    margin: 0,
-    fontSize: "14px",
-    lineHeight: "1.5",
-    wordBreak: "break-word",
+  bubble: {
+    padding: "12px 16px",
+    borderRadius: "16px",
+    position: "relative",
   },
 
-  messageFooter: {
+  msgText: { margin: 0, fontSize: "15px", lineHeight: "1.5" },
+
+  msgMeta: {
     display: "flex",
     alignItems: "center",
     justifyContent: "flex-end",
     gap: "4px",
     marginTop: "4px",
-    fontSize: "10px",
   },
 
-  messageTime: {
-    opacity: 0.7,
-  },
+  msgTime: { fontSize: "10px" },
 
-  statusIcon: {
-    fontSize: "12px",
-    marginLeft: "4px",
-  },
-
-  doubleTick: {
-    fontSize: "12px",
-  },
-
-  deleteButton: {
-    background: "none",
-    border: "none",
-    padding: "4px",
-    cursor: "pointer",
-    color: "#94a3b8",
-    transition: "color 0.2s",
-    opacity: 0,
-    visibility: "hidden",
-  },
-
-  // Typing Indicator
-  typingIndicator: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    marginBottom: "8px",
-  },
-
-  typingAvatar: {
-    width: "32px",
-    height: "32px",
+  deleteAction: {
+    position: "absolute",
+    right: "-35px",
+    top: "50%",
+    transform: "translateY(-50%)",
+    background: "#fff",
+    border: "1px solid #fee2e2",
     borderRadius: "50%",
-    background: "linear-gradient(135deg, #94a3b8 0%, #64748b 100%)",
-    color: "#fff",
+    width: "28px",
+    height: "28px",
+    cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "12px",
-    fontWeight: "600",
+    boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
   },
 
-  typingDots: {
-    background: "#fff",
-    padding: "12px 16px",
-    borderRadius: "20px",
-    display: "flex",
-    gap: "4px",
-    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
-  },
-
-  dot: {
-    width: "8px",
-    height: "8px",
-    borderRadius: "50%",
-    background: "#94a3b8",
-    animation: "typing 1.4s infinite ease-in-out",
-  },
-
-  // Input Area Styles
-  inputContainer: {
-    background: "#fff",
-    padding: "16px",
+  footer: {
+    padding: "15px 20px 25px 20px",
+    background: "#ffffff",
     borderTop: "1px solid #e2e8f0",
+  },
+
+  inputWrapper: {
     display: "flex",
-    gap: "12px",
     alignItems: "center",
-    boxShadow: "0 -4px 12px rgba(0, 0, 0, 0.02)",
+    background: "#f1f5f9",
+    borderRadius: "24px",
+    padding: "6px 12px",
+    gap: "8px",
   },
 
   input: {
     flex: 1,
-    padding: "14px 18px",
-    borderRadius: "30px",
-    border: "2px solid #e2e8f0",
+    border: "none",
+    background: "transparent",
+    padding: "10px",
+    fontSize: "15px",
     outline: "none",
-    fontSize: "14px",
-    transition: "border-color 0.2s",
-    fontFamily: "inherit",
+    color: "#1e293b",
   },
 
-  sendButton: {
-    width: "48px",
-    height: "48px",
-    borderRadius: "50%",
-    background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
+  footerIconBtn: {
+    background: "none",
     border: "none",
+    color: "#94a3b8",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+  },
+
+  sendBtn: {
+    background: "linear-gradient(135deg, #6366f1, #a855f7)",
     color: "#fff",
+    border: "none",
+    width: "38px",
+    height: "38px",
+    borderRadius: "50%",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
-    transition: "transform 0.2s, box-shadow 0.2s",
-    boxShadow: "0 4px 12px rgba(99, 102, 241, 0.3)",
-    outline: "none",
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+    boxShadow: "0 4px 10px rgba(99, 102, 241, 0.3)",
   },
 
-  // Loader Styles
-  loaderContainer: {
+  typingIndicator: {
+    fontSize: "12px",
+    color: "#64748b",
+    padding: "10px",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+
+  loadingContainer: {
     height: "100vh",
     display: "flex",
+    flexDirection: "column",
     justifyContent: "center",
     alignItems: "center",
-    background: "#f8fafc",
-  },
-
-  loader: {
-    textAlign: "center",
-  },
-
-  loaderSpinner: {
-    width: "48px",
-    height: "48px",
-    border: "3px solid #e2e8f0",
-    borderTopColor: "#6366F1",
-    borderRadius: "50%",
-    animation: "spin 1s linear infinite",
-    margin: "0 auto 16px",
-  },
-
-  loaderText: {
+    gap: "15px",
     color: "#64748b",
-    fontSize: "14px",
-    margin: 0,
+  },
+
+  spinner: {
+    width: "40px",
+    height: "40px",
+    border: "3px solid #f3f3f3",
+    borderTop: "3px solid #6366f1",
+    borderRadius: "50%",
   },
 };
-
-// Add keyframes animation
-const styleSheet = document.createElement("style");
-styleSheet.textContent = `
-  @keyframes typing {
-    0%, 60%, 100% { transform: translateY(0); }
-    30% { transform: translateY(-10px); }
-  }
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-  button:hover {
-    transform: scale(1.05);
-  }
-  input:focus {
-    border-color: #6366F1 !important;
-  }
-  .message-container:hover .delete-button {
-    opacity: 1;
-    visibility: visible;
-  }
-`;
-document.head.appendChild(styleSheet);
