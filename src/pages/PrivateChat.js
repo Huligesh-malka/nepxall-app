@@ -4,169 +4,17 @@ import { onAuthStateChanged } from "firebase/auth";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/api";
 import { io } from "socket.io-client";
-import {
-  Box,
-  Container,
-  Paper,
-  Typography,
-  TextField,
-  IconButton,
-  Avatar,
-  Badge,
-  CircularProgress,
-  Fade,
-  Slide,
-  Zoom,
-  Tooltip,
-  useTheme,
-  alpha
-} from "@mui/material";
-import {
-  Send as SendIcon,
-  ArrowBack as ArrowBackIcon,
-  Delete as DeleteIcon,
-  Check as CheckIcon,
-  DoneAll as DoneAllIcon,
-  AccessTime as PendingIcon
-} from "@mui/icons-material";
-import { styled } from "@mui/material/styles";
 
 const socket = io("https://nepxall-backend.onrender.com", {
   autoConnect: false,
   transports: ["websocket"],
 });
 
-// Styled Components
-const ChatContainer = styled(Box)(({ theme }) => ({
-  height: "100vh",
-  display: "flex",
-  flexDirection: "column",
-  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.1)} 0%, ${alpha(theme.palette.secondary.light, 0.1)} 100%)`,
-  position: "relative",
-  overflow: "hidden"
-}));
-
-const Header = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(1.5, 2),
-  display: "flex",
-  alignItems: "center",
-  gap: theme.spacing(2),
-  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-  color: "#fff",
-  borderRadius: 0,
-  boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-  zIndex: 10
-}));
-
-const ChatBody = styled(Box)(({ theme }) => ({
-  flex: 1,
-  overflowY: "auto",
-  padding: theme.spacing(2),
-  display: "flex",
-  flexDirection: "column",
-  gap: theme.spacing(1),
-  "&::-webkit-scrollbar": {
-    width: "6px"
-  },
-  "&::-webkit-scrollbar-track": {
-    background: "transparent"
-  },
-  "&::-webkit-scrollbar-thumb": {
-    background: alpha(theme.palette.primary.main, 0.3),
-    borderRadius: "3px"
-  }
-}));
-
-const MessageBubble = styled(Paper, {
-  shouldForwardProp: (prop) => prop !== "isOwn"
-})(({ theme, isOwn }) => ({
-  padding: theme.spacing(1.5, 2),
-  maxWidth: "70%",
-  wordWrap: "break-word",
-  position: "relative",
-  background: isOwn
-    ? `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`
-    : theme.palette.background.paper,
-  color: isOwn ? "#fff" : theme.palette.text.primary,
-  borderRadius: isOwn ? "20px 20px 5px 20px" : "20px 20px 20px 5px",
-  boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-  transition: "all 0.3s ease",
-  "&:hover": {
-    transform: "translateY(-2px)",
-    boxShadow: "0 5px 15px rgba(0,0,0,0.2)"
-  }
-}));
-
-const StatusDot = styled(Box)(({ theme, status }) => ({
-  width: 8,
-  height: 8,
-  borderRadius: "50%",
-  display: "inline-block",
-  marginLeft: theme.spacing(0.5),
-  backgroundColor: 
-    status === "online" ? "#4caf50" :
-    status === "offline" ? "#9e9e9e" :
-    status === "typing" ? "#ff9800" :
-    status === "sent" ? "#ff6b6b" :
-    status === "delivered" ? "#ffd93d" :
-    status === "read" ? "#6bcf7f" : "#9e9e9e",
-  animation: status === "typing" ? "pulse 1.5s infinite" : "none",
-  "@keyframes pulse": {
-    "0%": { opacity: 0.6, transform: "scale(1)" },
-    "50%": { opacity: 1, transform: "scale(1.2)" },
-    "100%": { opacity: 0.6, transform: "scale(1)" }
-  }
-}));
-
-const InputArea = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(2),
-  background: theme.palette.background.paper,
-  borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  boxShadow: "0 -4px 20px rgba(0,0,0,0.05)",
-  zIndex: 10
-}));
-
-const TypingIndicator = styled(Box)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: theme.spacing(0.5),
-  padding: theme.spacing(1, 2),
-  background: alpha(theme.palette.primary.main, 0.1),
-  borderRadius: 20,
-  width: "fit-content",
-  marginLeft: theme.spacing(1),
-  marginBottom: theme.spacing(1)
-}));
-
-const DeleteButton = styled(IconButton)(({ theme }) => ({
-  position: "absolute",
-  top: -10,
-  right: -10,
-  background: theme.palette.error.main,
-  color: "#fff",
-  padding: 4,
-  opacity: 0,
-  transition: "opacity 0.2s ease",
-  "&:hover": {
-    background: theme.palette.error.dark,
-    transform: "scale(1.1)"
-  }
-}));
-
-const MessageWrapper = styled(Box)({
-  position: "relative",
-  "&:hover .delete-btn": {
-    opacity: 1
-  }
-});
-
 export default function PrivateChat() {
-  const theme = useTheme();
+
   const { userId } = useParams();
   const navigate = useNavigate();
   const bottomRef = useRef();
-  const inputRef = useRef();
-  const typingTimeoutRef = useRef();
 
   const [messages, setMessages] = useState([]);
   const [me, setMe] = useState(null);
@@ -175,82 +23,38 @@ export default function PrivateChat() {
   const [typing, setTyping] = useState(false);
   const [online, setOnline] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
 
-  const scrollBottom = () => {
+  const scrollBottom = () =>
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-  };
-
-  // Handle typing indicator
-  const handleTyping = (isTyping) => {
-    if (!me) return;
-    
-    if (isTyping) {
-      socket.emit("typing", {
-        userId: me.id,
-        receiverId: Number(userId),
-        isTyping: true
-      });
-    } else {
-      socket.emit("typing", {
-        userId: me.id,
-        receiverId: Number(userId),
-        isTyping: false
-      });
-    }
-  };
-
-  const handleTextChange = (e) => {
-    setText(e.target.value);
-    
-    if (!typingTimeoutRef.current) {
-      handleTyping(true);
-    } else {
-      clearTimeout(typingTimeoutRef.current);
-    }
-    
-    typingTimeoutRef.current = setTimeout(() => {
-      handleTyping(false);
-      typingTimeoutRef.current = null;
-    }, 1000);
-  };
 
   /* ================= AUTH LOAD ================= */
   useEffect(() => {
+
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
+
       if (!fbUser) return navigate("/login");
 
-      try {
-        const token = await fbUser.getIdToken();
-        const config = { headers: { Authorization: `Bearer ${token}` } };
+      const token = await fbUser.getIdToken();
+      const config = { headers: { Authorization: `Bearer ${token}` } };
 
-        const [meRes, userRes, msgRes] = await Promise.all([
-          api.get("/private-chat/me", config),
-          api.get(`/private-chat/user/${userId}`, config),
-          api.get(`/private-chat/messages/${userId}`, config),
-        ]);
+      const [meRes, userRes, msgRes] = await Promise.all([
+        api.get("/private-chat/me", config),
+        api.get(`/private-chat/user/${userId}`, config),
+        api.get(`/private-chat/messages/${userId}`, config),
+      ]);
 
-        setMe(meRes.data);
-        setOtherUser(userRes.data);
-        setMessages(msgRes.data);
-        setLoading(false);
+      setMe(meRes.data);
+      setOtherUser(userRes.data);
+      setMessages(msgRes.data);
+      setLoading(false);
 
-        if (!socket.connected) socket.connect();
-        socket.emit("register", fbUser.uid);
-        
-        scrollBottom();
-      } catch (error) {
-        console.error("Error loading chat:", error);
-        setLoading(false);
-      }
+      if (!socket.connected) socket.connect();
+      socket.emit("register", fbUser.uid);
+
     });
 
-    return () => {
-      unsub?.();
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-    };
+    return () => unsub?.();
+
   }, [userId, navigate]);
 
   /* ================= JOIN ROOM ================= */
@@ -261,10 +65,12 @@ export default function PrivateChat() {
       userA: me.id,
       userB: Number(userId),
     });
+
   }, [me, userId]);
 
   /* ================= AUTO MARK READ ================= */
   useEffect(() => {
+
     if (!me) return;
 
     const hasUnread = messages.some(
@@ -277,10 +83,12 @@ export default function PrivateChat() {
         userB: Number(userId),
       });
     }
+
   }, [messages, me, userId]);
 
   /* ================= SOCKET EVENTS ================= */
   useEffect(() => {
+
     const receiveMessage = (msg) => {
       setMessages(prev => [...prev, msg]);
       scrollBottom();
@@ -297,7 +105,7 @@ export default function PrivateChat() {
     const read = () => {
       setMessages(prev =>
         prev.map(m =>
-          m.sender_id === me?.id ? { ...m, status: "read", is_read: true } : m
+          m.sender_id === me.id ? { ...m, status: "read" } : m
         )
       );
     };
@@ -324,313 +132,219 @@ export default function PrivateChat() {
       socket.off("user_offline");
       socket.off("user_typing");
     };
+
   }, [me]);
 
   /* ================= SEND ================= */
   const sendMessage = async () => {
-    if (!text.trim() || sending) return;
 
-    setSending(true);
-    handleTyping(false);
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
+    if (!text.trim()) return;
 
-    try {
-      const token = await auth.currentUser.getIdToken();
+    const token = await auth.currentUser.getIdToken();
 
-      const res = await api.post(
-        "/private-chat/send",
-        { receiver_id: Number(userId), message: text },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+    const res = await api.post(
+      "/private-chat/send",
+      { receiver_id: Number(userId), message: text },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-      socket.emit("send_private_message", res.data);
-      setMessages(prev => [...prev, { ...res.data, status: "sent" }]);
-      setText("");
-      scrollBottom();
-    } catch (error) {
-      console.error("Error sending message:", error);
-    } finally {
-      setSending(false);
-    }
+    socket.emit("send_private_message", res.data);
+
+    setMessages(prev => [...prev, { ...res.data, status: "sent" }]);
+
+    setText("");
+    scrollBottom();
   };
 
   /* ================= DELETE ================= */
   const deleteMessage = async (id) => {
-    try {
-      const token = await auth.currentUser.getIdToken();
 
-      await api.delete(`/private-chat/message/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    const token = await auth.currentUser.getIdToken();
 
-      setMessages(prev => prev.filter(m => m.id !== id));
+    await api.delete(`/private-chat/message/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-      socket.emit("delete_private_message", {
-        messageId: id,
-        sender_id: me.id,
-        receiver_id: Number(userId),
-      });
-    } catch (error) {
-      console.error("Error deleting message:", error);
-    }
+    setMessages(prev => prev.filter(m => m.id !== id));
+
+    socket.emit("delete_private_message", {
+      messageId: id,
+      sender_id: me.id,
+      receiver_id: Number(userId),
+    });
   };
 
-  const getMessageStatusIcon = (status) => {
-    switch(status) {
-      case "sent":
-        return <CheckIcon sx={{ fontSize: 14, color: "#ff6b6b" }} />;
-      case "delivered":
-        return <DoneAllIcon sx={{ fontSize: 14, color: "#ffd93d" }} />;
-      case "read":
-        return <DoneAllIcon sx={{ fontSize: 14, color: "#6bcf7f" }} />;
-      default:
-        return <PendingIcon sx={{ fontSize: 14, color: "#9e9e9e" }} />;
-    }
+  const getStatusDot = (status) => {
+
+    if (status === "sent")
+      return <span style={{ ...styles.dot, background: "red" }} />;
+
+    if (status === "delivered")
+      return <span style={{ ...styles.dot, background: "gold" }} />;
+
+    if (status === "read")
+      return <span style={{ ...styles.dot, background: "limegreen" }} />;
+
+    return null;
   };
 
-  if (loading) {
-    return (
-      <ChatContainer>
-        <Box sx={{ 
-          height: "100%", 
-          display: "flex", 
-          justifyContent: "center", 
-          alignItems: "center",
-          flexDirection: "column",
-          gap: 2
-        }}>
-          <CircularProgress />
-          <Typography variant="body1" color="textSecondary">
-            Loading chat...
-          </Typography>
-        </Box>
-      </ChatContainer>
-    );
-  }
+  if (loading) return <div style={styles.loader}>Loading chat...</div>;
 
-  const headerTitle = me?.role === "owner"
-    ? otherUser?.name || "User"
-    : otherUser?.pg_name || otherUser?.name || "PG";
-
-  const getAvatarText = () => {
-    if (headerTitle) {
-      return headerTitle.charAt(0).toUpperCase();
-    }
-    return "?";
-  };
+  const headerTitle =
+    me?.role === "owner"
+      ? otherUser?.name || "User"
+      : otherUser?.pg_name || otherUser?.name || "PG";
 
   return (
-    <ChatContainer>
-      <Header elevation={3}>
-        <IconButton 
-          onClick={() => navigate(-1)} 
-          sx={{ color: "#fff" }}
-          size="large"
-        >
-          <ArrowBackIcon />
-        </IconButton>
-        
-        <Badge
-          overlap="circular"
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-          badgeContent={
-            <StatusDot 
-              status={online ? "online" : "offline"} 
-              sx={{ 
-                border: "2px solid #fff",
-                width: 12,
-                height: 12
-              }} 
-            />
-          }
-        >
-          <Avatar 
-            sx={{ 
-              bgcolor: alpha("#fff", 0.2),
-              color: "#fff",
-              fontWeight: "bold"
-            }}
-          >
-            {getAvatarText()}
-          </Avatar>
-        </Badge>
-        
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            {headerTitle}
-          </Typography>
-          <Typography variant="caption" sx={{ opacity: 0.9, display: "flex", alignItems: "center", gap: 0.5 }}>
-            {typing ? (
-              <>
-                <StatusDot status="typing" />
-                Typing...
-              </>
-            ) : (
-              <>
-                <StatusDot status={online ? "online" : "offline"} />
-                {online ? "Online" : "Offline"}
-              </>
-            )}
-          </Typography>
-        </Box>
-      </Header>
+    <div style={styles.container}>
 
-      <ChatBody>
-        {messages.map((m, index) => {
-          const isOwn = m.sender_id === me?.id;
-          const showAvatar = index === 0 || messages[index - 1]?.sender_id !== m.sender_id;
-          
-          return (
-            <Slide 
-              direction={isOwn ? "left" : "right"} 
-              in={true} 
-              key={m.id}
-              timeout={300}
-            >
-              <Box sx={{
-                display: "flex",
-                justifyContent: isOwn ? "flex-end" : "flex-start",
-                mb: 1
+      <div style={styles.header}>
+        <span onClick={() => navigate(-1)} style={styles.back}>←</span>
+        <div>
+          <div style={styles.name}>{headerTitle}</div>
+          <div style={styles.status}>
+            {online ? "🟢 online" : "⚪ offline"}
+          </div>
+        </div>
+      </div>
+
+      <div style={styles.chatBody}>
+        {messages.map((m) => (
+          <div key={m.id}
+               style={{
+                 ...styles.msgRow,
+                 justifyContent: m.sender_id === me?.id ? "flex-end" : "flex-start",
+               }}>
+            <div style={{ position: "relative" }}>
+              <div style={{
+                ...styles.bubble,
+                background: m.sender_id === me?.id
+                  ? "linear-gradient(135deg,#667eea,#764ba2)"
+                  : "#fff",
+                color: m.sender_id === me?.id ? "#fff" : "#000",
               }}>
-                <Box sx={{ display: "flex", alignItems: "flex-end", gap: 1 }}>
-                  {!isOwn && showAvatar && (
-                    <Avatar 
-                      sx={{ 
-                        width: 32, 
-                        height: 32,
-                        bgcolor: theme.palette.secondary.main
-                      }}
-                    >
-                      {otherUser?.name?.charAt(0) || "U"}
-                    </Avatar>
-                  )}
-                  
-                  <MessageWrapper>
-                    <MessageBubble isOwn={isOwn}>
-                      <Typography variant="body1">
-                        {m.message}
-                      </Typography>
-                      
-                      <Box sx={{
-                        display: "flex",
-                        justifyContent: "flex-end",
-                        alignItems: "center",
-                        gap: 0.5,
-                        mt: 0.5
-                      }}>
-                        <Typography variant="caption" sx={{
-                          color: isOwn ? alpha("#fff", 0.7) : alpha("#000", 0.5)
-                        }}>
-                          {new Date(m.created_at).toLocaleTimeString([], { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                        </Typography>
-                        
-                        {isOwn && getMessageStatusIcon(m.status)}
-                      </Box>
-                    </MessageBubble>
+                {m.message}
 
-                    {isOwn && (
-                      <Zoom in={true}>
-                        <DeleteButton
-                          className="delete-btn"
-                          size="small"
-                          onClick={() => deleteMessage(m.id)}
-                        >
-                          <DeleteIcon sx={{ fontSize: 16 }} />
-                        </DeleteButton>
-                      </Zoom>
-                    )}
-                  </MessageWrapper>
-
-                  {isOwn && showAvatar && (
-                    <Avatar 
-                      sx={{ 
-                        width: 32, 
-                        height: 32,
-                        bgcolor: theme.palette.primary.main
-                      }}
-                    >
-                      {me?.name?.charAt(0) || "M"}
-                    </Avatar>
-                  )}
-                </Box>
-              </Box>
-            </Slide>
-          );
-        })}
-
-        {typing && (
-          <Fade in={true}>
-            <TypingIndicator>
-              <StatusDot status="typing" />
-              <StatusDot status="typing" sx={{ animationDelay: "0.2s" }} />
-              <StatusDot status="typing" sx={{ animationDelay: "0.4s" }} />
-              <Typography variant="caption" sx={{ ml: 1, color: "text.secondary" }}>
-                {otherUser?.name?.split(' ')[0] || "User"} is typing...
-              </Typography>
-            </TypingIndicator>
-          </Fade>
-        )}
-        
-        <div ref={bottomRef} />
-      </ChatBody>
-
-      <InputArea elevation={3}>
-        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-          <TextField
-            fullWidth
-            variant="outlined"
-            placeholder="Type a message..."
-            value={text}
-            onChange={handleTextChange}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-            multiline
-            maxRows={4}
-            inputRef={inputRef}
-            sx={{
-              "& .MuiOutlinedInput-root": {
-                borderRadius: 3,
-                backgroundColor: alpha(theme.palette.primary.main, 0.05),
-                transition: "all 0.3s ease",
-                "&:hover": {
-                  backgroundColor: alpha(theme.palette.primary.main, 0.1)
-                },
-                "&.Mui-focused": {
-                  backgroundColor: "#fff",
-                  boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`
+                {m.sender_id === me?.id &&
+                  <div style={styles.tick}>
+                    {getStatusDot(m.status)}
+                  </div>
                 }
+
+              </div>
+
+              {m.sender_id === me?.id &&
+                <span onClick={() => deleteMessage(m.id)} style={styles.deleteBtn}>
+                  🗑
+                </span>
               }
-            }}
-          />
-          
-          <Tooltip title="Send message" arrow>
-            <IconButton
-              onClick={sendMessage}
-              disabled={!text.trim() || sending}
-              sx={{
-                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                color: "#fff",
-                width: 48,
-                height: 48,
-                "&:hover": {
-                  transform: "scale(1.1)",
-                  background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.secondary.dark} 100%)`
-                },
-                "&.Mui-disabled": {
-                  background: alpha(theme.palette.grey[500], 0.3),
-                  color: alpha("#fff", 0.5)
-                }
-              }}
-            >
-              {sending ? <CircularProgress size={24} color="inherit" /> : <SendIcon />}
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </InputArea>
-    </ChatContainer>
+            </div>
+          </div>
+        ))}
+
+        {typing && <div style={styles.typing}>Typing...</div>}
+        <div ref={bottomRef} />
+      </div>
+
+      <div style={styles.inputArea}>
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Type a message..."
+          style={styles.input}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+        />
+        <button onClick={sendMessage} style={styles.sendBtn}>➤</button>
+      </div>
+
+    </div>
   );
 }
+
+/* ================= STYLES ================= */
+
+const styles = {
+
+  container: { height: "100vh", display: "flex", flexDirection: "column", background: "#f1f5f9" },
+
+  header: {
+    background: "linear-gradient(135deg,#667eea,#764ba2)",
+    color: "#fff",
+    padding: "12px 15px",
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  back: { cursor: "pointer", fontSize: 20 },
+
+  name: { fontWeight: "bold" },
+  status: { fontSize: 12, opacity: 0.9 },
+
+  chatBody: { flex: 1, overflowY: "auto", padding: 15 },
+
+  msgRow: { display: "flex", marginBottom: 10 },
+
+  bubble: {
+    padding: "10px 14px",
+    borderRadius: 15,
+    maxWidth: "70%",
+    position: "relative",
+  },
+
+  tick: { marginTop: 5, textAlign: "right" },
+
+  dot: {
+    height: 8,
+    width: 8,
+    borderRadius: "50%",
+    display: "inline-block",
+  },
+
+  typing: { fontSize: 12, marginLeft: 10, color: "#555" },
+
+  deleteBtn: {
+    position: "absolute",
+    top: -8,
+    right: -8,
+    cursor: "pointer",
+    fontSize: 14,
+    background: "#fff",
+    borderRadius: "50%",
+    padding: "2px 5px",
+    boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+  },
+
+  inputArea: {
+    display: "flex",
+    padding: 10,
+    background: "#fff",
+    borderTop: "1px solid #eee",
+  },
+
+  input: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 25,
+    border: "1px solid #ddd",
+    outline: "none",
+  },
+
+  sendBtn: {
+    marginLeft: 10,
+    background: "linear-gradient(135deg,#667eea,#764ba2)",
+    color: "#fff",
+    border: "none",
+    padding: "0 18px",
+    borderRadius: "50%",
+    cursor: "pointer",
+  },
+
+  loader: {
+    height: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+};
