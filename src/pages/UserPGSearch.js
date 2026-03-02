@@ -2745,7 +2745,7 @@ function UserPGSearch() {
         </div>
 
         <p style={{ color: "#6b7280", fontSize: 16 }}>
-          Discover comfortable PGs, Co-living spaces, and rental homes
+          Nepxall is a smart PG, Co-living and rental booking platform where tenants can discover properties and pay booking amount online
           {filters.nearMe && userLocation && " - Showing nearby properties"}
         </p>
       </div>
