@@ -1,36 +1,13 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/api";
 import { io } from "socket.io-client";
-import {
-  FiArrowLeft,
-  FiSend,
-  FiMoreVertical,
-  FiTrash2,
-  FiCheck,
-  FiCheckCircle,
-  FiClock,
-  FiPhone,
-  FiVideo,
-  FiImage,
-  FiSmile,
-  FiPaperclip,
-  FiX,
-  FiUser,
-  FiHome,
-} from "react-icons/fi";
-import { format, isToday, isYesterday, formatDistanceToNow } from "date-fns";
-import EmojiPicker from 'emoji-picker-react';
-import { motion, AnimatePresence } from "framer-motion";
 
 const socket = io("https://nepxall-backend.onrender.com", {
   autoConnect: false,
   transports: ["websocket"],
-  reconnection: true,
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000,
 });
 
 export default function PrivateChat() {
@@ -38,9 +15,6 @@ export default function PrivateChat() {
   const navigate = useNavigate();
   const bottomRef = useRef();
   const inputRef = useRef();
-  const fileInputRef = useRef();
-  const chatContainerRef = useRef();
-  const typingTimeoutRef = useRef();
 
   const [messages, setMessages] = useState([]);
   const [me, setMe] = useState(null);
@@ -49,39 +23,20 @@ export default function PrivateChat() {
   const [typing, setTyping] = useState(false);
   const [online, setOnline] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [selectedMessage, setSelectedMessage] = useState(null);
-  const [replyTo, setReplyTo] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState("connected");
-  const [messageGroups, setMessageGroups] = useState({});
+  const [sending, setSending] = useState(false);
 
-  const scrollBottom = useCallback((behavior = "smooth") => {
-    setTimeout(() => {
-      bottomRef.current?.scrollIntoView({ behavior, block: "end" });
-    }, 100);
-  }, []);
-
-  /* ================= GROUP MESSAGES BY DATE ================= */
-  useEffect(() => {
-    const groups = {};
-    messages.forEach(msg => {
-      const date = format(new Date(msg.created_at), 'yyyy-MM-dd');
-      if (!groups[date]) groups[date] = [];
-      groups[date].push(msg);
-    });
-    setMessageGroups(groups);
-  }, [messages]);
+  const scrollBottom = () =>
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
 
   /* ================= AUTH LOAD ================= */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
       if (!fbUser) return navigate("/login");
 
-      try {
-        const token = await fbUser.getIdToken();
-        const config = { headers: { Authorization: `Bearer ${token}` } };
+      const token = await fbUser.getIdToken();
+      const config = { headers: { Authorization: `Bearer ${token}` } };
 
+      try {
         const [meRes, userRes, msgRes] = await Promise.all([
           api.get("/private-chat/me", config),
           api.get(`/private-chat/user/${userId}`, config),
@@ -93,26 +48,15 @@ export default function PrivateChat() {
         setMessages(msgRes.data);
         setLoading(false);
 
-        if (!socket.connected) {
-          socket.connect();
-          socket.on("connect", () => {
-            setConnectionStatus("connected");
-            socket.emit("register", fbUser.uid);
-          });
-          
-          socket.on("disconnect", () => setConnectionStatus("disconnected"));
-          socket.on("reconnecting", () => setConnectionStatus("reconnecting"));
-        }
+        if (!socket.connected) socket.connect();
+        socket.emit("register", fbUser.uid);
       } catch (error) {
-        console.error("Auth error:", error);
-        navigate("/login");
+        console.error("Error loading chat:", error);
+        navigate(-1);
       }
     });
 
-    return () => {
-      unsub?.();
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    };
+    return () => unsub?.();
   }, [userId, navigate]);
 
   /* ================= JOIN ROOM ================= */
@@ -129,7 +73,7 @@ export default function PrivateChat() {
     if (!me) return;
 
     const hasUnread = messages.some(
-      m => m.sender_id !== me.id && !m.is_read
+      (m) => m.sender_id !== me.id && !m.is_read
     );
 
     if (hasUnread) {
@@ -143,32 +87,26 @@ export default function PrivateChat() {
   /* ================= SOCKET EVENTS ================= */
   useEffect(() => {
     const receiveMessage = (msg) => {
-      setMessages(prev => [...prev, msg]);
+      setMessages((prev) => [...prev, msg]);
       scrollBottom();
     };
 
     const delivered = (msg) => {
-      setMessages(prev =>
-        prev.map(m => m.id === msg.id ? { ...m, status: "delivered" } : m)
+      setMessages((prev) =>
+        prev.map((m) => (m.id === msg.id ? { ...m, status: "delivered" } : m))
       );
     };
 
     const read = () => {
-      setMessages(prev =>
-        prev.map(m =>
+      setMessages((prev) =>
+        prev.map((m) =>
           m.sender_id === me?.id ? { ...m, status: "read" } : m
         )
       );
     };
 
     const deleted = ({ messageId }) => {
-      setMessages(prev => prev.filter(m => m.id !== messageId));
-    };
-
-    const typingHandler = ({ isTyping, userId: typingUserId }) => {
-      if (typingUserId !== me?.id) {
-        setTyping(isTyping);
-      }
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
     };
 
     socket.on("receive_private_message", receiveMessage);
@@ -177,7 +115,7 @@ export default function PrivateChat() {
     socket.on("message_deleted", deleted);
     socket.on("user_online", () => setOnline(true));
     socket.on("user_offline", () => setOnline(false));
-    socket.on("user_typing", typingHandler);
+    socket.on("user_typing", ({ isTyping }) => setTyping(isTyping));
 
     return () => {
       socket.off("receive_private_message", receiveMessage);
@@ -186,129 +124,83 @@ export default function PrivateChat() {
       socket.off("message_deleted", deleted);
       socket.off("user_online");
       socket.off("user_offline");
-      socket.off("user_typing", typingHandler);
+      socket.off("user_typing");
     };
-  }, [me, scrollBottom]);
+  }, [me]);
 
-  /* ================= TYPING INDICATOR ================= */
-  const handleTyping = (e) => {
-    setText(e.target.value);
-
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-
-    socket.emit("typing", {
-      sender_id: me?.id,
-      receiver_id: Number(userId),
-      isTyping: true,
-    });
-
-    typingTimeoutRef.current = setTimeout(() => {
-      socket.emit("typing", {
-        sender_id: me?.id,
-        receiver_id: Number(userId),
-        isTyping: false,
-      });
-    }, 1000);
-  };
-
-  /* ================= SEND MESSAGE ================= */
+  /* ================= SEND ================= */
   const sendMessage = async () => {
-    if (!text.trim() && !uploading) return;
+    if (!text.trim() || sending) return;
 
-    const token = await auth.currentUser.getIdToken();
-
+    setSending(true);
     try {
+      const token = await auth.currentUser.getIdToken();
       const res = await api.post(
         "/private-chat/send",
-        { 
-          receiver_id: Number(userId), 
-          message: text,
-          reply_to: replyTo?.id || null 
-        },
+        { receiver_id: Number(userId), message: text },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       socket.emit("send_private_message", res.data);
-      setMessages(prev => [...prev, { ...res.data, status: "sent" }]);
+      setMessages((prev) => [...prev, { ...res.data, status: "sent" }]);
       setText("");
-      setReplyTo(null);
       scrollBottom();
     } catch (error) {
-      console.error("Send error:", error);
+      console.error("Error sending message:", error);
+    } finally {
+      setSending(false);
     }
   };
 
-  /* ================= UPLOAD FILE ================= */
-  const uploadFile = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("receiver_id", userId);
-
-    setUploading(true);
-
+  /* ================= DELETE ================= */
+  const deleteMessage = async (id) => {
     try {
       const token = await auth.currentUser.getIdToken();
-      const res = await api.post("/private-chat/upload", formData, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      setMessages(prev => [...prev, res.data]);
-      socket.emit("send_private_message", res.data);
-      scrollBottom();
-    } catch (error) {
-      console.error("Upload error:", error);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  /* ================= DELETE MESSAGE ================= */
-  const deleteMessage = async (id) => {
-    const token = await auth.currentUser.getIdToken();
-
-    try {
       await api.delete(`/private-chat/message/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setMessages(prev => prev.filter(m => m.id !== id));
+      setMessages((prev) => prev.filter((m) => m.id !== id));
       socket.emit("delete_private_message", {
         messageId: id,
         sender_id: me.id,
         receiver_id: Number(userId),
       });
     } catch (error) {
-      console.error("Delete error:", error);
+      console.error("Error deleting message:", error);
     }
   };
 
-  /* ================= FORMAT DATE HEADER ================= */
-  const formatDateHeader = (dateStr) => {
-    const date = new Date(dateStr);
-    if (isToday(date)) return "Today";
-    if (isYesterday(date)) return "Yesterday";
-    return format(date, "MMMM d, yyyy");
+  /* ================= TYPING ================= */
+  const handleTyping = (e) => {
+    setText(e.target.value);
+    socket.emit("typing", {
+      userA: me?.id,
+      userB: Number(userId),
+      isTyping: e.target.value.length > 0,
+    });
   };
 
-  /* ================= GET MESSAGE TIME ================= */
-  const getMessageTime = (timestamp) => {
-    return format(new Date(timestamp), "h:mm a");
-  };
-
-  /* ================= RENDER STATUS ICON ================= */
-  const renderStatusIcon = (status) => {
-    switch(status) {
-      case "sent": return <FiClock size={12} color="#94a3b8" />;
-      case "delivered": return <FiCheck size={12} color="#94a3b8" />;
-      case "read": return <FiCheckCircle size={12} color="#3b82f6" />;
-      default: return null;
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case "sent":
+        return <span style={styles.statusIcon}>✓</span>;
+      case "delivered":
+        return <span style={{ ...styles.statusIcon, color: "#FFC107" }}>✓✓</span>;
+      case "read":
+        return (
+          <span style={{ ...styles.statusIcon, color: "#4CAF50" }}>
+            <span style={styles.doubleTick}>✓✓</span>
+          </span>
+        );
+      default:
+        return null;
     }
+  };
+
+  const formatTime = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
   if (loading) {
@@ -316,671 +208,446 @@ export default function PrivateChat() {
       <div style={styles.loaderContainer}>
         <div style={styles.loader}>
           <div style={styles.loaderSpinner}></div>
-          <p>Loading chat...</p>
+          <p style={styles.loaderText}>Loading chat...</p>
         </div>
       </div>
     );
   }
 
-  const headerTitle = me?.role === "owner"
-    ? otherUser?.name || "User"
-    : otherUser?.pg_name || otherUser?.name || "PG";
+  const headerTitle =
+    me?.role === "owner"
+      ? otherUser?.name || "User"
+      : otherUser?.pg_name || otherUser?.name || "PG";
+
+  const headerSubtitle = otherUser?.email || otherUser?.phone || "";
 
   return (
     <div style={styles.container}>
       {/* Header */}
-      <motion.div 
-        style={styles.header}
-        initial={{ y: -50 }}
-        animate={{ y: 0 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      >
-        <div style={styles.headerLeft}>
-          <motion.div 
-            style={styles.backButton}
-            onClick={() => navigate(-1)}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-          >
-            <FiArrowLeft size={24} />
-          </motion.div>
-          
-          <motion.div 
-            style={styles.userAvatar}
-            whileHover={{ scale: 1.05 }}
-          >
-            {me?.role === "owner" ? <FiUser size={24} /> : <FiHome size={24} />}
-          </motion.div>
-          
-          <div style={styles.userInfo}>
-            <div style={styles.userName}>{headerTitle}</div>
-            <div style={styles.userStatus}>
-              <span style={{
-                ...styles.statusDot,
-                background: online ? "#10b981" : "#94a3b8"
-              }} />
-              <span>{online ? "Online" : "Offline"}</span>
-              {typing && (
-                <motion.span 
-                  style={styles.typingIndicator}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
-                  typing...
-                </motion.span>
-              )}
-            </div>
+      <div style={styles.header}>
+        <button onClick={() => navigate(-1)} style={styles.backButton}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        
+        <div style={styles.headerAvatar}>
+          {otherUser?.name?.charAt(0) || "U"}
+        </div>
+        
+        <div style={styles.headerInfo}>
+          <div style={styles.headerName}>{headerTitle}</div>
+          <div style={styles.headerSubtitle}>
+            {headerSubtitle && <span style={styles.headerEmail}>{headerSubtitle}</span>}
+            <span style={styles.headerStatus}>
+              <span style={{ ...styles.statusDot, backgroundColor: online ? "#4CAF50" : "#9E9E9E" }} />
+              {online ? "Online" : "Offline"}
+            </span>
           </div>
         </div>
-
-        <div style={styles.headerRight}>
-          <motion.button 
-            style={styles.iconButton}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-          >
-            <FiPhone size={20} />
-          </motion.button>
-          <motion.button 
-            style={styles.iconButton}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-          >
-            <FiVideo size={20} />
-          </motion.button>
-          <motion.button 
-            style={styles.iconButton}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-          >
-            <FiMoreVertical size={20} />
-          </motion.button>
-        </div>
-      </motion.div>
-
-      {/* Connection Status */}
-      {connectionStatus !== "connected" && (
-        <motion.div 
-          style={{
-            ...styles.connectionStatus,
-            background: connectionStatus === "reconnecting" ? "#f59e0b" : "#ef4444"
-          }}
-          initial={{ y: -100 }}
-          animate={{ y: 0 }}
-        >
-          {connectionStatus === "reconnecting" ? "Reconnecting..." : "Disconnected"}
-        </motion.div>
-      )}
+      </div>
 
       {/* Chat Body */}
-      <div style={styles.chatBody} ref={chatContainerRef}>
-        <AnimatePresence>
-          {Object.entries(messageGroups).map(([date, msgs]) => (
-            <div key={date}>
-              <motion.div 
-                style={styles.dateHeader}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <span style={styles.dateHeaderText}>{formatDateHeader(date)}</span>
-              </motion.div>
+      <div style={styles.chatBody}>
+        {messages.length === 0 ? (
+          <div style={styles.emptyState}>
+            <div style={styles.emptyStateIcon}>💬</div>
+            <p style={styles.emptyStateText}>No messages yet</p>
+            <p style={styles.emptyStateSubtext}>Say hello to start chatting!</p>
+          </div>
+        ) : (
+          messages.map((m, index) => {
+            const isMe = m.sender_id === me?.id;
+            const showDate = index === 0 || 
+              new Date(m.created_at).toDateString() !== new Date(messages[index - 1]?.created_at).toDateString();
 
-              {msgs.map((m, index) => {
-                const isMe = m.sender_id === me?.id;
-                const showAvatar = index === 0 || msgs[index - 1]?.sender_id !== m.sender_id;
-
-                return (
-                  <motion.div
-                    key={m.id}
-                    style={{
-                      ...styles.messageRow,
-                      justifyContent: isMe ? "flex-end" : "flex-start",
-                    }}
-                    initial={{ opacity: 0, x: isMe ? 50 : -50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                    onHoverStart={() => setSelectedMessage(m.id)}
-                    onHoverEnd={() => setSelectedMessage(null)}
-                  >
-                    {!isMe && showAvatar && (
-                      <div style={styles.messageAvatar}>
-                        {me?.role === "owner" ? <FiUser size={16} /> : <FiHome size={16} />}
-                      </div>
-                    )}
-
-                    <div style={{ maxWidth: "70%" }}>
-                      {m.reply_to && (
-                        <div style={styles.replyPreview}>
-                          <div style={styles.replyText}>
-                            Replying to: {m.reply_to.message}
-                          </div>
-                        </div>
-                      )}
-
-                      <div style={{
-                        ...styles.messageBubble,
-                        background: isMe 
-                          ? "linear-gradient(135deg, #2563eb, #3b82f6)"
-                          : "#ffffff",
-                        color: isMe ? "#ffffff" : "#1e293b",
-                        marginLeft: !isMe && !showAvatar ? 40 : 0,
-                      }}>
-                        {m.message}
-                        
-                        {m.file_url && (
-                          <div style={styles.fileAttachment}>
-                            <FiImage size={20} />
-                            <a href={m.file_url} target="_blank" rel="noopener noreferrer">
-                              Attachment
-                            </a>
-                          </div>
-                        )}
-                      </div>
-
-                      <div style={{
-                        ...styles.messageMeta,
-                        justifyContent: isMe ? "flex-end" : "flex-start",
-                      }}>
-                        <span style={styles.messageTime}>
-                          {getMessageTime(m.created_at)}
-                        </span>
-                        {isMe && (
-                          <span style={styles.messageStatus}>
-                            {renderStatusIcon(m.status)}
-                          </span>
-                        )}
-                      </div>
+            return (
+              <React.Fragment key={m.id}>
+                {showDate && (
+                  <div style={styles.dateDivider}>
+                    <span style={styles.dateText}>
+                      {new Date(m.created_at).toLocaleDateString([], { 
+                        weekday: "long", 
+                        year: "numeric", 
+                        month: "long", 
+                        day: "numeric" 
+                      })}
+                    </span>
+                  </div>
+                )}
+                
+                <div style={{ ...styles.messageRow, justifyContent: isMe ? "flex-end" : "flex-start" }}>
+                  {!isMe && (
+                    <div style={styles.otherAvatar}>
+                      {otherUser?.name?.charAt(0) || "U"}
                     </div>
+                  )}
+                  
+                  <div style={{ maxWidth: "70%" }}>
+                    <div style={styles.messageContainer}>
+                      <div style={{ ...styles.messageBubble, ...(isMe ? styles.myMessage : styles.otherMessage) }}>
+                        <p style={styles.messageText}>{m.message}</p>
+                        <div style={styles.messageFooter}>
+                          <span style={styles.messageTime}>{formatTime(m.created_at)}</span>
+                          {isMe && getStatusIcon(m.status)}
+                        </div>
+                      </div>
+                      
+                      {isMe && (
+                        <button
+                          onClick={() => deleteMessage(m.id)}
+                          style={styles.deleteButton}
+                          title="Delete message"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </React.Fragment>
+            );
+          })
+        )}
 
-                    {isMe && (
-                      <AnimatePresence>
-                        {selectedMessage === m.id && (
-                          <motion.div 
-                            style={styles.messageActions}
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                          >
-                            <motion.button
-                              style={styles.actionButton}
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => deleteMessage(m.id)}
-                            >
-                              <FiTrash2 size={14} color="#ef4444" />
-                            </motion.button>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    )}
-                  </motion.div>
-                );
-              })}
+        {typing && (
+          <div style={styles.typingIndicator}>
+            <div style={styles.typingAvatar}>{otherUser?.name?.charAt(0) || "U"}</div>
+            <div style={styles.typingDots}>
+              <span style={styles.dot}></span>
+              <span style={styles.dot}></span>
+              <span style={styles.dot}></span>
             </div>
-          ))}
-        </AnimatePresence>
-
+          </div>
+        )}
+        
         <div ref={bottomRef} />
       </div>
 
-      {/* Reply Preview */}
-      <AnimatePresence>
-        {replyTo && (
-          <motion.div 
-            style={styles.replyContainer}
-            initial={{ y: 100 }}
-            animate={{ y: 0 }}
-            exit={{ y: 100 }}
-          >
-            <div style={styles.replyContent}>
-              <div style={styles.replyTo}>Replying to message</div>
-              <div style={styles.replyMessage}>{replyTo.message}</div>
-            </div>
-            <motion.button
-              style={styles.closeReply}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setReplyTo(null)}
-            >
-              <FiX size={16} />
-            </motion.button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Input Area */}
-      <motion.div 
-        style={styles.inputArea}
-        initial={{ y: 50 }}
-        animate={{ y: 0 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      >
-        <div style={styles.inputWrapper}>
-          <motion.button
-            style={styles.attachButton}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <FiPaperclip size={20} color="#64748b" />
-          </motion.button>
-          
-          <input
-            ref={fileInputRef}
-            type="file"
-            style={{ display: "none" }}
-            onChange={uploadFile}
-            accept="image/*,.pdf,.doc,.docx"
-          />
-
-          <motion.button
-            style={styles.emojiButton}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          >
-            <FiSmile size={20} color="#64748b" />
-          </motion.button>
-
-          <input
-            ref={inputRef}
-            value={text}
-            onChange={handleTyping}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-            placeholder="Type a message..."
-            style={styles.input}
-          />
-
-          <motion.button
-            onClick={sendMessage}
-            style={{
-              ...styles.sendButton,
-              background: text.trim() ? "linear-gradient(135deg, #2563eb, #3b82f6)" : "#e2e8f0",
-            }}
-            whileHover={text.trim() ? { scale: 1.1 } : {}}
-            whileTap={text.trim() ? { scale: 0.9 } : {}}
-            disabled={!text.trim()}
-          >
-            <FiSend size={20} color={text.trim() ? "#ffffff" : "#94a3b8"} />
-          </motion.button>
-        </div>
-
-        {uploading && (
-          <div style={styles.uploading}>
-            <div style={styles.uploadingSpinner}></div>
-            <span>Uploading...</span>
-          </div>
-        )}
-
-        {/* Emoji Picker */}
-        <AnimatePresence>
-          {showEmojiPicker && (
-            <motion.div 
-              style={styles.emojiPicker}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-            >
-              <EmojiPicker
-                onEmojiClick={(emoji) => setText(prev => prev + emoji.emoji)}
-                theme="light"
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+      <div style={styles.inputContainer}>
+        <input
+          ref={inputRef}
+          value={text}
+          onChange={handleTyping}
+          placeholder="Type a message..."
+          style={styles.input}
+          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
+          disabled={sending}
+        />
+        <button
+          onClick={sendMessage}
+          style={{ ...styles.sendButton, opacity: text.trim() && !sending ? 1 : 0.5 }}
+          disabled={!text.trim() || sending}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 }
 
+/* ================= STYLES ================= */
 const styles = {
   container: {
     height: "100vh",
     display: "flex",
     flexDirection: "column",
     background: "#f8fafc",
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
   },
 
+  // Header Styles
   header: {
-    background: "#ffffff",
-    padding: "16px 20px",
+    background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
+    color: "#fff",
+    padding: "12px 16px",
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
-    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)",
-    zIndex: 10,
-  },
-
-  headerLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: 16,
+    gap: "12px",
+    boxShadow: "0 4px 12px rgba(99, 102, 241, 0.2)",
   },
 
   backButton: {
+    background: "rgba(255, 255, 255, 0.2)",
+    border: "none",
+    borderRadius: "50%",
+    width: "40px",
+    height: "40px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     cursor: "pointer",
-    color: "#2563eb",
-    padding: 8,
+    color: "#fff",
+    transition: "background 0.2s",
+    outline: "none",
+  },
+
+  headerAvatar: {
+    width: "45px",
+    height: "45px",
     borderRadius: "50%",
-    background: "#f1f5f9",
+    background: "rgba(255, 255, 255, 0.3)",
+    backdropFilter: "blur(10px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-  },
-
-  userAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: "50%",
-    background: "linear-gradient(135deg, #667eea, #764ba2)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#ffffff",
-    fontSize: 20,
-    fontWeight: "bold",
-    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
-  },
-
-  userInfo: {
-    display: "flex",
-    flexDirection: "column",
-  },
-
-  userName: {
-    fontSize: 18,
+    fontSize: "18px",
     fontWeight: "600",
-    color: "#1e293b",
-    marginBottom: 4,
+    color: "#fff",
+    border: "2px solid rgba(255, 255, 255, 0.5)",
   },
 
-  userStatus: {
-    fontSize: 13,
-    color: "#64748b",
+  headerInfo: {
+    flex: 1,
+  },
+
+  headerName: {
+    fontSize: "16px",
+    fontWeight: "600",
+    marginBottom: "4px",
+  },
+
+  headerSubtitle: {
     display: "flex",
     alignItems: "center",
-    gap: 6,
+    gap: "12px",
+    fontSize: "12px",
+    opacity: 0.9,
+  },
+
+  headerEmail: {
+    fontSize: "12px",
+  },
+
+  headerStatus: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
   },
 
   statusDot: {
-    width: 8,
-    height: 8,
+    width: "8px",
+    height: "8px",
     borderRadius: "50%",
     display: "inline-block",
+    marginRight: "4px",
   },
 
-  typingIndicator: {
-    color: "#2563eb",
-    fontSize: 12,
-    marginLeft: 8,
-    fontStyle: "italic",
-  },
-
-  headerRight: {
-    display: "flex",
-    gap: 8,
-  },
-
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: "50%",
-    border: "none",
-    background: "#f1f5f9",
-    color: "#2563eb",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all 0.2s",
-  },
-
-  connectionStatus: {
-    textAlign: "center",
-    padding: "8px",
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-
+  // Chat Body Styles
   chatBody: {
     flex: 1,
     overflowY: "auto",
-    padding: "20px",
-    scrollBehavior: "smooth",
+    padding: "20px 16px",
+    background: "#f8fafc",
   },
 
-  dateHeader: {
-    textAlign: "center",
+  emptyState: {
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#94a3b8",
+  },
+
+  emptyStateIcon: {
+    fontSize: "48px",
+    marginBottom: "16px",
+  },
+
+  emptyStateText: {
+    fontSize: "16px",
+    fontWeight: "500",
+    marginBottom: "8px",
+  },
+
+  emptyStateSubtext: {
+    fontSize: "14px",
+  },
+
+  dateDivider: {
+    display: "flex",
+    justifyContent: "center",
     margin: "20px 0",
   },
 
-  dateHeaderText: {
+  dateText: {
     background: "#e2e8f0",
     padding: "6px 12px",
-    borderRadius: 20,
-    fontSize: 12,
-    color: "#475569",
-    fontWeight: "500",
+    borderRadius: "20px",
+    fontSize: "12px",
+    color: "#64748b",
   },
 
   messageRow: {
     display: "flex",
-    marginBottom: 16,
-    position: "relative",
+    marginBottom: "16px",
     alignItems: "flex-end",
-    gap: 8,
   },
 
-  messageAvatar: {
-    width: 32,
-    height: 32,
+  otherAvatar: {
+    width: "32px",
+    height: "32px",
     borderRadius: "50%",
-    background: "#e2e8f0",
+    background: "linear-gradient(135deg, #94a3b8 0%, #64748b 100%)",
+    color: "#fff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#64748b",
-    fontSize: 14,
+    fontSize: "12px",
+    fontWeight: "600",
+    marginRight: "8px",
     flexShrink: 0,
+  },
+
+  messageContainer: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
   },
 
   messageBubble: {
     padding: "12px 16px",
-    borderRadius: 18,
-    fontSize: 15,
-    lineHeight: 1.5,
-    wordWrap: "break-word",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+    borderRadius: "20px",
+    position: "relative",
+    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
   },
 
-  messageMeta: {
+  myMessage: {
+    background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
+    color: "#fff",
+    borderBottomRightRadius: "4px",
+  },
+
+  otherMessage: {
+    background: "#fff",
+    color: "#1e293b",
+    borderBottomLeftRadius: "4px",
+  },
+
+  messageText: {
+    margin: 0,
+    fontSize: "14px",
+    lineHeight: "1.5",
+    wordBreak: "break-word",
+  },
+
+  messageFooter: {
     display: "flex",
     alignItems: "center",
-    gap: 4,
-    marginTop: 4,
-    fontSize: 11,
-    color: "#94a3b8",
+    justifyContent: "flex-end",
+    gap: "4px",
+    marginTop: "4px",
+    fontSize: "10px",
   },
 
   messageTime: {
-    fontSize: 11,
+    opacity: 0.7,
   },
 
-  messageStatus: {
+  statusIcon: {
+    fontSize: "12px",
+    marginLeft: "4px",
+  },
+
+  doubleTick: {
+    fontSize: "12px",
+  },
+
+  deleteButton: {
+    background: "none",
+    border: "none",
+    padding: "4px",
+    cursor: "pointer",
+    color: "#94a3b8",
+    transition: "color 0.2s",
+    opacity: 0,
+    visibility: "hidden",
+  },
+
+  // Typing Indicator
+  typingIndicator: {
     display: "flex",
     alignItems: "center",
+    gap: "8px",
+    marginBottom: "8px",
   },
 
-  messageActions: {
-    position: "absolute",
-    right: -40,
-    top: "50%",
-    transform: "translateY(-50%)",
-    display: "flex",
-    gap: 4,
-  },
-
-  actionButton: {
-    width: 28,
-    height: 28,
+  typingAvatar: {
+    width: "32px",
+    height: "32px",
     borderRadius: "50%",
-    border: "none",
-    background: "#ffffff",
-    cursor: "pointer",
+    background: "linear-gradient(135deg, #94a3b8 0%, #64748b 100%)",
+    color: "#fff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+    fontSize: "12px",
+    fontWeight: "600",
   },
 
-  fileAttachment: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 8,
-    padding: "8px 12px",
-    background: "rgba(255,255,255,0.1)",
-    borderRadius: 8,
-    cursor: "pointer",
-  },
-
-  replyPreview: {
-    marginBottom: 4,
-    padding: "8px 12px",
-    background: "rgba(0,0,0,0.05)",
-    borderRadius: 12,
-    fontSize: 12,
-    color: "#64748b",
-    borderLeft: "3px solid #2563eb",
-  },
-
-  replyText: {
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-  },
-
-  replyContainer: {
-    background: "#ffffff",
+  typingDots: {
+    background: "#fff",
     padding: "12px 16px",
-    borderTop: "1px solid #e2e8f0",
+    borderRadius: "20px",
     display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
+    gap: "4px",
+    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
   },
 
-  replyContent: {
-    flex: 1,
-  },
-
-  replyTo: {
-    fontSize: 12,
-    color: "#2563eb",
-    marginBottom: 4,
-  },
-
-  replyMessage: {
-    fontSize: 14,
-    color: "#1e293b",
-  },
-
-  closeReply: {
-    width: 28,
-    height: 28,
+  dot: {
+    width: "8px",
+    height: "8px",
     borderRadius: "50%",
-    border: "none",
-    background: "#f1f5f9",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+    background: "#94a3b8",
+    animation: "typing 1.4s infinite ease-in-out",
   },
 
-  inputArea: {
-    padding: "16px 20px",
-    background: "#ffffff",
+  // Input Area Styles
+  inputContainer: {
+    background: "#fff",
+    padding: "16px",
     borderTop: "1px solid #e2e8f0",
-    position: "relative",
-  },
-
-  inputWrapper: {
     display: "flex",
+    gap: "12px",
     alignItems: "center",
-    gap: 8,
-    background: "#f1f5f9",
-    borderRadius: 30,
-    padding: "4px 4px 4px 16px",
-  },
-
-  attachButton: {
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    padding: 8,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  emojiButton: {
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    padding: 8,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+    boxShadow: "0 -4px 12px rgba(0, 0, 0, 0.02)",
   },
 
   input: {
     flex: 1,
-    padding: "12px 8px",
-    border: "none",
-    background: "transparent",
+    padding: "14px 18px",
+    borderRadius: "30px",
+    border: "2px solid #e2e8f0",
     outline: "none",
-    fontSize: 15,
-    color: "#1e293b",
+    fontSize: "14px",
+    transition: "border-color 0.2s",
+    fontFamily: "inherit",
   },
 
   sendButton: {
-    width: 48,
-    height: 48,
+    width: "48px",
+    height: "48px",
     borderRadius: "50%",
+    background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
     border: "none",
-    cursor: "pointer",
+    color: "#fff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    transition: "all 0.2s",
+    cursor: "pointer",
+    transition: "transform 0.2s, box-shadow 0.2s",
+    boxShadow: "0 4px 12px rgba(99, 102, 241, 0.3)",
+    outline: "none",
   },
 
-  uploading: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 8,
-    fontSize: 13,
-    color: "#64748b",
-  },
-
-  uploadingSpinner: {
-    width: 16,
-    height: 16,
-    border: "2px solid #e2e8f0",
-    borderTopColor: "#2563eb",
-    borderRadius: "50%",
-    animation: "spin 1s linear infinite",
-  },
-
-  emojiPicker: {
-    position: "absolute",
-    bottom: 80,
-    right: 20,
-    zIndex: 20,
-  },
-
+  // Loader Styles
   loaderContainer: {
     height: "100vh",
     display: "flex",
@@ -991,21 +658,44 @@ const styles = {
 
   loader: {
     textAlign: "center",
-    color: "#2563eb",
   },
 
   loaderSpinner: {
-    width: 40,
-    height: 40,
+    width: "48px",
+    height: "48px",
     border: "3px solid #e2e8f0",
-    borderTopColor: "#2563eb",
+    borderTopColor: "#6366F1",
     borderRadius: "50%",
     animation: "spin 1s linear infinite",
     margin: "0 auto 16px",
   },
+
+  loaderText: {
+    color: "#64748b",
+    fontSize: "14px",
+    margin: 0,
+  },
 };
 
-// Add keyframe animation to your global CSS
-// @keyframes spin {
-//   to { transform: rotate(360deg); }
-// }
+// Add keyframes animation
+const styleSheet = document.createElement("style");
+styleSheet.textContent = `
+  @keyframes typing {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-10px); }
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  button:hover {
+    transform: scale(1.05);
+  }
+  input:focus {
+    border-color: #6366F1 !important;
+  }
+  .message-container:hover .delete-button {
+    opacity: 1;
+    visibility: visible;
+  }
+`;
+document.head.appendChild(styleSheet);
