@@ -1,22 +1,46 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/api";
 import { io } from "socket.io-client";
+import {
+  FiArrowLeft,
+  FiSend,
+  FiMoreVertical,
+  FiTrash2,
+  FiCheck,
+  FiCheckCircle,
+  FiClock,
+  FiPhone,
+  FiVideo,
+  FiImage,
+  FiSmile,
+  FiPaperclip,
+  FiX,
+  FiUser,
+  FiHome,
+} from "react-icons/fi";
+import { format, isToday, isYesterday, formatDistanceToNow } from "date-fns";
+import EmojiPicker from 'emoji-picker-react';
+import { motion, AnimatePresence } from "framer-motion";
 
 const socket = io("https://nepxall-backend.onrender.com", {
   autoConnect: false,
   transports: ["websocket"],
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
 });
 
 export default function PrivateChat() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const bottomRef = useRef();
-  const messagesEndRef = useRef(null);
-  const inputRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
+  const inputRef = useRef();
+  const fileInputRef = useRef();
+  const chatContainerRef = useRef();
+  const typingTimeoutRef = useRef();
 
   const [messages, setMessages] = useState([]);
   const [me, setMe] = useState(null);
@@ -25,48 +49,70 @@ export default function PrivateChat() {
   const [typing, setTyping] = useState(false);
   const [online, setOnline] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [emojiPicker, setEmojiPicker] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filteredMessages, setFilteredMessages] = useState([]);
-  const [showSearch, setShowSearch] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState(null);
+  const [replyTo, setReplyTo] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState("connected");
+  const [messageGroups, setMessageGroups] = useState({});
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const scrollBottom = useCallback((behavior = "smooth") => {
+    setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior, block: "end" });
+    }, 100);
+  }, []);
 
+  /* ================= GROUP MESSAGES BY DATE ================= */
   useEffect(() => {
-    scrollToBottom();
+    const groups = {};
+    messages.forEach(msg => {
+      const date = format(new Date(msg.created_at), 'yyyy-MM-dd');
+      if (!groups[date]) groups[date] = [];
+      groups[date].push(msg);
+    });
+    setMessageGroups(groups);
   }, [messages]);
-
-  const scrollBottom = () =>
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
 
   /* ================= AUTH LOAD ================= */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
       if (!fbUser) return navigate("/login");
 
-      const token = await fbUser.getIdToken();
-      const config = { headers: { Authorization: `Bearer ${token}` } };
+      try {
+        const token = await fbUser.getIdToken();
+        const config = { headers: { Authorization: `Bearer ${token}` } };
 
-      const [meRes, userRes, msgRes] = await Promise.all([
-        api.get("/private-chat/me", config),
-        api.get(`/private-chat/user/${userId}`, config),
-        api.get(`/private-chat/messages/${userId}`, config),
-      ]);
+        const [meRes, userRes, msgRes] = await Promise.all([
+          api.get("/private-chat/me", config),
+          api.get(`/private-chat/user/${userId}`, config),
+          api.get(`/private-chat/messages/${userId}`, config),
+        ]);
 
-      setMe(meRes.data);
-      setOtherUser(userRes.data);
-      setMessages(msgRes.data);
-      setFilteredMessages(msgRes.data);
-      setLoading(false);
+        setMe(meRes.data);
+        setOtherUser(userRes.data);
+        setMessages(msgRes.data);
+        setLoading(false);
 
-      if (!socket.connected) socket.connect();
-      socket.emit("register", fbUser.uid);
+        if (!socket.connected) {
+          socket.connect();
+          socket.on("connect", () => {
+            setConnectionStatus("connected");
+            socket.emit("register", fbUser.uid);
+          });
+          
+          socket.on("disconnect", () => setConnectionStatus("disconnected"));
+          socket.on("reconnecting", () => setConnectionStatus("reconnecting"));
+        }
+      } catch (error) {
+        console.error("Auth error:", error);
+        navigate("/login");
+      }
     });
 
-    return () => unsub?.();
+    return () => {
+      unsub?.();
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
   }, [userId, navigate]);
 
   /* ================= JOIN ROOM ================= */
@@ -83,7 +129,7 @@ export default function PrivateChat() {
     if (!me) return;
 
     const hasUnread = messages.some(
-      (m) => m.sender_id !== me.id && !m.is_read
+      m => m.sender_id !== me.id && !m.is_read
     );
 
     if (hasUnread) {
@@ -97,42 +143,41 @@ export default function PrivateChat() {
   /* ================= SOCKET EVENTS ================= */
   useEffect(() => {
     const receiveMessage = (msg) => {
-      setMessages((prev) => [...prev, msg]);
-      setFilteredMessages((prev) => [...prev, msg]);
+      setMessages(prev => [...prev, msg]);
       scrollBottom();
     };
 
     const delivered = (msg) => {
-      setMessages((prev) =>
-        prev.map((m) => (m.id === msg.id ? { ...m, status: "delivered" } : m))
-      );
-      setFilteredMessages((prev) =>
-        prev.map((m) => (m.id === msg.id ? { ...m, status: "delivered" } : m))
+      setMessages(prev =>
+        prev.map(m => m.id === msg.id ? { ...m, status: "delivered" } : m)
       );
     };
 
     const read = () => {
-      setMessages((prev) =>
-        prev.map((m) => (m.sender_id === me.id ? { ...m, status: "read" } : m))
-      );
-      setFilteredMessages((prev) =>
-        prev.map((m) => (m.sender_id === me.id ? { ...m, status: "read" } : m))
+      setMessages(prev =>
+        prev.map(m =>
+          m.sender_id === me?.id ? { ...m, status: "read" } : m
+        )
       );
     };
 
     const deleted = ({ messageId }) => {
-      setMessages((prev) => prev.filter((m) => m.id !== messageId));
-      setFilteredMessages((prev) => prev.filter((m) => m.id !== messageId));
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+    };
+
+    const typingHandler = ({ isTyping, userId: typingUserId }) => {
+      if (typingUserId !== me?.id) {
+        setTyping(isTyping);
+      }
     };
 
     socket.on("receive_private_message", receiveMessage);
     socket.on("message_sent_confirmation", delivered);
     socket.on("messages_read", read);
-   socket.on("message_deleted", deleted);  // ✅ Properly formatted
-
+    socket.on("message_deleted", deleted);
     socket.on("user_online", () => setOnline(true));
     socket.on("user_offline", () => setOnline(false));
-    socket.on("user_typing", ({ isTyping }) => setTyping(isTyping));
+    socket.on("user_typing", typingHandler);
 
     return () => {
       socket.off("receive_private_message", receiveMessage);
@@ -141,60 +186,89 @@ export default function PrivateChat() {
       socket.off("message_deleted", deleted);
       socket.off("user_online");
       socket.off("user_offline");
-      socket.off("user_typing");
+      socket.off("user_typing", typingHandler);
     };
-  }, [me]);
+  }, [me, scrollBottom]);
 
   /* ================= TYPING INDICATOR ================= */
-  const handleTyping = () => {
-    if (!me) return;
+  const handleTyping = (e) => {
+    setText(e.target.value);
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
     socket.emit("typing", {
-      userA: me.id,
-      userB: Number(userId),
+      sender_id: me?.id,
+      receiver_id: Number(userId),
       isTyping: true,
     });
 
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
     typingTimeoutRef.current = setTimeout(() => {
       socket.emit("typing", {
-        userA: me.id,
-        userB: Number(userId),
+        sender_id: me?.id,
+        receiver_id: Number(userId),
         isTyping: false,
       });
     }, 1000);
   };
 
-  /* ================= SEND ================= */
+  /* ================= SEND MESSAGE ================= */
   const sendMessage = async () => {
-    if (!text.trim() || sending) return;
+    if (!text.trim() && !uploading) return;
 
-    setSending(true);
     const token = await auth.currentUser.getIdToken();
 
     try {
       const res = await api.post(
         "/private-chat/send",
-        { receiver_id: Number(userId), message: text },
+        { 
+          receiver_id: Number(userId), 
+          message: text,
+          reply_to: replyTo?.id || null 
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       socket.emit("send_private_message", res.data);
-      setMessages((prev) => [...prev, { ...res.data, status: "sent" }]);
-      setFilteredMessages((prev) => [...prev, { ...res.data, status: "sent" }]);
+      setMessages(prev => [...prev, { ...res.data, status: "sent" }]);
       setText("");
+      setReplyTo(null);
       scrollBottom();
     } catch (error) {
-      console.error("Failed to send message:", error);
-    } finally {
-      setSending(false);
+      console.error("Send error:", error);
     }
   };
 
-  /* ================= DELETE ================= */
+  /* ================= UPLOAD FILE ================= */
+  const uploadFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("receiver_id", userId);
+
+    setUploading(true);
+
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await api.post("/private-chat/upload", formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      setMessages(prev => [...prev, res.data]);
+      socket.emit("send_private_message", res.data);
+      scrollBottom();
+    } catch (error) {
+      console.error("Upload error:", error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  /* ================= DELETE MESSAGE ================= */
   const deleteMessage = async (id) => {
     const token = await auth.currentUser.getIdToken();
 
@@ -203,778 +277,735 @@ export default function PrivateChat() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setMessages((prev) => prev.filter((m) => m.id !== id));
-      setFilteredMessages((prev) => prev.filter((m) => m.id !== id));
-
+      setMessages(prev => prev.filter(m => m.id !== id));
       socket.emit("delete_private_message", {
         messageId: id,
         sender_id: me.id,
         receiver_id: Number(userId),
       });
     } catch (error) {
-      console.error("Failed to delete message:", error);
+      console.error("Delete error:", error);
     }
   };
 
-  /* ================= SEARCH ================= */
-  useEffect(() => {
-    if (searchTerm.trim() === "") {
-      setFilteredMessages(messages);
-    } else {
-      const filtered = messages.filter((msg) =>
-        msg.message.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredMessages(filtered);
-    }
-  }, [searchTerm, messages]);
-
-  /* ================= EMOJI PICKER ================= */
-  const addEmoji = (emoji) => {
-    setText((prev) => prev + emoji);
-    setEmojiPicker(false);
-    inputRef.current?.focus();
+  /* ================= FORMAT DATE HEADER ================= */
+  const formatDateHeader = (dateStr) => {
+    const date = new Date(dateStr);
+    if (isToday(date)) return "Today";
+    if (isYesterday(date)) return "Yesterday";
+    return format(date, "MMMM d, yyyy");
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "sent":
-        return <span style={styles.statusIcon}>✓</span>;
-      case "delivered":
-        return <span style={styles.statusIcon}>✓✓</span>;
-      case "read":
-        return <span style={{ ...styles.statusIcon, color: "#4CAF50" }}>✓✓</span>;
-      default:
-        return null;
+  /* ================= GET MESSAGE TIME ================= */
+  const getMessageTime = (timestamp) => {
+    return format(new Date(timestamp), "h:mm a");
+  };
+
+  /* ================= RENDER STATUS ICON ================= */
+  const renderStatusIcon = (status) => {
+    switch(status) {
+      case "sent": return <FiClock size={12} color="#94a3b8" />;
+      case "delivered": return <FiCheck size={12} color="#94a3b8" />;
+      case "read": return <FiCheckCircle size={12} color="#3b82f6" />;
+      default: return null;
     }
   };
 
-  const formatTime = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  };
-
-  if (loading)
+  if (loading) {
     return (
       <div style={styles.loaderContainer}>
         <div style={styles.loader}>
           <div style={styles.loaderSpinner}></div>
-          <p style={styles.loaderText}>Loading conversation...</p>
+          <p>Loading chat...</p>
         </div>
       </div>
     );
+  }
 
-  const headerTitle =
-    me?.role === "owner"
-      ? otherUser?.name || "User"
-      : otherUser?.pg_name || otherUser?.name || "PG";
+  const headerTitle = me?.role === "owner"
+    ? otherUser?.name || "User"
+    : otherUser?.pg_name || otherUser?.name || "PG";
 
   return (
     <div style={styles.container}>
-      {/* Glassmorphism Header */}
-      <div style={styles.header}>
-        <div style={styles.headerContent}>
-          <button onClick={() => navigate(-1)} style={styles.backButton}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-
+      {/* Header */}
+      <motion.div 
+        style={styles.header}
+        initial={{ y: -50 }}
+        animate={{ y: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      >
+        <div style={styles.headerLeft}>
+          <motion.div 
+            style={styles.backButton}
+            onClick={() => navigate(-1)}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            <FiArrowLeft size={24} />
+          </motion.div>
+          
+          <motion.div 
+            style={styles.userAvatar}
+            whileHover={{ scale: 1.05 }}
+          >
+            {me?.role === "owner" ? <FiUser size={24} /> : <FiHome size={24} />}
+          </motion.div>
+          
           <div style={styles.userInfo}>
-            <div style={styles.avatar}>
-              {otherUser?.name?.charAt(0) || "U"}
-              <span style={{ ...styles.onlineDot, backgroundColor: online ? "#4CAF50" : "#9e9e9e" }} />
+            <div style={styles.userName}>{headerTitle}</div>
+            <div style={styles.userStatus}>
+              <span style={{
+                ...styles.statusDot,
+                background: online ? "#10b981" : "#94a3b8"
+              }} />
+              <span>{online ? "Online" : "Offline"}</span>
+              {typing && (
+                <motion.span 
+                  style={styles.typingIndicator}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  typing...
+                </motion.span>
+              )}
             </div>
-            <div style={styles.userDetails}>
-              <div style={styles.userName}>{headerTitle}</div>
-              <div style={styles.userStatus}>
-                {online ? "Online" : "Offline"}
-                {typing && <span style={styles.typingIndicator}> • typing...</span>}
-              </div>
-            </div>
-          </div>
-
-          <div style={styles.headerActions}>
-            <button onClick={() => setShowSearch(!showSearch)} style={styles.iconButton}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
-              </svg>
-            </button>
-            <button style={styles.iconButton}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="1" />
-                <circle cx="12" cy="5" r="1" />
-                <circle cx="12" cy="19" r="1" />
-              </svg>
-            </button>
           </div>
         </div>
 
-        {showSearch && (
-          <div style={styles.searchBar}>
-            <input
-              type="text"
-              placeholder="Search messages..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={styles.searchInput}
-              autoFocus
-            />
-            <button onClick={() => setShowSearch(false)} style={styles.searchClose}>
-              ✕
-            </button>
-          </div>
-        )}
-      </div>
+        <div style={styles.headerRight}>
+          <motion.button 
+            style={styles.iconButton}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            <FiPhone size={20} />
+          </motion.button>
+          <motion.button 
+            style={styles.iconButton}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            <FiVideo size={20} />
+          </motion.button>
+          <motion.button 
+            style={styles.iconButton}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            <FiMoreVertical size={20} />
+          </motion.button>
+        </div>
+      </motion.div>
 
-      {/* Chat Messages */}
-      <div style={styles.chatBody}>
-        {filteredMessages.length === 0 ? (
-          <div style={styles.emptyState}>
-            <div style={styles.emptyStateIcon}>💬</div>
-            <h3 style={styles.emptyStateTitle}>No messages yet</h3>
-            <p style={styles.emptyStateText}>Send a message to start the conversation</p>
-          </div>
-        ) : (
-          filteredMessages.map((m, index) => {
-            const isMe = m.sender_id === me?.id;
-            const showDate = index === 0 || 
-              new Date(m.created_at).toDateString() !== new Date(filteredMessages[index - 1]?.created_at).toDateString();
+      {/* Connection Status */}
+      {connectionStatus !== "connected" && (
+        <motion.div 
+          style={{
+            ...styles.connectionStatus,
+            background: connectionStatus === "reconnecting" ? "#f59e0b" : "#ef4444"
+          }}
+          initial={{ y: -100 }}
+          animate={{ y: 0 }}
+        >
+          {connectionStatus === "reconnecting" ? "Reconnecting..." : "Disconnected"}
+        </motion.div>
+      )}
 
-            return (
-              <React.Fragment key={m.id}>
-                {showDate && (
-                  <div style={styles.dateDivider}>
-                    <span style={styles.dateText}>
-                      {new Date(m.created_at).toLocaleDateString([], { 
-                        weekday: 'long', 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })}
-                    </span>
-                  </div>
-                )}
-                <div style={{ ...styles.msgRow, justifyContent: isMe ? "flex-end" : "flex-start" }}>
-                  {!isMe && (
-                    <div style={styles.otherAvatar}>
-                      {otherUser?.name?.charAt(0) || "U"}
-                    </div>
-                  )}
-                  <div style={isMe ? styles.myMessageWrapper : styles.otherMessageWrapper}>
-                    <div
-                      style={{
-                        ...styles.bubble,
-                        background: isMe
-                          ? "linear-gradient(135deg, #667eea, #764ba2)"
-                          : "rgba(255, 255, 255, 0.95)",
-                        color: isMe ? "#fff" : "#333",
-                        boxShadow: "0 4px 15px rgba(0, 0, 0, 0.1)",
-                      }}
-                    >
-                      <div style={styles.messageText}>{m.message}</div>
-                      <div style={styles.messageMeta}>
-                        <span style={styles.messageTime}>{formatTime(m.created_at)}</span>
+      {/* Chat Body */}
+      <div style={styles.chatBody} ref={chatContainerRef}>
+        <AnimatePresence>
+          {Object.entries(messageGroups).map(([date, msgs]) => (
+            <div key={date}>
+              <motion.div 
+                style={styles.dateHeader}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <span style={styles.dateHeaderText}>{formatDateHeader(date)}</span>
+              </motion.div>
+
+              {msgs.map((m, index) => {
+                const isMe = m.sender_id === me?.id;
+                const showAvatar = index === 0 || msgs[index - 1]?.sender_id !== m.sender_id;
+
+                return (
+                  <motion.div
+                    key={m.id}
+                    style={{
+                      ...styles.messageRow,
+                      justifyContent: isMe ? "flex-end" : "flex-start",
+                    }}
+                    initial={{ opacity: 0, x: isMe ? 50 : -50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    onHoverStart={() => setSelectedMessage(m.id)}
+                    onHoverEnd={() => setSelectedMessage(null)}
+                  >
+                    {!isMe && showAvatar && (
+                      <div style={styles.messageAvatar}>
+                        {me?.role === "owner" ? <FiUser size={16} /> : <FiHome size={16} />}
+                      </div>
+                    )}
+
+                    <div style={{ maxWidth: "70%" }}>
+                      {m.reply_to && (
+                        <div style={styles.replyPreview}>
+                          <div style={styles.replyText}>
+                            Replying to: {m.reply_to.message}
+                          </div>
+                        </div>
+                      )}
+
+                      <div style={{
+                        ...styles.messageBubble,
+                        background: isMe 
+                          ? "linear-gradient(135deg, #2563eb, #3b82f6)"
+                          : "#ffffff",
+                        color: isMe ? "#ffffff" : "#1e293b",
+                        marginLeft: !isMe && !showAvatar ? 40 : 0,
+                      }}>
+                        {m.message}
+                        
+                        {m.file_url && (
+                          <div style={styles.fileAttachment}>
+                            <FiImage size={20} />
+                            <a href={m.file_url} target="_blank" rel="noopener noreferrer">
+                              Attachment
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{
+                        ...styles.messageMeta,
+                        justifyContent: isMe ? "flex-end" : "flex-start",
+                      }}>
+                        <span style={styles.messageTime}>
+                          {getMessageTime(m.created_at)}
+                        </span>
                         {isMe && (
                           <span style={styles.messageStatus}>
-                            {getStatusIcon(m.status)}
+                            {renderStatusIcon(m.status)}
                           </span>
                         )}
                       </div>
                     </div>
+
                     {isMe && (
-                      <button onClick={() => deleteMessage(m.id)} style={styles.deleteBtn}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                          <path d="M10 11v5M14 11v5" strokeLinecap="round" />
-                        </svg>
-                      </button>
+                      <AnimatePresence>
+                        {selectedMessage === m.id && (
+                          <motion.div 
+                            style={styles.messageActions}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                          >
+                            <motion.button
+                              style={styles.actionButton}
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => deleteMessage(m.id)}
+                            >
+                              <FiTrash2 size={14} color="#ef4444" />
+                            </motion.button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     )}
-                  </div>
-                </div>
-              </React.Fragment>
-            );
-          })
-        )}
-        {typing && !searchTerm && (
-          <div style={styles.typingBubble}>
-            <div style={styles.typingDots}>
-              <span style={styles.dot1}>.</span>
-              <span style={styles.dot2}>.</span>
-              <span style={styles.dot3}>.</span>
+                  </motion.div>
+                );
+              })}
             </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
+          ))}
+        </AnimatePresence>
+
+        <div ref={bottomRef} />
       </div>
+
+      {/* Reply Preview */}
+      <AnimatePresence>
+        {replyTo && (
+          <motion.div 
+            style={styles.replyContainer}
+            initial={{ y: 100 }}
+            animate={{ y: 0 }}
+            exit={{ y: 100 }}
+          >
+            <div style={styles.replyContent}>
+              <div style={styles.replyTo}>Replying to message</div>
+              <div style={styles.replyMessage}>{replyTo.message}</div>
+            </div>
+            <motion.button
+              style={styles.closeReply}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setReplyTo(null)}
+            >
+              <FiX size={16} />
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Input Area */}
-      <div style={styles.inputArea}>
-        <button onClick={() => setEmojiPicker(!emojiPicker)} style={styles.emojiButton}>
-          😊
-        </button>
-        
-        {emojiPicker && (
-          <div style={styles.emojiPicker}>
-            {["😊", "😂", "❤️", "👍", "🎉", "🔥", "✨", "💯", "🙏", "😢"].map((emoji) => (
-              <button key={emoji} onClick={() => addEmoji(emoji)} style={styles.emojiItem}>
-                {emoji}
-              </button>
-            ))}
+      <motion.div 
+        style={styles.inputArea}
+        initial={{ y: 50 }}
+        animate={{ y: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      >
+        <div style={styles.inputWrapper}>
+          <motion.button
+            style={styles.attachButton}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <FiPaperclip size={20} color="#64748b" />
+          </motion.button>
+          
+          <input
+            ref={fileInputRef}
+            type="file"
+            style={{ display: "none" }}
+            onChange={uploadFile}
+            accept="image/*,.pdf,.doc,.docx"
+          />
+
+          <motion.button
+            style={styles.emojiButton}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          >
+            <FiSmile size={20} color="#64748b" />
+          </motion.button>
+
+          <input
+            ref={inputRef}
+            value={text}
+            onChange={handleTyping}
+            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
+            placeholder="Type a message..."
+            style={styles.input}
+          />
+
+          <motion.button
+            onClick={sendMessage}
+            style={{
+              ...styles.sendButton,
+              background: text.trim() ? "linear-gradient(135deg, #2563eb, #3b82f6)" : "#e2e8f0",
+            }}
+            whileHover={text.trim() ? { scale: 1.1 } : {}}
+            whileTap={text.trim() ? { scale: 0.9 } : {}}
+            disabled={!text.trim()}
+          >
+            <FiSend size={20} color={text.trim() ? "#ffffff" : "#94a3b8"} />
+          </motion.button>
+        </div>
+
+        {uploading && (
+          <div style={styles.uploading}>
+            <div style={styles.uploadingSpinner}></div>
+            <span>Uploading...</span>
           </div>
         )}
 
-        <input
-          ref={inputRef}
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            handleTyping();
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              sendMessage();
-            }
-          }}
-          placeholder="Type your message..."
-          style={styles.input}
-          disabled={sending}
-        />
-
-        <button
-          onClick={sendMessage}
-          disabled={!text.trim() || sending}
-          style={{
-            ...styles.sendBtn,
-            opacity: !text.trim() || sending ? 0.5 : 1,
-            cursor: !text.trim() || sending ? "not-allowed" : "pointer",
-          }}
-        >
-          {sending ? (
-            <div style={styles.sendingSpinner} />
-          ) : (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+        {/* Emoji Picker */}
+        <AnimatePresence>
+          {showEmojiPicker && (
+            <motion.div 
+              style={styles.emojiPicker}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+            >
+              <EmojiPicker
+                onEmojiClick={(emoji) => setText(prev => prev + emoji.emoji)}
+                theme="light"
+              />
+            </motion.div>
           )}
-        </button>
-      </div>
+        </AnimatePresence>
+      </motion.div>
     </div>
   );
 }
 
-/* ================= MODERN STYLES ================= */
 const styles = {
   container: {
     height: "100vh",
     display: "flex",
     flexDirection: "column",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    background: "#f8fafc",
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   },
 
   header: {
-    background: "rgba(255, 255, 255, 0.1)",
-    backdropFilter: "blur(10px)",
-    borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
-    padding: "12px 16px",
-  },
-
-  headerContent: {
+    background: "#ffffff",
+    padding: "16px 20px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
+    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)",
+    zIndex: 10,
+  },
+
+  headerLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: 16,
   },
 
   backButton: {
-    background: "rgba(255, 255, 255, 0.2)",
-    border: "none",
+    cursor: "pointer",
+    color: "#2563eb",
+    padding: 8,
     borderRadius: "50%",
-    width: "40px",
-    height: "40px",
+    background: "#f1f5f9",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    cursor: "pointer",
-    color: "#fff",
-    transition: "all 0.3s ease",
-    ":hover": {
-      background: "rgba(255, 255, 255, 0.3)",
-      transform: "scale(1.1)",
-    },
+  },
+
+  userAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: "50%",
+    background: "linear-gradient(135deg, #667eea, #764ba2)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#ffffff",
+    fontSize: 20,
+    fontWeight: "bold",
+    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
   },
 
   userInfo: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    flex: 1,
-    marginLeft: "12px",
-  },
-
-  avatar: {
-    width: "48px",
-    height: "48px",
-    borderRadius: "50%",
-    background: "linear-gradient(135deg, #ff6b6b, #feca57)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#fff",
-    fontSize: "20px",
-    fontWeight: "bold",
-    position: "relative",
-    boxShadow: "0 4px 15px rgba(0, 0, 0, 0.2)",
-  },
-
-  onlineDot: {
-    position: "absolute",
-    bottom: "2px",
-    right: "2px",
-    width: "12px",
-    height: "12px",
-    borderRadius: "50%",
-    border: "2px solid #fff",
-  },
-
-  userDetails: {
     display: "flex",
     flexDirection: "column",
   },
 
   userName: {
-    color: "#fff",
-    fontSize: "18px",
+    fontSize: 18,
     fontWeight: "600",
-    marginBottom: "4px",
+    color: "#1e293b",
+    marginBottom: 4,
   },
 
   userStatus: {
-    color: "rgba(255, 255, 255, 0.8)",
-    fontSize: "13px",
+    fontSize: 13,
+    color: "#64748b",
     display: "flex",
     alignItems: "center",
+    gap: 6,
+  },
+
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: "50%",
+    display: "inline-block",
   },
 
   typingIndicator: {
-    color: "#4CAF50",
+    color: "#2563eb",
+    fontSize: 12,
+    marginLeft: 8,
     fontStyle: "italic",
-    marginLeft: "4px",
   },
 
-  headerActions: {
+  headerRight: {
     display: "flex",
-    gap: "8px",
+    gap: 8,
   },
 
   iconButton: {
-    background: "rgba(255, 255, 255, 0.2)",
-    border: "none",
+    width: 40,
+    height: 40,
     borderRadius: "50%",
-    width: "40px",
-    height: "40px",
+    border: "none",
+    background: "#f1f5f9",
+    color: "#2563eb",
+    cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    cursor: "pointer",
-    color: "#fff",
-    transition: "all 0.3s ease",
-    ":hover": {
-      background: "rgba(255, 255, 255, 0.3)",
-    },
+    transition: "all 0.2s",
   },
 
-  searchBar: {
-    marginTop: "12px",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-
-  searchInput: {
-    flex: 1,
-    padding: "10px 16px",
-    borderRadius: "25px",
-    border: "none",
-    background: "rgba(255, 255, 255, 0.2)",
-    color: "#fff",
-    fontSize: "14px",
-    outline: "none",
-    "::placeholder": {
-      color: "rgba(255, 255, 255, 0.6)",
-    },
-  },
-
-  searchClose: {
-    background: "rgba(255, 255, 255, 0.2)",
-    border: "none",
-    borderRadius: "50%",
-    width: "32px",
-    height: "32px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    color: "#fff",
-    fontSize: "16px",
+  connectionStatus: {
+    textAlign: "center",
+    padding: "8px",
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "500",
   },
 
   chatBody: {
     flex: 1,
     overflowY: "auto",
-    padding: "20px 16px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
+    padding: "20px",
+    scrollBehavior: "smooth",
   },
 
-  emptyState: {
+  dateHeader: {
     textAlign: "center",
-    padding: "40px 20px",
-    color: "#fff",
+    margin: "20px 0",
   },
 
-  emptyStateIcon: {
-    fontSize: "64px",
-    marginBottom: "16px",
-    opacity: 0.8,
-  },
-
-  emptyStateTitle: {
-    fontSize: "20px",
-    fontWeight: "600",
-    marginBottom: "8px",
-  },
-
-  emptyStateText: {
-    fontSize: "14px",
-    opacity: 0.8,
-  },
-
-  dateDivider: {
-    textAlign: "center",
-    margin: "16px 0",
-    position: "relative",
-  },
-
-  dateText: {
-    background: "rgba(255, 255, 255, 0.2)",
+  dateHeaderText: {
+    background: "#e2e8f0",
     padding: "6px 12px",
-    borderRadius: "20px",
-    color: "#fff",
-    fontSize: "12px",
+    borderRadius: 20,
+    fontSize: 12,
+    color: "#475569",
     fontWeight: "500",
-    backdropFilter: "blur(5px)",
   },
 
-  msgRow: {
+  messageRow: {
     display: "flex",
+    marginBottom: 16,
+    position: "relative",
     alignItems: "flex-end",
-    gap: "8px",
+    gap: 8,
   },
 
-  otherAvatar: {
-    width: "32px",
-    height: "32px",
+  messageAvatar: {
+    width: 32,
+    height: 32,
     borderRadius: "50%",
-    background: "linear-gradient(135deg, #48c6ef, #6f86d6)",
+    background: "#e2e8f0",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#fff",
-    fontSize: "14px",
-    fontWeight: "bold",
+    color: "#64748b",
+    fontSize: 14,
     flexShrink: 0,
   },
 
-  myMessageWrapper: {
-    maxWidth: "70%",
-    position: "relative",
-  },
-
-  otherMessageWrapper: {
-    maxWidth: "70%",
-    position: "relative",
-  },
-
-  bubble: {
+  messageBubble: {
     padding: "12px 16px",
-    borderRadius: "20px",
-    backdropFilter: "blur(10px)",
-    animation: "slideIn 0.3s ease",
+    borderRadius: 18,
+    fontSize: 15,
+    lineHeight: 1.5,
     wordWrap: "break-word",
-  },
-
-  messageText: {
-    fontSize: "15px",
-    lineHeight: "1.4",
-    marginBottom: "4px",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
   },
 
   messageMeta: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "flex-end",
-    gap: "4px",
-    fontSize: "11px",
-    opacity: 0.7,
+    gap: 4,
+    marginTop: 4,
+    fontSize: 11,
+    color: "#94a3b8",
   },
 
   messageTime: {
-    color: "inherit",
+    fontSize: 11,
   },
 
   messageStatus: {
-    display: "inline-flex",
+    display: "flex",
     alignItems: "center",
   },
 
-  statusIcon: {
-    fontSize: "14px",
-    marginLeft: "4px",
+  messageActions: {
+    position: "absolute",
+    right: -40,
+    top: "50%",
+    transform: "translateY(-50%)",
+    display: "flex",
+    gap: 4,
   },
 
-  deleteBtn: {
-    position: "absolute",
-    top: "-8px",
-    right: "-8px",
-    background: "#fff",
-    border: "none",
+  actionButton: {
+    width: 28,
+    height: 28,
     borderRadius: "50%",
-    width: "28px",
-    height: "28px",
+    border: "none",
+    background: "#ffffff",
+    cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    cursor: "pointer",
-    color: "#ff4757",
-    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.2)",
-    transition: "all 0.3s ease",
-    opacity: 0,
-    ":hover": {
-      transform: "scale(1.1)",
-      background: "#ff4757",
-      color: "#fff",
-    },
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
   },
 
-  myMessageWrapper: {
-    maxWidth: "70%",
-    position: "relative",
-    ":hover button": {
-      opacity: 1,
-    },
-  },
-
-  typingBubble: {
-    padding: "12px 16px",
-    background: "rgba(255, 255, 255, 0.2)",
-    borderRadius: "20px",
-    backdropFilter: "blur(10px)",
-    width: "fit-content",
-    marginTop: "8px",
-  },
-
-  typingDots: {
+  fileAttachment: {
     display: "flex",
-    gap: "4px",
-    fontSize: "24px",
-    color: "#fff",
-    lineHeight: "12px",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+    padding: "8px 12px",
+    background: "rgba(255,255,255,0.1)",
+    borderRadius: 8,
+    cursor: "pointer",
   },
 
-  dot1: {
-    animation: "bounce 1.4s infinite",
-    animationDelay: "0s",
+  replyPreview: {
+    marginBottom: 4,
+    padding: "8px 12px",
+    background: "rgba(0,0,0,0.05)",
+    borderRadius: 12,
+    fontSize: 12,
+    color: "#64748b",
+    borderLeft: "3px solid #2563eb",
   },
 
-  dot2: {
-    animation: "bounce 1.4s infinite",
-    animationDelay: "0.2s",
+  replyText: {
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
 
-  dot3: {
-    animation: "bounce 1.4s infinite",
-    animationDelay: "0.4s",
+  replyContainer: {
+    background: "#ffffff",
+    padding: "12px 16px",
+    borderTop: "1px solid #e2e8f0",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  replyContent: {
+    flex: 1,
+  },
+
+  replyTo: {
+    fontSize: 12,
+    color: "#2563eb",
+    marginBottom: 4,
+  },
+
+  replyMessage: {
+    fontSize: 14,
+    color: "#1e293b",
+  },
+
+  closeReply: {
+    width: 28,
+    height: 28,
+    borderRadius: "50%",
+    border: "none",
+    background: "#f1f5f9",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   inputArea: {
-    background: "rgba(255, 255, 255, 0.1)",
-    backdropFilter: "blur(10px)",
-    padding: "16px",
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    borderTop: "1px solid rgba(255, 255, 255, 0.2)",
+    padding: "16px 20px",
+    background: "#ffffff",
+    borderTop: "1px solid #e2e8f0",
     position: "relative",
   },
 
-  emojiButton: {
-    background: "rgba(255, 255, 255, 0.2)",
+  inputWrapper: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    background: "#f1f5f9",
+    borderRadius: 30,
+    padding: "4px 4px 4px 16px",
+  },
+
+  attachButton: {
+    background: "none",
     border: "none",
-    borderRadius: "50%",
-    width: "44px",
-    height: "44px",
-    fontSize: "24px",
+    cursor: "pointer",
+    padding: 8,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    cursor: "pointer",
-    transition: "all 0.3s ease",
-    color: "#fff",
-    ":hover": {
-      background: "rgba(255, 255, 255, 0.3)",
-      transform: "scale(1.1)",
-    },
   },
 
-  emojiPicker: {
-    position: "absolute",
-    bottom: "80px",
-    left: "16px",
-    background: "#fff",
-    borderRadius: "25px",
-    padding: "12px",
-    display: "grid",
-    gridTemplateColumns: "repeat(5, 1fr)",
-    gap: "8px",
-    boxShadow: "0 10px 40px rgba(0, 0, 0, 0.2)",
-    animation: "slideUp 0.3s ease",
-    zIndex: 10,
-  },
-
-  emojiItem: {
+  emojiButton: {
     background: "none",
     border: "none",
-    fontSize: "24px",
-    padding: "8px",
-    borderRadius: "12px",
     cursor: "pointer",
-    transition: "all 0.3s ease",
-    ":hover": {
-      background: "#f0f0f0",
-      transform: "scale(1.2)",
-    },
+    padding: 8,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   input: {
     flex: 1,
-    padding: "14px 20px",
-    borderRadius: "30px",
+    padding: "12px 8px",
     border: "none",
-    background: "rgba(255, 255, 255, 0.2)",
-    color: "#fff",
-    fontSize: "15px",
+    background: "transparent",
     outline: "none",
-    transition: "all 0.3s ease",
-    "::placeholder": {
-      color: "rgba(255, 255, 255, 0.6)",
-    },
-    ":focus": {
-      background: "rgba(255, 255, 255, 0.25)",
-      boxShadow: "0 0 0 2px rgba(255, 255, 255, 0.3)",
-    },
+    fontSize: 15,
+    color: "#1e293b",
   },
 
-  sendBtn: {
-    background: "linear-gradient(135deg, #667eea, #764ba2)",
-    border: "none",
+  sendButton: {
+    width: 48,
+    height: 48,
     borderRadius: "50%",
-    width: "48px",
-    height: "48px",
+    border: "none",
+    cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    cursor: "pointer",
-    color: "#fff",
-    boxShadow: "0 4px 15px rgba(102, 126, 234, 0.4)",
-    transition: "all 0.3s ease",
-    ":hover": {
-      transform: "scale(1.1)",
-      boxShadow: "0 6px 20px rgba(102, 126, 234, 0.6)",
-    },
+    transition: "all 0.2s",
   },
 
-  sendingSpinner: {
-    width: "20px",
-    height: "20px",
-    border: "2px solid #fff",
-    borderTop: "2px solid transparent",
+  uploading: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+    fontSize: 13,
+    color: "#64748b",
+  },
+
+  uploadingSpinner: {
+    width: 16,
+    height: 16,
+    border: "2px solid #e2e8f0",
+    borderTopColor: "#2563eb",
     borderRadius: "50%",
     animation: "spin 1s linear infinite",
+  },
+
+  emojiPicker: {
+    position: "absolute",
+    bottom: 80,
+    right: 20,
+    zIndex: 20,
   },
 
   loaderContainer: {
     height: "100vh",
     display: "flex",
-    alignItems: "center",
     justifyContent: "center",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    alignItems: "center",
+    background: "#f8fafc",
   },
 
   loader: {
     textAlign: "center",
-    color: "#fff",
+    color: "#2563eb",
   },
 
   loaderSpinner: {
-    width: "50px",
-    height: "50px",
-    border: "3px solid rgba(255, 255, 255, 0.3)",
-    borderTop: "3px solid #fff",
+    width: 40,
+    height: 40,
+    border: "3px solid #e2e8f0",
+    borderTopColor: "#2563eb",
     borderRadius: "50%",
     animation: "spin 1s linear infinite",
-    margin: "0 auto 20px",
-  },
-
-  loaderText: {
-    fontSize: "16px",
-    opacity: 0.9,
+    margin: "0 auto 16px",
   },
 };
 
-// Add keyframes for animations
-const styleSheet = document.createElement("style");
-styleSheet.textContent = `
-  @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes bounce {
-    0%, 60%, 100% {
-      transform: translateY(0);
-    }
-    30% {
-      transform: translateY(-10px);
-    }
-  }
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-
-  .my-message-wrapper:hover .delete-btn {
-    opacity: 1;
-  }
-`;
-document.head.appendChild(styleSheet);
+// Add keyframe animation to your global CSS
+// @keyframes spin {
+//   to { transform: rotate(360deg); }
+// }
