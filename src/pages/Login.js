@@ -62,6 +62,7 @@ const PhoneLogin = () => {
   const redirect = (role) => {
     if (role === "admin") navigate("/admin/dashboard");
     else if (role === "owner") navigate("/owner/dashboard");
+    else if (role === "vendor") navigate("/vendor/dashboard");
     else navigate("/");
   };
 
@@ -75,7 +76,7 @@ const PhoneLogin = () => {
 
       const res = await userAPI.post("/auth/firebase", {
         idToken,
-        role: selectedRole || null   // ⭐ IMPORTANT
+        role: selectedRole || null
       });
 
       if (res.data.success) {
@@ -116,7 +117,8 @@ const PhoneLogin = () => {
 
       setConfirmObj(confirmation);
       setOtpTimer(60);
-      setSuccess("OTP sent");
+      setCanResend(false);
+      setSuccess("OTP sent successfully");
 
     } catch (err) {
       setError("Failed to send OTP");
@@ -128,7 +130,7 @@ const PhoneLogin = () => {
   /* ================= VERIFY OTP ================= */
   const verifyOtp = async () => {
 
-    if (otp.length !== 6) return setError("Enter valid OTP");
+    if (otp.length !== 6) return setError("Enter valid 6 digit OTP");
 
     try {
       setLoading(true);
@@ -140,7 +142,6 @@ const PhoneLogin = () => {
       if (res._tokenResponse?.isNewUser) {
         setIsNewUser(true);
       } else {
-        // ⭐ EXISTING USER → ROLE FROM DB
         await syncUser(res.user, null);
       }
 
@@ -153,6 +154,7 @@ const PhoneLogin = () => {
 
   /* ================= NEW USER REGISTRATION ================= */
   const completeRegistration = async () => {
+    if (!firebaseUser) return;
     await syncUser(firebaseUser, role);
   };
 
@@ -166,12 +168,15 @@ const PhoneLogin = () => {
           {isNewUser ? "Complete Registration" : "Phone Login"}
         </Typography>
 
-        {error && <Alert severity="error">{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         <Snackbar open={!!success} autoHideDuration={2500}>
-          <Alert severity="success">{success}</Alert>
+          <Alert severity="success" variant="filled">
+            {success}
+          </Alert>
         </Snackbar>
 
+        {/* ================= PHONE INPUT ================= */}
         {!confirmObj && !isNewUser && (
           <>
             <TextField
@@ -180,31 +185,43 @@ const PhoneLogin = () => {
               value={phone}
               onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
               margin="normal"
-              InputProps={{ startAdornment: <Typography mr={1}>+91</Typography> }}
+              inputProps={{ maxLength: 10 }}
+              InputProps={{
+                startAdornment: <Typography mr={1}>+91</Typography>
+              }}
             />
 
-            <Button fullWidth variant="contained" onClick={sendOtp}>
+            <Button fullWidth variant="contained" onClick={sendOtp} disabled={loading}>
               {loading ? <CircularProgress size={24} /> : "Send OTP"}
             </Button>
           </>
         )}
 
+        {/* ================= OTP INPUT ================= */}
         {confirmObj && !isNewUser && (
           <>
             <TextField
               fullWidth
               label="Enter OTP"
               value={otp}
-              onChange={(e) => setOtp(e.target.value)}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
               margin="normal"
+              inputProps={{ maxLength: 6 }}
             />
 
-            <Button fullWidth variant="contained" onClick={verifyOtp}>
+            <Button fullWidth variant="contained" onClick={verifyOtp} disabled={loading}>
               {loading ? <CircularProgress size={24} /> : "Verify OTP"}
             </Button>
+
+            {otpTimer > 0 && (
+              <Typography variant="caption" display="block" mt={1}>
+                Resend OTP in {otpTimer}s
+              </Typography>
+            )}
           </>
         )}
 
+        {/* ================= ROLE SELECTION ================= */}
         {isNewUser && (
           <>
             <TextField
@@ -217,6 +234,7 @@ const PhoneLogin = () => {
             >
               <MenuItem value="tenant">Tenant</MenuItem>
               <MenuItem value="owner">Owner</MenuItem>
+              <MenuItem value="vendor">Vendor</MenuItem>
             </TextField>
 
             <Button fullWidth variant="contained" onClick={completeRegistration}>
