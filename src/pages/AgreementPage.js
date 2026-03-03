@@ -1,8 +1,6 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { onAuthStateChanged } from "firebase/auth";
 import api from "../api/api";
-import { auth } from "../firebase";
 import logo from "../assets/nepxall-logo.png";
 import { QRCodeCanvas } from "qrcode.react";
 
@@ -14,75 +12,75 @@ export default function AgreementPage() {
   const [error, setError] = useState("");
 
   //////////////////////////////////////////////////////
-  // LOAD AGREEMENT
+  // LOAD AGREEMENT DIRECTLY (NO AUTH WAIT)
   //////////////////////////////////////////////////////
-  const loadAgreement = useCallback(async () => {
+  const loadAgreement = async () => {
     try {
-      if (!bookingId) return;
-
       setLoading(true);
       setError("");
 
       const res = await api.get(`/agreement/booking/${bookingId}`);
 
-      setAgreement(res.data.data);
+      if (res.data?.data) {
+        setAgreement(res.data.data);
+      } else {
+        setError("Agreement not found");
+      }
     } catch (err) {
-      console.error("AGREEMENT LOAD ERROR:", err);
+      console.error("Agreement Load Error:", err);
       setError(
-        err.response?.data?.message ||
-        "Failed to load agreement"
+        err.response?.data?.message || "Failed to load agreement"
       );
     } finally {
       setLoading(false);
     }
-  }, [bookingId]);
+  };
 
-  //////////////////////////////////////////////////////
-  // WAIT FOR AUTH (important for production refresh)
-  //////////////////////////////////////////////////////
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) loadAgreement();
-      else setLoading(false);
-    });
-
-    return () => unsub();
-  }, [loadAgreement]);
+    if (bookingId) loadAgreement();
+  }, [bookingId]);
 
   //////////////////////////////////////////////////////
   // HELPERS
   //////////////////////////////////////////////////////
-  const money = v => `₹${Number(v || 0).toLocaleString("en-IN")}`;
+  const money = (v) =>
+    `₹${Number(v || 0).toLocaleString("en-IN")}`;
 
-  const formatDate = d =>
+  const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString("en-GB") : "-";
 
   //////////////////////////////////////////////////////
-  // STATES
+  // LOADING STATE
   //////////////////////////////////////////////////////
   if (loading)
     return (
-      <div className="p-10 text-center text-lg font-semibold">
+      <div className="min-h-screen flex items-center justify-center text-lg font-semibold">
         Loading agreement...
       </div>
     );
 
+  //////////////////////////////////////////////////////
+  // ERROR STATE
+  //////////////////////////////////////////////////////
   if (error)
     return (
-      <div className="p-10 text-center">
-        <p className="text-red-600 font-bold">{error}</p>
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <p className="text-red-600 font-bold text-lg">{error}</p>
         <button
           onClick={loadAgreement}
-          className="mt-4 bg-blue-600 text-white px-4 py-2 rounded"
+          className="mt-4 bg-blue-600 text-white px-5 py-2 rounded-lg"
         >
           Retry
         </button>
       </div>
     );
 
+  //////////////////////////////////////////////////////
+  // NO AGREEMENT
+  //////////////////////////////////////////////////////
   if (!agreement)
     return (
-      <div className="p-10 text-center">
+      <div className="min-h-screen flex items-center justify-center">
         Agreement not found
       </div>
     );
@@ -100,7 +98,7 @@ export default function AgreementPage() {
             DIGITAL AGREEMENT
           </div>
 
-          <img src={logo} className="w-20 mx-auto mb-3" alt="" />
+          <img src={logo} className="w-20 mx-auto mb-3" alt="logo" />
 
           <h1 className="text-4xl font-bold tracking-wide">
             RENTAL AGREEMENT
@@ -133,7 +131,7 @@ export default function AgreementPage() {
 
             <Box title="AGREEMENT INFO">
               <Row label="Start Date" value={formatDate(agreement.move_in_date)} />
-              <Row label="Lock-In" value={`${agreement.agreement_duration_months} Months`} />
+              <Row label="Duration" value={`${agreement.agreement_duration_months} Months`} />
               <Row label="Rent Due" value={`${agreement.rent_due_day}th`} />
             </Box>
           </div>
