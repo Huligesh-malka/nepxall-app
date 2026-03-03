@@ -7,6 +7,7 @@ import { auth } from "./firebase";
 import MainLayout from "./layouts/MainLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import OwnerLayout from "./layouts/OwnerLayout";
+import VendorLayout from "./layouts/VendorLayout"; // ✅ NEW
 
 /* AUTH */
 import Login from "./pages/Login";
@@ -30,7 +31,7 @@ import UserActiveStay from "./pages/UserActiveStay";
 import AadhaarKyc from "./pages/AadhaarKyc";
 import VisitSchedulePage from "./pages/VisitSchedulePage";
 import PublicAgreementPage from "./pages/PublicAgreementPage";
-import ServicesPage from "./pages/ServicesPage"; // ✅ NEW IMPORT
+import ServicesPage from "./pages/ServicesPage";
 
 /* CHAT */
 import PrivateChat from "./pages/PrivateChat";
@@ -62,6 +63,9 @@ import AdminSettlements from "./pages/admin/AdminSettlements";
 import AdminFinanceDashboard from "./pages/admin/AdminFinanceDashboard";
 import SettlementHistory from "./pages/admin/SettlementHistory";
 
+/* ✅ VENDOR */
+import VendorDashboard from "./pages/VendorDashboard";
+
 /* CONFIG */
 import { testBackendConnection } from "./config";
 
@@ -78,6 +82,13 @@ function App() {
 
   const PrivateRoute = ({ children }) =>
     user ? children : <Navigate to="/login" replace />;
+
+  const RoleRoute = ({ children, allowedRole }) => {
+    const role = localStorage.getItem("role");
+    return user && role === allowedRole
+      ? children
+      : <Navigate to="/" replace />;
+  };
 
   return (
     <Routes>
@@ -107,7 +118,7 @@ function App() {
       >
         <Route path="booking/:pgId" element={<BookingForm />} />
         <Route path="user/bookings" element={<UserBookingHistory />} />
-        <Route path="user/services/:bookingId" element={<ServicesPage />} /> {/* ✅ NEW ROUTE */}
+        <Route path="user/services/:bookingId" element={<ServicesPage />} />
         <Route path="payment-success" element={<PaymentSuccess />} />
         <Route path="payment/:bookingId" element={<PaymentPage />} />
         <Route path="agreement/:bookingId" element={<AgreementPage />} />
@@ -124,13 +135,14 @@ function App() {
         path="/owner"
         element={
           <PrivateRoute>
-            <OwnerLayout />
+            <RoleRoute allowedRole="owner">
+              <OwnerLayout />
+            </RoleRoute>
           </PrivateRoute>
         }
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<OwnerDashboard />} />
-        <Route path="pgs" element={<OwnerDashboard />} />
         <Route path="bookings" element={<OwnerBookings />} />
         <Route path="verification" element={<OwnerVerificationPage />} />
         <Route path="bank" element={<OwnerBankDetails />} />
@@ -153,7 +165,9 @@ function App() {
         path="/admin"
         element={
           <PrivateRoute>
-            <AdminLayout />
+            <RoleRoute allowedRole="admin">
+              <AdminLayout />
+            </RoleRoute>
           </PrivateRoute>
         }
       >
@@ -164,6 +178,21 @@ function App() {
         <Route path="pending-pgs" element={<AdminPendingPGs />} />
         <Route path="pg/:id" element={<AdminPGDetails />} />
         <Route path="owner-verification" element={<AdminOwnerVerification />} />
+      </Route>
+
+      {/* ================= ✅ VENDOR ================= */}
+      <Route
+        path="/vendor"
+        element={
+          <PrivateRoute>
+            <RoleRoute allowedRole="vendor">
+              <VendorLayout />
+            </RoleRoute>
+          </PrivateRoute>
+        }
+      >
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<VendorDashboard />} />
       </Route>
 
       {/* ================= FALLBACK ================= */}
