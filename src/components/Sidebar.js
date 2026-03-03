@@ -33,7 +33,9 @@ const Sidebar = () => {
       <hr style={divider} />
 
       <nav style={nav}>
-        <Link style={linkStyle(isActive("/"))} to="/">🏡 Home</Link>
+        <Link style={linkStyle(isActive("/"))} to="/">
+          🏡 Home
+        </Link>
 
         {/* ================= TENANT ================= */}
         {isLoggedIn && (role === "tenant" || role === "user") && (
@@ -41,36 +43,35 @@ const Sidebar = () => {
             <hr style={divider} />
             <p style={sectionLabel}>TENANT</p>
 
-       <Link style={linkStyle(isActive("/user/my-stay"))} to="/user/my-stay">
-  🏠 My Stay
-</Link>
+            <Link style={linkStyle(isActive("/user/my-stay"))} to="/user/my-stay">
+              🏠 My Stay
+            </Link>
 
-<Link style={linkStyle(isActive("/user/bookings"))} to="/user/bookings">
-  📜 My Bookings
-</Link>
+            <Link style={linkStyle(isActive("/user/bookings"))} to="/user/bookings">
+              📜 My Bookings
+            </Link>
 
-<Link style={linkStyle(isActive("/user/aadhaar-kyc"))} to="/user/aadhaar-kyc">
-  🛂 Aadhaar KYC
-</Link>
+            <Link style={linkStyle(isActive("/user/aadhaar-kyc"))} to="/user/aadhaar-kyc">
+              🛂 Aadhaar KYC
+            </Link>
 
-<Link style={linkStyle(isActive("/"))} to="/">
-  🔍 Browse Properties
-</Link>
+            <Link style={linkStyle(isActive("/"))} to="/">
+              🔍 Browse Properties
+            </Link>
 
-{/* ✅ Cashfree Required Links */}
-<hr style={{ margin: "15px 0", opacity: 0.2 }} />
+            <hr style={{ margin: "15px 0", opacity: 0.2 }} />
 
-<Link style={linkStyle(isActive("/contact"))} to="/contact">
-  📞 Contact Us
-</Link>
+            <Link style={linkStyle(isActive("/contact"))} to="/contact">
+              📞 Contact Us
+            </Link>
 
-<Link style={linkStyle(isActive("/terms"))} to="/terms">
-  📄 Terms & Conditions
-</Link>
+            <Link style={linkStyle(isActive("/terms"))} to="/terms">
+              📄 Terms & Conditions
+            </Link>
 
-<Link style={linkStyle(isActive("/refund-policy"))} to="/refund-policy">
-  💰 Refund Policy
-</Link>
+            <Link style={linkStyle(isActive("/refund-policy"))} to="/refund-policy">
+              💰 Refund Policy
+            </Link>
           </>
         )}
 
@@ -80,17 +81,53 @@ const Sidebar = () => {
             <hr style={divider} />
             <p style={sectionLabel}>OWNER</p>
 
-            <Link style={linkStyle(isActive("/owner/dashboard"))} to="/owner/dashboard">📊 Dashboard</Link>
-            <Link style={linkStyle(isActive("/owner/bookings"))} to="/owner/bookings">📥 Booking Requests</Link>
-            <Link style={linkStyle(isActive("/owner/pgs"))} to="/owner/pgs">🏢 My PGs</Link>
-            <Link style={linkStyle(isActive("/owner/hotels"))} to="/owner/hotels">🏨 My Hotels</Link>
+            <Link style={linkStyle(isActive("/owner/dashboard"))} to="/owner/dashboard">
+              📊 Dashboard
+            </Link>
 
-            <Link style={linkStyle(isActive("/owner/add"))} to="/owner/add">➕ Add PG</Link>
-            <Link style={linkStyle(isActive("/owner/add-hotel"))} to="/owner/add-hotel">➕ Add Hotel</Link>
+            <Link style={linkStyle(isActive("/owner/bookings"))} to="/owner/bookings">
+              📥 Booking Requests
+            </Link>
 
-            <Link style={linkStyle(isActive("/owner/bank"))} to="/owner/bank">🏦 Bank Details</Link>
+            <Link style={linkStyle(isActive("/owner/pgs"))} to="/owner/pgs">
+              🏢 My PGs
+            </Link>
 
-            <Link style={linkStyle(isActive("/owner/verification"))} to="/owner/verification">🛂 Verification</Link>
+            <Link style={linkStyle(isActive("/owner/hotels"))} to="/owner/hotels">
+              🏨 My Hotels
+            </Link>
+
+            <Link style={linkStyle(isActive("/owner/add"))} to="/owner/add">
+              ➕ Add PG
+            </Link>
+
+            <Link style={linkStyle(isActive("/owner/add-hotel"))} to="/owner/add-hotel">
+              ➕ Add Hotel
+            </Link>
+
+            <Link style={linkStyle(isActive("/owner/bank"))} to="/owner/bank">
+              🏦 Bank Details
+            </Link>
+
+            <Link style={linkStyle(isActive("/owner/verification"))} to="/owner/verification">
+              🛂 Verification
+            </Link>
+          </>
+        )}
+
+        {/* ================= VENDOR ================= */}
+        {isLoggedIn && role === "vendor" && (
+          <>
+            <hr style={divider} />
+            <p style={sectionLabel}>VENDOR</p>
+
+            <Link style={linkStyle(isActive("/vendor/dashboard"))} to="/vendor/dashboard">
+              📊 Dashboard
+            </Link>
+
+            <Link style={linkStyle(isActive("/vendor/dashboard"))} to="/vendor/dashboard">
+              🛠 My Assigned Services
+            </Link>
           </>
         )}
 
@@ -100,18 +137,21 @@ const Sidebar = () => {
             <hr style={divider} />
             <p style={sectionLabel}>ADMIN</p>
 
-            <Link style={linkStyle(isActive("/admin/dashboard"))} to="/admin/dashboard">📊 Dashboard</Link>
-            <Link style={linkStyle(isActive("/admin/owner-verification"))} to="/admin/owner-verification">🛡️ Verify Owners</Link>
-            <Link style={linkStyle(isActive("/admin/users"))} to="/admin/users">👥 Manage Users</Link>
-            <Link style={linkStyle(isActive("/admin/properties"))} to="/admin/properties">🏘️ All Properties</Link>
+            <Link style={linkStyle(isActive("/admin/finance"))} to="/admin/finance">
+              📊 Finance Dashboard
+            </Link>
 
-            {/* ✅ NEW SETTLEMENT MENU */}
+            <Link style={linkStyle(isActive("/admin/owner-verification"))} to="/admin/owner-verification">
+              🛡️ Verify Owners
+            </Link>
+
             <Link style={linkStyle(isActive("/admin/settlements"))} to="/admin/settlements">
               💰 Settlements
             </Link>
-            <Link style={linkStyle(isActive("/admin/finance"))} to="/admin/finance">💰 Finance</Link>
-            <Link style={linkStyle(isActive("/admin/settlement-history"))} to="/admin/settlement-history">📜 Settlement History</Link>
-            
+
+            <Link style={linkStyle(isActive("/admin/settlement-history"))} to="/admin/settlement-history">
+              📜 Settlement History
+            </Link>
           </>
         )}
 
@@ -119,8 +159,13 @@ const Sidebar = () => {
         {!isLoggedIn && (
           <>
             <hr style={divider} />
-            <Link style={linkStyle(isActive("/login"))} to="/login">🔑 Login</Link>
-            <Link style={linkStyle(isActive("/register"))} to="/register">📝 Register</Link>
+            <Link style={linkStyle(isActive("/login"))} to="/login">
+              🔑 Login
+            </Link>
+
+            <Link style={linkStyle(isActive("/register"))} to="/register">
+              📝 Register
+            </Link>
           </>
         )}
       </nav>
@@ -132,7 +177,7 @@ const Sidebar = () => {
           <p style={{ color: "#94a3b8", fontSize: 12, margin: 0 }}>
             Logged in as
             <span style={{ color: "#fff", fontWeight: "bold", textTransform: "capitalize" }}>
-              {" "}{role}
+              {" "} {role}
             </span>
           </p>
           <p style={{ color: "#4CAF50", fontSize: 11 }}>
