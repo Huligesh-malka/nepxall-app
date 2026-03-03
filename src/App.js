@@ -30,6 +30,7 @@ import UserActiveStay from "./pages/UserActiveStay";
 import AadhaarKyc from "./pages/AadhaarKyc";
 import VisitSchedulePage from "./pages/VisitSchedulePage";
 import PublicAgreementPage from "./pages/PublicAgreementPage";
+import ServicesPage from "./pages/ServicesPage"; // ✅ NEW IMPORT
 
 /* CHAT */
 import PrivateChat from "./pages/PrivateChat";
@@ -81,7 +82,7 @@ function App() {
   return (
     <Routes>
 
-      {/* ================= PUBLIC WITH LAYOUT ✅ ================= */}
+      {/* ================= PUBLIC WITH LAYOUT ================= */}
       <Route element={<MainLayout />}>
         <Route index element={<UserPGSearch />} />
         <Route path="pg/:id" element={<PGDetails />} />
@@ -106,6 +107,7 @@ function App() {
       >
         <Route path="booking/:pgId" element={<BookingForm />} />
         <Route path="user/bookings" element={<UserBookingHistory />} />
+        <Route path="user/services/:bookingId" element={<ServicesPage />} /> {/* ✅ NEW ROUTE */}
         <Route path="payment-success" element={<PaymentSuccess />} />
         <Route path="payment/:bookingId" element={<PaymentPage />} />
         <Route path="agreement/:bookingId" element={<AgreementPage />} />
