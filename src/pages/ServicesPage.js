@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/api";
 
 const ServicesPage = () => {
-  const { bookingId } = useParams();
+  const { bookingId } = useParams(); // optional now
   const navigate = useNavigate();
 
   const [selectedService, setSelectedService] = useState(null);
@@ -12,6 +12,7 @@ const ServicesPage = () => {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
 
   const services = [
     { id: "packers", name: "🚚 Packers & Movers", price: 1500 },
@@ -22,8 +23,11 @@ const ServicesPage = () => {
   ];
 
   const handleSubmit = async () => {
+    setError("");
+    setSuccess("");
+
     if (!selectedService || !serviceDate || !address) {
-      alert("Please fill all required fields");
+      setError("Please fill all required fields");
       return;
     }
 
@@ -32,24 +36,38 @@ const ServicesPage = () => {
 
       const serviceObj = services.find(s => s.id === selectedService);
 
-      await api.post("/services/book", {
-        bookingId,
+      const payload = {
         serviceType: serviceObj.name,
         serviceDate,
         address,
         notes,
         amount: serviceObj.price,
-      });
+      };
 
-      setSuccess("Service booked successfully!");
-      setSelectedService(null);
-      setServiceDate("");
-      setAddress("");
-      setNotes("");
+      // Only send bookingId if exists
+      if (bookingId) {
+        payload.bookingId = bookingId;
+      }
+
+      const res = await api.post("/services/book", payload);
+
+      if (res.data.success) {
+        setSuccess("Service booked successfully!");
+        setSelectedService(null);
+        setServiceDate("");
+        setAddress("");
+        setNotes("");
+      } else {
+        setError(res.data.message || "Booking failed");
+      }
 
     } catch (err) {
-      console.error(err);
-      alert("Failed to book service");
+      console.error("SERVICE BOOK ERROR:", err.response?.data || err);
+
+      setError(
+        err.response?.data?.message ||
+        "Failed to book service. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -60,6 +78,7 @@ const ServicesPage = () => {
       <h2 style={title}>🚚 Move-In / Move-Out Services</h2>
 
       {success && <div style={successBox}>{success}</div>}
+      {error && <div style={errorBox}>{error}</div>}
 
       {!selectedService ? (
         <div style={serviceGrid}>
@@ -90,6 +109,7 @@ const ServicesPage = () => {
             value={serviceDate}
             onChange={(e) => setServiceDate(e.target.value)}
             style={input}
+            min={new Date().toISOString().split("T")[0]}
           />
 
           <label style={label}>Pickup / Service Address *</label>
@@ -119,7 +139,10 @@ const ServicesPage = () => {
 
             <button
               style={cancelBtn}
-              onClick={() => setSelectedService(null)}
+              onClick={() => {
+                setSelectedService(null);
+                setError("");
+              }}
             >
               Cancel
             </button>
@@ -248,6 +271,15 @@ const backBtn = {
 const successBox = {
   background: "#d1fae5",
   color: "#065f46",
+  padding: 12,
+  borderRadius: 8,
+  marginBottom: 20,
+  textAlign: "center"
+};
+
+const errorBox = {
+  background: "#fee2e2",
+  color: "#991b1b",
   padding: 12,
   borderRadius: 8,
   marginBottom: 20,
