@@ -12,7 +12,7 @@ export default function AgreementPage() {
   const [error, setError] = useState("");
 
   //////////////////////////////////////////////////////
-  // LOAD AGREEMENT DIRECTLY (NO AUTH WAIT)
+  // LOAD AGREEMENT
   //////////////////////////////////////////////////////
   const loadAgreement = async () => {
     try {
@@ -49,8 +49,15 @@ export default function AgreementPage() {
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString("en-GB") : "-";
 
+  const statusColor = {
+    draft: "bg-yellow-500",
+    requested: "bg-blue-500",
+    completed: "bg-green-600",
+    expired: "bg-red-600"
+  };
+
   //////////////////////////////////////////////////////
-  // LOADING STATE
+  // STATES
   //////////////////////////////////////////////////////
   if (loading)
     return (
@@ -59,9 +66,6 @@ export default function AgreementPage() {
       </div>
     );
 
-  //////////////////////////////////////////////////////
-  // ERROR STATE
-  //////////////////////////////////////////////////////
   if (error)
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
@@ -75,9 +79,6 @@ export default function AgreementPage() {
       </div>
     );
 
-  //////////////////////////////////////////////////////
-  // NO AGREEMENT
-  //////////////////////////////////////////////////////
   if (!agreement)
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -94,6 +95,13 @@ export default function AgreementPage() {
 
         {/* HEADER */}
         <div className="text-center py-10 bg-gradient-to-r from-[#0F5ED7] to-[#22C55E] text-white relative">
+
+          <div className="absolute top-4 left-6">
+            <span className={`px-4 py-1 rounded-full text-xs font-semibold ${statusColor[agreement.status] || "bg-gray-500"}`}>
+              {agreement.status?.toUpperCase()}
+            </span>
+          </div>
+
           <div className="absolute top-4 right-6 text-xs bg-white/20 px-3 py-1 rounded-full">
             DIGITAL AGREEMENT
           </div>
@@ -125,14 +133,16 @@ export default function AgreementPage() {
           {/* PROPERTY */}
           <div className="grid md:grid-cols-2 gap-6">
             <Box title="PROPERTY DETAILS">
-              <Row label="Name" value={agreement.pg_name} />
+              <Row label="Property Name" value={agreement.pg_name} />
               <Row label="Address" value={agreement.address} />
+              <Row label="City" value={agreement.city} />
             </Box>
 
             <Box title="AGREEMENT INFO">
               <Row label="Start Date" value={formatDate(agreement.move_in_date)} />
               <Row label="Duration" value={`${agreement.agreement_duration_months} Months`} />
-              <Row label="Rent Due" value={`${agreement.rent_due_day}th`} />
+              <Row label="Rent Due Day" value={`${agreement.rent_due_day}th`} />
+              <Row label="Notice Period" value={`${agreement.notice_period_days} Days`} />
             </Box>
           </div>
 
@@ -140,19 +150,61 @@ export default function AgreementPage() {
           <Box title="FINANCIAL DETAILS">
             <TableRow label="Monthly Rent" value={money(agreement.rent_amount)} />
             <TableRow label="Security Deposit" value={money(agreement.security_deposit)} />
-            <TableRow label="Maintenance" value={money(agreement.maintenance_amount)} />
-            <TableRow label="Electricity" value="Payable separately" />
+            <TableRow label="Maintenance Charges" value={money(agreement.maintenance_amount)} />
+            <TableRow label="Late Fee Per Day" value={money(agreement.late_fee_per_day)} />
+          </Box>
+
+          {/* LEGAL CLAUSE */}
+          <Box title="LEGAL TERMS & CONDITIONS">
+            <p>
+              This agreement is governed under the Karnataka Rent Act, 1999.
+              Both landlord and tenant agree to abide by all rental laws.
+            </p>
+            <p className="mt-2">
+              Any dispute arising from this agreement shall fall under the
+              jurisdiction of courts in Bengaluru, Karnataka.
+            </p>
+          </Box>
+
+          {/* SIGNATURE PREVIEW */}
+          <Box title="DIGITAL SIGNATURE STATUS">
+            <Row label="Owner Signed" value={agreement.owner_esigned ? "Yes" : "No"} />
+            <Row label="Tenant Signed" value={agreement.tenant_esigned ? "Yes" : "No"} />
+            <Row label="Signed On" value={formatDate(agreement.signed_at)} />
           </Box>
 
           {/* QR */}
-          <div className="text-center pt-10">
-            <QRCodeCanvas
-              value={`${window.location.origin}/public/agreement/${agreement.agreement_hash}`}
-              size={130}
-            />
-            <p className="text-xs mt-2 text-gray-500">
-              Scan to Verify
-            </p>
+          {agreement.agreement_hash && (
+            <div className="text-center pt-10">
+              <QRCodeCanvas
+                value={`${window.location.origin}/public/agreement/${agreement.agreement_hash}`}
+                size={130}
+              />
+              <p className="text-xs mt-2 text-gray-500">
+                Scan to Verify Agreement Authenticity
+              </p>
+            </div>
+          )}
+
+          {/* ACTION BUTTONS */}
+          <div className="flex justify-center gap-4 pt-6">
+            <button
+              onClick={() => window.print()}
+              className="bg-gray-700 text-white px-6 py-2 rounded-lg"
+            >
+              Print
+            </button>
+
+            {agreement.agreement_file && (
+              <a
+                href={`${process.env.REACT_APP_API_URL}${agreement.agreement_file}`}
+                target="_blank"
+                rel="noreferrer"
+                className="bg-green-600 text-white px-6 py-2 rounded-lg"
+              >
+                Download PDF
+              </a>
+            )}
           </div>
 
         </div>
@@ -177,7 +229,7 @@ const Box = ({ title, children }) => (
     <div className="bg-gradient-to-r from-[#0F5ED7] to-[#22C55E] text-white px-4 py-2 text-sm font-semibold">
       {title}
     </div>
-    <div className="p-4 text-sm space-y-1">{children}</div>
+    <div className="p-4 text-sm space-y-2">{children}</div>
   </div>
 );
 
