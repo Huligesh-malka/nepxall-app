@@ -3,44 +3,42 @@ import { adminAPI } from "../../api/api";
 
 const AdminServiceBookings = () => {
 
-  const [services, setServices] = useState([]);
-  const [vendors, setVendors] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [services,setServices] = useState([]);
+  const [vendors,setVendors] = useState([]);
+  const [loading,setLoading] = useState(true);
 
   const loadData = async () => {
-    try {
+
+    try{
 
       setLoading(true);
 
-      // GET /api/admin/services
       const s = await adminAPI.get("/services");
-
-      // GET /api/admin/vendors
       const v = await adminAPI.get("/vendors");
 
       setServices(s.data.data || []);
       setVendors(v.data.vendors || []);
 
-    } catch (err) {
-      console.error("API Error:", err.response?.data || err.message);
-    } finally {
+    }catch(err){
+      console.error(err);
+    }finally{
       setLoading(false);
     }
+
   };
 
-  useEffect(() => {
+  useEffect(()=>{
     loadData();
-  }, []);
+  },[]);
 
 
-  const assignVendor = async (serviceId, vendorId) => {
+  const assignVendor = async(serviceId,vendorId)=>{
 
-    if (!vendorId) return;
+    if(!vendorId) return;
 
-    try {
+    try{
 
-      // POST /api/admin/assign-vendor
-      await adminAPI.post("/assign-vendor", {
+      await adminAPI.post("/assign-vendor",{
         serviceId,
         vendorId
       });
@@ -49,34 +47,25 @@ const AdminServiceBookings = () => {
 
       loadData();
 
-    } catch (err) {
-      console.error(err);
+    }catch(err){
       alert("Failed to assign vendor");
     }
+
   };
 
 
-  if (loading) {
-    return (
-      <div className="p-6">
-        Loading service requests...
-      </div>
-    );
+  if(loading){
+    return <div className="p-6">Loading services...</div>;
   }
 
 
-  return (
+  return(
+
     <div className="p-6">
 
       <h1 className="text-2xl font-bold mb-6">
         Admin Service Management
       </h1>
-
-      {services.length === 0 && (
-        <div className="bg-blue-50 text-blue-700 p-4 rounded mb-4">
-          No service bookings found
-        </div>
-      )}
 
       <table className="w-full bg-white shadow rounded overflow-hidden">
 
@@ -85,16 +74,21 @@ const AdminServiceBookings = () => {
             <th className="p-3 text-left">Service</th>
             <th className="p-3 text-left">Tenant</th>
             <th className="p-3 text-left">Amount</th>
-            <th className="p-3 text-left">Assign Vendor</th>
+            <th className="p-3 text-left">Vendor</th>
           </tr>
         </thead>
 
         <tbody>
 
-          {services.map((s) => (
+        {services.map((s)=>{
+
+          const assigned = s.assigned_vendor_id;
+
+          return(
+
             <tr key={s.id} className="border-t">
 
-              <td className="p-3 capitalize">
+              <td className="p-3">
                 {s.service_type}
               </td>
 
@@ -108,35 +102,50 @@ const AdminServiceBookings = () => {
 
               <td className="p-3">
 
-                <select
-                  defaultValue=""
-                  onChange={(e) => assignVendor(s.id, e.target.value)}
-                  className="border p-2 rounded"
-                >
+                {assigned ? (
 
-                  <option value="" disabled>
-                    Select Vendor
-                  </option>
+                  <span className="bg-green-100 text-green-700 px-3 py-1 rounded text-sm">
+                    {s.vendor_name || "Vendor Assigned"}
+                  </span>
 
-                  {vendors.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name}
+                ) : (
+
+                  <select
+                    onChange={(e)=>assignVendor(s.id,e.target.value)}
+                    className="border p-2 rounded"
+                    defaultValue=""
+                  >
+
+                    <option value="">
+                      Select Vendor
                     </option>
-                  ))}
 
-                </select>
+                    {vendors.map(v=>(
+                      <option key={v.id} value={v.id}>
+                        {v.name}
+                      </option>
+                    ))}
+
+                  </select>
+
+                )}
 
               </td>
 
             </tr>
-          ))}
+
+          );
+
+        })}
 
         </tbody>
 
       </table>
 
     </div>
+
   );
+
 };
 
 export default AdminServiceBookings;
