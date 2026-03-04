@@ -11,7 +11,10 @@ import {
   Button,
   Chip,
   CircularProgress,
-  Alert
+  Alert,
+  Grid,
+  Card,
+  CardContent
 } from "@mui/material";
 import { userAPI } from "../api/api";
 import { useNavigate } from "react-router-dom";
@@ -26,6 +29,7 @@ const VendorDashboard = () => {
   const role = localStorage.getItem("role");
 
   /* ================= ROLE PROTECTION ================= */
+
   useEffect(() => {
     if (role !== "vendor") {
       navigate("/");
@@ -43,7 +47,6 @@ const VendorDashboard = () => {
 
     } catch (err) {
 
-      console.error(err);
       setError("Failed to load services");
 
     } finally {
@@ -60,6 +63,7 @@ const VendorDashboard = () => {
   /* ================= UPDATE STATUS ================= */
 
   const updateStatus = async (id, status) => {
+
     try {
 
       await userAPI.put(`/vendor/services/${id}/status`, {
@@ -98,6 +102,23 @@ const VendorDashboard = () => {
     }
   };
 
+  /* ================= DASHBOARD STATS ================= */
+
+  const totalJobs = services.length;
+
+  const completedJobs = services.filter(
+    (s) => s.vendor_status === "completed"
+  ).length;
+
+  const pendingJobs = services.filter(
+    (s) => s.vendor_status !== "completed"
+  ).length;
+
+  const totalEarnings = services.reduce((sum, s) => {
+    const earn = (s.amount || 0) - (s.commission || 0);
+    return sum + earn;
+  }, 0);
+
   /* ================= LOADING ================= */
 
   if (loading) {
@@ -117,6 +138,50 @@ const VendorDashboard = () => {
       </Typography>
 
       {error && <Alert severity="error">{error}</Alert>}
+
+      {/* ================= STATS CARDS ================= */}
+
+      <Grid container spacing={2} mb={3}>
+
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6">Total Jobs</Typography>
+              <Typography variant="h4">{totalJobs}</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6">Completed</Typography>
+              <Typography variant="h4">{completedJobs}</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6">Pending</Typography>
+              <Typography variant="h4">{pendingJobs}</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6">Total Earnings</Typography>
+              <Typography variant="h4">₹{totalEarnings.toFixed(2)}</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+      </Grid>
+
+      {/* ================= SERVICE TABLE ================= */}
 
       {services.length === 0 ? (
 
@@ -160,10 +225,20 @@ const VendorDashboard = () => {
 
                     <TableCell>{s.service_type}</TableCell>
 
-                    <TableCell>{s.service_date}</TableCell>
+                    <TableCell>
+                      {new Date(s.service_date).toLocaleDateString("en-IN")}
+                    </TableCell>
 
                     <TableCell>
-                      {s.tenant_name || s.user_name || "Customer"}
+
+                      {s.tenant_phone}
+
+                      <br/>
+
+                      <a href={`tel:${s.tenant_phone}`}>
+                        📞 Call
+                      </a>
+
                     </TableCell>
 
                     <TableCell>{s.address || "-"}</TableCell>
@@ -173,7 +248,7 @@ const VendorDashboard = () => {
                     <TableCell>₹{s.commission}</TableCell>
 
                     <TableCell>
-                      <strong>₹{earnings}</strong>
+                      <strong>₹{earnings.toFixed(2)}</strong>
                     </TableCell>
 
                     <TableCell>
