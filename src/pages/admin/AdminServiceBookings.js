@@ -11,25 +11,39 @@ const AdminServiceBookings = () => {
   },[]);
 
   const loadData = async ()=>{
+    try{
 
-    const s = await adminAPI.get("/services");
-    setServices(s.data.data);
+      const s = await adminAPI.get("/services");
+      console.log("Services:", s.data);
 
-    const v = await adminAPI.get("/vendors");
-    setVendors(v.data.vendors);
+      setServices(s.data.data || s.data || []);
 
+      const v = await adminAPI.get("/vendors");
+      console.log("Vendors:", v.data);
+
+      setVendors(v.data.vendors || v.data || []);
+
+    }catch(err){
+      console.error("Load error:", err);
+    }
   };
 
   const assignVendor = async(serviceId,vendorId)=>{
+    try{
 
-    await adminAPI.post("/assign-vendor",{
-      serviceId,
-      vendorId
-    });
+      await adminAPI.post("/assign-vendor",{
+        serviceId,
+        vendorId
+      });
 
-    alert("Vendor assigned");
+      alert("Vendor assigned successfully");
 
-    loadData();
+      loadData();
+
+    }catch(err){
+      console.error(err);
+      alert("Failed to assign vendor");
+    }
   };
 
   return(
@@ -40,14 +54,20 @@ const AdminServiceBookings = () => {
         Service Requests
       </h1>
 
+      {services.length === 0 && (
+        <div className="bg-blue-50 text-blue-700 p-4 rounded mb-4">
+          No service bookings found
+        </div>
+      )}
+
       <table className="w-full bg-white shadow rounded">
 
         <thead className="bg-gray-100">
           <tr>
-            <th className="p-3">Service</th>
-            <th className="p-3">Tenant</th>
-            <th className="p-3">Amount</th>
-            <th className="p-3">Assign Vendor</th>
+            <th className="p-3 text-left">Service</th>
+            <th className="p-3 text-left">Tenant</th>
+            <th className="p-3 text-left">Amount</th>
+            <th className="p-3 text-left">Assign Vendor</th>
           </tr>
         </thead>
 
@@ -61,7 +81,7 @@ const AdminServiceBookings = () => {
             </td>
 
             <td className="p-3">
-              {s.tenant_name}
+              {s.tenant_name || "Unknown"}
             </td>
 
             <td className="p-3">
@@ -71,11 +91,12 @@ const AdminServiceBookings = () => {
             <td className="p-3">
 
               <select
+                defaultValue=""
                 onChange={(e)=>assignVendor(s.id,e.target.value)}
                 className="border p-2 rounded"
               >
 
-                <option>Select Vendor</option>
+                <option value="">Select Vendor</option>
 
                 {vendors.map(v=>(
                   <option key={v.id} value={v.id}>
