@@ -141,6 +141,10 @@ const Sidebar = () => {
               📊 Finance Dashboard
             </Link>
 
+            <Link style={linkStyle(isActive("/admin/services"))} to="/admin/services">
+              🛠 Service Requests
+            </Link>
+
             <Link style={linkStyle(isActive("/admin/owner-verification"))} to="/admin/owner-verification">
               🛡️ Verify Owners
             </Link>

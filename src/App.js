@@ -7,7 +7,7 @@ import { auth } from "./firebase";
 import MainLayout from "./layouts/MainLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import OwnerLayout from "./layouts/OwnerLayout";
-import VendorLayout from "./layouts/VendorLayout"; // ✅ NEW
+import VendorLayout from "./layouts/VendorLayout";
 
 /* AUTH */
 import Login from "./pages/Login";
@@ -63,6 +63,9 @@ import AdminSettlements from "./pages/admin/AdminSettlements";
 import AdminFinanceDashboard from "./pages/admin/AdminFinanceDashboard";
 import SettlementHistory from "./pages/admin/SettlementHistory";
 
+/* ✅ NEW ADMIN SERVICE PAGE */
+import AdminServiceBookings from "./pages/admin/AdminServiceBookings";
+
 /* ✅ VENDOR */
 import VendorDashboard from "./pages/VendorDashboard";
 
@@ -85,6 +88,7 @@ function App() {
 
   const RoleRoute = ({ children, allowedRole }) => {
     const role = localStorage.getItem("role");
+
     return user && role === allowedRole
       ? children
       : <Navigate to="/" replace />;
@@ -178,9 +182,12 @@ function App() {
         <Route path="pending-pgs" element={<AdminPendingPGs />} />
         <Route path="pg/:id" element={<AdminPGDetails />} />
         <Route path="owner-verification" element={<AdminOwnerVerification />} />
+
+        {/* ✅ NEW ADMIN SERVICE MANAGEMENT */}
+        <Route path="services" element={<AdminServiceBookings />} />
       </Route>
 
-      {/* ================= ✅ VENDOR ================= */}
+      {/* ================= VENDOR ================= */}
       <Route
         path="/vendor"
         element={
@@ -197,6 +204,7 @@ function App() {
 
       {/* ================= FALLBACK ================= */}
       <Route path="*" element={<Navigate to="/" replace />} />
+
     </Routes>
   );
 }
