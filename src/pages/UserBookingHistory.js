@@ -11,7 +11,6 @@ const UserBookingHistory = () => {
   const [payingId, setPayingId] = useState(null);
 
   const [paymentData, setPaymentData] = useState(null);
-  const [utr, setUtr] = useState("");
 
   //////////////////////////////////////////////////////
   // LOAD BOOKINGS
@@ -69,33 +68,6 @@ const UserBookingHistory = () => {
       alert("Payment initialization failed");
     } finally {
       setPayingId(null);
-    }
-  };
-
-  //////////////////////////////////////////////////////
-  // SUBMIT UTR
-  //////////////////////////////////////////////////////
-  const submitUTR = async () => {
-    try {
-      if (!utr) {
-        alert("Enter UTR number");
-        return;
-      }
-
-      await api.post("/payments/submit-utr", {
-        orderId: paymentData.orderId,
-        utr,
-      });
-
-      alert("Payment submitted for verification");
-
-      setPaymentData(null);
-      setUtr("");
-
-      loadBookings();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to submit payment");
     }
   };
 
@@ -249,81 +221,9 @@ const UserBookingHistory = () => {
           <br />
           <br />
 
-          <input
-            type="text"
-            placeholder="Enter UTR number"
-            value={utr}
-            onChange={(e) => setUtr(e.target.value)}
-            style={{ padding: 10, width: "80%" }}
-          />
-
-          <br />
-
-          <button style={submitBtn} onClick={submitUTR}>
-            Submit Payment
-          </button>
-
-          <br />
-
           <button onClick={() => setPaymentData(null)}>Close</button>
         </div>
       )}
     </div>
   );
 };
-
-//////////////////////////////////////////////////////
-// STYLES
-//////////////////////////////////////////////////////
-
-const serviceBtn = {
-  padding: "10px 18px",
-  border: "none",
-  borderRadius: 10,
-  cursor: "pointer",
-  fontWeight: 500,
-  fontSize: 14,
-  background: "#f59e0b",
-  color: "#fff",
-};
-
-const viewBtn = { ...serviceBtn, background: "#2563eb" };
-const chatBtn = { ...serviceBtn, background: "#25d366" };
-const agreementBtn = { ...serviceBtn, background: "#7c3aed" };
-const payBtn = { ...serviceBtn, background: "#e11d48", width: "100%", marginTop: 10 };
-const submitBtn = { ...serviceBtn, background: "#16a34a", marginTop: 10 };
-
-const container = { maxWidth: 900, margin: "40px auto", padding: 20 };
-const title = { marginBottom: 30, fontSize: 28, fontWeight: 600 };
-const loadingContainer = { textAlign: "center", marginTop: 100 };
-const loadingSpinner = { width: 40, height: 40, border: "4px solid #f3f3f3", borderTop: "4px solid #2563eb", borderRadius: "50%" };
-const card = { background: "#fff", padding: 24, borderRadius: 16, marginBottom: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.08)" };
-const topRow = { display: "flex", justifyContent: "space-between" };
-const pgName = { margin: 0 };
-const statusBadge = () => ({ background: "#6b7280", color: "#fff", padding: 6, borderRadius: 20 });
-const detailsGrid = { marginTop: 12 };
-const detailItem = { margin: 4 };
-const priceBreakdown = { marginTop: 12 };
-const priceItem = { margin: 4 };
-const totalPrice = { marginTop: 8 };
-const btnRow = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 };
-const confirmedContainer = { marginTop: 16 };
-const paidBadge = { background: "#16a34a", color: "#fff", padding: 8 };
-const errorBox = { padding: 40, textAlign: "center" };
-const retryBtn = { padding: 10 };
-const emptyState = { textAlign: "center", padding: 60 };
-const browseBtn = { padding: 12 };
-
-const paymentModal = {
-  position: "fixed",
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  background: "#fff",
-  padding: 30,
-  borderRadius: 12,
-  boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-  textAlign: "center",
-};
-
-export default UserBookingHistory;
