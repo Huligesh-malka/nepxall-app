@@ -13,9 +13,10 @@ const PaymentPage = () => {
   const [error, setError] = useState("");
 
   const [paymentData, setPaymentData] = useState(null);
+  const [utr, setUtr] = useState("");
 
   //////////////////////////////////////////////////////
-  // 🔐 TOKEN
+  // TOKEN
   //////////////////////////////////////////////////////
   const getToken = useCallback(async () => {
 
@@ -103,18 +104,24 @@ const PaymentPage = () => {
   };
 
   //////////////////////////////////////////////////////
-  // USER CLICKED "I HAVE PAID"
+  // SUBMIT UTR
   //////////////////////////////////////////////////////
-  const confirmPayment = async () => {
+  const submitUTR = async () => {
+
+    if (!utr) {
+      alert("Enter UTR number");
+      return;
+    }
 
     try {
 
       const token = await getToken();
 
       await api.post(
-        "/payments/confirm-payment",
+        "/payments/submit-utr",
         {
-          orderId: paymentData.orderId
+          orderId: paymentData.orderId,
+          utr
         },
         {
           headers: { Authorization: `Bearer ${token}` }
@@ -124,6 +131,8 @@ const PaymentPage = () => {
       alert("Payment submitted for verification");
 
       setPaymentData(null);
+      setUtr("");
+
       loadBookings();
 
     } catch (err) {
@@ -180,8 +189,6 @@ const PaymentPage = () => {
 
       ))}
 
-      {/* PAYMENT BOX */}
-
       {paymentData && (
 
         <div style={paymentBox}>
@@ -204,11 +211,21 @@ const PaymentPage = () => {
 
           <br /><br />
 
+          <input
+            type="text"
+            placeholder="Enter UTR number"
+            value={utr}
+            onChange={(e) => setUtr(e.target.value)}
+            style={utrInput}
+          />
+
+          <br /><br />
+
           <button
             style={submitBtn}
-            onClick={confirmPayment}
+            onClick={submitUTR}
           >
-            I Have Paid
+            Submit Payment
           </button>
 
           <br /><br />
@@ -266,6 +283,13 @@ const upiBtn = {
   color: "#fff",
   borderRadius: 8,
   textDecoration: "none"
+};
+
+const utrInput = {
+  padding: 10,
+  width: 220,
+  borderRadius: 6,
+  border: "1px solid #ccc"
 };
 
 const submitBtn = {
