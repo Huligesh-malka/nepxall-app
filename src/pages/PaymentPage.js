@@ -2,9 +2,8 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import api from "../api/api";
-import { API_CONFIG, isCashfreeLoaded } from "../config";
 
-const UserBookingHistory = () => {
+const PaymentPage = () => {
   const navigate = useNavigate();
 
   const [bookings, setBookings] = useState([]);
@@ -12,15 +11,19 @@ const UserBookingHistory = () => {
   const [payingId, setPayingId] = useState(null);
   const [error, setError] = useState("");
 
+  const [paymentData, setPaymentData] = useState(null);
+
   //////////////////////////////////////////////////////
-  // 🔐 TOKEN
+  // 🔐 GET TOKEN
   //////////////////////////////////////////////////////
   const getToken = useCallback(async () => {
     const user = auth.currentUser;
+
     if (!user) {
       navigate("/login");
       return null;
     }
+
     return await user.getIdToken();
   }, [navigate]);
 
@@ -50,21 +53,16 @@ const UserBookingHistory = () => {
   }, [loadBookings]);
 
   //////////////////////////////////////////////////////
-  // 💳 PAYMENT
+  // 💳 CREATE UPI PAYMENT
   //////////////////////////////////////////////////////
   const handlePayNow = async (booking) => {
     try {
-      if (!isCashfreeLoaded()) {
-        alert("Cashfree SDK not loaded");
-        return;
-      }
-
       setPayingId(booking.id);
 
       const token = await getToken();
 
       const res = await api.post(
-        "/payments/create-order",   // ✅ FIXED
+        "/payments/create-payment",
         {
           bookingId: booking.id,
           amount: booking.rent || 1,
@@ -74,25 +72,22 @@ const UserBookingHistory = () => {
         }
       );
 
-      const cashfree = new window.Cashfree({
-        mode: API_CONFIG.CASHFREE.MODE,
-      });
-
-      await cashfree.checkout({
-        paymentSessionId: res.data.payment_session_id,
-        redirectTarget: "_self",
+      setPaymentData({
+        qr: res.data.qr,
+        upiLink: res.data.upiLink,
+        amount: booking.rent,
       });
 
     } catch (err) {
-      console.error("PAYMENT ERROR:", err.response?.data || err.message);
-      alert(err.response?.data?.error || "Payment failed");
+      console.error("PAYMENT ERROR:", err);
+      alert("Failed to generate payment");
     } finally {
       setPayingId(null);
     }
   };
 
   //////////////////////////////////////////////////////
-  // UI
+  // UI STATES
   //////////////////////////////////////////////////////
   if (loading) return <p style={{ padding: 30 }}>Loading...</p>;
 
@@ -105,7 +100,9 @@ const UserBookingHistory = () => {
       {bookings.map((b) => (
         <div key={b.id} style={card}>
           <h3>{b.pg_name}</h3>
+
           <p>📞 {b.phone}</p>
+
           <p>📅 {new Date(b.check_in_date).toDateString()}</p>
 
           {b.status === "approved" && (
@@ -125,15 +122,54 @@ const UserBookingHistory = () => {
           )}
         </div>
       ))}
+
+      //////////////////////////////////////////////////////
+      // UPI PAYMENT BOX
+      //////////////////////////////////////////////////////
+      {paymentData && (
+        <div style={paymentBox}>
+          <h3>Scan & Pay</h3>
+
+          <p>Amount: ₹{paymentData.amount}</p>
+
+          <img
+            src={paymentData.qr}
+            alt="UPI QR"
+            style={{ width: 220 }}
+          />
+
+          <br />
+          <br />
+
+          <a href={paymentData.upiLink} style={upiBtn}>
+            Pay via UPI
+          </a>
+
+          <br />
+          <br />
+
+          <button
+            style={closeBtn}
+            onClick={() => setPaymentData(null)}
+          >
+            Close
+          </button>
+        </div>
+      )}
     </div>
   );
 };
+
+//////////////////////////////////////////////////////
+// STYLES
+//////////////////////////////////////////////////////
 
 const card = {
   background: "#fff",
   padding: 20,
   borderRadius: 10,
   marginBottom: 15,
+  boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
 };
 
 const payBtn = {
@@ -145,4 +181,30 @@ const payBtn = {
   cursor: "pointer",
 };
 
-export default UserBookingHistory;
+const paymentBox = {
+  marginTop: 40,
+  padding: 25,
+  textAlign: "center",
+  background: "#fff",
+  borderRadius: 10,
+  boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
+};
+
+const upiBtn = {
+  padding: "12px 20px",
+  background: "#4CAF50",
+  color: "#fff",
+  borderRadius: 8,
+  textDecoration: "none",
+};
+
+const closeBtn = {
+  padding: "10px 16px",
+  border: "none",
+  background: "#444",
+  color: "#fff",
+  borderRadius: 6,
+  cursor: "pointer",
+};
+
+export default PaymentPage;
