@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/api";
-import { API_CONFIG, isCashfreeLoaded } from "../config";
 
 const UserBookingHistory = () => {
   const navigate = useNavigate();
@@ -10,6 +9,9 @@ const UserBookingHistory = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [payingId, setPayingId] = useState(null);
+
+  const [paymentData, setPaymentData] = useState(null);
+  const [utr, setUtr] = useState("");
 
   //////////////////////////////////////////////////////
   // LOAD BOOKINGS
@@ -32,15 +34,10 @@ const UserBookingHistory = () => {
   }, [loadBookings]);
 
   //////////////////////////////////////////////////////
-  // 💳 PAY
+  // CREATE UPI PAYMENT
   //////////////////////////////////////////////////////
   const handlePayNow = async (booking) => {
     try {
-      if (!isCashfreeLoaded()) {
-        alert("Cashfree SDK not loaded");
-        return;
-      }
-
       setPayingId(booking.id);
 
       const rent = Number(booking.rent_amount || booking.rent || 0);
@@ -55,35 +52,50 @@ const UserBookingHistory = () => {
         return;
       }
 
-      const res = await api.post("/payments/create-order", {
+      const res = await api.post("/payments/create-payment", {
         bookingId: booking.id,
         amount: total,
       });
 
-      if (!res.data?.payment_session_id) {
-        alert("Failed to initialize payment session");
+      setPaymentData({
+        qr: res.data.qr,
+        upiLink: res.data.upiLink,
+        orderId: res.data.orderId,
+        amount: total,
+      });
+
+    } catch (err) {
+      console.error("PAYMENT ERROR:", err);
+      alert("Payment initialization failed");
+    } finally {
+      setPayingId(null);
+    }
+  };
+
+  //////////////////////////////////////////////////////
+  // SUBMIT UTR
+  //////////////////////////////////////////////////////
+  const submitUTR = async () => {
+    try {
+      if (!utr) {
+        alert("Enter UTR number");
         return;
       }
 
-      const cashfree = new window.Cashfree({
-        mode:
-          API_CONFIG.CASHFREE.MODE === "production"
-            ? "production"
-            : "sandbox",
+      await api.post("/payments/submit-utr", {
+        orderId: paymentData.orderId,
+        utr,
       });
 
-      await cashfree.checkout({
-        paymentSessionId: res.data.payment_session_id,
-        redirectTarget: "_self",
-      });
+      alert("Payment submitted for verification");
+
+      setPaymentData(null);
+      setUtr("");
+
+      loadBookings();
     } catch (err) {
-      console.error("PAYMENT ERROR:", err.response?.data || err);
-      alert(
-        err.response?.data?.message ||
-          "Payment failed. Please try again."
-      );
-    } finally {
-      setPayingId(null);
+      console.error(err);
+      alert("Failed to submit payment");
     }
   };
 
@@ -125,6 +137,7 @@ const UserBookingHistory = () => {
           const rent = Number(b.rent_amount || b.rent || 0);
           const deposit = Number(b.security_deposit || 0);
           const maintenance = Number(b.maintenance_amount || 0);
+
           const total =
             Number(b.total_amount) || rent + deposit + maintenance;
 
@@ -152,9 +165,7 @@ const UserBookingHistory = () => {
               </div>
 
               <div style={priceBreakdown}>
-                <p style={priceItem}>
-                  💸 Rent: ₹{rent.toLocaleString()}
-                </p>
+                <p style={priceItem}>💸 Rent: ₹{rent.toLocaleString()}</p>
                 <p style={priceItem}>
                   🔐 Deposit: ₹{deposit.toLocaleString()}
                 </p>
@@ -166,9 +177,7 @@ const UserBookingHistory = () => {
                 </p>
               </div>
 
-              {/* APPROVED / CONFIRMED */}
-              {(b.status === "approved" ||
-                b.status === "confirmed") && (
+              {(b.status === "approved" || b.status === "confirmed") && (
                 <div style={btnRow}>
                   <button
                     style={viewBtn}
@@ -179,39 +188,27 @@ const UserBookingHistory = () => {
 
                   <button
                     style={chatBtn}
-                    onClick={() => {
-                      if (!b.owner_id) {
-                        alert("Owner not available for chat");
-                        return;
-                      }
-                      navigate(`/chat/private/${b.owner_id}`);
-                    }}
+                    onClick={() => navigate(`/chat/private/${b.owner_id}`)}
                   >
                     💬 Chat Owner
                   </button>
 
                   <button
                     style={agreementBtn}
-                    onClick={() =>
-                      navigate(`/agreement/${b.id}`)
-                    }
+                    onClick={() => navigate(`/agreement/${b.id}`)}
                   >
                     📄 Preview Agreement
                   </button>
 
-                  {/* 🚚 ADD SERVICES BUTTON */}
                   <button
                     style={serviceBtn}
-                    onClick={() =>
-                      navigate(`/user/services/${b.id}`)
-                    }
+                    onClick={() => navigate(`/user/services/${b.id}`)}
                   >
                     🚚 Add Services
                   </button>
                 </div>
               )}
 
-              {/* PAYMENT */}
               {b.status === "approved" && (
                 <button
                   style={payBtn}
@@ -224,38 +221,52 @@ const UserBookingHistory = () => {
                 </button>
               )}
 
-              {/* CONFIRMED */}
               {b.status === "confirmed" && (
                 <div style={confirmedContainer}>
                   <div style={paidBadge}>✅ Paid</div>
-
-                  {!b.kyc_verified && (
-                    <button
-                      style={kycBtn}
-                      onClick={() =>
-                        navigate("/user/aadhaar-kyc")
-                      }
-                    >
-                      🪪 Complete KYC
-                    </button>
-                  )}
                 </div>
-              )}
-
-              {/* REJECTED */}
-              {b.status === "rejected" && (
-                <button
-                  style={rebookBtn}
-                  onClick={() =>
-                    navigate(`/pg/${b.pg_id}`)
-                  }
-                >
-                  🔄 Re-Book
-                </button>
               )}
             </div>
           );
         })
+      )}
+
+      {paymentData && (
+        <div style={paymentModal}>
+          <h3>Scan & Pay</h3>
+
+          <p>Amount: ₹{paymentData.amount}</p>
+
+          <img src={paymentData.qr} width="220" alt="UPI QR" />
+
+          <br />
+          <br />
+
+          <a href={paymentData.upiLink} style={payBtn}>
+            Pay via UPI
+          </a>
+
+          <br />
+          <br />
+
+          <input
+            type="text"
+            placeholder="Enter UTR number"
+            value={utr}
+            onChange={(e) => setUtr(e.target.value)}
+            style={{ padding: 10, width: "80%" }}
+          />
+
+          <br />
+
+          <button style={submitBtn} onClick={submitUTR}>
+            Submit Payment
+          </button>
+
+          <br />
+
+          <button onClick={() => setPaymentData(null)}>Close</button>
+        </div>
       )}
     </div>
   );
@@ -279,37 +290,14 @@ const serviceBtn = {
 const viewBtn = { ...serviceBtn, background: "#2563eb" };
 const chatBtn = { ...serviceBtn, background: "#25d366" };
 const agreementBtn = { ...serviceBtn, background: "#7c3aed" };
-const payBtn = {
-  ...serviceBtn,
-  background: "#e11d48",
-  width: "100%",
-  marginTop: 10,
-};
-const kycBtn = { ...serviceBtn, background: "#0ea5e9" };
-const rebookBtn = {
-  ...serviceBtn,
-  background: "#16a34a",
-  width: "100%",
-  marginTop: 10,
-};
+const payBtn = { ...serviceBtn, background: "#e11d48", width: "100%", marginTop: 10 };
+const submitBtn = { ...serviceBtn, background: "#16a34a", marginTop: 10 };
 
 const container = { maxWidth: 900, margin: "40px auto", padding: 20 };
 const title = { marginBottom: 30, fontSize: 28, fontWeight: 600 };
 const loadingContainer = { textAlign: "center", marginTop: 100 };
-const loadingSpinner = {
-  width: 40,
-  height: 40,
-  border: "4px solid #f3f3f3",
-  borderTop: "4px solid #2563eb",
-  borderRadius: "50%",
-};
-const card = {
-  background: "#fff",
-  padding: 24,
-  borderRadius: 16,
-  marginBottom: 24,
-  boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-};
+const loadingSpinner = { width: 40, height: 40, border: "4px solid #f3f3f3", borderTop: "4px solid #2563eb", borderRadius: "50%" };
+const card = { background: "#fff", padding: 24, borderRadius: 16, marginBottom: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.08)" };
 const topRow = { display: "flex", justifyContent: "space-between" };
 const pgName = { margin: 0 };
 const statusBadge = () => ({ background: "#6b7280", color: "#fff", padding: 6, borderRadius: 20 });
@@ -325,5 +313,17 @@ const errorBox = { padding: 40, textAlign: "center" };
 const retryBtn = { padding: 10 };
 const emptyState = { textAlign: "center", padding: 60 };
 const browseBtn = { padding: 12 };
+
+const paymentModal = {
+  position: "fixed",
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  background: "#fff",
+  padding: 30,
+  borderRadius: 12,
+  boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
+  textAlign: "center",
+};
 
 export default UserBookingHistory;
