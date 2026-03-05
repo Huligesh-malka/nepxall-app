@@ -13,11 +13,11 @@ import VendorLayout from "./layouts/VendorLayout";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
-/* STATIC PAGES */
+/* STATIC */
 import Contact from "./pages/Contact";
 import Terms from "./pages/Terms";
 import RefundPolicy from "./pages/RefundPolicy";
-import PrivacyPolicy from "./pages/PrivacyPolicy"; // ✅ NEW
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 /* USER */
 import UserPGSearch from "./pages/UserPGSearch";
@@ -63,6 +63,7 @@ import AdminPGDetails from "./pages/admin/AdminPGDetails";
 import AdminSettlements from "./pages/admin/AdminSettlements";
 import AdminFinanceDashboard from "./pages/admin/AdminFinanceDashboard";
 import SettlementHistory from "./pages/admin/SettlementHistory";
+import AdminPayments from "./pages/admin/AdminPayments";   // ⭐ NEW
 
 /* ADMIN SERVICE */
 import AdminServiceBookings from "./pages/admin/AdminServiceBookings";
@@ -74,12 +75,19 @@ import VendorDashboard from "./pages/VendorDashboard";
 import { testBackendConnection } from "./config";
 
 function App() {
+
   const [user, setUser] = useState(undefined);
 
   useEffect(() => {
+
     testBackendConnection();
-    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
+
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+    });
+
     return unsub;
+
   }, []);
 
   if (user === undefined) return null;
@@ -88,33 +96,36 @@ function App() {
     user ? children : <Navigate to="/login" replace />;
 
   const RoleRoute = ({ children, allowedRole }) => {
+
     const role = localStorage.getItem("role");
 
     return user && role === allowedRole
       ? children
       : <Navigate to="/" replace />;
+
   };
 
   return (
+
     <Routes>
 
-      {/* PUBLIC WITH LAYOUT */}
+      {/* PUBLIC HOME */}
       <Route element={<MainLayout />}>
         <Route index element={<UserPGSearch />} />
         <Route path="pg/:id" element={<PGDetails />} />
       </Route>
 
-      {/* PUBLIC PAGES */}
+      {/* STATIC */}
       <Route path="/contact" element={<Contact />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/refund-policy" element={<RefundPolicy />} />
-      <Route path="/privacy-policy" element={<PrivacyPolicy />} /> {/* ✅ NEW */}
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
       {/* AUTH */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* USER */}
+      {/* USER ROUTES */}
       <Route
         element={
           <PrivateRoute>
@@ -136,7 +147,7 @@ function App() {
         <Route path="chat/private/:userId" element={<PrivateChat />} />
       </Route>
 
-      {/* OWNER */}
+      {/* OWNER ROUTES */}
       <Route
         path="/owner"
         element={
@@ -166,7 +177,7 @@ function App() {
         <Route path="chat/private/:userId" element={<PrivateChat />} />
       </Route>
 
-      {/* ADMIN */}
+      {/* ADMIN ROUTES */}
       <Route
         path="/admin"
         element={
@@ -179,6 +190,7 @@ function App() {
       >
         <Route index element={<Navigate to="finance" replace />} />
         <Route path="finance" element={<AdminFinanceDashboard />} />
+        <Route path="payments" element={<AdminPayments />} /> {/* ⭐ NEW */}
         <Route path="settlements" element={<AdminSettlements />} />
         <Route path="settlement-history" element={<SettlementHistory />} />
         <Route path="pending-pgs" element={<AdminPendingPGs />} />
@@ -187,7 +199,7 @@ function App() {
         <Route path="services" element={<AdminServiceBookings />} />
       </Route>
 
-      {/* VENDOR */}
+      {/* VENDOR ROUTES */}
       <Route
         path="/vendor"
         element={
@@ -206,7 +218,9 @@ function App() {
       <Route path="*" element={<Navigate to="/" replace />} />
 
     </Routes>
+
   );
+
 }
 
 export default App;

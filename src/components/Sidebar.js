@@ -7,6 +7,7 @@ const BRAND_BLUE = "#0B5ED7";
 const BRAND_GREEN = "#4CAF50";
 
 const Sidebar = () => {
+
   const location = useLocation();
   const role = localStorage.getItem("role");
 
@@ -17,22 +18,30 @@ const Sidebar = () => {
   const isLoggedIn = role && role !== "null" && role !== "undefined";
 
   return (
+
     <div style={sidebar}>
+
       {/* LOGO */}
       <div style={companyHeader}>
         <img src={logo} alt="Nepxall logo" style={logoImage} />
+
         <div>
           <h2 style={companyName}>
             <span style={{ color: BRAND_BLUE }}>Nep</span>
             <span style={{ color: BRAND_GREEN }}>xall</span>
           </h2>
-          <p style={companyTagline}>Next Places for Living</p>
+
+          <p style={companyTagline}>
+            Next Places for Living
+          </p>
         </div>
       </div>
 
       <hr style={divider} />
 
       <nav style={nav}>
+
+        {/* HOME */}
         <Link style={linkStyle(isActive("/"))} to="/">
           🏡 Home
         </Link>
@@ -73,7 +82,6 @@ const Sidebar = () => {
               💰 Refund Policy
             </Link>
 
-            {/* ✅ NEW PRIVACY POLICY */}
             <Link style={linkStyle(isActive("/privacy-policy"))} to="/privacy-policy">
               🔒 Privacy Policy
             </Link>
@@ -130,7 +138,7 @@ const Sidebar = () => {
               📊 Dashboard
             </Link>
 
-            <Link style={linkStyle(isActive("/vendor/dashboard"))} to="/vendor/dashboard">
+            <Link style={linkStyle(isActive("/vendor/services"))} to="/vendor/services">
               🛠 My Assigned Services
             </Link>
           </>
@@ -144,6 +152,11 @@ const Sidebar = () => {
 
             <Link style={linkStyle(isActive("/admin/finance"))} to="/admin/finance">
               📊 Finance Dashboard
+            </Link>
+
+            {/* ⭐ NEW PAYMENT VERIFICATION */}
+            <Link style={linkStyle(isActive("/admin/payments"))} to="/admin/payments">
+              💳 Payment Verification
             </Link>
 
             <Link style={linkStyle(isActive("/admin/services"))} to="/admin/services">
@@ -168,6 +181,7 @@ const Sidebar = () => {
         {!isLoggedIn && (
           <>
             <hr style={divider} />
+
             <Link style={linkStyle(isActive("/login"))} to="/login">
               🔑 Login
             </Link>
@@ -177,12 +191,15 @@ const Sidebar = () => {
             </Link>
           </>
         )}
+
       </nav>
 
       {/* USER INFO */}
       {isLoggedIn && (
         <div style={userInfoStyle}>
+
           <hr style={divider} />
+
           <p style={{ color: "#94a3b8", fontSize: 12, margin: 0 }}>
             Logged in as
             <span
@@ -192,17 +209,21 @@ const Sidebar = () => {
                 textTransform: "capitalize",
               }}
             >
-              {" "}
-              {role}
+              {" "} {role}
             </span>
           </p>
+
           <p style={{ color: "#4CAF50", fontSize: 11 }}>
             {localStorage.getItem("email")?.split("@")[0] || "User"}
           </p>
+
         </div>
       )}
+
     </div>
+
   );
+
 };
 
 export default Sidebar;
@@ -230,23 +251,44 @@ const companyHeader = {
   marginBottom: 20,
 };
 
-const logoImage = { width: 48, height: 48, borderRadius: 8 };
+const logoImage = {
+  width: 48,
+  height: 48,
+  borderRadius: 8
+};
 
-const companyName = { fontSize: 20, fontWeight: "bold", margin: 0 };
+const companyName = {
+  fontSize: 20,
+  fontWeight: "bold",
+  margin: 0
+};
 
-const companyTagline = { fontSize: 11, color: "#94a3b8" };
+const companyTagline = {
+  fontSize: 11,
+  color: "#94a3b8"
+};
 
-const nav = { display: "flex", flexDirection: "column", gap: 10, flex: 1 };
+const nav = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 10,
+  flex: 1
+};
 
-const divider = { borderTop: "1px solid #334155", margin: "12px 0" };
+const divider = {
+  borderTop: "1px solid #334155",
+  margin: "12px 0"
+};
 
 const sectionLabel = {
   fontSize: 11,
   color: "#94a3b8",
-  letterSpacing: 1,
+  letterSpacing: 1
 };
 
-const userInfoStyle = { marginTop: "auto" };
+const userInfoStyle = {
+  marginTop: "auto"
+};
 
 const linkStyle = (active) => ({
   color: "#e5e7eb",
