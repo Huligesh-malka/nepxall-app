@@ -72,6 +72,25 @@ const UserBookingHistory = () => {
   };
 
   //////////////////////////////////////////////////////
+  // SUBMIT PAYMENT CONFIRMATION
+  //////////////////////////////////////////////////////
+  const submitPayment = async () => {
+    try {
+      await api.post("/payments/submit-payment", {
+        orderId: paymentData.orderId,
+      });
+
+      alert("Payment submitted successfully");
+
+      setPaymentData(null);
+      loadBookings();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit payment");
+    }
+  };
+
+  //////////////////////////////////////////////////////
   // UI
   //////////////////////////////////////////////////////
   if (loading)
@@ -214,16 +233,91 @@ const UserBookingHistory = () => {
           <br />
           <br />
 
-          <a href={paymentData.upiLink} style={payBtn}>
+          <a href={paymentData.upiLink} style={upiLinkStyle}>
             Pay via UPI
           </a>
 
           <br />
           <br />
 
-          <button onClick={() => setPaymentData(null)}>Close</button>
+          <button style={paidButton} onClick={submitPayment}>
+            ✅ I have paid
+          </button>
+
+          <br />
+
+          <button style={closeButton} onClick={() => setPaymentData(null)}>
+            Close
+          </button>
         </div>
       )}
     </div>
   );
 };
+
+//////////////////////////////////////////////////////
+// STYLES
+//////////////////////////////////////////////////////
+
+const serviceBtn = {
+  padding: "10px 18px",
+  border: "none",
+  borderRadius: 10,
+  cursor: "pointer",
+  fontWeight: 500,
+  fontSize: 14,
+  background: "#f59e0b",
+  color: "#fff",
+};
+
+const viewBtn = { ...serviceBtn, background: "#2563eb" };
+const chatBtn = { ...serviceBtn, background: "#25d366" };
+const agreementBtn = { ...serviceBtn, background: "#7c3aed" };
+const payBtn = { ...serviceBtn, background: "#e11d48", width: "100%", marginTop: 10 };
+const paidButton = { ...serviceBtn, background: "#16a34a", marginTop: 10, width: "80%" };
+const closeButton = { ...serviceBtn, background: "#6b7280", marginTop: 10, width: "80%" };
+
+const container = { maxWidth: 900, margin: "40px auto", padding: 20 };
+const title = { marginBottom: 30, fontSize: 28, fontWeight: 600 };
+const loadingContainer = { textAlign: "center", marginTop: 100 };
+const loadingSpinner = { width: 40, height: 40, border: "4px solid #f3f3f3", borderTop: "4px solid #2563eb", borderRadius: "50%", margin: "0 auto 20px" };
+const card = { background: "#fff", padding: 24, borderRadius: 16, marginBottom: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.08)" };
+const topRow = { display: "flex", justifyContent: "space-between", alignItems: "center" };
+const pgName = { margin: 0 };
+const statusBadge = () => ({ background: "#6b7280", color: "#fff", padding: "6px 12px", borderRadius: 20, fontSize: 12 });
+const detailsGrid = { marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 };
+const detailItem = { margin: 0 };
+const priceBreakdown = { marginTop: 12, padding: 12, background: "#f8fafc", borderRadius: 8 };
+const priceItem = { margin: 4, fontSize: 14 };
+const totalPrice = { marginTop: 8, fontSize: 16 };
+const btnRow = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 };
+const confirmedContainer = { marginTop: 16 };
+const paidBadge = { background: "#16a34a", color: "#fff", padding: "8px 16px", borderRadius: 20, display: "inline-block" };
+const errorBox = { padding: 40, textAlign: "center" };
+const retryBtn = { padding: "10px 20px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer" };
+const emptyState = { textAlign: "center", padding: 60 };
+const browseBtn = { padding: "12px 24px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer" };
+
+const paymentModal = {
+  position: "fixed",
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  background: "#fff",
+  padding: 30,
+  borderRadius: 12,
+  boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
+  textAlign: "center",
+  width: "90%",
+  maxWidth: 400,
+};
+
+const upiLinkStyle = {
+  ...serviceBtn,
+  background: "#2563eb",
+  textDecoration: "none",
+  display: "inline-block",
+  width: "80%",
+};
+
+export default UserBookingHistory;
