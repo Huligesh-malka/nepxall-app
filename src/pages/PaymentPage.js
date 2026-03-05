@@ -77,8 +77,7 @@ const PaymentPage = () => {
       const res = await api.post(
         "/payments/create-payment",
         {
-          bookingId: booking.id,
-          amount: booking.rent_amount || booking.rent || 1
+          bookingId: booking.id
         },
         {
           headers: { Authorization: `Bearer ${token}` }
@@ -89,7 +88,7 @@ const PaymentPage = () => {
         qr: res.data.qr,
         upiLink: res.data.upiLink,
         orderId: res.data.orderId,
-        amount: booking.rent_amount || booking.rent
+        amount: booking.rent_amount || booking.rent || 1
       });
 
     } catch (err) {
@@ -193,9 +192,17 @@ const PaymentPage = () => {
 
         <div style={paymentBox}>
 
-          <h3>Scan & Pay</h3>
+          <h3>💳 Scan & Pay</h3>
 
-          <p>Amount: ₹{paymentData.amount}</p>
+          <p><b>Amount:</b> ₹{paymentData.amount}</p>
+
+          <p>
+            <b>Order ID:</b> {paymentData.orderId}
+          </p>
+
+          <p style={{color:"#666"}}>
+            Use this Order ID as payment note if required
+          </p>
 
           <img
             src={paymentData.qr}
@@ -206,14 +213,14 @@ const PaymentPage = () => {
           <br /><br />
 
           <a href={paymentData.upiLink} style={upiBtn}>
-            Pay via UPI
+            🚀 Pay via UPI App
           </a>
 
           <br /><br />
 
           <input
             type="text"
-            placeholder="Enter UTR number"
+            placeholder="Enter UTR / Reference Number"
             value={utr}
             onChange={(e) => setUtr(e.target.value)}
             style={utrInput}
@@ -287,7 +294,7 @@ const upiBtn = {
 
 const utrInput = {
   padding: 10,
-  width: 220,
+  width: 240,
   borderRadius: 6,
   border: "1px solid #ccc"
 };

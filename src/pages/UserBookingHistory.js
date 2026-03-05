@@ -74,24 +74,21 @@ const UserBookingHistory = () => {
   //////////////////////////////////////////////////////
   // SUBMIT PAYMENT CONFIRMATION
   //////////////////////////////////////////////////////
-  //////////////////////////////////////////////////////
-// SUBMIT PAYMENT CONFIRMATION
-//////////////////////////////////////////////////////
-const submitPayment = async () => {
-  try {
-    await api.post("/payments/confirm-payment", {
-      orderId: paymentData.orderId,
-    });
+  const submitPayment = async () => {
+    try {
+      await api.post("/payments/confirm-payment", {
+        orderId: paymentData.orderId,
+      });
 
-    alert("Payment submitted successfully");
+      alert("Payment submitted successfully");
 
-    setPaymentData(null);
-    loadBookings();
-  } catch (err) {
-    console.error(err);
-    alert("Failed to submit payment");
-  }
-};
+      setPaymentData(null);
+      loadBookings();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit payment");
+    }
+  };
 
   //////////////////////////////////////////////////////
   // UI
@@ -171,38 +168,6 @@ const submitPayment = async () => {
                 </p>
               </div>
 
-              {(b.status === "approved" || b.status === "confirmed") && (
-                <div style={btnRow}>
-                  <button
-                    style={viewBtn}
-                    onClick={() => navigate(`/pg/${b.pg_id}`)}
-                  >
-                    🏠 View PG
-                  </button>
-
-                  <button
-                    style={chatBtn}
-                    onClick={() => navigate(`/chat/private/${b.owner_id}`)}
-                  >
-                    💬 Chat Owner
-                  </button>
-
-                  <button
-                    style={agreementBtn}
-                    onClick={() => navigate(`/agreement/${b.id}`)}
-                  >
-                    📄 Preview Agreement
-                  </button>
-
-                  <button
-                    style={serviceBtn}
-                    onClick={() => navigate(`/user/services/${b.id}`)}
-                  >
-                    🚚 Add Services
-                  </button>
-                </div>
-              )}
-
               {b.status === "approved" && (
                 <button
                   style={payBtn}
@@ -227,21 +192,27 @@ const submitPayment = async () => {
 
       {paymentData && (
         <div style={paymentModal}>
-          <h3>Scan & Pay</h3>
+          <h3>💳 Scan & Pay</h3>
 
-          <p>Amount: ₹{paymentData.amount}</p>
+          <p><b>Amount:</b> ₹{paymentData.amount}</p>
+
+          <p>
+            <b>Order ID:</b> {paymentData.orderId}
+          </p>
+
+          <p style={{ fontSize: 13, color: "#666" }}>
+            Add this Order ID in UPI remark if needed
+          </p>
 
           <img src={paymentData.qr} width="220" alt="UPI QR" />
 
-          <br />
-          <br />
+          <br /><br />
 
           <a href={paymentData.upiLink} style={upiLinkStyle}>
-            Pay via UPI
+            🚀 Pay via UPI
           </a>
 
-          <br />
-          <br />
+          <br /><br />
 
           <button style={paidButton} onClick={submitPayment}>
             ✅ I have paid
@@ -273,9 +244,6 @@ const serviceBtn = {
   color: "#fff",
 };
 
-const viewBtn = { ...serviceBtn, background: "#2563eb" };
-const chatBtn = { ...serviceBtn, background: "#25d366" };
-const agreementBtn = { ...serviceBtn, background: "#7c3aed" };
 const payBtn = { ...serviceBtn, background: "#e11d48", width: "100%", marginTop: 10 };
 const paidButton = { ...serviceBtn, background: "#16a34a", marginTop: 10, width: "80%" };
 const closeButton = { ...serviceBtn, background: "#6b7280", marginTop: 10, width: "80%" };
@@ -293,13 +261,12 @@ const detailItem = { margin: 0 };
 const priceBreakdown = { marginTop: 12, padding: 12, background: "#f8fafc", borderRadius: 8 };
 const priceItem = { margin: 4, fontSize: 14 };
 const totalPrice = { marginTop: 8, fontSize: 16 };
-const btnRow = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 };
 const confirmedContainer = { marginTop: 16 };
 const paidBadge = { background: "#16a34a", color: "#fff", padding: "8px 16px", borderRadius: 20, display: "inline-block" };
 const errorBox = { padding: 40, textAlign: "center" };
-const retryBtn = { padding: "10px 20px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer" };
+const retryBtn = { padding: "10px 20px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8 };
 const emptyState = { textAlign: "center", padding: 60 };
-const browseBtn = { padding: "12px 24px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer" };
+const browseBtn = { padding: "12px 24px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8 };
 
 const paymentModal = {
   position: "fixed",
