@@ -74,21 +74,24 @@ const UserBookingHistory = () => {
   //////////////////////////////////////////////////////
   // SUBMIT PAYMENT CONFIRMATION
   //////////////////////////////////////////////////////
-  const submitPayment = async () => {
-    try {
-      await api.post("/payments/submit-payment", {
-        orderId: paymentData.orderId,
-      });
+  //////////////////////////////////////////////////////
+// SUBMIT PAYMENT CONFIRMATION
+//////////////////////////////////////////////////////
+const submitPayment = async () => {
+  try {
+    await api.post("/payments/confirm-payment", {
+      orderId: paymentData.orderId,
+    });
 
-      alert("Payment submitted successfully");
+    alert("Payment submitted successfully");
 
-      setPaymentData(null);
-      loadBookings();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to submit payment");
-    }
-  };
+    setPaymentData(null);
+    loadBookings();
+  } catch (err) {
+    console.error(err);
+    alert("Failed to submit payment");
+  }
+};
 
   //////////////////////////////////////////////////////
   // UI
