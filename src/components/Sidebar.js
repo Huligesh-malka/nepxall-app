@@ -72,6 +72,11 @@ const Sidebar = () => {
             <Link style={linkStyle(isActive("/refund-policy"))} to="/refund-policy">
               💰 Refund Policy
             </Link>
+
+            {/* ✅ NEW PRIVACY POLICY */}
+            <Link style={linkStyle(isActive("/privacy-policy"))} to="/privacy-policy">
+              🔒 Privacy Policy
+            </Link>
           </>
         )}
 
@@ -180,8 +185,15 @@ const Sidebar = () => {
           <hr style={divider} />
           <p style={{ color: "#94a3b8", fontSize: 12, margin: 0 }}>
             Logged in as
-            <span style={{ color: "#fff", fontWeight: "bold", textTransform: "capitalize" }}>
-              {" "} {role}
+            <span
+              style={{
+                color: "#fff",
+                fontWeight: "bold",
+                textTransform: "capitalize",
+              }}
+            >
+              {" "}
+              {role}
             </span>
           </p>
           <p style={{ color: "#4CAF50", fontSize: 11 }}>

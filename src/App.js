@@ -17,6 +17,7 @@ import Register from "./pages/Register";
 import Contact from "./pages/Contact";
 import Terms from "./pages/Terms";
 import RefundPolicy from "./pages/RefundPolicy";
+import PrivacyPolicy from "./pages/PrivacyPolicy"; // ✅ NEW
 
 /* USER */
 import UserPGSearch from "./pages/UserPGSearch";
@@ -63,10 +64,10 @@ import AdminSettlements from "./pages/admin/AdminSettlements";
 import AdminFinanceDashboard from "./pages/admin/AdminFinanceDashboard";
 import SettlementHistory from "./pages/admin/SettlementHistory";
 
-/* ✅ NEW ADMIN SERVICE PAGE */
+/* ADMIN SERVICE */
 import AdminServiceBookings from "./pages/admin/AdminServiceBookings";
 
-/* ✅ VENDOR */
+/* VENDOR */
 import VendorDashboard from "./pages/VendorDashboard";
 
 /* CONFIG */
@@ -97,22 +98,23 @@ function App() {
   return (
     <Routes>
 
-      {/* ================= PUBLIC WITH LAYOUT ================= */}
+      {/* PUBLIC WITH LAYOUT */}
       <Route element={<MainLayout />}>
         <Route index element={<UserPGSearch />} />
         <Route path="pg/:id" element={<PGDetails />} />
       </Route>
 
-      {/* ================= PUBLIC PAGES ================= */}
+      {/* PUBLIC PAGES */}
       <Route path="/contact" element={<Contact />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/refund-policy" element={<RefundPolicy />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} /> {/* ✅ NEW */}
 
-      {/* ================= AUTH ================= */}
+      {/* AUTH */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* ================= PRIVATE USER ================= */}
+      {/* USER */}
       <Route
         element={
           <PrivateRoute>
@@ -134,7 +136,7 @@ function App() {
         <Route path="chat/private/:userId" element={<PrivateChat />} />
       </Route>
 
-      {/* ================= OWNER ================= */}
+      {/* OWNER */}
       <Route
         path="/owner"
         element={
@@ -164,7 +166,7 @@ function App() {
         <Route path="chat/private/:userId" element={<PrivateChat />} />
       </Route>
 
-      {/* ================= ADMIN ================= */}
+      {/* ADMIN */}
       <Route
         path="/admin"
         element={
@@ -182,12 +184,10 @@ function App() {
         <Route path="pending-pgs" element={<AdminPendingPGs />} />
         <Route path="pg/:id" element={<AdminPGDetails />} />
         <Route path="owner-verification" element={<AdminOwnerVerification />} />
-
-        {/* ✅ NEW ADMIN SERVICE MANAGEMENT */}
         <Route path="services" element={<AdminServiceBookings />} />
       </Route>
 
-      {/* ================= VENDOR ================= */}
+      {/* VENDOR */}
       <Route
         path="/vendor"
         element={
@@ -202,7 +202,7 @@ function App() {
         <Route path="dashboard" element={<VendorDashboard />} />
       </Route>
 
-      {/* ================= FALLBACK ================= */}
+      {/* FALLBACK */}
       <Route path="*" element={<Navigate to="/" replace />} />
 
     </Routes>
