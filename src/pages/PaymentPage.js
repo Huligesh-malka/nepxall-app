@@ -13,7 +13,6 @@ const PaymentPage = () => {
   const [error, setError] = useState("");
 
   const [paymentData, setPaymentData] = useState(null);
-  const [utr, setUtr] = useState("");
 
   //////////////////////////////////////////////////////
   // 🔐 TOKEN
@@ -104,24 +103,18 @@ const PaymentPage = () => {
   };
 
   //////////////////////////////////////////////////////
-  // SUBMIT UTR
+  // USER CLICKED "I HAVE PAID"
   //////////////////////////////////////////////////////
-  const submitUTR = async () => {
-
-    if (!utr) {
-      alert("Enter UTR number");
-      return;
-    }
+  const confirmPayment = async () => {
 
     try {
 
       const token = await getToken();
 
       await api.post(
-        "/payments/submit-utr",
+        "/payments/confirm-payment",
         {
-          orderId: paymentData.orderId,
-          utr
+          orderId: paymentData.orderId
         },
         {
           headers: { Authorization: `Bearer ${token}` }
@@ -131,8 +124,6 @@ const PaymentPage = () => {
       alert("Payment submitted for verification");
 
       setPaymentData(null);
-      setUtr("");
-
       loadBookings();
 
     } catch (err) {
@@ -213,21 +204,11 @@ const PaymentPage = () => {
 
           <br /><br />
 
-          <input
-            type="text"
-            placeholder="Enter UTR number"
-            value={utr}
-            onChange={(e) => setUtr(e.target.value)}
-            style={utrInput}
-          />
-
-          <br /><br />
-
           <button
             style={submitBtn}
-            onClick={submitUTR}
+            onClick={confirmPayment}
           >
-            Submit Payment
+            I Have Paid
           </button>
 
           <br /><br />
@@ -285,13 +266,6 @@ const upiBtn = {
   color: "#fff",
   borderRadius: 8,
   textDecoration: "none"
-};
-
-const utrInput = {
-  padding: 10,
-  width: 220,
-  borderRadius: 6,
-  border: "1px solid #ccc"
 };
 
 const submitBtn = {
