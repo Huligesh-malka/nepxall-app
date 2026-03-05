@@ -69,15 +69,19 @@ const UserBookingHistory = () => {
       }
 
       const res = await api.post("/payments/create-payment", {
+
         bookingId: booking.id,
-        amount: total,
+        amount: total
+
       });
 
       setPaymentData({
+
         qr: res.data.qr,
         upiLink: res.data.upiLink,
         orderId: res.data.orderId,
-        amount: total,
+        amount: total
+
       });
 
     } catch (err) {
@@ -101,7 +105,9 @@ const UserBookingHistory = () => {
     try {
 
       await api.post("/payments/confirm-payment", {
+
         orderId: paymentData.orderId
+
       });
 
       alert("Payment submitted for verification");
@@ -171,10 +177,13 @@ const UserBookingHistory = () => {
             <div key={b.id} style={card}>
 
               <div style={topRow}>
+
                 <h3 style={pgName}>{b.pg_name || "PG Name"}</h3>
+
                 <span style={statusBadge(b.status)}>
                   {b.status?.toUpperCase() || "PENDING"}
                 </span>
+
               </div>
 
               <div style={detailsGrid}>
@@ -189,12 +198,15 @@ const UserBookingHistory = () => {
               </div>
 
               <div style={priceBreakdown}>
+
                 <p>💸 Rent: ₹{rent.toLocaleString()}</p>
                 <p>🔐 Deposit: ₹{deposit.toLocaleString()}</p>
                 <p>🧰 Maintenance: ₹{maintenance.toLocaleString()}</p>
+
                 <p>
                   <b>🧾 Total: ₹{total.toLocaleString()}</b>
                 </p>
+
               </div>
 
               {b.status === "approved" && (
@@ -204,15 +216,21 @@ const UserBookingHistory = () => {
                   onClick={() => handlePayNow(b)}
                   disabled={payingId === b.id}
                 >
+
                   {payingId === b.id
                     ? "Processing..."
                     : `💳 Pay ₹${total.toLocaleString()}`}
+
                 </button>
 
               )}
 
               {b.status === "confirmed" && (
-                <div style={paidBadge}>✅ Paid</div>
+
+                <div style={paidBadge}>
+                  ✅ Paid
+                </div>
+
               )}
 
             </div>
@@ -222,8 +240,6 @@ const UserBookingHistory = () => {
         })
 
       )}
-
-      {/* PAYMENT MODAL */}
 
       {paymentData && (
 
