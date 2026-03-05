@@ -204,7 +204,7 @@ const PrivacyPolicy = () => {
               </li>
               <li className="flex items-start gap-2">
                 <ChevronRight className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
-                <span>Last updated: March 5, 2026</span>
+                <span>Last updated: March 3, 2026</span>
               </li>
             </ul>
           </div>
@@ -227,7 +227,7 @@ const PrivacyPolicy = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-400">Email Us</p>
-                <p className="font-semibold">support@nepxall.com</p>
+                <p className="font-semibold">huligeshmalka@gmail.com</p>
               </div>
             </div>
             
@@ -247,7 +247,7 @@ const PrivacyPolicy = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-400">Call Us</p>
-                <p className="font-semibold">+91 12345 67890</p>
+                <p className="font-semibold">+91 7483090510</p>
               </div>
             </div>
           </div>
