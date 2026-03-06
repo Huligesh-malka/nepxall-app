@@ -214,6 +214,7 @@ const AdminPayments = () => {
               <TableCell><strong>Tenant</strong></TableCell>
               <TableCell><strong>Phone</strong></TableCell>
               <TableCell><strong>PG</strong></TableCell>
+              <TableCell><strong>Owner</strong></TableCell>
               <TableCell><strong>Amount</strong></TableCell>
               <TableCell><strong>Order ID</strong></TableCell>
               <TableCell><strong>Status</strong></TableCell>
@@ -225,7 +226,7 @@ const AdminPayments = () => {
 
             {payments.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} align="center">
+                <TableCell colSpan={8} align="center">
                   No pending payments
                 </TableCell>
               </TableRow>
@@ -235,9 +236,11 @@ const AdminPayments = () => {
 
               <TableRow key={p.order_id} hover>
 
-                <TableCell>{p.tenant_name || "N/A"}</TableCell>
-                <TableCell>{p.phone || "N/A"}</TableCell>
-                <TableCell>{p.pg_name || "N/A"}</TableCell>
+                <TableCell>{p.tenant_name || "-"}</TableCell>
+                <TableCell>{p.phone || "-"}</TableCell>
+                <TableCell>{p.pg_name || "-"}</TableCell>
+                <TableCell>{p.owner_id || "-"}</TableCell>
+
                 <TableCell>₹{p.amount}</TableCell>
 
                 <TableCell sx={{ fontFamily: "monospace" }}>
@@ -268,7 +271,10 @@ const AdminPayments = () => {
                     variant="contained"
                     color="success"
                     size="small"
-                    disabled={processing === p.order_id}
+                    disabled={
+                      processing === p.order_id ||
+                      p.status === "paid"
+                    }
                     onClick={() => approvePayment(p.order_id)}
                     sx={{ mr: 1 }}
                   >
@@ -281,7 +287,10 @@ const AdminPayments = () => {
                     variant="contained"
                     color="error"
                     size="small"
-                    disabled={processing === p.order_id}
+                    disabled={
+                      processing === p.order_id ||
+                      p.status === "rejected"
+                    }
                     onClick={() => rejectPayment(p.order_id)}
                   >
                     Reject
