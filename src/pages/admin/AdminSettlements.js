@@ -25,7 +25,8 @@ import {
   CheckCircleOutline,
   Person,
   ReceiptLong,
-  ContentCopy
+  ContentCopy,
+  Home
 } from "@mui/icons-material";
 
 import { styled } from "@mui/material/styles";
@@ -42,7 +43,7 @@ const StyledCard = styled(Card)(({ theme }) => ({
 }));
 
 const StyledTableCell = styled(TableCell)(() => ({
-  fontWeight: 500
+  fontWeight: 600
 }));
 
 const GradientButton = styled(Button)(({ theme }) => ({
@@ -63,9 +64,12 @@ export default function AdminSettlements() {
 
   const token = localStorage.getItem("token");
 
-  /* ================= FETCH SETTLEMENTS ================= */
+  //////////////////////////////////////////////////////
+  // FETCH SETTLEMENTS
+  //////////////////////////////////////////////////////
 
   const fetchSettlements = async () => {
+
     try {
 
       setLoading(true);
@@ -98,7 +102,9 @@ export default function AdminSettlements() {
     fetchSettlements();
   }, []);
 
-  /* ================= MARK SETTLED ================= */
+  //////////////////////////////////////////////////////
+  // MARK SETTLED
+  //////////////////////////////////////////////////////
 
   const markSettled = async (bookingId) => {
 
@@ -132,14 +138,20 @@ export default function AdminSettlements() {
     }
   };
 
-  /* ================= COPY ================= */
+  //////////////////////////////////////////////////////
+  // COPY FUNCTION
+  //////////////////////////////////////////////////////
 
   const copyToClipboard = (text) => {
+
     navigator.clipboard.writeText(text);
     alert("Copied!");
+
   };
 
-  /* ================= LOADING ================= */
+  //////////////////////////////////////////////////////
+  // LOADING
+  //////////////////////////////////////////////////////
 
   if (loading) {
     return (
@@ -150,7 +162,9 @@ export default function AdminSettlements() {
     );
   }
 
-  /* ================= UI ================= */
+  //////////////////////////////////////////////////////
+  // UI
+  //////////////////////////////////////////////////////
 
   return (
 
@@ -192,6 +206,7 @@ export default function AdminSettlements() {
                 <TableRow>
                   <StyledTableCell>Booking</StyledTableCell>
                   <StyledTableCell>Owner</StyledTableCell>
+                  <StyledTableCell>PG</StyledTableCell>
                   <StyledTableCell>Amount</StyledTableCell>
                   <StyledTableCell>Bank</StyledTableCell>
                   <StyledTableCell align="center">Action</StyledTableCell>
@@ -203,6 +218,8 @@ export default function AdminSettlements() {
                 {data.map((item)=>(
                   <TableRow key={item.booking_id} hover>
 
+                    {/* Booking */}
+
                     <TableCell>
                       <Box display="flex" alignItems="center" gap={1}>
                         <Avatar sx={{ bgcolor:"#eef2ff" }}>
@@ -212,20 +229,69 @@ export default function AdminSettlements() {
                       </Box>
                     </TableCell>
 
+                    {/* Owner */}
+
                     <TableCell>
+
                       <Box display="flex" alignItems="center" gap={1}>
+
                         <Avatar sx={{ bgcolor:"#e6f4ea" }}>
                           <Person/>
                         </Avatar>
-                        {item.owner_name}
+
+                        <Box>
+
+                          <Typography fontWeight="bold">
+                            {item.owner_name}
+                          </Typography>
+
+                          <Typography variant="caption">
+                            {item.owner_phone}
+                          </Typography>
+
+                        </Box>
+
                       </Box>
+
                     </TableCell>
 
+                    {/* PG */}
+
                     <TableCell>
+
+                      <Box display="flex" alignItems="center" gap={1}>
+
+                        <Avatar sx={{ bgcolor:"#fff4e5" }}>
+                          <Home/>
+                        </Avatar>
+
+                        <Box>
+
+                          <Typography fontWeight="bold">
+                            {item.pg_name}
+                          </Typography>
+
+                          <Typography variant="caption">
+                            {item.area}, {item.city}
+                          </Typography>
+
+                        </Box>
+
+                      </Box>
+
+                    </TableCell>
+
+                    {/* Amount */}
+
+                    <TableCell>
+
                       <Typography fontWeight="bold" color="green">
                         ₹{Number(item.owner_amount).toLocaleString()}
                       </Typography>
+
                     </TableCell>
+
+                    {/* Bank */}
 
                     <TableCell>
 
@@ -253,6 +319,8 @@ export default function AdminSettlements() {
                       </Typography>
 
                     </TableCell>
+
+                    {/* Action */}
 
                     <TableCell align="center">
 
