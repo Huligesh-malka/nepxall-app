@@ -4,7 +4,6 @@ import {
   Box,
   Container,
   Typography,
-  Paper,
   Table,
   TableBody,
   TableCell,
@@ -18,41 +17,31 @@ import {
   Card,
   CardContent,
   Avatar,
-  IconButton,
-  Tooltip,
   useTheme,
-  alpha,
   Skeleton
 } from "@mui/material";
 
 import {
   CheckCircleOutline,
-  AccountBalance,
   Person,
   ReceiptLong,
-  WarningAmber,
-  Refresh,
   ContentCopy
 } from "@mui/icons-material";
 
 import { styled } from "@mui/material/styles";
 
-////////////////////////////////////////////////////////////
-// BACKEND API
-////////////////////////////////////////////////////////////
+/* ================= BACKEND API ================= */
 
-const API = "https://nepxall-backend.onrender.com/api/payments";
+const API = "https://nepxall-backend.onrender.com/api/admin/settlements";
 
-////////////////////////////////////////////////////////////
-// STYLES
-////////////////////////////////////////////////////////////
+/* ================= STYLES ================= */
 
 const StyledCard = styled(Card)(({ theme }) => ({
   borderRadius: theme.spacing(2),
-  boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.12)"
 }));
 
-const StyledTableCell = styled(TableCell)(({ theme }) => ({
+const StyledTableCell = styled(TableCell)(() => ({
   fontWeight: 500
 }));
 
@@ -60,14 +49,8 @@ const GradientButton = styled(Button)(({ theme }) => ({
   background: `linear-gradient(45deg, ${theme.palette.success.main} 30%, ${theme.palette.success.light} 90%)`,
   color: "white",
   borderRadius: theme.spacing(1.5),
-  "&:hover": {
-    transform: "translateY(-2px)"
-  }
+  "&:hover": { transform: "translateY(-2px)" }
 }));
-
-////////////////////////////////////////////////////////////
-// COMPONENT
-////////////////////////////////////////////////////////////
 
 export default function AdminSettlements() {
 
@@ -80,9 +63,7 @@ export default function AdminSettlements() {
 
   const token = localStorage.getItem("token");
 
-////////////////////////////////////////////////////////////
-// FETCH SETTLEMENTS
-////////////////////////////////////////////////////////////
+  /* ================= FETCH SETTLEMENTS ================= */
 
   const fetchSettlements = async () => {
     try {
@@ -90,7 +71,7 @@ export default function AdminSettlements() {
       setLoading(true);
 
       const res = await axios.get(
-        `${API}/admin/pending-settlements`,
+        `${API}/pending-settlements`,
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -99,6 +80,7 @@ export default function AdminSettlements() {
       );
 
       setData(res.data.data || []);
+      setError("");
 
     } catch (err) {
 
@@ -112,15 +94,11 @@ export default function AdminSettlements() {
     }
   };
 
-////////////////////////////////////////////////////////////
-
   useEffect(() => {
     fetchSettlements();
   }, []);
 
-////////////////////////////////////////////////////////////
-// MARK SETTLED
-////////////////////////////////////////////////////////////
+  /* ================= MARK SETTLED ================= */
 
   const markSettled = async (bookingId) => {
 
@@ -131,7 +109,7 @@ export default function AdminSettlements() {
       setProcessingId(bookingId);
 
       await axios.put(
-        `${API}/admin/mark-settled/${bookingId}`,
+        `${API}/mark-settled/${bookingId}`,
         {},
         {
           headers: {
@@ -154,18 +132,14 @@ export default function AdminSettlements() {
     }
   };
 
-////////////////////////////////////////////////////////////
-// COPY FUNCTION
-////////////////////////////////////////////////////////////
+  /* ================= COPY ================= */
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     alert("Copied!");
   };
 
-////////////////////////////////////////////////////////////
-// LOADING
-////////////////////////////////////////////////////////////
+  /* ================= LOADING ================= */
 
   if (loading) {
     return (
@@ -176,9 +150,7 @@ export default function AdminSettlements() {
     );
   }
 
-////////////////////////////////////////////////////////////
-// UI
-////////////////////////////////////////////////////////////
+  /* ================= UI ================= */
 
   return (
 
@@ -217,59 +189,42 @@ export default function AdminSettlements() {
             <Table>
 
               <TableHead>
-
                 <TableRow>
-
                   <StyledTableCell>Booking</StyledTableCell>
                   <StyledTableCell>Owner</StyledTableCell>
                   <StyledTableCell>Amount</StyledTableCell>
                   <StyledTableCell>Bank</StyledTableCell>
                   <StyledTableCell align="center">Action</StyledTableCell>
-
                 </TableRow>
-
               </TableHead>
 
               <TableBody>
 
                 {data.map((item)=>(
-
                   <TableRow key={item.booking_id} hover>
 
                     <TableCell>
-
                       <Box display="flex" alignItems="center" gap={1}>
-
                         <Avatar sx={{ bgcolor:"#eef2ff" }}>
                           <ReceiptLong/>
                         </Avatar>
-
                         #{item.booking_id}
-
                       </Box>
-
                     </TableCell>
 
                     <TableCell>
-
                       <Box display="flex" alignItems="center" gap={1}>
-
                         <Avatar sx={{ bgcolor:"#e6f4ea" }}>
                           <Person/>
                         </Avatar>
-
                         {item.owner_name}
-
                       </Box>
-
                     </TableCell>
 
                     <TableCell>
-
                       <Typography fontWeight="bold" color="green">
                         ₹{Number(item.owner_amount).toLocaleString()}
                       </Typography>
-
                     </TableCell>
 
                     <TableCell>
@@ -316,7 +271,6 @@ export default function AdminSettlements() {
                     </TableCell>
 
                   </TableRow>
-
                 ))}
 
               </TableBody>
@@ -330,6 +284,5 @@ export default function AdminSettlements() {
       </StyledCard>
 
     </Container>
-
   );
 }
