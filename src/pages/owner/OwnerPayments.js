@@ -45,18 +45,15 @@ export default function OwnerPayments() {
       setLoading(true);
       setError("");
 
-      const res = await axios.get(
-        `${API}/payments`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+      const res = await axios.get(`${API}/payments`, {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-      );
+      });
 
       console.log("OWNER PAYMENTS RESPONSE:", res.data);
 
-      if (res.data.success) {
+      if (res.data?.success) {
         setData(res.data.data || []);
       } else {
         setError("Failed to load payments");
@@ -65,7 +62,6 @@ export default function OwnerPayments() {
     } catch (err) {
 
       console.error("Owner payments error:", err);
-
       setError("Failed to load payments");
 
     } finally {
@@ -87,14 +83,19 @@ export default function OwnerPayments() {
   const paymentColor = (status) => {
 
     switch (status) {
+
       case "paid":
         return "success";
+
       case "submitted":
         return "warning";
+
       case "rejected":
         return "error";
+
       default:
         return "default";
+
     }
 
   };
@@ -112,7 +113,7 @@ export default function OwnerPayments() {
   };
 
   ////////////////////////////////////////////////////////////
-  // LOADING
+  // LOADING UI
   ////////////////////////////////////////////////////////////
 
   if (loading) {
@@ -124,7 +125,7 @@ export default function OwnerPayments() {
   }
 
   ////////////////////////////////////////////////////////////
-  // UI
+  // MAIN UI
   ////////////////////////////////////////////////////////////
 
   return (
@@ -183,7 +184,7 @@ export default function OwnerPayments() {
 
             {data.map((item) => (
 
-              <TableRow key={item.booking_id} hover>
+              <TableRow key={item.payment_id || item.booking_id} hover>
 
                 {/* BOOKING */}
 
@@ -211,7 +212,7 @@ export default function OwnerPayments() {
                       <Person />
                     </Avatar>
 
-                    {item.tenant_name || item.name || "-"}
+                    {item.tenant_name || "-"}
 
                   </Box>
 
@@ -237,23 +238,23 @@ export default function OwnerPayments() {
 
                 <TableCell>
 
-                  ₹{Number(item.owner_amount || 0).toLocaleString()}
+                  ₹{Number(item.owner_amount || item.amount || 0).toLocaleString()}
 
                 </TableCell>
 
-                {/* PAYMENT */}
+                {/* PAYMENT STATUS */}
 
                 <TableCell>
 
                   <Chip
-                    label={item.payment_status || item.status || "pending"}
+                    label={(item.payment_status || item.status || "pending").toUpperCase()}
                     color={paymentColor(item.payment_status || item.status)}
                     size="small"
                   />
 
                 </TableCell>
 
-                {/* OWNER PAID */}
+                {/* OWNER SETTLEMENT */}
 
                 <TableCell>
 
