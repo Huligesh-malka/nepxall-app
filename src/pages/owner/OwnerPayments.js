@@ -77,39 +77,16 @@ export default function OwnerPayments() {
   }, []);
 
   ////////////////////////////////////////////////////////////
-  // PAYMENT STATUS COLOR
+  // CHIP COLORS
   ////////////////////////////////////////////////////////////
 
   const paymentColor = (status) => {
-
-    switch (status) {
-
-      case "paid":
-        return "success";
-
-      case "submitted":
-        return "warning";
-
-      case "rejected":
-        return "error";
-
-      default:
-        return "default";
-
-    }
-
+    if (status === "paid") return "success";
+    return "default";
   };
 
-  ////////////////////////////////////////////////////////////
-  // OWNER SETTLEMENT COLOR
-  ////////////////////////////////////////////////////////////
-
   const settlementColor = (status) => {
-
-    if (status === "DONE") return "success";
-
-    return "warning";
-
+    return status === "DONE" ? "success" : "warning";
   };
 
   ////////////////////////////////////////////////////////////
@@ -158,18 +135,14 @@ export default function OwnerPayments() {
         <Table>
 
           <TableHead>
-
             <TableRow sx={{ background: "#f5f5f5" }}>
-
               <TableCell><strong>Booking</strong></TableCell>
               <TableCell><strong>Tenant</strong></TableCell>
               <TableCell><strong>PG</strong></TableCell>
               <TableCell><strong>Amount</strong></TableCell>
               <TableCell><strong>Payment</strong></TableCell>
               <TableCell><strong>Owner Paid</strong></TableCell>
-
             </TableRow>
-
           </TableHead>
 
           <TableBody>
@@ -184,86 +157,53 @@ export default function OwnerPayments() {
 
             {data.map((item) => (
 
-              <TableRow key={item.payment_id || item.booking_id} hover>
-
-                {/* BOOKING */}
+              <TableRow key={item.booking_id} hover>
 
                 <TableCell>
-
                   <Box display="flex" alignItems="center" gap={1}>
-
                     <Avatar sx={{ bgcolor: "#eef2ff" }}>
                       <ReceiptLong />
                     </Avatar>
-
                     #{item.booking_id}
-
                   </Box>
-
                 </TableCell>
 
-                {/* TENANT */}
-
                 <TableCell>
-
                   <Box display="flex" alignItems="center" gap={1}>
-
                     <Avatar sx={{ bgcolor: "#e6f4ea" }}>
                       <Person />
                     </Avatar>
-
-                    {item.tenant_name || "-"}
-
+                    {item.tenant_name}
                   </Box>
-
                 </TableCell>
 
-                {/* PG */}
-
                 <TableCell>
-
                   <Box display="flex" alignItems="center" gap={1}>
-
                     <Avatar sx={{ bgcolor: "#fff4e5" }}>
                       <Home />
                     </Avatar>
-
-                    {item.pg_name || "-"}
-
+                    {item.pg_name}
                   </Box>
-
                 </TableCell>
 
-                {/* AMOUNT */}
-
                 <TableCell>
-
-                  ₹{Number(item.owner_amount || item.amount || 0).toLocaleString()}
-
+                  ₹{Number(item.owner_amount || 0).toLocaleString()}
                 </TableCell>
 
-                {/* PAYMENT STATUS */}
-
                 <TableCell>
-
                   <Chip
-                    label={(item.payment_status || item.status || "pending").toUpperCase()}
-                    color={paymentColor(item.payment_status || item.status)}
+                    label={(item.payment_status || "paid").toUpperCase()}
+                    color={paymentColor(item.payment_status)}
                     size="small"
                   />
-
                 </TableCell>
 
-                {/* OWNER SETTLEMENT */}
-
                 <TableCell>
-
                   <Chip
                     label={item.owner_settlement === "DONE" ? "Paid" : "Pending"}
                     color={settlementColor(item.owner_settlement)}
                     size="small"
                   />
-
                 </TableCell>
 
               </TableRow>
