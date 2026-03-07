@@ -1,50 +1,75 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const ScanPG = () => {
 
   const { id } = useParams();
+  const navigate = useNavigate();
+
   const [pg, setPg] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchPG();
-  }, []);
+  }, [id]);
 
   const fetchPG = async () => {
     try {
+
       const res = await axios.get(
-        `${process.env.REACT_APP_API_URL}/pg/${id}`
+        `${process.env.REACT_APP_API_URL}/scan/${id}`
       );
-      setPg(res.data);
+
+      if (res.data.success) {
+        setPg(res.data.data);
+      }
+
     } catch (err) {
-      console.error(err);
+      console.error("Scan fetch error:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (!pg) return <div>Loading property...</div>;
+  if (loading) return <div style={{ padding: 40 }}>Loading property...</div>;
+
+  if (!pg) return <div style={{ padding: 40 }}>Property not found</div>;
 
   return (
     <div style={{ padding: 40 }}>
 
-      <h1>{pg.name}</h1>
+      <h2>{pg.pg_name}</h2>
 
-      <img
-        src={pg.image}
-        alt="pg"
-        style={{ width: "300px", borderRadius: 10 }}
-      />
+      {pg.photos && pg.photos.length > 0 && (
+        <img
+          src={pg.photos[0]}
+          alt="pg"
+          style={{ width: 300, borderRadius: 10 }}
+        />
+      )}
 
-      <p>Location: {pg.location}</p>
-      <p>Rooms: {pg.totalRooms}</p>
+      <p><b>Location:</b> {pg.area}, {pg.city}</p>
+
+      <p><b>Available Rooms:</b> {pg.available_rooms}</p>
+
+      <p><b>Rent Starting:</b> ₹{pg.rent_amount}</p>
+
+      <br/>
 
       <button
-        onClick={() =>
-          window.location.href = `/pg/${id}`
-        }
+        onClick={() => navigate(`/pg/${id}`)}
       >
         View Full Details
       </button>
+
+      <br/><br/>
+
+      {pg.contact_phone && (
+        <a href={`tel:${pg.contact_phone}`}>
+          <button>Call Owner</button>
+        </a>
+      )}
 
     </div>
   );
