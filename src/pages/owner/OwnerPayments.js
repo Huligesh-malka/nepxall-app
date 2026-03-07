@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+
 import {
   Container,
   Typography,
@@ -32,13 +33,15 @@ export default function OwnerPayments() {
 
   const token = localStorage.getItem("token");
 
-  useEffect(() => {
-    fetchPayments();
-  }, []);
+  /////////////////////////////////////////////////////////
+  // FETCH OWNER PAYMENTS
+  /////////////////////////////////////////////////////////
 
   const fetchPayments = async () => {
 
     try {
+
+      setLoading(true);
 
       const res = await axios.get(
         `${API}/payments`,
@@ -49,11 +52,14 @@ export default function OwnerPayments() {
         }
       );
 
+      console.log("OWNER PAYMENTS RESPONSE:", res.data);
+
       setData(res.data.data || []);
 
     } catch (err) {
 
-      console.error(err);
+      console.error("Owner payments error:", err);
+
       setError("Failed to load payments");
 
     } finally {
@@ -64,7 +70,17 @@ export default function OwnerPayments() {
 
   };
 
+  useEffect(() => {
+    fetchPayments();
+  }, []);
+
+  /////////////////////////////////////////////////////////
+  // PAYMENT STATUS COLOR
+  /////////////////////////////////////////////////////////
+
   const paymentColor = (status) => {
+
+    if (!status) return "default";
 
     if (status === "paid") return "success";
     if (status === "submitted") return "warning";
@@ -72,15 +88,22 @@ export default function OwnerPayments() {
     if (status === "rejected") return "error";
 
     return "default";
-
   };
+
+  /////////////////////////////////////////////////////////
+  // SETTLEMENT COLOR
+  /////////////////////////////////////////////////////////
 
   const settlementColor = (status) => {
 
     if (status === "DONE") return "success";
-    return "warning";
 
+    return "warning";
   };
+
+  /////////////////////////////////////////////////////////
+  // LOADING
+  /////////////////////////////////////////////////////////
 
   if (loading) {
     return (
@@ -89,6 +112,10 @@ export default function OwnerPayments() {
       </Box>
     );
   }
+
+  /////////////////////////////////////////////////////////
+  // UI
+  /////////////////////////////////////////////////////////
 
   return (
 
@@ -99,7 +126,9 @@ export default function OwnerPayments() {
       </Typography>
 
       {error && (
-        <Alert severity="error">{error}</Alert>
+        <Alert severity="error" sx={{ mb:2 }}>
+          {error}
+        </Alert>
       )}
 
       <Paper sx={{ borderRadius: 2 }}>
@@ -135,7 +164,7 @@ export default function OwnerPayments() {
 
               <TableRow key={item.booking_id} hover>
 
-                {/* Booking */}
+                {/* BOOKING */}
 
                 <TableCell>
 
@@ -151,7 +180,7 @@ export default function OwnerPayments() {
 
                 </TableCell>
 
-                {/* Tenant */}
+                {/* TENANT */}
 
                 <TableCell>
 
@@ -161,7 +190,7 @@ export default function OwnerPayments() {
                       <Person />
                     </Avatar>
 
-                    {item.tenant_name}
+                    {item.tenant_name || "-"}
 
                   </Box>
 
@@ -177,36 +206,42 @@ export default function OwnerPayments() {
                       <Home />
                     </Avatar>
 
-                    {item.pg_name}
+                    {item.pg_name || "-"}
 
                   </Box>
 
                 </TableCell>
 
-                {/* Amount */}
+                {/* AMOUNT */}
 
                 <TableCell>
+
                   ₹{Number(item.owner_amount || 0).toLocaleString()}
+
                 </TableCell>
 
-                {/* Payment Status */}
+                {/* PAYMENT STATUS */}
 
                 <TableCell>
 
                   <Chip
-                    label={item.payment_status || "pending"}
-                    color={paymentColor(item.payment_status)}
+                    label={item.payment_status || item.status || "pending"}
+                    color={paymentColor(item.payment_status || item.status)}
                     size="small"
                   />
 
                 </TableCell>
 
-                {/* Owner Settlement */}
+                {/* OWNER SETTLEMENT */}
 
                 <TableCell>
 
                   <Chip
-                    label={item.owner_settlement === "DONE" ? "Paid" : "Pending"}
+                    label={
+                      item.owner_settlement === "DONE"
+                        ? "Paid"
+                        : "Pending"
+                    }
                     color={settlementColor(item.owner_settlement)}
                     size="small"
                   />
