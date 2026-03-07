@@ -113,14 +113,13 @@ function App() {
 
     <Routes>
 
-      {/* PUBLIC HOME */}
+      {/* PUBLIC ROUTES */}
       <Route element={<MainLayout />}>
-        <Route index element={<UserPGSearch />} />
-        <Route path="pg/:id" element={<PGDetails />} />
-
-        {/* ⭐ QR SCAN PAGE */}
-        <Route path="scan/:id" element={<ScanPG />} />
+        <Route path="/" element={<UserPGSearch />} />
+        <Route path="/pg/:id" element={<PGDetails />} />
+        <Route path="/scan/:id" element={<ScanPG />} />
       </Route>
+
 
       {/* STATIC */}
       <Route path="/contact" element={<Contact />} />
@@ -128,9 +127,11 @@ function App() {
       <Route path="/refund-policy" element={<RefundPolicy />} />
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
+
       {/* AUTH */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+
 
       {/* USER ROUTES */}
       <Route
@@ -140,19 +141,20 @@ function App() {
           </PrivateRoute>
         }
       >
-        <Route path="booking/:pgId" element={<BookingForm />} />
-        <Route path="user/bookings" element={<UserBookingHistory />} />
-        <Route path="user/services/:bookingId" element={<ServicesPage />} />
-        <Route path="payment-success" element={<PaymentSuccess />} />
-        <Route path="payment/:bookingId" element={<PaymentPage />} />
-        <Route path="agreement/:bookingId" element={<AgreementPage />} />
-        <Route path="user/my-stay" element={<UserActiveStay />} />
-        <Route path="user/notifications" element={<NotificationBell />} />
-        <Route path="user/aadhaar-kyc" element={<AadhaarKyc />} />
-        <Route path="user/visit-schedule/:bookingId" element={<VisitSchedulePage />} />
-        <Route path="public/agreement/:hash" element={<PublicAgreementPage />} />
-        <Route path="chat/private/:userId" element={<PrivateChat />} />
+        <Route path="/booking/:pgId" element={<BookingForm />} />
+        <Route path="/user/bookings" element={<UserBookingHistory />} />
+        <Route path="/user/services/:bookingId" element={<ServicesPage />} />
+        <Route path="/payment-success" element={<PaymentSuccess />} />
+        <Route path="/payment/:bookingId" element={<PaymentPage />} />
+        <Route path="/agreement/:bookingId" element={<AgreementPage />} />
+        <Route path="/user/my-stay" element={<UserActiveStay />} />
+        <Route path="/user/notifications" element={<NotificationBell />} />
+        <Route path="/user/aadhaar-kyc" element={<AadhaarKyc />} />
+        <Route path="/user/visit-schedule/:bookingId" element={<VisitSchedulePage />} />
+        <Route path="/public/agreement/:hash" element={<PublicAgreementPage />} />
+        <Route path="/chat/private/:userId" element={<PrivateChat />} />
       </Route>
+
 
       {/* OWNER ROUTES */}
       <Route
@@ -185,6 +187,7 @@ function App() {
         <Route path="chat/private/:userId" element={<PrivateChat />} />
       </Route>
 
+
       {/* ADMIN ROUTES */}
       <Route
         path="/admin"
@@ -207,6 +210,7 @@ function App() {
         <Route path="services" element={<AdminServiceBookings />} />
       </Route>
 
+
       {/* VENDOR ROUTES */}
       <Route
         path="/vendor"
@@ -221,6 +225,7 @@ function App() {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<VendorDashboard />} />
       </Route>
+
 
       {/* FALLBACK */}
       <Route path="*" element={<Navigate to="/" replace />} />
