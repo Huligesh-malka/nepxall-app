@@ -14,7 +14,8 @@ import {
   Avatar,
   Box,
   CircularProgress,
-  Alert
+  Alert,
+  Button
 } from "@mui/material";
 
 import {
@@ -33,15 +34,16 @@ export default function OwnerPayments() {
 
   const token = localStorage.getItem("token");
 
-  /////////////////////////////////////////////////////////
-  // FETCH OWNER PAYMENTS
-  /////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////
+  // FETCH PAYMENTS
+  ////////////////////////////////////////////////////////////
 
   const fetchPayments = async () => {
 
     try {
 
       setLoading(true);
+      setError("");
 
       const res = await axios.get(
         `${API}/payments`,
@@ -54,7 +56,11 @@ export default function OwnerPayments() {
 
       console.log("OWNER PAYMENTS RESPONSE:", res.data);
 
-      setData(res.data.data || []);
+      if (res.data.success) {
+        setData(res.data.data || []);
+      } else {
+        setError("Failed to load payments");
+      }
 
     } catch (err) {
 
@@ -74,36 +80,40 @@ export default function OwnerPayments() {
     fetchPayments();
   }, []);
 
-  /////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////
   // PAYMENT STATUS COLOR
-  /////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////
 
   const paymentColor = (status) => {
 
-    if (!status) return "default";
+    switch (status) {
+      case "paid":
+        return "success";
+      case "submitted":
+        return "warning";
+      case "rejected":
+        return "error";
+      default:
+        return "default";
+    }
 
-    if (status === "paid") return "success";
-    if (status === "submitted") return "warning";
-    if (status === "pending") return "default";
-    if (status === "rejected") return "error";
-
-    return "default";
   };
 
-  /////////////////////////////////////////////////////////
-  // SETTLEMENT COLOR
-  /////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////
+  // OWNER SETTLEMENT COLOR
+  ////////////////////////////////////////////////////////////
 
   const settlementColor = (status) => {
 
     if (status === "DONE") return "success";
 
     return "warning";
+
   };
 
-  /////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////
   // LOADING
-  /////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////
 
   if (loading) {
     return (
@@ -113,20 +123,31 @@ export default function OwnerPayments() {
     );
   }
 
-  /////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////
   // UI
-  /////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////
 
   return (
 
     <Container maxWidth="lg" sx={{ mt: 4 }}>
 
-      <Typography variant="h4" fontWeight="bold" mb={3}>
-        💰 Earnings & Payments
-      </Typography>
+      <Box display="flex" justifyContent="space-between" mb={3}>
+
+        <Typography variant="h4" fontWeight="bold">
+          💰 Earnings & Payments
+        </Typography>
+
+        <Button
+          variant="outlined"
+          onClick={fetchPayments}
+        >
+          Refresh
+        </Button>
+
+      </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb:2 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
@@ -190,7 +211,7 @@ export default function OwnerPayments() {
                       <Person />
                     </Avatar>
 
-                    {item.tenant_name || "-"}
+                    {item.tenant_name || item.name || "-"}
 
                   </Box>
 
@@ -220,7 +241,7 @@ export default function OwnerPayments() {
 
                 </TableCell>
 
-                {/* PAYMENT STATUS */}
+                {/* PAYMENT */}
 
                 <TableCell>
 
@@ -232,16 +253,12 @@ export default function OwnerPayments() {
 
                 </TableCell>
 
-                {/* OWNER SETTLEMENT */}
+                {/* OWNER PAID */}
 
                 <TableCell>
 
                   <Chip
-                    label={
-                      item.owner_settlement === "DONE"
-                        ? "Paid"
-                        : "Pending"
-                    }
+                    label={item.owner_settlement === "DONE" ? "Paid" : "Pending"}
                     color={settlementColor(item.owner_settlement)}
                     size="small"
                   />
