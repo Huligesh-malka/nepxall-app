@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 
-// Import your config
-import config from "../config"; // Adjust the path based on your project structure
+// Import the API_CONFIG from config
+import { API_CONFIG } from "../config"; 
 
 const ScanPG = () => {
   const { id } = useParams();
@@ -26,9 +26,9 @@ const ScanPG = () => {
       setLoading(true);
       setError(null);
 
-      // Use the USER_API_URL from config (which already includes /api)
+      // Use API_CONFIG.USER_API_URL from config (which already includes /api)
       // and append /scan/${id} (without extra /api)
-      const apiUrl = `${config.USER_API_URL}/scan/${id}`;
+      const apiUrl = `${API_CONFIG.USER_API_URL}/scan/${id}`;
       console.log("Fetching from:", apiUrl);
       
       const res = await axios.get(apiUrl);
@@ -51,8 +51,8 @@ const ScanPG = () => {
 
   const trackScan = async () => {
     try {
-      // Use the USER_API_URL from config (which already includes /api)
-      const apiUrl = `${config.USER_API_URL}/scan/${id}/track`;
+      // Use API_CONFIG.USER_API_URL from config
+      const apiUrl = `${API_CONFIG.USER_API_URL}/scan/${id}/track`;
       console.log("Tracking scan at:", apiUrl);
       
       await axios.post(apiUrl, {
