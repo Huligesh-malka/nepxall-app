@@ -51,6 +51,7 @@ import OwnerBankDetails from "./pages/owner/OwnerBankDetails";
 import OwnerVerificationPage from "./pages/owner/OwnerVerification";
 import OwnerChatList from "./pages/OwnerChatList";
 import CreatePlan from "./pages/CreatePlan";
+import OwnerPayments from "./pages/owner/OwnerPayments";   // ⭐ NEW PAGE
 
 /* HOTEL */
 import AddHotel from "./pages/hotels/AddHotel";
@@ -63,7 +64,7 @@ import AdminPGDetails from "./pages/admin/AdminPGDetails";
 import AdminSettlements from "./pages/admin/AdminSettlements";
 import AdminFinanceDashboard from "./pages/admin/AdminFinanceDashboard";
 import SettlementHistory from "./pages/admin/SettlementHistory";
-import AdminPayments from "./pages/admin/AdminPayments";   // ⭐ NEW
+import AdminPayments from "./pages/admin/AdminPayments";
 
 /* ADMIN SERVICE */
 import AdminServiceBookings from "./pages/admin/AdminServiceBookings";
@@ -160,6 +161,7 @@ function App() {
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<OwnerDashboard />} />
+        <Route path="payments" element={<OwnerPayments />} />   {/* ⭐ NEW */}
         <Route path="bookings" element={<OwnerBookings />} />
         <Route path="verification" element={<OwnerVerificationPage />} />
         <Route path="bank" element={<OwnerBankDetails />} />
@@ -190,7 +192,7 @@ function App() {
       >
         <Route index element={<Navigate to="finance" replace />} />
         <Route path="finance" element={<AdminFinanceDashboard />} />
-        <Route path="payments" element={<AdminPayments />} /> {/* ⭐ NEW */}
+        <Route path="payments" element={<AdminPayments />} />
         <Route path="settlements" element={<AdminSettlements />} />
         <Route path="settlement-history" element={<SettlementHistory />} />
         <Route path="pending-pgs" element={<AdminPendingPGs />} />

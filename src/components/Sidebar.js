@@ -102,6 +102,11 @@ const Sidebar = () => {
               📥 Booking Requests
             </Link>
 
+            {/* ⭐ NEW OWNER PAYMENTS */}
+            <Link style={linkStyle(isActive("/owner/payments"))} to="/owner/payments">
+              💰 Earnings / Payments
+            </Link>
+
             <Link style={linkStyle(isActive("/owner/pgs"))} to="/owner/pgs">
               🏢 My PGs
             </Link>
@@ -154,7 +159,6 @@ const Sidebar = () => {
               📊 Finance Dashboard
             </Link>
 
-            {/* ⭐ NEW PAYMENT VERIFICATION */}
             <Link style={linkStyle(isActive("/admin/payments"))} to="/admin/payments">
               💳 Payment Verification
             </Link>
