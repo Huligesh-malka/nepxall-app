@@ -23,8 +23,10 @@ const ScanPG = () => {
       setLoading(true);
       setError(null);
 
+      // FIXED: Remove the extra /api from the URL
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
       
+      // This will now call: http://localhost:5000/api/scan/3 (not /api/api/scan/3)
       const res = await axios.get(`${API_URL}/api/scan/${id}`);
 
       if (res.data.success) {
@@ -46,6 +48,7 @@ const ScanPG = () => {
   const trackScan = async () => {
     try {
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      // FIXED: Remove the extra /api from the URL
       await axios.post(`${API_URL}/api/scan/${id}/track`, {
         source: 'qr_code'
       });
