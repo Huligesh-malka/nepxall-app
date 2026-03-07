@@ -1,11 +1,10 @@
-// src/pages/OwnerDashboard.js
-
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { pgAPI } from "../api/api";
 import { getImageUrl } from "../config";
+import QRCode from "qrcode";
 
 import {
   Typography, Box, Button, Grid, Alert, Snackbar,
@@ -295,6 +294,49 @@ const OwnerDashboard = () => {
     navigate(`/owner/bookings/${bookingId}`);
   };
 
+  // ⭐ NEW: QR Code Generator Function
+  const handleGenerateQR = async (propertyId) => {
+    try {
+      // Find property name for better filename
+      const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
+      const propertyName = property?.pg_name || 'property';
+      const sanitizedName = propertyName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+      
+      // Create URL for QR code
+      const url = `https://nepxall.vercel.app/scan/${propertyId}`;
+      
+      // Generate QR code as data URL
+      const qrDataUrl = await QRCode.toDataURL(url, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      });
+
+      // Create download link
+      const link = document.createElement("a");
+      link.href = qrDataUrl;
+      link.download = `nepxall-${sanitizedName}-${propertyId}.png`;
+      link.click();
+
+      setSnackbar({
+        open: true,
+        message: "✅ QR Code downloaded successfully",
+        severity: "success"
+      });
+
+    } catch (err) {
+      console.error("❌ QR Generation Error:", err);
+      setSnackbar({
+        open: true,
+        message: "❌ Failed to generate QR code",
+        severity: "error"
+      });
+    }
+  };
+
   /* ---------------- LOADER ---------------- */
 
   if (authLoading || loading) {
@@ -481,6 +523,7 @@ const OwnerDashboard = () => {
                   onVideos={() => handleManageVideos(pg.id || pg.pg_id)}
                   onChat={() => handleChat(pg.id || pg.pg_id)}
                   onAnnouncement={() => handleAnnouncement(pg.id || pg.pg_id)}
+                  onGenerateQR={() => handleGenerateQR(pg.id || pg.pg_id)}   // ⭐ NEW QR handler
                   onCreatePlan={
                     pg.pg_category === "coliving"
                       ? () => handleCreatePlan(pg.id || pg.pg_id)

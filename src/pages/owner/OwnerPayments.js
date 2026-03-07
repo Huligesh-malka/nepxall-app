@@ -71,7 +71,7 @@ export default function OwnerPayments() {
     }
 
   };
-
+  
   useEffect(() => {
     fetchPayments();
   }, []);

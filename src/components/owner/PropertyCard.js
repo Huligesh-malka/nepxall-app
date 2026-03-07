@@ -1,5 +1,3 @@
-// src/components/owner/PropertyCard.jsx
-
 import React from "react";
 import {
   Card,
@@ -26,7 +24,9 @@ import {
   Star as StarIcon,
   Campaign as AnnouncementIcon,
   PlaylistAdd as PlanIcon,
-  Image as ImageIcon
+  Image as ImageIcon,
+  QrCode as QrCodeIcon,  // ⭐ NEW: QR Code Icon
+  Chat as ChatIcon
 } from "@mui/icons-material";
 
 const BRAND_BLUE = "#0B5ED7";
@@ -50,9 +50,11 @@ const PropertyCard = ({
   onRooms,
   onPhotos,
   onVideos,
+  onChat,           // ⭐ Added chat handler
   onToggleStatus,
   onAnnouncement,
-  onCreatePlan
+  onCreatePlan,
+  onGenerateQR      // ⭐ NEW: QR Code handler
 }) => {
 
   const status = statusConfig[property.status] || statusConfig.pending;
@@ -274,7 +276,7 @@ const PropertyCard = ({
         {/* ACTION BUTTONS */}
         <Box display="flex" gap={1} flexWrap="wrap">
 
-          <Tooltip title="View">
+          <Tooltip title="View Property">
             <Button 
               size="small" 
               variant="outlined" 
@@ -286,7 +288,7 @@ const PropertyCard = ({
             </Button>
           </Tooltip>
 
-          <Tooltip title="Edit">
+          <Tooltip title="Edit Property">
             <Button 
               size="small" 
               variant="outlined" 
@@ -298,7 +300,7 @@ const PropertyCard = ({
             </Button>
           </Tooltip>
 
-          <Tooltip title="Rooms">
+          <Tooltip title="Manage Rooms">
             <Button 
               size="small" 
               variant="outlined" 
@@ -310,7 +312,7 @@ const PropertyCard = ({
             </Button>
           </Tooltip>
 
-          <Tooltip title="Photos">
+          <Tooltip title="Manage Photos">
             <Button 
               size="small" 
               variant="outlined" 
@@ -322,7 +324,7 @@ const PropertyCard = ({
             </Button>
           </Tooltip>
 
-          <Tooltip title="Videos">
+          <Tooltip title="Manage Videos">
             <Button 
               size="small" 
               variant="outlined" 
@@ -331,6 +333,39 @@ const PropertyCard = ({
               sx={{ textTransform: "none" }}
             >
               Videos
+            </Button>
+          </Tooltip>
+
+          <Tooltip title="Chat with Tenants">
+            <Button 
+              size="small" 
+              variant="outlined" 
+              startIcon={<ChatIcon />} 
+              onClick={onChat}
+              sx={{ textTransform: "none" }}
+            >
+              Chat
+            </Button>
+          </Tooltip>
+
+          {/* ⭐ NEW: QR Code Generation Button */}
+          <Tooltip title="Generate QR Code for this property">
+            <Button 
+              size="small" 
+              variant="outlined"
+              startIcon={<QrCodeIcon />} 
+              onClick={onGenerateQR}
+              sx={{ 
+                textTransform: "none",
+                color: "#6b21a8",
+                borderColor: "#6b21a8",
+                "&:hover": {
+                  borderColor: "#581c87",
+                  backgroundColor: "#faf5ff"
+                }
+              }}
+            >
+              QR Code
             </Button>
           </Tooltip>
 

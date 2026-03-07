@@ -51,7 +51,7 @@ import OwnerBankDetails from "./pages/owner/OwnerBankDetails";
 import OwnerVerificationPage from "./pages/owner/OwnerVerification";
 import OwnerChatList from "./pages/OwnerChatList";
 import CreatePlan from "./pages/CreatePlan";
-import OwnerPayments from "./pages/owner/OwnerPayments";   // ⭐ NEW PAGE
+import OwnerPayments from "./pages/owner/OwnerPayments";
 
 /* HOTEL */
 import AddHotel from "./pages/hotels/AddHotel";
@@ -71,6 +71,9 @@ import AdminServiceBookings from "./pages/admin/AdminServiceBookings";
 
 /* VENDOR */
 import VendorDashboard from "./pages/VendorDashboard";
+
+/* QR SCAN PAGE */
+import ScanPG from "./pages/ScanPG";
 
 /* CONFIG */
 import { testBackendConnection } from "./config";
@@ -114,6 +117,9 @@ function App() {
       <Route element={<MainLayout />}>
         <Route index element={<UserPGSearch />} />
         <Route path="pg/:id" element={<PGDetails />} />
+
+        {/* ⭐ QR SCAN PAGE */}
+        <Route path="scan/:id" element={<ScanPG />} />
       </Route>
 
       {/* STATIC */}
@@ -161,7 +167,7 @@ function App() {
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<OwnerDashboard />} />
-        <Route path="payments" element={<OwnerPayments />} />   {/* ⭐ NEW */}
+        <Route path="payments" element={<OwnerPayments />} />
         <Route path="bookings" element={<OwnerBookings />} />
         <Route path="verification" element={<OwnerVerificationPage />} />
         <Route path="bank" element={<OwnerBankDetails />} />
