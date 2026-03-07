@@ -1,10 +1,5 @@
 {
   "rewrites": [
-    { "source": "/scan/:id", "destination": "/" },
-    { "source": "/pg/:id", "destination": "/" },
-    { "source": "/booking/:path*", "destination": "/" },
-    { "source": "/owner/:path*", "destination": "/" },
-    { "source": "/admin/:path*", "destination": "/" },
-    { "source": "/vendor/:path*", "destination": "/" }
+    { "source": "/(.*)", "destination": "/" }
   ]
 }
