@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 
+// Import your config
+import config from "../config"; // Adjust the path based on your project structure
+
 const ScanPG = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -23,11 +26,12 @@ const ScanPG = () => {
       setLoading(true);
       setError(null);
 
-      // FIXED: Remove the extra /api from the URL
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      // Use the USER_API_URL from config (which already includes /api)
+      // and append /scan/${id} (without extra /api)
+      const apiUrl = `${config.USER_API_URL}/scan/${id}`;
+      console.log("Fetching from:", apiUrl);
       
-      // This will now call: http://localhost:5000/api/scan/3 (not /api/api/scan/3)
-      const res = await axios.get(`${API_URL}/api/scan/${id}`);
+      const res = await axios.get(apiUrl);
 
       if (res.data.success) {
         setPg(res.data.data);
@@ -47,9 +51,11 @@ const ScanPG = () => {
 
   const trackScan = async () => {
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-      // FIXED: Remove the extra /api from the URL
-      await axios.post(`${API_URL}/api/scan/${id}/track`, {
+      // Use the USER_API_URL from config (which already includes /api)
+      const apiUrl = `${config.USER_API_URL}/scan/${id}/track`;
+      console.log("Tracking scan at:", apiUrl);
+      
+      await axios.post(apiUrl, {
         source: 'qr_code'
       });
     } catch (err) {
