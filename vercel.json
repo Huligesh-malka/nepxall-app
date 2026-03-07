@@ -1,28 +1,10 @@
 {
   "rewrites": [
-    {
-      "source": "/scan/:id",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/pg/:id",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/booking/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/owner/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/admin/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/vendor/:path*",
-      "destination": "/index.html"
-    }
+    { "source": "/scan/:id", "destination": "/" },
+    { "source": "/pg/:id", "destination": "/" },
+    { "source": "/booking/:path*", "destination": "/" },
+    { "source": "/owner/:path*", "destination": "/" },
+    { "source": "/admin/:path*", "destination": "/" },
+    { "source": "/vendor/:path*", "destination": "/" }
   ]
 }

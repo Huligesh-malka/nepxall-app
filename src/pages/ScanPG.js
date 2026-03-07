@@ -5,7 +5,6 @@ import api from "../api/api";
 const ScanPG = () => {
 
   const { id } = useParams();
-
   const [pg, setPg] = useState(null);
 
   useEffect(() => {
