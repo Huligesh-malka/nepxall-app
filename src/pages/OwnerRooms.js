@@ -18,49 +18,75 @@ const OwnerRooms = () => {
 
   /* ================= LOAD ROOMS ================= */
 
-const loadRooms = async (retry = true) => {
+  const loadRooms = useCallback(async (retry = true) => {
 
-  try {
+    try {
 
-    setLoading(true);
+      console.log("Fetching rooms for PG:", pgId);
 
-    const res = await api.get(`/rooms/${pgId}`);
+      const res = await api.get(`/rooms/${pgId}`);
 
-    console.log("Rooms response:", res.data);
+      console.log("Rooms response:", res.data);
 
-    if (Array.isArray(res.data)) {
-      setRooms(res.data);
-    } else if (res.data?.data) {
-      setRooms(res.data.data);
-    } else {
+      if (Array.isArray(res.data)) {
+        setRooms(res.data);
+      } else if (res.data?.data) {
+        setRooms(res.data.data);
+      } else {
+        setRooms([]);
+      }
+
+    } catch (err) {
+
+      console.error("Load rooms error:", err);
+
+      // Retry once if backend sleeping
+      if (retry) {
+        console.log("Retrying rooms API...");
+        setTimeout(() => loadRooms(false), 3000);
+        return;
+      }
+
       setRooms([]);
+
+    } finally {
+
+      setLoading(false);
+
     }
 
-  } catch (err) {
+  }, [pgId]);
 
-    console.error("Load rooms error:", err);
+  /* ================= LOAD ROOMS ON PAGE LOAD ================= */
 
-    if (retry) {
-      console.log("Backend sleeping, retrying...");
-      setTimeout(() => loadRooms(false), 3000);
-      return;
-    }
+  useEffect(() => {
 
-    setRooms([]);
+    loadRooms();
 
-  } finally {
+  }, [loadRooms]);
 
-    setLoading(false);
+  /* ================= AUTH CHECK ================= */
 
-  }
+  useEffect(() => {
 
-};
+    const unsub = onAuthStateChanged(auth, (user) => {
+
+      if (!user) {
+        navigate("/login");
+      }
+
+    });
+
+    return () => unsub();
+
+  }, [navigate]);
+
   /* ================= ADD ROOM ================= */
 
   const addRoom = async () => {
 
     if (!roomNo || !totalSeats) {
-      alert("Enter room number and total seats");
+      alert("Enter room number and seats");
       return;
     }
 
@@ -109,11 +135,13 @@ const loadRooms = async (retry = true) => {
   /* ================= LOADING ================= */
 
   if (loading) {
+
     return (
       <div style={styles.center}>
         <h3>Loading rooms...</h3>
       </div>
     );
+
   }
 
   /* ================= UI ================= */
@@ -178,15 +206,17 @@ const loadRooms = async (retry = true) => {
                 </p>
 
                 <p>
-                  Status:{" "}
-                  <span style={{ color: status.color, fontWeight: "bold" }}>
+                  Status:
+                  <span style={{ color: status.color, fontWeight: "bold", marginLeft: 6 }}>
                     {status.label}
                   </span>
                 </p>
 
                 <p>
-                  Available Beds:{" "}
-                  <b>{room.total_seats - room.occupied_seats}</b>
+                  Available Beds:
+                  <b style={{ marginLeft: 5 }}>
+                    {room.total_seats - room.occupied_seats}
+                  </b>
                 </p>
 
               </div>
