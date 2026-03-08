@@ -297,104 +297,127 @@ const OwnerDashboard = () => {
 
   // ⭐ NEW: QR Code Generator Function
   
- const handleGenerateEntranceQR = async (propertyId) => {
+ const handleGenerateQR = async (propertyId) => {
+  try {
+    const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
+    const propertyName = property?.pg_name || "PG";
 
-  const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
-  const propertyName = property?.pg_name || "PG";
+    const url = `https://nepxall.vercel.app/scan/${propertyId}`;
 
-  const url = `https://nepxall.vercel.app/scan/${propertyId}`;
+    const qr = new QRCodeStyling({
+      width: 600,
+      height: 600,
+      data: url,
+      image: window.location.origin + "/logo.png",
 
-  const qr = new QRCodeStyling({
-    width: 500,
-    height: 500,
-    data: url,
-    image: "/logo.png",
+      dotsOptions: {
+        type: "rounded",
+        gradient: {
+          type: "linear",
+          rotation: 0,
+          colorStops: [
+            { offset: 0, color: "#0A5CB8" },
+            { offset: 1, color: "#1DB954" }
+          ]
+        }
+      },
 
-    dotsOptions: {
-      type: "rounded",
-      gradient: {
-        type: "linear",
-        rotation: 0,
-        colorStops: [
-          { offset: 0, color: "#0A5CB8" },
-          { offset: 1, color: "#1DB954" }
-        ]
+      cornersSquareOptions: {
+        type: "extra-rounded",
+        color: "#1DB954"
+      },
+
+      cornersDotOptions: {
+        type: "dot",
+        color: "#0A5CB8"
+      },
+
+      backgroundOptions: {
+        color: "#ffffff"
+      },
+
+      imageOptions: {
+        crossOrigin: "anonymous",
+        margin: 10,
+        imageSize: 0.35
       }
-    },
+    });
 
-    cornersSquareOptions: {
-      type: "extra-rounded",
-      color: "#1DB954"
-    },
+    /* POSTER CANVAS */
 
-    backgroundOptions: {
-      color: "#ffffff"
-    },
+    const canvas = document.createElement("canvas");
+    canvas.width = 900;
+    canvas.height = 1100;
 
-    imageOptions: {
-      crossOrigin: "anonymous",
-      margin: 8,
-      imageSize: 0.35
-    }
-  });
+    const ctx = canvas.getContext("2d");
 
-  const canvas = document.createElement("canvas");
-  canvas.width = 900;
-  canvas.height = 1200;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const ctx = canvas.getContext("2d");
+    /* LOGO */
 
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const logo = new Image();
+    logo.src = "/logo.png";
 
-  const logo = new Image();
-  logo.src = "/logo.png";
+    logo.onload = async () => {
 
-  logo.onload = async () => {
+      ctx.drawImage(logo, 350, 40, 200, 110);
 
-    ctx.drawImage(logo, 350, 40, 200, 120);
+      /* BRAND NAME */
 
-    ctx.font = "bold 46px Arial";
-    ctx.fillStyle = "#0A5CB8";
-    ctx.textAlign = "center";
-    ctx.fillText("Nepxall", 450, 220);
+      ctx.font = "bold 44px Arial";
+      ctx.fillStyle = "#0A5CB8";
+      ctx.textAlign = "center";
+      ctx.fillText("Nepxall", 450, 200);
 
-    ctx.font = "26px Arial";
-    ctx.fillStyle = "#6b7280";
-    ctx.fillText("Next Places for Living", 450, 260);
+      /* TAGLINE */
 
-    ctx.font = "bold 36px Arial";
-    ctx.fillStyle = "#111";
-    ctx.fillText(propertyName.toUpperCase(), 450, 340);
+      ctx.font = "26px Arial";
+      ctx.fillStyle = "#6b7280";
+      ctx.fillText("Next Places for Living", 450, 240);
 
-    ctx.font = "26px Arial";
-    ctx.fillStyle = "#444";
-    ctx.fillText("Scan QR to View Rooms", 450, 390);
+      /* PG NAME */
 
-    ctx.fillText("Book Instantly Online", 450, 430);
-
-    const qrBlob = await qr.getRawData("png");
-    const qrImg = new Image();
-    qrImg.src = URL.createObjectURL(qrBlob);
-
-    qrImg.onload = () => {
-
-      ctx.drawImage(qrImg, 200, 470, 500, 500);
-
-      ctx.font = "bold 28px Arial";
+      ctx.font = "bold 34px Arial";
       ctx.fillStyle = "#111";
-      ctx.fillText("Powered by Nepxall", 450, 1050);
+      ctx.fillText(propertyName.toUpperCase(), 450, 320);
 
-      const link = document.createElement("a");
-      link.href = canvas.toDataURL("image/png");
-      link.download = `${propertyName}-entrance-qr.png`;
-      link.click();
+      /* SUBTEXT */
+
+      ctx.font = "26px Arial";
+      ctx.fillStyle = "#444";
+      ctx.fillText("Scan QR to View Rooms", 450, 370);
+      ctx.fillText("Book Instantly Online", 450, 405);
+
+      /* QR IMAGE */
+
+      const qrBlob = await qr.getRawData("png");
+      const qrImg = new Image();
+      qrImg.src = URL.createObjectURL(qrBlob);
+
+      qrImg.onload = () => {
+
+        ctx.drawImage(qrImg, 150, 440, 600, 600);
+
+        /* FOOTER */
+
+        ctx.font = "bold 24px Arial";
+        ctx.fillStyle = "#333";
+        ctx.fillText("Powered by Nepxall", 450, 1080);
+
+        /* DOWNLOAD */
+
+        const link = document.createElement("a");
+        link.href = canvas.toDataURL("image/png");
+        link.download = `nepxall-${propertyName}-entrance-qr.png`;
+        link.click();
+      };
     };
 
-  };
-
+  } catch (err) {
+    console.error("QR Generation Error:", err);
+  }
 };
-
   /* ---------------- LOADER ---------------- */
 
   if (authLoading || loading) {
