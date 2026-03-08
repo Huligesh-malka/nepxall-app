@@ -26,7 +26,8 @@ import {
   QrCodeScanner as QrCodeIcon,
   Download as DownloadIcon,
   Close as CloseIcon,
-  ContentCopy as CopyIcon
+  Print as PrintIcon,
+  CheckCircle as CheckCircleIcon
 } from "@mui/icons-material";
 
 import StatCard from "../components/owner/StatCard";
@@ -78,7 +79,7 @@ const generatePGCode = (id) => {
 const QRCodeModal = ({ open, onClose, property }) => {
   const [qrDataUrl, setQrDataUrl] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [copySuccess, setCopySuccess] = useState(false);
+  const [downloadReady, setDownloadReady] = useState(false);
 
   useEffect(() => {
     if (open && property) {
@@ -90,23 +91,22 @@ const QRCodeModal = ({ open, onClose, property }) => {
     try {
       setLoading(true);
       const propertyId = property.id || property.pg_id;
-      const propertyName = property.pg_name || 'property';
-      const pgCode = generatePGCode(propertyId);
       
       // Create URL for QR code
       const scanUrl = `https://nepxall.vercel.app/scan/${propertyId}`;
       
-      // Generate QR code with custom design
+      // Generate QR code with custom brand colors
       const qr = await QRCode.toDataURL(scanUrl, {
-        width: 400,
+        width: 300,
         margin: 2,
         color: {
-          dark: '#4f46e5', // Primary color
+          dark: '#4f46e5', // Brand primary color
           light: '#ffffff'
         }
       });
 
       setQrDataUrl(qr);
+      setDownloadReady(true);
     } catch (err) {
       console.error("❌ QR Generation Error:", err);
     } finally {
@@ -128,22 +128,205 @@ const QRCodeModal = ({ open, onClose, property }) => {
     link.click();
   };
 
-  const handleCopyLink = () => {
-    if (!property) return;
+  const handlePrint = () => {
+    if (!qrDataUrl || !property) return;
     
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow pop-ups to print');
+      return;
+    }
+
     const propertyId = property.id || property.pg_id;
-    const scanUrl = `https://nepxall.vercel.app/scan/${propertyId}`;
+    const pgCode = generatePGCode(propertyId);
+    const status = property.status || 'active';
+    const statusColor = status === 'active' ? '#10b981' : '#f59e0b';
+    const statusText = status === 'active' ? 'ACTIVE' : 'PENDING';
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>QR Code - ${property.pg_name}</title>
+          <style>
+            body {
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              margin: 0;
+              padding: 20px;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              background: #f9fafb;
+            }
+            .qr-container {
+              max-width: 500px;
+              width: 100%;
+              background: white;
+              border-radius: 24px;
+              overflow: hidden;
+              box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            }
+            .header {
+              background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+              color: white;
+              padding: 32px;
+              text-align: center;
+            }
+            .brand {
+              font-size: 36px;
+              font-weight: 800;
+              margin: 0;
+              letter-spacing: -0.5px;
+            }
+            .tagline {
+              font-size: 14px;
+              opacity: 0.9;
+              margin: 4px 0 0 0;
+            }
+            .content {
+              padding: 32px;
+              text-align: center;
+            }
+            .property-name {
+              font-size: 24px;
+              font-weight: 700;
+              color: #111827;
+              margin: 0 0 4px 0;
+            }
+            .property-location {
+              font-size: 14px;
+              color: #6b7280;
+              margin: 0 0 20px 0;
+            }
+            .pg-code {
+              display: inline-block;
+              background: #f3f4f6;
+              color: #4f46e5;
+              font-weight: 700;
+              font-size: 18px;
+              padding: 12px 24px;
+              border-radius: 12px;
+              margin-bottom: 24px;
+              letter-spacing: 1px;
+              border: 1px solid #e5e7eb;
+            }
+            .qr-wrapper {
+              background: #f9fafb;
+              padding: 24px;
+              border-radius: 16px;
+              margin-bottom: 16px;
+              display: inline-block;
+              border: 2px solid #e5e7eb;
+            }
+            .qr-image {
+              width: 250px;
+              height: 250px;
+              display: block;
+            }
+            .scan-link {
+              background: #f3f4f6;
+              padding: 12px 16px;
+              border-radius: 12px;
+              font-size: 14px;
+              color: #4b5563;
+              margin: 16px 0 24px 0;
+              word-break: break-all;
+              border: 1px solid #e5e7eb;
+            }
+            .instructions {
+              text-align: left;
+              background: #f9fafb;
+              padding: 20px;
+              border-radius: 16px;
+              margin-bottom: 24px;
+            }
+            .instructions-title {
+              font-size: 16px;
+              font-weight: 600;
+              color: #111827;
+              margin: 0 0 12px 0;
+            }
+            .instructions-list {
+              margin: 0;
+              padding-left: 20px;
+            }
+            .instructions-list li {
+              color: #4b5563;
+              margin-bottom: 8px;
+              font-size: 14px;
+            }
+            .status-badge {
+              display: inline-block;
+              background: ${statusColor};
+              color: white;
+              font-weight: 600;
+              font-size: 14px;
+              padding: 8px 24px;
+              border-radius: 30px;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+            }
+            @media print {
+              body { background: white; padding: 0; }
+              .qr-container { box-shadow: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="qr-container">
+            <div class="header">
+              <h1 class="brand">NEPXALL</h1>
+              <p class="tagline">Next Places for Living</p>
+            </div>
+            
+            <div class="content">
+              <h2 class="property-name">${property.pg_name}</h2>
+              <p class="property-location">${property.area || ''}, ${property.city || ''}</p>
+              
+              <div class="pg-code">${pgCode}</div>
+              
+              <div class="qr-wrapper">
+                <img src="${qrDataUrl}" alt="QR Code" class="qr-image" />
+              </div>
+              
+              <div class="scan-link">
+                https://nepxall.vercel.app/scan/${propertyId}
+              </div>
+              
+              <div class="instructions">
+                <h3 class="instructions-title">📋 How to use:</h3>
+                <ul class="instructions-list">
+                  <li>Print this QR code and display at your property</li>
+                  <li>Tenants can scan to view property details instantly</li>
+                  <li>Track scans and bookings in your dashboard</li>
+                </ul>
+              </div>
+              
+              <div class="status-badge">${statusText}</div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
     
-    navigator.clipboard.writeText(scanUrl);
-    setCopySuccess(true);
-    setTimeout(() => setCopySuccess(false), 2000);
+    // Wait for images to load then print
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
   };
 
   if (!property) return null;
 
   const propertyId = property.id || property.pg_id;
   const pgCode = generatePGCode(propertyId);
-  const scanUrl = `https://nepxall.vercel.app/scan/${propertyId}`;
+  const status = property.status || 'active';
+  const statusColor = status === 'active' ? '#10b981' : '#f59e0b';
+  const statusText = status === 'active' ? 'ACTIVE' : 'PENDING';
 
   return (
     <Modal
@@ -165,15 +348,16 @@ const QRCodeModal = ({ open, onClose, property }) => {
             borderRadius: 4,
             overflow: 'hidden',
             position: 'relative',
-            outline: 'none'
+            outline: 'none',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
           }}
         >
-          {/* Header with brand colors */}
+          {/* Header with brand gradient */}
           <Box
             sx={{
               background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
               color: 'white',
-              p: 3,
+              p: 4,
               textAlign: 'center'
             }}
           >
@@ -181,8 +365,8 @@ const QRCodeModal = ({ open, onClose, property }) => {
               onClick={onClose}
               sx={{
                 position: 'absolute',
-                top: 12,
-                right: 12,
+                top: 16,
+                right: 16,
                 color: 'white',
                 bgcolor: 'rgba(255,255,255,0.2)',
                 '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }
@@ -192,35 +376,42 @@ const QRCodeModal = ({ open, onClose, property }) => {
               <CloseIcon />
             </IconButton>
 
-            <Typography variant="h4" fontWeight={700} sx={{ mb: 1 }}>
+            <Typography variant="h3" fontWeight={800} sx={{ letterSpacing: '-0.5px', mb: 1 }}>
               NEPXALL
             </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+            <Typography variant="body1" sx={{ opacity: 0.9 }}>
               Next Places for Living
             </Typography>
           </Box>
 
-          {/* Property Info */}
-          <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Typography variant="h5" fontWeight={600} sx={{ mb: 1 }}>
+          {/* Content */}
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            {/* Property Info */}
+            <Typography variant="h5" fontWeight={700} sx={{ mb: 1 }}>
               {property.pg_name}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {property.area}, {property.city}
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              {property.area || ''}{property.area && property.city ? ', ' : ''}{property.city || ''}
             </Typography>
             
-            <Chip
-              label={pgCode}
+            {/* PG Code */}
+            <Box
               sx={{
+                display: 'inline-block',
                 bgcolor: '#f3f4f6',
                 color: '#4f46e5',
-                fontWeight: 600,
-                fontSize: '1rem',
-                p: 2,
+                fontWeight: 700,
+                fontSize: '1.25rem',
+                px: 3,
+                py: 1.5,
                 borderRadius: 2,
-                mb: 3
+                mb: 3,
+                border: '1px solid',
+                borderColor: '#e5e7eb'
               }}
-            />
+            >
+              {pgCode}
+            </Box>
 
             {/* QR Code */}
             <Box
@@ -231,7 +422,9 @@ const QRCodeModal = ({ open, onClose, property }) => {
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                mb: 2
+                mb: 2,
+                border: '2px solid',
+                borderColor: '#e5e7eb'
               }}
             >
               {loading ? (
@@ -244,7 +437,7 @@ const QRCodeModal = ({ open, onClose, property }) => {
                     width: 250,
                     height: 250,
                     borderRadius: 12,
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                   }}
                 />
               ) : null}
@@ -256,53 +449,68 @@ const QRCodeModal = ({ open, onClose, property }) => {
                 bgcolor: '#f3f4f6',
                 p: 2,
                 borderRadius: 2,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                mb: 3
+                mb: 3,
+                border: '1px solid',
+                borderColor: '#e5e7eb'
               }}
             >
               <Typography
                 variant="body2"
                 sx={{
-                  flex: 1,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  color: '#4b5563'
+                  color: '#4b5563',
+                  wordBreak: 'break-all',
+                  fontFamily: 'monospace'
                 }}
               >
-                {scanUrl}
+                https://nepxall.vercel.app/scan/{propertyId}
               </Typography>
-              <IconButton
-                size="small"
-                onClick={handleCopyLink}
-                sx={{ color: copySuccess ? '#10b981' : '#4f46e5' }}
-              >
-                <CopyIcon fontSize="small" />
-              </IconButton>
             </Box>
-            {copySuccess && (
-              <Typography variant="caption" sx={{ color: '#10b981', display: 'block', mb: 2 }}>
-                ✓ Link copied to clipboard
-              </Typography>
-            )}
-
-            <Divider sx={{ my: 2 }} />
 
             {/* Instructions */}
-            <Box sx={{ textAlign: 'left', mb: 3 }}>
-              <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                📋 How to use:
+            <Box
+              sx={{
+                textAlign: 'left',
+                bgcolor: '#f9fafb',
+                p: 2.5,
+                borderRadius: 2,
+                mb: 3,
+                border: '1px solid',
+                borderColor: '#e5e7eb'
+              }}
+            >
+              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <span>📋</span> How to use:
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                1. Print this QR code and display at your property
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                2. Tenants can scan to view property details instantly
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                3. Track scans and bookings in your dashboard
-              </Typography>
+              <Box component="ul" sx={{ m: 0, pl: 2, color: '#4b5563' }}>
+                <Typography component="li" variant="body2" sx={{ mb: 1 }}>
+                  Print this QR code and display at your property
+                </Typography>
+                <Typography component="li" variant="body2" sx={{ mb: 1 }}>
+                  Tenants can scan to view property details instantly
+                </Typography>
+                <Typography component="li" variant="body2">
+                  Track scans and bookings in your dashboard
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Status Badge */}
+            <Box
+              sx={{
+                display: 'inline-block',
+                bgcolor: statusColor,
+                color: 'white',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                px: 4,
+                py: 1,
+                borderRadius: 30,
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                mb: 3
+              }}
+            >
+              {statusText}
             </Box>
 
             {/* Action Buttons */}
@@ -317,6 +525,7 @@ const QRCodeModal = ({ open, onClose, property }) => {
                   sx={{
                     borderColor: '#4f46e5',
                     color: '#4f46e5',
+                    py: 1.5,
                     '&:hover': {
                       borderColor: '#7c3aed',
                       bgcolor: '#f5f3ff'
@@ -329,14 +538,21 @@ const QRCodeModal = ({ open, onClose, property }) => {
               <Grid item xs={6}>
                 <Button
                   fullWidth
-                  variant="contained"
-                  onClick={onClose}
+                  variant="outlined"
+                  startIcon={<PrintIcon />}
+                  onClick={handlePrint}
+                  disabled={loading || !qrDataUrl}
                   sx={{
-                    bgcolor: '#4f46e5',
-                    '&:hover': { bgcolor: '#7c3aed' }
+                    borderColor: '#4f46e5',
+                    color: '#4f46e5',
+                    py: 1.5,
+                    '&:hover': {
+                      borderColor: '#7c3aed',
+                      bgcolor: '#f5f3ff'
+                    }
                   }}
                 >
-                  Done
+                  Print
                 </Button>
               </Grid>
             </Grid>
@@ -347,7 +563,7 @@ const QRCodeModal = ({ open, onClose, property }) => {
   );
 };
 
-/* ---------------- COMPONENT ---------------- */
+/* ---------------- MAIN COMPONENT ---------------- */
 
 const OwnerDashboard = () => {
 
@@ -580,7 +796,7 @@ const OwnerDashboard = () => {
     navigate(`/owner/bookings/${bookingId}`);
   };
 
-  // ⭐ NEW: QR Code Handler - Opens Modal
+  // ⭐ QR Code Handler - Opens Modal
   const handleGenerateQR = (propertyId) => {
     const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
     if (property) {
