@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../firebase";
@@ -15,12 +15,16 @@ const OwnerRooms = () => {
 
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [error, setError] = useState("");
 
   /* ================= LOAD ROOMS ================= */
 
-  const loadRooms = useCallback(async (retry = true) => {
+  const loadRooms = async () => {
 
     try {
+
+      setLoading(true);
+      setError("");
 
       console.log("Fetching rooms for PG:", pgId);
 
@@ -28,26 +32,19 @@ const OwnerRooms = () => {
 
       console.log("Rooms response:", res.data);
 
-      if (Array.isArray(res.data)) {
-        setRooms(res.data);
-      } else if (res.data?.data) {
+      if (res.data?.data) {
         setRooms(res.data.data);
+      } else if (Array.isArray(res.data)) {
+        setRooms(res.data);
       } else {
         setRooms([]);
       }
 
     } catch (err) {
 
-      console.error("Load rooms error:", err);
+      console.error("Rooms load error:", err);
 
-      // Retry once if backend sleeping
-      if (retry) {
-        console.log("Retrying rooms API...");
-        setTimeout(() => loadRooms(false), 3000);
-        return;
-      }
-
-      setRooms([]);
+      setError("Failed to load rooms");
 
     } finally {
 
@@ -55,15 +52,13 @@ const OwnerRooms = () => {
 
     }
 
-  }, [pgId]);
+  };
 
   /* ================= LOAD ROOMS ON PAGE LOAD ================= */
 
   useEffect(() => {
-
-    loadRooms();
-
-  }, [loadRooms]);
+    if (pgId) loadRooms();
+  }, [pgId]);
 
   /* ================= AUTH CHECK ================= */
 
@@ -152,6 +147,13 @@ const OwnerRooms = () => {
 
       <h2>🛏 Room Management</h2>
 
+      {/* ERROR */}
+      {error && (
+        <p style={{ color: "red", marginBottom: 20 }}>
+          {error}
+        </p>
+      )}
+
       {/* ADD ROOM */}
 
       <div style={styles.addRoomBox}>
@@ -207,7 +209,13 @@ const OwnerRooms = () => {
 
                 <p>
                   Status:
-                  <span style={{ color: status.color, fontWeight: "bold", marginLeft: 6 }}>
+                  <span
+                    style={{
+                      color: status.color,
+                      fontWeight: "bold",
+                      marginLeft: 6
+                    }}
+                  >
                     {status.label}
                   </span>
                 </p>
