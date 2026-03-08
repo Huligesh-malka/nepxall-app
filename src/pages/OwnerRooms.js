@@ -24,7 +24,11 @@ const OwnerRooms = () => {
 
       const res = await api.get(`/rooms/${pgId}`);
 
-      setRooms(res.data || []);
+      if (res.data?.success) {
+        setRooms(res.data.data);
+      } else {
+        setRooms(res.data || []);
+      }
 
     } catch (err) {
 
@@ -45,13 +49,9 @@ const OwnerRooms = () => {
     const unsub = onAuthStateChanged(auth, (user) => {
 
       if (!user) {
-
         navigate("/login");
-
       } else {
-
         loadRooms();
-
       }
 
     });
@@ -65,11 +65,8 @@ const OwnerRooms = () => {
   const addRoom = async () => {
 
     if (!roomNo || !totalSeats) {
-
-      alert("Enter room no & seats");
-
+      alert("Enter room number and seats");
       return;
-
     }
 
     try {
@@ -77,11 +74,9 @@ const OwnerRooms = () => {
       setAdding(true);
 
       await api.post("/rooms/add", {
-
         pg_id: pgId,
         room_no: roomNo,
         total_seats: totalSeats
-
       });
 
       setRoomNo("");
@@ -91,7 +86,7 @@ const OwnerRooms = () => {
 
     } catch (err) {
 
-      console.error(err);
+      console.error("Add room error:", err);
 
       alert("Failed to add room");
 
@@ -108,46 +103,57 @@ const OwnerRooms = () => {
   const getStatus = (room) => {
 
     if (room.occupied_seats === 0)
-      return { label: "EMPTY", color: "green" };
+      return { label: "EMPTY", color: "#16a34a" };
 
     if (room.occupied_seats === room.total_seats)
-      return { label: "FULL", color: "red" };
+      return { label: "FULL", color: "#dc2626" };
 
-    return { label: "PARTIAL", color: "orange" };
+    return { label: "PARTIAL", color: "#f59e0b" };
 
   };
 
   /* ================= LOADING ================= */
 
-  if (loading)
-    return <h3 style={{ textAlign: "center" }}>Loading rooms...</h3>;
+  if (loading) {
+    return (
+      <div style={styles.center}>
+        <h3>Loading rooms...</h3>
+      </div>
+    );
+  }
 
   /* ================= UI ================= */
 
   return (
 
-    <div style={{ maxWidth: 900, margin: "auto", padding: 20 }}>
+    <div style={styles.container}>
 
       <h2>🛏 Room Management</h2>
 
       {/* ADD ROOM */}
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+      <div style={styles.addRoomBox}>
 
         <input
-          placeholder="Room No"
+          style={styles.input}
+          placeholder="Room Number"
           value={roomNo}
           onChange={(e) => setRoomNo(e.target.value)}
         />
 
         <input
+          style={styles.input}
           type="number"
           placeholder="Total Seats"
           value={totalSeats}
           onChange={(e) => setTotalSeats(e.target.value)}
         />
 
-        <button onClick={addRoom} disabled={adding}>
+        <button
+          style={styles.addButton}
+          onClick={addRoom}
+          disabled={adding}
+        >
           {adding ? "Adding..." : "➕ Add Room"}
         </button>
 
@@ -161,32 +167,36 @@ const OwnerRooms = () => {
 
       ) : (
 
-        rooms.map((r) => {
+        <div style={styles.roomGrid}>
 
-          const status = getStatus(r);
+          {rooms.map((room) => {
 
-          return (
+            const status = getStatus(room);
 
-            <div key={r.id} style={card}>
+            return (
 
-              <h4>Room {r.room_no}</h4>
+              <div key={room.id} style={styles.card}>
 
-              <p>
-                🪑 Seats: {r.occupied_seats}/{r.total_seats}
-              </p>
+                <h3>Room {room.room_no}</h3>
 
-              <p>
-                Status:{" "}
-                <b style={{ color: status.color }}>
-                  {status.label}
-                </b>
-              </p>
+                <p>
+                  🪑 Seats: {room.occupied_seats}/{room.total_seats}
+                </p>
 
-            </div>
+                <p>
+                  Status:{" "}
+                  <span style={{ color: status.color, fontWeight: "bold" }}>
+                    {status.label}
+                  </span>
+                </p>
 
-          );
+              </div>
 
-        })
+            );
+
+          })}
+
+        </div>
 
       )}
 
@@ -196,12 +206,56 @@ const OwnerRooms = () => {
 
 };
 
-const card = {
-  border: "1px solid #ddd",
-  padding: 12,
-  marginBottom: 12,
-  borderRadius: 8,
-  background: "#fff",
+/* ================= STYLES ================= */
+
+const styles = {
+
+  container: {
+    maxWidth: 900,
+    margin: "auto",
+    padding: 20
+  },
+
+  center: {
+    textAlign: "center",
+    marginTop: 50
+  },
+
+  addRoomBox: {
+    display: "flex",
+    gap: 10,
+    marginBottom: 20
+  },
+
+  input: {
+    padding: 10,
+    border: "1px solid #ccc",
+    borderRadius: 6
+  },
+
+  addButton: {
+    background: "#4f46e5",
+    color: "#fff",
+    border: "none",
+    padding: "10px 18px",
+    borderRadius: 6,
+    cursor: "pointer"
+  },
+
+  roomGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px,1fr))",
+    gap: 15
+  },
+
+  card: {
+    border: "1px solid #ddd",
+    padding: 16,
+    borderRadius: 10,
+    background: "#fff",
+    boxShadow: "0 3px 8px rgba(0,0,0,0.08)"
+  }
+
 };
 
 export default OwnerRooms;
