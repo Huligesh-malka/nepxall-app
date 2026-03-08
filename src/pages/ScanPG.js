@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_CONFIG } from "../config";
+import api from "../api/api"; // Import your API instance for backend calls
 
 const ScanPG = () => {
   const { id } = useParams();
@@ -10,6 +11,9 @@ const ScanPG = () => {
   const [pg, setPg] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentData, setPaymentData] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   useEffect(() => {
     fetchPG();
@@ -35,9 +39,14 @@ const ScanPG = () => {
     setSelectedRoom(room);
   };
 
-  const getSelectedPrice = () => {
-    if (selectedRoom) return selectedRoom.price;
-    return null;
+  const calculateTotalAmount = (room) => {
+    if (!room || !pg) return 0;
+    
+    const rent = Number(room.price || 0);
+    const deposit = Number(pg.price_details?.deposit_amount || 0);
+    const maintenance = Number(pg.price_details?.maintenance_amount || 0);
+    
+    return rent + deposit + maintenance;
   };
 
   const getSelectedDetails = () => {
@@ -45,28 +54,89 @@ const ScanPG = () => {
       return {
         type: "room",
         name: `Room ${selectedRoom.room_number} (${selectedRoom.sharing_type})`,
-        price: selectedRoom.price
+        price: selectedRoom.price,
+        totalAmount: calculateTotalAmount(selectedRoom)
       };
     }
     return null;
   };
 
-  const goToPayment = () => {
+  // Create booking and initiate payment
+  const handlePayNow = async () => {
     const selected = getSelectedDetails();
     if (!selected) {
       alert("Please select a room to proceed");
       return;
     }
-    
-    navigate(`/booking/${id}`, {
-      state: {
-        selectionType: selected.type,
-        selectionName: selected.name,
-        price: selected.price,
-        roomId: selectedRoom?.room_number,
-        sharingType: selectedRoom?.sharing_type
+
+    try {
+      setPaymentLoading(true);
+
+      // First create the booking
+      const bookingPayload = {
+        pgId: id,
+        roomNumber: selectedRoom.room_number,
+        roomType: selectedRoom.sharing_type,
+        rentAmount: selectedRoom.price,
+        securityDeposit: pg.price_details?.deposit_amount || 0,
+        maintenanceAmount: pg.price_details?.maintenance_amount || 0,
+        totalAmount: selected.totalAmount
+      };
+
+      const bookingRes = await api.post("/bookings/create-direct", bookingPayload);
+      
+      if (!bookingRes.data?.success) {
+        throw new Error(bookingRes.data?.message || "Booking creation failed");
       }
-    });
+
+      const bookingId = bookingRes.data.bookingId;
+
+      // Then create payment
+      const paymentRes = await api.post("/payments/create-payment", {
+        bookingId: bookingId,
+        amount: selected.totalAmount,
+      });
+
+      setPaymentData({
+        qr: paymentRes.data.qr,
+        upiLink: paymentRes.data.upiLink,
+        orderId: paymentRes.data.orderId,
+        amount: selected.totalAmount,
+        bookingId: bookingId
+      });
+
+      setShowPaymentModal(true);
+
+    } catch (err) {
+      console.error("Payment error:", err);
+      alert(err.response?.data?.message || "Payment initialization failed");
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  // Submit payment confirmation
+  const submitPayment = async () => {
+    try {
+      setPaymentLoading(true);
+      
+      await api.post("/payments/confirm-payment", {
+        orderId: paymentData.orderId,
+      });
+
+      alert("Payment successful! Your booking is confirmed.");
+      setShowPaymentModal(false);
+      setPaymentData(null);
+      
+      // Navigate to bookings page or success page
+      navigate("/user/bookings");
+
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit payment confirmation");
+    } finally {
+      setPaymentLoading(false);
+    }
   };
 
   const goToFullDetails = () => {
@@ -75,7 +145,7 @@ const ScanPG = () => {
 
   // Format price with commas
   const formatPrice = (price) => {
-    if (!price || price === 0 || price === "0" || price === "") return null;
+    if (!price || price === 0 || price === "0" || price === "") return "0";
     return Number(price).toLocaleString('en-IN');
   };
 
@@ -340,29 +410,24 @@ const ScanPG = () => {
         <span style={styles.viewDetailsArrow}>→</span>
       </button>
 
-      {/* Selected Room Summary (if any) */}
-      {selectedDetails && (
-        <div style={styles.selectedSummary}>
-          <div style={styles.selectedSummaryLeft}>
-            <span style={styles.selectedSummaryLabel}>Selected:</span>
-            <span style={styles.selectedSummaryName}>{selectedDetails.name}</span>
-          </div>
-          <span style={styles.selectedSummaryPrice}>₹{formatPrice(selectedDetails.price)}/month</span>
-        </div>
-      )}
-
-      {/* Footer Actions */}
+      {/* Footer Actions - Direct Pay Button */}
       <div style={styles.footer}>
         <button
-          onClick={goToPayment}
+          onClick={handlePayNow}
           style={{
-            ...styles.bookBtn,
-            opacity: selectedDetails ? 1 : 0.5,
-            cursor: selectedDetails ? 'pointer' : 'not-allowed'
+            ...styles.payBtn,
+            opacity: selectedRoom ? 1 : 0.5,
+            cursor: selectedRoom ? 'pointer' : 'not-allowed'
           }}
-          disabled={!selectedDetails}
+          disabled={!selectedRoom || paymentLoading}
         >
-          {selectedDetails ? `Book Now • ₹${formatPrice(selectedDetails.price)}/month` : 'Select a room to continue'}
+          {paymentLoading ? (
+            <span style={styles.loadingText}>Processing...</span>
+          ) : selectedRoom ? (
+            `Pay ₹${formatPrice(calculateTotalAmount(selectedRoom))}`
+          ) : (
+            'Select a room to continue'
+          )}
         </button>
 
         {pg.contact?.phone && (
@@ -373,6 +438,45 @@ const ScanPG = () => {
           </a>
         )}
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && paymentData && (
+        <div style={styles.paymentModal}>
+          <h3 style={styles.paymentModalTitle}>Scan & Pay</h3>
+
+          <p style={styles.paymentAmount}>Amount: ₹{formatPrice(paymentData.amount)}</p>
+
+          <img src={paymentData.qr} width="220" alt="UPI QR" style={styles.qrCode} />
+
+          <br />
+          <br />
+
+          <a href={paymentData.upiLink} style={styles.upiLink}>
+            Pay via UPI
+          </a>
+
+          <br />
+          <br />
+
+          <button 
+            style={styles.paidButton} 
+            onClick={submitPayment}
+            disabled={paymentLoading}
+          >
+            {paymentLoading ? "Processing..." : "✅ I have paid"}
+          </button>
+
+          <br />
+
+          <button 
+            style={styles.closeButton} 
+            onClick={() => setShowPaymentModal(false)}
+            disabled={paymentLoading}
+          >
+            Close
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -397,6 +501,10 @@ const styles = {
     fontSize: "18px",
     color: "#4f46e5",
     fontWeight: "500"
+  },
+  loadingText: {
+    fontSize: "16px",
+    color: "#ffffff"
   },
   notFound: {
     textAlign: "center",
@@ -626,35 +734,6 @@ const styles = {
     fontSize: "20px",
     transition: "transform 0.2s ease"
   },
-  selectedSummary: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#f3f4f6",
-    padding: "16px 20px",
-    borderRadius: "16px",
-    marginBottom: "16px",
-    border: "1px solid #e5e7eb"
-  },
-  selectedSummaryLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px"
-  },
-  selectedSummaryLabel: {
-    fontSize: "14px",
-    color: "#6b7280"
-  },
-  selectedSummaryName: {
-    fontSize: "15px",
-    fontWeight: "600",
-    color: "#111827"
-  },
-  selectedSummaryPrice: {
-    fontSize: "16px",
-    fontWeight: "700",
-    color: "#4f46e5"
-  },
   footer: {
     display: "flex",
     flexDirection: "column",
@@ -670,10 +749,10 @@ const styles = {
     borderTop: "1px solid #e5e7eb",
     boxShadow: "0 -4px 12px rgba(0, 0, 0, 0.05)"
   },
-  bookBtn: {
+  payBtn: {
     width: "100%",
     padding: "18px",
-    backgroundColor: "#4f46e5",
+    backgroundColor: "#e11d48",
     color: "#ffffff",
     border: "none",
     borderRadius: "16px",
@@ -693,6 +772,72 @@ const styles = {
     fontSize: "16px",
     cursor: "pointer",
     transition: "all 0.2s ease"
+  },
+  paymentModal: {
+    position: "fixed",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    background: "#fff",
+    padding: "30px",
+    borderRadius: "20px",
+    boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
+    textAlign: "center",
+    width: "90%",
+    maxWidth: "400px",
+    zIndex: 1000
+  },
+  paymentModalTitle: {
+    fontSize: "24px",
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: "16px"
+  },
+  paymentAmount: {
+    fontSize: "18px",
+    fontWeight: "600",
+    color: "#4f46e5",
+    marginBottom: "20px"
+  },
+  qrCode: {
+    border: "2px solid #e5e7eb",
+    padding: "10px",
+    borderRadius: "12px",
+    marginBottom: "10px"
+  },
+  upiLink: {
+    padding: "12px 24px",
+    background: "#2563eb",
+    color: "#fff",
+    textDecoration: "none",
+    borderRadius: "12px",
+    fontWeight: "600",
+    display: "inline-block",
+    width: "80%"
+  },
+  paidButton: {
+    padding: "12px 24px",
+    background: "#16a34a",
+    color: "#fff",
+    border: "none",
+    borderRadius: "12px",
+    fontWeight: "600",
+    fontSize: "16px",
+    cursor: "pointer",
+    width: "80%",
+    marginTop: "10px"
+  },
+  closeButton: {
+    padding: "12px 24px",
+    background: "#6b7280",
+    color: "#fff",
+    border: "none",
+    borderRadius: "12px",
+    fontWeight: "600",
+    fontSize: "16px",
+    cursor: "pointer",
+    width: "80%",
+    marginTop: "10px"
   }
 };
 
