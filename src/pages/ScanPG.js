@@ -271,11 +271,6 @@ const ScanPG = () => {
                     )}
                   </div>
                   
-                  <div style={styles.roomPrice}>
-                    ₹{formatPrice(room.price)}
-                    <span style={styles.roomPricePeriod}>/month</span>
-                  </div>
-                  
                   <div style={styles.roomFooter}>
                     <span style={styles.roomNumber}>Room {room.room_number}</span>
                     {isSelected && (
@@ -522,19 +517,6 @@ const styles = {
     backgroundColor: "#fee2e2",
     padding: "4px 10px",
     borderRadius: "20px"
-  },
-  roomPrice: {
-    fontSize: "28px",
-    fontWeight: "700",
-    color: "#4f46e5",
-    marginBottom: "12px",
-    lineHeight: "1.2"
-  },
-  roomPricePeriod: {
-    fontSize: "16px",
-    fontWeight: "400",
-    color: "#9ca3af",
-    marginLeft: "4px"
   },
   roomFooter: {
     display: "flex",
