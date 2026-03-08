@@ -9,11 +9,8 @@ const ScanPG = () => {
 
   const [pg, setPg] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
-  const [selectedBHK, setSelectedBHK] = useState(null);
-  const [selectedSharing, setSelectedSharing] = useState(null);
-  const [activeTab, setActiveTab] = useState("rooms"); // 'rooms', 'pricing', 'amenities', 'rules'
   const [loading, setLoading] = useState(true);
-  const [showAllAmenities, setShowAllAmenities] = useState(false);
+  const [showFullDetails, setShowFullDetails] = useState(false);
 
   useEffect(() => {
     fetchPG();
@@ -28,7 +25,7 @@ const ScanPG = () => {
 
       if (res.data.success) {
         setPg(res.data.data);
-        console.log("PG Data:", res.data.data); // For debugging
+        console.log("PG Data:", res.data.data);
       }
     } catch (err) {
       console.error("Fetch error:", err);
@@ -39,26 +36,10 @@ const ScanPG = () => {
 
   const handleRoomSelection = (room) => {
     setSelectedRoom(room);
-    setSelectedBHK(null);
-    setSelectedSharing(null);
-  };
-
-  const handleBHKSelection = (bhkType, price) => {
-    setSelectedBHK({ type: bhkType, price });
-    setSelectedRoom(null);
-    setSelectedSharing(null);
-  };
-
-  const handleSharingSelection = (type, price) => {
-    setSelectedSharing({ type, price });
-    setSelectedRoom(null);
-    setSelectedBHK(null);
   };
 
   const getSelectedPrice = () => {
     if (selectedRoom) return selectedRoom.price;
-    if (selectedBHK) return selectedBHK.price;
-    if (selectedSharing) return selectedSharing.price;
     return null;
   };
 
@@ -70,27 +51,13 @@ const ScanPG = () => {
         price: selectedRoom.price
       };
     }
-    if (selectedBHK) {
-      return {
-        type: "bhk",
-        name: `${selectedBHK.type} BHK`,
-        price: selectedBHK.price
-      };
-    }
-    if (selectedSharing) {
-      return {
-        type: "sharing",
-        name: selectedSharing.type.replace('_', ' ').toUpperCase(),
-        price: selectedSharing.price
-      };
-    }
     return null;
   };
 
   const goToPayment = () => {
     const selected = getSelectedDetails();
     if (!selected) {
-      alert("Please select a room/configuration to proceed");
+      alert("Please select a room to proceed");
       return;
     }
     
@@ -105,417 +72,94 @@ const ScanPG = () => {
     });
   };
 
-  const renderPriceSection = () => {
-    if (!pg) return null;
-
-    const { price_details, category } = pg;
-
-    return (
-      <div style={styles.priceSection}>
-        {/* Base Price */}
-        {price_details?.rent_amount && (
-          <div style={styles.basePriceCard}>
-            <span style={styles.basePriceLabel}>Starting from</span>
-            <span style={styles.basePriceValue}>₹{price_details.rent_amount}/month</span>
-          </div>
-        )}
-
-        {/* Sharing Prices (PG) */}
-        {price_details?.sharing && Object.values(price_details.sharing).some(val => val) && (
-          <div style={styles.priceCategory}>
-            <h4 style={styles.categoryTitle}>🏠 Sharing Options</h4>
-            <div style={styles.priceGrid}>
-              {price_details.sharing.single_sharing && (
-                <div 
-                  style={{
-                    ...styles.priceCard,
-                    borderColor: selectedSharing?.type === 'single_sharing' ? '#4f46e5' : '#e5e7eb',
-                    backgroundColor: selectedSharing?.type === 'single_sharing' ? '#f5f3ff' : '#fff'
-                  }}
-                  onClick={() => handleSharingSelection('single_sharing', price_details.sharing.single_sharing)}
-                >
-                  <span style={styles.priceLabel}>Single Sharing</span>
-                  <span style={styles.priceAmount}>₹{price_details.sharing.single_sharing}</span>
-                </div>
-              )}
-              {price_details.sharing.double_sharing && (
-                <div 
-                  style={{
-                    ...styles.priceCard,
-                    borderColor: selectedSharing?.type === 'double_sharing' ? '#4f46e5' : '#e5e7eb',
-                    backgroundColor: selectedSharing?.type === 'double_sharing' ? '#f5f3ff' : '#fff'
-                  }}
-                  onClick={() => handleSharingSelection('double_sharing', price_details.sharing.double_sharing)}
-                >
-                  <span style={styles.priceLabel}>Double Sharing</span>
-                  <span style={styles.priceAmount}>₹{price_details.sharing.double_sharing}</span>
-                </div>
-              )}
-              {price_details.sharing.triple_sharing && (
-                <div 
-                  style={{
-                    ...styles.priceCard,
-                    borderColor: selectedSharing?.type === 'triple_sharing' ? '#4f46e5' : '#e5e7eb',
-                    backgroundColor: selectedSharing?.type === 'triple_sharing' ? '#f5f3ff' : '#fff'
-                  }}
-                  onClick={() => handleSharingSelection('triple_sharing', price_details.sharing.triple_sharing)}
-                >
-                  <span style={styles.priceLabel}>Triple Sharing</span>
-                  <span style={styles.priceAmount}>₹{price_details.sharing.triple_sharing}</span>
-                </div>
-              )}
-              {price_details.sharing.four_sharing && (
-                <div 
-                  style={{
-                    ...styles.priceCard,
-                    borderColor: selectedSharing?.type === 'four_sharing' ? '#4f46e5' : '#e5e7eb',
-                    backgroundColor: selectedSharing?.type === 'four_sharing' ? '#f5f3ff' : '#fff'
-                  }}
-                  onClick={() => handleSharingSelection('four_sharing', price_details.sharing.four_sharing)}
-                >
-                  <span style={styles.priceLabel}>Four Sharing</span>
-                  <span style={styles.priceAmount}>₹{price_details.sharing.four_sharing}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* BHK Prices (To-let) */}
-        {price_details?.to_let?.prices && Object.values(price_details.to_let.prices).some(val => val) && (
-          <div style={styles.priceCategory}>
-            <h4 style={styles.categoryTitle}>🏢 BHK Options</h4>
-            <div style={styles.priceGrid}>
-              {price_details.to_let.prices['1bhk'] && (
-                <div 
-                  style={{
-                    ...styles.priceCard,
-                    borderColor: selectedBHK?.type === '1bhk' ? '#4f46e5' : '#e5e7eb',
-                    backgroundColor: selectedBHK?.type === '1bhk' ? '#f5f3ff' : '#fff'
-                  }}
-                  onClick={() => handleBHKSelection('1bhk', price_details.to_let.prices['1bhk'])}
-                >
-                  <span style={styles.priceLabel}>1 BHK</span>
-                  <span style={styles.priceAmount}>₹{price_details.to_let.prices['1bhk']}</span>
-                  <small style={styles.configText}>
-                    {price_details.to_let.configurations?.['1bhk']?.bedrooms} bed, {price_details.to_let.configurations?.['1bhk']?.bathrooms} bath
-                  </small>
-                </div>
-              )}
-              {price_details.to_let.prices['2bhk'] && (
-                <div 
-                  style={{
-                    ...styles.priceCard,
-                    borderColor: selectedBHK?.type === '2bhk' ? '#4f46e5' : '#e5e7eb',
-                    backgroundColor: selectedBHK?.type === '2bhk' ? '#f5f3ff' : '#fff'
-                  }}
-                  onClick={() => handleBHKSelection('2bhk', price_details.to_let.prices['2bhk'])}
-                >
-                  <span style={styles.priceLabel}>2 BHK</span>
-                  <span style={styles.priceAmount}>₹{price_details.to_let.prices['2bhk']}</span>
-                  <small style={styles.configText}>
-                    {price_details.to_let.configurations?.['2bhk']?.bedrooms} bed, {price_details.to_let.configurations?.['2bhk']?.bathrooms} bath
-                  </small>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Co-living Prices */}
-        {price_details?.co_living && Object.values(price_details.co_living).some(val => val) && (
-          <div style={styles.priceCategory}>
-            <h4 style={styles.categoryTitle}>👥 Co-living Options</h4>
-            <div style={styles.priceGrid}>
-              {price_details.co_living.single_room && (
-                <div 
-                  style={{
-                    ...styles.priceCard,
-                    borderColor: selectedSharing?.type === 'co_living_single' ? '#4f46e5' : '#e5e7eb',
-                    backgroundColor: selectedSharing?.type === 'co_living_single' ? '#f5f3ff' : '#fff'
-                  }}
-                  onClick={() => handleSharingSelection('co_living_single', price_details.co_living.single_room)}
-                >
-                  <span style={styles.priceLabel}>Single Room</span>
-                  <span style={styles.priceAmount}>₹{price_details.co_living.single_room}</span>
-                </div>
-              )}
-              {price_details.co_living.double_room && (
-                <div 
-                  style={{
-                    ...styles.priceCard,
-                    borderColor: selectedSharing?.type === 'co_living_double' ? '#4f46e5' : '#e5e7eb',
-                    backgroundColor: selectedSharing?.type === 'co_living_double' ? '#f5f3ff' : '#fff'
-                  }}
-                  onClick={() => handleSharingSelection('co_living_double', price_details.co_living.double_room)}
-                >
-                  <span style={styles.priceLabel}>Double Room</span>
-                  <span style={styles.priceAmount}>₹{price_details.co_living.double_room}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Additional Charges */}
-        {(price_details?.deposit_amount || price_details?.maintenance_amount || price_details?.brokerage_amount) && (
-          <div style={styles.chargesSection}>
-            <h4 style={styles.categoryTitle}>💰 Additional Charges</h4>
-            <div style={styles.chargesGrid}>
-              {price_details.deposit_amount > 0 && (
-                <div style={styles.chargeItem}>
-                  <span>Security Deposit</span>
-                  <span style={styles.chargeValue}>₹{price_details.deposit_amount}</span>
-                </div>
-              )}
-              {price_details.maintenance_amount > 0 && (
-                <div style={styles.chargeItem}>
-                  <span>Maintenance</span>
-                  <span style={styles.chargeValue}>₹{price_details.maintenance_amount}/month</span>
-                </div>
-              )}
-              {price_details.brokerage_amount > 0 && (
-                <div style={styles.chargeItem}>
-                  <span>Brokerage</span>
-                  <span style={styles.chargeValue}>₹{price_details.brokerage_amount}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    );
+  const goToFullDetails = () => {
+    navigate(`/pg/${id}`);
   };
 
-  const renderAmenities = () => {
-    if (!pg?.amenities) return null;
+  // Format price with commas
+  const formatPrice = (price) => {
+    if (!price) return "0";
+    return Number(price).toLocaleString('en-IN');
+  };
 
-    const { amenities } = pg;
+  // Get all available price options from price_details
+  const getAllPriceOptions = () => {
+    if (!pg?.price_details) return [];
+    
+    const options = [];
+    const { price_details } = pg;
 
-    const amenityCategories = [
-      {
-        title: "Basic Amenities",
-        items: [
-          { key: "wifi", label: "WiFi", emoji: "📶" },
-          { key: "parking", label: "Parking", emoji: "🅿️" },
-          { key: "ac", label: "AC", emoji: "❄️" },
-          { key: "power_backup", label: "Power Backup", emoji: "⚡" },
-          { key: "cctv", label: "CCTV", emoji: "📹" },
-          { key: "security_guard", label: "Security Guard", emoji: "🛡️" },
-          { key: "housekeeping", label: "Housekeeping", emoji: "🧹" },
-          { key: "lift", label: "Lift", emoji: "🛗" }
-        ]
-      },
-      {
-        title: "Appliances",
-        items: [
-          { key: "geyser", label: "Geyser", emoji: "🔥" },
-          { key: "washing_machine", label: "Washing Machine", emoji: "🧺" },
-          { key: "refrigerator", label: "Refrigerator", emoji: "🧊" },
-          { key: "microwave", label: "Microwave", emoji: "🔥" },
-          { key: "tv", label: "TV", emoji: "📺" },
-          { key: "water_purifier", label: "Water Purifier", emoji: "💧" }
-        ]
-      },
-      {
-        title: "Room Amenities",
-        items: [
-          { key: "attached_bathroom", label: "Attached Bathroom", emoji: "🚿" },
-          { key: "balcony", label: "Balcony", emoji: "🏞️" },
-          { key: "cupboard", label: "Cupboard", emoji: "🗄️" },
-          { key: "table_chair", label: "Table & Chair", emoji: "🪑" },
-          { key: "bed_with_mattress", label: "Bed with Mattress", emoji: "🛏️" }
-        ]
-      },
-      {
-        title: "Common Areas",
-        items: [
-          { key: "gym", label: "Gym", emoji: "💪" },
-          { key: "study_room", label: "Study Room", emoji: "📚" },
-          { key: "common_tv_lounge", label: "TV Lounge", emoji: "📺" },
-          { key: "balcony_open_space", label: "Open Space", emoji: "🌳" }
-        ]
+    // Sharing options
+    if (price_details.sharing) {
+      if (price_details.sharing.single_sharing) {
+        options.push({
+          type: "Single Sharing",
+          price: price_details.sharing.single_sharing,
+          category: "sharing"
+        });
       }
-    ];
+      if (price_details.sharing.double_sharing) {
+        options.push({
+          type: "Double Sharing",
+          price: price_details.sharing.double_sharing,
+          category: "sharing"
+        });
+      }
+      if (price_details.sharing.triple_sharing) {
+        options.push({
+          type: "Triple Sharing",
+          price: price_details.sharing.triple_sharing,
+          category: "sharing"
+        });
+      }
+      if (price_details.sharing.four_sharing) {
+        options.push({
+          type: "Four Sharing",
+          price: price_details.sharing.four_sharing,
+          category: "sharing"
+        });
+      }
+    }
 
-    return (
-      <div style={styles.amenitiesSection}>
-        {amenityCategories.map((category, idx) => (
-          <div key={idx} style={styles.amenityCategory}>
-            <h4 style={styles.categoryTitle}>{category.title}</h4>
-            <div style={styles.amenityGrid}>
-              {category.items.map((item, i) => {
-                const isAvailable = amenities.basic?.[item.key] || 
-                                   amenities.appliances?.[item.key] || 
-                                   amenities.room_amenities?.[item.key] || 
-                                   amenities.common_areas?.[item.key];
-                if (isAvailable) {
-                  return (
-                    <div key={i} style={styles.amenityItem}>
-                      <span style={styles.amenityEmoji}>{item.emoji}</span>
-                      <span style={styles.amenityLabel}>{item.label}</span>
-                    </div>
-                  );
-                }
-                return null;
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
+    // Co-living options
+    if (price_details.co_living) {
+      if (price_details.co_living.single_room) {
+        options.push({
+          type: "Co-Living Single",
+          price: price_details.co_living.single_room,
+          category: "coliving"
+        });
+      }
+      if (price_details.co_living.double_room) {
+        options.push({
+          type: "Co-Living Double",
+          price: price_details.co_living.double_room,
+          category: "coliving"
+        });
+      }
+    }
 
-  const renderFoodDetails = () => {
-    if (!pg?.food_details || !pg.food_details.food_available) return null;
+    // BHK options
+    if (price_details.to_let?.prices) {
+      if (price_details.to_let.prices['1bhk']) {
+        options.push({
+          type: "1 BHK",
+          price: price_details.to_let.prices['1bhk'],
+          category: "bhk",
+          config: price_details.to_let.configurations?.['1bhk']
+        });
+      }
+      if (price_details.to_let.prices['2bhk']) {
+        options.push({
+          type: "2 BHK",
+          price: price_details.to_let.prices['2bhk'],
+          category: "bhk",
+          config: price_details.to_let.configurations?.['2bhk']
+        });
+      }
+    }
 
-    return (
-      <div style={styles.foodSection}>
-        <h4 style={styles.categoryTitle}>🍽️ Food Details</h4>
-        <div style={styles.foodCard}>
-          <div style={styles.foodItem}>
-            <span>Type:</span>
-            <span style={styles.foodValue}>{pg.food_details.food_type}</span>
-          </div>
-          {pg.food_details.meals_per_day && (
-            <div style={styles.foodItem}>
-              <span>Meals:</span>
-              <span style={styles.foodValue}>{pg.food_details.meals_per_day}</span>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const renderRules = () => {
-    if (!pg?.rules) return null;
-
-    const { rules } = pg;
-
-    return (
-      <div style={styles.rulesSection}>
-        <h4 style={styles.categoryTitle}>📋 House Rules</h4>
-        
-        {/* Visitor Rules */}
-        <div style={styles.ruleCategory}>
-          <h5 style={styles.ruleSubtitle}>👥 Visitors</h5>
-          <div style={styles.ruleGrid}>
-            <span style={styles.ruleItem}>
-              {rules.visitors?.allowed ? "✅ Visitors Allowed" : "❌ No Visitors"}
-            </span>
-            {rules.visitors?.time_restricted && (
-              <span style={styles.ruleItem}>
-                ⏰ Until {rules.visitors.allowed_till}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Entry Rules */}
-        <div style={styles.ruleCategory}>
-          <h5 style={styles.ruleSubtitle}>🚪 Entry</h5>
-          <div style={styles.ruleGrid}>
-            <span style={styles.ruleItem}>
-              {rules.entry?.late_night_allowed ? "✅ Late Night Entry" : "❌ No Late Entry"}
-            </span>
-            {rules.entry?.curfew_time && (
-              <span style={styles.ruleItem}>
-                ⏰ Curfew: {rules.entry.curfew_time}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Restrictions */}
-        <div style={styles.ruleCategory}>
-          <h5 style={styles.ruleSubtitle}>🚫 Restrictions</h5>
-          <div style={styles.ruleGrid}>
-            {rules.restrictions?.couple_allowed && (
-              <span style={styles.ruleItem}>👫 Couples Allowed</span>
-            )}
-            {rules.restrictions?.smoking_allowed && (
-              <span style={styles.ruleItem}>🚬 Smoking Allowed</span>
-            )}
-            {rules.restrictions?.drinking_allowed && (
-              <span style={styles.ruleItem}>🍺 Drinking Allowed</span>
-            )}
-            {rules.restrictions?.pets_allowed && (
-              <span style={styles.ruleItem}>🐕 Pets Allowed</span>
-            )}
-          </div>
-        </div>
-
-        {/* Tenancy Terms */}
-        <div style={styles.ruleCategory}>
-          <h5 style={styles.ruleSubtitle}>📄 Tenancy Terms</h5>
-          <div style={styles.ruleGrid}>
-            <span style={styles.ruleItem}>
-              📅 Notice Period: {rules.tenancy?.notice_period} month(s)
-            </span>
-            <span style={styles.ruleItem}>
-              🔒 Min Stay: {rules.tenancy?.min_stay_months} month(s)
-            </span>
-          </div>
-        </div>
-
-        {/* Occupant Type */}
-        <div style={styles.ruleCategory}>
-          <h5 style={styles.ruleSubtitle}>👤 Suitable For</h5>
-          <div style={styles.ruleGrid}>
-            {rules.occupant_type?.students_only && (
-              <span style={styles.ruleItem}>🎓 Students Only</span>
-            )}
-            {rules.occupant_type?.boys_only && (
-              <span style={styles.ruleItem}>👨 Boys Only</span>
-            )}
-            {rules.occupant_type?.girls_only && (
-              <span style={styles.ruleItem}>👩 Girls Only</span>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderNearbyPlaces = () => {
-    if (!pg?.nearby_places) return null;
-
-    const { nearby_places } = pg;
-
-    const nearbyCategories = [
-      { title: "🚆 Transport", items: nearby_places.transport },
-      { title: "🏥 Healthcare", items: nearby_places.healthcare },
-      { title: "🛒 Shopping", items: nearby_places.shopping },
-      { title: "🏫 Education", items: nearby_places.education },
-      { title: "💼 Employment", items: nearby_places.employment }
-    ];
-
-    return (
-      <div style={styles.nearbySection}>
-        <h4 style={styles.categoryTitle}>📍 Nearby Places</h4>
-        {nearbyCategories.map((category, idx) => {
-          const hasItems = Object.values(category.items || {}).some(val => val);
-          if (!hasItems) return null;
-
-          return (
-            <div key={idx} style={styles.nearbyCategory}>
-              <h5 style={styles.nearbySubtitle}>{category.title}</h5>
-              <div style={styles.nearbyGrid}>
-                {Object.entries(category.items || {}).map(([key, value]) => {
-                  if (!value) return null;
-                  return (
-                    <div key={key} style={styles.nearbyItem}>
-                      <span>{value}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
+    return options;
   };
 
   if (loading) {
@@ -544,164 +188,173 @@ const ScanPG = () => {
   }
 
   const selectedDetails = getSelectedDetails();
+  const priceOptions = getAllPriceOptions();
+  const minPrice = priceOptions.length > 0 
+    ? Math.min(...priceOptions.map(o => Number(o.price))) 
+    : pg.price_details?.rent_amount || 0;
 
   return (
     <div style={styles.container}>
-      {/* Header */}
+      {/* Header with PG Name */}
       <div style={styles.header}>
         <h1 style={styles.title}>{pg.name}</h1>
-        <div style={styles.rating}>
-          <span style={styles.star}>⭐</span>
-          <span>{pg.rating || "New"}</span>
-        </div>
-      </div>
-
-      {/* Address */}
-      <div style={styles.addressContainer}>
-        <span style={styles.locationIcon}>📍</span>
-        <p style={styles.address}>{pg.location?.address}</p>
-      </div>
-      <p style={styles.area}>{pg.location?.area}, {pg.location?.city}</p>
-
-      {/* Quick Info */}
-      <div style={styles.quickInfo}>
-        <div style={styles.infoChip}>
-          <span>🏷️ {pg.category}</span>
-        </div>
-        <div style={styles.infoChip}>
-          <span>👥 {pg.type}</span>
-        </div>
-        {pg.available_rooms > 0 && (
-          <div style={styles.infoChip}>
-            <span>🛏️ {pg.available_rooms} rooms left</span>
+        {pg.rating && (
+          <div style={styles.rating}>
+            <span style={styles.star}>⭐</span>
+            <span>{pg.rating}</span>
           </div>
         )}
       </div>
 
-      {/* Tabs */}
-      <div style={styles.tabs}>
-        <button
-          style={{
-            ...styles.tab,
-            borderBottomColor: activeTab === 'rooms' ? '#4f46e5' : 'transparent',
-            color: activeTab === 'rooms' ? '#4f46e5' : '#6b7280'
-          }}
-          onClick={() => setActiveTab('rooms')}
-        >
-          Rooms
-        </button>
-        <button
-          style={{
-            ...styles.tab,
-            borderBottomColor: activeTab === 'pricing' ? '#4f46e5' : 'transparent',
-            color: activeTab === 'pricing' ? '#4f46e5' : '#6b7280'
-          }}
-          onClick={() => setActiveTab('pricing')}
-        >
-          Pricing
-        </button>
-        <button
-          style={{
-            ...styles.tab,
-            borderBottomColor: activeTab === 'amenities' ? '#4f46e5' : 'transparent',
-            color: activeTab === 'amenities' ? '#4f46e5' : '#6b7280'
-          }}
-          onClick={() => setActiveTab('amenities')}
-        >
-          Amenities
-        </button>
-        <button
-          style={{
-            ...styles.tab,
-            borderBottomColor: activeTab === 'rules' ? '#4f46e5' : 'transparent',
-            color: activeTab === 'rules' ? '#4f46e5' : '#6b7280'
-          }}
-          onClick={() => setActiveTab('rules')}
-        >
-          Rules
-        </button>
+      {/* Location - Simple and Clear */}
+      <div style={styles.locationContainer}>
+        <span style={styles.locationIcon}>📍</span>
+        <p style={styles.location}>
+          {pg.location?.area}, {pg.location?.city}
+        </p>
       </div>
 
-      {/* Tab Content */}
-      <div style={styles.tabContent}>
-        {activeTab === 'rooms' && (
-          <>
-            {/* Availability Summary */}
-            {pg.availability_summary && Object.keys(pg.availability_summary).length > 0 && (
-              <div style={styles.summaryBox}>
-                <p style={styles.summaryTitle}>📊 Quick Availability</p>
-                <div style={styles.badgeContainer}>
-                  {Object.entries(pg.availability_summary).map(([type, data]) => (
-                    <span key={type} style={styles.badge}>
-                      {type}: {data.available_beds || data} beds left
-                    </span>
-                  ))}
+      {/* Price Summary Card */}
+      <div style={styles.priceSummaryCard}>
+        <div style={styles.priceMain}>
+          <span style={styles.priceLabel}>Starting from</span>
+          <span style={styles.priceValue}>₹{formatPrice(minPrice)}</span>
+          <span style={styles.pricePeriod}>/month</span>
+        </div>
+        
+        <div style={styles.priceMeta}>
+          {pg.available_rooms > 0 && (
+            <span style={styles.availabilityChip}>
+              🟢 {pg.available_rooms} room{pg.available_rooms > 1 ? 's' : ''} available
+            </span>
+          )}
+          {pg.price_details?.deposit_amount > 0 && (
+            <span style={styles.depositChip}>
+              🔒 Deposit: ₹{formatPrice(pg.price_details.deposit_amount)}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Quick Property Info */}
+      <div style={styles.quickInfo}>
+        <div style={styles.infoChip}>
+          <span>🏷️ {pg.category || "PG"}</span>
+        </div>
+        <div style={styles.infoChip}>
+          <span>👥 {pg.type || "All"}</span>
+        </div>
+        {pg.available_rooms > 0 && (
+          <div style={styles.infoChip}>
+            <span>🛏️ {pg.available_rooms} left</span>
+          </div>
+        )}
+      </div>
+
+      {/* Room Selection Section */}
+      <div style={styles.roomSection}>
+        <h3 style={styles.sectionTitle}>Available Rooms</h3>
+        
+        {pg.available_room_details && pg.available_room_details.length > 0 ? (
+          <div style={styles.roomList}>
+            {pg.available_room_details.map((room, index) => (
+              <div
+                key={index}
+                style={{
+                  ...styles.roomItem,
+                  borderColor: selectedRoom?.room_number === room.room_number ? "#4f46e5" : "#e5e7eb",
+                  backgroundColor: selectedRoom?.room_number === room.room_number ? "#f5f3ff" : "#fff"
+                }}
+                onClick={() => handleRoomSelection(room)}
+              >
+                <input
+                  type="radio"
+                  name="room"
+                  checked={selectedRoom?.room_number === room.room_number}
+                  onChange={() => handleRoomSelection(room)}
+                  style={styles.radio}
+                />
+                <div style={styles.roomInfo}>
+                  <span style={styles.roomNo}>Room {room.room_number}</span>
+                  <span style={styles.roomType}>{room.sharing_type}</span>
+                  <span style={styles.roomBeds}>{room.available_beds} bed{room.available_beds > 1 ? 's' : ''} left</span>
+                </div>
+                <div style={styles.roomPriceInfo}>
+                  <span style={styles.roomPrice}>₹{formatPrice(room.price)}</span>
+                  <span style={styles.roomPeriod}>/month</span>
                 </div>
               </div>
-            )}
-
-            <h3 style={styles.sectionTitle}>Select a Room</h3>
-            
-            {pg.available_room_details && pg.available_room_details.length > 0 ? (
-              <div style={styles.roomList}>
-                {pg.available_room_details.map((room, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      ...styles.roomItem,
-                      borderColor: selectedRoom?.room_number === room.room_number ? "#4f46e5" : "#e5e7eb",
-                      backgroundColor: selectedRoom?.room_number === room.room_number ? "#f5f3ff" : "#fff"
-                    }}
-                    onClick={() => handleRoomSelection(room)}
-                  >
-                    <input
-                      type="radio"
-                      name="room"
-                      checked={selectedRoom?.room_number === room.room_number}
-                      onChange={() => handleRoomSelection(room)}
-                      style={styles.radio}
-                    />
-                    <div style={styles.roomInfo}>
-                      <span style={styles.roomNo}>Room {room.room_number}</span>
-                      <span style={styles.roomType}>{room.sharing_type}</span>
-                    </div>
-                    <div style={styles.priceInfo}>
-                      <span style={styles.price}>₹{room.price}</span>
-                      <span style={styles.beds}>{room.available_beds} beds left</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={styles.noRooms}>
-                <p style={styles.noRoomsText}>No rooms currently available</p>
-              </div>
-            )}
-          </>
+            ))}
+          </div>
+        ) : (
+          <div style={styles.noRooms}>
+            <p style={styles.noRoomsText}>No rooms currently available</p>
+          </div>
         )}
-
-        {activeTab === 'pricing' && (
-          <>
-            {renderPriceSection()}
-            {renderFoodDetails()}
-          </>
-        )}
-
-        {activeTab === 'amenities' && (
-          <>
-            {renderAmenities()}
-            {renderNearbyPlaces()}
-          </>
-        )}
-
-        {activeTab === 'rules' && renderRules()}
       </div>
+
+      {/* All Price Options (if no specific rooms) */}
+      {(!pg.available_room_details || pg.available_room_details.length === 0) && priceOptions.length > 0 && (
+        <div style={styles.priceOptionsSection}>
+          <h3 style={styles.sectionTitle}>Available Price Options</h3>
+          <div style={styles.priceOptionsGrid}>
+            {priceOptions.map((option, index) => (
+              <div key={index} style={styles.priceOptionCard}>
+                <div style={styles.priceOptionType}>{option.type}</div>
+                <div style={styles.priceOptionValue}>₹{formatPrice(option.price)}/month</div>
+                {option.config && (
+                  <div style={styles.priceOptionConfig}>
+                    {option.config.bedrooms} bed • {option.config.bathrooms} bath
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Additional Charges */}
+      {pg.price_details && (
+        <div style={styles.chargesSection}>
+          {(pg.price_details.deposit_amount > 0 || pg.price_details.maintenance_amount > 0 || pg.price_details.brokerage_amount > 0) && (
+            <>
+              <h4 style={styles.chargesTitle}>Additional Charges</h4>
+              <div style={styles.chargesList}>
+                {pg.price_details.deposit_amount > 0 && (
+                  <div style={styles.chargeItem}>
+                    <span>Security Deposit</span>
+                    <span style={styles.chargeValue}>₹{formatPrice(pg.price_details.deposit_amount)}</span>
+                  </div>
+                )}
+                {pg.price_details.maintenance_amount > 0 && (
+                  <div style={styles.chargeItem}>
+                    <span>Maintenance</span>
+                    <span style={styles.chargeValue}>₹{formatPrice(pg.price_details.maintenance_amount)}/month</span>
+                  </div>
+                )}
+                {pg.price_details.brokerage_amount > 0 && (
+                  <div style={styles.chargeItem}>
+                    <span>Brokerage</span>
+                    <span style={styles.chargeValue}>₹{formatPrice(pg.price_details.brokerage_amount)}</span>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* View Full Details Button - Like in reference component */}
+      <button onClick={goToFullDetails} style={styles.viewDetailsBtn}>
+        <span>📋 View Full Property Details</span>
+        <span style={styles.viewDetailsArrow}>→</span>
+      </button>
 
       {/* Selected Item Summary */}
       {selectedDetails && (
         <div style={styles.selectedSummary}>
           <span>Selected: {selectedDetails.name}</span>
-          <span style={styles.selectedPrice}>₹{selectedDetails.price}/month</span>
+          <span style={styles.selectedPrice}>₹{formatPrice(selectedDetails.price)}/month</span>
         </div>
       )}
 
@@ -710,19 +363,19 @@ const ScanPG = () => {
         <button
           onClick={goToPayment}
           style={{
-            ...styles.payBtn,
+            ...styles.bookBtn,
             opacity: selectedDetails ? 1 : 0.5,
             cursor: selectedDetails ? 'pointer' : 'not-allowed'
           }}
           disabled={!selectedDetails}
         >
-          Continue to Booking • ₹{getSelectedPrice() || 'Select option'}/month
+          {selectedDetails ? `Book Now • ₹${formatPrice(selectedDetails.price)}/month` : 'Select a room to continue'}
         </button>
 
         {pg.contact?.phone && (
           <a href={`tel:${pg.contact.phone}`} style={{ textDecoration: 'none' }}>
             <button style={styles.callBtn}>
-              📞 Contact {pg.contact.person || 'Owner'}
+              📞 Call {pg.contact.person || 'Owner'}
             </button>
           </a>
         )}
@@ -735,9 +388,10 @@ const styles = {
   container: {
     maxWidth: 600,
     margin: "0 auto",
-    padding: "20px 16px",
+    padding: "20px 16px 100px 16px",
     backgroundColor: "#f9fafb",
-    minHeight: "100vh"
+    minHeight: "100vh",
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
   },
   center: {
     display: "flex",
@@ -773,7 +427,7 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "12px"
+    marginBottom: "8px"
   },
   title: {
     fontSize: "24px",
@@ -788,30 +442,76 @@ const styles = {
     backgroundColor: "#f3f4f6",
     padding: "6px 12px",
     borderRadius: "20px",
-    fontSize: "14px"
+    fontSize: "14px",
+    fontWeight: "500"
   },
   star: {
     fontSize: "16px"
   },
-  addressContainer: {
+  locationContainer: {
     display: "flex",
-    alignItems: "flex-start",
-    gap: "8px",
-    marginBottom: "4px"
+    alignItems: "center",
+    gap: "6px",
+    marginBottom: "16px"
   },
   locationIcon: {
-    fontSize: "18px"
+    fontSize: "16px"
   },
-  address: {
+  location: {
     margin: 0,
     color: "#4b5563",
     fontSize: "14px",
-    lineHeight: "1.5"
+    fontWeight: "500"
   },
-  area: {
-    margin: "0 0 16px 26px",
+  priceSummaryCard: {
+    backgroundColor: "white",
+    borderRadius: "16px",
+    padding: "16px",
+    marginBottom: "16px",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+    border: "1px solid #e5e7eb"
+  },
+  priceMain: {
+    marginBottom: "12px"
+  },
+  priceLabel: {
+    display: "block",
+    fontSize: "12px",
     color: "#6b7280",
-    fontSize: "14px"
+    marginBottom: "4px",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px"
+  },
+  priceValue: {
+    fontSize: "32px",
+    fontWeight: "bold",
+    color: "#4f46e5",
+    marginRight: "4px"
+  },
+  pricePeriod: {
+    fontSize: "14px",
+    color: "#9ca3af"
+  },
+  priceMeta: {
+    display: "flex",
+    gap: "8px",
+    flexWrap: "wrap"
+  },
+  availabilityChip: {
+    backgroundColor: "#d1fae5",
+    color: "#065f46",
+    padding: "4px 12px",
+    borderRadius: "20px",
+    fontSize: "12px",
+    fontWeight: "500"
+  },
+  depositChip: {
+    backgroundColor: "#fef3c7",
+    color: "#92400e",
+    padding: "4px 12px",
+    borderRadius: "20px",
+    fontSize: "12px",
+    fontWeight: "500"
   },
   quickInfo: {
     display: "flex",
@@ -820,61 +520,18 @@ const styles = {
     marginBottom: "24px"
   },
   infoChip: {
-    backgroundColor: "#e5e7eb",
+    backgroundColor: "#f3f4f6",
     padding: "6px 12px",
     borderRadius: "20px",
     fontSize: "13px",
     color: "#374151"
   },
-  tabs: {
-    display: "flex",
-    gap: "16px",
-    borderBottom: "2px solid #e5e7eb",
-    marginBottom: "20px",
-    overflowX: "auto",
-    paddingBottom: "2px"
-  },
-  tab: {
-    padding: "8px 4px",
-    border: "none",
-    background: "none",
-    fontSize: "15px",
-    fontWeight: "500",
-    cursor: "pointer",
-    borderBottom: "2px solid transparent",
-    transition: "all 0.2s",
-    whiteSpace: "nowrap"
-  },
-  tabContent: {
-    minHeight: "400px",
-    marginBottom: "20px"
-  },
-  summaryBox: {
-    backgroundColor: "#e0f2fe",
-    padding: "16px",
-    borderRadius: "12px",
-    marginBottom: "20px"
-  },
-  summaryTitle: {
-    margin: "0 0 12px 0",
-    fontWeight: "600",
-    color: "#0369a1"
-  },
-  badgeContainer: {
-    display: "flex",
-    gap: "8px",
-    flexWrap: "wrap"
-  },
-  badge: {
-    backgroundColor: "#fff",
-    padding: "6px 12px",
-    borderRadius: "20px",
-    fontSize: "12px",
-    border: "1px solid #bae6fd",
-    color: "#0369a1"
+  roomSection: {
+    marginBottom: "24px"
   },
   sectionTitle: {
     fontSize: "18px",
+    fontWeight: "600",
     marginBottom: "16px",
     color: "#1f2937"
   },
@@ -888,7 +545,7 @@ const styles = {
     alignItems: "center",
     padding: "16px",
     border: "2px solid #e5e7eb",
-    borderRadius: "12px",
+    borderRadius: "14px",
     cursor: "pointer",
     transition: "all 0.2s",
     backgroundColor: "#fff"
@@ -907,106 +564,92 @@ const styles = {
     display: "block",
     fontWeight: "600",
     fontSize: "16px",
-    marginBottom: "4px"
+    marginBottom: "4px",
+    color: "#1f2937"
   },
   roomType: {
+    display: "inline-block",
     fontSize: "13px",
-    color: "#6b7280"
+    color: "#6b7280",
+    marginRight: "8px"
   },
-  priceInfo: {
+  roomBeds: {
+    display: "inline-block",
+    fontSize: "12px",
+    color: "#16a34a",
+    backgroundColor: "#dcfce7",
+    padding: "2px 8px",
+    borderRadius: "12px"
+  },
+  roomPriceInfo: {
     textAlign: "right"
   },
-  price: {
+  roomPrice: {
     display: "block",
     fontWeight: "bold",
     color: "#4f46e5",
-    fontSize: "18px"
+    fontSize: "20px",
+    lineHeight: "1.2"
   },
-  beds: {
-    fontSize: "12px",
-    color: "#16a34a"
+  roomPeriod: {
+    fontSize: "11px",
+    color: "#9ca3af"
   },
   noRooms: {
     textAlign: "center",
     padding: "40px",
     backgroundColor: "#fff",
-    borderRadius: "12px",
+    borderRadius: "16px",
     border: "2px dashed #e5e7eb"
   },
   noRoomsText: {
     color: "#6b7280",
     margin: 0
   },
-  priceSection: {
-    backgroundColor: "#fff",
-    borderRadius: "12px",
-    padding: "20px",
-    marginBottom: "16px"
-  },
-  basePriceCard: {
-    backgroundColor: "#f3f4f6",
-    padding: "16px",
-    borderRadius: "10px",
-    marginBottom: "20px",
-    textAlign: "center"
-  },
-  basePriceLabel: {
-    display: "block",
-    fontSize: "14px",
-    color: "#6b7280",
-    marginBottom: "4px"
-  },
-  basePriceValue: {
-    display: "block",
-    fontSize: "24px",
-    fontWeight: "bold",
-    color: "#4f46e5"
-  },
-  priceCategory: {
+  priceOptionsSection: {
     marginBottom: "24px"
   },
-  categoryTitle: {
-    fontSize: "16px",
-    fontWeight: "600",
-    marginBottom: "12px",
-    color: "#374151"
-  },
-  priceGrid: {
+  priceOptionsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
     gap: "12px"
   },
-  priceCard: {
-    padding: "12px",
-    border: "2px solid #e5e7eb",
-    borderRadius: "10px",
-    cursor: "pointer",
-    transition: "all 0.2s"
+  priceOptionCard: {
+    backgroundColor: "white",
+    padding: "16px",
+    borderRadius: "12px",
+    border: "1px solid #e5e7eb",
+    textAlign: "center"
   },
-  priceLabel: {
-    display: "block",
-    fontSize: "13px",
+  priceOptionType: {
+    fontSize: "14px",
     color: "#6b7280",
+    marginBottom: "8px"
+  },
+  priceOptionValue: {
+    fontSize: "18px",
+    fontWeight: "bold",
+    color: "#4f46e5",
     marginBottom: "4px"
   },
-  priceAmount: {
-    display: "block",
-    fontSize: "16px",
-    fontWeight: "bold",
-    color: "#4f46e5"
-  },
-  configText: {
-    display: "block",
+  priceOptionConfig: {
     fontSize: "11px",
-    color: "#9ca3af",
-    marginTop: "4px"
+    color: "#9ca3af"
   },
   chargesSection: {
-    marginTop: "20px",
-    paddingTop: "20px",
-    borderTop: "1px solid #e5e7eb"
+    backgroundColor: "white",
+    borderRadius: "12px",
+    padding: "16px",
+    marginBottom: "24px",
+    border: "1px solid #e5e7eb"
   },
-  chargesGrid: {
+  chargesTitle: {
+    fontSize: "14px",
+    fontWeight: "600",
+    margin: "0 0 12px 0",
+    color: "#374151"
+  },
+  chargesList: {
     display: "flex",
     flexDirection: "column",
     gap: "8px"
@@ -1015,113 +658,32 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     fontSize: "14px",
-    padding: "8px 0"
+    padding: "4px 0"
   },
   chargeValue: {
     fontWeight: "600",
     color: "#374151"
   },
-  foodSection: {
+  viewDetailsBtn: {
+    width: "100%",
+    padding: "16px",
     backgroundColor: "#fff",
-    borderRadius: "12px",
-    padding: "20px",
-    marginTop: "16px"
-  },
-  foodCard: {
-    backgroundColor: "#f9fafb",
-    padding: "12px",
-    borderRadius: "8px"
-  },
-  foodItem: {
-    display: "flex",
-    justifyContent: "space-between",
-    padding: "4px 0"
-  },
-  foodValue: {
-    fontWeight: "500",
-    color: "#374151"
-  },
-  amenitiesSection: {
-    backgroundColor: "#fff",
-    borderRadius: "12px",
-    padding: "20px"
-  },
-  amenityCategory: {
-    marginBottom: "20px"
-  },
-  amenityGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-    gap: "12px"
-  },
-  amenityItem: {
+    color: "#4f46e5",
+    border: "2px solid #4f46e5",
+    borderRadius: "14px",
+    fontWeight: "600",
+    fontSize: "16px",
+    cursor: "pointer",
+    marginBottom: "20px",
     display: "flex",
     alignItems: "center",
+    justifyContent: "center",
     gap: "8px",
-    padding: "8px",
-    backgroundColor: "#f9fafb",
-    borderRadius: "8px"
+    transition: "all 0.3s ease"
   },
-  amenityEmoji: {
-    fontSize: "18px"
-  },
-  amenityLabel: {
-    fontSize: "13px",
-    color: "#374151"
-  },
-  nearbySection: {
-    backgroundColor: "#fff",
-    borderRadius: "12px",
-    padding: "20px",
-    marginTop: "16px"
-  },
-  nearbyCategory: {
-    marginBottom: "16px"
-  },
-  nearbySubtitle: {
-    fontSize: "14px",
-    fontWeight: "600",
-    marginBottom: "8px",
-    color: "#4b5563"
-  },
-  nearbyGrid: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px"
-  },
-  nearbyItem: {
-    fontSize: "13px",
-    color: "#6b7280",
-    padding: "4px 0"
-  },
-  rulesSection: {
-    backgroundColor: "#fff",
-    borderRadius: "12px",
-    padding: "20px"
-  },
-  ruleCategory: {
-    marginBottom: "16px",
-    padding: "12px",
-    backgroundColor: "#f9fafb",
-    borderRadius: "8px"
-  },
-  ruleSubtitle: {
-    fontSize: "14px",
-    fontWeight: "600",
-    margin: "0 0 8px 0",
-    color: "#4b5563"
-  },
-  ruleGrid: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "8px"
-  },
-  ruleItem: {
-    fontSize: "13px",
-    padding: "4px 8px",
-    backgroundColor: "#fff",
-    borderRadius: "6px",
-    border: "1px solid #e5e7eb"
+  viewDetailsArrow: {
+    fontSize: "18px",
+    transition: "transform 0.3s ease"
   },
   selectedSummary: {
     display: "flex",
@@ -1129,8 +691,8 @@ const styles = {
     alignItems: "center",
     padding: "12px 16px",
     backgroundColor: "#f3f4f6",
-    borderRadius: "10px",
-    marginBottom: "16px",
+    borderRadius: "12px",
+    marginBottom: "12px",
     fontSize: "14px",
     fontWeight: "500"
   },
@@ -1141,21 +703,28 @@ const styles = {
   footer: {
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
-    position: "sticky",
-    bottom: "20px",
+    gap: "10px",
+    position: "fixed",
+    bottom: "0",
+    left: "0",
+    right: "0",
+    maxWidth: "600px",
+    margin: "0 auto",
     backgroundColor: "#f9fafb",
-    padding: "16px 0"
+    padding: "16px",
+    borderTop: "1px solid #e5e7eb",
+    boxShadow: "0 -4px 12px rgba(0,0,0,0.05)"
   },
-  payBtn: {
+  bookBtn: {
     width: "100%",
     padding: "16px",
     backgroundColor: "#4f46e5",
     color: "#fff",
     border: "none",
-    borderRadius: "12px",
+    borderRadius: "14px",
     fontWeight: "bold",
     fontSize: "16px",
+    cursor: "pointer",
     transition: "all 0.2s"
   },
   callBtn: {
@@ -1164,7 +733,7 @@ const styles = {
     backgroundColor: "#fff",
     color: "#22c55e",
     border: "2px solid #22c55e",
-    borderRadius: "12px",
+    borderRadius: "14px",
     fontWeight: "bold",
     fontSize: "16px",
     cursor: "pointer"
