@@ -4,7 +4,7 @@ import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { pgAPI } from "../api/api";
 import { getImageUrl } from "../config";
-import QRCode from "qrcode";
+
 import QRCodeStyling from "qr-code-styling";
 
 import {
@@ -296,78 +296,71 @@ const OwnerDashboard = () => {
   };
 
   // ⭐ NEW: QR Code Generator Function
+  
   const handleGenerateQR = async (propertyId) => {
-    try {
-      // Find property name for better filename
-      const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
-      const propertyName = property?.pg_name || 'property';
-      const sanitizedName = propertyName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
-      
-      // Create URL for QR code
-      const url = `https://nepxall.vercel.app/scan/${propertyId}`;
-      
-      // Generate QR code as data URL
-      const qrCode = new QRCodeStyling({
-  width: 400,
-  height: 400,
-  data: url,
+  try {
 
-  image: "/logo.png", // Nepxall logo in public folder
+    const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
+    const propertyName = property?.pg_name || 'property';
+    const sanitizedName = propertyName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
 
-  dotsOptions: {
-    type: "rounded",
-    gradient: {
-      type: "linear",
-      rotation: 0,
-      colorStops: [
-        { offset: 0, color: "#0A5CB8" }, // Nepxall Blue
-        { offset: 1, color: "#1DB954" }  // Nepxall Green
-      ]
-    }
-  },
+    const url = `https://nepxall.vercel.app/scan/${propertyId}`;
 
-  cornersSquareOptions: {
-    type: "extra-rounded",
-    color: "#1DB954"
-  },
+    const qrCode = new QRCodeStyling({
+      width: 400,
+      height: 400,
+      data: url,
 
-  backgroundOptions: {
-    color: "#ffffff"
-  },
+      image: "/logo.png",
 
-  imageOptions: {
-    crossOrigin: "anonymous",
-    margin: 5,
-    imageSize: 0.3
+      dotsOptions: {
+        type: "rounded",
+        gradient: {
+          type: "linear",
+          rotation: 0,
+          colorStops: [
+            { offset: 0, color: "#0A5CB8" },
+            { offset: 1, color: "#1DB954" }
+          ]
+        }
+      },
+
+      cornersSquareOptions: {
+        type: "extra-rounded",
+        color: "#1DB954"
+      },
+
+      backgroundOptions: {
+        color: "#ffffff"
+      },
+
+      imageOptions: {
+        crossOrigin: "anonymous",
+        margin: 5,
+        imageSize: 0.3
+      }
+    });
+
+    qrCode.download({
+      name: `nepxall-${sanitizedName}-${propertyId}`,
+      extension: "png"
+    });
+
+    setSnackbar({
+      open: true,
+      message: "✅ QR Code downloaded successfully",
+      severity: "success"
+    });
+
+  } catch (err) {
+    console.error("❌ QR Generation Error:", err);
+    setSnackbar({
+      open: true,
+      message: "❌ Failed to generate QR code",
+      severity: "error"
+    });
   }
-});
-
-qrCode.download({
-  name: `nepxall-${sanitizedName}-${propertyId}`,
-  extension: "png"
-});
-
-      // Create download link
-      const link = document.createElement("a");
-      link.href = qrDataUrl;
-      link.download = `nepxall-${sanitizedName}-${propertyId}.png`;
-      link.click();
-
-      setSnackbar({
-        open: true,
-        message: "✅ QR Code downloaded successfully",
-        severity: "success"
-      });
-
-    } catch (err) {
-      console.error("❌ QR Generation Error:", err);
-      setSnackbar({
-        open: true,
-        message: "❌ Failed to generate QR code",
-        severity: "error"
-      });
-    }
-  };
+};
 
   /* ---------------- LOADER ---------------- */
 
