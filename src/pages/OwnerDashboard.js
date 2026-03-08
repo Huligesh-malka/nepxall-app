@@ -10,7 +10,7 @@ import {
   Typography, Box, Button, Grid, Alert, Snackbar,
   CircularProgress, Paper, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow,
-  Chip, Avatar, IconButton
+  Chip, Avatar, IconButton, Modal, Fade, Divider
 } from "@mui/material";
 
 import {
@@ -22,7 +22,11 @@ import {
   Refresh as RefreshIcon,
   Chat as ChatIcon,
   Groups as CommunityIcon,
-  Visibility as ViewIcon
+  Visibility as ViewIcon,
+  QrCodeScanner as QrCodeIcon,
+  Download as DownloadIcon,
+  Close as CloseIcon,
+  ContentCopy as CopyIcon
 } from "@mui/icons-material";
 
 import StatCard from "../components/owner/StatCard";
@@ -65,6 +69,284 @@ const getStatusColor = (status) => {
   }
 };
 
+// Generate PG Code
+const generatePGCode = (id) => {
+  return `NEPX-${String(id).padStart(5, '0')}`;
+};
+
+/* ---------------- QR MODAL COMPONENT ---------------- */
+const QRCodeModal = ({ open, onClose, property }) => {
+  const [qrDataUrl, setQrDataUrl] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  useEffect(() => {
+    if (open && property) {
+      generateQRCode();
+    }
+  }, [open, property]);
+
+  const generateQRCode = async () => {
+    try {
+      setLoading(true);
+      const propertyId = property.id || property.pg_id;
+      const propertyName = property.pg_name || 'property';
+      const pgCode = generatePGCode(propertyId);
+      
+      // Create URL for QR code
+      const scanUrl = `https://nepxall.vercel.app/scan/${propertyId}`;
+      
+      // Generate QR code with custom design
+      const qr = await QRCode.toDataURL(scanUrl, {
+        width: 400,
+        margin: 2,
+        color: {
+          dark: '#4f46e5', // Primary color
+          light: '#ffffff'
+        }
+      });
+
+      setQrDataUrl(qr);
+    } catch (err) {
+      console.error("❌ QR Generation Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownload = () => {
+    if (!qrDataUrl || !property) return;
+    
+    const propertyId = property.id || property.pg_id;
+    const propertyName = property.pg_name || 'property';
+    const sanitizedName = propertyName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    const pgCode = generatePGCode(propertyId);
+    
+    const link = document.createElement("a");
+    link.href = qrDataUrl;
+    link.download = `nepxall-${sanitizedName}-${pgCode}.png`;
+    link.click();
+  };
+
+  const handleCopyLink = () => {
+    if (!property) return;
+    
+    const propertyId = property.id || property.pg_id;
+    const scanUrl = `https://nepxall.vercel.app/scan/${propertyId}`;
+    
+    navigator.clipboard.writeText(scanUrl);
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 2000);
+  };
+
+  if (!property) return null;
+
+  const propertyId = property.id || property.pg_id;
+  const pgCode = generatePGCode(propertyId);
+  const scanUrl = `https://nepxall.vercel.app/scan/${propertyId}`;
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      closeAfterTransition
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        p: 2
+      }}
+    >
+      <Fade in={open}>
+        <Paper
+          sx={{
+            maxWidth: 500,
+            width: '100%',
+            borderRadius: 4,
+            overflow: 'hidden',
+            position: 'relative',
+            outline: 'none'
+          }}
+        >
+          {/* Header with brand colors */}
+          <Box
+            sx={{
+              background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+              color: 'white',
+              p: 3,
+              textAlign: 'center'
+            }}
+          >
+            <IconButton
+              onClick={onClose}
+              sx={{
+                position: 'absolute',
+                top: 12,
+                right: 12,
+                color: 'white',
+                bgcolor: 'rgba(255,255,255,0.2)',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }
+              }}
+              size="small"
+            >
+              <CloseIcon />
+            </IconButton>
+
+            <Typography variant="h4" fontWeight={700} sx={{ mb: 1 }}>
+              NEPXALL
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+              Next Places for Living
+            </Typography>
+          </Box>
+
+          {/* Property Info */}
+          <Box sx={{ p: 3, textAlign: 'center' }}>
+            <Typography variant="h5" fontWeight={600} sx={{ mb: 1 }}>
+              {property.pg_name}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              {property.area}, {property.city}
+            </Typography>
+            
+            <Chip
+              label={pgCode}
+              sx={{
+                bgcolor: '#f3f4f6',
+                color: '#4f46e5',
+                fontWeight: 600,
+                fontSize: '1rem',
+                p: 2,
+                borderRadius: 2,
+                mb: 3
+              }}
+            />
+
+            {/* QR Code */}
+            <Box
+              sx={{
+                bgcolor: '#f9fafb',
+                p: 3,
+                borderRadius: 3,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                mb: 2
+              }}
+            >
+              {loading ? (
+                <CircularProgress size={200} />
+              ) : qrDataUrl ? (
+                <img
+                  src={qrDataUrl}
+                  alt={`QR Code for ${property.pg_name}`}
+                  style={{
+                    width: 250,
+                    height: 250,
+                    borderRadius: 12,
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+                  }}
+                />
+              ) : null}
+            </Box>
+
+            {/* Scan Link */}
+            <Box
+              sx={{
+                bgcolor: '#f3f4f6',
+                p: 2,
+                borderRadius: 2,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                mb: 3
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{
+                  flex: 1,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  color: '#4b5563'
+                }}
+              >
+                {scanUrl}
+              </Typography>
+              <IconButton
+                size="small"
+                onClick={handleCopyLink}
+                sx={{ color: copySuccess ? '#10b981' : '#4f46e5' }}
+              >
+                <CopyIcon fontSize="small" />
+              </IconButton>
+            </Box>
+            {copySuccess && (
+              <Typography variant="caption" sx={{ color: '#10b981', display: 'block', mb: 2 }}>
+                ✓ Link copied to clipboard
+              </Typography>
+            )}
+
+            <Divider sx={{ my: 2 }} />
+
+            {/* Instructions */}
+            <Box sx={{ textAlign: 'left', mb: 3 }}>
+              <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                📋 How to use:
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                1. Print this QR code and display at your property
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                2. Tenants can scan to view property details instantly
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                3. Track scans and bookings in your dashboard
+              </Typography>
+            </Box>
+
+            {/* Action Buttons */}
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<DownloadIcon />}
+                  onClick={handleDownload}
+                  disabled={loading || !qrDataUrl}
+                  sx={{
+                    borderColor: '#4f46e5',
+                    color: '#4f46e5',
+                    '&:hover': {
+                      borderColor: '#7c3aed',
+                      bgcolor: '#f5f3ff'
+                    }
+                  }}
+                >
+                  Download
+                </Button>
+              </Grid>
+              <Grid item xs={6}>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  onClick={onClose}
+                  sx={{
+                    bgcolor: '#4f46e5',
+                    '&:hover': { bgcolor: '#7c3aed' }
+                  }}
+                >
+                  Done
+                </Button>
+              </Grid>
+            </Grid>
+          </Box>
+        </Paper>
+      </Fade>
+    </Modal>
+  );
+};
+
 /* ---------------- COMPONENT ---------------- */
 
 const OwnerDashboard = () => {
@@ -78,6 +360,10 @@ const OwnerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // QR Modal state
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState(null);
 
   const [stats, setStats] = useState({
     totalProperties: 0,
@@ -294,44 +580,16 @@ const OwnerDashboard = () => {
     navigate(`/owner/bookings/${bookingId}`);
   };
 
-  // ⭐ NEW: QR Code Generator Function
-  const handleGenerateQR = async (propertyId) => {
-    try {
-      // Find property name for better filename
-      const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
-      const propertyName = property?.pg_name || 'property';
-      const sanitizedName = propertyName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
-      
-      // Create URL for QR code
-      const url = `https://nepxall.vercel.app/scan/${propertyId}`;
-      
-      // Generate QR code as data URL
-      const qrDataUrl = await QRCode.toDataURL(url, {
-        width: 300,
-        margin: 2,
-        color: {
-          dark: '#000000',
-          light: '#ffffff'
-        }
-      });
-
-      // Create download link
-      const link = document.createElement("a");
-      link.href = qrDataUrl;
-      link.download = `nepxall-${sanitizedName}-${propertyId}.png`;
-      link.click();
-
+  // ⭐ NEW: QR Code Handler - Opens Modal
+  const handleGenerateQR = (propertyId) => {
+    const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
+    if (property) {
+      setSelectedProperty(property);
+      setQrModalOpen(true);
+    } else {
       setSnackbar({
         open: true,
-        message: "✅ QR Code downloaded successfully",
-        severity: "success"
-      });
-
-    } catch (err) {
-      console.error("❌ QR Generation Error:", err);
-      setSnackbar({
-        open: true,
-        message: "❌ Failed to generate QR code",
+        message: "❌ Property not found",
         severity: "error"
       });
     }
@@ -361,6 +619,13 @@ const OwnerDashboard = () => {
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
+
+      {/* QR Code Modal */}
+      <QRCodeModal
+        open={qrModalOpen}
+        onClose={() => setQrModalOpen(false)}
+        property={selectedProperty}
+      />
 
       {/* HEADER */}
       <Box 
@@ -523,7 +788,7 @@ const OwnerDashboard = () => {
                   onVideos={() => handleManageVideos(pg.id || pg.pg_id)}
                   onChat={() => handleChat(pg.id || pg.pg_id)}
                   onAnnouncement={() => handleAnnouncement(pg.id || pg.pg_id)}
-                  onGenerateQR={() => handleGenerateQR(pg.id || pg.pg_id)}   // ⭐ NEW QR handler
+                  onGenerateQR={() => handleGenerateQR(pg.id || pg.pg_id)}
                   onCreatePlan={
                     pg.pg_category === "coliving"
                       ? () => handleCreatePlan(pg.id || pg.pg_id)
