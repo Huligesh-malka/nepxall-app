@@ -301,17 +301,17 @@ const OwnerDashboard = () => {
   try {
 
     const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
-    const propertyName = property?.pg_name || 'property';
-    const sanitizedName = propertyName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    const propertyName = property?.pg_name || "property";
+    const sanitizedName = propertyName.replace(/[^a-z0-9]/gi, "-").toLowerCase();
 
     const url = `https://nepxall.vercel.app/scan/${propertyId}`;
 
     const qrCode = new QRCodeStyling({
-      width: 400,
-      height: 400,
+      width: 500,
+      height: 500,
       data: url,
 
-      image: "/logo.png",
+      image: window.location.origin + "/logo.png",
 
       dotsOptions: {
         type: "rounded",
@@ -336,8 +336,8 @@ const OwnerDashboard = () => {
 
       imageOptions: {
         crossOrigin: "anonymous",
-        margin: 5,
-        imageSize: 0.3
+        margin: 10,
+        imageSize: 0.35
       }
     });
 
@@ -346,19 +346,8 @@ const OwnerDashboard = () => {
       extension: "png"
     });
 
-    setSnackbar({
-      open: true,
-      message: "✅ QR Code downloaded successfully",
-      severity: "success"
-    });
-
   } catch (err) {
-    console.error("❌ QR Generation Error:", err);
-    setSnackbar({
-      open: true,
-      message: "❌ Failed to generate QR code",
-      severity: "error"
-    });
+    console.error("QR Error:", err);
   }
 };
 
