@@ -299,7 +299,11 @@ const OwnerDashboard = () => {
   
  
 const handleGenerateQR = async (propertyId) => {
+
   try {
+
+    const BRAND_BLUE = "#0B5ED7";
+    const BRAND_GREEN = "#4CAF50";
 
     const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
     const propertyName = property?.pg_name || "PG";
@@ -320,20 +324,20 @@ const handleGenerateQR = async (propertyId) => {
           type: "linear",
           rotation: 0,
           colorStops: [
-            { offset: 0, color: "#0A5CB8" },  // Nepxall logo blue
-            { offset: 1, color: "#1DB954" }   // Nepxall logo green
+            { offset: 0, color: BRAND_BLUE },
+            { offset: 1, color: BRAND_GREEN }
           ]
         }
       },
 
       cornersSquareOptions: {
         type: "extra-rounded",
-        color: "#1DB954"
+        color: BRAND_GREEN
       },
 
       cornersDotOptions: {
         type: "dot",
-        color: "#0A5CB8"
+        color: BRAND_BLUE
       },
 
       backgroundOptions: {
@@ -345,6 +349,7 @@ const handleGenerateQR = async (propertyId) => {
         margin: 10,
         imageSize: 0.35
       }
+
     });
 
     /* POSTER CANVAS */
@@ -354,8 +359,6 @@ const handleGenerateQR = async (propertyId) => {
     canvas.height = 1100;
 
     const ctx = canvas.getContext("2d");
-
-    /* BACKGROUND */
 
     ctx.fillStyle = "#F9FAFB";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -374,13 +377,13 @@ const handleGenerateQR = async (propertyId) => {
 
       ctx.drawImage(logo, 350, 40, 200, 110);
 
-      /* NEPXALL BRAND NAME WITH GRADIENT */
+      /* NEPXALL TEXT WITH SIDEBAR GRADIENT */
 
       ctx.font = "bold 48px Arial";
 
       const gradient = ctx.createLinearGradient(300, 210, 600, 210);
-      gradient.addColorStop(0, "#0A5CB8");   // logo blue
-      gradient.addColorStop(1, "#1DB954");   // logo green
+      gradient.addColorStop(0, BRAND_BLUE);
+      gradient.addColorStop(1, BRAND_GREEN);
 
       ctx.fillStyle = gradient;
       ctx.fillText("Nepxall", 450, 210);
@@ -388,7 +391,7 @@ const handleGenerateQR = async (propertyId) => {
       /* TAGLINE */
 
       ctx.font = "26px Arial";
-      ctx.fillStyle = "#6B7280";
+      ctx.fillStyle = "#94a3b8";
       ctx.fillText("Next Places for Living", 450, 250);
 
       /* PROPERTY NAME */
@@ -400,7 +403,7 @@ const handleGenerateQR = async (propertyId) => {
       /* DESCRIPTION */
 
       ctx.font = "26px Arial";
-      ctx.fillStyle = "#0A5CB8";
+      ctx.fillStyle = BRAND_BLUE;
       ctx.fillText("Scan QR to View Rooms", 450, 380);
 
       ctx.font = "24px Arial";
@@ -423,18 +426,23 @@ const handleGenerateQR = async (propertyId) => {
         ctx.fillStyle = "#6B7280";
         ctx.fillText("Powered by Nepxall", 450, 1080);
 
-        /* DOWNLOAD IMAGE */
+        /* DOWNLOAD */
 
         const link = document.createElement("a");
         link.href = canvas.toDataURL("image/png");
         link.download = `nepxall-${propertyName}-entrance-qr.png`;
         link.click();
+
       };
+
     };
 
   } catch (err) {
+
     console.error("QR Generation Error:", err);
+
   }
+
 };
   /* ---------------- LOADER ---------------- */
 
