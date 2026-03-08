@@ -100,7 +100,7 @@ const QRCodeModal = ({ open, onClose, property }) => {
         width: 300,
         margin: 2,
         color: {
-          dark: '#4f46e5', // Brand primary color
+          dark: '#0A5CB8', // Brand primary blue
           light: '#ffffff'
         }
       });
@@ -158,10 +158,10 @@ const QRCodeModal = ({ open, onClose, property }) => {
               justify-content: center;
               align-items: center;
               min-height: 100vh;
-              background: #f9fafb;
+              background: #ffffff;
             }
             .qr-container {
-              max-width: 500px;
+              max-width: 450px;
               width: 100%;
               background: white;
               border-radius: 24px;
@@ -169,7 +169,7 @@ const QRCodeModal = ({ open, onClose, property }) => {
               box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             }
             .header {
-              background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+              background: linear-gradient(135deg, #0A5CB8 0%, #1DB954 100%);
               color: white;
               padding: 32px;
               text-align: center;
@@ -193,19 +193,14 @@ const QRCodeModal = ({ open, onClose, property }) => {
               font-size: 24px;
               font-weight: 700;
               color: #111827;
-              margin: 0 0 4px 0;
-            }
-            .property-location {
-              font-size: 14px;
-              color: #6b7280;
-              margin: 0 0 20px 0;
+              margin: 0 0 16px 0;
             }
             .pg-code {
               display: inline-block;
               background: #f3f4f6;
-              color: #4f46e5;
+              color: #0A5CB8;
               font-weight: 700;
-              font-size: 18px;
+              font-size: 20px;
               padding: 12px 24px;
               border-radius: 12px;
               margin-bottom: 24px;
@@ -225,38 +220,6 @@ const QRCodeModal = ({ open, onClose, property }) => {
               height: 250px;
               display: block;
             }
-            .scan-link {
-              background: #f3f4f6;
-              padding: 12px 16px;
-              border-radius: 12px;
-              font-size: 14px;
-              color: #4b5563;
-              margin: 16px 0 24px 0;
-              word-break: break-all;
-              border: 1px solid #e5e7eb;
-            }
-            .instructions {
-              text-align: left;
-              background: #f9fafb;
-              padding: 20px;
-              border-radius: 16px;
-              margin-bottom: 24px;
-            }
-            .instructions-title {
-              font-size: 16px;
-              font-weight: 600;
-              color: #111827;
-              margin: 0 0 12px 0;
-            }
-            .instructions-list {
-              margin: 0;
-              padding-left: 20px;
-            }
-            .instructions-list li {
-              color: #4b5563;
-              margin-bottom: 8px;
-              font-size: 14px;
-            }
             .status-badge {
               display: inline-block;
               background: ${statusColor};
@@ -267,6 +230,7 @@ const QRCodeModal = ({ open, onClose, property }) => {
               border-radius: 30px;
               text-transform: uppercase;
               letter-spacing: 1px;
+              margin-top: 16px;
             }
             @media print {
               body { background: white; padding: 0; }
@@ -283,25 +247,11 @@ const QRCodeModal = ({ open, onClose, property }) => {
             
             <div class="content">
               <h2 class="property-name">${property.pg_name}</h2>
-              <p class="property-location">${property.area || ''}, ${property.city || ''}</p>
               
               <div class="pg-code">${pgCode}</div>
               
               <div class="qr-wrapper">
                 <img src="${qrDataUrl}" alt="QR Code" class="qr-image" />
-              </div>
-              
-              <div class="scan-link">
-                https://nepxall.vercel.app/scan/${propertyId}
-              </div>
-              
-              <div class="instructions">
-                <h3 class="instructions-title">📋 How to use:</h3>
-                <ul class="instructions-list">
-                  <li>Print this QR code and display at your property</li>
-                  <li>Tenants can scan to view property details instantly</li>
-                  <li>Track scans and bookings in your dashboard</li>
-                </ul>
               </div>
               
               <div class="status-badge">${statusText}</div>
@@ -343,7 +293,7 @@ const QRCodeModal = ({ open, onClose, property }) => {
       <Fade in={open}>
         <Paper
           sx={{
-            maxWidth: 500,
+            maxWidth: 450,
             width: '100%',
             borderRadius: 4,
             overflow: 'hidden',
@@ -352,10 +302,10 @@ const QRCodeModal = ({ open, onClose, property }) => {
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
           }}
         >
-          {/* Header with brand gradient */}
+          {/* Header with brand gradient - Blue to Green */}
           <Box
             sx={{
-              background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+              background: 'linear-gradient(135deg, #0A5CB8 0%, #1DB954 100%)',
               color: 'white',
               p: 4,
               textAlign: 'center'
@@ -384,14 +334,11 @@ const QRCodeModal = ({ open, onClose, property }) => {
             </Typography>
           </Box>
 
-          {/* Content */}
+          {/* Content - Only Property Name, PG Code, and QR Code */}
           <Box sx={{ p: 4, textAlign: 'center' }}>
-            {/* Property Info */}
-            <Typography variant="h5" fontWeight={700} sx={{ mb: 1 }}>
+            {/* Property Name */}
+            <Typography variant="h5" fontWeight={700} sx={{ mb: 3 }}>
               {property.pg_name}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              {property.area || ''}{property.area && property.city ? ', ' : ''}{property.city || ''}
             </Typography>
             
             {/* PG Code */}
@@ -399,7 +346,7 @@ const QRCodeModal = ({ open, onClose, property }) => {
               sx={{
                 display: 'inline-block',
                 bgcolor: '#f3f4f6',
-                color: '#4f46e5',
+                color: '#0A5CB8',
                 fontWeight: 700,
                 fontSize: '1.25rem',
                 px: 3,
@@ -422,7 +369,7 @@ const QRCodeModal = ({ open, onClose, property }) => {
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                mb: 2,
+                mb: 3,
                 border: '2px solid',
                 borderColor: '#e5e7eb'
               }}
@@ -441,57 +388,6 @@ const QRCodeModal = ({ open, onClose, property }) => {
                   }}
                 />
               ) : null}
-            </Box>
-
-            {/* Scan Link */}
-            <Box
-              sx={{
-                bgcolor: '#f3f4f6',
-                p: 2,
-                borderRadius: 2,
-                mb: 3,
-                border: '1px solid',
-                borderColor: '#e5e7eb'
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{
-                  color: '#4b5563',
-                  wordBreak: 'break-all',
-                  fontFamily: 'monospace'
-                }}
-              >
-                https://nepxall.vercel.app/scan/{propertyId}
-              </Typography>
-            </Box>
-
-            {/* Instructions */}
-            <Box
-              sx={{
-                textAlign: 'left',
-                bgcolor: '#f9fafb',
-                p: 2.5,
-                borderRadius: 2,
-                mb: 3,
-                border: '1px solid',
-                borderColor: '#e5e7eb'
-              }}
-            >
-              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <span>📋</span> How to use:
-              </Typography>
-              <Box component="ul" sx={{ m: 0, pl: 2, color: '#4b5563' }}>
-                <Typography component="li" variant="body2" sx={{ mb: 1 }}>
-                  Print this QR code and display at your property
-                </Typography>
-                <Typography component="li" variant="body2" sx={{ mb: 1 }}>
-                  Tenants can scan to view property details instantly
-                </Typography>
-                <Typography component="li" variant="body2">
-                  Track scans and bookings in your dashboard
-                </Typography>
-              </Box>
             </Box>
 
             {/* Status Badge */}
@@ -523,12 +419,12 @@ const QRCodeModal = ({ open, onClose, property }) => {
                   onClick={handleDownload}
                   disabled={loading || !qrDataUrl}
                   sx={{
-                    borderColor: '#4f46e5',
-                    color: '#4f46e5',
+                    borderColor: '#0A5CB8',
+                    color: '#0A5CB8',
                     py: 1.5,
                     '&:hover': {
-                      borderColor: '#7c3aed',
-                      bgcolor: '#f5f3ff'
+                      borderColor: '#1DB954',
+                      bgcolor: '#f0f9ff'
                     }
                   }}
                 >
@@ -543,12 +439,12 @@ const QRCodeModal = ({ open, onClose, property }) => {
                   onClick={handlePrint}
                   disabled={loading || !qrDataUrl}
                   sx={{
-                    borderColor: '#4f46e5',
-                    color: '#4f46e5',
+                    borderColor: '#0A5CB8',
+                    color: '#0A5CB8',
                     py: 1.5,
                     '&:hover': {
-                      borderColor: '#7c3aed',
-                      bgcolor: '#f5f3ff'
+                      borderColor: '#1DB954',
+                      bgcolor: '#f0f9ff'
                     }
                   }}
                 >
