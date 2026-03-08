@@ -349,7 +349,6 @@ const handleGenerateQR = async (propertyId) => {
         margin: 10,
         imageSize: 0.35
       }
-
     });
 
     /* POSTER CANVAS */
@@ -377,16 +376,24 @@ const handleGenerateQR = async (propertyId) => {
 
       ctx.drawImage(logo, 350, 40, 200, 110);
 
-      /* NEPXALL TEXT WITH SIDEBAR GRADIENT */
+      /* STRONG NEPXALL BRAND TEXT */
 
-      ctx.font = "bold 48px Arial";
+      ctx.font = "900 54px Arial";
 
-      const gradient = ctx.createLinearGradient(300, 210, 600, 210);
+      const gradient = ctx.createLinearGradient(360, 210, 540, 210);
       gradient.addColorStop(0, BRAND_BLUE);
       gradient.addColorStop(1, BRAND_GREEN);
 
       ctx.fillStyle = gradient;
+
+      ctx.shadowColor = "rgba(0,0,0,0.15)";
+      ctx.shadowBlur = 2;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 1;
+
       ctx.fillText("Nepxall", 450, 210);
+
+      ctx.shadowColor = "transparent";
 
       /* TAGLINE */
 
@@ -396,7 +403,7 @@ const handleGenerateQR = async (propertyId) => {
 
       /* PROPERTY NAME */
 
-      ctx.font = "bold 34px Arial";
+      ctx.font = "bold 36px Arial";
       ctx.fillStyle = "#111827";
       ctx.fillText(propertyName.toUpperCase(), 450, 320);
 
