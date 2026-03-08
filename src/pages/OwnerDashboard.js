@@ -297,16 +297,14 @@ const OwnerDashboard = () => {
 
   // ⭐ NEW: QR Code Generator Function
   
-  const handleGenerateQR = async (propertyId) => {
+ const handleGenerateQR = async (propertyId) => {
   try {
-
     const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
-    const propertyName = property?.pg_name || "property";
-    const sanitizedName = propertyName.replace(/[^a-z0-9]/gi, "-").toLowerCase();
+    const propertyName = property?.pg_name || "Property";
 
     const url = `https://nepxall.vercel.app/scan/${propertyId}`;
 
-    const qrCode = new QRCodeStyling({
+    const qr = new QRCodeStyling({
       width: 500,
       height: 500,
       data: url,
@@ -330,6 +328,11 @@ const OwnerDashboard = () => {
         color: "#1DB954"
       },
 
+      cornersDotOptions: {
+        type: "dot",
+        color: "#0A5CB8"
+      },
+
       backgroundOptions: {
         color: "#ffffff"
       },
@@ -341,13 +344,64 @@ const OwnerDashboard = () => {
       }
     });
 
-    qrCode.download({
-      name: `nepxall-${sanitizedName}-${propertyId}`,
-      extension: "png"
-    });
+    // Create canvas
+    const canvas = document.createElement("canvas");
+    canvas.width = 800;
+    canvas.height = 950;
+
+    const ctx = canvas.getContext("2d");
+
+    // white background
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw logo
+    const logo = new Image();
+    logo.src = "/logo.png";
+
+    logo.onload = async () => {
+
+      ctx.drawImage(logo, 300, 20, 200, 100);
+
+      // Brand name
+      ctx.font = "bold 40px Arial";
+      ctx.fillStyle = "#0A5CB8";
+      ctx.textAlign = "center";
+      ctx.fillText("Nepxall", 400, 160);
+
+      // tagline
+      ctx.font = "24px Arial";
+      ctx.fillStyle = "#6b7280";
+      ctx.fillText("Next Places for Living", 400, 200);
+
+      // Property name
+      ctx.font = "bold 28px Arial";
+      ctx.fillStyle = "#111";
+      ctx.fillText(propertyName, 400, 250);
+
+      // Draw QR
+      const qrBlob = await qr.getRawData("png");
+      const qrImg = new Image();
+      qrImg.src = URL.createObjectURL(qrBlob);
+
+      qrImg.onload = () => {
+
+        ctx.drawImage(qrImg, 150, 280, 500, 500);
+
+        // Footer text
+        ctx.font = "bold 28px Arial";
+        ctx.fillStyle = "#111";
+        ctx.fillText("Scan to Book Room", 400, 840);
+
+        const link = document.createElement("a");
+        link.href = canvas.toDataURL("image/png");
+        link.download = `nepxall-${propertyName}.png`;
+        link.click();
+      };
+    };
 
   } catch (err) {
-    console.error("QR Error:", err);
+    console.error(err);
   }
 };
 
