@@ -9,140 +9,146 @@ const ScanPG = () => {
   const navigate = useNavigate();
 
   const [pg, setPg] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [selectedRoom, setSelectedRoom] = useState(null);
 
   useEffect(() => {
     fetchPG();
-  }, [id]);
+  }, []);
 
   const fetchPG = async () => {
+
     try {
 
       const res = await axios.get(
         `${API_CONFIG.USER_API_URL}/scan/${id}`
       );
 
-      if (res.data.success) {
+      if(res.data.success){
         setPg(res.data.data);
       }
 
-    } catch (err) {
-      console.error("Scan error:", err);
+    } catch(err){
+      console.error(err);
     }
 
-    setLoading(false);
   };
 
-  const callOwner = () => {
-    if (pg?.contact_phone) {
-      window.location.href = `tel:${pg.contact_phone}`;
+  const goToPayment = () => {
+
+    if(!selectedRoom){
+      alert("Please select a room");
+      return;
     }
+
+    navigate(`/booking/${id}?room=${selectedRoom}`);
+
   };
 
-  if (loading) {
-    return (
-      <div style={{padding:40,textAlign:"center"}}>
-        Loading PG details...
-      </div>
-    );
-  }
-
-  if (!pg) {
-    return (
-      <div style={{padding:40,textAlign:"center"}}>
-        PG not found
-      </div>
-    );
+  if(!pg){
+    return <div style={{padding:40}}>Loading PG...</div>;
   }
 
   return (
-    <div style={{
-      maxWidth:500,
-      margin:"40px auto",
-      background:"#fff",
-      padding:25,
-      borderRadius:12,
-      boxShadow:"0 10px 30px rgba(0,0,0,0.1)"
-    }}>
 
-      {/* PG NAME */}
-      <h2 style={{marginBottom:10}}>
-        {pg.pg_name}
-      </h2>
+    <div style={{maxWidth:500,margin:"40px auto"}}>
 
-      {/* LOCATION */}
+      <h2>{pg.pg_name}</h2>
+
       <p>
         📍 {pg.area}, {pg.city}
       </p>
 
-      {/* MAIN PRICE */}
-      <h3 style={{marginTop:15}}>
+      <h3>
         Starting Rent: ₹{pg.rent_amount}
       </h3>
 
-      {/* AVAILABLE ROOMS */}
-      <p style={{marginTop:10}}>
-        🏠 Available Rooms: <b>{pg.available_rooms}</b>
-      </p>
-
       <hr/>
 
-      <h3>Available Room Types</h3>
+      <h3>Available Rooms</h3>
 
       {pg.single_sharing && (
-        <p>🛏 Single Sharing – ₹{pg.single_sharing}</p>
+        <div>
+          <input
+            type="radio"
+            name="room"
+            onChange={()=>setSelectedRoom("single")}
+          />
+          Single Sharing – ₹{pg.single_sharing}
+        </div>
       )}
 
       {pg.double_sharing && (
-        <p>🛏 Double Sharing – ₹{pg.double_sharing}</p>
+        <div>
+          <input
+            type="radio"
+            name="room"
+            onChange={()=>setSelectedRoom("double")}
+          />
+          Double Sharing – ₹{pg.double_sharing}
+        </div>
       )}
 
       {pg.triple_sharing && (
-        <p>🛏 Triple Sharing – ₹{pg.triple_sharing}</p>
+        <div>
+          <input
+            type="radio"
+            name="room"
+            onChange={()=>setSelectedRoom("triple")}
+          />
+          Triple Sharing – ₹{pg.triple_sharing}
+        </div>
       )}
 
       {pg.four_sharing && (
-        <p>🛏 Four Sharing – ₹{pg.four_sharing}</p>
+        <div>
+          <input
+            type="radio"
+            name="room"
+            onChange={()=>setSelectedRoom("four")}
+          />
+          Four Sharing – ₹{pg.four_sharing}
+        </div>
       )}
 
-      <div style={{marginTop:25,display:"flex",gap:10}}>
+      <br/>
 
-        <button
-          onClick={() => navigate(`/pg/${id}`)}
-          style={{
-            flex:1,
-            padding:12,
-            background:"#4f46e5",
-            color:"#fff",
-            border:"none",
-            borderRadius:8,
-            cursor:"pointer"
-          }}
-        >
-          View Full Details
-        </button>
+      <button
+        onClick={goToPayment}
+        style={{
+          width:"100%",
+          padding:12,
+          background:"#4f46e5",
+          color:"#fff",
+          border:"none",
+          borderRadius:8
+        }}
+      >
+        Continue to Payment
+      </button>
 
-        {pg.contact_phone && (
+      <br/><br/>
+
+      {pg.contact_phone && (
+        <a href={`tel:${pg.contact_phone}`}>
           <button
-            onClick={callOwner}
             style={{
-              flex:1,
+              width:"100%",
               padding:12,
               background:"#22c55e",
               color:"#fff",
               border:"none",
-              borderRadius:8,
-              cursor:"pointer"
+              borderRadius:8
             }}
           >
             Call Owner
           </button>
-        )}
-
-      </div>
+        </a>
+      )}
 
     </div>
+
   );
+
 };
 
 export default ScanPG;
