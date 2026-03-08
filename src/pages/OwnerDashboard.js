@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -27,7 +27,8 @@ import {
   Download as DownloadIcon,
   Close as CloseIcon,
   Print as PrintIcon,
-  CheckCircle as CheckCircleIcon
+  CheckCircle as CheckCircleIcon,
+  Home as HomeIcon
 } from "@mui/icons-material";
 
 import StatCard from "../components/owner/StatCard";
@@ -79,7 +80,7 @@ const generatePGCode = (id) => {
 const QRCodeModal = ({ open, onClose, property }) => {
   const [qrDataUrl, setQrDataUrl] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [downloadReady, setDownloadReady] = useState(false);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     if (open && property) {
@@ -95,9 +96,14 @@ const QRCodeModal = ({ open, onClose, property }) => {
       // Create URL for QR code
       const scanUrl = `https://nepxall.vercel.app/scan/${propertyId}`;
       
-      // Generate QR code with custom brand colors
-      const qr = await QRCode.toDataURL(scanUrl, {
-        width: 300,
+      // Create a canvas element
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 400;
+      
+      // Generate QR code with custom colors
+      await QRCode.toCanvas(canvas, scanUrl, {
+        width: 400,
         margin: 2,
         color: {
           dark: '#0A5CB8', // Brand primary blue
@@ -105,13 +111,86 @@ const QRCodeModal = ({ open, onClose, property }) => {
         }
       });
 
-      setQrDataUrl(qr);
-      setDownloadReady(true);
+      // Get the canvas context
+      const ctx = canvas.getContext('2d');
+      
+      // Draw a white background for the center
+      const centerSize = 80;
+      const centerX = (canvas.width - centerSize) / 2;
+      const centerY = (canvas.height - centerSize) / 2;
+      
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(centerX, centerY, centerSize, centerSize);
+      
+      // Draw rounded square for logo background
+      ctx.beginPath();
+      ctx.roundRect(centerX, centerY, centerSize, centerSize, 12);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.strokeStyle = '#0A5CB8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      // Draw house icon
+      ctx.fillStyle = '#0A5CB8';
+      
+      // Draw house shape
+      const houseX = centerX + 20;
+      const houseY = centerY + 15;
+      const houseWidth = 40;
+      const houseHeight = 35;
+      
+      // Roof
+      ctx.beginPath();
+      ctx.moveTo(houseX, houseY + 10);
+      ctx.lineTo(houseX + houseWidth/2, houseY - 10);
+      ctx.lineTo(houseX + houseWidth, houseY + 10);
+      ctx.closePath();
+      ctx.fillStyle = '#0A5CB8';
+      ctx.fill();
+      
+      // House body
+      ctx.fillStyle = '#0A5CB8';
+      ctx.fillRect(houseX, houseY + 10, houseWidth, houseHeight - 10);
+      
+      // Door
+      ctx.fillStyle = '#1DB954';
+      ctx.fillRect(houseX + 15, houseY + 25, 10, 15);
+      
+      // Draw brand name below icon
+      ctx.font = 'bold 16px "Inter", Arial, sans-serif';
+      ctx.fillStyle = '#0A5CB8';
+      ctx.textAlign = 'center';
+      ctx.fillText('NEPXALL', canvas.width / 2, centerY + centerSize + 25);
+      
+      // Draw tagline
+      ctx.font = '10px "Inter", Arial, sans-serif';
+      ctx.fillStyle = '#6B7280';
+      ctx.fillText('Next Places for Living', canvas.width / 2, centerY + centerSize + 40);
+      
+      setQrDataUrl(canvas.toDataURL('image/png'));
+      
     } catch (err) {
       console.error("❌ QR Generation Error:", err);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function for rounded rectangles
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+    if (w < 2 * r) r = w / 2;
+    if (h < 2 * r) r = h / 2;
+    this.moveTo(x + r, y);
+    this.lineTo(x + w - r, y);
+    this.quadraticCurveTo(x + w, y, x + w, y + r);
+    this.lineTo(x + w, y + h - r);
+    this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    this.lineTo(x + r, y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - r);
+    this.lineTo(x, y + r);
+    this.quadraticCurveTo(x, y, x + r, y);
+    return this;
   };
 
   const handleDownload = () => {
@@ -158,15 +237,15 @@ const QRCodeModal = ({ open, onClose, property }) => {
               justify-content: center;
               align-items: center;
               min-height: 100vh;
-              background: #ffffff;
+              background: #f9fafb;
             }
             .qr-container {
-              max-width: 450px;
+              max-width: 500px;
               width: 100%;
               background: white;
               border-radius: 24px;
               overflow: hidden;
-              box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+              box-shadow: 0 20px 40px rgba(0,0,0,0.15);
             }
             .header {
               background: linear-gradient(135deg, #0A5CB8 0%, #1DB954 100%);
@@ -208,17 +287,19 @@ const QRCodeModal = ({ open, onClose, property }) => {
               border: 1px solid #e5e7eb;
             }
             .qr-wrapper {
-              background: #f9fafb;
-              padding: 24px;
-              border-radius: 16px;
-              margin-bottom: 16px;
+              background: #ffffff;
+              padding: 20px;
+              border-radius: 20px;
+              margin-bottom: 20px;
               display: inline-block;
               border: 2px solid #e5e7eb;
+              box-shadow: 0 8px 20px rgba(0,0,0,0.05);
             }
             .qr-image {
-              width: 250px;
-              height: 250px;
+              width: 300px;
+              height: 300px;
               display: block;
+              border-radius: 12px;
             }
             .status-badge {
               display: inline-block;
@@ -226,7 +307,7 @@ const QRCodeModal = ({ open, onClose, property }) => {
               color: white;
               font-weight: 600;
               font-size: 14px;
-              padding: 8px 24px;
+              padding: 8px 32px;
               border-radius: 30px;
               text-transform: uppercase;
               letter-spacing: 1px;
@@ -293,7 +374,7 @@ const QRCodeModal = ({ open, onClose, property }) => {
       <Fade in={open}>
         <Paper
           sx={{
-            maxWidth: 450,
+            maxWidth: 550,
             width: '100%',
             borderRadius: 4,
             overflow: 'hidden',
@@ -326,18 +407,18 @@ const QRCodeModal = ({ open, onClose, property }) => {
               <CloseIcon />
             </IconButton>
 
-            <Typography variant="h3" fontWeight={800} sx={{ letterSpacing: '-0.5px', mb: 1 }}>
+            <Typography variant="h2" fontWeight={800} sx={{ letterSpacing: '-0.5px', mb: 1 }}>
               NEPXALL
             </Typography>
-            <Typography variant="body1" sx={{ opacity: 0.9 }}>
+            <Typography variant="h6" sx={{ opacity: 0.9, fontWeight: 400 }}>
               Next Places for Living
             </Typography>
           </Box>
 
-          {/* Content - Only Property Name, PG Code, and QR Code */}
+          {/* Content */}
           <Box sx={{ p: 4, textAlign: 'center' }}>
             {/* Property Name */}
-            <Typography variant="h5" fontWeight={700} sx={{ mb: 3 }}>
+            <Typography variant="h4" fontWeight={700} sx={{ mb: 2, color: '#111827' }}>
               {property.pg_name}
             </Typography>
             
@@ -348,42 +429,44 @@ const QRCodeModal = ({ open, onClose, property }) => {
                 bgcolor: '#f3f4f6',
                 color: '#0A5CB8',
                 fontWeight: 700,
-                fontSize: '1.25rem',
-                px: 3,
+                fontSize: '1.5rem',
+                px: 4,
                 py: 1.5,
-                borderRadius: 2,
+                borderRadius: 3,
                 mb: 3,
                 border: '1px solid',
-                borderColor: '#e5e7eb'
+                borderColor: '#e5e7eb',
+                letterSpacing: '1px'
               }}
             >
               {pgCode}
             </Box>
 
-            {/* QR Code */}
+            {/* QR Code with Logo */}
             <Box
               sx={{
-                bgcolor: '#f9fafb',
+                bgcolor: '#ffffff',
                 p: 3,
-                borderRadius: 3,
+                borderRadius: 4,
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
                 mb: 3,
                 border: '2px solid',
-                borderColor: '#e5e7eb'
+                borderColor: '#e5e7eb',
+                boxShadow: '0 8px 20px rgba(0,0,0,0.05)'
               }}
             >
               {loading ? (
-                <CircularProgress size={200} />
+                <CircularProgress size={250} />
               ) : qrDataUrl ? (
                 <img
                   src={qrDataUrl}
                   alt={`QR Code for ${property.pg_name}`}
                   style={{
-                    width: 250,
-                    height: 250,
-                    borderRadius: 12,
+                    width: 300,
+                    height: 300,
+                    borderRadius: 16,
                     boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                   }}
                 />
@@ -396,14 +479,15 @@ const QRCodeModal = ({ open, onClose, property }) => {
                 display: 'inline-block',
                 bgcolor: statusColor,
                 color: 'white',
-                fontWeight: 600,
-                fontSize: '0.875rem',
-                px: 4,
-                py: 1,
-                borderRadius: 30,
+                fontWeight: 700,
+                fontSize: '1rem',
+                px: 5,
+                py: 1.5,
+                borderRadius: 40,
                 textTransform: 'uppercase',
-                letterSpacing: '1px',
-                mb: 3
+                letterSpacing: '1.5px',
+                mb: 3,
+                boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
               }}
             >
               {statusText}
@@ -414,41 +498,45 @@ const QRCodeModal = ({ open, onClose, property }) => {
               <Grid item xs={6}>
                 <Button
                   fullWidth
-                  variant="outlined"
+                  variant="contained"
                   startIcon={<DownloadIcon />}
                   onClick={handleDownload}
                   disabled={loading || !qrDataUrl}
                   sx={{
-                    borderColor: '#0A5CB8',
-                    color: '#0A5CB8',
-                    py: 1.5,
+                    bgcolor: '#0A5CB8',
+                    color: 'white',
+                    py: 1.8,
+                    borderRadius: 3,
+                    fontSize: '1rem',
+                    fontWeight: 600,
                     '&:hover': {
-                      borderColor: '#1DB954',
-                      bgcolor: '#f0f9ff'
+                      bgcolor: '#1DB954',
                     }
                   }}
                 >
-                  Download
+                  DOWNLOAD
                 </Button>
               </Grid>
               <Grid item xs={6}>
                 <Button
                   fullWidth
-                  variant="outlined"
+                  variant="contained"
                   startIcon={<PrintIcon />}
                   onClick={handlePrint}
                   disabled={loading || !qrDataUrl}
                   sx={{
-                    borderColor: '#0A5CB8',
-                    color: '#0A5CB8',
-                    py: 1.5,
+                    bgcolor: '#0A5CB8',
+                    color: 'white',
+                    py: 1.8,
+                    borderRadius: 3,
+                    fontSize: '1rem',
+                    fontWeight: 600,
                     '&:hover': {
-                      borderColor: '#1DB954',
-                      bgcolor: '#f0f9ff'
+                      bgcolor: '#1DB954',
                     }
                   }}
                 >
-                  Print
+                  PRINT
                 </Button>
               </Grid>
             </Grid>
