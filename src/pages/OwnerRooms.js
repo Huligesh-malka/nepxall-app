@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../firebase";
@@ -18,35 +18,37 @@ const OwnerRooms = () => {
 
   /* ================= LOAD ROOMS ================= */
 
-  const loadRooms = async () => {
+  const loadRooms = useCallback(async () => {
 
-  try {
+    try {
 
-    const res = await api.get(`/rooms/${pgId}`);
+      setLoading(true);
 
-    console.log("Rooms response:", res.data);
+      const res = await api.get(`/rooms/${pgId}`);
 
-    if (Array.isArray(res.data)) {
-      setRooms(res.data);
-    } else if (res.data.data) {
-      setRooms(res.data.data);
-    } else {
+      console.log("Rooms response:", res.data);
+
+      if (Array.isArray(res.data)) {
+        setRooms(res.data);
+      } else if (res.data?.data) {
+        setRooms(res.data.data);
+      } else {
+        setRooms([]);
+      }
+
+    } catch (err) {
+
+      console.error("Load rooms error:", err);
       setRooms([]);
+
+    } finally {
+
+      setLoading(false);
+
     }
 
-  } catch (err) {
+  }, [pgId]);
 
-    console.error("Load rooms error:", err);
-
-    setRooms([]);
-
-  } finally {
-
-    setLoading(false);
-
-  }
-
-};
   /* ================= AUTH CHECK ================= */
 
   useEffect(() => {
@@ -63,14 +65,14 @@ const OwnerRooms = () => {
 
     return () => unsub();
 
-  }, [pgId]);
+  }, [loadRooms, navigate]);
 
   /* ================= ADD ROOM ================= */
 
   const addRoom = async () => {
 
     if (!roomNo || !totalSeats) {
-      alert("Enter room number and seats");
+      alert("Enter room number and total seats");
       return;
     }
 
@@ -92,7 +94,6 @@ const OwnerRooms = () => {
     } catch (err) {
 
       console.error("Add room error:", err);
-
       alert("Failed to add room");
 
     } finally {
@@ -193,6 +194,11 @@ const OwnerRooms = () => {
                   <span style={{ color: status.color, fontWeight: "bold" }}>
                     {status.label}
                   </span>
+                </p>
+
+                <p>
+                  Available Beds:{" "}
+                  <b>{room.total_seats - room.occupied_seats}</b>
                 </p>
 
               </div>
