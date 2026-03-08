@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_CONFIG } from "../config";
-import { MapPin, Wifi, Zap, Snowflake, Utensils, ChevronRight } from "lucide-react";
+import { MapPin, Wifi, Zap, Snowflake, Utensils, ChevronRight, Home, AlertCircle } from "lucide-react";
 
 const ScanPG = () => {
   const { id } = useParams();
@@ -12,9 +12,15 @@ const ScanPG = () => {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [loading, setLoading] = useState(true);
   const [weather, setWeather] = useState({ temp: 32, condition: "Sunny" });
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
     fetchPG();
+    
+    // Update time every minute
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
     
     // Track QR scan
     const trackScan = async () => {
@@ -26,6 +32,8 @@ const ScanPG = () => {
     };
     
     trackScan();
+    
+    return () => clearInterval(timer);
   }, [id]);
 
   const fetchPG = async () => {
@@ -217,6 +225,23 @@ const ScanPG = () => {
     return prices.length > 0 ? Math.min(...prices) : pg.rent_amount || 1998;
   };
 
+  // Format time as HH:MM
+  const formatTime = (date) => {
+    return date.toLocaleTimeString('en-IN', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false 
+    });
+  };
+
+  // Format date as DD-MM-YYYY
+  const formatDate = (date) => {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
   if (loading) {
     return (
       <div style={styles.center}>
@@ -228,13 +253,61 @@ const ScanPG = () => {
 
   if (!pg) {
     return (
-      <div style={styles.center}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>🏠</div>
-        <h2 style={{ color: '#1f2937', marginBottom: 8 }}>Property Not Found</h2>
-        <p style={{ color: '#6b7280', marginBottom: 20 }}>The QR code is invalid or property has been removed.</p>
-        <button onClick={() => navigate('/')} style={styles.homeBtn}>
-          Go to Home
-        </button>
+      <div style={styles.notFoundContainer}>
+        {/* Header */}
+        <div style={styles.header}>
+          <div style={styles.logo}># Welcome,</div>
+          <div style={styles.weather}>
+            <span>{weather.temp}°C</span>
+            <span style={styles.weatherCondition}>{weather.condition}</span>
+          </div>
+        </div>
+
+        {/* Navigation Menu */}
+        <div style={styles.navigation}>
+          <div style={styles.navItem}>Home</div>
+          <div style={styles.navGroup}>
+            <div style={styles.navGroupTitle}>Owner</div>
+            <div style={styles.navSubItems}>
+              <div style={styles.navSubItem}>• Dashboard</div>
+              <div style={styles.navSubItem}>• Booking Requests</div>
+              <div style={styles.navSubItem}>• Earnings / Payments</div>
+              <div style={styles.navSubItem}>• My PGs</div>
+              <div style={styles.navSubItem}>• My Hotels</div>
+              <div style={styles.navSubItem}>• Add PG</div>
+              <div style={styles.navSubItem}>• Add Hotel</div>
+              <div style={styles.navSubItem}>• Bank Details</div>
+              <div style={styles.navSubItem}>• Verification</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div style={styles.divider}></div>
+
+        {/* Not Found Content */}
+        <div style={styles.notFoundContent}>
+          <div style={styles.notFoundIcon}>🏠</div>
+          <h2 style={styles.notFoundTitle}>Property Not Found</h2>
+          <p style={styles.notFoundMessage}>
+            The QR code is invalid or property has been removed.
+          </p>
+          <button onClick={() => navigate('/')} style={styles.notFoundButton}>
+            Go to Home
+          </button>
+        </div>
+
+        {/* Footer with Time and Date */}
+        <div style={styles.footer}>
+          <div style={styles.footerLeft}>
+            <span style={styles.footerLang}>ENG</span>
+            <span style={styles.footerLang}>INTL</span>
+          </div>
+          <div style={styles.footerRight}>
+            <div style={styles.footerTime}>{formatTime(currentTime)}</div>
+            <div style={styles.footerDate}>{formatDate(currentTime)}</div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -444,6 +517,7 @@ const ScanPG = () => {
 };
 
 const styles = {
+  // Page styles (same as before)
   page: {
     minHeight: '100vh',
     backgroundColor: '#f8fafc',
@@ -712,6 +786,122 @@ const styles = {
     fontSize: 14,
     fontWeight: 500,
     cursor: 'pointer',
+  },
+
+  // Not Found Page Styles (exactly like your image)
+  notFoundContainer: {
+    minHeight: '100vh',
+    backgroundColor: '#ffffff',
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  navigation: {
+    padding: '20px',
+    borderBottom: '1px solid #e2e8f0',
+  },
+  navItem: {
+    fontSize: 16,
+    fontWeight: 500,
+    color: '#1e293b',
+    padding: '8px 0',
+    cursor: 'pointer',
+  },
+  navGroup: {
+    marginTop: 16,
+  },
+  navGroupTitle: {
+    fontSize: 16,
+    fontWeight: 600,
+    color: '#1e293b',
+    marginBottom: 12,
+  },
+  navSubItems: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+    paddingLeft: 16,
+  },
+  navSubItem: {
+    fontSize: 14,
+    color: '#64748b',
+    cursor: 'pointer',
+    transition: 'color 0.2s',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    margin: '20px 0',
+  },
+  notFoundContent: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '40px 20px',
+    textAlign: 'center',
+  },
+  notFoundIcon: {
+    fontSize: 64,
+    marginBottom: 20,
+    opacity: 0.5,
+  },
+  notFoundTitle: {
+    fontSize: 24,
+    fontWeight: 600,
+    color: '#1e293b',
+    marginBottom: 12,
+  },
+  notFoundMessage: {
+    fontSize: 16,
+    color: '#64748b',
+    marginBottom: 32,
+    maxWidth: 300,
+  },
+  notFoundButton: {
+    padding: '12px 32px',
+    backgroundColor: '#6366f1',
+    color: 'white',
+    border: 'none',
+    borderRadius: 8,
+    fontSize: 16,
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+  },
+  footer: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '16px 20px',
+    borderTop: '1px solid #e2e8f0',
+    backgroundColor: '#ffffff',
+  },
+  footerLeft: {
+    display: 'flex',
+    gap: 16,
+  },
+  footerLang: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: 500,
+  },
+  footerRight: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  footerTime: {
+    fontSize: 16,
+    fontWeight: 600,
+    color: '#1e293b',
+  },
+  footerDate: {
+    fontSize: 12,
+    color: '#94a3b8',
   },
 };
 
