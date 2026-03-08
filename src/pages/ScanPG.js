@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_CONFIG } from "../config";
-import api from "../api/api"; // Import your API instance for backend calls
+import api from "../api/api";
+import { auth } from "../firebase"; // Import auth to get current user
 
 const ScanPG = () => {
   const { id } = useParams();
@@ -14,9 +15,17 @@ const ScanPG = () => {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentData, setPaymentData] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     fetchPG();
+    
+    // Get current user
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      setUser(currentUser);
+    });
+    
+    return () => unsubscribe();
   }, [id]);
 
   const fetchPG = async () => {
@@ -69,32 +78,66 @@ const ScanPG = () => {
       return;
     }
 
+    // Check if user is logged in
+    if (!user) {
+      alert("Please login to continue");
+      navigate("/login", { state: { redirectTo: `/scan/${id}` } });
+      return;
+    }
+
     try {
       setPaymentLoading(true);
 
-      // First create the booking
+      // Get Firebase token
+      const token = await user.getIdToken(true);
+
+      // First create the booking with ALL required fields
       const bookingPayload = {
         pgId: id,
+        pgName: pg.name,
         roomNumber: selectedRoom.room_number,
         roomType: selectedRoom.sharing_type,
+        sharingType: selectedRoom.sharing_type,
         rentAmount: selectedRoom.price,
         securityDeposit: pg.price_details?.deposit_amount || 0,
         maintenanceAmount: pg.price_details?.maintenance_amount || 0,
-        totalAmount: selected.totalAmount
+        totalAmount: selected.totalAmount,
+        // Add user details
+        userId: user.uid,
+        userEmail: user.email,
+        // Add property details
+        propertyType: pg.category,
+        propertyAddress: `${pg.location?.area}, ${pg.location?.city}`,
+        // Add timestamp
+        bookingDate: new Date().toISOString(),
+        // Status for direct booking
+        status: "pending_payment"
       };
 
-      const bookingRes = await api.post("/bookings/create-direct", bookingPayload);
+      console.log("Sending booking payload:", bookingPayload);
+
+      const bookingRes = await api.post("/bookings/create-direct", bookingPayload, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       
       if (!bookingRes.data?.success) {
         throw new Error(bookingRes.data?.message || "Booking creation failed");
       }
 
-      const bookingId = bookingRes.data.bookingId;
+      const bookingId = bookingRes.data.bookingId || bookingRes.data.id;
 
       // Then create payment
       const paymentRes = await api.post("/payments/create-payment", {
         bookingId: bookingId,
         amount: selected.totalAmount,
+        userId: user.uid,
+        pgId: id
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
 
       setPaymentData({
@@ -109,7 +152,13 @@ const ScanPG = () => {
 
     } catch (err) {
       console.error("Payment error:", err);
-      alert(err.response?.data?.message || "Payment initialization failed");
+      console.error("Error response:", err.response?.data);
+      
+      // Show specific error message from backend
+      const errorMessage = err.response?.data?.message || 
+                          err.response?.data?.error || 
+                          "Payment initialization failed. Please try again.";
+      alert(errorMessage);
     } finally {
       setPaymentLoading(false);
     }
@@ -120,20 +169,27 @@ const ScanPG = () => {
     try {
       setPaymentLoading(true);
       
+      const token = await user.getIdToken(true);
+      
       await api.post("/payments/confirm-payment", {
         orderId: paymentData.orderId,
+        bookingId: paymentData.bookingId
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
 
       alert("Payment successful! Your booking is confirmed.");
       setShowPaymentModal(false);
       setPaymentData(null);
       
-      // Navigate to bookings page or success page
+      // Navigate to bookings page
       navigate("/user/bookings");
 
     } catch (err) {
       console.error(err);
-      alert("Failed to submit payment confirmation");
+      alert("Failed to submit payment confirmation. Please contact support.");
     } finally {
       setPaymentLoading(false);
     }
@@ -451,7 +507,7 @@ const ScanPG = () => {
           <br />
           <br />
 
-          <a href={paymentData.upiLink} style={styles.upiLink}>
+          <a href={paymentData.upiLink} style={styles.upiLink} target="_blank" rel="noopener noreferrer">
             Pay via UPI
           </a>
 
