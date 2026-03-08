@@ -75,7 +75,7 @@ const ScanPG = () => {
 
   // Format price with commas
   const formatPrice = (price) => {
-    if (!price || price === 0) return "0";
+    if (!price || price === 0 || price === "0" || price === "") return null;
     return Number(price).toLocaleString('en-IN');
   };
 
@@ -86,6 +86,116 @@ const ScanPG = () => {
     if (room.sharing_type?.toLowerCase().includes('triple')) return 'Triple Sharing';
     if (room.sharing_type?.toLowerCase().includes('four')) return 'Four Sharing';
     return room.sharing_type || 'Standard Room';
+  };
+
+  // Get all available prices based on property type
+  const getAllPropertyPrices = () => {
+    if (!pg?.price_details) return [];
+    
+    const prices = [];
+    const { price_details } = pg;
+
+    // PG/Hostel Prices
+    if (price_details.sharing) {
+      if (price_details.sharing.single_sharing && price_details.sharing.single_sharing > 0) {
+        prices.push({
+          label: "Single Sharing",
+          price: price_details.sharing.single_sharing,
+          type: "pg"
+        });
+      }
+      if (price_details.sharing.double_sharing && price_details.sharing.double_sharing > 0) {
+        prices.push({
+          label: "Double Sharing",
+          price: price_details.sharing.double_sharing,
+          type: "pg"
+        });
+      }
+      if (price_details.sharing.triple_sharing && price_details.sharing.triple_sharing > 0) {
+        prices.push({
+          label: "Triple Sharing",
+          price: price_details.sharing.triple_sharing,
+          type: "pg"
+        });
+      }
+      if (price_details.sharing.four_sharing && price_details.sharing.four_sharing > 0) {
+        prices.push({
+          label: "Four Sharing",
+          price: price_details.sharing.four_sharing,
+          type: "pg"
+        });
+      }
+      if (price_details.sharing.single_room && price_details.sharing.single_room > 0) {
+        prices.push({
+          label: "Single Room",
+          price: price_details.sharing.single_room,
+          type: "pg"
+        });
+      }
+      if (price_details.sharing.double_room && price_details.sharing.double_room > 0) {
+        prices.push({
+          label: "Double Room",
+          price: price_details.sharing.double_room,
+          type: "pg"
+        });
+      }
+    }
+
+    // Co-living Prices
+    if (price_details.co_living) {
+      if (price_details.co_living.single_room && price_details.co_living.single_room > 0) {
+        prices.push({
+          label: "Co-living Single",
+          price: price_details.co_living.single_room,
+          type: "coliving"
+        });
+      }
+      if (price_details.co_living.double_room && price_details.co_living.double_room > 0) {
+        prices.push({
+          label: "Co-living Double",
+          price: price_details.co_living.double_room,
+          type: "coliving"
+        });
+      }
+    }
+
+    // To-let/BHK Prices
+    if (price_details.to_let?.prices) {
+      if (price_details.to_let.prices['1bhk'] && price_details.to_let.prices['1bhk'] > 0) {
+        prices.push({
+          label: "1 BHK",
+          price: price_details.to_let.prices['1bhk'],
+          type: "tolet",
+          config: price_details.to_let.configurations?.['1bhk']
+        });
+      }
+      if (price_details.to_let.prices['2bhk'] && price_details.to_let.prices['2bhk'] > 0) {
+        prices.push({
+          label: "2 BHK",
+          price: price_details.to_let.prices['2bhk'],
+          type: "tolet",
+          config: price_details.to_let.configurations?.['2bhk']
+        });
+      }
+      if (price_details.to_let.prices['3bhk'] && price_details.to_let.prices['3bhk'] > 0) {
+        prices.push({
+          label: "3 BHK",
+          price: price_details.to_let.prices['3bhk'],
+          type: "tolet",
+          config: price_details.to_let.configurations?.['3bhk']
+        });
+      }
+      if (price_details.to_let.prices['4bhk'] && price_details.to_let.prices['4bhk'] > 0) {
+        prices.push({
+          label: "4 BHK",
+          price: price_details.to_let.prices['4bhk'],
+          type: "tolet",
+          config: price_details.to_let.configurations?.['4bhk']
+        });
+      }
+    }
+
+    return prices;
   };
 
   if (loading) {
@@ -111,6 +221,7 @@ const ScanPG = () => {
   }
 
   const selectedDetails = getSelectedDetails();
+  const propertyPrices = getAllPropertyPrices();
 
   return (
     <div style={styles.container}>
@@ -122,6 +233,12 @@ const ScanPG = () => {
           <span style={styles.locationText}>
             {pg.location?.area}, {pg.location?.city}
           </span>
+        </div>
+        {/* Property Type Badge */}
+        <div style={styles.typeBadge}>
+          {pg.category === "to_let" ? "🏠 House/Flat" : 
+           pg.category === "coliving" ? "🤝 Co-Living" : 
+           "🏢 PG/Hostel"}
         </div>
       </div>
 
@@ -176,39 +293,48 @@ const ScanPG = () => {
         )}
       </div>
 
-      {/* Price Details Section */}
-      {pg.price_details && (
+      {/* Price Details Section - Shows all available prices */}
+      {propertyPrices.length > 0 && (
         <div style={styles.priceSection}>
-          <h3 style={styles.subSectionTitle}>Price Details</h3>
+          <h3 style={styles.subSectionTitle}>Available Price Options</h3>
           
-          <div style={styles.priceDetails}>
-            {pg.price_details.rent_amount > 0 && (
-              <div style={styles.priceRow}>
-                <span>Base Rent</span>
-                <span style={styles.priceRowValue}>₹{formatPrice(pg.price_details.rent_amount)}/month</span>
+          <div style={styles.priceGrid}>
+            {propertyPrices.map((item, index) => (
+              <div key={index} style={styles.priceCard}>
+                <div style={styles.priceCardLabel}>{item.label}</div>
+                <div style={styles.priceCardValue}>₹{formatPrice(item.price)}/month</div>
+                {item.config && (
+                  <div style={styles.priceCardConfig}>
+                    {item.config.bedrooms} bed • {item.config.bathrooms} bath
+                  </div>
+                )}
               </div>
-            )}
-            
-            {pg.price_details.deposit_amount > 0 && (
-              <div style={styles.priceRow}>
-                <span>Security Deposit</span>
-                <span style={styles.priceRowValue}>₹{formatPrice(pg.price_details.deposit_amount)}</span>
-              </div>
-            )}
-            
-            {pg.price_details.maintenance_amount > 0 && (
-              <div style={styles.priceRow}>
-                <span>Maintenance</span>
-                <span style={styles.priceRowValue}>₹{formatPrice(pg.price_details.maintenance_amount)}/month</span>
-              </div>
-            )}
-            
-            {pg.price_details.brokerage_amount > 0 && (
-              <div style={styles.priceRow}>
-                <span>Brokerage</span>
-                <span style={styles.priceRowValue}>₹{formatPrice(pg.price_details.brokerage_amount)}</span>
-              </div>
-            )}
+            ))}
+          </div>
+
+          {/* Additional Charges */}
+          <div style={styles.additionalCharges}>
+            <h4 style={styles.chargesTitle}>Additional Charges</h4>
+            <div style={styles.chargesList}>
+              {pg.price_details?.deposit_amount > 0 && (
+                <div style={styles.chargeRow}>
+                  <span>Security Deposit</span>
+                  <span style={styles.chargeValue}>₹{formatPrice(pg.price_details.deposit_amount)}</span>
+                </div>
+              )}
+              {pg.price_details?.maintenance_amount > 0 && (
+                <div style={styles.chargeRow}>
+                  <span>Maintenance</span>
+                  <span style={styles.chargeValue}>₹{formatPrice(pg.price_details.maintenance_amount)}/month</span>
+                </div>
+              )}
+              {pg.price_details?.brokerage_amount > 0 && (
+                <div style={styles.chargeRow}>
+                  <span>Brokerage</span>
+                  <span style={styles.chargeValue}>₹{formatPrice(pg.price_details.brokerage_amount)}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -311,7 +437,8 @@ const styles = {
   locationRow: {
     display: "flex",
     alignItems: "center",
-    gap: "6px"
+    gap: "6px",
+    marginBottom: "8px"
   },
   locationIcon: {
     fontSize: "16px",
@@ -321,6 +448,15 @@ const styles = {
     fontSize: "15px",
     color: "#6b7280",
     fontWeight: "400"
+  },
+  typeBadge: {
+    display: "inline-block",
+    backgroundColor: "#f3f4f6",
+    padding: "6px 14px",
+    borderRadius: "30px",
+    fontSize: "13px",
+    fontWeight: "500",
+    color: "#4b5563"
   },
   roomSection: {
     marginBottom: "32px"
@@ -431,19 +567,59 @@ const styles = {
     padding: "20px",
     marginBottom: "32px"
   },
-  priceDetails: {
+  priceGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+    gap: "12px",
+    marginBottom: "20px"
+  },
+  priceCard: {
+    backgroundColor: "#ffffff",
+    padding: "16px",
+    borderRadius: "16px",
+    border: "1px solid #e5e7eb",
+    textAlign: "center"
+  },
+  priceCardLabel: {
+    fontSize: "14px",
+    color: "#6b7280",
+    marginBottom: "8px",
+    fontWeight: "500"
+  },
+  priceCardValue: {
+    fontSize: "18px",
+    fontWeight: "700",
+    color: "#4f46e5",
+    marginBottom: "4px"
+  },
+  priceCardConfig: {
+    fontSize: "11px",
+    color: "#9ca3af"
+  },
+  additionalCharges: {
+    borderTop: "1px solid #e5e7eb",
+    paddingTop: "20px",
+    marginTop: "8px"
+  },
+  chargesTitle: {
+    fontSize: "15px",
+    fontWeight: "600",
+    color: "#374151",
+    margin: "0 0 12px 0"
+  },
+  chargesList: {
     display: "flex",
     flexDirection: "column",
-    gap: "12px"
+    gap: "10px"
   },
-  priceRow: {
+  chargeRow: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "8px 0",
-    borderBottom: "1px solid #e5e7eb"
+    fontSize: "14px",
+    padding: "4px 0"
   },
-  priceRowValue: {
+  chargeValue: {
     fontWeight: "600",
     color: "#111827"
   },
