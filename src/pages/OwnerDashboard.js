@@ -299,10 +299,13 @@ const OwnerDashboard = () => {
   
  const handleGenerateQR = async (propertyId) => {
   try {
+
     const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
     const propertyName = property?.pg_name || "PG";
 
     const url = `https://nepxall.vercel.app/scan/${propertyId}`;
+
+    /* QR DESIGN */
 
     const qr = new QRCodeStyling({
       width: 600,
@@ -316,20 +319,20 @@ const OwnerDashboard = () => {
           type: "linear",
           rotation: 0,
           colorStops: [
-            { offset: 0, color: "#0A5CB8" },
-            { offset: 1, color: "#1DB954" }
+            { offset: 0, color: "#1E5EFF" },   // Nepxall Blue
+            { offset: 1, color: "#22C55E" }    // Nepxall Green
           ]
         }
       },
 
       cornersSquareOptions: {
         type: "extra-rounded",
-        color: "#1DB954"
+        color: "#22C55E"
       },
 
       cornersDotOptions: {
         type: "dot",
-        color: "#0A5CB8"
+        color: "#1E5EFF"
       },
 
       backgroundOptions: {
@@ -343,7 +346,7 @@ const OwnerDashboard = () => {
       }
     });
 
-    /* POSTER CANVAS */
+    /* CREATE POSTER */
 
     const canvas = document.createElement("canvas");
     canvas.width = 900;
@@ -351,45 +354,54 @@ const OwnerDashboard = () => {
 
     const ctx = canvas.getContext("2d");
 
-    ctx.fillStyle = "#ffffff";
+    /* BACKGROUND */
+
+    ctx.fillStyle = "#F9FAFB";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    /* LOGO */
+    ctx.textAlign = "center";
+
+    /* LOAD LOGO */
 
     const logo = new Image();
+    logo.crossOrigin = "anonymous";
     logo.src = "/logo.png";
 
     logo.onload = async () => {
+
+      /* LOGO */
 
       ctx.drawImage(logo, 350, 40, 200, 110);
 
       /* BRAND NAME */
 
-      ctx.font = "bold 44px Arial";
-      ctx.fillStyle = "#0A5CB8";
-      ctx.textAlign = "center";
-      ctx.fillText("Nepxall", 450, 200);
+      ctx.font = "bold 48px Arial";
+      ctx.fillStyle = "#1E5EFF";
+      ctx.fillText("Nepxall", 450, 210);
 
       /* TAGLINE */
 
       ctx.font = "26px Arial";
-      ctx.fillStyle = "#6b7280";
-      ctx.fillText("Next Places for Living", 450, 240);
+      ctx.fillStyle = "#6B7280";
+      ctx.fillText("Next Places for Living", 450, 250);
 
       /* PG NAME */
 
       ctx.font = "bold 34px Arial";
-      ctx.fillStyle = "#111";
+      ctx.fillStyle = "#111827";
       ctx.fillText(propertyName.toUpperCase(), 450, 320);
 
-      /* SUBTEXT */
+      /* DESCRIPTION */
 
       ctx.font = "26px Arial";
-      ctx.fillStyle = "#444";
-      ctx.fillText("Scan QR to View Rooms", 450, 370);
-      ctx.fillText("Book Instantly Online", 450, 405);
+      ctx.fillStyle = "#1E5EFF";
+      ctx.fillText("Scan QR to View Rooms", 450, 380);
 
-      /* QR IMAGE */
+      ctx.font = "24px Arial";
+      ctx.fillStyle = "#6B7280";
+      ctx.fillText("Book Instantly Online", 450, 415);
+
+      /* GENERATE QR IMAGE */
 
       const qrBlob = await qr.getRawData("png");
       const qrImg = new Image();
@@ -397,12 +409,12 @@ const OwnerDashboard = () => {
 
       qrImg.onload = () => {
 
-        ctx.drawImage(qrImg, 150, 440, 600, 600);
+        ctx.drawImage(qrImg, 150, 450, 600, 600);
 
         /* FOOTER */
 
-        ctx.font = "bold 24px Arial";
-        ctx.fillStyle = "#333";
+        ctx.font = "22px Arial";
+        ctx.fillStyle = "#6B7280";
         ctx.fillText("Powered by Nepxall", 450, 1080);
 
         /* DOWNLOAD */
