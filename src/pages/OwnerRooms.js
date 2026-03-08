@@ -20,28 +20,33 @@ const OwnerRooms = () => {
 
   const loadRooms = async () => {
 
-    try {
+  try {
 
-      const res = await api.get(`/rooms/${pgId}`);
+    const res = await api.get(`/rooms/${pgId}`);
 
-      if (res.data?.success) {
-        setRooms(res.data.data);
-      } else {
-        setRooms(res.data || []);
-      }
+    console.log("Rooms response:", res.data);
 
-    } catch (err) {
-
-      console.error("Load rooms error:", err);
-
-    } finally {
-
-      setLoading(false);
-
+    if (Array.isArray(res.data)) {
+      setRooms(res.data);
+    } else if (res.data.data) {
+      setRooms(res.data.data);
+    } else {
+      setRooms([]);
     }
 
-  };
+  } catch (err) {
 
+    console.error("Load rooms error:", err);
+
+    setRooms([]);
+
+  } finally {
+
+    setLoading(false);
+
+  }
+
+};
   /* ================= AUTH CHECK ================= */
 
   useEffect(() => {
