@@ -2,8 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_CONFIG } from "../config";
-import api from "../api/api";
-import { auth } from "../firebase"; // Import auth to get current user
 
 const ScanPG = () => {
   const { id } = useParams();
@@ -12,20 +10,9 @@ const ScanPG = () => {
   const [pg, setPg] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const [paymentData, setPaymentData] = useState(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [user, setUser] = useState(null);
 
   useEffect(() => {
     fetchPG();
-    
-    // Get current user
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
-      setUser(currentUser);
-    });
-    
-    return () => unsubscribe();
   }, [id]);
 
   const fetchPG = async () => {
@@ -48,14 +35,9 @@ const ScanPG = () => {
     setSelectedRoom(room);
   };
 
-  const calculateTotalAmount = (room) => {
-    if (!room || !pg) return 0;
-    
-    const rent = Number(room.price || 0);
-    const deposit = Number(pg.price_details?.deposit_amount || 0);
-    const maintenance = Number(pg.price_details?.maintenance_amount || 0);
-    
-    return rent + deposit + maintenance;
+  const getSelectedPrice = () => {
+    if (selectedRoom) return selectedRoom.price;
+    return null;
   };
 
   const getSelectedDetails = () => {
@@ -63,136 +45,28 @@ const ScanPG = () => {
       return {
         type: "room",
         name: `Room ${selectedRoom.room_number} (${selectedRoom.sharing_type})`,
-        price: selectedRoom.price,
-        totalAmount: calculateTotalAmount(selectedRoom)
+        price: selectedRoom.price
       };
     }
     return null;
   };
 
-  // Create booking and initiate payment
-  const handlePayNow = async () => {
+  const goToPayment = () => {
     const selected = getSelectedDetails();
     if (!selected) {
       alert("Please select a room to proceed");
       return;
     }
-
-    // Check if user is logged in
-    if (!user) {
-      alert("Please login to continue");
-      navigate("/login", { state: { redirectTo: `/scan/${id}` } });
-      return;
-    }
-
-    try {
-      setPaymentLoading(true);
-
-      // Get Firebase token
-      const token = await user.getIdToken(true);
-
-      // First create the booking with ALL required fields
-      const bookingPayload = {
-        pgId: id,
-        pgName: pg.name,
-        roomNumber: selectedRoom.room_number,
-        roomType: selectedRoom.sharing_type,
-        sharingType: selectedRoom.sharing_type,
-        rentAmount: selectedRoom.price,
-        securityDeposit: pg.price_details?.deposit_amount || 0,
-        maintenanceAmount: pg.price_details?.maintenance_amount || 0,
-        totalAmount: selected.totalAmount,
-        // Add user details
-        userId: user.uid,
-        userEmail: user.email,
-        // Add property details
-        propertyType: pg.category,
-        propertyAddress: `${pg.location?.area}, ${pg.location?.city}`,
-        // Add timestamp
-        bookingDate: new Date().toISOString(),
-        // Status for direct booking
-        status: "pending_payment"
-      };
-
-      console.log("Sending booking payload:", bookingPayload);
-
-      const bookingRes = await api.post("/bookings/create-direct", bookingPayload, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      
-      if (!bookingRes.data?.success) {
-        throw new Error(bookingRes.data?.message || "Booking creation failed");
+    
+    navigate(`/booking/${id}`, {
+      state: {
+        selectionType: selected.type,
+        selectionName: selected.name,
+        price: selected.price,
+        roomId: selectedRoom?.room_number,
+        sharingType: selectedRoom?.sharing_type
       }
-
-      const bookingId = bookingRes.data.bookingId || bookingRes.data.id;
-
-      // Then create payment
-      const paymentRes = await api.post("/payments/create-payment", {
-        bookingId: bookingId,
-        amount: selected.totalAmount,
-        userId: user.uid,
-        pgId: id
-      }, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      setPaymentData({
-        qr: paymentRes.data.qr,
-        upiLink: paymentRes.data.upiLink,
-        orderId: paymentRes.data.orderId,
-        amount: selected.totalAmount,
-        bookingId: bookingId
-      });
-
-      setShowPaymentModal(true);
-
-    } catch (err) {
-      console.error("Payment error:", err);
-      console.error("Error response:", err.response?.data);
-      
-      // Show specific error message from backend
-      const errorMessage = err.response?.data?.message || 
-                          err.response?.data?.error || 
-                          "Payment initialization failed. Please try again.";
-      alert(errorMessage);
-    } finally {
-      setPaymentLoading(false);
-    }
-  };
-
-  // Submit payment confirmation
-  const submitPayment = async () => {
-    try {
-      setPaymentLoading(true);
-      
-      const token = await user.getIdToken(true);
-      
-      await api.post("/payments/confirm-payment", {
-        orderId: paymentData.orderId,
-        bookingId: paymentData.bookingId
-      }, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      alert("Payment successful! Your booking is confirmed.");
-      setShowPaymentModal(false);
-      setPaymentData(null);
-      
-      // Navigate to bookings page
-      navigate("/user/bookings");
-
-    } catch (err) {
-      console.error(err);
-      alert("Failed to submit payment confirmation. Please contact support.");
-    } finally {
-      setPaymentLoading(false);
-    }
+    });
   };
 
   const goToFullDetails = () => {
@@ -201,7 +75,7 @@ const ScanPG = () => {
 
   // Format price with commas
   const formatPrice = (price) => {
-    if (!price || price === 0 || price === "0" || price === "") return "0";
+    if (!price || price === 0 || price === "0" || price === "") return null;
     return Number(price).toLocaleString('en-IN');
   };
 
@@ -466,24 +340,29 @@ const ScanPG = () => {
         <span style={styles.viewDetailsArrow}>→</span>
       </button>
 
-      {/* Footer Actions - Direct Pay Button */}
+      {/* Selected Room Summary (if any) */}
+      {selectedDetails && (
+        <div style={styles.selectedSummary}>
+          <div style={styles.selectedSummaryLeft}>
+            <span style={styles.selectedSummaryLabel}>Selected:</span>
+            <span style={styles.selectedSummaryName}>{selectedDetails.name}</span>
+          </div>
+          <span style={styles.selectedSummaryPrice}>₹{formatPrice(selectedDetails.price)}/month</span>
+        </div>
+      )}
+
+      {/* Footer Actions */}
       <div style={styles.footer}>
         <button
-          onClick={handlePayNow}
+          onClick={goToPayment}
           style={{
-            ...styles.payBtn,
-            opacity: selectedRoom ? 1 : 0.5,
-            cursor: selectedRoom ? 'pointer' : 'not-allowed'
+            ...styles.bookBtn,
+            opacity: selectedDetails ? 1 : 0.5,
+            cursor: selectedDetails ? 'pointer' : 'not-allowed'
           }}
-          disabled={!selectedRoom || paymentLoading}
+          disabled={!selectedDetails}
         >
-          {paymentLoading ? (
-            <span style={styles.loadingText}>Processing...</span>
-          ) : selectedRoom ? (
-            `Pay ₹${formatPrice(calculateTotalAmount(selectedRoom))}`
-          ) : (
-            'Select a room to continue'
-          )}
+          {selectedDetails ? `Book Now • ₹${formatPrice(selectedDetails.price)}/month` : 'Select a room to continue'}
         </button>
 
         {pg.contact?.phone && (
@@ -494,45 +373,6 @@ const ScanPG = () => {
           </a>
         )}
       </div>
-
-      {/* Payment Modal */}
-      {showPaymentModal && paymentData && (
-        <div style={styles.paymentModal}>
-          <h3 style={styles.paymentModalTitle}>Scan & Pay</h3>
-
-          <p style={styles.paymentAmount}>Amount: ₹{formatPrice(paymentData.amount)}</p>
-
-          <img src={paymentData.qr} width="220" alt="UPI QR" style={styles.qrCode} />
-
-          <br />
-          <br />
-
-          <a href={paymentData.upiLink} style={styles.upiLink} target="_blank" rel="noopener noreferrer">
-            Pay via UPI
-          </a>
-
-          <br />
-          <br />
-
-          <button 
-            style={styles.paidButton} 
-            onClick={submitPayment}
-            disabled={paymentLoading}
-          >
-            {paymentLoading ? "Processing..." : "✅ I have paid"}
-          </button>
-
-          <br />
-
-          <button 
-            style={styles.closeButton} 
-            onClick={() => setShowPaymentModal(false)}
-            disabled={paymentLoading}
-          >
-            Close
-          </button>
-        </div>
-      )}
     </div>
   );
 };
@@ -557,10 +397,6 @@ const styles = {
     fontSize: "18px",
     color: "#4f46e5",
     fontWeight: "500"
-  },
-  loadingText: {
-    fontSize: "16px",
-    color: "#ffffff"
   },
   notFound: {
     textAlign: "center",
@@ -790,6 +626,35 @@ const styles = {
     fontSize: "20px",
     transition: "transform 0.2s ease"
   },
+  selectedSummary: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#f3f4f6",
+    padding: "16px 20px",
+    borderRadius: "16px",
+    marginBottom: "16px",
+    border: "1px solid #e5e7eb"
+  },
+  selectedSummaryLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px"
+  },
+  selectedSummaryLabel: {
+    fontSize: "14px",
+    color: "#6b7280"
+  },
+  selectedSummaryName: {
+    fontSize: "15px",
+    fontWeight: "600",
+    color: "#111827"
+  },
+  selectedSummaryPrice: {
+    fontSize: "16px",
+    fontWeight: "700",
+    color: "#4f46e5"
+  },
   footer: {
     display: "flex",
     flexDirection: "column",
@@ -805,10 +670,10 @@ const styles = {
     borderTop: "1px solid #e5e7eb",
     boxShadow: "0 -4px 12px rgba(0, 0, 0, 0.05)"
   },
-  payBtn: {
+  bookBtn: {
     width: "100%",
     padding: "18px",
-    backgroundColor: "#e11d48",
+    backgroundColor: "#4f46e5",
     color: "#ffffff",
     border: "none",
     borderRadius: "16px",
@@ -828,72 +693,6 @@ const styles = {
     fontSize: "16px",
     cursor: "pointer",
     transition: "all 0.2s ease"
-  },
-  paymentModal: {
-    position: "fixed",
-    top: "50%",
-    left: "50%",
-    transform: "translate(-50%, -50%)",
-    background: "#fff",
-    padding: "30px",
-    borderRadius: "20px",
-    boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-    textAlign: "center",
-    width: "90%",
-    maxWidth: "400px",
-    zIndex: 1000
-  },
-  paymentModalTitle: {
-    fontSize: "24px",
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: "16px"
-  },
-  paymentAmount: {
-    fontSize: "18px",
-    fontWeight: "600",
-    color: "#4f46e5",
-    marginBottom: "20px"
-  },
-  qrCode: {
-    border: "2px solid #e5e7eb",
-    padding: "10px",
-    borderRadius: "12px",
-    marginBottom: "10px"
-  },
-  upiLink: {
-    padding: "12px 24px",
-    background: "#2563eb",
-    color: "#fff",
-    textDecoration: "none",
-    borderRadius: "12px",
-    fontWeight: "600",
-    display: "inline-block",
-    width: "80%"
-  },
-  paidButton: {
-    padding: "12px 24px",
-    background: "#16a34a",
-    color: "#fff",
-    border: "none",
-    borderRadius: "12px",
-    fontWeight: "600",
-    fontSize: "16px",
-    cursor: "pointer",
-    width: "80%",
-    marginTop: "10px"
-  },
-  closeButton: {
-    padding: "12px 24px",
-    background: "#6b7280",
-    color: "#fff",
-    border: "none",
-    borderRadius: "12px",
-    fontWeight: "600",
-    fontSize: "16px",
-    cursor: "pointer",
-    width: "80%",
-    marginTop: "10px"
   }
 };
 
