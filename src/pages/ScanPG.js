@@ -35,7 +35,7 @@ const ScanPG = () => {
       return;
     }
 
-    navigate(`/booking/${id}?room=${selectedRoom.room_number}&type=${selectedRoom.sharing_type}`);
+    navigate(`/booking/${id}?room=${selectedRoom.room_number}`);
   };
 
   if (loading) {
@@ -47,38 +47,29 @@ const ScanPG = () => {
   }
 
   return (
-    <div style={styles.page}>
+    <div style={styles.container}>
 
-      {/* PG IMAGE */}
-      <div style={styles.imageBox}>
-        <img
-          src={pg.photos?.[0] || "https://via.placeholder.com/800x400"}
-          alt="pg"
-          style={styles.image}
-        />
+      {/* PG NAME */}
+      <h2 style={styles.title}>{pg.pg_name}</h2>
+
+      {/* LOCATION */}
+      <p style={styles.location}>
+        📍 {pg.area}, {pg.city}
+      </p>
+
+      {/* SUMMARY */}
+      <div style={styles.summary}>
+        {Object.entries(pg.availability_summary || {}).map(([type, count]) => (
+          <span key={type} style={styles.badge}>
+            {type} • {count} left
+          </span>
+        ))}
       </div>
 
-      {/* PG DETAILS */}
-      <div style={styles.card}>
+      <h3 style={styles.section}>Choose Room</h3>
 
-        <h2 style={styles.title}>{pg.pg_name}</h2>
-
-        <p style={styles.location}>
-          📍 {pg.area}, {pg.city}
-        </p>
-
-        {/* SUMMARY */}
-        <div style={styles.summary}>
-          {Object.entries(pg.availability_summary || {}).map(([type, count]) => (
-            <span key={type} style={styles.badge}>
-              {type} • {count} left
-            </span>
-          ))}
-        </div>
-
-        <h3 style={styles.sectionTitle}>Choose Room</h3>
-
-        {/* ROOMS */}
+      {/* ROOM LIST */}
+      <div style={styles.roomList}>
         {pg.available_room_details?.map((room, index) => (
           <div
             key={index}
@@ -88,11 +79,11 @@ const ScanPG = () => {
               border:
                 selectedRoom?.room_number === room.room_number
                   ? "2px solid #4f46e5"
-                  : "1px solid #e5e7eb",
+                  : "1px solid #e5e7eb"
             }}
           >
             <div>
-              <div style={styles.roomTitle}>
+              <div style={styles.roomNumber}>
                 Room {room.room_number}
               </div>
 
@@ -105,26 +96,22 @@ const ScanPG = () => {
               </div>
             </div>
 
-            <div style={styles.price}>
-              ₹{room.price}
+            <div style={styles.priceBox}>
+              <div style={styles.price}>
+                ₹ {room.price}
+              </div>
+              <div style={styles.perMonth}>
+                /month
+              </div>
             </div>
           </div>
         ))}
-
       </div>
 
-      {/* FOOTER BUTTON */}
-      <div style={styles.bottomBar}>
-        <button onClick={goToPayment} style={styles.bookBtn}>
-          Continue Booking
-        </button>
-
-        {pg.contact_phone && (
-          <a href={`tel:${pg.contact_phone}`} style={{ width: "40%" }}>
-            <button style={styles.callBtn}>Call Owner</button>
-          </a>
-        )}
-      </div>
+      {/* BOOK BUTTON */}
+      <button onClick={goToPayment} style={styles.bookBtn}>
+        Continue Booking
+      </button>
 
     </div>
   );
@@ -132,35 +119,20 @@ const ScanPG = () => {
 
 const styles = {
 
-  page: {
-    maxWidth: 700,
+  container: {
+    maxWidth: 500,
     margin: "auto",
-    fontFamily: "sans-serif",
-    paddingBottom: 100
-  },
-
-  imageBox: {
-    width: "100%",
-    height: 220,
-    overflow: "hidden"
-  },
-
-  image: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover"
-  },
-
-  card: {
-    background: "#fff",
-    marginTop: -30,
-    borderRadius: 20,
     padding: 20,
-    boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
+    fontFamily: "sans-serif"
+  },
+
+  center: {
+    textAlign: "center",
+    marginTop: 100
   },
 
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 700,
     marginBottom: 5
   },
@@ -172,7 +144,6 @@ const styles = {
 
   summary: {
     display: "flex",
-    flexWrap: "wrap",
     gap: 10,
     marginBottom: 20
   },
@@ -185,23 +156,27 @@ const styles = {
     fontSize: 13
   },
 
-  sectionTitle: {
+  section: {
     marginBottom: 10
+  },
+
+  roomList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 12
   },
 
   roomCard: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
+    padding: 15,
+    borderRadius: 10,
     cursor: "pointer",
-    transition: "0.2s",
     background: "#fafafa"
   },
 
-  roomTitle: {
+  roomNumber: {
     fontWeight: 600,
     fontSize: 16
   },
@@ -216,49 +191,32 @@ const styles = {
     color: "#16a34a"
   },
 
+  priceBox: {
+    textAlign: "right"
+  },
+
   price: {
-    fontWeight: 700,
     fontSize: 18,
+    fontWeight: 700,
     color: "#4f46e5"
   },
 
-  bottomBar: {
-    position: "fixed",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    background: "#fff",
-    padding: 15,
-    display: "flex",
-    gap: 10,
-    boxShadow: "0 -2px 10px rgba(0,0,0,0.1)"
+  perMonth: {
+    fontSize: 12,
+    color: "#6b7280"
   },
 
   bookBtn: {
-    flex: 1,
+    width: "100%",
+    marginTop: 25,
+    padding: 14,
+    borderRadius: 10,
+    border: "none",
     background: "linear-gradient(90deg,#6366f1,#4f46e5)",
     color: "#fff",
-    border: "none",
-    padding: 14,
-    borderRadius: 10,
     fontWeight: "bold",
-    fontSize: 16
-  },
-
-  callBtn: {
-    width: "100%",
-    border: "2px solid #22c55e",
-    color: "#22c55e",
-    background: "#fff",
-    borderRadius: 10,
-    padding: 14,
-    fontWeight: "bold"
-  },
-
-  center: {
-    textAlign: "center",
-    marginTop: 100,
-    fontSize: 18
+    fontSize: 16,
+    cursor: "pointer"
   }
 };
 
