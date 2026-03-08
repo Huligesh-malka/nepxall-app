@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../firebase";
 import api from "../api/api";
 
 const OwnerRooms = () => {
+
   const { pgId } = useParams();
   const navigate = useNavigate();
 
@@ -14,89 +15,125 @@ const OwnerRooms = () => {
 
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
-  const [error, setError] = useState(null);
-
-  /* ================= AUTH ================= */
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) navigate("/login");
-      else loadRooms();
-    });
-
-    return unsub;
-  }, [pgId]);
 
   /* ================= LOAD ROOMS ================= */
-  const loadRooms = useCallback(async () => {
-    if (!pgId) return;
+
+  const loadRooms = async () => {
 
     try {
-      setLoading(true);
+
       const res = await api.get(`/rooms/${pgId}`);
+
       setRooms(res.data || []);
-      setError(null);
+
     } catch (err) {
-      console.error(err);
-      setError("Failed to load rooms");
+
+      console.error("Load rooms error:", err);
+
     } finally {
+
       setLoading(false);
+
     }
+
+  };
+
+  /* ================= AUTH CHECK ================= */
+
+  useEffect(() => {
+
+    const unsub = onAuthStateChanged(auth, (user) => {
+
+      if (!user) {
+
+        navigate("/login");
+
+      } else {
+
+        loadRooms();
+
+      }
+
+    });
+
+    return () => unsub();
+
   }, [pgId]);
 
   /* ================= ADD ROOM ================= */
+
   const addRoom = async () => {
+
     if (!roomNo || !totalSeats) {
-      return alert("Enter room no & seats");
+
+      alert("Enter room no & seats");
+
+      return;
+
     }
 
     try {
+
       setAdding(true);
 
       await api.post("/rooms/add", {
+
         pg_id: pgId,
         room_no: roomNo,
-        total_seats: totalSeats,
+        total_seats: totalSeats
+
       });
 
       setRoomNo("");
       setTotalSeats("");
 
       loadRooms();
+
     } catch (err) {
+
       console.error(err);
+
       alert("Failed to add room");
+
     } finally {
+
       setAdding(false);
+
     }
+
   };
 
-  /* ================= HELPERS ================= */
+  /* ================= ROOM STATUS ================= */
+
   const getStatus = (room) => {
-    if (room.occupied_seats === 0) return { label: "EMPTY", color: "green" };
+
+    if (room.occupied_seats === 0)
+      return { label: "EMPTY", color: "green" };
+
     if (room.occupied_seats === room.total_seats)
       return { label: "FULL", color: "red" };
+
     return { label: "PARTIAL", color: "orange" };
+
   };
 
-  /* ================= STATES ================= */
+  /* ================= LOADING ================= */
 
-  if (loading) return <h3 style={{ textAlign: "center" }}>Loading rooms...</h3>;
-
-  if (error)
-    return (
-      <div style={{ textAlign: "center", color: "red" }}>
-        {error}
-      </div>
-    );
+  if (loading)
+    return <h3 style={{ textAlign: "center" }}>Loading rooms...</h3>;
 
   /* ================= UI ================= */
 
   return (
+
     <div style={{ maxWidth: 900, margin: "auto", padding: 20 }}>
+
       <h2>🛏 Room Management</h2>
 
       {/* ADD ROOM */}
+
       <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+
         <input
           placeholder="Room No"
           value={roomNo}
@@ -113,17 +150,25 @@ const OwnerRooms = () => {
         <button onClick={addRoom} disabled={adding}>
           {adding ? "Adding..." : "➕ Add Room"}
         </button>
+
       </div>
 
-      {/* ROOMS LIST */}
+      {/* ROOM LIST */}
+
       {rooms.length === 0 ? (
+
         <p>No rooms added yet</p>
+
       ) : (
+
         rooms.map((r) => {
+
           const status = getStatus(r);
 
           return (
+
             <div key={r.id} style={card}>
+
               <h4>Room {r.room_no}</h4>
 
               <p>
@@ -132,17 +177,24 @@ const OwnerRooms = () => {
 
               <p>
                 Status:{" "}
-                <b style={{ color: status.color }}>{status.label}</b>
+                <b style={{ color: status.color }}>
+                  {status.label}
+                </b>
               </p>
-            </div>
-          );
-        })
-      )}
-    </div>
-  );
-};
 
-/* ================= STYLES ================= */
+            </div>
+
+          );
+
+        })
+
+      )}
+
+    </div>
+
+  );
+
+};
 
 const card = {
   border: "1px solid #ddd",
