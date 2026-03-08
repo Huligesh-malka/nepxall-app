@@ -9,11 +9,8 @@ const ScanPG = () => {
 
   const [pg, setPg] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
-  const [selectedBHK, setSelectedBHK] = useState(null);
-  const [selectedSharing, setSelectedSharing] = useState(null);
-  const [activeTab, setActiveTab] = useState("rooms"); // 'rooms', 'pricing', 'amenities', 'rules'
   const [loading, setLoading] = useState(true);
-  const [showAllAmenities, setShowAllAmenities] = useState(false);
+  const [showFullDetails, setShowFullDetails] = useState(false);
 
   useEffect(() => {
     fetchPG();
@@ -28,7 +25,7 @@ const ScanPG = () => {
 
       if (res.data.success) {
         setPg(res.data.data);
-        console.log("PG Data:", res.data.data); // For debugging
+        console.log("PG Data:", res.data.data);
       }
     } catch (err) {
       console.error("Fetch error:", err);
@@ -39,26 +36,10 @@ const ScanPG = () => {
 
   const handleRoomSelection = (room) => {
     setSelectedRoom(room);
-    setSelectedBHK(null);
-    setSelectedSharing(null);
-  };
-
-  const handleBHKSelection = (bhkType, price) => {
-    setSelectedBHK({ type: bhkType, price });
-    setSelectedRoom(null);
-    setSelectedSharing(null);
-  };
-
-  const handleSharingSelection = (type, price) => {
-    setSelectedSharing({ type, price });
-    setSelectedRoom(null);
-    setSelectedBHK(null);
   };
 
   const getSelectedPrice = () => {
     if (selectedRoom) return selectedRoom.price;
-    if (selectedBHK) return selectedBHK.price;
-    if (selectedSharing) return selectedSharing.price;
     return null;
   };
 
@@ -70,27 +51,13 @@ const ScanPG = () => {
         price: selectedRoom.price
       };
     }
-    if (selectedBHK) {
-      return {
-        type: "bhk",
-        name: `${selectedBHK.type} BHK`,
-        price: selectedBHK.price
-      };
-    }
-    if (selectedSharing) {
-      return {
-        type: "sharing",
-        name: selectedSharing.type.replace('_', ' ').toUpperCase(),
-        price: selectedSharing.price
-      };
-    }
     return null;
   };
 
   const goToPayment = () => {
     const selected = getSelectedDetails();
     if (!selected) {
-      alert("Please select a room/configuration to proceed");
+      alert("Please select a room to proceed");
       return;
     }
     
@@ -105,417 +72,8 @@ const ScanPG = () => {
     });
   };
 
-  const renderPriceSection = () => {
-    if (!pg) return null;
-
-    const { price_details, category } = pg;
-
-    return (
-      <div style={styles.priceSection}>
-        {/* Base Price */}
-        {price_details?.rent_amount && (
-          <div style={styles.basePriceCard}>
-            <span style={styles.basePriceLabel}>Starting from</span>
-            <span style={styles.basePriceValue}>₹{price_details.rent_amount}/month</span>
-          </div>
-        )}
-
-        {/* Sharing Prices (PG) */}
-        {price_details?.sharing && Object.values(price_details.sharing).some(val => val) && (
-          <div style={styles.priceCategory}>
-            <h4 style={styles.categoryTitle}>🏠 Sharing Options</h4>
-            <div style={styles.priceGrid}>
-              {price_details.sharing.single_sharing && (
-                <div 
-                  style={{
-                    ...styles.priceCard,
-                    borderColor: selectedSharing?.type === 'single_sharing' ? '#4f46e5' : '#e5e7eb',
-                    backgroundColor: selectedSharing?.type === 'single_sharing' ? '#f5f3ff' : '#fff'
-                  }}
-                  onClick={() => handleSharingSelection('single_sharing', price_details.sharing.single_sharing)}
-                >
-                  <span style={styles.priceLabel}>Single Sharing</span>
-                  <span style={styles.priceAmount}>₹{price_details.sharing.single_sharing}</span>
-                </div>
-              )}
-              {price_details.sharing.double_sharing && (
-                <div 
-                  style={{
-                    ...styles.priceCard,
-                    borderColor: selectedSharing?.type === 'double_sharing' ? '#4f46e5' : '#e5e7eb',
-                    backgroundColor: selectedSharing?.type === 'double_sharing' ? '#f5f3ff' : '#fff'
-                  }}
-                  onClick={() => handleSharingSelection('double_sharing', price_details.sharing.double_sharing)}
-                >
-                  <span style={styles.priceLabel}>Double Sharing</span>
-                  <span style={styles.priceAmount}>₹{price_details.sharing.double_sharing}</span>
-                </div>
-              )}
-              {price_details.sharing.triple_sharing && (
-                <div 
-                  style={{
-                    ...styles.priceCard,
-                    borderColor: selectedSharing?.type === 'triple_sharing' ? '#4f46e5' : '#e5e7eb',
-                    backgroundColor: selectedSharing?.type === 'triple_sharing' ? '#f5f3ff' : '#fff'
-                  }}
-                  onClick={() => handleSharingSelection('triple_sharing', price_details.sharing.triple_sharing)}
-                >
-                  <span style={styles.priceLabel}>Triple Sharing</span>
-                  <span style={styles.priceAmount}>₹{price_details.sharing.triple_sharing}</span>
-                </div>
-              )}
-              {price_details.sharing.four_sharing && (
-                <div 
-                  style={{
-                    ...styles.priceCard,
-                    borderColor: selectedSharing?.type === 'four_sharing' ? '#4f46e5' : '#e5e7eb',
-                    backgroundColor: selectedSharing?.type === 'four_sharing' ? '#f5f3ff' : '#fff'
-                  }}
-                  onClick={() => handleSharingSelection('four_sharing', price_details.sharing.four_sharing)}
-                >
-                  <span style={styles.priceLabel}>Four Sharing</span>
-                  <span style={styles.priceAmount}>₹{price_details.sharing.four_sharing}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* BHK Prices (To-let) */}
-        {price_details?.to_let?.prices && Object.values(price_details.to_let.prices).some(val => val) && (
-          <div style={styles.priceCategory}>
-            <h4 style={styles.categoryTitle}>🏢 BHK Options</h4>
-            <div style={styles.priceGrid}>
-              {price_details.to_let.prices['1bhk'] && (
-                <div 
-                  style={{
-                    ...styles.priceCard,
-                    borderColor: selectedBHK?.type === '1bhk' ? '#4f46e5' : '#e5e7eb',
-                    backgroundColor: selectedBHK?.type === '1bhk' ? '#f5f3ff' : '#fff'
-                  }}
-                  onClick={() => handleBHKSelection('1bhk', price_details.to_let.prices['1bhk'])}
-                >
-                  <span style={styles.priceLabel}>1 BHK</span>
-                  <span style={styles.priceAmount}>₹{price_details.to_let.prices['1bhk']}</span>
-                  <small style={styles.configText}>
-                    {price_details.to_let.configurations?.['1bhk']?.bedrooms} bed, {price_details.to_let.configurations?.['1bhk']?.bathrooms} bath
-                  </small>
-                </div>
-              )}
-              {price_details.to_let.prices['2bhk'] && (
-                <div 
-                  style={{
-                    ...styles.priceCard,
-                    borderColor: selectedBHK?.type === '2bhk' ? '#4f46e5' : '#e5e7eb',
-                    backgroundColor: selectedBHK?.type === '2bhk' ? '#f5f3ff' : '#fff'
-                  }}
-                  onClick={() => handleBHKSelection('2bhk', price_details.to_let.prices['2bhk'])}
-                >
-                  <span style={styles.priceLabel}>2 BHK</span>
-                  <span style={styles.priceAmount}>₹{price_details.to_let.prices['2bhk']}</span>
-                  <small style={styles.configText}>
-                    {price_details.to_let.configurations?.['2bhk']?.bedrooms} bed, {price_details.to_let.configurations?.['2bhk']?.bathrooms} bath
-                  </small>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Co-living Prices */}
-        {price_details?.co_living && Object.values(price_details.co_living).some(val => val) && (
-          <div style={styles.priceCategory}>
-            <h4 style={styles.categoryTitle}>👥 Co-living Options</h4>
-            <div style={styles.priceGrid}>
-              {price_details.co_living.single_room && (
-                <div 
-                  style={{
-                    ...styles.priceCard,
-                    borderColor: selectedSharing?.type === 'co_living_single' ? '#4f46e5' : '#e5e7eb',
-                    backgroundColor: selectedSharing?.type === 'co_living_single' ? '#f5f3ff' : '#fff'
-                  }}
-                  onClick={() => handleSharingSelection('co_living_single', price_details.co_living.single_room)}
-                >
-                  <span style={styles.priceLabel}>Single Room</span>
-                  <span style={styles.priceAmount}>₹{price_details.co_living.single_room}</span>
-                </div>
-              )}
-              {price_details.co_living.double_room && (
-                <div 
-                  style={{
-                    ...styles.priceCard,
-                    borderColor: selectedSharing?.type === 'co_living_double' ? '#4f46e5' : '#e5e7eb',
-                    backgroundColor: selectedSharing?.type === 'co_living_double' ? '#f5f3ff' : '#fff'
-                  }}
-                  onClick={() => handleSharingSelection('co_living_double', price_details.co_living.double_room)}
-                >
-                  <span style={styles.priceLabel}>Double Room</span>
-                  <span style={styles.priceAmount}>₹{price_details.co_living.double_room}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Additional Charges */}
-        {(price_details?.deposit_amount || price_details?.maintenance_amount || price_details?.brokerage_amount) && (
-          <div style={styles.chargesSection}>
-            <h4 style={styles.categoryTitle}>💰 Additional Charges</h4>
-            <div style={styles.chargesGrid}>
-              {price_details.deposit_amount > 0 && (
-                <div style={styles.chargeItem}>
-                  <span>Security Deposit</span>
-                  <span style={styles.chargeValue}>₹{price_details.deposit_amount}</span>
-                </div>
-              )}
-              {price_details.maintenance_amount > 0 && (
-                <div style={styles.chargeItem}>
-                  <span>Maintenance</span>
-                  <span style={styles.chargeValue}>₹{price_details.maintenance_amount}/month</span>
-                </div>
-              )}
-              {price_details.brokerage_amount > 0 && (
-                <div style={styles.chargeItem}>
-                  <span>Brokerage</span>
-                  <span style={styles.chargeValue}>₹{price_details.brokerage_amount}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderAmenities = () => {
-    if (!pg?.amenities) return null;
-
-    const { amenities } = pg;
-
-    const amenityCategories = [
-      {
-        title: "Basic Amenities",
-        items: [
-          { key: "wifi", label: "WiFi", emoji: "📶" },
-          { key: "parking", label: "Parking", emoji: "🅿️" },
-          { key: "ac", label: "AC", emoji: "❄️" },
-          { key: "power_backup", label: "Power Backup", emoji: "⚡" },
-          { key: "cctv", label: "CCTV", emoji: "📹" },
-          { key: "security_guard", label: "Security Guard", emoji: "🛡️" },
-          { key: "housekeeping", label: "Housekeeping", emoji: "🧹" },
-          { key: "lift", label: "Lift", emoji: "🛗" }
-        ]
-      },
-      {
-        title: "Appliances",
-        items: [
-          { key: "geyser", label: "Geyser", emoji: "🔥" },
-          { key: "washing_machine", label: "Washing Machine", emoji: "🧺" },
-          { key: "refrigerator", label: "Refrigerator", emoji: "🧊" },
-          { key: "microwave", label: "Microwave", emoji: "🔥" },
-          { key: "tv", label: "TV", emoji: "📺" },
-          { key: "water_purifier", label: "Water Purifier", emoji: "💧" }
-        ]
-      },
-      {
-        title: "Room Amenities",
-        items: [
-          { key: "attached_bathroom", label: "Attached Bathroom", emoji: "🚿" },
-          { key: "balcony", label: "Balcony", emoji: "🏞️" },
-          { key: "cupboard", label: "Cupboard", emoji: "🗄️" },
-          { key: "table_chair", label: "Table & Chair", emoji: "🪑" },
-          { key: "bed_with_mattress", label: "Bed with Mattress", emoji: "🛏️" }
-        ]
-      },
-      {
-        title: "Common Areas",
-        items: [
-          { key: "gym", label: "Gym", emoji: "💪" },
-          { key: "study_room", label: "Study Room", emoji: "📚" },
-          { key: "common_tv_lounge", label: "TV Lounge", emoji: "📺" },
-          { key: "balcony_open_space", label: "Open Space", emoji: "🌳" }
-        ]
-      }
-    ];
-
-    return (
-      <div style={styles.amenitiesSection}>
-        {amenityCategories.map((category, idx) => (
-          <div key={idx} style={styles.amenityCategory}>
-            <h4 style={styles.categoryTitle}>{category.title}</h4>
-            <div style={styles.amenityGrid}>
-              {category.items.map((item, i) => {
-                const isAvailable = amenities.basic?.[item.key] || 
-                                   amenities.appliances?.[item.key] || 
-                                   amenities.room_amenities?.[item.key] || 
-                                   amenities.common_areas?.[item.key];
-                if (isAvailable) {
-                  return (
-                    <div key={i} style={styles.amenityItem}>
-                      <span style={styles.amenityEmoji}>{item.emoji}</span>
-                      <span style={styles.amenityLabel}>{item.label}</span>
-                    </div>
-                  );
-                }
-                return null;
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const renderFoodDetails = () => {
-    if (!pg?.food_details || !pg.food_details.food_available) return null;
-
-    return (
-      <div style={styles.foodSection}>
-        <h4 style={styles.categoryTitle}>🍽️ Food Details</h4>
-        <div style={styles.foodCard}>
-          <div style={styles.foodItem}>
-            <span>Type:</span>
-            <span style={styles.foodValue}>{pg.food_details.food_type}</span>
-          </div>
-          {pg.food_details.meals_per_day && (
-            <div style={styles.foodItem}>
-              <span>Meals:</span>
-              <span style={styles.foodValue}>{pg.food_details.meals_per_day}</span>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const renderRules = () => {
-    if (!pg?.rules) return null;
-
-    const { rules } = pg;
-
-    return (
-      <div style={styles.rulesSection}>
-        <h4 style={styles.categoryTitle}>📋 House Rules</h4>
-        
-        {/* Visitor Rules */}
-        <div style={styles.ruleCategory}>
-          <h5 style={styles.ruleSubtitle}>👥 Visitors</h5>
-          <div style={styles.ruleGrid}>
-            <span style={styles.ruleItem}>
-              {rules.visitors?.allowed ? "✅ Visitors Allowed" : "❌ No Visitors"}
-            </span>
-            {rules.visitors?.time_restricted && (
-              <span style={styles.ruleItem}>
-                ⏰ Until {rules.visitors.allowed_till}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Entry Rules */}
-        <div style={styles.ruleCategory}>
-          <h5 style={styles.ruleSubtitle}>🚪 Entry</h5>
-          <div style={styles.ruleGrid}>
-            <span style={styles.ruleItem}>
-              {rules.entry?.late_night_allowed ? "✅ Late Night Entry" : "❌ No Late Entry"}
-            </span>
-            {rules.entry?.curfew_time && (
-              <span style={styles.ruleItem}>
-                ⏰ Curfew: {rules.entry.curfew_time}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Restrictions */}
-        <div style={styles.ruleCategory}>
-          <h5 style={styles.ruleSubtitle}>🚫 Restrictions</h5>
-          <div style={styles.ruleGrid}>
-            {rules.restrictions?.couple_allowed && (
-              <span style={styles.ruleItem}>👫 Couples Allowed</span>
-            )}
-            {rules.restrictions?.smoking_allowed && (
-              <span style={styles.ruleItem}>🚬 Smoking Allowed</span>
-            )}
-            {rules.restrictions?.drinking_allowed && (
-              <span style={styles.ruleItem}>🍺 Drinking Allowed</span>
-            )}
-            {rules.restrictions?.pets_allowed && (
-              <span style={styles.ruleItem}>🐕 Pets Allowed</span>
-            )}
-          </div>
-        </div>
-
-        {/* Tenancy Terms */}
-        <div style={styles.ruleCategory}>
-          <h5 style={styles.ruleSubtitle}>📄 Tenancy Terms</h5>
-          <div style={styles.ruleGrid}>
-            <span style={styles.ruleItem}>
-              📅 Notice Period: {rules.tenancy?.notice_period} month(s)
-            </span>
-            <span style={styles.ruleItem}>
-              🔒 Min Stay: {rules.tenancy?.min_stay_months} month(s)
-            </span>
-          </div>
-        </div>
-
-        {/* Occupant Type */}
-        <div style={styles.ruleCategory}>
-          <h5 style={styles.ruleSubtitle}>👤 Suitable For</h5>
-          <div style={styles.ruleGrid}>
-            {rules.occupant_type?.students_only && (
-              <span style={styles.ruleItem}>🎓 Students Only</span>
-            )}
-            {rules.occupant_type?.boys_only && (
-              <span style={styles.ruleItem}>👨 Boys Only</span>
-            )}
-            {rules.occupant_type?.girls_only && (
-              <span style={styles.ruleItem}>👩 Girls Only</span>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderNearbyPlaces = () => {
-    if (!pg?.nearby_places) return null;
-
-    const { nearby_places } = pg;
-
-    const nearbyCategories = [
-      { title: "🚆 Transport", items: nearby_places.transport },
-      { title: "🏥 Healthcare", items: nearby_places.healthcare },
-      { title: "🛒 Shopping", items: nearby_places.shopping },
-      { title: "🏫 Education", items: nearby_places.education },
-      { title: "💼 Employment", items: nearby_places.employment }
-    ];
-
-    return (
-      <div style={styles.nearbySection}>
-        <h4 style={styles.categoryTitle}>📍 Nearby Places</h4>
-        {nearbyCategories.map((category, idx) => {
-          const hasItems = Object.values(category.items || {}).some(val => val);
-          if (!hasItems) return null;
-
-          return (
-            <div key={idx} style={styles.nearbyCategory}>
-              <h5 style={styles.nearbySubtitle}>{category.title}</h5>
-              <div style={styles.nearbyGrid}>
-                {Object.entries(category.items || {}).map(([key, value]) => {
-                  if (!value) return null;
-                  return (
-                    <div key={key} style={styles.nearbyItem}>
-                      <span>{value}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
+  const toggleFullDetails = () => {
+    setShowFullDetails(!showFullDetails);
   };
 
   if (loading) {
@@ -547,155 +105,170 @@ const ScanPG = () => {
 
   return (
     <div style={styles.container}>
-      {/* Header */}
+      {/* Header with PG Name */}
       <div style={styles.header}>
         <h1 style={styles.title}>{pg.name}</h1>
         <div style={styles.rating}>
           <span style={styles.star}>⭐</span>
-          <span>{pg.rating || "New"}</span>
+          <span>{pg.rating || "4.5"}</span>
         </div>
       </div>
 
-      {/* Address */}
-      <div style={styles.addressContainer}>
+      {/* Location - Simple and Clear */}
+      <div style={styles.locationContainer}>
         <span style={styles.locationIcon}>📍</span>
-        <p style={styles.address}>{pg.location?.address}</p>
+        <p style={styles.location}>
+          {pg.location?.area}, {pg.location?.city}
+        </p>
       </div>
-      <p style={styles.area}>{pg.location?.area}, {pg.location?.city}</p>
 
-      {/* Quick Info */}
-      <div style={styles.quickInfo}>
-        <div style={styles.infoChip}>
-          <span>🏷️ {pg.category}</span>
+      {/* Price Summary - Clear Display */}
+      <div style={styles.priceSummary}>
+        <div style={styles.priceCard}>
+          <span style={styles.priceLabel}>Starting from</span>
+          <span style={styles.priceValue}>₹{pg.price_details?.rent_amount || pg.available_room_details?.[0]?.price || 0}</span>
+          <span style={styles.pricePeriod}>/month</span>
         </div>
-        <div style={styles.infoChip}>
-          <span>👥 {pg.type}</span>
-        </div>
-        {pg.available_rooms > 0 && (
-          <div style={styles.infoChip}>
-            <span>🛏️ {pg.available_rooms} rooms left</span>
+        
+        {pg.price_details?.deposit_amount > 0 && (
+          <div style={styles.depositCard}>
+            <span style={styles.depositLabel}>Security Deposit</span>
+            <span style={styles.depositValue}>₹{pg.price_details.deposit_amount}</span>
           </div>
         )}
       </div>
 
-      {/* Tabs */}
-      <div style={styles.tabs}>
-        <button
-          style={{
-            ...styles.tab,
-            borderBottomColor: activeTab === 'rooms' ? '#4f46e5' : 'transparent',
-            color: activeTab === 'rooms' ? '#4f46e5' : '#6b7280'
-          }}
-          onClick={() => setActiveTab('rooms')}
-        >
-          Rooms
-        </button>
-        <button
-          style={{
-            ...styles.tab,
-            borderBottomColor: activeTab === 'pricing' ? '#4f46e5' : 'transparent',
-            color: activeTab === 'pricing' ? '#4f46e5' : '#6b7280'
-          }}
-          onClick={() => setActiveTab('pricing')}
-        >
-          Pricing
-        </button>
-        <button
-          style={{
-            ...styles.tab,
-            borderBottomColor: activeTab === 'amenities' ? '#4f46e5' : 'transparent',
-            color: activeTab === 'amenities' ? '#4f46e5' : '#6b7280'
-          }}
-          onClick={() => setActiveTab('amenities')}
-        >
-          Amenities
-        </button>
-        <button
-          style={{
-            ...styles.tab,
-            borderBottomColor: activeTab === 'rules' ? '#4f46e5' : 'transparent',
-            color: activeTab === 'rules' ? '#4f46e5' : '#6b7280'
-          }}
-          onClick={() => setActiveTab('rules')}
-        >
-          Rules
-        </button>
+      {/* Quick Stats */}
+      <div style={styles.statsContainer}>
+        <div style={styles.statItem}>
+          <span style={styles.statEmoji}>🛏️</span>
+          <span style={styles.statValue}>{pg.available_rooms || 0}</span>
+          <span style={styles.statLabel}>Rooms Left</span>
+        </div>
+        <div style={styles.statItem}>
+          <span style={styles.statEmoji}>🏠</span>
+          <span style={styles.statValue}>{pg.category}</span>
+          <span style={styles.statLabel}>Type</span>
+        </div>
+        <div style={styles.statItem}>
+          <span style={styles.statEmoji}>👥</span>
+          <span style={styles.statValue}>{pg.type}</span>
+          <span style={styles.statLabel}>For</span>
+        </div>
       </div>
 
-      {/* Tab Content */}
-      <div style={styles.tabContent}>
-        {activeTab === 'rooms' && (
-          <>
-            {/* Availability Summary */}
-            {pg.availability_summary && Object.keys(pg.availability_summary).length > 0 && (
-              <div style={styles.summaryBox}>
-                <p style={styles.summaryTitle}>📊 Quick Availability</p>
-                <div style={styles.badgeContainer}>
-                  {Object.entries(pg.availability_summary).map(([type, data]) => (
-                    <span key={type} style={styles.badge}>
-                      {type}: {data.available_beds || data} beds left
-                    </span>
-                  ))}
+      {/* Room Selection Section */}
+      <div style={styles.roomSection}>
+        <h3 style={styles.sectionTitle}>Select a Room</h3>
+        
+        {pg.available_room_details && pg.available_room_details.length > 0 ? (
+          <div style={styles.roomList}>
+            {pg.available_room_details.map((room, index) => (
+              <div
+                key={index}
+                style={{
+                  ...styles.roomItem,
+                  borderColor: selectedRoom?.room_number === room.room_number ? "#4f46e5" : "#e5e7eb",
+                  backgroundColor: selectedRoom?.room_number === room.room_number ? "#f5f3ff" : "#fff"
+                }}
+                onClick={() => handleRoomSelection(room)}
+              >
+                <input
+                  type="radio"
+                  name="room"
+                  checked={selectedRoom?.room_number === room.room_number}
+                  onChange={() => handleRoomSelection(room)}
+                  style={styles.radio}
+                />
+                <div style={styles.roomInfo}>
+                  <span style={styles.roomNo}>Room {room.room_number}</span>
+                  <span style={styles.roomType}>{room.sharing_type}</span>
+                  <span style={styles.roomBeds}>{room.available_beds} bed{room.available_beds > 1 ? 's' : ''} left</span>
+                </div>
+                <div style={styles.roomPriceInfo}>
+                  <span style={styles.roomPrice}>₹{room.price}</span>
+                  <span style={styles.roomPeriod}>/month</span>
                 </div>
               </div>
-            )}
-
-            <h3 style={styles.sectionTitle}>Select a Room</h3>
-            
-            {pg.available_room_details && pg.available_room_details.length > 0 ? (
-              <div style={styles.roomList}>
-                {pg.available_room_details.map((room, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      ...styles.roomItem,
-                      borderColor: selectedRoom?.room_number === room.room_number ? "#4f46e5" : "#e5e7eb",
-                      backgroundColor: selectedRoom?.room_number === room.room_number ? "#f5f3ff" : "#fff"
-                    }}
-                    onClick={() => handleRoomSelection(room)}
-                  >
-                    <input
-                      type="radio"
-                      name="room"
-                      checked={selectedRoom?.room_number === room.room_number}
-                      onChange={() => handleRoomSelection(room)}
-                      style={styles.radio}
-                    />
-                    <div style={styles.roomInfo}>
-                      <span style={styles.roomNo}>Room {room.room_number}</span>
-                      <span style={styles.roomType}>{room.sharing_type}</span>
-                    </div>
-                    <div style={styles.priceInfo}>
-                      <span style={styles.price}>₹{room.price}</span>
-                      <span style={styles.beds}>{room.available_beds} beds left</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={styles.noRooms}>
-                <p style={styles.noRoomsText}>No rooms currently available</p>
-              </div>
-            )}
-          </>
+            ))}
+          </div>
+        ) : (
+          <div style={styles.noRooms}>
+            <p style={styles.noRoomsText}>No rooms currently available</p>
+          </div>
         )}
-
-        {activeTab === 'pricing' && (
-          <>
-            {renderPriceSection()}
-            {renderFoodDetails()}
-          </>
-        )}
-
-        {activeTab === 'amenities' && (
-          <>
-            {renderAmenities()}
-            {renderNearbyPlaces()}
-          </>
-        )}
-
-        {activeTab === 'rules' && renderRules()}
       </div>
+
+      {/* View All Details Button */}
+      <button onClick={toggleFullDetails} style={styles.viewDetailsBtn}>
+        {showFullDetails ? 'Hide Details' : 'View All Details'} 📋
+      </button>
+
+      {/* Full Details Section - Collapsible */}
+      {showFullDetails && (
+        <div style={styles.fullDetails}>
+          <h4 style={styles.detailsTitle}>Complete Property Details</h4>
+          
+          {/* Address */}
+          <div style={styles.detailBlock}>
+            <h5 style={styles.detailSubtitle}>📍 Full Address</h5>
+            <p style={styles.detailText}>{pg.location?.address}</p>
+          </div>
+
+          {/* Amenities Summary */}
+          {pg.amenities && (
+            <div style={styles.detailBlock}>
+              <h5 style={styles.detailSubtitle}>✨ Key Amenities</h5>
+              <div style={styles.amenitiesList}>
+                {pg.amenities.basic?.wifi && <span style={styles.amenityTag}>📶 WiFi</span>}
+                {pg.amenities.basic?.ac && <span style={styles.amenityTag}>❄️ AC</span>}
+                {pg.amenities.basic?.parking && <span style={styles.amenityTag}>🅿️ Parking</span>}
+                {pg.amenities.appliances?.geyser && <span style={styles.amenityTag}>🔥 Geyser</span>}
+                {pg.amenities.appliances?.washing_machine && <span style={styles.amenityTag}>🧺 Washing Machine</span>}
+                {pg.amenities.appliances?.refrigerator && <span style={styles.amenityTag}>🧊 Refrigerator</span>}
+              </div>
+            </div>
+          )}
+
+          {/* Food Details */}
+          {pg.food_details?.food_available && (
+            <div style={styles.detailBlock}>
+              <h5 style={styles.detailSubtitle}>🍽️ Food</h5>
+              <p style={styles.detailText}>
+                {pg.food_details.food_type} • {pg.food_details.meals_per_day || 'Meals included'}
+              </p>
+            </div>
+          )}
+
+          {/* Rules Summary */}
+          {pg.rules && (
+            <div style={styles.detailBlock}>
+              <h5 style={styles.detailSubtitle}>📋 Rules</h5>
+              <div style={styles.rulesList}>
+                {pg.rules.visitors?.allowed && <span style={styles.ruleTag}>👥 Visitors Allowed</span>}
+                {pg.rules.entry?.late_night_allowed && <span style={styles.ruleTag}>🌙 Late Entry</span>}
+                {pg.rules.occupant_type?.boys_only && <span style={styles.ruleTag}>👨 Boys Only</span>}
+                {pg.rules.occupant_type?.girls_only && <span style={styles.ruleTag}>👩 Girls Only</span>}
+                {pg.rules.restrictions?.couple_allowed && <span style={styles.ruleTag}>👫 Couples Allowed</span>}
+              </div>
+            </div>
+          )}
+
+          {/* Contact Info */}
+          {pg.contact && (
+            <div style={styles.detailBlock}>
+              <h5 style={styles.detailSubtitle}>📞 Contact</h5>
+              <p style={styles.detailText}>
+                {pg.contact.person}<br />
+                <a href={`tel:${pg.contact.phone}`} style={styles.contactLink}>
+                  {pg.contact.phone}
+                </a>
+                {pg.contact.email && <><br /><a href={`mailto:${pg.contact.email}`} style={styles.contactLink}>{pg.contact.email}</a></>}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Selected Item Summary */}
       {selectedDetails && (
@@ -716,13 +289,13 @@ const ScanPG = () => {
           }}
           disabled={!selectedDetails}
         >
-          Continue to Booking • ₹{getSelectedPrice() || 'Select option'}/month
+          Book Now • ₹{getSelectedPrice() || 'Select room'}/month
         </button>
 
         {pg.contact?.phone && (
           <a href={`tel:${pg.contact.phone}`} style={{ textDecoration: 'none' }}>
             <button style={styles.callBtn}>
-              📞 Contact {pg.contact.person || 'Owner'}
+              📞 Call Owner
             </button>
           </a>
         )}
@@ -737,7 +310,8 @@ const styles = {
     margin: "0 auto",
     padding: "20px 16px",
     backgroundColor: "#f9fafb",
-    minHeight: "100vh"
+    minHeight: "100vh",
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif"
   },
   center: {
     display: "flex",
@@ -773,7 +347,7 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "12px"
+    marginBottom: "8px"
   },
   title: {
     fontSize: "24px",
@@ -788,107 +362,128 @@ const styles = {
     backgroundColor: "#f3f4f6",
     padding: "6px 12px",
     borderRadius: "20px",
-    fontSize: "14px"
+    fontSize: "14px",
+    fontWeight: "500"
   },
   star: {
     fontSize: "16px"
   },
-  addressContainer: {
+  locationContainer: {
     display: "flex",
-    alignItems: "flex-start",
-    gap: "8px",
-    marginBottom: "4px"
+    alignItems: "center",
+    gap: "6px",
+    marginBottom: "16px"
   },
   locationIcon: {
-    fontSize: "18px"
+    fontSize: "16px"
   },
-  address: {
+  location: {
     margin: 0,
     color: "#4b5563",
     fontSize: "14px",
-    lineHeight: "1.5"
+    fontWeight: "500"
   },
-  area: {
-    margin: "0 0 16px 26px",
-    color: "#6b7280",
-    fontSize: "14px"
-  },
-  quickInfo: {
+  priceSummary: {
     display: "flex",
-    gap: "8px",
-    flexWrap: "wrap",
+    gap: "12px",
+    marginBottom: "20px"
+  },
+  priceCard: {
+    flex: 2,
+    backgroundColor: "#4f46e5",
+    padding: "16px",
+    borderRadius: "16px",
+    color: "white"
+  },
+  priceLabel: {
+    display: "block",
+    fontSize: "12px",
+    opacity: 0.9,
+    marginBottom: "4px",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px"
+  },
+  priceValue: {
+    display: "inline-block",
+    fontSize: "28px",
+    fontWeight: "bold",
+    marginRight: "4px"
+  },
+  pricePeriod: {
+    fontSize: "14px",
+    opacity: 0.8
+  },
+  depositCard: {
+    flex: 1,
+    backgroundColor: "#f3f4f6",
+    padding: "16px",
+    borderRadius: "16px",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center"
+  },
+  depositLabel: {
+    display: "block",
+    fontSize: "12px",
+    color: "#6b7280",
+    marginBottom: "4px"
+  },
+  depositValue: {
+    display: "block",
+    fontSize: "18px",
+    fontWeight: "bold",
+    color: "#1f2937"
+  },
+  statsContainer: {
+    display: "flex",
+    gap: "12px",
     marginBottom: "24px"
   },
-  infoChip: {
-    backgroundColor: "#e5e7eb",
-    padding: "6px 12px",
-    borderRadius: "20px",
-    fontSize: "13px",
-    color: "#374151"
-  },
-  tabs: {
-    display: "flex",
-    gap: "16px",
-    borderBottom: "2px solid #e5e7eb",
-    marginBottom: "20px",
-    overflowX: "auto",
-    paddingBottom: "2px"
-  },
-  tab: {
-    padding: "8px 4px",
-    border: "none",
-    background: "none",
-    fontSize: "15px",
-    fontWeight: "500",
-    cursor: "pointer",
-    borderBottom: "2px solid transparent",
-    transition: "all 0.2s",
-    whiteSpace: "nowrap"
-  },
-  tabContent: {
-    minHeight: "400px",
-    marginBottom: "20px"
-  },
-  summaryBox: {
-    backgroundColor: "#e0f2fe",
-    padding: "16px",
-    borderRadius: "12px",
-    marginBottom: "20px"
-  },
-  summaryTitle: {
-    margin: "0 0 12px 0",
-    fontWeight: "600",
-    color: "#0369a1"
-  },
-  badgeContainer: {
-    display: "flex",
-    gap: "8px",
-    flexWrap: "wrap"
-  },
-  badge: {
+  statItem: {
+    flex: 1,
     backgroundColor: "#fff",
-    padding: "6px 12px",
-    borderRadius: "20px",
-    fontSize: "12px",
-    border: "1px solid #bae6fd",
-    color: "#0369a1"
+    padding: "12px",
+    borderRadius: "12px",
+    textAlign: "center",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
+  },
+  statEmoji: {
+    display: "block",
+    fontSize: "20px",
+    marginBottom: "4px"
+  },
+  statValue: {
+    display: "block",
+    fontSize: "16px",
+    fontWeight: "bold",
+    color: "#1f2937"
+  },
+  statLabel: {
+    display: "block",
+    fontSize: "11px",
+    color: "#6b7280",
+    marginTop: "2px"
+  },
+  roomSection: {
+    marginBottom: "16px"
   },
   sectionTitle: {
     fontSize: "18px",
-    marginBottom: "16px",
+    fontWeight: "600",
+    marginBottom: "12px",
     color: "#1f2937"
   },
   roomList: {
     display: "flex",
     flexDirection: "column",
-    gap: "12px"
+    gap: "10px"
   },
   roomItem: {
     display: "flex",
     alignItems: "center",
     padding: "16px",
     border: "2px solid #e5e7eb",
-    borderRadius: "12px",
+    borderRadius: "14px",
     cursor: "pointer",
     transition: "all 0.2s",
     backgroundColor: "#fff"
@@ -907,221 +502,115 @@ const styles = {
     display: "block",
     fontWeight: "600",
     fontSize: "16px",
-    marginBottom: "4px"
+    marginBottom: "2px",
+    color: "#1f2937"
   },
   roomType: {
+    display: "inline-block",
     fontSize: "13px",
-    color: "#6b7280"
+    color: "#6b7280",
+    marginRight: "8px"
   },
-  priceInfo: {
+  roomBeds: {
+    display: "inline-block",
+    fontSize: "12px",
+    color: "#16a34a",
+    backgroundColor: "#e6f7e6",
+    padding: "2px 8px",
+    borderRadius: "12px"
+  },
+  roomPriceInfo: {
     textAlign: "right"
   },
-  price: {
+  roomPrice: {
     display: "block",
     fontWeight: "bold",
     color: "#4f46e5",
-    fontSize: "18px"
+    fontSize: "20px",
+    lineHeight: "1.2"
   },
-  beds: {
-    fontSize: "12px",
-    color: "#16a34a"
+  roomPeriod: {
+    fontSize: "11px",
+    color: "#9ca3af"
   },
   noRooms: {
     textAlign: "center",
     padding: "40px",
     backgroundColor: "#fff",
-    borderRadius: "12px",
+    borderRadius: "16px",
     border: "2px dashed #e5e7eb"
   },
   noRoomsText: {
     color: "#6b7280",
     margin: 0
   },
-  priceSection: {
+  viewDetailsBtn: {
+    width: "100%",
+    padding: "14px",
     backgroundColor: "#fff",
+    color: "#4f46e5",
+    border: "2px solid #4f46e5",
     borderRadius: "12px",
-    padding: "20px",
-    marginBottom: "16px"
-  },
-  basePriceCard: {
-    backgroundColor: "#f3f4f6",
-    padding: "16px",
-    borderRadius: "10px",
-    marginBottom: "20px",
-    textAlign: "center"
-  },
-  basePriceLabel: {
-    display: "block",
-    fontSize: "14px",
-    color: "#6b7280",
-    marginBottom: "4px"
-  },
-  basePriceValue: {
-    display: "block",
-    fontSize: "24px",
-    fontWeight: "bold",
-    color: "#4f46e5"
-  },
-  priceCategory: {
-    marginBottom: "24px"
-  },
-  categoryTitle: {
-    fontSize: "16px",
     fontWeight: "600",
-    marginBottom: "12px",
-    color: "#374151"
-  },
-  priceGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-    gap: "12px"
-  },
-  priceCard: {
-    padding: "12px",
-    border: "2px solid #e5e7eb",
-    borderRadius: "10px",
+    fontSize: "16px",
     cursor: "pointer",
-    transition: "all 0.2s"
-  },
-  priceLabel: {
-    display: "block",
-    fontSize: "13px",
-    color: "#6b7280",
-    marginBottom: "4px"
-  },
-  priceAmount: {
-    display: "block",
-    fontSize: "16px",
-    fontWeight: "bold",
-    color: "#4f46e5"
-  },
-  configText: {
-    display: "block",
-    fontSize: "11px",
-    color: "#9ca3af",
-    marginTop: "4px"
-  },
-  chargesSection: {
-    marginTop: "20px",
-    paddingTop: "20px",
-    borderTop: "1px solid #e5e7eb"
-  },
-  chargesGrid: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px"
-  },
-  chargeItem: {
-    display: "flex",
-    justifyContent: "space-between",
-    fontSize: "14px",
-    padding: "8px 0"
-  },
-  chargeValue: {
-    fontWeight: "600",
-    color: "#374151"
-  },
-  foodSection: {
-    backgroundColor: "#fff",
-    borderRadius: "12px",
-    padding: "20px",
-    marginTop: "16px"
-  },
-  foodCard: {
-    backgroundColor: "#f9fafb",
-    padding: "12px",
-    borderRadius: "8px"
-  },
-  foodItem: {
-    display: "flex",
-    justifyContent: "space-between",
-    padding: "4px 0"
-  },
-  foodValue: {
-    fontWeight: "500",
-    color: "#374151"
-  },
-  amenitiesSection: {
-    backgroundColor: "#fff",
-    borderRadius: "12px",
-    padding: "20px"
-  },
-  amenityCategory: {
-    marginBottom: "20px"
-  },
-  amenityGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-    gap: "12px"
-  },
-  amenityItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    padding: "8px",
-    backgroundColor: "#f9fafb",
-    borderRadius: "8px"
-  },
-  amenityEmoji: {
-    fontSize: "18px"
-  },
-  amenityLabel: {
-    fontSize: "13px",
-    color: "#374151"
-  },
-  nearbySection: {
-    backgroundColor: "#fff",
-    borderRadius: "12px",
-    padding: "20px",
-    marginTop: "16px"
-  },
-  nearbyCategory: {
     marginBottom: "16px"
   },
-  nearbySubtitle: {
+  fullDetails: {
+    backgroundColor: "#fff",
+    borderRadius: "16px",
+    padding: "20px",
+    marginBottom: "16px"
+  },
+  detailsTitle: {
+    fontSize: "16px",
+    fontWeight: "600",
+    marginBottom: "16px",
+    color: "#1f2937"
+  },
+  detailBlock: {
+    marginBottom: "16px"
+  },
+  detailSubtitle: {
     fontSize: "14px",
     fontWeight: "600",
     marginBottom: "8px",
     color: "#4b5563"
   },
-  nearbyGrid: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px"
-  },
-  nearbyItem: {
-    fontSize: "13px",
-    color: "#6b7280",
-    padding: "4px 0"
-  },
-  rulesSection: {
-    backgroundColor: "#fff",
-    borderRadius: "12px",
-    padding: "20px"
-  },
-  ruleCategory: {
-    marginBottom: "16px",
-    padding: "12px",
-    backgroundColor: "#f9fafb",
-    borderRadius: "8px"
-  },
-  ruleSubtitle: {
+  detailText: {
     fontSize: "14px",
-    fontWeight: "600",
-    margin: "0 0 8px 0",
-    color: "#4b5563"
+    color: "#6b7280",
+    margin: 0,
+    lineHeight: "1.5"
   },
-  ruleGrid: {
+  amenitiesList: {
     display: "flex",
     flexWrap: "wrap",
     gap: "8px"
   },
-  ruleItem: {
-    fontSize: "13px",
-    padding: "4px 8px",
-    backgroundColor: "#fff",
-    borderRadius: "6px",
-    border: "1px solid #e5e7eb"
+  amenityTag: {
+    backgroundColor: "#f3f4f6",
+    padding: "6px 12px",
+    borderRadius: "20px",
+    fontSize: "12px",
+    color: "#1f2937"
+  },
+  rulesList: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "8px"
+  },
+  ruleTag: {
+    backgroundColor: "#f3f4f6",
+    padding: "6px 12px",
+    borderRadius: "20px",
+    fontSize: "12px",
+    color: "#1f2937"
+  },
+  contactLink: {
+    color: "#4f46e5",
+    textDecoration: "none",
+    fontWeight: "500"
   },
   selectedSummary: {
     display: "flex",
@@ -1129,8 +618,8 @@ const styles = {
     alignItems: "center",
     padding: "12px 16px",
     backgroundColor: "#f3f4f6",
-    borderRadius: "10px",
-    marginBottom: "16px",
+    borderRadius: "12px",
+    marginBottom: "12px",
     fontSize: "14px",
     fontWeight: "500"
   },
@@ -1141,11 +630,11 @@ const styles = {
   footer: {
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
+    gap: "10px",
     position: "sticky",
-    bottom: "20px",
+    bottom: "16px",
     backgroundColor: "#f9fafb",
-    padding: "16px 0"
+    padding: "12px 0"
   },
   payBtn: {
     width: "100%",
@@ -1153,9 +642,10 @@ const styles = {
     backgroundColor: "#4f46e5",
     color: "#fff",
     border: "none",
-    borderRadius: "12px",
+    borderRadius: "14px",
     fontWeight: "bold",
     fontSize: "16px",
+    cursor: "pointer",
     transition: "all 0.2s"
   },
   callBtn: {
@@ -1164,7 +654,7 @@ const styles = {
     backgroundColor: "#fff",
     color: "#22c55e",
     border: "2px solid #22c55e",
-    borderRadius: "12px",
+    borderRadius: "14px",
     fontWeight: "bold",
     fontSize: "16px",
     cursor: "pointer"
