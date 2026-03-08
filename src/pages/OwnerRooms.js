@@ -36,13 +36,7 @@ const OwnerRooms = () => {
       }
     } catch (err) {
       console.error("❌ Rooms load error:", err);
-      
-      // Handle the 2-minute timeout specifically
-      if (err.code === "ECONNABORTED") {
-        setError("The server is taking too long to wake up. Please click 'Retry'.");
-      } else {
-        setError("Failed to load rooms. The server might be offline.");
-      }
+      setError("Failed to load rooms. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -81,7 +75,7 @@ const OwnerRooms = () => {
       loadRooms();
     } catch (err) {
       console.error("Add room error:", err);
-      alert("Failed to add room. Server might be sleeping.");
+      alert("Failed to add room.");
     } finally {
       setAdding(false);
     }
@@ -94,15 +88,12 @@ const OwnerRooms = () => {
   };
 
   /* ================= LOADING UI ================= */
+  // Cleaned up to remove the "Force Refresh" button and wake-up messages
   if (loading) {
     return (
       <div style={styles.center}>
-        <div className="spinner"></div> {/* You can add CSS for a spinner here */}
-        <h3>Loading rooms...</h3>
-        <p style={{ color: "#666" }}>Server may take a moment to wake up (Render Free Tier)</p>
-        <button onClick={loadRooms} style={{...styles.addButton, marginTop: 15}}>
-          🔄 Force Refresh
-        </button>
+        <div className="spinner"></div> 
+        <h3 style={{ color: "#4f46e5" }}>Loading rooms...</h3>
       </div>
     );
   }
@@ -110,16 +101,14 @@ const OwnerRooms = () => {
   /* ================= MAIN UI ================= */
   return (
     <div style={styles.container}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ marginBottom: 20 }}>
         <h2>🛏 Room Management</h2>
-        <button onClick={loadRooms} style={styles.refreshBtn}>🔄 Refresh List</button>
       </div>
 
-      {/* ERROR MESSAGE WITH RETRY */}
+      {/* ERROR MESSAGE */}
       {error && (
         <div style={styles.errorBox}>
           <p>{error}</p>
-          <button onClick={loadRooms} style={styles.retryBtn}>Retry Now</button>
         </div>
       )}
 
@@ -173,12 +162,10 @@ const OwnerRooms = () => {
 
 const styles = {
   container: { maxWidth: 900, margin: "auto", padding: 20 },
-  center: { textAlign: "center", marginTop: 100 },
+  center: { textAlign: "center", marginTop: 150 },
   addRoomBox: { display: "flex", gap: 10, marginBottom: 30, flexWrap: "wrap" },
   input: { padding: 10, border: "1px solid #ccc", borderRadius: 6, flex: 1, minWidth: '150px' },
   addButton: { background: "#4f46e5", color: "#fff", border: "none", padding: "10px 18px", borderRadius: 6, cursor: "pointer" },
-  refreshBtn: { background: "none", border: "1px solid #4f46e5", color: "#4f46e5", padding: "5px 10px", borderRadius: 5, cursor: "pointer" },
-  retryBtn: { background: "#dc2626", color: "#fff", border: "none", padding: "8px 15px", borderRadius: 5, marginTop: 10, cursor: "pointer" },
   errorBox: { padding: 15, background: "#fef2f2", border: "1px solid #fee2e2", borderRadius: 8, color: "#991b1b", marginBottom: 20 },
   roomGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20 },
   card: { border: "1px solid #ddd", padding: 20, borderRadius: 12, background: "#fff", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }
