@@ -18,55 +18,43 @@ const OwnerRooms = () => {
 
   /* ================= LOAD ROOMS ================= */
 
-  const loadRooms = useCallback(async () => {
+const loadRooms = async (retry = true) => {
 
-    try {
+  try {
 
-      setLoading(true);
+    setLoading(true);
 
-      const res = await api.get(`/rooms/${pgId}`);
+    const res = await api.get(`/rooms/${pgId}`);
 
-      console.log("Rooms response:", res.data);
+    console.log("Rooms response:", res.data);
 
-      if (Array.isArray(res.data)) {
-        setRooms(res.data);
-      } else if (res.data?.data) {
-        setRooms(res.data.data);
-      } else {
-        setRooms([]);
-      }
-
-    } catch (err) {
-
-      console.error("Load rooms error:", err);
+    if (Array.isArray(res.data)) {
+      setRooms(res.data);
+    } else if (res.data?.data) {
+      setRooms(res.data.data);
+    } else {
       setRooms([]);
-
-    } finally {
-
-      setLoading(false);
-
     }
 
-  }, [pgId]);
+  } catch (err) {
 
-  /* ================= AUTH CHECK ================= */
+    console.error("Load rooms error:", err);
 
-  useEffect(() => {
+    if (retry) {
+      console.log("Backend sleeping, retrying...");
+      setTimeout(() => loadRooms(false), 3000);
+      return;
+    }
 
-    const unsub = onAuthStateChanged(auth, (user) => {
+    setRooms([]);
 
-      if (!user) {
-        navigate("/login");
-      } else {
-        loadRooms();
-      }
+  } finally {
 
-    });
+    setLoading(false);
 
-    return () => unsub();
+  }
 
-  }, [loadRooms, navigate]);
-
+};
   /* ================= ADD ROOM ================= */
 
   const addRoom = async () => {
