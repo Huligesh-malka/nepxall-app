@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_CONFIG } from "../config";
+import api from "../api/api";
+import { auth } from "../firebase";
+import { X, BookOpen, Phone, MapPin, Check, Info } from "lucide-react";
 
 const ScanPG = () => {
   const { id } = useParams();
@@ -10,6 +13,9 @@ const ScanPG = () => {
   const [pg, setPg] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [notification, setNotification] = useState(null);
 
   useEffect(() => {
     fetchPG();
@@ -51,22 +57,103 @@ const ScanPG = () => {
     return null;
   };
 
-  const goToPayment = () => {
+  //////////////////////////////////////////////////////
+  // 🏷 BOOK NOW CLICK - EXACT SAME AS PGDetails
+  //////////////////////////////////////////////////////
+  const handleBookNow = () => {
     const selected = getSelectedDetails();
     if (!selected) {
       alert("Please select a room to proceed");
       return;
     }
-    
-    navigate(`/booking/${id}`, {
-      state: {
-        selectionType: selected.type,
-        selectionName: selected.name,
-        price: selected.price,
-        roomId: selectedRoom?.room_number,
-        sharingType: selectedRoom?.sharing_type
+
+    const user = auth.currentUser;
+
+    if (!user) {
+      showNotificationMessage("Please register or login to book this property");
+      navigate("/register", {
+        state: { redirectTo: `/scan/${id}` }
+      });
+      return;
+    }
+
+    setShowBookingModal(true);
+  };
+
+  //////////////////////////////////////////////////////
+  // 📝 BOOKING SUBMIT - EXACT SAME AS PGDetails
+  //////////////////////////////////////////////////////
+  const handleBookingSubmit = async (bookingData) => {
+    try {
+      if (bookingLoading) return;
+
+      setBookingLoading(true);
+
+      const user = auth.currentUser;
+
+      if (!user) {
+        showNotificationMessage("Please login to continue");
+        navigate("/login");
+        return;
       }
-    });
+
+      const token = await user.getIdToken(true);
+
+      const payload = {
+        name: bookingData.name,
+        phone: bookingData.phone,
+        check_in_date: bookingData.checkInDate,
+        room_type: bookingData.roomType,
+        room_number: selectedRoom?.room_number,
+        sharing_type: selectedRoom?.sharing_type,
+        rent_amount: selectedRoom?.price
+      };
+
+      const res = await api.post(
+        `/bookings/${id}`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      // ✅ SUCCESS
+      showNotificationMessage(
+        res.data?.message || "✅ Booking request sent to owner"
+      );
+
+      setShowBookingModal(false);
+      setSelectedRoom(null);
+
+    } catch (error) {
+      console.log("BOOKING ERROR:", error?.response?.data);
+
+      // ⚠️ REAL BACKEND MESSAGE
+      if (error?.response?.data?.message) {
+        showNotificationMessage(error.response.data.message);
+      } else {
+        showNotificationMessage("❌ Booking failed. Try again");
+      }
+
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
+  //////////////////////////////////////////////////////
+  // 📞 CALL OWNER
+  //////////////////////////////////////////////////////
+  const handleCallOwner = () => {
+    if (pg.contact?.phone) {
+      window.location.href = `tel:${pg.contact.phone}`;
+    }
+  };
+
+  const showNotificationMessage = (message) => {
+    setNotification(message);
+    setTimeout(() => setNotification(null), 3000);
   };
 
   const goToFullDetails = () => {
@@ -75,7 +162,7 @@ const ScanPG = () => {
 
   // Format price with commas
   const formatPrice = (price) => {
-    if (!price || price === 0 || price === "0" || price === "") return null;
+    if (!price || price === 0 || price === "0" || price === "") return "0";
     return Number(price).toLocaleString('en-IN');
   };
 
@@ -198,6 +285,68 @@ const ScanPG = () => {
     return prices;
   };
 
+  // Get room types for booking modal
+  const getRoomTypes = () => {
+    if (!pg) return [];
+    
+    const types = [];
+    
+    if (pg.category === "to_let") {
+      if (pg.price_details?.to_let?.prices?.['1bhk']) types.push({ 
+        value: "1 BHK", 
+        label: `1 BHK - ₹${formatPrice(pg.price_details.to_let.prices['1bhk'])}` 
+      });
+      if (pg.price_details?.to_let?.prices?.['2bhk']) types.push({ 
+        value: "2 BHK", 
+        label: `2 BHK - ₹${formatPrice(pg.price_details.to_let.prices['2bhk'])}` 
+      });
+      if (pg.price_details?.to_let?.prices?.['3bhk']) types.push({ 
+        value: "3 BHK", 
+        label: `3 BHK - ₹${formatPrice(pg.price_details.to_let.prices['3bhk'])}` 
+      });
+      if (pg.price_details?.to_let?.prices?.['4bhk']) types.push({ 
+        value: "4 BHK", 
+        label: `4 BHK - ₹${formatPrice(pg.price_details.to_let.prices['4bhk'])}` 
+      });
+    } else if (pg.category === "coliving") {
+      if (pg.price_details?.co_living?.single_room) types.push({ 
+        value: "Co-Living Single Room", 
+        label: `Co-Living Single Room - ₹${formatPrice(pg.price_details.co_living.single_room)}` 
+      });
+      if (pg.price_details?.co_living?.double_room) types.push({ 
+        value: "Co-Living Double Room", 
+        label: `Co-Living Double Room - ₹${formatPrice(pg.price_details.co_living.double_room)}` 
+      });
+    } else {
+      if (pg.price_details?.sharing?.single_sharing) types.push({ 
+        value: "Single Sharing", 
+        label: `Single Sharing - ₹${formatPrice(pg.price_details.sharing.single_sharing)}` 
+      });
+      if (pg.price_details?.sharing?.double_sharing) types.push({ 
+        value: "Double Sharing", 
+        label: `Double Sharing - ₹${formatPrice(pg.price_details.sharing.double_sharing)}` 
+      });
+      if (pg.price_details?.sharing?.triple_sharing) types.push({ 
+        value: "Triple Sharing", 
+        label: `Triple Sharing - ₹${formatPrice(pg.price_details.sharing.triple_sharing)}` 
+      });
+      if (pg.price_details?.sharing?.four_sharing) types.push({ 
+        value: "Four Sharing", 
+        label: `Four Sharing - ₹${formatPrice(pg.price_details.sharing.four_sharing)}` 
+      });
+      if (pg.price_details?.sharing?.single_room) types.push({ 
+        value: "Single Room", 
+        label: `Single Room - ₹${formatPrice(pg.price_details.sharing.single_room)}` 
+      });
+      if (pg.price_details?.sharing?.double_room) types.push({ 
+        value: "Double Room", 
+        label: `Double Room - ₹${formatPrice(pg.price_details.sharing.double_room)}` 
+      });
+    }
+    
+    return types;
+  };
+
   if (loading) {
     return (
       <div style={styles.center}>
@@ -225,11 +374,21 @@ const ScanPG = () => {
 
   return (
     <div style={styles.container}>
+      {/* Notification Toast */}
+      {notification && (
+        <div style={styles.notification}>
+          {notification.includes("✅") ? <Check size={18} /> : 
+           notification.includes("❌") ? <X size={18} /> : 
+           <Info size={18} />}
+          {notification}
+        </div>
+      )}
+
       {/* Header with PG Name and Location */}
       <div style={styles.headerSection}>
         <h1 style={styles.title}>{pg.name}</h1>
         <div style={styles.locationRow}>
-          <span style={styles.locationIcon}>📍</span>
+          <MapPin size={16} style={styles.locationIcon} />
           <span style={styles.locationText}>
             {pg.location?.area}, {pg.location?.city}
           </span>
@@ -340,39 +499,156 @@ const ScanPG = () => {
         <span style={styles.viewDetailsArrow}>→</span>
       </button>
 
-      {/* Selected Room Summary (if any) */}
-      {selectedDetails && (
-        <div style={styles.selectedSummary}>
-          <div style={styles.selectedSummaryLeft}>
-            <span style={styles.selectedSummaryLabel}>Selected:</span>
-            <span style={styles.selectedSummaryName}>{selectedDetails.name}</span>
-          </div>
-          <span style={styles.selectedSummaryPrice}>₹{formatPrice(selectedDetails.price)}/month</span>
-        </div>
-      )}
-
       {/* Footer Actions */}
       <div style={styles.footer}>
         <button
-          onClick={goToPayment}
+          onClick={handleBookNow}
           style={{
             ...styles.bookBtn,
-            opacity: selectedDetails ? 1 : 0.5,
-            cursor: selectedDetails ? 'pointer' : 'not-allowed'
+            opacity: selectedRoom ? 1 : 0.5,
+            cursor: selectedRoom ? 'pointer' : 'not-allowed'
           }}
-          disabled={!selectedDetails}
+          disabled={!selectedRoom}
         >
-          {selectedDetails ? `Book Now • ₹${formatPrice(selectedDetails.price)}/month` : 'Select a room to continue'}
+          <BookOpen size={18} style={{ marginRight: 8 }} />
+          {selectedRoom ? 'Book Now' : 'Select a room to continue'}
         </button>
 
         {pg.contact?.phone && (
-          <a href={`tel:${pg.contact.phone}`} style={{ textDecoration: 'none', width: '100%' }}>
-            <button style={styles.callBtn}>
-              📞 Call {pg.contact.person || 'Owner'}
-            </button>
-          </a>
+          <button onClick={handleCallOwner} style={styles.callBtn}>
+            <Phone size={18} style={{ marginRight: 8 }} />
+            Call {pg.contact.person || 'Owner'}
+          </button>
         )}
       </div>
+
+      {/* Booking Modal - EXACT SAME AS PGDetails */}
+      {showBookingModal && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <button
+              onClick={() => setShowBookingModal(false)}
+              disabled={bookingLoading}
+              style={styles.modalClose}
+            >
+              <X size={24} />
+            </button>
+
+            <div style={styles.modalBody}>
+              <h2 style={styles.modalTitle}>
+                🏠 Book {pg?.name}
+              </h2>
+              <p style={styles.modalSubtitle}>
+                Fill in your details to book this property
+              </p>
+
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = {
+                  name: e.target.name.value,
+                  phone: e.target.phone.value,
+                  checkInDate: e.target.checkInDate.value,
+                  roomType: e.target.roomType.value
+                };
+                handleBookingSubmit(formData);
+              }}>
+                {/* Full Name */}
+                <div style={styles.formGroup}>
+                  <label style={styles.formLabel}>
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    required
+                    disabled={bookingLoading}
+                    style={styles.formInput}
+                    placeholder="Enter your full name"
+                  />
+                </div>
+
+                {/* Phone Number */}
+                <div style={styles.formGroup}>
+                  <label style={styles.formLabel}>
+                    Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    required
+                    disabled={bookingLoading}
+                    style={styles.formInput}
+                    placeholder="Enter your phone number"
+                  />
+                </div>
+
+                {/* Check-in Date */}
+                <div style={styles.formGroup}>
+                  <label style={styles.formLabel}>
+                    Check-in Date *
+                  </label>
+                  <input
+                    type="date"
+                    name="checkInDate"
+                    required
+                    disabled={bookingLoading}
+                    style={styles.formInput}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+
+                {/* Room Type */}
+                <div style={styles.formGroup}>
+                  <label style={styles.formLabel}>
+                    {pg?.category === "to_let" ? "BHK Type *" : "Room Type *"}
+                  </label>
+                  <select
+                    name="roomType"
+                    required
+                    disabled={bookingLoading}
+                    style={styles.formSelect}
+                    defaultValue={selectedRoom ? getRoomDisplayName(selectedRoom) : ''}
+                  >
+                    <option value="" disabled>Select room type</option>
+                    {getRoomTypes().map((type, index) => (
+                      <option key={index} value={type.value}>{type.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Action Buttons */}
+                <div style={styles.formActions}>
+                  <button
+                    type="button"
+                    onClick={() => setShowBookingModal(false)}
+                    disabled={bookingLoading}
+                    style={styles.cancelBtn}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={bookingLoading}
+                    style={styles.submitBtn}
+                  >
+                    {bookingLoading ? (
+                      <>
+                        <div style={styles.spinner}></div>
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <BookOpen size={18} />
+                        Submit Booking
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -416,8 +692,21 @@ const styles = {
     fontSize: "16px",
     fontWeight: "600",
     cursor: "pointer",
-    marginTop: "20px",
-    transition: "all 0.2s ease"
+    marginTop: "20px"
+  },
+  notification: {
+    position: "fixed",
+    top: 20,
+    right: 20,
+    background: "#10b981",
+    color: "white",
+    padding: "12px 24px",
+    borderRadius: 10,
+    boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+    zIndex: 4000,
+    display: "flex",
+    alignItems: "center",
+    gap: 8
   },
   headerSection: {
     marginBottom: "32px"
@@ -426,8 +715,7 @@ const styles = {
     fontSize: "28px",
     fontWeight: "700",
     color: "#111827",
-    margin: "0 0 8px 0",
-    lineHeight: "1.2"
+    margin: "0 0 8px 0"
   },
   locationRow: {
     display: "flex",
@@ -436,13 +724,11 @@ const styles = {
     marginBottom: "8px"
   },
   locationIcon: {
-    fontSize: "16px",
     color: "#6b7280"
   },
   locationText: {
     fontSize: "15px",
-    color: "#6b7280",
-    fontWeight: "400"
+    color: "#6b7280"
   },
   typeBadge: {
     display: "inline-block",
@@ -540,8 +826,7 @@ const styles = {
     backgroundColor: "#f9fafb",
     borderRadius: "20px",
     border: "2px dashed #e5e7eb",
-    color: "#6b7280",
-    fontSize: "16px"
+    color: "#6b7280"
   },
   priceSection: {
     backgroundColor: "#f9fafb",
@@ -619,41 +904,10 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: "8px",
-    transition: "all 0.2s ease"
-  },
-  viewDetailsArrow: {
-    fontSize: "20px",
-    transition: "transform 0.2s ease"
-  },
-  selectedSummary: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#f3f4f6",
-    padding: "16px 20px",
-    borderRadius: "16px",
-    marginBottom: "16px",
-    border: "1px solid #e5e7eb"
-  },
-  selectedSummaryLeft: {
-    display: "flex",
-    alignItems: "center",
     gap: "8px"
   },
-  selectedSummaryLabel: {
-    fontSize: "14px",
-    color: "#6b7280"
-  },
-  selectedSummaryName: {
-    fontSize: "15px",
-    fontWeight: "600",
-    color: "#111827"
-  },
-  selectedSummaryPrice: {
-    fontSize: "16px",
-    fontWeight: "700",
-    color: "#4f46e5"
+  viewDetailsArrow: {
+    fontSize: "20px"
   },
   footer: {
     display: "flex",
@@ -680,7 +934,9 @@ const styles = {
     fontWeight: "700",
     fontSize: "16px",
     cursor: "pointer",
-    transition: "all 0.2s ease"
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
   },
   callBtn: {
     width: "100%",
@@ -692,8 +948,139 @@ const styles = {
     fontWeight: "600",
     fontSize: "16px",
     cursor: "pointer",
-    transition: "all 0.2s ease"
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  // Modal Styles - EXACT SAME AS PGDetails
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 3000,
+    padding: 20
+  },
+  modalContent: {
+    background: "#ffffff",
+    borderRadius: 20,
+    width: "100%",
+    maxWidth: 500,
+    maxHeight: "90vh",
+    overflowY: "auto",
+    position: "relative",
+    boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
+  },
+  modalClose: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    background: "rgba(255,255,255,0.9)",
+    border: "none",
+    width: 40,
+    height: 40,
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    zIndex: 100,
+    boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+  },
+  modalBody: {
+    padding: 30
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 700,
+    color: "#111827",
+    marginBottom: 8
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: "#6b7280",
+    marginBottom: 24
+  },
+  formGroup: {
+    marginBottom: 20
+  },
+  formLabel: {
+    display: "block",
+    marginBottom: 8,
+    fontSize: 14,
+    fontWeight: 500,
+    color: "#374151"
+  },
+  formInput: {
+    width: "100%",
+    padding: "12px 16px",
+    border: "1px solid #d1d5db",
+    borderRadius: 10,
+    fontSize: 14,
+    background: "#f9fafb"
+  },
+  formSelect: {
+    width: "100%",
+    padding: "12px 16px",
+    border: "1px solid #d1d5db",
+    borderRadius: 10,
+    fontSize: 14,
+    background: "#f9fafb"
+  },
+  formActions: {
+    display: "flex",
+    gap: 12,
+    marginTop: 24
+  },
+  cancelBtn: {
+    flex: 1,
+    padding: "14px",
+    background: "#f3f4f6",
+    color: "#374151",
+    border: "none",
+    borderRadius: 10,
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer"
+  },
+  submitBtn: {
+    flex: 2,
+    padding: "14px",
+    background: "#10b981",
+    color: "white",
+    border: "none",
+    borderRadius: 10,
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8
+  },
+  spinner: {
+    width: 18,
+    height: 18,
+    border: "2px solid rgba(255,255,255,0.3)",
+    borderTop: "2px solid white",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite"
   }
 };
+
+// Add global styles for animations
+const style = document.createElement('style');
+style.innerHTML = `
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+document.head.appendChild(style);
 
 export default ScanPG;
