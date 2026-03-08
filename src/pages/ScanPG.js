@@ -10,7 +10,6 @@ const ScanPG = () => {
   const [pg, setPg] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showFullDetails, setShowFullDetails] = useState(false);
 
   useEffect(() => {
     fetchPG();
@@ -19,9 +18,7 @@ const ScanPG = () => {
   const fetchPG = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(
-        `${API_CONFIG.USER_API_URL}/scan/${id}`
-      );
+      const res = await axios.get(`${API_CONFIG.USER_API_URL}/scan/${id}`);
 
       if (res.data.success) {
         setPg(res.data.data);
@@ -78,88 +75,17 @@ const ScanPG = () => {
 
   // Format price with commas
   const formatPrice = (price) => {
-    if (!price) return "0";
+    if (!price || price === 0) return "0";
     return Number(price).toLocaleString('en-IN');
   };
 
-  // Get all available price options from price_details
-  const getAllPriceOptions = () => {
-    if (!pg?.price_details) return [];
-    
-    const options = [];
-    const { price_details } = pg;
-
-    // Sharing options
-    if (price_details.sharing) {
-      if (price_details.sharing.single_sharing) {
-        options.push({
-          type: "Single Sharing",
-          price: price_details.sharing.single_sharing,
-          category: "sharing"
-        });
-      }
-      if (price_details.sharing.double_sharing) {
-        options.push({
-          type: "Double Sharing",
-          price: price_details.sharing.double_sharing,
-          category: "sharing"
-        });
-      }
-      if (price_details.sharing.triple_sharing) {
-        options.push({
-          type: "Triple Sharing",
-          price: price_details.sharing.triple_sharing,
-          category: "sharing"
-        });
-      }
-      if (price_details.sharing.four_sharing) {
-        options.push({
-          type: "Four Sharing",
-          price: price_details.sharing.four_sharing,
-          category: "sharing"
-        });
-      }
-    }
-
-    // Co-living options
-    if (price_details.co_living) {
-      if (price_details.co_living.single_room) {
-        options.push({
-          type: "Co-Living Single",
-          price: price_details.co_living.single_room,
-          category: "coliving"
-        });
-      }
-      if (price_details.co_living.double_room) {
-        options.push({
-          type: "Co-Living Double",
-          price: price_details.co_living.double_room,
-          category: "coliving"
-        });
-      }
-    }
-
-    // BHK options
-    if (price_details.to_let?.prices) {
-      if (price_details.to_let.prices['1bhk']) {
-        options.push({
-          type: "1 BHK",
-          price: price_details.to_let.prices['1bhk'],
-          category: "bhk",
-          config: price_details.to_let.configurations?.['1bhk']
-        });
-      }
-      if (price_details.to_let.prices['2bhk']) {
-        options.push({
-          type: "2 BHK",
-          price: price_details.to_let.prices['2bhk'],
-          category: "bhk",
-          config: price_details.to_let.configurations?.['2bhk']
-        });
-      }
-    }
-
-    return options;
+  // Get room display name
+  const getRoomDisplayName = (room) => {
+    if (room.sharing_type?.toLowerCase().includes('single')) return 'Single Sharing';
+    if (room.sharing_type?.toLowerCase().includes('double')) return 'Double Sharing';
+    if (room.sharing_type?.toLowerCase().includes('triple')) return 'Triple Sharing';
+    if (room.sharing_type?.toLowerCase().includes('four')) return 'Four Sharing';
+    return room.sharing_type || 'Standard Room';
   };
 
   if (loading) {
@@ -176,10 +102,7 @@ const ScanPG = () => {
         <div style={styles.notFound}>
           <span style={styles.notFoundEmoji}>🏠❌</span>
           <h3>Property not found or link expired</h3>
-          <button 
-            onClick={() => navigate('/')} 
-            style={styles.homeBtn}
-          >
+          <button onClick={() => navigate('/')} style={styles.homeBtn}>
             Go to Home
           </button>
         </div>
@@ -188,173 +111,122 @@ const ScanPG = () => {
   }
 
   const selectedDetails = getSelectedDetails();
-  const priceOptions = getAllPriceOptions();
-  const minPrice = priceOptions.length > 0 
-    ? Math.min(...priceOptions.map(o => Number(o.price))) 
-    : pg.price_details?.rent_amount || 0;
 
   return (
     <div style={styles.container}>
-      {/* Header with PG Name */}
-      <div style={styles.header}>
+      {/* Header with PG Name and Location */}
+      <div style={styles.headerSection}>
         <h1 style={styles.title}>{pg.name}</h1>
-        {pg.rating && (
-          <div style={styles.rating}>
-            <span style={styles.star}>⭐</span>
-            <span>{pg.rating}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Location - Simple and Clear */}
-      <div style={styles.locationContainer}>
-        <span style={styles.locationIcon}>📍</span>
-        <p style={styles.location}>
-          {pg.location?.area}, {pg.location?.city}
-        </p>
-      </div>
-
-      {/* Price Summary Card */}
-      <div style={styles.priceSummaryCard}>
-        <div style={styles.priceMain}>
-          <span style={styles.priceLabel}>Starting from</span>
-          <span style={styles.priceValue}>₹{formatPrice(minPrice)}</span>
-          <span style={styles.pricePeriod}>/month</span>
+        <div style={styles.locationRow}>
+          <span style={styles.locationIcon}>📍</span>
+          <span style={styles.locationText}>
+            {pg.location?.area}, {pg.location?.city}
+          </span>
         </div>
-        
-        <div style={styles.priceMeta}>
-          {pg.available_rooms > 0 && (
-            <span style={styles.availabilityChip}>
-              🟢 {pg.available_rooms} room{pg.available_rooms > 1 ? 's' : ''} available
-            </span>
-          )}
-          {pg.price_details?.deposit_amount > 0 && (
-            <span style={styles.depositChip}>
-              🔒 Deposit: ₹{formatPrice(pg.price_details.deposit_amount)}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Quick Property Info */}
-      <div style={styles.quickInfo}>
-        <div style={styles.infoChip}>
-          <span>🏷️ {pg.category || "PG"}</span>
-        </div>
-        <div style={styles.infoChip}>
-          <span>👥 {pg.type || "All"}</span>
-        </div>
-        {pg.available_rooms > 0 && (
-          <div style={styles.infoChip}>
-            <span>🛏️ {pg.available_rooms} left</span>
-          </div>
-        )}
       </div>
 
       {/* Room Selection Section */}
       <div style={styles.roomSection}>
-        <h3 style={styles.sectionTitle}>Available Rooms</h3>
+        <h2 style={styles.sectionTitle}>Select Your Room</h2>
         
         {pg.available_room_details && pg.available_room_details.length > 0 ? (
-          <div style={styles.roomList}>
-            {pg.available_room_details.map((room, index) => (
-              <div
-                key={index}
-                style={{
-                  ...styles.roomItem,
-                  borderColor: selectedRoom?.room_number === room.room_number ? "#4f46e5" : "#e5e7eb",
-                  backgroundColor: selectedRoom?.room_number === room.room_number ? "#f5f3ff" : "#fff"
-                }}
-                onClick={() => handleRoomSelection(room)}
-              >
-                <input
-                  type="radio"
-                  name="room"
-                  checked={selectedRoom?.room_number === room.room_number}
-                  onChange={() => handleRoomSelection(room)}
-                  style={styles.radio}
-                />
-                <div style={styles.roomInfo}>
-                  <span style={styles.roomNo}>Room {room.room_number}</span>
-                  <span style={styles.roomType}>{room.sharing_type}</span>
-                  <span style={styles.roomBeds}>{room.available_beds} bed{room.available_beds > 1 ? 's' : ''} left</span>
+          <div style={styles.roomGrid}>
+            {pg.available_room_details.map((room, index) => {
+              const roomDisplayName = getRoomDisplayName(room);
+              const isSelected = selectedRoom?.room_number === room.room_number;
+              
+              return (
+                <div
+                  key={index}
+                  style={{
+                    ...styles.roomCard,
+                    ...(isSelected ? styles.roomCardSelected : {}),
+                    ...(room.available_beds === 0 ? styles.roomCardSoldOut : {})
+                  }}
+                  onClick={() => room.available_beds > 0 && handleRoomSelection(room)}
+                >
+                  <div style={styles.roomCardHeader}>
+                    <span style={styles.roomName}>{roomDisplayName}</span>
+                    {room.available_beds > 0 ? (
+                      <span style={styles.roomAvailability}>● {room.available_beds} left</span>
+                    ) : (
+                      <span style={styles.roomSoldOut}>Sold Out</span>
+                    )}
+                  </div>
+                  
+                  <div style={styles.roomPrice}>
+                    ₹{formatPrice(room.price)}
+                    <span style={styles.roomPricePeriod}>/month</span>
+                  </div>
+                  
+                  <div style={styles.roomFooter}>
+                    <span style={styles.roomNumber}>Room {room.room_number}</span>
+                    {isSelected && (
+                      <span style={styles.selectedBadge}>✓ Selected</span>
+                    )}
+                  </div>
                 </div>
-                <div style={styles.roomPriceInfo}>
-                  <span style={styles.roomPrice}>₹{formatPrice(room.price)}</span>
-                  <span style={styles.roomPeriod}>/month</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div style={styles.noRooms}>
-            <p style={styles.noRoomsText}>No rooms currently available</p>
+            <p>No rooms currently available</p>
           </div>
         )}
       </div>
 
-      {/* All Price Options (if no specific rooms) */}
-      {(!pg.available_room_details || pg.available_room_details.length === 0) && priceOptions.length > 0 && (
-        <div style={styles.priceOptionsSection}>
-          <h3 style={styles.sectionTitle}>Available Price Options</h3>
-          <div style={styles.priceOptionsGrid}>
-            {priceOptions.map((option, index) => (
-              <div key={index} style={styles.priceOptionCard}>
-                <div style={styles.priceOptionType}>{option.type}</div>
-                <div style={styles.priceOptionValue}>₹{formatPrice(option.price)}/month</div>
-                {option.config && (
-                  <div style={styles.priceOptionConfig}>
-                    {option.config.bedrooms} bed • {option.config.bathrooms} bath
-                  </div>
-                )}
+      {/* Price Details Section */}
+      {pg.price_details && (
+        <div style={styles.priceSection}>
+          <h3 style={styles.subSectionTitle}>Price Details</h3>
+          
+          <div style={styles.priceDetails}>
+            {pg.price_details.rent_amount > 0 && (
+              <div style={styles.priceRow}>
+                <span>Base Rent</span>
+                <span style={styles.priceRowValue}>₹{formatPrice(pg.price_details.rent_amount)}/month</span>
               </div>
-            ))}
+            )}
+            
+            {pg.price_details.deposit_amount > 0 && (
+              <div style={styles.priceRow}>
+                <span>Security Deposit</span>
+                <span style={styles.priceRowValue}>₹{formatPrice(pg.price_details.deposit_amount)}</span>
+              </div>
+            )}
+            
+            {pg.price_details.maintenance_amount > 0 && (
+              <div style={styles.priceRow}>
+                <span>Maintenance</span>
+                <span style={styles.priceRowValue}>₹{formatPrice(pg.price_details.maintenance_amount)}/month</span>
+              </div>
+            )}
+            
+            {pg.price_details.brokerage_amount > 0 && (
+              <div style={styles.priceRow}>
+                <span>Brokerage</span>
+                <span style={styles.priceRowValue}>₹{formatPrice(pg.price_details.brokerage_amount)}</span>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Additional Charges */}
-      {pg.price_details && (
-        <div style={styles.chargesSection}>
-          {(pg.price_details.deposit_amount > 0 || pg.price_details.maintenance_amount > 0 || pg.price_details.brokerage_amount > 0) && (
-            <>
-              <h4 style={styles.chargesTitle}>Additional Charges</h4>
-              <div style={styles.chargesList}>
-                {pg.price_details.deposit_amount > 0 && (
-                  <div style={styles.chargeItem}>
-                    <span>Security Deposit</span>
-                    <span style={styles.chargeValue}>₹{formatPrice(pg.price_details.deposit_amount)}</span>
-                  </div>
-                )}
-                {pg.price_details.maintenance_amount > 0 && (
-                  <div style={styles.chargeItem}>
-                    <span>Maintenance</span>
-                    <span style={styles.chargeValue}>₹{formatPrice(pg.price_details.maintenance_amount)}/month</span>
-                  </div>
-                )}
-                {pg.price_details.brokerage_amount > 0 && (
-                  <div style={styles.chargeItem}>
-                    <span>Brokerage</span>
-                    <span style={styles.chargeValue}>₹{formatPrice(pg.price_details.brokerage_amount)}</span>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* View Full Details Button - Like in reference component */}
+      {/* View Full Details Button */}
       <button onClick={goToFullDetails} style={styles.viewDetailsBtn}>
-        <span>📋 View Full Property Details</span>
+        <span>View Full Property Details</span>
         <span style={styles.viewDetailsArrow}>→</span>
       </button>
 
-      {/* Selected Item Summary */}
+      {/* Selected Room Summary (if any) */}
       {selectedDetails && (
         <div style={styles.selectedSummary}>
-          <span>Selected: {selectedDetails.name}</span>
-          <span style={styles.selectedPrice}>₹{formatPrice(selectedDetails.price)}/month</span>
+          <div style={styles.selectedSummaryLeft}>
+            <span style={styles.selectedSummaryLabel}>Selected:</span>
+            <span style={styles.selectedSummaryName}>{selectedDetails.name}</span>
+          </div>
+          <span style={styles.selectedSummaryPrice}>₹{formatPrice(selectedDetails.price)}/month</span>
         </div>
       )}
 
@@ -373,7 +245,7 @@ const ScanPG = () => {
         </button>
 
         {pg.contact?.phone && (
-          <a href={`tel:${pg.contact.phone}`} style={{ textDecoration: 'none' }}>
+          <a href={`tel:${pg.contact.phone}`} style={{ textDecoration: 'none', width: '100%' }}>
             <button style={styles.callBtn}>
               📞 Call {pg.contact.person || 'Owner'}
             </button>
@@ -388,21 +260,22 @@ const styles = {
   container: {
     maxWidth: 600,
     margin: "0 auto",
-    padding: "20px 16px 100px 16px",
-    backgroundColor: "#f9fafb",
+    padding: "24px 20px 120px 20px",
+    backgroundColor: "#ffffff",
     minHeight: "100vh",
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
   },
   center: {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
     minHeight: "100vh",
-    backgroundColor: "#f9fafb"
+    backgroundColor: "#ffffff"
   },
   loader: {
     fontSize: "18px",
-    color: "#4f46e5"
+    color: "#4f46e5",
+    fontWeight: "500"
   },
   notFound: {
     textAlign: "center",
@@ -418,325 +291,250 @@ const styles = {
     backgroundColor: "#4f46e5",
     color: "white",
     border: "none",
-    borderRadius: "8px",
+    borderRadius: "12px",
     fontSize: "16px",
+    fontWeight: "600",
     cursor: "pointer",
-    marginTop: "20px"
+    marginTop: "20px",
+    transition: "all 0.2s ease"
   },
-  header: {
+  headerSection: {
+    marginBottom: "32px"
+  },
+  title: {
+    fontSize: "28px",
+    fontWeight: "700",
+    color: "#111827",
+    margin: "0 0 8px 0",
+    lineHeight: "1.2"
+  },
+  locationRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px"
+  },
+  locationIcon: {
+    fontSize: "16px",
+    color: "#6b7280"
+  },
+  locationText: {
+    fontSize: "15px",
+    color: "#6b7280",
+    fontWeight: "400"
+  },
+  roomSection: {
+    marginBottom: "32px"
+  },
+  sectionTitle: {
+    fontSize: "20px",
+    fontWeight: "600",
+    color: "#111827",
+    margin: "0 0 20px 0"
+  },
+  subSectionTitle: {
+    fontSize: "18px",
+    fontWeight: "600",
+    color: "#111827",
+    margin: "0 0 16px 0"
+  },
+  roomGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr",
+    gap: "16px"
+  },
+  roomCard: {
+    backgroundColor: "#ffffff",
+    border: "2px solid #e5e7eb",
+    borderRadius: "20px",
+    padding: "20px",
+    cursor: "pointer",
+    transition: "all 0.2s ease"
+  },
+  roomCardSelected: {
+    borderColor: "#4f46e5",
+    backgroundColor: "#f5f3ff",
+    transform: "scale(1.02)",
+    boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.2)"
+  },
+  roomCardSoldOut: {
+    opacity: 0.5,
+    cursor: "not-allowed"
+  },
+  roomCardHeader: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "8px"
-  },
-  title: {
-    fontSize: "24px",
-    fontWeight: "bold",
-    color: "#1f2937",
-    margin: 0
-  },
-  rating: {
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-    backgroundColor: "#f3f4f6",
-    padding: "6px 12px",
-    borderRadius: "20px",
-    fontSize: "14px",
-    fontWeight: "500"
-  },
-  star: {
-    fontSize: "16px"
-  },
-  locationContainer: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    marginBottom: "16px"
-  },
-  locationIcon: {
-    fontSize: "16px"
-  },
-  location: {
-    margin: 0,
-    color: "#4b5563",
-    fontSize: "14px",
-    fontWeight: "500"
-  },
-  priceSummaryCard: {
-    backgroundColor: "white",
-    borderRadius: "16px",
-    padding: "16px",
-    marginBottom: "16px",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-    border: "1px solid #e5e7eb"
-  },
-  priceMain: {
     marginBottom: "12px"
   },
-  priceLabel: {
-    display: "block",
-    fontSize: "12px",
-    color: "#6b7280",
-    marginBottom: "4px",
-    textTransform: "uppercase",
-    letterSpacing: "0.5px"
-  },
-  priceValue: {
-    fontSize: "32px",
-    fontWeight: "bold",
-    color: "#4f46e5",
-    marginRight: "4px"
-  },
-  pricePeriod: {
-    fontSize: "14px",
-    color: "#9ca3af"
-  },
-  priceMeta: {
-    display: "flex",
-    gap: "8px",
-    flexWrap: "wrap"
-  },
-  availabilityChip: {
-    backgroundColor: "#d1fae5",
-    color: "#065f46",
-    padding: "4px 12px",
-    borderRadius: "20px",
-    fontSize: "12px",
-    fontWeight: "500"
-  },
-  depositChip: {
-    backgroundColor: "#fef3c7",
-    color: "#92400e",
-    padding: "4px 12px",
-    borderRadius: "20px",
-    fontSize: "12px",
-    fontWeight: "500"
-  },
-  quickInfo: {
-    display: "flex",
-    gap: "8px",
-    flexWrap: "wrap",
-    marginBottom: "24px"
-  },
-  infoChip: {
-    backgroundColor: "#f3f4f6",
-    padding: "6px 12px",
-    borderRadius: "20px",
-    fontSize: "13px",
-    color: "#374151"
-  },
-  roomSection: {
-    marginBottom: "24px"
-  },
-  sectionTitle: {
+  roomName: {
     fontSize: "18px",
     fontWeight: "600",
-    marginBottom: "16px",
-    color: "#1f2937"
+    color: "#111827"
   },
-  roomList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px"
+  roomAvailability: {
+    fontSize: "14px",
+    color: "#10b981",
+    fontWeight: "500",
+    backgroundColor: "#d1fae5",
+    padding: "4px 10px",
+    borderRadius: "20px"
   },
-  roomItem: {
-    display: "flex",
-    alignItems: "center",
-    padding: "16px",
-    border: "2px solid #e5e7eb",
-    borderRadius: "14px",
-    cursor: "pointer",
-    transition: "all 0.2s",
-    backgroundColor: "#fff"
-  },
-  radio: {
-    marginRight: "16px",
-    width: "20px",
-    height: "20px",
-    cursor: "pointer",
-    accentColor: "#4f46e5"
-  },
-  roomInfo: {
-    flex: 1
-  },
-  roomNo: {
-    display: "block",
-    fontWeight: "600",
-    fontSize: "16px",
-    marginBottom: "4px",
-    color: "#1f2937"
-  },
-  roomType: {
-    display: "inline-block",
-    fontSize: "13px",
-    color: "#6b7280",
-    marginRight: "8px"
-  },
-  roomBeds: {
-    display: "inline-block",
-    fontSize: "12px",
-    color: "#16a34a",
-    backgroundColor: "#dcfce7",
-    padding: "2px 8px",
-    borderRadius: "12px"
-  },
-  roomPriceInfo: {
-    textAlign: "right"
+  roomSoldOut: {
+    fontSize: "14px",
+    color: "#ef4444",
+    fontWeight: "500",
+    backgroundColor: "#fee2e2",
+    padding: "4px 10px",
+    borderRadius: "20px"
   },
   roomPrice: {
-    display: "block",
-    fontWeight: "bold",
+    fontSize: "28px",
+    fontWeight: "700",
     color: "#4f46e5",
-    fontSize: "20px",
+    marginBottom: "12px",
     lineHeight: "1.2"
   },
-  roomPeriod: {
-    fontSize: "11px",
-    color: "#9ca3af"
+  roomPricePeriod: {
+    fontSize: "16px",
+    fontWeight: "400",
+    color: "#9ca3af",
+    marginLeft: "4px"
+  },
+  roomFooter: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderTop: "1px solid #e5e7eb",
+    paddingTop: "12px"
+  },
+  roomNumber: {
+    fontSize: "14px",
+    color: "#6b7280"
+  },
+  selectedBadge: {
+    fontSize: "14px",
+    color: "#4f46e5",
+    fontWeight: "600"
   },
   noRooms: {
     textAlign: "center",
     padding: "40px",
-    backgroundColor: "#fff",
-    borderRadius: "16px",
-    border: "2px dashed #e5e7eb"
-  },
-  noRoomsText: {
+    backgroundColor: "#f9fafb",
+    borderRadius: "20px",
+    border: "2px dashed #e5e7eb",
     color: "#6b7280",
-    margin: 0
+    fontSize: "16px"
   },
-  priceOptionsSection: {
-    marginBottom: "24px"
+  priceSection: {
+    backgroundColor: "#f9fafb",
+    borderRadius: "20px",
+    padding: "20px",
+    marginBottom: "32px"
   },
-  priceOptionsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-    gap: "12px"
-  },
-  priceOptionCard: {
-    backgroundColor: "white",
-    padding: "16px",
-    borderRadius: "12px",
-    border: "1px solid #e5e7eb",
-    textAlign: "center"
-  },
-  priceOptionType: {
-    fontSize: "14px",
-    color: "#6b7280",
-    marginBottom: "8px"
-  },
-  priceOptionValue: {
-    fontSize: "18px",
-    fontWeight: "bold",
-    color: "#4f46e5",
-    marginBottom: "4px"
-  },
-  priceOptionConfig: {
-    fontSize: "11px",
-    color: "#9ca3af"
-  },
-  chargesSection: {
-    backgroundColor: "white",
-    borderRadius: "12px",
-    padding: "16px",
-    marginBottom: "24px",
-    border: "1px solid #e5e7eb"
-  },
-  chargesTitle: {
-    fontSize: "14px",
-    fontWeight: "600",
-    margin: "0 0 12px 0",
-    color: "#374151"
-  },
-  chargesList: {
+  priceDetails: {
     display: "flex",
     flexDirection: "column",
-    gap: "8px"
+    gap: "12px"
   },
-  chargeItem: {
+  priceRow: {
     display: "flex",
     justifyContent: "space-between",
-    fontSize: "14px",
-    padding: "4px 0"
+    alignItems: "center",
+    padding: "8px 0",
+    borderBottom: "1px solid #e5e7eb"
   },
-  chargeValue: {
+  priceRowValue: {
     fontWeight: "600",
-    color: "#374151"
+    color: "#111827"
   },
   viewDetailsBtn: {
     width: "100%",
-    padding: "16px",
-    backgroundColor: "#fff",
+    padding: "18px",
+    backgroundColor: "#ffffff",
     color: "#4f46e5",
     border: "2px solid #4f46e5",
-    borderRadius: "14px",
+    borderRadius: "16px",
     fontWeight: "600",
     fontSize: "16px",
     cursor: "pointer",
-    marginBottom: "20px",
+    marginBottom: "24px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     gap: "8px",
-    transition: "all 0.3s ease"
+    transition: "all 0.2s ease"
   },
   viewDetailsArrow: {
-    fontSize: "18px",
-    transition: "transform 0.3s ease"
+    fontSize: "20px",
+    transition: "transform 0.2s ease"
   },
   selectedSummary: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "12px 16px",
     backgroundColor: "#f3f4f6",
-    borderRadius: "12px",
-    marginBottom: "12px",
-    fontSize: "14px",
-    fontWeight: "500"
+    padding: "16px 20px",
+    borderRadius: "16px",
+    marginBottom: "16px",
+    border: "1px solid #e5e7eb"
   },
-  selectedPrice: {
-    color: "#4f46e5",
-    fontWeight: "bold"
+  selectedSummaryLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px"
+  },
+  selectedSummaryLabel: {
+    fontSize: "14px",
+    color: "#6b7280"
+  },
+  selectedSummaryName: {
+    fontSize: "15px",
+    fontWeight: "600",
+    color: "#111827"
+  },
+  selectedSummaryPrice: {
+    fontSize: "16px",
+    fontWeight: "700",
+    color: "#4f46e5"
   },
   footer: {
     display: "flex",
     flexDirection: "column",
-    gap: "10px",
+    gap: "12px",
     position: "fixed",
     bottom: "0",
     left: "0",
     right: "0",
     maxWidth: "600px",
     margin: "0 auto",
-    backgroundColor: "#f9fafb",
-    padding: "16px",
+    backgroundColor: "#ffffff",
+    padding: "20px",
     borderTop: "1px solid #e5e7eb",
-    boxShadow: "0 -4px 12px rgba(0,0,0,0.05)"
+    boxShadow: "0 -4px 12px rgba(0, 0, 0, 0.05)"
   },
   bookBtn: {
     width: "100%",
-    padding: "16px",
+    padding: "18px",
     backgroundColor: "#4f46e5",
-    color: "#fff",
+    color: "#ffffff",
     border: "none",
-    borderRadius: "14px",
-    fontWeight: "bold",
+    borderRadius: "16px",
+    fontWeight: "700",
     fontSize: "16px",
     cursor: "pointer",
-    transition: "all 0.2s"
+    transition: "all 0.2s ease"
   },
   callBtn: {
     width: "100%",
-    padding: "16px",
-    backgroundColor: "#fff",
+    padding: "18px",
+    backgroundColor: "#ffffff",
     color: "#22c55e",
     border: "2px solid #22c55e",
-    borderRadius: "14px",
-    fontWeight: "bold",
+    borderRadius: "16px",
+    fontWeight: "600",
     fontSize: "16px",
-    cursor: "pointer"
+    cursor: "pointer",
+    transition: "all 0.2s ease"
   }
 };
 
