@@ -172,7 +172,21 @@ const OwnerDashboard = () => {
         ? bookingsRes.data
         : bookingsRes.data?.bookings || [];
 
-      const sortedBookings = bookings
+      // Filter out bookings with missing tenant information
+      const validBookings = bookings.filter(booking => 
+        booking && 
+        booking.id && 
+        booking.name && 
+        booking.name !== 'Unknown' &&
+        booking.name !== 'unknown' &&
+        booking.pg_name && 
+        booking.pg_name !== 'Unknown' &&
+        booking.pg_name !== 'unknown'
+      );
+
+      console.log(`✅ Valid bookings count: ${validBookings.length}`);
+
+      const sortedBookings = validBookings
         .sort(
           (a, b) =>
             new Date(b.created_at || b.check_in_date || 0) -
@@ -195,14 +209,15 @@ const OwnerDashboard = () => {
         ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
         : 0;
 
-      const totalEarnings = bookings
+      // Calculate earnings only from valid bookings
+      const totalEarnings = validBookings
         .filter(b => ["confirmed", "completed"].includes(b?.status?.toLowerCase()))
         .reduce((a, b) => a + (Number(b.amount) || 0), 0);
 
       const currentMonth = new Date().getMonth();
       const currentYear = new Date().getFullYear();
 
-      const monthlyEarnings = bookings
+      const monthlyEarnings = validBookings
         .filter(b => {
           if (!["confirmed", "completed"].includes(b?.status?.toLowerCase())) return false;
           const d = new Date(b.created_at || b.check_in_date);
@@ -210,7 +225,7 @@ const OwnerDashboard = () => {
         })
         .reduce((a, b) => a + (Number(b.amount) || 0), 0);
 
-      const pendingBookings = bookings.filter(b => 
+      const pendingBookings = validBookings.filter(b => 
         b?.status?.toLowerCase() === "pending"
       ).length;
 
@@ -221,7 +236,7 @@ const OwnerDashboard = () => {
         totalEarnings,
         monthlyEarnings,
         pendingBookings,
-        totalBookings: bookings.length,
+        totalBookings: validBookings.length,
         avgRating,
         totalEnquiries: recentEnquiries.length
       });
@@ -251,7 +266,7 @@ const OwnerDashboard = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [navigate]);
+  }, [navigate, recentEnquiries.length]);
 
   /* ---------------- HANDLERS ---------------- */
 
@@ -650,62 +665,54 @@ const handleGenerateQR = async (propertyId) => {
         </>
       )}
 
-      {/* BOOKINGS TABLE */}
-      <Box mt={4}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h5" fontWeight={600}>
-            Recent Bookings
-            {stats.totalBookings > 0 && (
-              <Chip 
-                label={stats.totalBookings} 
-                size="small" 
-                sx={{ ml: 1, bgcolor: 'primary.main', color: 'white' }} 
-              />
+      {/* BOOKINGS TABLE - Only show if there are valid bookings */}
+      {recentBookings.length > 0 && (
+        <Box mt={4}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="h5" fontWeight={600}>
+              Recent Bookings
+              {stats.totalBookings > 0 && (
+                <Chip 
+                  label={stats.totalBookings} 
+                  size="small" 
+                  sx={{ ml: 1, bgcolor: 'primary.main', color: 'white' }} 
+                />
+              )}
+            </Typography>
+            
+            {stats.totalBookings > 5 && (
+              <Button 
+                onClick={() => navigate("/owner/bookings")}
+                endIcon={<ViewIcon />}
+                size="small"
+              >
+                View All
+              </Button>
             )}
-          </Typography>
-          
-          {stats.totalBookings > 5 && (
-            <Button 
-              onClick={() => navigate("/owner/bookings")}
-              endIcon={<ViewIcon />}
-              size="small"
-            >
-              View All
-            </Button>
-          )}
-        </Box>
+          </Box>
 
-        <TableContainer 
-          component={Paper} 
-          sx={{ 
-            borderRadius: 2, 
-            overflow: 'hidden',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-          }}
-        >
-          <Table>
-            <TableHead sx={{ bgcolor: '#f5f5f5' }}>
-              <TableRow>
-                <TableCell><strong>Tenant</strong></TableCell>
-                <TableCell><strong>Property</strong></TableCell>
-                <TableCell><strong>Check In</strong></TableCell>
-                <TableCell><strong>Amount</strong></TableCell>
-                <TableCell><strong>Status</strong></TableCell>
-                <TableCell align="center"><strong>Action</strong></TableCell>
-              </TableRow>
-            </TableHead>
-
-            <TableBody>
-              {recentBookings.length === 0 ? (
+          <TableContainer 
+            component={Paper} 
+            sx={{ 
+              borderRadius: 2, 
+              overflow: 'hidden',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}
+          >
+            <Table>
+              <TableHead sx={{ bgcolor: '#f5f5f5' }}>
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                    <Typography color="text.secondary">
-                      No bookings yet
-                    </Typography>
-                  </TableCell>
+                  <TableCell><strong>Tenant</strong></TableCell>
+                  <TableCell><strong>Property</strong></TableCell>
+                  <TableCell><strong>Check In</strong></TableCell>
+                  <TableCell><strong>Amount</strong></TableCell>
+                  <TableCell><strong>Status</strong></TableCell>
+                  <TableCell align="center"><strong>Action</strong></TableCell>
                 </TableRow>
-              ) : (
-                recentBookings.map((booking) => (
+              </TableHead>
+
+              <TableBody>
+                {recentBookings.map((booking) => (
                   <TableRow key={booking.id} hover>
                     <TableCell>
                       <Box display="flex" alignItems="center" gap={1}>
@@ -767,12 +774,12 @@ const handleGenerateQR = async (propertyId) => {
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Box>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+      )}
 
       {/* SNACKBAR */}
       <Snackbar
