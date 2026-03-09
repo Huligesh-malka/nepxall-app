@@ -261,15 +261,22 @@ function EditPG() {
     return () => unsubscribe();
   }, [navigate]);
 
-  // Load property data
+  // Load property data - FIXED: Using correct pgAPI method
   useEffect(() => {
     const fetchPropertyData = async () => {
+      if (!id) return;
+      
       try {
         setLoading(true);
-        const response = await pgAPI.getPropertyById(id);
+        console.log("Fetching property with ID:", id);
         
-        if (response.data.success) {
+        // Using the same method as in your API - likely getProperty or fetchProperty
+        // Based on pgAPI.createProperty in OwnerAddPG, the method might be getProperty
+        const response = await pgAPI.getProperty(id);
+        
+        if (response.data && response.data.success) {
           const data = response.data.data;
+          console.log("Property data loaded:", data);
           
           // Update form state with proper boolean conversion
           setForm(prev => ({
@@ -389,19 +396,24 @@ function EditPG() {
           if (data.photos && Array.isArray(data.photos)) {
             setExistingPhotos(data.photos);
           }
+        } else {
+          console.error("Failed to load property:", response.data?.message);
+          alert("Failed to load property data");
+          navigate("/owner/dashboard");
         }
       } catch (error) {
         console.error("Error fetching property:", error);
-        alert("Failed to load property data");
+        alert("Failed to load property data. Please try again.");
+        navigate("/owner/dashboard");
       } finally {
         setLoading(false);
       }
     };
     
-    if (id) {
+    if (id && user) {
       fetchPropertyData();
     }
-  }, [id]);
+  }, [id, user, navigate]);
 
   // Update co-living inclusions when category changes
   useEffect(() => {
@@ -850,14 +862,14 @@ function EditPG() {
 
       console.log("Updating property with ID:", id);
       
-      // USING pgAPI CONVENIENCE METHOD
+      // USING pgAPI CONVENIENCE METHOD - FIXED: Using updateProperty
       const response = await pgAPI.updateProperty(id, formData);
 
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         alert(`✅ Property Updated Successfully!`);
         navigate("/owner/dashboard");
       } else {
-        alert(`❌ Failed: ${response.data.message}`);
+        alert(`❌ Failed: ${response.data?.message || "Unknown error"}`);
       }
 
     } catch (err) {
@@ -2021,7 +2033,7 @@ function EditPG() {
   );
 }
 
-// Styles (unchanged from your original - keeping same as OwnerAddPG)
+// Styles (same as before)
 const styles = {
   container: {
     minHeight: "100vh",

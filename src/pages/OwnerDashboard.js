@@ -11,8 +11,7 @@ import {
   Typography, Box, Button, Grid, Alert, Snackbar,
   CircularProgress, Paper, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow,
-  Chip, Avatar, IconButton, Card, CardContent,
-  Divider
+  Chip, Avatar, IconButton
 } from "@mui/material";
 
 import {
@@ -24,14 +23,7 @@ import {
   Refresh as RefreshIcon,
   Chat as ChatIcon,
   Groups as CommunityIcon,
-  Visibility as ViewIcon,
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
-  HourglassEmpty as HourglassIcon,
-  Phone as PhoneIcon,
-  CalendarToday as CalendarIcon,
-  Home as HomeIcon,
-  Person as PersonIcon
+  Visibility as ViewIcon
 } from "@mui/icons-material";
 
 import StatCard from "../components/owner/StatCard";
@@ -64,42 +56,13 @@ const formatDate = (dateStr) => {
   }
 };
 
-const formatDateString = (dateStr) => {
-  if (!dateStr) return "N/A";
-  try {
-    return new Date(dateStr).toDateString();
-  } catch {
-    return dateStr;
-  }
-};
-
 const getStatusColor = (status) => {
   switch(status?.toLowerCase()) {
-    case 'confirmed':
-    case 'approved':
-      return 'success';
-    case 'pending':
-      return 'warning';
-    case 'cancelled':
-    case 'rejected':
-      return 'error';
-    case 'completed':
-      return 'info';
-    default:
-      return 'default';
-  }
-};
-
-const getStatusStyle = (status) => {
-  switch(status?.toLowerCase()) {
-    case 'approved':
-      return { background: "#16a34a", color: "#fff" };
-    case 'rejected':
-      return { background: "#dc2626", color: "#fff" };
-    case 'pending':
-      return { background: "#f59e0b", color: "#fff" };
-    default:
-      return { background: "#6b7280", color: "#fff" };
+    case 'confirmed': return 'success';
+    case 'pending': return 'warning';
+    case 'cancelled': return 'error';
+    case 'completed': return 'info';
+    default: return 'default';
   }
 };
 
@@ -112,7 +75,6 @@ const OwnerDashboard = () => {
   const [pgs, setPGs] = useState([]);
   const [recentBookings, setRecentBookings] = useState([]);
   const [recentEnquiries, setRecentEnquiries] = useState([]);
-  const [actionLoading, setActionLoading] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
@@ -174,14 +136,23 @@ const OwnerDashboard = () => {
         ? pgRes.data
         : pgRes.data?.data || [];
 
+      // Debug: Log the first property's photos to see format
+      if (pgData.length > 0) {
+        console.log("📸 First property photos (raw):", pgData[0].photos);
+      }
+
       const properties = pgData.map(pg => {
         const photos = parseArray(pg.photos);
+        
+        // Debug: Log parsed photos
+        console.log(`Property ${pg.pg_name} parsed photos:`, photos);
         
         return {
           ...pg,
           id: pg.id || pg.pg_id,
           pg_id: pg.pg_id || pg.id,
           photos,
+          // ✅ Don't use getImageUrl here - let PropertyCard handle it
           image: photos.length ? photos[0] : null,
           total_rooms: Number(pg.total_rooms) || 0,
           available_rooms: Number(pg.available_rooms) || 0
@@ -201,12 +172,7 @@ const OwnerDashboard = () => {
         ? bookingsRes.data
         : bookingsRes.data?.bookings || [];
 
-      // Filter out invalid bookings
-      const validBookings = bookings.filter(booking => 
-        booking && booking.id
-      );
-
-      const sortedBookings = validBookings
+      const sortedBookings = bookings
         .sort(
           (a, b) =>
             new Date(b.created_at || b.check_in_date || 0) -
@@ -229,22 +195,22 @@ const OwnerDashboard = () => {
         ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
         : 0;
 
-      const totalEarnings = validBookings
-        .filter(b => ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase()))
+      const totalEarnings = bookings
+        .filter(b => ["confirmed", "completed"].includes(b?.status?.toLowerCase()))
         .reduce((a, b) => a + (Number(b.amount) || 0), 0);
 
       const currentMonth = new Date().getMonth();
       const currentYear = new Date().getFullYear();
 
-      const monthlyEarnings = validBookings
+      const monthlyEarnings = bookings
         .filter(b => {
-          if (!["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase())) return false;
+          if (!["confirmed", "completed"].includes(b?.status?.toLowerCase())) return false;
           const d = new Date(b.created_at || b.check_in_date);
           return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
         })
         .reduce((a, b) => a + (Number(b.amount) || 0), 0);
 
-      const pendingBookings = validBookings.filter(b => 
+      const pendingBookings = bookings.filter(b => 
         b?.status?.toLowerCase() === "pending"
       ).length;
 
@@ -255,7 +221,7 @@ const OwnerDashboard = () => {
         totalEarnings,
         monthlyEarnings,
         pendingBookings,
-        totalBookings: validBookings.length,
+        totalBookings: bookings.length,
         avgRating,
         totalEnquiries: recentEnquiries.length
       });
@@ -285,50 +251,7 @@ const OwnerDashboard = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [navigate, recentEnquiries.length]);
-
-  /* ---------------- UPDATE BOOKING STATUS ---------------- */
-
-  const updateBookingStatus = async (bookingId, status) => {
-    try {
-      setActionLoading(bookingId);
-
-      const token = await auth.currentUser.getIdToken(true);
-
-      await pgAPI.updateBookingStatus(bookingId, status);
-
-      setSnackbar({
-        open: true,
-        message: `Booking ${status} successfully`,
-        severity: "success"
-      });
-
-      // Reload data to reflect changes
-      loadAllData(true);
-
-    } catch (err) {
-      console.error("❌ Status update error:", err);
-
-      if (err.response?.data?.code === "ONBOARDING_PENDING") {
-        setSnackbar({
-          open: true,
-          message: "Please complete owner verification first",
-          severity: "warning"
-        });
-        navigate("/owner/bank");
-        return;
-      }
-
-      setSnackbar({
-        open: true,
-        message: err.response?.data?.message || "Action failed",
-        severity: "error"
-      });
-
-    } finally {
-      setActionLoading(null);
-    }
-  };
+  }, [navigate]);
 
   /* ---------------- HANDLERS ---------------- */
 
@@ -372,126 +295,162 @@ const OwnerDashboard = () => {
     navigate(`/owner/bookings/${bookingId}`);
   };
 
-  const handleViewAllBookings = () => {
-    navigate("/owner/bookings");
-  };
+  // ⭐ NEW: QR Code Generator Function
+  
+ 
+const handleGenerateQR = async (propertyId) => {
 
-  const handleApproveBooking = (bookingId) => {
-    updateBookingStatus(bookingId, "approved");
-  };
+  try {
 
-  const handleRejectBooking = (bookingId) => {
-    updateBookingStatus(bookingId, "rejected");
-  };
+    const BRAND_BLUE = "#0B5ED7";
+    const BRAND_GREEN = "#4CAF50";
 
-  // QR Code Generator Function
-  const handleGenerateQR = async (propertyId) => {
-    try {
-      const BRAND_BLUE = "#0B5ED7";
-      const BRAND_GREEN = "#4CAF50";
+    const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
+    const propertyName = property?.pg_name || "PG";
 
-      const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
-      const propertyName = property?.pg_name || "PG";
+    const url = `https://nepxall.vercel.app/scan/${propertyId}`;
 
-      const url = `https://nepxall.vercel.app/scan/${propertyId}`;
+    /* QR DESIGN */
 
-      const qr = new QRCodeStyling({
-        width: 600,
-        height: 600,
-        data: url,
-        image: window.location.origin + "/logo.png",
-        dotsOptions: {
-          type: "rounded",
-          gradient: {
-            type: "linear",
-            rotation: 0,
-            colorStops: [
-              { offset: 0, color: BRAND_BLUE },
-              { offset: 1, color: BRAND_GREEN }
-            ]
-          }
-        },
-        cornersSquareOptions: {
-          type: "extra-rounded",
-          color: BRAND_GREEN
-        },
-        cornersDotOptions: {
-          type: "dot",
-          color: BRAND_BLUE
-        },
-        backgroundOptions: {
-          color: "#ffffff"
-        },
-        imageOptions: {
-          crossOrigin: "anonymous",
-          margin: 10,
-          imageSize: 0.35
+    const qr = new QRCodeStyling({
+      width: 600,
+      height: 600,
+      data: url,
+      image: window.location.origin + "/logo.png",
+
+      dotsOptions: {
+        type: "rounded",
+        gradient: {
+          type: "linear",
+          rotation: 0,
+          colorStops: [
+            { offset: 0, color: BRAND_BLUE },
+            { offset: 1, color: BRAND_GREEN }
+          ]
         }
-      });
+      },
 
-      const canvas = document.createElement("canvas");
-      canvas.width = 900;
-      canvas.height = 1100;
-      const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#F9FAFB";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.textAlign = "center";
+      cornersSquareOptions: {
+        type: "extra-rounded",
+        color: BRAND_GREEN
+      },
 
-      const logo = new Image();
-      logo.crossOrigin = "anonymous";
-      logo.src = "/logo.png";
+      cornersDotOptions: {
+        type: "dot",
+        color: BRAND_BLUE
+      },
 
-      logo.onload = async () => {
-        ctx.drawImage(logo, 350, 40, 200, 110);
+      backgroundOptions: {
+        color: "#ffffff"
+      },
 
-        ctx.font = "900 54px Arial";
-        const gradient = ctx.createLinearGradient(360, 210, 540, 210);
-        gradient.addColorStop(0, BRAND_BLUE);
-        gradient.addColorStop(1, BRAND_GREEN);
-        ctx.fillStyle = gradient;
-        ctx.shadowColor = "rgba(0,0,0,0.15)";
-        ctx.shadowBlur = 2;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 1;
-        ctx.fillText("Nepxall", 450, 210);
-        ctx.shadowColor = "transparent";
+      imageOptions: {
+        crossOrigin: "anonymous",
+        margin: 10,
+        imageSize: 0.35
+      }
+    });
 
-        ctx.font = "26px Arial";
-        ctx.fillStyle = "#94a3b8";
-        ctx.fillText("Next Places for Living", 450, 250);
+    /* POSTER CANVAS */
 
-        ctx.font = "bold 36px Arial";
-        ctx.fillStyle = "#111827";
-        ctx.fillText(propertyName.toUpperCase(), 450, 320);
+    const canvas = document.createElement("canvas");
+    canvas.width = 900;
+    canvas.height = 1100;
 
-        ctx.font = "26px Arial";
-        ctx.fillStyle = BRAND_BLUE;
-        ctx.fillText("Scan QR to View Rooms", 450, 380);
-        ctx.font = "24px Arial";
+    const ctx = canvas.getContext("2d");
+
+    ctx.fillStyle = "#F9FAFB";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.textAlign = "center";
+
+    /* LOAD LOGO */
+
+    const logo = new Image();
+    logo.crossOrigin = "anonymous";
+    logo.src = "/logo.png";
+
+    logo.onload = async () => {
+
+      /* LOGO */
+
+      ctx.drawImage(logo, 350, 40, 200, 110);
+
+      /* STRONG NEPXALL BRAND TEXT */
+
+      ctx.font = "900 54px Arial";
+
+      const gradient = ctx.createLinearGradient(360, 210, 540, 210);
+      gradient.addColorStop(0, BRAND_BLUE);
+      gradient.addColorStop(1, BRAND_GREEN);
+
+      ctx.fillStyle = gradient;
+
+      ctx.shadowColor = "rgba(0,0,0,0.15)";
+      ctx.shadowBlur = 2;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 1;
+
+      ctx.fillText("Nepxall", 450, 210);
+
+      ctx.shadowColor = "transparent";
+
+      /* TAGLINE */
+
+      ctx.font = "26px Arial";
+      ctx.fillStyle = "#94a3b8";
+      ctx.fillText("Next Places for Living", 450, 250);
+
+      /* PROPERTY NAME */
+
+      ctx.font = "bold 36px Arial";
+      ctx.fillStyle = "#111827";
+      ctx.fillText(propertyName.toUpperCase(), 450, 320);
+
+      /* DESCRIPTION */
+
+      ctx.font = "26px Arial";
+      ctx.fillStyle = BRAND_BLUE;
+      ctx.fillText("Scan QR to View Rooms", 450, 380);
+
+      ctx.font = "24px Arial";
+      ctx.fillStyle = "#6B7280";
+      ctx.fillText("Book Instantly Online", 450, 415);
+
+      /* QR IMAGE */
+
+      const qrBlob = await qr.getRawData("png");
+      const qrImg = new Image();
+      qrImg.src = URL.createObjectURL(qrBlob);
+
+      qrImg.onload = () => {
+
+        ctx.drawImage(qrImg, 150, 450, 600, 600);
+
+        /* FOOTER */
+
+        ctx.font = "22px Arial";
         ctx.fillStyle = "#6B7280";
-        ctx.fillText("Book Instantly Online", 450, 415);
+        ctx.fillText("Powered by Nepxall", 450, 1080);
 
-        const qrBlob = await qr.getRawData("png");
-        const qrImg = new Image();
-        qrImg.src = URL.createObjectURL(qrBlob);
+        /* DOWNLOAD */
 
-        qrImg.onload = () => {
-          ctx.drawImage(qrImg, 150, 450, 600, 600);
-          ctx.font = "22px Arial";
-          ctx.fillStyle = "#6B7280";
-          ctx.fillText("Powered by Nepxall", 450, 1080);
+        const link = document.createElement("a");
+        link.href = canvas.toDataURL("image/png");
+        link.download = `nepxall-${propertyName}-entrance-qr.png`;
+        link.click();
 
-          const link = document.createElement("a");
-          link.href = canvas.toDataURL("image/png");
-          link.download = `nepxall-${propertyName}-entrance-qr.png`;
-          link.click();
-        };
       };
-    } catch (err) {
-      console.error("QR Generation Error:", err);
-    }
-  };
 
+    };
+
+  } catch (err) {
+
+    console.error("QR Generation Error:", err);
+
+  }
+
+};
   /* ---------------- LOADER ---------------- */
 
   if (authLoading || loading) {
@@ -678,7 +637,7 @@ const OwnerDashboard = () => {
                   onVideos={() => handleManageVideos(pg.id || pg.pg_id)}
                   onChat={() => handleChat(pg.id || pg.pg_id)}
                   onAnnouncement={() => handleAnnouncement(pg.id || pg.pg_id)}
-                  onGenerateQR={() => handleGenerateQR(pg.id || pg.pg_id)}
+                  onGenerateQR={() => handleGenerateQR(pg.id || pg.pg_id)}   // ⭐ NEW QR handler
                   onCreatePlan={
                     pg.pg_category === "coliving"
                       ? () => handleCreatePlan(pg.id || pg.pg_id)
@@ -691,7 +650,7 @@ const OwnerDashboard = () => {
         </>
       )}
 
-      {/* RECENT BOOKINGS SECTION - Horizontal Scroll Cards */}
+      {/* BOOKINGS TABLE */}
       <Box mt={4}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h5" fontWeight={600}>
@@ -705,182 +664,114 @@ const OwnerDashboard = () => {
             )}
           </Typography>
           
-          <Button 
-            onClick={handleViewAllBookings}
-            endIcon={<ViewIcon />}
-            variant="outlined"
-            size="small"
-          >
-            View All
-          </Button>
+          {stats.totalBookings > 5 && (
+            <Button 
+              onClick={() => navigate("/owner/bookings")}
+              endIcon={<ViewIcon />}
+              size="small"
+            >
+              View All
+            </Button>
+          )}
         </Box>
 
-        {recentBookings.length === 0 ? (
-          <Paper sx={{ p: 4, textAlign: 'center', bgcolor: '#f9fafb', borderRadius: 2 }}>
-            <Typography color="text.secondary" gutterBottom>
-              No booking requests yet
-            </Typography>
-            <Button 
-              size="small" 
-              onClick={handleRefresh}
-              startIcon={<RefreshIcon />}
-              sx={{ mt: 1 }}
-            >
-              Reload
-            </Button>
-          </Paper>
-        ) : (
-          <Box sx={{
-            display: 'flex',
-            overflowX: 'auto',
-            gap: 2,
-            pb: 2,
-            '&::-webkit-scrollbar': {
-              height: 6,
-            },
-            '&::-webkit-scrollbar-track': {
-              backgroundColor: '#f1f1f1',
-              borderRadius: 3,
-            },
-            '&::-webkit-scrollbar-thumb': {
-              backgroundColor: '#888',
-              borderRadius: 3,
-              '&:hover': {
-                backgroundColor: '#555',
-              },
-            },
-          }}>
-            {recentBookings.map((booking) => (
-              <Card key={booking.id} sx={{ 
-                minWidth: 300,
-                maxWidth: 300,
-                borderRadius: 2,
-                border: '1px solid #e5e7eb',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                transition: 'all 0.2s',
-                '&:hover': {
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                  transform: 'translateY(-2px)'
-                }
-              }}>
-                <CardContent sx={{ p: 2.5 }}>
-                  {/* PG Name */}
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                    PG
-                  </Typography>
-                  <Typography variant="body1" fontWeight={600} sx={{ mb: 1.5 }}>
-                    {booking.pg_name || 'N/A'}
-                  </Typography>
+        <TableContainer 
+          component={Paper} 
+          sx={{ 
+            borderRadius: 2, 
+            overflow: 'hidden',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          }}
+        >
+          <Table>
+            <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+              <TableRow>
+                <TableCell><strong>Tenant</strong></TableCell>
+                <TableCell><strong>Property</strong></TableCell>
+                <TableCell><strong>Check In</strong></TableCell>
+                <TableCell><strong>Amount</strong></TableCell>
+                <TableCell><strong>Status</strong></TableCell>
+                <TableCell align="center"><strong>Action</strong></TableCell>
+              </TableRow>
+            </TableHead>
 
-                  {/* Tenant Name */}
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                    Tenant
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1.5 }}>
-                    {booking.tenant_name || booking.name || 'N/A'}
-                  </Typography>
+            <TableBody>
+              {recentBookings.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                    <Typography color="text.secondary">
+                      No bookings yet
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                recentBookings.map((booking) => (
+                  <TableRow key={booking.id} hover>
+                    <TableCell>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Avatar 
+                          sx={{ 
+                            width: 36, 
+                            height: 36, 
+                            bgcolor: '#4CAF50',
+                            fontSize: '1rem'
+                          }}
+                        >
+                          {booking.name?.charAt(0) || 'U'}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body2" fontWeight={500}>
+                            {booking.name || 'Unknown'}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {booking.email || ''}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </TableCell>
 
-                  {/* Phone */}
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                    Phone
-                  </Typography>
-                  <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5 }}>
-                    <PhoneIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                    {booking.tenant_phone || booking.phone || 'N/A'}
-                  </Typography>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={500}>
+                        {booking.pg_name || 'N/A'}
+                      </Typography>
+                    </TableCell>
 
-                  {/* Check-in Date */}
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                    Check-in
-                  </Typography>
-                  <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5 }}>
-                    <CalendarIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                    {formatDateString(booking.check_in_date)}
-                  </Typography>
+                    <TableCell>
+                      {formatDate(booking.check_in_date || booking.created_at)}
+                    </TableCell>
 
-                  {/* Room Type */}
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                    Room Type
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1.5 }}>
-                    {booking.room_type || 'Standard'}
-                  </Typography>
+                    <TableCell>
+                      <Typography fontWeight={600} color="primary.main">
+                        {formatCurrency(booking.amount)}
+                      </Typography>
+                    </TableCell>
 
-                  {/* Amount */}
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                    Amount
-                  </Typography>
-                  <Typography variant="h6" color="primary.main" fontWeight={700} sx={{ mb: 1.5 }}>
-                    {formatCurrency(booking.amount)}
-                  </Typography>
-
-                  {/* Status */}
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                    Status
-                  </Typography>
-                  <Box sx={{ mb: 2 }}>
-                    <span style={{
-                      display: 'inline-block',
-                      padding: '4px 12px',
-                      borderRadius: 20,
-                      color: '#fff',
-                      fontSize: 12,
-                      fontWeight: 'bold',
-                      background: booking.status?.toLowerCase() === 'approved' ? '#16a34a' :
-                                 booking.status?.toLowerCase() === 'rejected' ? '#dc2626' :
-                                 booking.status?.toLowerCase() === 'pending' ? '#f59e0b' : '#6b7280'
-                    }}>
-                      {booking.status?.toUpperCase() || 'PENDING'}
-                    </span>
-                  </Box>
-
-                  {/* Action Buttons - Only for Pending Bookings */}
-                  {booking.status?.toLowerCase() === 'pending' && (
-                    <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                      <Button
-                        fullWidth
-                        variant="contained"
+                    <TableCell>
+                      <Chip 
+                        label={booking.status || 'pending'} 
                         size="small"
-                        sx={{ 
-                          bgcolor: '#16a34a', 
-                          '&:hover': { bgcolor: '#15803d' },
-                          color: '#fff',
-                          textTransform: 'none',
-                          fontWeight: 500,
-                          py: 1
-                        }}
-                        disabled={actionLoading === booking.id}
-                        onClick={() => handleApproveBooking(booking.id)}
-                        startIcon={actionLoading === booking.id ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : <CheckCircleIcon />}
-                      >
-                        {actionLoading === booking.id ? '...' : 'Approve'}
-                      </Button>
+                        color={getStatusColor(booking.status)}
+                        sx={{ fontWeight: 500, textTransform: 'capitalize' }}
+                      />
+                    </TableCell>
 
+                    <TableCell align="center">
                       <Button
-                        fullWidth
-                        variant="contained"
                         size="small"
-                        sx={{ 
-                          bgcolor: '#dc2626', 
-                          '&:hover': { bgcolor: '#b91c1c' },
-                          color: '#fff',
-                          textTransform: 'none',
-                          fontWeight: 500,
-                          py: 1
-                        }}
-                        disabled={actionLoading === booking.id}
-                        onClick={() => handleRejectBooking(booking.id)}
-                        startIcon={actionLoading === booking.id ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : <CancelIcon />}
+                        variant="outlined"
+                        onClick={() => handleViewBooking(booking.id)}
+                        startIcon={<ViewIcon />}
+                        sx={{ borderRadius: 2 }}
                       >
-                        {actionLoading === booking.id ? '...' : 'Reject'}
+                        View
                       </Button>
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </Box>
-        )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Box>
 
       {/* SNACKBAR */}
