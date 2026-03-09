@@ -24,7 +24,7 @@ import {
   Chat as ChatIcon,
   Groups as CommunityIcon,
   Visibility as ViewIcon
-} from "@mui/material/icons";
+} from "@mui/icons-material";
 
 import StatCard from "../components/owner/StatCard";
 import PropertyCard from "../components/owner/PropertyCard";
@@ -58,10 +58,8 @@ const formatDate = (dateStr) => {
 
 const getStatusColor = (status) => {
   switch(status?.toLowerCase()) {
-    case 'approved': return 'success';
     case 'confirmed': return 'success';
     case 'pending': return 'warning';
-    case 'rejected': return 'error';
     case 'cancelled': return 'error';
     case 'completed': return 'info';
     default: return 'default';
@@ -81,7 +79,6 @@ const OwnerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [actionLoading, setActionLoading] = useState(null);
 
   const [stats, setStats] = useState({
     totalProperties: 0,
@@ -165,25 +162,16 @@ const OwnerDashboard = () => {
       setPGs(properties);
       console.log(`✅ Loaded ${properties.length} properties`);
 
-      /* -------- BOOKINGS USING UPDATED STRUCTURE -------- */
+      /* -------- BOOKINGS USING pgAPI -------- */
 
       console.log("📡 Fetching owner bookings...");
-      
-      const user = auth.currentUser;
-      const token = await user.getIdToken(true);
-      
-      // Using the same API endpoint as OwnerBookings component
-      const bookingsRes = await api.get("/owner/bookings", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
+      const bookingsRes = await pgAPI.getOwnerBookings();
       console.log("✅ Bookings received:", bookingsRes.data);
 
       const bookings = Array.isArray(bookingsRes.data)
         ? bookingsRes.data
         : bookingsRes.data?.bookings || [];
 
-      // Sort by most recent and take first 5
       const sortedBookings = bookings
         .sort(
           (a, b) =>
@@ -208,7 +196,7 @@ const OwnerDashboard = () => {
         : 0;
 
       const totalEarnings = bookings
-        .filter(b => ["approved", "confirmed", "completed"].includes(b?.status?.toLowerCase()))
+        .filter(b => ["confirmed", "completed"].includes(b?.status?.toLowerCase()))
         .reduce((a, b) => a + (Number(b.amount) || 0), 0);
 
       const currentMonth = new Date().getMonth();
@@ -216,7 +204,7 @@ const OwnerDashboard = () => {
 
       const monthlyEarnings = bookings
         .filter(b => {
-          if (!["approved", "confirmed", "completed"].includes(b?.status?.toLowerCase())) return false;
+          if (!["confirmed", "completed"].includes(b?.status?.toLowerCase())) return false;
           const d = new Date(b.created_at || b.check_in_date);
           return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
         })
@@ -247,18 +235,10 @@ const OwnerDashboard = () => {
     } catch (err) {
       console.error("❌ Dashboard error:", err?.response?.data || err.message);
 
-      if (err.response?.status === 401 || err.response?.status === 403) {
+      if (err.response?.status === 401) {
         console.log("🔐 Unauthorized - logging out");
-        if (err.response?.status === 403) {
-          setSnackbar({
-            open: true,
-            message: "You are not registered as an owner",
-            severity: "error"
-          });
-        } else {
-          await auth.signOut();
-          navigate("/login");
-        }
+        await auth.signOut();
+        navigate("/login");
       }
 
       setSnackbar({
@@ -271,53 +251,7 @@ const OwnerDashboard = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [navigate, recentEnquiries.length]);
-
-  /* ---------------- UPDATE BOOKING STATUS ---------------- */
-
-  const updateBookingStatus = async (bookingId, status) => {
-    try {
-      setActionLoading(bookingId);
-      
-      const token = await auth.currentUser.getIdToken(true);
-      
-      await api.put(
-        `/owner/bookings/${bookingId}`,
-        { status },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      setSnackbar({
-        open: true,
-        message: `Booking ${status.toUpperCase()} successfully`,
-        severity: "success"
-      });
-      
-      // Reload data to reflect changes
-      loadAllData(true);
-
-    } catch (err) {
-      console.error(err);
-      
-      if (err.response?.data?.code === "ONBOARDING_PENDING") {
-        setSnackbar({
-          open: true,
-          message: "Please complete owner verification first",
-          severity: "warning"
-        });
-        navigate("/owner/bank");
-        return;
-      }
-
-      setSnackbar({
-        open: true,
-        message: err.response?.data?.message || "Action failed",
-        severity: "error"
-      });
-    } finally {
-      setActionLoading(null);
-    }
-  };
+  }, [navigate]);
 
   /* ---------------- HANDLERS ---------------- */
 
@@ -361,133 +295,162 @@ const OwnerDashboard = () => {
     navigate(`/owner/bookings/${bookingId}`);
   };
 
-  const handleViewAllBookings = () => {
-    navigate("/owner/bookings");
-  };
-
-  /* ⭐ QR Code Generator Function */
+  // ⭐ NEW: QR Code Generator Function
   
-  const handleGenerateQR = async (propertyId) => {
-    try {
-      const BRAND_BLUE = "#0B5ED7";
-      const BRAND_GREEN = "#4CAF50";
+ 
+const handleGenerateQR = async (propertyId) => {
 
-      const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
-      const propertyName = property?.pg_name || "PG";
+  try {
 
-      const url = `https://nepxall.vercel.app/scan/${propertyId}`;
+    const BRAND_BLUE = "#0B5ED7";
+    const BRAND_GREEN = "#4CAF50";
 
-      /* QR DESIGN */
-      const qr = new QRCodeStyling({
-        width: 600,
-        height: 600,
-        data: url,
-        image: window.location.origin + "/logo.png",
-        dotsOptions: {
-          type: "rounded",
-          gradient: {
-            type: "linear",
-            rotation: 0,
-            colorStops: [
-              { offset: 0, color: BRAND_BLUE },
-              { offset: 1, color: BRAND_GREEN }
-            ]
-          }
-        },
-        cornersSquareOptions: {
-          type: "extra-rounded",
-          color: BRAND_GREEN
-        },
-        cornersDotOptions: {
-          type: "dot",
-          color: BRAND_BLUE
-        },
-        backgroundOptions: {
-          color: "#ffffff"
-        },
-        imageOptions: {
-          crossOrigin: "anonymous",
-          margin: 10,
-          imageSize: 0.35
+    const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
+    const propertyName = property?.pg_name || "PG";
+
+    const url = `https://nepxall.vercel.app/scan/${propertyId}`;
+
+    /* QR DESIGN */
+
+    const qr = new QRCodeStyling({
+      width: 600,
+      height: 600,
+      data: url,
+      image: window.location.origin + "/logo.png",
+
+      dotsOptions: {
+        type: "rounded",
+        gradient: {
+          type: "linear",
+          rotation: 0,
+          colorStops: [
+            { offset: 0, color: BRAND_BLUE },
+            { offset: 1, color: BRAND_GREEN }
+          ]
         }
-      });
+      },
 
-      /* POSTER CANVAS */
-      const canvas = document.createElement("canvas");
-      canvas.width = 900;
-      canvas.height = 1100;
-      const ctx = canvas.getContext("2d");
+      cornersSquareOptions: {
+        type: "extra-rounded",
+        color: BRAND_GREEN
+      },
 
-      ctx.fillStyle = "#F9FAFB";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.textAlign = "center";
+      cornersDotOptions: {
+        type: "dot",
+        color: BRAND_BLUE
+      },
 
-      /* LOAD LOGO */
-      const logo = new Image();
-      logo.crossOrigin = "anonymous";
-      logo.src = "/logo.png";
+      backgroundOptions: {
+        color: "#ffffff"
+      },
 
-      logo.onload = async () => {
-        /* LOGO */
-        ctx.drawImage(logo, 350, 40, 200, 110);
+      imageOptions: {
+        crossOrigin: "anonymous",
+        margin: 10,
+        imageSize: 0.35
+      }
+    });
 
-        /* STRONG NEPXALL BRAND TEXT */
-        ctx.font = "900 54px Arial";
-        const gradient = ctx.createLinearGradient(360, 210, 540, 210);
-        gradient.addColorStop(0, BRAND_BLUE);
-        gradient.addColorStop(1, BRAND_GREEN);
+    /* POSTER CANVAS */
 
-        ctx.fillStyle = gradient;
-        ctx.shadowColor = "rgba(0,0,0,0.15)";
-        ctx.shadowBlur = 2;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 1;
-        ctx.fillText("Nepxall", 450, 210);
-        ctx.shadowColor = "transparent";
+    const canvas = document.createElement("canvas");
+    canvas.width = 900;
+    canvas.height = 1100;
 
-        /* TAGLINE */
-        ctx.font = "26px Arial";
-        ctx.fillStyle = "#94a3b8";
-        ctx.fillText("Next Places for Living", 450, 250);
+    const ctx = canvas.getContext("2d");
 
-        /* PROPERTY NAME */
-        ctx.font = "bold 36px Arial";
-        ctx.fillStyle = "#111827";
-        ctx.fillText(propertyName.toUpperCase(), 450, 320);
+    ctx.fillStyle = "#F9FAFB";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        /* DESCRIPTION */
-        ctx.font = "26px Arial";
-        ctx.fillStyle = BRAND_BLUE;
-        ctx.fillText("Scan QR to View Rooms", 450, 380);
-        ctx.font = "24px Arial";
+    ctx.textAlign = "center";
+
+    /* LOAD LOGO */
+
+    const logo = new Image();
+    logo.crossOrigin = "anonymous";
+    logo.src = "/logo.png";
+
+    logo.onload = async () => {
+
+      /* LOGO */
+
+      ctx.drawImage(logo, 350, 40, 200, 110);
+
+      /* STRONG NEPXALL BRAND TEXT */
+
+      ctx.font = "900 54px Arial";
+
+      const gradient = ctx.createLinearGradient(360, 210, 540, 210);
+      gradient.addColorStop(0, BRAND_BLUE);
+      gradient.addColorStop(1, BRAND_GREEN);
+
+      ctx.fillStyle = gradient;
+
+      ctx.shadowColor = "rgba(0,0,0,0.15)";
+      ctx.shadowBlur = 2;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 1;
+
+      ctx.fillText("Nepxall", 450, 210);
+
+      ctx.shadowColor = "transparent";
+
+      /* TAGLINE */
+
+      ctx.font = "26px Arial";
+      ctx.fillStyle = "#94a3b8";
+      ctx.fillText("Next Places for Living", 450, 250);
+
+      /* PROPERTY NAME */
+
+      ctx.font = "bold 36px Arial";
+      ctx.fillStyle = "#111827";
+      ctx.fillText(propertyName.toUpperCase(), 450, 320);
+
+      /* DESCRIPTION */
+
+      ctx.font = "26px Arial";
+      ctx.fillStyle = BRAND_BLUE;
+      ctx.fillText("Scan QR to View Rooms", 450, 380);
+
+      ctx.font = "24px Arial";
+      ctx.fillStyle = "#6B7280";
+      ctx.fillText("Book Instantly Online", 450, 415);
+
+      /* QR IMAGE */
+
+      const qrBlob = await qr.getRawData("png");
+      const qrImg = new Image();
+      qrImg.src = URL.createObjectURL(qrBlob);
+
+      qrImg.onload = () => {
+
+        ctx.drawImage(qrImg, 150, 450, 600, 600);
+
+        /* FOOTER */
+
+        ctx.font = "22px Arial";
         ctx.fillStyle = "#6B7280";
-        ctx.fillText("Book Instantly Online", 450, 415);
+        ctx.fillText("Powered by Nepxall", 450, 1080);
 
-        /* QR IMAGE */
-        const qrBlob = await qr.getRawData("png");
-        const qrImg = new Image();
-        qrImg.src = URL.createObjectURL(qrBlob);
+        /* DOWNLOAD */
 
-        qrImg.onload = () => {
-          ctx.drawImage(qrImg, 150, 450, 600, 600);
+        const link = document.createElement("a");
+        link.href = canvas.toDataURL("image/png");
+        link.download = `nepxall-${propertyName}-entrance-qr.png`;
+        link.click();
 
-          /* FOOTER */
-          ctx.font = "22px Arial";
-          ctx.fillStyle = "#6B7280";
-          ctx.fillText("Powered by Nepxall", 450, 1080);
-
-          /* DOWNLOAD */
-          const link = document.createElement("a");
-          link.href = canvas.toDataURL("image/png");
-          link.download = `nepxall-${propertyName}-entrance-qr.png`;
-          link.click();
-        };
       };
-    } catch (err) {
-      console.error("QR Generation Error:", err);
-    }
-  };
 
+    };
+
+  } catch (err) {
+
+    console.error("QR Generation Error:", err);
+
+  }
+
+};
   /* ---------------- LOADER ---------------- */
 
   if (authLoading || loading) {
@@ -674,7 +637,7 @@ const OwnerDashboard = () => {
                   onVideos={() => handleManageVideos(pg.id || pg.pg_id)}
                   onChat={() => handleChat(pg.id || pg.pg_id)}
                   onAnnouncement={() => handleAnnouncement(pg.id || pg.pg_id)}
-                  onGenerateQR={() => handleGenerateQR(pg.id || pg.pg_id)}
+                  onGenerateQR={() => handleGenerateQR(pg.id || pg.pg_id)}   // ⭐ NEW QR handler
                   onCreatePlan={
                     pg.pg_category === "coliving"
                       ? () => handleCreatePlan(pg.id || pg.pg_id)
@@ -687,7 +650,7 @@ const OwnerDashboard = () => {
         </>
       )}
 
-      {/* BOOKINGS TABLE - UPDATED with OwnerBookings structure */}
+      {/* BOOKINGS TABLE */}
       <Box mt={4}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h5" fontWeight={600}>
@@ -703,7 +666,7 @@ const OwnerDashboard = () => {
           
           {stats.totalBookings > 5 && (
             <Button 
-              onClick={handleViewAllBookings}
+              onClick={() => navigate("/owner/bookings")}
               endIcon={<ViewIcon />}
               size="small"
             >
@@ -725,29 +688,20 @@ const OwnerDashboard = () => {
               <TableRow>
                 <TableCell><strong>Tenant</strong></TableCell>
                 <TableCell><strong>Property</strong></TableCell>
-                <TableCell><strong>Phone</strong></TableCell>
                 <TableCell><strong>Check In</strong></TableCell>
-                <TableCell><strong>Room Type</strong></TableCell>
                 <TableCell><strong>Amount</strong></TableCell>
                 <TableCell><strong>Status</strong></TableCell>
-                <TableCell align="center"><strong>Actions</strong></TableCell>
+                <TableCell align="center"><strong>Action</strong></TableCell>
               </TableRow>
             </TableHead>
 
             <TableBody>
               {recentBookings.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                     <Typography color="text.secondary">
-                      No booking requests
+                      No bookings yet
                     </Typography>
-                    <Button 
-                      size="small" 
-                      onClick={handleRefresh}
-                      sx={{ mt: 1 }}
-                    >
-                      Reload
-                    </Button>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -763,11 +717,11 @@ const OwnerDashboard = () => {
                             fontSize: '1rem'
                           }}
                         >
-                          {booking.tenant_name?.charAt(0) || booking.name?.charAt(0) || 'U'}
+                          {booking.name?.charAt(0) || 'U'}
                         </Avatar>
                         <Box>
                           <Typography variant="body2" fontWeight={500}>
-                            {booking.tenant_name || booking.name || 'Unknown'}
+                            {booking.name || 'Unknown'}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {booking.email || ''}
@@ -783,31 +737,7 @@ const OwnerDashboard = () => {
                     </TableCell>
 
                     <TableCell>
-                      {booking.tenant_phone ? (
-                        <Typography variant="body2">
-                          {booking.tenant_phone}
-                        </Typography>
-                      ) : (
-                        <Chip 
-                          label="Hidden until approval" 
-                          size="small"
-                          sx={{ 
-                            bgcolor: '#f59e0b', 
-                            color: 'white',
-                            fontSize: '0.7rem'
-                          }}
-                        />
-                      )}
-                    </TableCell>
-
-                    <TableCell>
                       {formatDate(booking.check_in_date || booking.created_at)}
-                    </TableCell>
-
-                    <TableCell>
-                      <Typography variant="body2">
-                        {booking.room_type || 'N/A'}
-                      </Typography>
                     </TableCell>
 
                     <TableCell>
@@ -826,43 +756,15 @@ const OwnerDashboard = () => {
                     </TableCell>
 
                     <TableCell align="center">
-                      <Box display="flex" gap={1} justifyContent="center">
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => handleViewBooking(booking.id)}
-                          startIcon={<ViewIcon />}
-                          sx={{ borderRadius: 2 }}
-                        >
-                          View
-                        </Button>
-                        
-                        {booking.status?.toLowerCase() === "pending" && (
-                          <>
-                            <Button
-                              size="small"
-                              variant="contained"
-                              color="success"
-                              disabled={actionLoading === booking.id}
-                              onClick={() => updateBookingStatus(booking.id, "approved")}
-                              sx={{ borderRadius: 2, minWidth: 80 }}
-                            >
-                              {actionLoading === booking.id ? "..." : "Approve"}
-                            </Button>
-                            
-                            <Button
-                              size="small"
-                              variant="contained"
-                              color="error"
-                              disabled={actionLoading === booking.id}
-                              onClick={() => updateBookingStatus(booking.id, "rejected")}
-                              sx={{ borderRadius: 2, minWidth: 80 }}
-                            >
-                              {actionLoading === booking.id ? "..." : "Reject"}
-                            </Button>
-                          </>
-                        )}
-                      </Box>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => handleViewBooking(booking.id)}
+                        startIcon={<ViewIcon />}
+                        sx={{ borderRadius: 2 }}
+                      >
+                        View
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))
