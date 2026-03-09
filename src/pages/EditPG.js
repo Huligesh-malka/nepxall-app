@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useParams, useNavigate } from "react-router-dom";
@@ -261,7 +261,7 @@ function EditPG() {
     return () => unsubscribe();
   }, [navigate]);
 
-  // Load property data - FIXED: Using correct pgAPI method
+  // Load property data
   useEffect(() => {
     const fetchPropertyData = async () => {
       if (!id) return;
@@ -270,8 +270,6 @@ function EditPG() {
         setLoading(true);
         console.log("Fetching property with ID:", id);
         
-        // Using the same method as in your API - likely getProperty or fetchProperty
-        // Based on pgAPI.createProperty in OwnerAddPG, the method might be getProperty
         const response = await pgAPI.getProperty(id);
         
         if (response.data && response.data.success) {
@@ -547,8 +545,8 @@ function EditPG() {
     await fetchAddressFromCoordinates(lat, lng);
   };
 
-  // Search location by address
-  const searchLocation = async (searchQuery) => {
+  // Search location by address - FIXED: Using useCallback to prevent re-renders
+  const searchLocation = useCallback(async (searchQuery) => {
     if (!searchQuery.trim()) return;
     
     try {
@@ -582,7 +580,7 @@ function EditPG() {
     } finally {
       setMapLoading(false);
     }
-  };
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -862,7 +860,6 @@ function EditPG() {
 
       console.log("Updating property with ID:", id);
       
-      // USING pgAPI CONVENIENCE METHOD - FIXED: Using updateProperty
       const response = await pgAPI.updateProperty(id, formData);
 
       if (response.data && response.data.success) {
@@ -888,8 +885,8 @@ function EditPG() {
     }
   };
 
-  // OpenStreetMap Modal Component
-  const OpenStreetMapModal = () => {
+  // OpenStreetMap Modal Component - FIXED: Wrapped with useCallback to prevent re-renders
+  const OpenStreetMapModal = useCallback(() => {
     const displayLat = formatCoordinate(selectedLocation.lat);
     const displayLng = formatCoordinate(selectedLocation.lng);
     const mapLat = parseCoordinate(selectedLocation.lat) || 12.9716;
@@ -924,7 +921,7 @@ function EditPG() {
                 <button 
                   onClick={() => {
                     const searchInput = document.getElementById('location-search');
-                    if (searchInput.value) {
+                    if (searchInput && searchInput.value) {
                       searchLocation(searchInput.value);
                     }
                   }}
@@ -1008,10 +1005,10 @@ function EditPG() {
         </div>
       </div>
     );
-  };
+  }, [selectedLocation, userLocation, gettingLocation, mapLoading, getUserCurrentLocation, searchLocation, handleLocationSelect]);
 
-  // Manual Address Entry Form
-  const ManualAddressForm = () => {
+  // Manual Address Entry Form - FIXED: Wrapped with useCallback to prevent re-renders
+  const ManualAddressForm = useCallback(() => {
     const displayLat = selectedLocation.lat || "";
     const displayLng = selectedLocation.lng || "";
     
@@ -1182,7 +1179,7 @@ function EditPG() {
         </div>
       </div>
     );
-  };
+  }, [selectedLocation, handleLocationChange]);
 
   // Render location preview
   const renderLocationPreview = () => {
