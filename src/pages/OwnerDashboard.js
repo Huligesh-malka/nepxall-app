@@ -11,8 +11,7 @@ import {
   Typography, Box, Button, Grid, Alert, Snackbar,
   CircularProgress, Paper, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow,
-  Chip, Avatar, IconButton, Card, CardContent,
-  Divider, Stack
+  Chip, Avatar, IconButton
 } from "@mui/material";
 
 import {
@@ -25,10 +24,7 @@ import {
   Chat as ChatIcon,
   Groups as CommunityIcon,
   Visibility as ViewIcon,
-  Phone as PhoneIcon,
-  Email as EmailIcon,
-  CalendarToday as CalendarIcon,
-  Hotel as RoomIcon
+  Phone as PhoneIcon
 } from "@mui/icons-material";
 
 import StatCard from "../components/owner/StatCard";
@@ -75,23 +71,6 @@ const getStatusColor = (status) => {
       return 'info';
     default:
       return 'default';
-  }
-};
-
-const getStatusBadgeStyle = (status) => {
-  switch(status?.toLowerCase()) {
-    case 'approved':
-    case 'confirmed':
-      return { bg: '#16a34a', color: '#fff' };
-    case 'pending':
-      return { bg: '#f59e0b', color: '#fff' };
-    case 'rejected':
-    case 'cancelled':
-      return { bg: '#dc2626', color: '#fff' };
-    case 'completed':
-      return { bg: '#0284c7', color: '#fff' };
-    default:
-      return { bg: '#6b7280', color: '#fff' };
   }
 };
 
@@ -165,23 +144,14 @@ const OwnerDashboard = () => {
         ? pgRes.data
         : pgRes.data?.data || [];
 
-      // Debug: Log the first property's photos to see format
-      if (pgData.length > 0) {
-        console.log("📸 First property photos (raw):", pgData[0].photos);
-      }
-
       const properties = pgData.map(pg => {
         const photos = parseArray(pg.photos);
-        
-        // Debug: Log parsed photos
-        console.log(`Property ${pg.pg_name} parsed photos:`, photos);
         
         return {
           ...pg,
           id: pg.id || pg.pg_id,
           pg_id: pg.pg_id || pg.id,
           photos,
-          // ✅ Don't use getImageUrl here - let PropertyCard handle it
           image: photos.length ? photos[0] : null,
           total_rooms: Number(pg.total_rooms) || 0,
           available_rooms: Number(pg.available_rooms) || 0
@@ -189,7 +159,6 @@ const OwnerDashboard = () => {
       });
 
       setPGs(properties);
-      console.log(`✅ Loaded ${properties.length} properties`);
 
       /* -------- BOOKINGS USING pgAPI -------- */
 
@@ -201,25 +170,24 @@ const OwnerDashboard = () => {
         ? bookingsRes.data
         : bookingsRes.data?.bookings || [];
 
-      // Enhance booking data with more details
+      // Enhance booking data with main details only
       const enhancedBookings = bookings.map(booking => ({
-        ...booking,
+        id: booking.id,
         tenant_name: booking.name || booking.tenant_name || 'Unknown',
         tenant_phone: booking.phone || booking.tenant_phone,
-        tenant_email: booking.email || booking.tenant_email,
-        room_type: booking.room_type || 'Not specified',
-        check_in_date: booking.check_in_date || booking.created_at,
+        pg_name: booking.pg_name || 'N/A',
         amount: booking.amount || 0,
-        pg_name: booking.pg_name || 'N/A'
+        status: booking.status || 'pending',
+        check_in_date: booking.check_in_date || booking.created_at
       }));
 
       const sortedBookings = enhancedBookings
         .sort(
           (a, b) =>
-            new Date(b.created_at || b.check_in_date || 0) -
-            new Date(a.created_at || a.check_in_date || 0)
+            new Date(b.check_in_date || 0) -
+            new Date(a.check_in_date || 0)
         )
-        .slice(0, 5);
+        .slice(0, 5); // Show only 5 recent bookings
 
       setRecentBookings(sortedBookings);
 
@@ -227,14 +195,6 @@ const OwnerDashboard = () => {
 
       const totalRooms = properties.reduce((a, b) => a + (b.total_rooms || 0), 0);
       const availableRooms = properties.reduce((a, b) => a + (b.available_rooms || 0), 0);
-
-      const ratings = properties
-        .filter(p => p.avg_rating > 0)
-        .map(p => p.avg_rating);
-
-      const avgRating = ratings.length
-        ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
-        : 0;
 
       const totalEarnings = bookings
         .filter(b => ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase()))
@@ -263,7 +223,7 @@ const OwnerDashboard = () => {
         monthlyEarnings,
         pendingBookings,
         totalBookings: bookings.length,
-        avgRating,
+        avgRating: 0,
         totalEnquiries: recentEnquiries.length
       });
 
@@ -336,161 +296,119 @@ const OwnerDashboard = () => {
     navigate(`/owner/bookings/${bookingId}`);
   };
 
-  // ⭐ NEW: QR Code Generator Function
-  
-const handleGenerateQR = async (propertyId) => {
+  // ⭐ QR Code Generator Function
+  const handleGenerateQR = async (propertyId) => {
+    try {
+      const BRAND_BLUE = "#0B5ED7";
+      const BRAND_GREEN = "#4CAF50";
 
-  try {
+      const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
+      const propertyName = property?.pg_name || "PG";
 
-    const BRAND_BLUE = "#0B5ED7";
-    const BRAND_GREEN = "#4CAF50";
+      const url = `https://nepxall.vercel.app/scan/${propertyId}`;
 
-    const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
-    const propertyName = property?.pg_name || "PG";
-
-    const url = `https://nepxall.vercel.app/scan/${propertyId}`;
-
-    /* QR DESIGN */
-
-    const qr = new QRCodeStyling({
-      width: 600,
-      height: 600,
-      data: url,
-      image: window.location.origin + "/logo.png",
-
-      dotsOptions: {
-        type: "rounded",
-        gradient: {
-          type: "linear",
-          rotation: 0,
-          colorStops: [
-            { offset: 0, color: BRAND_BLUE },
-            { offset: 1, color: BRAND_GREEN }
-          ]
+      const qr = new QRCodeStyling({
+        width: 600,
+        height: 600,
+        data: url,
+        image: window.location.origin + "/logo.png",
+        dotsOptions: {
+          type: "rounded",
+          gradient: {
+            type: "linear",
+            rotation: 0,
+            colorStops: [
+              { offset: 0, color: BRAND_BLUE },
+              { offset: 1, color: BRAND_GREEN }
+            ]
+          }
+        },
+        cornersSquareOptions: {
+          type: "extra-rounded",
+          color: BRAND_GREEN
+        },
+        cornersDotOptions: {
+          type: "dot",
+          color: BRAND_BLUE
+        },
+        backgroundOptions: {
+          color: "#ffffff"
+        },
+        imageOptions: {
+          crossOrigin: "anonymous",
+          margin: 10,
+          imageSize: 0.35
         }
-      },
+      });
 
-      cornersSquareOptions: {
-        type: "extra-rounded",
-        color: BRAND_GREEN
-      },
+      const canvas = document.createElement("canvas");
+      canvas.width = 900;
+      canvas.height = 1100;
 
-      cornersDotOptions: {
-        type: "dot",
-        color: BRAND_BLUE
-      },
+      const ctx = canvas.getContext("2d");
 
-      backgroundOptions: {
-        color: "#ffffff"
-      },
+      ctx.fillStyle = "#F9FAFB";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      imageOptions: {
-        crossOrigin: "anonymous",
-        margin: 10,
-        imageSize: 0.35
-      }
-    });
+      ctx.textAlign = "center";
 
-    /* POSTER CANVAS */
+      const logo = new Image();
+      logo.crossOrigin = "anonymous";
+      logo.src = "/logo.png";
 
-    const canvas = document.createElement("canvas");
-    canvas.width = 900;
-    canvas.height = 1100;
+      logo.onload = async () => {
+        ctx.drawImage(logo, 350, 40, 200, 110);
 
-    const ctx = canvas.getContext("2d");
+        ctx.font = "900 54px Arial";
+        const gradient = ctx.createLinearGradient(360, 210, 540, 210);
+        gradient.addColorStop(0, BRAND_BLUE);
+        gradient.addColorStop(1, BRAND_GREEN);
 
-    ctx.fillStyle = "#F9FAFB";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = gradient;
+        ctx.shadowColor = "rgba(0,0,0,0.15)";
+        ctx.shadowBlur = 2;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 1;
+        ctx.fillText("Nepxall", 450, 210);
+        ctx.shadowColor = "transparent";
 
-    ctx.textAlign = "center";
+        ctx.font = "26px Arial";
+        ctx.fillStyle = "#94a3b8";
+        ctx.fillText("Next Places for Living", 450, 250);
 
-    /* LOAD LOGO */
+        ctx.font = "bold 36px Arial";
+        ctx.fillStyle = "#111827";
+        ctx.fillText(propertyName.toUpperCase(), 450, 320);
 
-    const logo = new Image();
-    logo.crossOrigin = "anonymous";
-    logo.src = "/logo.png";
+        ctx.font = "26px Arial";
+        ctx.fillStyle = BRAND_BLUE;
+        ctx.fillText("Scan QR to View Rooms", 450, 380);
 
-    logo.onload = async () => {
-
-      /* LOGO */
-
-      ctx.drawImage(logo, 350, 40, 200, 110);
-
-      /* STRONG NEPXALL BRAND TEXT */
-
-      ctx.font = "900 54px Arial";
-
-      const gradient = ctx.createLinearGradient(360, 210, 540, 210);
-      gradient.addColorStop(0, BRAND_BLUE);
-      gradient.addColorStop(1, BRAND_GREEN);
-
-      ctx.fillStyle = gradient;
-
-      ctx.shadowColor = "rgba(0,0,0,0.15)";
-      ctx.shadowBlur = 2;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 1;
-
-      ctx.fillText("Nepxall", 450, 210);
-
-      ctx.shadowColor = "transparent";
-
-      /* TAGLINE */
-
-      ctx.font = "26px Arial";
-      ctx.fillStyle = "#94a3b8";
-      ctx.fillText("Next Places for Living", 450, 250);
-
-      /* PROPERTY NAME */
-
-      ctx.font = "bold 36px Arial";
-      ctx.fillStyle = "#111827";
-      ctx.fillText(propertyName.toUpperCase(), 450, 320);
-
-      /* DESCRIPTION */
-
-      ctx.font = "26px Arial";
-      ctx.fillStyle = BRAND_BLUE;
-      ctx.fillText("Scan QR to View Rooms", 450, 380);
-
-      ctx.font = "24px Arial";
-      ctx.fillStyle = "#6B7280";
-      ctx.fillText("Book Instantly Online", 450, 415);
-
-      /* QR IMAGE */
-
-      const qrBlob = await qr.getRawData("png");
-      const qrImg = new Image();
-      qrImg.src = URL.createObjectURL(qrBlob);
-
-      qrImg.onload = () => {
-
-        ctx.drawImage(qrImg, 150, 450, 600, 600);
-
-        /* FOOTER */
-
-        ctx.font = "22px Arial";
+        ctx.font = "24px Arial";
         ctx.fillStyle = "#6B7280";
-        ctx.fillText("Powered by Nepxall", 450, 1080);
+        ctx.fillText("Book Instantly Online", 450, 415);
 
-        /* DOWNLOAD */
+        const qrBlob = await qr.getRawData("png");
+        const qrImg = new Image();
+        qrImg.src = URL.createObjectURL(qrBlob);
 
-        const link = document.createElement("a");
-        link.href = canvas.toDataURL("image/png");
-        link.download = `nepxall-${propertyName}-entrance-qr.png`;
-        link.click();
+        qrImg.onload = () => {
+          ctx.drawImage(qrImg, 150, 450, 600, 600);
+          ctx.font = "22px Arial";
+          ctx.fillStyle = "#6B7280";
+          ctx.fillText("Powered by Nepxall", 450, 1080);
 
+          const link = document.createElement("a");
+          link.href = canvas.toDataURL("image/png");
+          link.download = `nepxall-${propertyName}-entrance-qr.png`;
+          link.click();
+        };
       };
+    } catch (err) {
+      console.error("QR Generation Error:", err);
+    }
+  };
 
-    };
-
-  } catch (err) {
-
-    console.error("QR Generation Error:", err);
-
-  }
-
-};
   /* ---------------- LOADER ---------------- */
 
   if (authLoading || loading) {
@@ -677,7 +595,7 @@ const handleGenerateQR = async (propertyId) => {
                   onVideos={() => handleManageVideos(pg.id || pg.pg_id)}
                   onChat={() => handleChat(pg.id || pg.pg_id)}
                   onAnnouncement={() => handleAnnouncement(pg.id || pg.pg_id)}
-                  onGenerateQR={() => handleGenerateQR(pg.id || pg.pg_id)}   // ⭐ NEW QR handler
+                  onGenerateQR={() => handleGenerateQR(pg.id || pg.pg_id)}
                   onCreatePlan={
                     pg.pg_category === "coliving"
                       ? () => handleCreatePlan(pg.id || pg.pg_id)
@@ -690,7 +608,7 @@ const handleGenerateQR = async (propertyId) => {
         </>
       )}
 
-      {/* ENHANCED BOOKINGS SECTION - Card based layout matching your example */}
+      {/* STRAIGHT LINE BOOKINGS TABLE - Showing only 5 main data points */}
       <Box mt={4}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h5" fontWeight={600}>
@@ -715,140 +633,90 @@ const handleGenerateQR = async (propertyId) => {
           )}
         </Box>
 
-        <Stack spacing={2}>
-          {recentBookings.length === 0 ? (
-            <Paper sx={{ p: 4, textAlign: 'center' }}>
-              <Typography color="text.secondary">
-                No bookings yet
-              </Typography>
-            </Paper>
-          ) : (
-            recentBookings.map((booking) => {
-              const statusStyle = getStatusBadgeStyle(booking.status);
-              
-              return (
-                <Card 
-                  key={booking.id} 
-                  sx={{ 
-                    borderRadius: 2,
-                    border: '1px solid #e5e7eb',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                  }}
-                >
-                  <CardContent sx={{ p: 3 }}>
-                    {/* PG Name */}
-                    <Typography variant="h6" fontWeight={600} color="primary.main" gutterBottom>
-                      {booking.pg_name}
+        <TableContainer 
+          component={Paper} 
+          sx={{ 
+            borderRadius: 2, 
+            overflow: 'hidden',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          }}
+        >
+          <Table>
+            <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+              <TableRow>
+                <TableCell><strong>Tenant</strong></TableCell>
+                <TableCell><strong>PG Name</strong></TableCell>
+                <TableCell><strong>Amount</strong></TableCell>
+                <TableCell><strong>Status</strong></TableCell>
+                <TableCell><strong>Check-in Date</strong></TableCell>
+                <TableCell align="center"><strong>Action</strong></TableCell>
+              </TableRow>
+            </TableHead>
+
+            <TableBody>
+              {recentBookings.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                    <Typography color="text.secondary">
+                      No bookings yet
                     </Typography>
-
-                    <Divider sx={{ my: 1.5 }} />
-
-                    {/* Tenant Info */}
-                    <Box display="flex" alignItems="center" gap={1.5} mb={2}>
-                      <Avatar sx={{ width: 40, height: 40, bgcolor: '#4CAF50' }}>
-                        {booking.tenant_name?.charAt(0) || 'U'}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="subtitle1" fontWeight={600}>
-                          {booking.tenant_name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {booking.tenant_phone ? (
-                            <Box display="flex" alignItems="center" gap={0.5}>
-                              <PhoneIcon sx={{ fontSize: 16 }} />
-                              {booking.tenant_phone}
-                            </Box>
-                          ) : (
-                            <span style={{ color: '#f59e0b', fontSize: '0.875rem' }}>
-                              🔒 Phone hidden until approval
-                            </span>
-                          )}
-                        </Typography>
-                      </Box>
-                    </Box>
-
-                    {/* Booking Details Grid */}
-                    <Grid container spacing={2} sx={{ mt: 1 }}>
-                      <Grid item xs={12} sm={6}>
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <CalendarIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
-                          <Box>
-                            <Typography variant="caption" color="text.secondary">
-                              Check-in Date
-                            </Typography>
-                            <Typography variant="body2" fontWeight={500}>
-                              {formatDate(booking.check_in_date)}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Grid>
-
-                      <Grid item xs={12} sm={6}>
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <RoomIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
-                          <Box>
-                            <Typography variant="caption" color="text.secondary">
-                              Room Type
-                            </Typography>
-                            <Typography variant="body2" fontWeight={500}>
-                              {booking.room_type}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Grid>
-
-                      {booking.amount > 0 && (
-                        <Grid item xs={12} sm={6}>
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <MoneyIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
-                            <Box>
-                              <Typography variant="caption" color="text.secondary">
-                                Amount
-                              </Typography>
-                              <Typography variant="body2" fontWeight={600} color="primary.main">
-                                {formatCurrency(booking.amount)}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </Grid>
-                      )}
-
-                      <Grid item xs={12} sm={6}>
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <Box>
-                            <Typography variant="caption" color="text.secondary">
-                              Status
-                            </Typography>
-                            <Box>
-                              <Chip 
-                                label={booking.status?.toUpperCase() || 'PENDING'}
-                                size="small"
-                                sx={{ 
-                                  mt: 0.5,
-                                  bgcolor: statusStyle.bg,
-                                  color: statusStyle.color,
-                                  fontWeight: 600,
-                                  fontSize: '0.75rem'
-                                }}
-                              />
-                            </Box>
-                          </Box>
-                        </Box>
-                      </Grid>
-                    </Grid>
-
-                    {/* Contact Info if available */}
-                    {booking.tenant_email && (
-                      <Box mt={2} pt={2} sx={{ borderTop: '1px dashed #e5e7eb' }}>
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <EmailIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                          <Typography variant="body2">{booking.tenant_email}</Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                recentBookings.map((booking) => (
+                  <TableRow key={booking.id} hover>
+                    <TableCell>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Avatar 
+                          sx={{ 
+                            width: 32, 
+                            height: 32, 
+                            bgcolor: '#4CAF50',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          {booking.tenant_name?.charAt(0) || 'U'}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body2" fontWeight={500}>
+                            {booking.tenant_name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <PhoneIcon sx={{ fontSize: 12 }} />
+                            {booking.tenant_phone || 'Hidden'}
+                          </Typography>
                         </Box>
                       </Box>
-                    )}
+                    </TableCell>
 
-                    {/* Action Button */}
-                    <Box display="flex" justifyContent="flex-end" mt={2}>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={500}>
+                        {booking.pg_name}
+                      </Typography>
+                    </TableCell>
+
+                    <TableCell>
+                      <Typography fontWeight={600} color="primary.main">
+                        {formatCurrency(booking.amount)}
+                      </Typography>
+                    </TableCell>
+
+                    <TableCell>
+                      <Chip 
+                        label={booking.status?.toUpperCase() || 'PENDING'}
+                        size="small"
+                        color={getStatusColor(booking.status)}
+                        sx={{ fontWeight: 500, minWidth: 80 }}
+                      />
+                    </TableCell>
+
+                    <TableCell>
+                      <Typography variant="body2">
+                        {formatDate(booking.check_in_date)}
+                      </Typography>
+                    </TableCell>
+
+                    <TableCell align="center">
                       <Button
                         size="small"
                         variant="outlined"
@@ -856,15 +724,15 @@ const handleGenerateQR = async (propertyId) => {
                         startIcon={<ViewIcon />}
                         sx={{ borderRadius: 2 }}
                       >
-                        View Details
+                        View
                       </Button>
-                    </Box>
-                  </CardContent>
-                </Card>
-              );
-            })
-          )}
-        </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Box>
 
       {/* SNACKBAR */}
