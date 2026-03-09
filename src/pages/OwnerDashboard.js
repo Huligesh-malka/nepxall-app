@@ -11,7 +11,8 @@ import {
   Typography, Box, Button, Grid, Alert, Snackbar,
   CircularProgress, Paper, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow,
-  Chip, Avatar, IconButton
+  Chip, Avatar, IconButton, Card, CardContent,
+  Divider, Stack, Tooltip
 } from "@mui/material";
 
 import {
@@ -24,7 +25,11 @@ import {
   Chat as ChatIcon,
   Groups as CommunityIcon,
   Visibility as ViewIcon,
-  Phone as PhoneIcon
+  Phone as PhoneIcon,
+  Email as EmailIcon,
+  CalendarToday as CalendarIcon,
+  Hotel as RoomIcon,
+  Person as PersonIcon
 } from "@mui/icons-material";
 
 import StatCard from "../components/owner/StatCard";
@@ -71,6 +76,23 @@ const getStatusColor = (status) => {
       return 'info';
     default:
       return 'default';
+  }
+};
+
+const getStatusBadgeStyle = (status) => {
+  switch(status?.toLowerCase()) {
+    case 'approved':
+    case 'confirmed':
+      return { bg: '#16a34a', color: '#fff' };
+    case 'pending':
+      return { bg: '#f59e0b', color: '#fff' };
+    case 'rejected':
+    case 'cancelled':
+      return { bg: '#dc2626', color: '#fff' };
+    case 'completed':
+      return { bg: '#0284c7', color: '#fff' };
+    default:
+      return { bg: '#6b7280', color: '#fff' };
   }
 };
 
@@ -144,14 +166,23 @@ const OwnerDashboard = () => {
         ? pgRes.data
         : pgRes.data?.data || [];
 
+      // Debug: Log the first property's photos to see format
+      if (pgData.length > 0) {
+        console.log("📸 First property photos (raw):", pgData[0].photos);
+      }
+
       const properties = pgData.map(pg => {
         const photos = parseArray(pg.photos);
+        
+        // Debug: Log parsed photos
+        console.log(`Property ${pg.pg_name} parsed photos:`, photos);
         
         return {
           ...pg,
           id: pg.id || pg.pg_id,
           pg_id: pg.pg_id || pg.id,
           photos,
+          // ✅ Don't use getImageUrl here - let PropertyCard handle it
           image: photos.length ? photos[0] : null,
           total_rooms: Number(pg.total_rooms) || 0,
           available_rooms: Number(pg.available_rooms) || 0
@@ -159,6 +190,7 @@ const OwnerDashboard = () => {
       });
 
       setPGs(properties);
+      console.log(`✅ Loaded ${properties.length} properties`);
 
       /* -------- BOOKINGS USING pgAPI -------- */
 
@@ -170,24 +202,25 @@ const OwnerDashboard = () => {
         ? bookingsRes.data
         : bookingsRes.data?.bookings || [];
 
-      // Enhance booking data with main details only
+      // Enhance booking data with more details
       const enhancedBookings = bookings.map(booking => ({
-        id: booking.id,
+        ...booking,
         tenant_name: booking.name || booking.tenant_name || 'Unknown',
         tenant_phone: booking.phone || booking.tenant_phone,
-        pg_name: booking.pg_name || 'N/A',
+        tenant_email: booking.email || booking.tenant_email,
+        room_type: booking.room_type || 'Not specified',
+        check_in_date: booking.check_in_date || booking.created_at,
         amount: booking.amount || 0,
-        status: booking.status || 'pending',
-        check_in_date: booking.check_in_date || booking.created_at
+        pg_name: booking.pg_name || 'N/A'
       }));
 
       const sortedBookings = enhancedBookings
         .sort(
           (a, b) =>
-            new Date(b.check_in_date || 0) -
-            new Date(a.check_in_date || 0)
+            new Date(b.created_at || b.check_in_date || 0) -
+            new Date(a.created_at || a.check_in_date || 0)
         )
-        .slice(0, 5); // Show only 5 recent bookings
+        .slice(0, 5);
 
       setRecentBookings(sortedBookings);
 
@@ -195,6 +228,14 @@ const OwnerDashboard = () => {
 
       const totalRooms = properties.reduce((a, b) => a + (b.total_rooms || 0), 0);
       const availableRooms = properties.reduce((a, b) => a + (b.available_rooms || 0), 0);
+
+      const ratings = properties
+        .filter(p => p.avg_rating > 0)
+        .map(p => p.avg_rating);
+
+      const avgRating = ratings.length
+        ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
+        : 0;
 
       const totalEarnings = bookings
         .filter(b => ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase()))
@@ -223,7 +264,7 @@ const OwnerDashboard = () => {
         monthlyEarnings,
         pendingBookings,
         totalBookings: bookings.length,
-        avgRating: 0,
+        avgRating,
         totalEnquiries: recentEnquiries.length
       });
 
@@ -296,7 +337,8 @@ const OwnerDashboard = () => {
     navigate(`/owner/bookings/${bookingId}`);
   };
 
-  // ⭐ QR Code Generator Function
+  // ⭐ NEW: QR Code Generator Function
+  
   const handleGenerateQR = async (propertyId) => {
     try {
       const BRAND_BLUE = "#0B5ED7";
@@ -307,6 +349,7 @@ const OwnerDashboard = () => {
 
       const url = `https://nepxall.vercel.app/scan/${propertyId}`;
 
+      /* QR DESIGN */
       const qr = new QRCodeStyling({
         width: 600,
         height: 600,
@@ -341,6 +384,7 @@ const OwnerDashboard = () => {
         }
       });
 
+      /* POSTER CANVAS */
       const canvas = document.createElement("canvas");
       canvas.width = 900;
       canvas.height = 1100;
@@ -352,34 +396,44 @@ const OwnerDashboard = () => {
 
       ctx.textAlign = "center";
 
+      /* LOAD LOGO */
       const logo = new Image();
       logo.crossOrigin = "anonymous";
       logo.src = "/logo.png";
 
       logo.onload = async () => {
+        /* LOGO */
         ctx.drawImage(logo, 350, 40, 200, 110);
 
+        /* STRONG NEPXALL BRAND TEXT */
         ctx.font = "900 54px Arial";
+
         const gradient = ctx.createLinearGradient(360, 210, 540, 210);
         gradient.addColorStop(0, BRAND_BLUE);
         gradient.addColorStop(1, BRAND_GREEN);
 
         ctx.fillStyle = gradient;
+
         ctx.shadowColor = "rgba(0,0,0,0.15)";
         ctx.shadowBlur = 2;
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 1;
+
         ctx.fillText("Nepxall", 450, 210);
+
         ctx.shadowColor = "transparent";
 
+        /* TAGLINE */
         ctx.font = "26px Arial";
         ctx.fillStyle = "#94a3b8";
         ctx.fillText("Next Places for Living", 450, 250);
 
+        /* PROPERTY NAME */
         ctx.font = "bold 36px Arial";
         ctx.fillStyle = "#111827";
         ctx.fillText(propertyName.toUpperCase(), 450, 320);
 
+        /* DESCRIPTION */
         ctx.font = "26px Arial";
         ctx.fillStyle = BRAND_BLUE;
         ctx.fillText("Scan QR to View Rooms", 450, 380);
@@ -388,16 +442,20 @@ const OwnerDashboard = () => {
         ctx.fillStyle = "#6B7280";
         ctx.fillText("Book Instantly Online", 450, 415);
 
+        /* QR IMAGE */
         const qrBlob = await qr.getRawData("png");
         const qrImg = new Image();
         qrImg.src = URL.createObjectURL(qrBlob);
 
         qrImg.onload = () => {
           ctx.drawImage(qrImg, 150, 450, 600, 600);
+
+          /* FOOTER */
           ctx.font = "22px Arial";
           ctx.fillStyle = "#6B7280";
           ctx.fillText("Powered by Nepxall", 450, 1080);
 
+          /* DOWNLOAD */
           const link = document.createElement("a");
           link.href = canvas.toDataURL("image/png");
           link.download = `nepxall-${propertyName}-entrance-qr.png`;
@@ -608,7 +666,7 @@ const OwnerDashboard = () => {
         </>
       )}
 
-      {/* STRAIGHT LINE BOOKINGS TABLE - Showing only 5 main data points */}
+      {/* COMPACT TABLE FOR RECENT BOOKINGS - 5 COLUMNS */}
       <Box mt={4}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h5" fontWeight={600}>
@@ -633,26 +691,18 @@ const OwnerDashboard = () => {
           )}
         </Box>
 
-        <TableContainer 
-          component={Paper} 
-          sx={{ 
-            borderRadius: 2, 
-            overflow: 'hidden',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-          }}
-        >
-          <Table>
-            <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+        <TableContainer component={Paper} sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderRadius: 2 }}>
+          <Table sx={{ minWidth: 650 }}>
+            <TableHead sx={{ bgcolor: '#f8fafc' }}>
               <TableRow>
-                <TableCell><strong>Tenant</strong></TableCell>
-                <TableCell><strong>PG Name</strong></TableCell>
-                <TableCell><strong>Amount</strong></TableCell>
-                <TableCell><strong>Status</strong></TableCell>
-                <TableCell><strong>Check-in Date</strong></TableCell>
-                <TableCell align="center"><strong>Action</strong></TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>PROPERTY</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>TENANT</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>CHECK-IN</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>AMOUNT</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>STATUS</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>ACTION</TableCell>
               </TableRow>
             </TableHead>
-
             <TableBody>
               {recentBookings.length === 0 ? (
                 <TableRow>
@@ -663,72 +713,103 @@ const OwnerDashboard = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                recentBookings.map((booking) => (
-                  <TableRow key={booking.id} hover>
-                    <TableCell>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <Avatar 
-                          sx={{ 
-                            width: 32, 
-                            height: 32, 
-                            bgcolor: '#4CAF50',
-                            fontSize: '0.875rem'
-                          }}
-                        >
-                          {booking.tenant_name?.charAt(0) || 'U'}
-                        </Avatar>
+                recentBookings.map((booking) => {
+                  const statusStyle = getStatusBadgeStyle(booking.status);
+                  
+                  return (
+                    <TableRow 
+                      key={booking.id}
+                      hover
+                      sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                    >
+                      {/* PROPERTY COLUMN */}
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={500}>
+                          {booking.pg_name}
+                        </Typography>
+                      </TableCell>
+
+                      {/* TENANT COLUMN */}
+                      <TableCell>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Avatar sx={{ width: 32, height: 32, bgcolor: '#4CAF50', fontSize: '0.875rem' }}>
+                            {booking.tenant_name?.charAt(0) || 'U'}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="body2" fontWeight={500}>
+                              {booking.tenant_name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <PhoneIcon sx={{ fontSize: 12 }} />
+                              {booking.tenant_phone ? (
+                                booking.tenant_phone
+                              ) : (
+                                <span style={{ color: '#f59e0b' }}>Hidden</span>
+                              )}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </TableCell>
+
+                      {/* CHECK-IN COLUMN */}
+                      <TableCell>
                         <Box>
-                          <Typography variant="body2" fontWeight={500}>
-                            {booking.tenant_name}
+                          <Typography variant="body2">
+                            {formatDate(booking.check_in_date)}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <PhoneIcon sx={{ fontSize: 12 }} />
-                            {booking.tenant_phone || 'Hidden'}
+                          <Typography variant="caption" color="text.secondary">
+                            {booking.room_type}
                           </Typography>
                         </Box>
-                      </Box>
-                    </TableCell>
+                      </TableCell>
 
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={500}>
-                        {booking.pg_name}
-                      </Typography>
-                    </TableCell>
+                      {/* AMOUNT COLUMN */}
+                      <TableCell>
+                        {booking.amount > 0 ? (
+                          <Typography variant="body2" fontWeight={600} color="primary.main">
+                            {formatCurrency(booking.amount)}
+                          </Typography>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            -
+                          </Typography>
+                        )}
+                      </TableCell>
 
-                    <TableCell>
-                      <Typography fontWeight={600} color="primary.main">
-                        {formatCurrency(booking.amount)}
-                      </Typography>
-                    </TableCell>
+                      {/* STATUS COLUMN */}
+                      <TableCell>
+                        <Chip 
+                          label={booking.status?.toUpperCase() || 'PENDING'}
+                          size="small"
+                          sx={{ 
+                            bgcolor: statusStyle.bg,
+                            color: statusStyle.color,
+                            fontWeight: 600,
+                            fontSize: '0.75rem',
+                            minWidth: 80
+                          }}
+                        />
+                      </TableCell>
 
-                    <TableCell>
-                      <Chip 
-                        label={booking.status?.toUpperCase() || 'PENDING'}
-                        size="small"
-                        color={getStatusColor(booking.status)}
-                        sx={{ fontWeight: 500, minWidth: 80 }}
-                      />
-                    </TableCell>
-
-                    <TableCell>
-                      <Typography variant="body2">
-                        {formatDate(booking.check_in_date)}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell align="center">
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => handleViewBooking(booking.id)}
-                        startIcon={<ViewIcon />}
-                        sx={{ borderRadius: 2 }}
-                      >
-                        View
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      {/* ACTION COLUMN */}
+                      <TableCell align="right">
+                        <Tooltip title="View Details">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleViewBooking(booking.id)}
+                            color="primary"
+                            sx={{ 
+                              bgcolor: '#f0f7ff',
+                              '&:hover': { bgcolor: '#e5f0ff' }
+                            }}
+                          >
+                            <ViewIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
