@@ -29,9 +29,7 @@ import {
   Email as EmailIcon,
   CalendarToday as CalendarIcon,
   Hotel as RoomIcon,
-  Person as PersonIcon,
-  AccountBalance as DepositIcon,
-  Receipt as RentIcon
+  Person as PersonIcon
 } from "@mui/icons-material";
 
 import StatCard from "../components/owner/StatCard";
@@ -661,8 +659,8 @@ const OwnerDashboard = () => {
         </Box>
       </Box>
 
-      {/* STATS CARDS - First Row */}
-      <Grid container spacing={3} mb={3}>
+      {/* STATS CARDS - Only 4 Cards */}
+      <Grid container spacing={3} mb={4}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard 
             title="Total Properties" 
@@ -700,49 +698,6 @@ const OwnerDashboard = () => {
             icon={<PendingIcon sx={{ fontSize: 40 }} />} 
             color="#f44336"
             bgColor="#FFEBEE"
-          />
-        </Grid>
-      </Grid>
-
-      {/* STATS CARDS - Second Row (Rent & Deposit) */}
-      <Grid container spacing={3} mb={4}>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard 
-            title="Total Rent (All Time)" 
-            value={formatCurrency(stats.totalRent)} 
-            icon={<RentIcon sx={{ fontSize: 40 }} />} 
-            color="#8B5CF6"
-            bgColor="#F3E8FF"
-          />
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard 
-            title="Total Deposit" 
-            value={formatCurrency(stats.totalDeposit)} 
-            icon={<DepositIcon sx={{ fontSize: 40 }} />} 
-            color="#EC4899"
-            bgColor="#FCE7F3"
-          />
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard 
-            title="Pending Rent" 
-            value={formatCurrency(stats.pendingRent)} 
-            icon={<RentIcon sx={{ fontSize: 40 }} />} 
-            color="#F59E0B"
-            bgColor="#FEF3C7"
-          />
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard 
-            title="Pending Deposit" 
-            value={formatCurrency(stats.pendingDeposit)} 
-            icon={<DepositIcon sx={{ fontSize: 40 }} />} 
-            color="#EF4444"
-            bgColor="#FEE2E2"
           />
         </Grid>
       </Grid>
@@ -819,7 +774,7 @@ const OwnerDashboard = () => {
         </>
       )}
 
-      {/* COMPACT TABLE FOR RECENT BOOKINGS - 8 COLUMNS */}
+      {/* COMPACT TABLE FOR RECENT BOOKINGS - 6 COLUMNS (Removed Deposit and Action) */}
       <Box mt={4}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h5" fontWeight={600}>
@@ -845,23 +800,21 @@ const OwnerDashboard = () => {
         </Box>
 
         <TableContainer component={Paper} sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderRadius: 2, overflowX: 'auto' }}>
-          <Table sx={{ minWidth: 1000 }}>
+          <Table sx={{ minWidth: 800 }}>
             <TableHead sx={{ bgcolor: '#f8fafc' }}>
               <TableRow>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>PROPERTY</TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>TENANT</TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>CHECK-IN</TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>MONTHLY RENT</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>DEPOSIT</TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>TOTAL AMOUNT</TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>STATUS</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>ACTION</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {recentBookings.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                     <Typography color="text.secondary">
                       No bookings yet
                     </Typography>
@@ -928,13 +881,6 @@ const OwnerDashboard = () => {
                         </Typography>
                       </TableCell>
 
-                      {/* DEPOSIT COLUMN */}
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={500} color="#EC4899">
-                          {formatCurrency(deposit)}
-                        </Typography>
-                      </TableCell>
-
                       {/* TOTAL AMOUNT COLUMN */}
                       <TableCell>
                         <Typography variant="body2" fontWeight={600} color="primary.main">
@@ -955,23 +901,6 @@ const OwnerDashboard = () => {
                             minWidth: 80
                           }}
                         />
-                      </TableCell>
-
-                      {/* ACTION COLUMN */}
-                      <TableCell align="right">
-                        <Tooltip title="View Details">
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handleViewBooking(booking.id)}
-                            color="primary"
-                            sx={{ 
-                              bgcolor: '#f0f7ff',
-                              '&:hover': { bgcolor: '#e5f0ff' }
-                            }}
-                          >
-                            <ViewIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   );
