@@ -30,23 +30,47 @@ import {
   PendingActions,
   Refresh,
   Info,
-  Warning,
-  Error as ErrorIcon
+  Warning
 } from "@mui/icons-material";
 
 const API = "https://nepxall-backend.onrender.com/api/owner";
 
 export default function OwnerPayments() {
   const [data, setData] = useState([]);
-  const [rawData, setRawData] = useState(null); // For debugging
-  const [summary, setSummary] = useState(null);
+  const [summary, setSummary] = useState({
+    total_bookings: 0,
+    verified_payments: 0,
+    pending_approval: 0,
+    rejected_payments: 0,
+    total_earned: 0,
+    pending_settlement: 0,
+    completed_settlement: 0
+  });
   const [loading, setLoading] = useState(true);
+  const [summaryLoading, setSummaryLoading] = useState(false);
   const [error, setError] = useState("");
+  const [summaryError, setSummaryError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [userInfo, setUserInfo] = useState(null);
 
   const token = localStorage.getItem("token");
 
-  // Fetch payments with better debugging
+  // Decode token to get user info
+  useEffect(() => {
+    if (token) {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(window.atob(base64));
+        console.log("👤 Logged in user:", payload);
+        setUserInfo(payload);
+      } catch (e) {
+        console.error("Could not decode token:", e);
+      }
+    }
+  }, [token]);
+
+  // Fetch payments
   const fetchPayments = async (showRefreshing = false) => {
     try {
       if (showRefreshing) {
@@ -64,33 +88,31 @@ export default function OwnerPayments() {
         }
       });
 
-      console.log("📦 Raw API Response:", res);
-      console.log("📦 Response Data:", res.data);
+      console.log("📦 Payments Response:", res.data);
       
-      // Store raw data for debugging
-      setRawData(res.data);
-
       if (res.data?.success) {
-        console.log("✅ Payments data array:", res.data.data);
-        console.log("📊 Number of payments:", res.data.data?.length);
-        
-        // Log the first item to see structure
-        if (res.data.data && res.data.data.length > 0) {
-          console.log("📋 First payment item structure:", res.data.data[0]);
-        } else {
-          console.log("⚠️ No payment items in data array");
-        }
+        console.log("✅ Payments data:", res.data.data);
+        console.log("📊 Count:", res.data.count);
+        console.log("🔧 Debug info:", res.data.debug);
         
         setData(res.data.data || []);
+        
+        // Show warning if no data
+        if (res.data.count === 0) {
+          console.log("⚠️ No payments found. Debug info:", res.data.debug);
+          
+          // If there's debug info with ownerId, show helpful message
+          if (res.data.debug) {
+            setError(`No payments found for your account (Owner ID: ${res.data.debug.ownerId}). This might be because you don't have any PGs or bookings yet.`);
+          }
+        }
       } else {
-        console.error("❌ API returned success: false");
         setError("Failed to load payments");
       }
 
     } catch (err) {
       console.error("❌ Payments fetch error:", err);
-      console.error("❌ Error response:", err.response);
-      setError(err.response?.data?.message || "Failed to load payments");
+      setError(err.response?.data?.message || "Failed to load payments. Please try again.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -100,6 +122,9 @@ export default function OwnerPayments() {
   // Fetch summary
   const fetchSummary = async () => {
     try {
+      setSummaryLoading(true);
+      setSummaryError("");
+      
       console.log("📡 Fetching summary from:", `${API}/settlements/summary`);
       
       const res = await axios.get(`${API}/settlements/summary`, {
@@ -115,6 +140,9 @@ export default function OwnerPayments() {
       }
     } catch (err) {
       console.error("❌ Summary fetch error:", err);
+      setSummaryError("Could not load summary data");
+    } finally {
+      setSummaryLoading(false);
     }
   };
   
@@ -171,6 +199,18 @@ export default function OwnerPayments() {
     }
   };
 
+  const getSettlementStatusLabel = (status) => {
+    switch(status?.toUpperCase()) {
+      case "COMPLETED":
+      case "DONE":
+        return "💰 PAID TO OWNER";
+      case "PENDING":
+        return "⏳ PENDING SETTLEMENT";
+      default:
+        return "📌 UNKNOWN";
+    }
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -193,13 +233,17 @@ export default function OwnerPayments() {
     }
   };
 
-  // Calculate stats from data
+  // Calculate stats from actual data
   const verifiedCount = data.filter(item => 
     item.payment_status?.toLowerCase() === 'paid'
   ).length;
   
   const pendingApprovalCount = data.filter(item => 
     item.payment_status?.toLowerCase() === 'submitted'
+  ).length;
+  
+  const rejectedCount = data.filter(item => 
+    item.payment_status?.toLowerCase() === 'rejected'
   ).length;
   
   const totalAmount = data.reduce((sum, item) => 
@@ -229,15 +273,15 @@ export default function OwnerPayments() {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
 
-      {/* Debug Info - Remove in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <Paper sx={{ p: 2, mb: 3, bgcolor: '#f5f5f5' }}>
-          <Typography variant="body2" color="text.secondary">
-            <strong>Debug:</strong> Data length: {data.length} | 
-            Verified: {verifiedCount} | 
-            Pending: {pendingApprovalCount} | 
-            Total: ₹{totalAmount}
-          </Typography>
+      {/* User Info Banner */}
+      {userInfo && (
+        <Paper sx={{ p: 2, mb: 3, bgcolor: '#e3f2fd', borderRadius: 2 }}>
+          <Box display="flex" alignItems="center" gap={2}>
+            <Info color="info" />
+            <Typography variant="body2">
+              Logged in as: <strong>{userInfo.email || userInfo.name || 'Owner'}</strong> (ID: {userInfo.id || userInfo.userId || 'N/A'})
+            </Typography>
+          </Box>
         </Paper>
       )}
 
@@ -272,7 +316,7 @@ export default function OwnerPayments() {
       {/* Error Alert */}
       {error && (
         <Alert 
-          severity="error" 
+          severity="warning" 
           sx={{ mb: 3 }}
           action={
             <Button color="inherit" size="small" onClick={() => loadAllData()}>
@@ -284,7 +328,14 @@ export default function OwnerPayments() {
         </Alert>
       )}
 
-      {/* Summary Cards - Using actual data */}
+      {/* Summary Error */}
+      {summaryError && (
+        <Alert severity="info" sx={{ mb: 3 }} icon={<Warning />}>
+          {summaryError} - Showing calculated stats from your data
+        </Alert>
+      )}
+
+      {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ bgcolor: 'primary.main', color: 'white' }}>
@@ -359,25 +410,78 @@ export default function OwnerPayments() {
         </Grid>
       </Grid>
 
+      {/* Second Row Summary - Additional Stats */}
+      {(verifiedCount > 0 || rejectedCount > 0) && (
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={6} md={4}>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography color="text.secondary" gutterBottom>
+                  Amount to be Settled
+                </Typography>
+                <Typography variant="h5" component="div">
+                  {formatCurrency(totalAmount - (summary?.completed_settlement || 0))}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  From {verifiedCount} verified payment(s)
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} sm={6} md={4}>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography color="text.secondary" gutterBottom>
+                  Already Settled
+                </Typography>
+                <Typography variant="h5" component="div" color="success.main">
+                  {formatCurrency(summary?.completed_settlement || 0)}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Paid to your account
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} sm={6} md={4}>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography color="text.secondary" gutterBottom>
+                  Rejected Payments
+                </Typography>
+                <Typography variant="h5" component="div" color="error.main">
+                  {rejectedCount}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Need attention
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
+
       {/* Main Table */}
       <Paper sx={{ borderRadius: 2, overflow: 'hidden' }}>
         <Box sx={{ p: 2, bgcolor: '#f8f9fa', borderBottom: '1px solid #e0e0e0' }}>
           <Typography variant="body2" color="text.secondary">
             <Info fontSize="small" sx={{ mr: 1, verticalAlign: 'middle' }} />
             Showing {data.length} booking{data.length !== 1 ? 's' : ''}
-            {verifiedCount > 0 && ` (${verifiedCount} verified)`}
+            {verifiedCount > 0 && ` (${verifiedCount} verified, ${formatCurrency(totalAmount)})`}
           </Typography>
         </Box>
 
         <Table>
           <TableHead>
             <TableRow sx={{ background: "#f5f5f5" }}>
-              <TableCell><strong>Booking</strong></TableCell>
-              <TableCell><strong>Tenant</strong></TableCell>
-              <TableCell><strong>PG</strong></TableCell>
+              <TableCell><strong>Booking ID</strong></TableCell>
+              <TableCell><strong>Tenant Details</strong></TableCell>
+              <TableCell><strong>PG Name</strong></TableCell>
               <TableCell align="right"><strong>Amount</strong></TableCell>
               <TableCell align="center"><strong>Payment Status</strong></TableCell>
-              <TableCell align="center"><strong>Settlement</strong></TableCell>
+              <TableCell align="center"><strong>Settlement Status</strong></TableCell>
               <TableCell><strong>Date</strong></TableCell>
             </TableRow>
           </TableHead>
@@ -391,14 +495,25 @@ export default function OwnerPayments() {
                     <Typography variant="h6" color="text.secondary">
                       No payment records found
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      From admin panel I can see there are approved payments. 
-                      This might be a data mapping issue.
+                    <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 500 }}>
+                      {userInfo ? (
+                        <>You are logged in as Owner ID: <strong>{userInfo.id || userInfo.userId}</strong>. 
+                        To see payments, you need to have:
+                        <ul style={{ textAlign: 'left', marginTop: 8 }}>
+                          <li>PGs registered under your account</li>
+                          <li>Bookings for those PGs</li>
+                          <li>Payments made against those bookings</li>
+                        </ul>
+                        </>
+                      ) : (
+                        'Please make sure you are logged in as an owner with PGs and bookings.'
+                      )}
                     </Typography>
                     <Button 
                       variant="contained" 
                       onClick={() => loadAllData(true)}
                       startIcon={<Refresh />}
+                      sx={{ mt: 2 }}
                     >
                       Refresh Data
                     </Button>
@@ -407,9 +522,6 @@ export default function OwnerPayments() {
               </TableRow>
             ) : (
               data.map((item, index) => {
-                // Debug each row
-                console.log(`🔍 Row ${index}:`, item);
-                
                 return (
                   <TableRow key={item.booking_id || index} hover>
                     <TableCell>
@@ -417,7 +529,7 @@ export default function OwnerPayments() {
                         <Avatar sx={{ bgcolor: "#eef2ff", width: 32, height: 32 }}>
                           <ReceiptLong sx={{ fontSize: 18 }} />
                         </Avatar>
-                        <Typography variant="body2">
+                        <Typography variant="body2" fontWeight="medium">
                           #{item.booking_id || 'N/A'}
                         </Typography>
                       </Box>
@@ -429,7 +541,7 @@ export default function OwnerPayments() {
                           <Person sx={{ fontSize: 18 }} />
                         </Avatar>
                         <Box>
-                          <Typography variant="body2">
+                          <Typography variant="body2" fontWeight="medium">
                             {item.tenant_name || item.name || "N/A"}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
@@ -461,16 +573,22 @@ export default function OwnerPayments() {
                         label={getPaymentStatusLabel(item.payment_status)}
                         color={getPaymentStatusColor(item.payment_status)}
                         size="small"
-                        sx={{ minWidth: 120 }}
+                        sx={{ 
+                          minWidth: 130,
+                          fontWeight: 'medium'
+                        }}
                       />
                     </TableCell>
 
                     <TableCell align="center">
                       <Chip
-                        label={item.owner_settlement === "COMPLETED" || item.owner_settlement === "DONE" ? "PAID" : "PENDING"}
+                        label={getSettlementStatusLabel(item.owner_settlement)}
                         color={getSettlementStatusColor(item.owner_settlement)}
                         size="small"
-                        sx={{ minWidth: 80 }}
+                        sx={{ 
+                          minWidth: 130,
+                          fontWeight: 'medium'
+                        }}
                       />
                     </TableCell>
 
@@ -478,6 +596,11 @@ export default function OwnerPayments() {
                       <Typography variant="caption" color="text.secondary">
                         {formatDate(item.payment_date || item.settlement_date || item.booking_date)}
                       </Typography>
+                      {item.order_id && (
+                        <Typography variant="caption" display="block" color="text.secondary">
+                          Order: {item.order_id.substring(0, 10)}...
+                        </Typography>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -494,15 +617,22 @@ export default function OwnerPayments() {
             borderTop: '1px solid #e0e0e0',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 2
           }}>
-            <Typography variant="body2" color="text.secondary">
-              <strong>Verified:</strong> {verifiedCount} | 
-              <strong>Pending:</strong> {pendingApprovalCount}
-            </Typography>
-            <Typography variant="body2" fontWeight="bold">
-              Total: {formatCurrency(totalAmount)}
-            </Typography>
+            <Box>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Verified:</strong> {verifiedCount} | 
+                <strong>Pending Approval:</strong> {pendingApprovalCount} |
+                <strong>Rejected:</strong> {rejectedCount}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="body1" fontWeight="bold" color="primary.main">
+                Total: {formatCurrency(totalAmount)}
+              </Typography>
+            </Box>
           </Box>
         )}
       </Paper>
@@ -510,7 +640,8 @@ export default function OwnerPayments() {
       {/* Info Note */}
       <Box sx={{ mt: 3, textAlign: 'center' }}>
         <Typography variant="caption" color="text.secondary">
-          ⓘ Payments with status "AWAITING APPROVAL" are pending admin verification
+          ⓘ Payments with status "AWAITING APPROVAL" are pending admin verification. 
+          Only "VERIFIED" payments are eligible for settlement.
         </Typography>
       </Box>
 
