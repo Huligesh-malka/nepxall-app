@@ -12,7 +12,7 @@ import {
   CircularProgress, Paper, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow,
   Chip, Avatar, IconButton, Card, CardContent,
-  Divider, Tooltip
+  Divider
 } from "@mui/material";
 
 import {
@@ -29,7 +29,6 @@ import {
   Cancel as CancelIcon,
   HourglassEmpty as HourglassIcon,
   Phone as PhoneIcon,
-  Email as EmailIcon,
   CalendarToday as CalendarIcon,
   Home as HomeIcon,
   Person as PersonIcon
@@ -65,6 +64,15 @@ const formatDate = (dateStr) => {
   }
 };
 
+const formatDateString = (dateStr) => {
+  if (!dateStr) return "N/A";
+  try {
+    return new Date(dateStr).toDateString();
+  } catch {
+    return dateStr;
+  }
+};
+
 const getStatusColor = (status) => {
   switch(status?.toLowerCase()) {
     case 'confirmed':
@@ -82,39 +90,16 @@ const getStatusColor = (status) => {
   }
 };
 
-const getStatusIcon = (status) => {
+const getStatusStyle = (status) => {
   switch(status?.toLowerCase()) {
-    case 'confirmed':
     case 'approved':
-      return <CheckCircleIcon fontSize="small" />;
-    case 'pending':
-      return <HourglassIcon fontSize="small" />;
-    case 'cancelled':
+      return { background: "#16a34a", color: "#fff" };
     case 'rejected':
-      return <CancelIcon fontSize="small" />;
-    case 'completed':
-      return <CheckCircleIcon fontSize="small" />;
-    default:
-      return null;
-  }
-};
-
-const getStatusLabel = (status) => {
-  switch(status?.toLowerCase()) {
-    case 'confirmed':
-      return 'CONFIRMED';
-    case 'approved':
-      return 'APPROVED';
+      return { background: "#dc2626", color: "#fff" };
     case 'pending':
-      return 'PENDING';
-    case 'cancelled':
-      return 'CANCELLED';
-    case 'rejected':
-      return 'REJECTED';
-    case 'completed':
-      return 'COMPLETED';
+      return { background: "#f59e0b", color: "#fff" };
     default:
-      return status?.toUpperCase() || 'UNKNOWN';
+      return { background: "#6b7280", color: "#fff" };
   }
 };
 
@@ -189,23 +174,14 @@ const OwnerDashboard = () => {
         ? pgRes.data
         : pgRes.data?.data || [];
 
-      // Debug: Log the first property's photos to see format
-      if (pgData.length > 0) {
-        console.log("📸 First property photos (raw):", pgData[0].photos);
-      }
-
       const properties = pgData.map(pg => {
         const photos = parseArray(pg.photos);
-        
-        // Debug: Log parsed photos
-        console.log(`Property ${pg.pg_name} parsed photos:`, photos);
         
         return {
           ...pg,
           id: pg.id || pg.pg_id,
           pg_id: pg.pg_id || pg.id,
           photos,
-          // ✅ Don't use getImageUrl here - let PropertyCard handle it
           image: photos.length ? photos[0] : null,
           total_rooms: Number(pg.total_rooms) || 0,
           available_rooms: Number(pg.available_rooms) || 0
@@ -225,7 +201,7 @@ const OwnerDashboard = () => {
         ? bookingsRes.data
         : bookingsRes.data?.bookings || [];
 
-      // Filter out invalid bookings and sort by date
+      // Filter out invalid bookings
       const validBookings = bookings.filter(booking => 
         booking && booking.id
       );
@@ -419,7 +395,6 @@ const OwnerDashboard = () => {
 
       const url = `https://nepxall.vercel.app/scan/${propertyId}`;
 
-      /* QR DESIGN */
       const qr = new QRCodeStyling({
         width: 600,
         height: 600,
@@ -454,7 +429,6 @@ const OwnerDashboard = () => {
         }
       });
 
-      /* POSTER CANVAS */
       const canvas = document.createElement("canvas");
       canvas.width = 900;
       canvas.height = 1100;
@@ -463,16 +437,13 @@ const OwnerDashboard = () => {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.textAlign = "center";
 
-      /* LOAD LOGO */
       const logo = new Image();
       logo.crossOrigin = "anonymous";
       logo.src = "/logo.png";
 
       logo.onload = async () => {
-        /* LOGO */
         ctx.drawImage(logo, 350, 40, 200, 110);
 
-        /* STRONG NEPXALL BRAND TEXT */
         ctx.font = "900 54px Arial";
         const gradient = ctx.createLinearGradient(360, 210, 540, 210);
         gradient.addColorStop(0, BRAND_BLUE);
@@ -485,17 +456,14 @@ const OwnerDashboard = () => {
         ctx.fillText("Nepxall", 450, 210);
         ctx.shadowColor = "transparent";
 
-        /* TAGLINE */
         ctx.font = "26px Arial";
         ctx.fillStyle = "#94a3b8";
         ctx.fillText("Next Places for Living", 450, 250);
 
-        /* PROPERTY NAME */
         ctx.font = "bold 36px Arial";
         ctx.fillStyle = "#111827";
         ctx.fillText(propertyName.toUpperCase(), 450, 320);
 
-        /* DESCRIPTION */
         ctx.font = "26px Arial";
         ctx.fillStyle = BRAND_BLUE;
         ctx.fillText("Scan QR to View Rooms", 450, 380);
@@ -503,20 +471,16 @@ const OwnerDashboard = () => {
         ctx.fillStyle = "#6B7280";
         ctx.fillText("Book Instantly Online", 450, 415);
 
-        /* QR IMAGE */
         const qrBlob = await qr.getRawData("png");
         const qrImg = new Image();
         qrImg.src = URL.createObjectURL(qrBlob);
 
         qrImg.onload = () => {
           ctx.drawImage(qrImg, 150, 450, 600, 600);
-
-          /* FOOTER */
           ctx.font = "22px Arial";
           ctx.fillStyle = "#6B7280";
           ctx.fillText("Powered by Nepxall", 450, 1080);
 
-          /* DOWNLOAD */
           const link = document.createElement("a");
           link.href = canvas.toDataURL("image/png");
           link.download = `nepxall-${propertyName}-entrance-qr.png`;
@@ -727,11 +691,11 @@ const OwnerDashboard = () => {
         </>
       )}
 
-      {/* RECENT BOOKINGS SECTION - Card Style like OwnerBookings */}
+      {/* RECENT BOOKINGS SECTION - Simple Card Style */}
       <Box mt={4}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h5" fontWeight={600}>
-            Recent Booking Requests
+            Recent Bookings
             {stats.totalBookings > 0 && (
               <Chip 
                 label={stats.totalBookings} 
@@ -766,160 +730,122 @@ const OwnerDashboard = () => {
             </Button>
           </Paper>
         ) : (
-          <Grid container spacing={2}>
+          <Box>
             {recentBookings.map((booking) => (
-              <Grid item xs={12} key={booking.id}>
-                <Card sx={{ 
-                  borderRadius: 2,
-                  border: '1px solid #e5e7eb',
-                  transition: 'all 0.2s',
-                  '&:hover': {
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                    transform: 'translateY(-2px)'
-                  }
-                }}>
-                  <CardContent>
-                    <Grid container spacing={2}>
-                      {/* Left Section - Tenant Info */}
-                      <Grid item xs={12} md={4}>
-                        <Box display="flex" alignItems="center" gap={2}>
-                          <Avatar 
-                            sx={{ 
-                              width: 48, 
-                              height: 48, 
-                              bgcolor: '#4CAF50',
-                              fontSize: '1.2rem'
-                            }}
-                          >
-                            {booking.tenant_name?.charAt(0) || booking.name?.charAt(0) || 'U'}
-                          </Avatar>
-                          <Box>
-                            <Typography variant="h6" fontWeight={600}>
-                              {booking.tenant_name || booking.name || 'Guest'}
-                            </Typography>
-                            <Box display="flex" alignItems="center" gap={1} mt={0.5}>
-                              <PhoneIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                              <Typography variant="body2" color="text.secondary">
-                                {booking.tenant_phone || booking.phone || (
-                                  <span style={{ color: '#f59e0b' }}>
-                                    🔒 Hidden until approval
-                                  </span>
-                                )}
-                              </Typography>
-                            </Box>
-                            {booking.tenant_email && (
-                              <Box display="flex" alignItems="center" gap={1} mt={0.5}>
-                                <EmailIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                <Typography variant="body2" color="text.secondary">
-                                  {booking.tenant_email}
-                                </Typography>
-                              </Box>
-                            )}
-                          </Box>
-                        </Box>
-                      </Grid>
+              <Card key={booking.id} sx={{ 
+                mb: 2, 
+                borderRadius: 2,
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                overflow: 'hidden'
+              }}>
+                <CardContent sx={{ p: 3 }}>
+                  {/* Simple format like the example */}
+                  <Box sx={{ mb: 1.5 }}>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      <strong>PG:</strong> {booking.pg_name || 'N/A'}
+                    </Typography>
+                  </Box>
 
-                      {/* Middle Section - Booking Details */}
-                      <Grid item xs={12} md={4}>
-                        <Box display="flex" flexDirection="column" gap={1}>
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <HomeIcon sx={{ fontSize: 18, color: 'primary.main' }} />
-                            <Typography variant="body1" fontWeight={500}>
-                              {booking.pg_name || 'N/A'}
-                            </Typography>
-                          </Box>
-                          
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <CalendarIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                            <Typography variant="body2">
-                              Check-in: {formatDate(booking.check_in_date)}
-                            </Typography>
-                          </Box>
+                  <Box sx={{ mb: 1.5 }}>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      <strong>Tenant:</strong> {booking.tenant_name || booking.name || 'N/A'}
+                    </Typography>
+                  </Box>
 
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <PersonIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                            <Typography variant="body2">
-                              Room Type: {booking.room_type || 'Standard'}
-                            </Typography>
-                          </Box>
+                  <Box sx={{ mb: 1.5 }}>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      <strong>Phone:</strong> {booking.tenant_phone || booking.phone || 'N/A'}
+                    </Typography>
+                  </Box>
 
-                          <Typography variant="h6" color="primary.main" fontWeight={700}>
-                            {formatCurrency(booking.amount)}
-                          </Typography>
-                        </Box>
-                      </Grid>
+                  <Box sx={{ mb: 1.5 }}>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      <strong>Check-in:</strong> {formatDateString(booking.check_in_date)}
+                    </Typography>
+                  </Box>
 
-                      {/* Right Section - Status & Actions */}
-                      <Grid item xs={12} md={4}>
-                        <Box display="flex" flexDirection="column" alignItems={{ md: 'flex-end' }} gap={2}>
-                          <Chip
-                            icon={getStatusIcon(booking.status)}
-                            label={getStatusLabel(booking.status)}
-                            color={getStatusColor(booking.status)}
-                            sx={{ 
-                              fontWeight: 600,
-                              px: 1,
-                              '& .MuiChip-icon': { ml: 0.5 }
-                            }}
-                          />
+                  <Box sx={{ mb: 1.5 }}>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      <strong>Room Type:</strong> {booking.room_type || 'Standard'}
+                    </Typography>
+                  </Box>
 
-                          {booking.status?.toLowerCase() === "pending" && (
-                            <Box display="flex" gap={1}>
-                              <Button
-                                variant="contained"
-                                color="success"
-                                size="small"
-                                disabled={actionLoading === booking.id}
-                                onClick={() => handleApproveBooking(booking.id)}
-                                startIcon={actionLoading === booking.id ? <CircularProgress size={16} /> : <CheckCircleIcon />}
-                                sx={{ minWidth: 100 }}
-                              >
-                                {actionLoading === booking.id ? '...' : 'Approve'}
-                              </Button>
-                              
-                              <Button
-                                variant="contained"
-                                color="error"
-                                size="small"
-                                disabled={actionLoading === booking.id}
-                                onClick={() => handleRejectBooking(booking.id)}
-                                startIcon={actionLoading === booking.id ? <CircularProgress size={16} /> : <CancelIcon />}
-                                sx={{ minWidth: 100 }}
-                              >
-                                {actionLoading === booking.id ? '...' : 'Reject'}
-                              </Button>
-                            </Box>
-                          )}
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      <strong>Status:</strong>{' '}
+                      <span style={{
+                        display: 'inline-block',
+                        padding: '4px 12px',
+                        borderRadius: 20,
+                        color: '#fff',
+                        fontSize: 12,
+                        fontWeight: 'bold',
+                        background: booking.status?.toLowerCase() === 'approved' ? '#16a34a' :
+                                   booking.status?.toLowerCase() === 'rejected' ? '#dc2626' :
+                                   booking.status?.toLowerCase() === 'pending' ? '#f59e0b' : '#6b7280',
+                        marginLeft: 8
+                      }}>
+                        {booking.status?.toUpperCase() || 'PENDING'}
+                      </span>
+                    </Typography>
+                  </Box>
 
-                          {booking.status?.toLowerCase() !== "pending" && (
-                            <Tooltip title="View Details">
-                              <Button
-                                variant="outlined"
-                                size="small"
-                                onClick={() => handleViewBooking(booking.id)}
-                                startIcon={<ViewIcon />}
-                              >
-                                View Details
-                              </Button>
-                            </Tooltip>
-                          )}
-                        </Box>
-                      </Grid>
-                    </Grid>
+                  {/* Action Buttons for Pending Bookings */}
+                  {booking.status?.toLowerCase() === 'pending' && (
+                    <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+                      <Button
+                        variant="contained"
+                        sx={{ 
+                          bgcolor: '#16a34a', 
+                          '&:hover': { bgcolor: '#15803d' },
+                          color: '#fff',
+                          textTransform: 'none',
+                          fontWeight: 500
+                        }}
+                        disabled={actionLoading === booking.id}
+                        onClick={() => handleApproveBooking(booking.id)}
+                        startIcon={actionLoading === booking.id ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : <CheckCircleIcon />}
+                      >
+                        {actionLoading === booking.id ? 'Processing...' : '✅ Approve'}
+                      </Button>
 
-                    {/* Additional Info for Non-Pending Bookings */}
-                    {booking.status?.toLowerCase() !== "pending" && booking.tenant_phone && (
-                      <Box mt={2} pt={2} borderTop="1px dashed #e5e7eb">
-                        <Typography variant="caption" color="text.secondary">
-                          📞 Contact: {booking.tenant_phone}
-                        </Typography>
-                      </Box>
-                    )}
-                  </CardContent>
-                </Card>
-              </Grid>
+                      <Button
+                        variant="contained"
+                        sx={{ 
+                          bgcolor: '#dc2626', 
+                          '&:hover': { bgcolor: '#b91c1c' },
+                          color: '#fff',
+                          textTransform: 'none',
+                          fontWeight: 500
+                        }}
+                        disabled={actionLoading === booking.id}
+                        onClick={() => handleRejectBooking(booking.id)}
+                        startIcon={actionLoading === booking.id ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : <CancelIcon />}
+                      >
+                        {actionLoading === booking.id ? 'Processing...' : '❌ Reject'}
+                      </Button>
+                    </Box>
+                  )}
+
+                  {/* View Details for Non-Pending Bookings */}
+                  {booking.status?.toLowerCase() !== 'pending' && (
+                    <Box sx={{ mt: 2 }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => handleViewBooking(booking.id)}
+                        startIcon={<ViewIcon />}
+                        sx={{ borderRadius: 2 }}
+                      >
+                        View Details
+                      </Button>
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
             ))}
-          </Grid>
+          </Box>
         )}
       </Box>
 
