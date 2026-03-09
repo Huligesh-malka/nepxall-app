@@ -29,7 +29,9 @@ import {
   Email as EmailIcon,
   CalendarToday as CalendarIcon,
   Hotel as RoomIcon,
-  Person as PersonIcon
+  Person as PersonIcon,
+  AccountBalance as DepositIcon,
+  Receipt as RentIcon
 } from "@mui/icons-material";
 
 import StatCard from "../components/owner/StatCard";
@@ -44,7 +46,7 @@ const parseArray = (v) => {
 };
 
 const formatCurrency = (amt) => {
-  if (!amt) return "₹0";
+  if (!amt && amt !== 0) return "₹0";
   const num = Number(amt);
   return isNaN(num) ? "₹0" : `₹${num.toLocaleString()}`;
 };
@@ -105,6 +107,7 @@ const OwnerDashboard = () => {
   const [pgs, setPGs] = useState([]);
   const [recentBookings, setRecentBookings] = useState([]);
   const [recentEnquiries, setRecentEnquiries] = useState([]);
+  const [bookingHistory, setBookingHistory] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
@@ -119,7 +122,11 @@ const OwnerDashboard = () => {
     pendingBookings: 0,
     totalBookings: 0,
     avgRating: 0,
-    totalEnquiries: 0
+    totalEnquiries: 0,
+    totalRent: 0,
+    totalDeposit: 0,
+    pendingRent: 0,
+    pendingDeposit: 0
   });
 
   const [snackbar, setSnackbar] = useState({
@@ -166,23 +173,14 @@ const OwnerDashboard = () => {
         ? pgRes.data
         : pgRes.data?.data || [];
 
-      // Debug: Log the first property's photos to see format
-      if (pgData.length > 0) {
-        console.log("📸 First property photos (raw):", pgData[0].photos);
-      }
-
       const properties = pgData.map(pg => {
         const photos = parseArray(pg.photos);
-        
-        // Debug: Log parsed photos
-        console.log(`Property ${pg.pg_name} parsed photos:`, photos);
         
         return {
           ...pg,
           id: pg.id || pg.pg_id,
           pg_id: pg.pg_id || pg.id,
           photos,
-          // ✅ Don't use getImageUrl here - let PropertyCard handle it
           image: photos.length ? photos[0] : null,
           total_rooms: Number(pg.total_rooms) || 0,
           available_rooms: Number(pg.available_rooms) || 0
@@ -202,6 +200,9 @@ const OwnerDashboard = () => {
         ? bookingsRes.data
         : bookingsRes.data?.bookings || [];
 
+      // Store full booking history
+      setBookingHistory(bookings);
+
       // Enhance booking data with more details
       const enhancedBookings = bookings.map(booking => ({
         ...booking,
@@ -211,6 +212,8 @@ const OwnerDashboard = () => {
         room_type: booking.room_type || 'Not specified',
         check_in_date: booking.check_in_date || booking.created_at,
         amount: booking.amount || 0,
+        deposit_amount: booking.deposit_amount || 0,
+        monthly_rent: booking.monthly_rent || booking.amount || 0,
         pg_name: booking.pg_name || 'N/A'
       }));
 
@@ -236,6 +239,26 @@ const OwnerDashboard = () => {
       const avgRating = ratings.length
         ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
         : 0;
+
+      // Calculate Total Rent from all confirmed bookings
+      const totalRent = bookings
+        .filter(b => ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase()))
+        .reduce((a, b) => a + (Number(b.monthly_rent) || Number(b.amount) || 0), 0);
+
+      // Calculate Total Deposit from all confirmed bookings
+      const totalDeposit = bookings
+        .filter(b => ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase()))
+        .reduce((a, b) => a + (Number(b.deposit_amount) || 0), 0);
+
+      // Calculate Pending Rent (from pending bookings)
+      const pendingRent = bookings
+        .filter(b => b?.status?.toLowerCase() === "pending")
+        .reduce((a, b) => a + (Number(b.monthly_rent) || Number(b.amount) || 0), 0);
+
+      // Calculate Pending Deposit (from pending bookings)
+      const pendingDeposit = bookings
+        .filter(b => b?.status?.toLowerCase() === "pending")
+        .reduce((a, b) => a + (Number(b.deposit_amount) || 0), 0);
 
       const totalEarnings = bookings
         .filter(b => ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase()))
@@ -265,7 +288,11 @@ const OwnerDashboard = () => {
         pendingBookings,
         totalBookings: bookings.length,
         avgRating,
-        totalEnquiries: recentEnquiries.length
+        totalEnquiries: recentEnquiries.length,
+        totalRent,
+        totalDeposit,
+        pendingRent,
+        pendingDeposit
       });
 
       setSnackbar({
@@ -551,8 +578,8 @@ const OwnerDashboard = () => {
         </Box>
       </Box>
 
-      {/* STATS CARDS */}
-      <Grid container spacing={3} mb={4}>
+      {/* STATS CARDS - First Row */}
+      <Grid container spacing={3} mb={3}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard 
             title="Total Properties" 
@@ -590,6 +617,49 @@ const OwnerDashboard = () => {
             icon={<PendingIcon sx={{ fontSize: 40 }} />} 
             color="#f44336"
             bgColor="#FFEBEE"
+          />
+        </Grid>
+      </Grid>
+
+      {/* STATS CARDS - Second Row (Rent & Deposit) */}
+      <Grid container spacing={3} mb={4}>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard 
+            title="Total Rent (All Time)" 
+            value={formatCurrency(stats.totalRent)} 
+            icon={<RentIcon sx={{ fontSize: 40 }} />} 
+            color="#8B5CF6"
+            bgColor="#F3E8FF"
+          />
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard 
+            title="Total Deposit" 
+            value={formatCurrency(stats.totalDeposit)} 
+            icon={<DepositIcon sx={{ fontSize: 40 }} />} 
+            color="#EC4899"
+            bgColor="#FCE7F3"
+          />
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard 
+            title="Pending Rent" 
+            value={formatCurrency(stats.pendingRent)} 
+            icon={<RentIcon sx={{ fontSize: 40 }} />} 
+            color="#F59E0B"
+            bgColor="#FEF3C7"
+          />
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard 
+            title="Pending Deposit" 
+            value={formatCurrency(stats.pendingDeposit)} 
+            icon={<DepositIcon sx={{ fontSize: 40 }} />} 
+            color="#EF4444"
+            bgColor="#FEE2E2"
           />
         </Grid>
       </Grid>
@@ -666,7 +736,7 @@ const OwnerDashboard = () => {
         </>
       )}
 
-      {/* COMPACT TABLE FOR RECENT BOOKINGS - 5 COLUMNS */}
+      {/* COMPACT TABLE FOR RECENT BOOKINGS - 7 COLUMNS */}
       <Box mt={4}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h5" fontWeight={600}>
@@ -691,14 +761,16 @@ const OwnerDashboard = () => {
           )}
         </Box>
 
-        <TableContainer component={Paper} sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderRadius: 2 }}>
-          <Table sx={{ minWidth: 650 }}>
+        <TableContainer component={Paper} sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderRadius: 2, overflowX: 'auto' }}>
+          <Table sx={{ minWidth: 900 }}>
             <TableHead sx={{ bgcolor: '#f8fafc' }}>
               <TableRow>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>PROPERTY</TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>TENANT</TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>CHECK-IN</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>AMOUNT</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>MONTHLY RENT</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>DEPOSIT</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>TOTAL AMOUNT</TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>STATUS</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>ACTION</TableCell>
               </TableRow>
@@ -706,7 +778,7 @@ const OwnerDashboard = () => {
             <TableBody>
               {recentBookings.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                     <Typography color="text.secondary">
                       No bookings yet
                     </Typography>
@@ -715,6 +787,9 @@ const OwnerDashboard = () => {
               ) : (
                 recentBookings.map((booking) => {
                   const statusStyle = getStatusBadgeStyle(booking.status);
+                  const monthlyRent = booking.monthly_rent || booking.amount || 0;
+                  const deposit = booking.deposit_amount || 0;
+                  const totalAmount = (Number(monthlyRent) + Number(deposit)) || booking.amount || 0;
                   
                   return (
                     <TableRow 
@@ -763,17 +838,25 @@ const OwnerDashboard = () => {
                         </Box>
                       </TableCell>
 
-                      {/* AMOUNT COLUMN */}
+                      {/* MONTHLY RENT COLUMN */}
                       <TableCell>
-                        {booking.amount > 0 ? (
-                          <Typography variant="body2" fontWeight={600} color="primary.main">
-                            {formatCurrency(booking.amount)}
-                          </Typography>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">
-                            -
-                          </Typography>
-                        )}
+                        <Typography variant="body2" fontWeight={500} color="#8B5CF6">
+                          {formatCurrency(monthlyRent)}
+                        </Typography>
+                      </TableCell>
+
+                      {/* DEPOSIT COLUMN */}
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={500} color="#EC4899">
+                          {formatCurrency(deposit)}
+                        </Typography>
+                      </TableCell>
+
+                      {/* TOTAL AMOUNT COLUMN */}
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={600} color="primary.main">
+                          {formatCurrency(totalAmount)}
+                        </Typography>
                       </TableCell>
 
                       {/* STATUS COLUMN */}
