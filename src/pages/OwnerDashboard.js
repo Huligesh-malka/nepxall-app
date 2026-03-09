@@ -12,7 +12,7 @@ import {
   CircularProgress, Paper, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow,
   Chip, Avatar, IconButton, Card, CardContent,
-  Divider, Stack, Tooltip
+  Divider, Stack, Tooltip, Container
 } from "@mui/material";
 
 import {
@@ -29,7 +29,9 @@ import {
   Email as EmailIcon,
   CalendarToday as CalendarIcon,
   Hotel as RoomIcon,
-  Person as PersonIcon
+  Person as PersonIcon,
+  People as OccupantsIcon,
+  TrendingUp as TrendingUpIcon
 } from "@mui/icons-material";
 
 import StatCard from "../components/owner/StatCard";
@@ -116,7 +118,8 @@ const OwnerDashboard = () => {
     totalProperties: 0,
     totalRooms: 0,
     availableRooms: 0,
-    monthlyEarnings: 0,
+    occupiedRooms: 0,
+    occupancyRate: 0,
     totalEarnings: 0,
     pendingBookings: 0,
     totalBookings: 0,
@@ -313,6 +316,8 @@ const OwnerDashboard = () => {
 
       const totalRooms = properties.reduce((a, b) => a + (b.total_rooms || 0), 0);
       const availableRooms = properties.reduce((a, b) => a + (b.available_rooms || 0), 0);
+      const occupiedRooms = totalRooms - availableRooms;
+      const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
 
       const ratings = properties
         .filter(p => p.avg_rating > 0)
@@ -346,17 +351,6 @@ const OwnerDashboard = () => {
         .filter(b => ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase()))
         .reduce((a, b) => a + (Number(b.amount) || 0), 0);
 
-      const currentMonth = new Date().getMonth();
-      const currentYear = new Date().getFullYear();
-
-      const monthlyEarnings = enhancedBookings
-        .filter(b => {
-          if (!["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase())) return false;
-          const d = new Date(b.created_at || b.check_in_date);
-          return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-        })
-        .reduce((a, b) => a + (Number(b.amount) || 0), 0);
-
       const pendingBookings = bookings.filter(b => 
         b?.status?.toLowerCase() === "pending"
       ).length;
@@ -365,8 +359,9 @@ const OwnerDashboard = () => {
         totalProperties: properties.length,
         totalRooms,
         availableRooms,
+        occupiedRooms,
+        occupancyRate,
         totalEarnings,
-        monthlyEarnings,
         pendingBookings,
         totalBookings: bookings.length,
         avgRating,
@@ -598,337 +593,330 @@ const OwnerDashboard = () => {
   /* ---------------- UI ---------------- */
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 } }}>
+    <Container maxWidth="xl" sx={{ py: 3 }}>
+      <Box sx={{ width: '100%' }}>
 
-      {/* HEADER */}
-      <Box 
-        display="flex" 
-        justifyContent="space-between" 
-        alignItems="center" 
-        mb={4} 
-        flexWrap="wrap" 
-        gap={2}
-      >
-        <Box>
-          <Typography variant="h4" fontWeight={700} gutterBottom>
-            Owner Dashboard
-          </Typography>
-          <Typography color="text.secondary">
-            Manage your properties and track performance
-          </Typography>
-        </Box>
-
-        <Box display="flex" gap={2} flexWrap="wrap">
-          <IconButton 
-            onClick={handleRefresh} 
-            disabled={refreshing}
-            color="primary"
-            sx={{ bgcolor: 'background.paper', boxShadow: 1 }}
-            title="Refresh"
-          >
-            <RefreshIcon />
-          </IconButton>
-
-          <Button
-            startIcon={<ChatIcon />}
-            variant="contained"
-            color="success"
-            onClick={() => navigate("/owner/chats")}
-            sx={{ boxShadow: 2 }}
-          >
-            Chats
-          </Button>
-
-          <Button
-            startIcon={<NotificationsIcon />}
-            onClick={() => navigate("/owner/notifications")}
-            variant="outlined"
-          >
-            Notifications
-          </Button>
-
-          <Button
-            startIcon={<AddIcon />}
-            onClick={() => navigate("/owner/add")}
-            variant="contained"
-            color="primary"
-            sx={{ boxShadow: 2 }}
-          >
-            Add Property
-          </Button>
-        </Box>
-      </Box>
-
-      {/* STATS CARDS - Only 4 Cards */}
-      <Grid container spacing={3} mb={4}>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard 
-            title="Total Properties" 
-            value={stats.totalProperties} 
-            icon={<ApartmentIcon sx={{ fontSize: 40 }} />} 
-            color="#4CAF50"
-            bgColor="#E8F5E8"
-          />
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard 
-            title="Total Rooms" 
-            value={stats.totalRooms} 
-            icon={<CommunityIcon sx={{ fontSize: 40 }} />} 
-            color="#2196F3"
-            bgColor="#E3F2FD"
-          />
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard 
-            title="Monthly Earnings" 
-            value={formatCurrency(stats.monthlyEarnings)} 
-            icon={<MoneyIcon sx={{ fontSize: 40 }} />} 
-            color="#FF9800"
-            bgColor="#FFF3E0"
-          />
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard 
-            title="Pending Bookings" 
-            value={stats.pendingBookings} 
-            icon={<PendingIcon sx={{ fontSize: 40 }} />} 
-            color="#f44336"
-            bgColor="#FFEBEE"
-          />
-        </Grid>
-      </Grid>
-
-      {/* AVAILABILITY ALERT */}
-      {stats.availableRooms > 0 && (
-        <Alert 
-          severity="success" 
-          sx={{ mb: 3 }}
-          icon={<CommunityIcon />}
+        {/* HEADER */}
+        <Box 
+          display="flex" 
+          justifyContent="space-between" 
+          alignItems="center" 
+          mb={4} 
+          flexWrap="wrap" 
+          gap={2}
         >
-          <strong>{stats.availableRooms}</strong> rooms available across your properties
-        </Alert>
-      )}
-
-      {/* EMPTY STATE */}
-      {pgs.length === 0 && (
-        <Alert 
-          severity="info" 
-          sx={{ mb: 3, py: 2 }}
-          action={
-            <Button 
-              color="inherit" 
-              size="small" 
-              onClick={() => navigate("/owner/add")}
-              startIcon={<AddIcon />}
-            >
-              Add Now
-            </Button>
-          }
-        >
-          <Typography variant="body1">
-            <strong>No properties added yet!</strong> Click the button to add your first property.
-          </Typography>
-        </Alert>
-      )}
-
-      {/* PROPERTIES SECTION */}
-      {pgs.length > 0 && (
-        <>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-            <Typography variant="h5" fontWeight={600}>
-              Your Properties
-              <Chip 
-                label={pgs.length} 
-                size="small" 
-                sx={{ ml: 1, bgcolor: 'primary.main', color: 'white' }} 
-              />
+          <Box>
+            <Typography variant="h4" fontWeight={700} gutterBottom>
+              Owner Dashboard
+            </Typography>
+            <Typography color="text.secondary">
+              Manage your properties and track performance
             </Typography>
           </Box>
 
-          <Grid container spacing={3} mb={4}>
-            {pgs.map(pg => (
-              <Grid item xs={12} key={pg.id || pg.pg_id}>
-                <PropertyCard
-                  property={pg}
-                  onView={() => handleViewProperty(pg.id || pg.pg_id)}
-                  onEdit={() => handleEditProperty(pg.id || pg.pg_id)}
-                  onRooms={() => handleManageRooms(pg.id || pg.pg_id)}
-                  onPhotos={() => handleManagePhotos(pg.id || pg.pg_id)}
-                  onVideos={() => handleManageVideos(pg.id || pg.pg_id)}
-                  onChat={() => handleChat(pg.id || pg.pg_id)}
-                  onAnnouncement={() => handleAnnouncement(pg.id || pg.pg_id)}
-                  onGenerateQR={() => handleGenerateQR(pg.id || pg.pg_id)}
-                  onCreatePlan={
-                    pg.pg_category === "coliving"
-                      ? () => handleCreatePlan(pg.id || pg.pg_id)
-                      : null
-                  }
-                />
-              </Grid>
-            ))}
-          </Grid>
-        </>
-      )}
-
-      {/* COMPACT TABLE FOR RECENT BOOKINGS - 6 COLUMNS (Removed Deposit and Action) */}
-      <Box mt={4}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h5" fontWeight={600}>
-            Recent Bookings
-            {stats.totalBookings > 0 && (
-              <Chip 
-                label={stats.totalBookings} 
-                size="small" 
-                sx={{ ml: 1, bgcolor: 'primary.main', color: 'white' }} 
-              />
-            )}
-          </Typography>
-          
-          {stats.totalBookings > 5 && (
-            <Button 
-              onClick={() => navigate("/owner/bookings")}
-              endIcon={<ViewIcon />}
-              size="small"
+          <Box display="flex" gap={2} flexWrap="wrap">
+            <IconButton 
+              onClick={handleRefresh} 
+              disabled={refreshing}
+              color="primary"
+              sx={{ bgcolor: 'background.paper', boxShadow: 1 }}
+              title="Refresh"
             >
-              View All
+              <RefreshIcon />
+            </IconButton>
+
+            <Button
+              startIcon={<ChatIcon />}
+              variant="contained"
+              color="success"
+              onClick={() => navigate("/owner/chats")}
+              sx={{ boxShadow: 2 }}
+            >
+              Chats
             </Button>
-          )}
+
+            <Button
+              startIcon={<NotificationsIcon />}
+              onClick={() => navigate("/owner/notifications")}
+              variant="outlined"
+            >
+              Notifications
+            </Button>
+
+            <Button
+              startIcon={<AddIcon />}
+              onClick={() => navigate("/owner/add")}
+              variant="contained"
+              color="primary"
+              sx={{ boxShadow: 2 }}
+            >
+              Add Property
+            </Button>
+          </Box>
         </Box>
 
-        <TableContainer component={Paper} sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderRadius: 2, overflowX: 'auto' }}>
-          <Table sx={{ minWidth: 800 }}>
-            <TableHead sx={{ bgcolor: '#f8fafc' }}>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>PROPERTY</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>TENANT</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>CHECK-IN</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>MONTHLY RENT</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>TOTAL AMOUNT</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>STATUS</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {recentBookings.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                    <Typography color="text.secondary">
-                      No bookings yet
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                recentBookings.map((booking) => {
-                  const statusStyle = getStatusBadgeStyle(booking.status);
-                  const monthlyRent = booking.monthly_rent || 0;
-                  const deposit = booking.deposit_amount || 0;
-                  const totalAmount = monthlyRent + deposit;
-                  
-                  return (
-                    <TableRow 
-                      key={booking.id}
-                      hover
-                      sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                    >
-                      {/* PROPERTY COLUMN */}
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={500}>
-                          {booking.pg_name}
-                        </Typography>
-                      </TableCell>
+        {/* STATS CARDS - 4 Cards with fixed layout */}
+        <Grid container spacing={3} mb={4}>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard 
+              title="Total Properties" 
+              value={stats.totalProperties} 
+              icon={<ApartmentIcon sx={{ fontSize: 40 }} />} 
+              color="#4CAF50"
+              bgColor="#E8F5E8"
+            />
+          </Grid>
 
-                      {/* TENANT COLUMN */}
-                      <TableCell>
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <Avatar sx={{ width: 32, height: 32, bgcolor: '#4CAF50', fontSize: '0.875rem' }}>
-                            {booking.tenant_name?.charAt(0) || 'U'}
-                          </Avatar>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard 
+              title="Total Rooms" 
+              value={stats.totalRooms} 
+              icon={<CommunityIcon sx={{ fontSize: 40 }} />} 
+              color="#2196F3"
+              bgColor="#E3F2FD"
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard 
+              title="Occupied Rooms" 
+              value={stats.occupiedRooms} 
+              subvalue={stats.occupancyRate > 0 ? `${stats.occupancyRate}% occupancy` : null}
+              icon={<OccupantsIcon sx={{ fontSize: 40 }} />} 
+              color="#8B5CF6"
+              bgColor="#F3E8FF"
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard 
+              title="Pending Bookings" 
+              value={stats.pendingBookings} 
+              icon={<PendingIcon sx={{ fontSize: 40 }} />} 
+              color="#f44336"
+              bgColor="#FFEBEE"
+            />
+          </Grid>
+        </Grid>
+
+        {/* AVAILABILITY ALERT */}
+        {stats.availableRooms > 0 && (
+          <Alert 
+            severity="success" 
+            sx={{ mb: 3 }}
+            icon={<CommunityIcon />}
+          >
+            <strong>{stats.availableRooms}</strong> rooms available across your properties
+          </Alert>
+        )}
+
+        {/* EMPTY STATE */}
+        {pgs.length === 0 && (
+          <Alert 
+            severity="info" 
+            sx={{ mb: 3, py: 2 }}
+            action={
+              <Button 
+                color="inherit" 
+                size="small" 
+                onClick={() => navigate("/owner/add")}
+                startIcon={<AddIcon />}
+              >
+                Add Now
+              </Button>
+            }
+          >
+            <Typography variant="body1">
+              <strong>No properties added yet!</strong> Click the button to add your first property.
+            </Typography>
+          </Alert>
+        )}
+
+        {/* PROPERTIES SECTION */}
+        {pgs.length > 0 && (
+          <>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="h5" fontWeight={600}>
+                Your Properties
+                <Chip 
+                  label={pgs.length} 
+                  size="small" 
+                  sx={{ ml: 1, bgcolor: 'primary.main', color: 'white' }} 
+                />
+              </Typography>
+            </Box>
+
+            <Grid container spacing={3} mb={4}>
+              {pgs.map(pg => (
+                <Grid item xs={12} key={pg.id || pg.pg_id}>
+                  <PropertyCard
+                    property={pg}
+                    onView={() => handleViewProperty(pg.id || pg.pg_id)}
+                    onEdit={() => handleEditProperty(pg.id || pg.pg_id)}
+                    onRooms={() => handleManageRooms(pg.id || pg.pg_id)}
+                    onPhotos={() => handleManagePhotos(pg.id || pg.pg_id)}
+                    onVideos={() => handleManageVideos(pg.id || pg.pg_id)}
+                    onChat={() => handleChat(pg.id || pg.pg_id)}
+                    onAnnouncement={() => handleAnnouncement(pg.id || pg.pg_id)}
+                    onGenerateQR={() => handleGenerateQR(pg.id || pg.pg_id)}
+                    onCreatePlan={
+                      pg.pg_category === "coliving"
+                        ? () => handleCreatePlan(pg.id || pg.pg_id)
+                        : null
+                    }
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          </>
+        )}
+
+        {/* COMPACT TABLE FOR RECENT BOOKINGS - 5 COLUMNS (Removed Total Amount) */}
+        <Box mt={4}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="h5" fontWeight={600}>
+              Recent Bookings
+              {stats.totalBookings > 0 && (
+                <Chip 
+                  label={stats.totalBookings} 
+                  size="small" 
+                  sx={{ ml: 1, bgcolor: 'primary.main', color: 'white' }} 
+                />
+              )}
+            </Typography>
+            
+            {stats.totalBookings > 5 && (
+              <Button 
+                onClick={() => navigate("/owner/bookings")}
+                endIcon={<ViewIcon />}
+                size="small"
+              >
+                View All
+              </Button>
+            )}
+          </Box>
+
+          <TableContainer component={Paper} sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderRadius: 2 }}>
+            <Table>
+              <TableHead sx={{ bgcolor: '#f8fafc' }}>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>PROPERTY</TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>TENANT</TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>CHECK-IN</TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>MONTHLY RENT</TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>STATUS</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {recentBookings.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                      <Typography color="text.secondary">
+                        No bookings yet
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  recentBookings.map((booking) => {
+                    const statusStyle = getStatusBadgeStyle(booking.status);
+                    const monthlyRent = booking.monthly_rent || 0;
+                    
+                    return (
+                      <TableRow 
+                        key={booking.id}
+                        hover
+                        sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                      >
+                        {/* PROPERTY COLUMN */}
+                        <TableCell>
+                          <Typography variant="body2" fontWeight={500}>
+                            {booking.pg_name}
+                          </Typography>
+                        </TableCell>
+
+                        {/* TENANT COLUMN */}
+                        <TableCell>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <Avatar sx={{ width: 32, height: 32, bgcolor: '#4CAF50', fontSize: '0.875rem' }}>
+                              {booking.tenant_name?.charAt(0) || 'U'}
+                            </Avatar>
+                            <Box>
+                              <Typography variant="body2" fontWeight={500}>
+                                {booking.tenant_name}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <PhoneIcon sx={{ fontSize: 12 }} />
+                                {booking.tenant_phone ? (
+                                  booking.tenant_phone
+                                ) : (
+                                  <span style={{ color: '#f59e0b' }}>Hidden</span>
+                                )}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </TableCell>
+
+                        {/* CHECK-IN COLUMN */}
+                        <TableCell>
                           <Box>
-                            <Typography variant="body2" fontWeight={500}>
-                              {booking.tenant_name}
+                            <Typography variant="body2">
+                              {formatDate(booking.check_in_date)}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <PhoneIcon sx={{ fontSize: 12 }} />
-                              {booking.tenant_phone ? (
-                                booking.tenant_phone
-                              ) : (
-                                <span style={{ color: '#f59e0b' }}>Hidden</span>
-                              )}
+                            <Typography variant="caption" color="text.secondary">
+                              {booking.room_type}
                             </Typography>
                           </Box>
-                        </Box>
-                      </TableCell>
+                        </TableCell>
 
-                      {/* CHECK-IN COLUMN */}
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body2">
-                            {formatDate(booking.check_in_date)}
+                        {/* MONTHLY RENT COLUMN */}
+                        <TableCell>
+                          <Typography variant="body2" fontWeight={500} color="#8B5CF6">
+                            {formatCurrency(monthlyRent)}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {booking.room_type}
-                          </Typography>
-                        </Box>
-                      </TableCell>
+                        </TableCell>
 
-                      {/* MONTHLY RENT COLUMN */}
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={500} color="#8B5CF6">
-                          {formatCurrency(monthlyRent)}
-                        </Typography>
-                      </TableCell>
+                        {/* STATUS COLUMN */}
+                        <TableCell>
+                          <Chip 
+                            label={booking.status?.toUpperCase() || 'PENDING'}
+                            size="small"
+                            sx={{ 
+                              bgcolor: statusStyle.bg,
+                              color: statusStyle.color,
+                              fontWeight: 600,
+                              fontSize: '0.75rem',
+                              minWidth: 80
+                            }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
 
-                      {/* TOTAL AMOUNT COLUMN */}
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={600} color="primary.main">
-                          {formatCurrency(totalAmount)}
-                        </Typography>
-                      </TableCell>
-
-                      {/* STATUS COLUMN */}
-                      <TableCell>
-                        <Chip 
-                          label={booking.status?.toUpperCase() || 'PENDING'}
-                          size="small"
-                          sx={{ 
-                            bgcolor: statusStyle.bg,
-                            color: statusStyle.color,
-                            fontWeight: 600,
-                            fontSize: '0.75rem',
-                            minWidth: 80
-                          }}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Box>
-
-      {/* SNACKBAR */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert 
-          severity={snackbar.severity} 
-          variant="filled"
+        {/* SNACKBAR */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={4000}
           onClose={() => setSnackbar({ ...snackbar, open: false })}
-          sx={{ width: '100%' }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+          <Alert 
+            severity={snackbar.severity} 
+            variant="filled"
+            onClose={() => setSnackbar({ ...snackbar, open: false })}
+            sx={{ width: '100%' }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
 
-    </Box>
+      </Box>
+    </Container>
   );
 };
 
