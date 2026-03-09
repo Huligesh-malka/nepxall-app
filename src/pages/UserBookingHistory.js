@@ -68,7 +68,7 @@ const UserBookingHistory = () => {
   }, [loadBookings]);
 
   //////////////////////////////////////////////////////
-  // CREATE UPI PAYMENT
+  // CREATE UPI PAYMENT - WITH ERROR HANDLING
   //////////////////////////////////////////////////////
   const handlePayNow = async (booking) => {
     try {
@@ -105,7 +105,24 @@ const UserBookingHistory = () => {
 
     } catch (err) {
       console.error("PAYMENT ERROR:", err);
-      alert("Payment initialization failed");
+      
+      // Handle existing payment error
+      if (err.response?.data?.existingPayment) {
+        const existing = err.response.data.existingPayment;
+        
+        if (existing.status === 'paid') {
+          alert("✅ Payment already completed for this booking!");
+        } else if (existing.status === 'submitted') {
+          alert("⏳ You already have a payment pending verification. Please wait for admin approval.");
+        } else if (existing.status === 'pending') {
+          alert("💰 You already have a pending payment. Please complete it or wait.");
+        }
+        
+        // Refresh to show correct status
+        loadBookings();
+      } else {
+        alert(err.response?.data?.message || "Payment initialization failed");
+      }
     } finally {
       setPayingId(null);
     }
@@ -186,13 +203,10 @@ const UserBookingHistory = () => {
   };
 
   //////////////////////////////////////////////////////
-  // GET PAYMENT STATUS DISPLAY - FIXED FOR REJECTED
+  // GET PAYMENT STATUS DISPLAY
   //////////////////////////////////////////////////////
   const getPaymentStatusDisplay = (bookingId, bookingStatus) => {
     const status = paymentStatuses[bookingId];
-    
-    // Log for debugging
-    console.log(`Booking ${bookingId}: status=${status}, bookingStatus=${bookingStatus}`);
     
     if (!status) {
       // No payment yet
@@ -227,7 +241,7 @@ const UserBookingHistory = () => {
       
       case "rejected":
         return {
-          showPayButton: true, // Allow re-payment
+          showPayButton: true,
           message: <div style={rejectedMessage}>❌ Payment was rejected. Please pay again with correct screenshot.</div>,
           badge: <div style={rejectedBadge}>❌ Payment Rejected</div>
         };
@@ -290,10 +304,8 @@ const UserBookingHistory = () => {
           
           const paymentStatus = getPaymentStatusDisplay(b.id, b.status);
           
-          // FIXED: For rejected payments, always show pay button regardless of booking status
-          const showPayButton = paymentStatuses[b.id] === "rejected" 
-            ? true  // Always show for rejected
-            : (paymentStatus.showPayButton && b.status === "approved");
+          // Show pay button for approved bookings OR rejected payments
+          const showPayButton = b.status === "approved" || paymentStatuses[b.id] === "rejected";
 
           return (
             <div key={b.id} style={card}>
@@ -409,7 +421,6 @@ const UserBookingHistory = () => {
             Order ID: {paymentData.orderId}
           </p>
 
-          {/* QR Code */}
           <div style={{ textAlign: "center", margin: "20px 0" }}>
             <img 
               src={paymentData.qr} 
@@ -418,7 +429,6 @@ const UserBookingHistory = () => {
             />
           </div>
 
-          {/* UPI Link */}
           <a
             href={paymentData.upiLink}
             target="_blank"
@@ -436,7 +446,6 @@ const UserBookingHistory = () => {
             ⚠️ Important: Pay only once. Multiple payments will be rejected.
           </p>
 
-          {/* Screenshot Upload */}
           <div style={{ marginBottom: 15 }}>
             <input
               type="file"
@@ -452,7 +461,6 @@ const UserBookingHistory = () => {
               📸 {screenshot ? "Change Screenshot" : "Upload Payment Screenshot"}
             </label>
             
-            {/* Preview */}
             {screenshotPreview && (
               <div style={{ textAlign: "center", marginTop: 10 }}>
                 <img
@@ -464,7 +472,6 @@ const UserBookingHistory = () => {
             )}
           </div>
 
-          {/* Submit Button */}
           <button
             style={uploading ? uploadingBtnStyle : submitButtonStyle}
             onClick={submitPaymentWithScreenshot}
@@ -473,7 +480,6 @@ const UserBookingHistory = () => {
             {uploading ? "Submitting..." : "✅ Submit for Verification"}
           </button>
 
-          {/* Close Button */}
           <button
             style={closeButton}
             onClick={() => {
