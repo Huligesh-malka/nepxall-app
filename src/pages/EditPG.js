@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
-import { useParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { useParams, useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
+import { pgAPI } from "../api/api"; // ✅ Using pgAPI convenience methods
+import { getImageUrl } from "../config"; // ✅ Image URL helper
 import 'leaflet/dist/leaflet.css';
-
-// API Base URL - Move to one constant
-const API_BASE = "http://localhost:5000";
 
 // Fix for default marker icons in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -120,7 +118,7 @@ const initialBhkConfig = {
   bathrooms_4bhk: "",
 };
 
-const EditPG = () => {
+function EditPG() {
   const { id } = useParams();
   const navigate = useNavigate();
   
@@ -131,7 +129,7 @@ const EditPG = () => {
   const [gettingLocation, setGettingLocation] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
   const [manualEditMode, setManualEditMode] = useState(false);
-  const [user, setUser] = useState(null); // Store Firebase user object
+  const [user, setUser] = useState(null);
   
   const [selectedLocation, setSelectedLocation] = useState(initialLocation);
   const [photos, setPhotos] = useState([]);
@@ -172,6 +170,7 @@ const EditPG = () => {
     common_tv_lounge: false,
     balcony_open_space: false,
     water_24x7: false,
+    water_type: "borewell",
     
     cupboard_available: false,
     table_chair_available: false,
@@ -215,8 +214,7 @@ const EditPG = () => {
     co_living_allowed: false,
     subletting_allowed: false,
     
-    // Only deposit_amount field (security_deposit removed)
-    deposit_amount: "",
+    security_deposit: "",
     maintenance_amount: "",
     
     total_rooms: "",
@@ -234,7 +232,7 @@ const EditPG = () => {
   const isPG = form.pg_category === "pg";
   const isCoLiving = form.pg_category === "coliving";
 
-  // ✅ FIX 1: Add CSS animation properly
+  // Add CSS animation properly
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
@@ -244,11 +242,10 @@ const EditPG = () => {
       }
     `;
     document.head.appendChild(style);
-
     return () => document.head.removeChild(style);
   }, []);
 
-  // ✅ FIX 2: Store user from onAuthStateChanged
+  // Store user from onAuthStateChanged
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       if (currentUser) {
@@ -269,18 +266,16 @@ const EditPG = () => {
     const fetchPropertyData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${API_BASE}/api/pg/${id}`);
+        const response = await pgAPI.getPropertyById(id);
         
         if (response.data.success) {
           const data = response.data.data;
           
-          // Update form state
+          // Update form state with proper boolean conversion
           setForm(prev => ({
             ...prev,
             ...data,
-            // Load deposit_amount from both fields for backward compatibility
-            deposit_amount: data.deposit_amount || data.security_deposit || "",
-            // Ensure boolean fields are properly set
+            security_deposit: data.security_deposit || data.deposit_amount || "",
             food_available: data.food_available === true || data.food_available === 'true',
             ac_available: data.ac_available === true || data.ac_available === 'true',
             wifi_available: data.wifi_available === true || data.wifi_available === 'true',
@@ -304,6 +299,7 @@ const EditPG = () => {
             common_tv_lounge: data.common_tv_lounge === true || data.common_tv_lounge === 'true',
             balcony_open_space: data.balcony_open_space === true || data.balcony_open_space === 'true',
             water_24x7: data.water_24x7 === true || data.water_24x7 === 'true',
+            water_type: data.water_type || "borewell",
             
             cupboard_available: data.cupboard_available === true || data.cupboard_available === 'true',
             table_chair_available: data.table_chair_available === true || data.table_chair_available === 'true',
@@ -354,8 +350,8 @@ const EditPG = () => {
             state: data.state || "",
             pincode: data.pincode || "",
             country: data.country || "",
-            lat: data.latitude || 12.9716,
-            lng: data.longitude || 77.5946
+            lat: data.latitude || null,
+            lng: data.longitude || null
           });
           
           // Update room rates
@@ -393,7 +389,6 @@ const EditPG = () => {
           if (data.photos && Array.isArray(data.photos)) {
             setExistingPhotos(data.photos);
           }
-          
         }
       } catch (error) {
         console.error("Error fetching property:", error);
@@ -403,7 +398,9 @@ const EditPG = () => {
       }
     };
     
-    fetchPropertyData();
+    if (id) {
+      fetchPropertyData();
+    }
   }, [id]);
 
   // Update co-living inclusions when category changes
@@ -486,7 +483,6 @@ const EditPG = () => {
         }
       },
       {
-        // ✅ FIX 9: Disable high accuracy for production
         enableHighAccuracy: false,
         timeout: 10000,
         maximumAge: 0
@@ -494,15 +490,15 @@ const EditPG = () => {
     );
   };
 
-  // Fetch address from coordinates
+  // Fetch address from coordinates using OpenStreetMap Nominatim
   const fetchAddressFromCoordinates = async (lat, lng) => {
     try {
       setMapLoading(true);
-      const response = await axios.get(
+      const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`
       );
       
-      const data = response.data;
+      const data = await response.json();
       
       if (data) {
         const address = data.display_name || "";
@@ -537,11 +533,6 @@ const EditPG = () => {
   // Handle location selection from map
   const handleLocationSelect = async (lat, lng) => {
     await fetchAddressFromCoordinates(lat, lng);
-    setSelectedLocation(prev => ({
-      ...prev,
-      lat: lat,
-      lng: lng
-    }));
   };
 
   // Search location by address
@@ -550,12 +541,14 @@ const EditPG = () => {
     
     try {
       setMapLoading(true);
-      const response = await axios.get(
+      const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5`
       );
       
-      if (response.data && response.data.length > 0) {
-        const location = response.data[0];
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        const location = data[0];
         const lat = parseFloat(location.lat);
         const lng = parseFloat(location.lon);
         
@@ -663,7 +656,7 @@ const EditPG = () => {
     setPhotosToDelete([...photosToDelete, photoUrl]);
   };
 
-  // ✅ FIX 5: Validation function
+  // Validation function
   const validateForm = () => {
     if (!form.pg_name?.trim()) return "Enter property name";
     if (!selectedLocation.address?.trim()) return "Select location from map or enter manually";
@@ -680,31 +673,24 @@ const EditPG = () => {
       return "Enter a valid phone number (10-15 digits)";
     }
     
-    // Deposit amount validation
-    if (!form.deposit_amount || parseFloat(form.deposit_amount) <= 0) {
-      return "Enter a valid deposit amount";
-    }
-    
     return null;
   };
 
-  // ✅ FIX 6: Helper to append only non-empty values
+  // Helper to append only non-empty values
   const appendIfValue = (formData, key, value) => {
     if (value !== "" && value !== null && value !== undefined) {
       formData.append(key, value.toString());
     }
   };
 
-  // Handle form submission
+  // Handle form submission using pgAPI convenience method
   const handleSubmit = async () => {
-    // ✅ FIX 2 & 7: Use stored user instead of auth.currentUser
     if (!user) {
       alert("Please log in to update a property");
       navigate("/login");
       return;
     }
 
-    // ✅ FIX 5: Run validation
     const validationError = validateForm();
     if (validationError) {
       alert(validationError);
@@ -727,9 +713,9 @@ const EditPG = () => {
       appendIfValue(formData, "road", selectedLocation.road);
       appendIfValue(formData, "landmark", selectedLocation.landmark);
       formData.append("city", selectedLocation.city);
-      formData.append("state", selectedLocation.state);
-      formData.append("pincode", selectedLocation.pincode);
-      formData.append("country", selectedLocation.country);
+      appendIfValue(formData, "state", selectedLocation.state);
+      appendIfValue(formData, "pincode", selectedLocation.pincode);
+      appendIfValue(formData, "country", selectedLocation.country);
       
       // Coordinates
       const lat = parseCoordinate(selectedLocation.lat);
@@ -742,13 +728,13 @@ const EditPG = () => {
         formData.append("bhk_type", form.bhk_type);
         formData.append("furnishing_type", form.furnishing_type);
         
-        // BHK Prices - using appendIfValue
+        // BHK Prices
         appendIfValue(formData, "price_1bhk", roomRates.price_1bhk);
         appendIfValue(formData, "price_2bhk", roomRates.price_2bhk);
         appendIfValue(formData, "price_3bhk", roomRates.price_3bhk);
         appendIfValue(formData, "price_4bhk", roomRates.price_4bhk);
         
-        // BHK Room/Bath counts - using appendIfValue
+        // BHK Room/Bath counts
         appendIfValue(formData, "bedrooms_1bhk", bhkConfig.bedrooms_1bhk);
         appendIfValue(formData, "bathrooms_1bhk", bhkConfig.bathrooms_1bhk);
         appendIfValue(formData, "bedrooms_2bhk", bhkConfig.bedrooms_2bhk);
@@ -793,6 +779,7 @@ const EditPG = () => {
       
       appendIfValue(formData, "food_type", form.food_type);
       appendIfValue(formData, "meals_per_day", form.meals_per_day);
+      appendIfValue(formData, "water_type", form.water_type);
       
       // Co-Living Inclusions
       if (isCoLiving) {
@@ -835,8 +822,8 @@ const EditPG = () => {
       appendIfValue(formData, "min_stay_months", form.min_stay_months);
       formData.append("notice_period", form.notice_period);
       
-      // FIXED: Only deposit_amount field
-      appendIfValue(formData, "deposit_amount", form.deposit_amount);
+      // Additional charges
+      appendIfValue(formData, "security_deposit", form.security_deposit);
       appendIfValue(formData, "maintenance_amount", form.maintenance_amount);
       
       // Room details
@@ -863,18 +850,8 @@ const EditPG = () => {
 
       console.log("Updating property with ID:", id);
       
-      // ✅ FIX 7: Use stored user for token
-      const token = await user.getIdToken();
-      const response = await axios.put(
-        `${API_BASE}/api/pg/${id}`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      // USING pgAPI CONVENIENCE METHOD
+      const response = await pgAPI.updateProperty(id, formData);
 
       if (response.data.success) {
         alert(`✅ Property Updated Successfully!`);
@@ -885,7 +862,15 @@ const EditPG = () => {
 
     } catch (err) {
       console.error("Error:", err.response?.data || err.message);
-      alert("❌ Failed to update property: " + (err.response?.data?.message || err.message || "Unknown error"));
+      
+      let errorMessage = "Unknown error";
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      alert(`❌ Failed to update property: ${errorMessage}`);
     } finally {
       setUpdating(false);
     }
@@ -1498,13 +1483,11 @@ const EditPG = () => {
     );
   }
 
-  // ✅ FIX 8: Enhanced disabled condition
   const isSubmitDisabled = updating || 
     !selectedLocation.address || 
     !form.pg_name?.trim() ||
     !form.contact_person?.trim() ||
-    !form.contact_phone?.trim() ||
-    !form.deposit_amount;
+    !form.contact_phone?.trim();
 
   return (
     <div style={styles.container}>
@@ -1711,6 +1694,17 @@ const EditPG = () => {
               </label>
             ))}
             
+            {/* Water Type */}
+            <div style={{ gridColumn: "1 / -1", marginTop: "10px" }}>
+              <label style={{ marginRight: "10px" }}>💧 Water Source:</label>
+              <select name="water_type" value={form.water_type} onChange={handleChange} style={{...styles.input, width: "150px", display: "inline-block"}}>
+                <option value="borewell">Borewell</option>
+                <option value="kaveri">Kaveri</option>
+                <option value="both">Both</option>
+                <option value="municipal">Municipal</option>
+              </select>
+            </div>
+            
             {/* Co-Living Inclusions */}
             {isCoLiving && (
               <>
@@ -1831,18 +1825,16 @@ const EditPG = () => {
           <h3 style={styles.sectionTitle}>💰 Additional Details & Charges</h3>
           <div style={styles.grid}>
             <div style={styles.inputGroup}>
-              <label>Deposit Amount (₹) *</label>
+              <label>Security Deposit (₹)</label>
               <input 
                 type="number" 
-                name="deposit_amount" 
+                name="security_deposit" 
                 placeholder="e.g., 10000" 
-                value={form.deposit_amount} 
+                value={form.security_deposit} 
                 onChange={handleChange} 
                 style={styles.input} 
                 min="0" 
-                required
               />
-              <small style={{color: "#666", fontSize: "12px"}}>Refundable deposit amount</small>
             </div>
             
             <div style={styles.inputGroup}>
@@ -1856,7 +1848,6 @@ const EditPG = () => {
                 style={styles.input} 
                 min="0" 
               />
-              <small style={{color: "#666", fontSize: "12px"}}>Monthly maintenance charges if any</small>
             </div>
             
             <div style={styles.inputGroup}>
@@ -1947,7 +1938,7 @@ const EditPG = () => {
                 {existingPhotos.map((photoUrl, index) => (
                   <div key={index} style={styles.photoItem}>
                     <img 
-                      src={`${API_BASE}${photoUrl}`} 
+                      src={getImageUrl(photoUrl)} 
                       alt={`Property ${index + 1}`} 
                       style={styles.photoThumbnail}
                       onError={(e) => {
@@ -2028,9 +2019,9 @@ const EditPG = () => {
       {manualEditMode && <ManualAddressForm />}
     </div>
   );
-};
+}
 
-// Styles (unchanged from your original)
+// Styles (unchanged from your original - keeping same as OwnerAddPG)
 const styles = {
   container: {
     minHeight: "100vh",
