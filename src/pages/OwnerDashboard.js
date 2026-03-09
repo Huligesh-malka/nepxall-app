@@ -691,7 +691,7 @@ const OwnerDashboard = () => {
         </>
       )}
 
-      {/* RECENT BOOKINGS SECTION - Simple Card Style */}
+      {/* RECENT BOOKINGS SECTION - Horizontal Scroll Cards */}
       <Box mt={4}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h5" fontWeight={600}>
@@ -730,115 +730,163 @@ const OwnerDashboard = () => {
             </Button>
           </Paper>
         ) : (
-          <Box>
+          <Box sx={{
+            display: 'flex',
+            overflowX: 'auto',
+            gap: 2,
+            pb: 2,
+            '&::-webkit-scrollbar': {
+              height: 8,
+            },
+            '&::-webkit-scrollbar-track': {
+              backgroundColor: '#f1f1f1',
+              borderRadius: 4,
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: '#888',
+              borderRadius: 4,
+              '&:hover': {
+                backgroundColor: '#555',
+              },
+            },
+          }}>
             {recentBookings.map((booking) => (
               <Card key={booking.id} sx={{ 
-                mb: 2, 
+                minWidth: 320,
+                maxWidth: 320,
                 borderRadius: 2,
                 border: '1px solid #e5e7eb',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                overflow: 'hidden'
+                transition: 'all 0.2s',
+                '&:hover': {
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  transform: 'translateY(-2px)'
+                }
               }}>
-                <CardContent sx={{ p: 3 }}>
-                  {/* Simple format like the example */}
+                <CardContent sx={{ p: 2.5 }}>
+                  {/* PG Name */}
                   <Box sx={{ mb: 1.5 }}>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      <strong>PG:</strong> {booking.pg_name || 'N/A'}
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      PG
+                    </Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                      {booking.pg_name || 'N/A'}
                     </Typography>
                   </Box>
 
+                  <Divider sx={{ my: 1.5 }} />
+
+                  {/* Tenant Name */}
                   <Box sx={{ mb: 1.5 }}>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      <strong>Tenant:</strong> {booking.tenant_name || booking.name || 'N/A'}
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Tenant
+                    </Typography>
+                    <Typography variant="body1" fontWeight={500}>
+                      {booking.tenant_name || booking.name || 'N/A'}
                     </Typography>
                   </Box>
 
+                  {/* Phone */}
                   <Box sx={{ mb: 1.5 }}>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      <strong>Phone:</strong> {booking.tenant_phone || booking.phone || 'N/A'}
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Phone
+                    </Typography>
+                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <PhoneIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                      {booking.tenant_phone || booking.phone || 'N/A'}
                     </Typography>
                   </Box>
 
+                  {/* Check-in Date */}
                   <Box sx={{ mb: 1.5 }}>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      <strong>Check-in:</strong> {formatDateString(booking.check_in_date)}
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Check-in
+                    </Typography>
+                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <CalendarIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                      {formatDateString(booking.check_in_date)}
                     </Typography>
                   </Box>
 
+                  {/* Room Type */}
                   <Box sx={{ mb: 1.5 }}>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      <strong>Room Type:</strong> {booking.room_type || 'Standard'}
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Room Type
+                    </Typography>
+                    <Typography variant="body2">
+                      {booking.room_type || 'Standard'}
                     </Typography>
                   </Box>
 
+                  {/* Amount */}
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      <strong>Status:</strong>{' '}
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '4px 12px',
-                        borderRadius: 20,
-                        color: '#fff',
-                        fontSize: 12,
-                        fontWeight: 'bold',
-                        background: booking.status?.toLowerCase() === 'approved' ? '#16a34a' :
-                                   booking.status?.toLowerCase() === 'rejected' ? '#dc2626' :
-                                   booking.status?.toLowerCase() === 'pending' ? '#f59e0b' : '#6b7280',
-                        marginLeft: 8
-                      }}>
-                        {booking.status?.toUpperCase() || 'PENDING'}
-                      </span>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Amount
                     </Typography>
+                    <Typography variant="h6" color="primary.main" fontWeight={700}>
+                      {formatCurrency(booking.amount)}
+                    </Typography>
+                  </Box>
+
+                  {/* Status */}
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Status
+                    </Typography>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '4px 12px',
+                      borderRadius: 20,
+                      color: '#fff',
+                      fontSize: 12,
+                      fontWeight: 'bold',
+                      background: booking.status?.toLowerCase() === 'approved' ? '#16a34a' :
+                                 booking.status?.toLowerCase() === 'rejected' ? '#dc2626' :
+                                 booking.status?.toLowerCase() === 'pending' ? '#f59e0b' : '#6b7280'
+                    }}>
+                      {booking.status?.toUpperCase() || 'PENDING'}
+                    </span>
                   </Box>
 
                   {/* Action Buttons for Pending Bookings */}
                   {booking.status?.toLowerCase() === 'pending' && (
-                    <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+                    <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
                       <Button
+                        fullWidth
                         variant="contained"
+                        size="small"
                         sx={{ 
                           bgcolor: '#16a34a', 
                           '&:hover': { bgcolor: '#15803d' },
                           color: '#fff',
                           textTransform: 'none',
-                          fontWeight: 500
+                          fontWeight: 500,
+                          py: 1
                         }}
                         disabled={actionLoading === booking.id}
                         onClick={() => handleApproveBooking(booking.id)}
                         startIcon={actionLoading === booking.id ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : <CheckCircleIcon />}
                       >
-                        {actionLoading === booking.id ? 'Processing...' : '✅ Approve'}
+                        {actionLoading === booking.id ? 'Processing...' : 'Approve'}
                       </Button>
 
                       <Button
+                        fullWidth
                         variant="contained"
+                        size="small"
                         sx={{ 
                           bgcolor: '#dc2626', 
                           '&:hover': { bgcolor: '#b91c1c' },
                           color: '#fff',
                           textTransform: 'none',
-                          fontWeight: 500
+                          fontWeight: 500,
+                          py: 1
                         }}
                         disabled={actionLoading === booking.id}
                         onClick={() => handleRejectBooking(booking.id)}
                         startIcon={actionLoading === booking.id ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : <CancelIcon />}
                       >
-                        {actionLoading === booking.id ? 'Processing...' : '❌ Reject'}
-                      </Button>
-                    </Box>
-                  )}
-
-                  {/* View Details for Non-Pending Bookings */}
-                  {booking.status?.toLowerCase() !== 'pending' && (
-                    <Box sx={{ mt: 2 }}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={() => handleViewBooking(booking.id)}
-                        startIcon={<ViewIcon />}
-                        sx={{ borderRadius: 2 }}
-                      >
-                        View Details
+                        {actionLoading === booking.id ? 'Processing...' : 'Reject'}
                       </Button>
                     </Box>
                   )}
