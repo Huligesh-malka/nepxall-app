@@ -186,10 +186,13 @@ const UserBookingHistory = () => {
   };
 
   //////////////////////////////////////////////////////
-  // GET PAYMENT STATUS DISPLAY
+  // GET PAYMENT STATUS DISPLAY - FIXED FOR REJECTED
   //////////////////////////////////////////////////////
   const getPaymentStatusDisplay = (bookingId, bookingStatus) => {
     const status = paymentStatuses[bookingId];
+    
+    // Log for debugging
+    console.log(`Booking ${bookingId}: status=${status}, bookingStatus=${bookingStatus}`);
     
     if (!status) {
       // No payment yet
@@ -286,7 +289,11 @@ const UserBookingHistory = () => {
           const total = Number(b.total_amount) || rent + deposit + maintenance;
           
           const paymentStatus = getPaymentStatusDisplay(b.id, b.status);
-          const showPayButton = paymentStatus.showPayButton && b.status === "approved";
+          
+          // FIXED: For rejected payments, always show pay button regardless of booking status
+          const showPayButton = paymentStatuses[b.id] === "rejected" 
+            ? true  // Always show for rejected
+            : (paymentStatus.showPayButton && b.status === "approved");
 
           return (
             <div key={b.id} style={card}>
@@ -336,7 +343,7 @@ const UserBookingHistory = () => {
                 </div>
               )}
 
-              {(b.status === "approved" || b.status === "confirmed") && (
+              {(b.status === "approved" || b.status === "confirmed" || paymentStatuses[b.id] === "rejected") && (
                 <div style={btnRow}>
                   <button
                     style={viewBtn}
