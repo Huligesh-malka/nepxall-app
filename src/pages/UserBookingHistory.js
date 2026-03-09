@@ -9,14 +9,14 @@ const UserBookingHistory = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [payingId, setPayingId] = useState(null);
+  const [paymentStatuses, setPaymentStatuses] = useState({});
 
   const [paymentData, setPaymentData] = useState(null);
   
-  // New state for screenshot upload
+  // State for screenshot upload
   const [screenshot, setScreenshot] = useState(null);
   const [screenshotPreview, setScreenshotPreview] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [utr, setUtr] = useState("");
 
   //////////////////////////////////////////////////////
   // LOAD BOOKINGS
@@ -26,6 +26,11 @@ const UserBookingHistory = () => {
       setLoading(true);
       const res = await api.get("/bookings/user/history");
       setBookings(res.data || []);
+      
+      // Check payment status for each booking
+      if (res.data && res.data.length > 0) {
+        await checkAllPaymentStatuses(res.data);
+      }
     } catch (err) {
       console.error(err);
       setError("Failed to load booking history");
@@ -33,6 +38,30 @@ const UserBookingHistory = () => {
       setLoading(false);
     }
   }, []);
+
+  //////////////////////////////////////////////////////
+  // CHECK PAYMENT STATUS FOR ALL BOOKINGS
+  //////////////////////////////////////////////////////
+  const checkAllPaymentStatuses = async (bookingsList) => {
+    try {
+      const statusMap = {};
+      
+      for (const booking of bookingsList) {
+        try {
+          const res = await api.get(`/payments/status/${booking.id}`);
+          if (res.data.success && res.data.data) {
+            statusMap[booking.id] = res.data.data.status;
+          }
+        } catch (err) {
+          console.log(`No payment found for booking ${booking.id}`);
+        }
+      }
+      
+      setPaymentStatuses(statusMap);
+    } catch (err) {
+      console.error("Error checking payment statuses:", err);
+    }
+  };
 
   useEffect(() => {
     loadBookings();
@@ -73,7 +102,6 @@ const UserBookingHistory = () => {
       // Reset upload states
       setScreenshot(null);
       setScreenshotPreview("");
-      setUtr("");
 
     } catch (err) {
       console.error("PAYMENT ERROR:", err);
@@ -127,10 +155,8 @@ const UserBookingHistory = () => {
       // Create form data
       const formData = new FormData();
       formData.append("orderId", paymentData.orderId);
-      formData.append("utr", utr);
       formData.append("screenshot", screenshot);
 
-      // You'll need to add this endpoint to your backend
       await api.post("/payments/submit-screenshot", formData, {
         headers: {
           "Content-Type": "multipart/form-data"
@@ -139,11 +165,16 @@ const UserBookingHistory = () => {
 
       alert("✅ Payment submitted successfully! Waiting for admin verification.");
 
+      // Update payment status locally
+      setPaymentStatuses(prev => ({
+        ...prev,
+        [paymentData.bookingId]: "submitted"
+      }));
+
       // Close modal and refresh
       setPaymentData(null);
       setScreenshot(null);
       setScreenshotPreview("");
-      setUtr("");
       loadBookings();
 
     } catch (err) {
@@ -155,31 +186,63 @@ const UserBookingHistory = () => {
   };
 
   //////////////////////////////////////////////////////
-  // SUBMIT PAYMENT CONFIRMATION (Original - without screenshot)
+  // GET PAYMENT STATUS DISPLAY
   //////////////////////////////////////////////////////
-  const submitPayment = async () => {
-    try {
-      await api.post("/payments/confirm-payment", {
-        orderId: paymentData.orderId,
-      });
-
-      alert("Payment submitted successfully");
-
-      setPaymentData(null);
-      loadBookings();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to submit payment");
+  const getPaymentStatusDisplay = (bookingId, bookingStatus) => {
+    const status = paymentStatuses[bookingId];
+    
+    if (!status) {
+      // No payment yet
+      if (bookingStatus === "approved") {
+        return {
+          showPayButton: true,
+          message: null,
+          badge: null
+        };
+      }
+      return {
+        showPayButton: false,
+        message: null,
+        badge: null
+      };
     }
-  };
 
-  //////////////////////////////////////////////////////
-  // CHECK PAYMENT STATUS COLOR
-  //////////////////////////////////////////////////////
-  const getPaymentStatusStyle = (booking) => {
-    // You can check if payment exists for this booking
-    // This would require a separate API call or include in booking data
-    return {};
+    switch(status) {
+      case "paid":
+        return {
+          showPayButton: false,
+          message: null,
+          badge: <div style={paidBadge}>✅ Payment Verified</div>
+        };
+      
+      case "submitted":
+        return {
+          showPayButton: false,
+          message: <div style={submittedMessage}>⏳ Payment submitted. Waiting for admin verification...</div>,
+          badge: <div style={submittedBadge}>⏳ Pending Verification</div>
+        };
+      
+      case "rejected":
+        return {
+          showPayButton: true, // Allow re-payment
+          message: <div style={rejectedMessage}>❌ Payment was rejected. Please pay again with correct screenshot.</div>,
+          badge: <div style={rejectedBadge}>❌ Payment Rejected</div>
+        };
+      
+      case "pending":
+        return {
+          showPayButton: true,
+          message: null,
+          badge: <div style={pendingBadge}>💰 Payment Pending</div>
+        };
+      
+      default:
+        return {
+          showPayButton: bookingStatus === "approved",
+          message: null,
+          badge: null
+        };
+    }
   };
 
   //////////////////////////////////////////////////////
@@ -220,9 +283,10 @@ const UserBookingHistory = () => {
           const rent = Number(b.rent_amount || b.rent || 0);
           const deposit = Number(b.security_deposit || 0);
           const maintenance = Number(b.maintenance_amount || 0);
-
-          const total =
-            Number(b.total_amount) || rent + deposit + maintenance;
+          const total = Number(b.total_amount) || rent + deposit + maintenance;
+          
+          const paymentStatus = getPaymentStatusDisplay(b.id, b.status);
+          const showPayButton = paymentStatus.showPayButton && b.status === "approved";
 
           return (
             <div key={b.id} style={card}>
@@ -232,6 +296,12 @@ const UserBookingHistory = () => {
                   {b.status?.toUpperCase() || "PENDING"}
                 </span>
               </div>
+
+              {paymentStatus.badge && (
+                <div style={{ marginTop: 10 }}>
+                  {paymentStatus.badge}
+                </div>
+              )}
 
               <div style={detailsGrid}>
                 <p style={detailItem}>📞 {b.phone || "N/A"}</p>
@@ -259,6 +329,12 @@ const UserBookingHistory = () => {
                   <b>🧾 Total: ₹{total.toLocaleString()}</b>
                 </p>
               </div>
+
+              {paymentStatus.message && (
+                <div style={{ marginTop: 10 }}>
+                  {paymentStatus.message}
+                </div>
+              )}
 
               {(b.status === "approved" || b.status === "confirmed") && (
                 <div style={btnRow}>
@@ -292,7 +368,7 @@ const UserBookingHistory = () => {
                 </div>
               )}
 
-              {b.status === "approved" && (
+              {showPayButton && (
                 <button
                   style={payBtn}
                   onClick={() => handlePayNow(b)}
@@ -304,9 +380,9 @@ const UserBookingHistory = () => {
                 </button>
               )}
 
-              {b.status === "confirmed" && (
+              {b.status === "confirmed" && paymentStatuses[b.id] === "paid" && (
                 <div style={confirmedContainer}>
-                  <div style={paidBadge}>✅ Paid</div>
+                  <div style={paidBadge}>✅ Payment Verified - Booking Confirmed</div>
                 </div>
               )}
             </div>
@@ -349,14 +425,9 @@ const UserBookingHistory = () => {
             After payment, upload screenshot and submit for verification
           </p>
 
-          {/* UTR Input (Optional) */}
-          <input
-            type="text"
-            placeholder="Enter UTR number (optional)"
-            value={utr}
-            onChange={(e) => setUtr(e.target.value)}
-            style={inputStyle}
-          />
+          <p style={{ fontSize: 12, color: "#e11d48", fontWeight: "bold" }}>
+            ⚠️ Important: Pay only once. Multiple payments will be rejected.
+          </p>
 
           {/* Screenshot Upload */}
           <div style={{ marginBottom: 15 }}>
@@ -388,28 +459,12 @@ const UserBookingHistory = () => {
 
           {/* Submit Button */}
           <button
-            style={uploading ? uploadingBtnStyle : paidButton}
+            style={uploading ? uploadingBtnStyle : submitButtonStyle}
             onClick={submitPaymentWithScreenshot}
             disabled={uploading || !screenshot}
           >
             {uploading ? "Submitting..." : "✅ Submit for Verification"}
           </button>
-
-          {/* OR Divider */}
-          <div style={{ margin: "15px 0", position: "relative" }}>
-            <hr />
-            <span style={orTextStyle}>OR</span>
-          </div>
-
-          {/* Original Submit Button (without screenshot) */}
-          <button
-            style={simplePaidButton}
-            onClick={submitPayment}
-          >
-            Quick Confirm (No Screenshot)
-          </button>
-
-          <br />
 
           {/* Close Button */}
           <button
@@ -418,7 +473,6 @@ const UserBookingHistory = () => {
               setPaymentData(null);
               setScreenshot(null);
               setScreenshotPreview("");
-              setUtr("");
             }}
           >
             Close
@@ -448,10 +502,28 @@ const viewBtn = { ...serviceBtn, background: "#2563eb" };
 const chatBtn = { ...serviceBtn, background: "#25d366" };
 const agreementBtn = { ...serviceBtn, background: "#7c3aed" };
 const payBtn = { ...serviceBtn, background: "#e11d48", width: "100%", marginTop: 10 };
-const paidButton = { ...serviceBtn, background: "#16a34a", marginTop: 10, width: "80%" };
-const uploadingBtnStyle = { ...serviceBtn, background: "#9ca3af", marginTop: 10, width: "80%", cursor: "not-allowed" };
-const simplePaidButton = { ...serviceBtn, background: "#6b7280", marginTop: 5, width: "80%" };
-const closeButton = { ...serviceBtn, background: "#6b7280", marginTop: 10, width: "80%" };
+
+const submitButtonStyle = {
+  ...serviceBtn,
+  background: "#16a34a",
+  marginTop: 10,
+  width: "100%",
+  fontSize: 16,
+  padding: "14px"
+};
+
+const uploadingBtnStyle = {
+  ...submitButtonStyle,
+  background: "#9ca3af",
+  cursor: "not-allowed"
+};
+
+const closeButton = {
+  ...serviceBtn,
+  background: "#6b7280",
+  marginTop: 10,
+  width: "100%"
+};
 
 const container = { maxWidth: 900, margin: "40px auto", padding: 20 };
 const title = { marginBottom: 30, fontSize: 28, fontWeight: 600 };
@@ -466,10 +538,10 @@ const loadingSpinner = {
   animation: "spin 1s linear infinite"
 };
 const card = { background: "#fff", padding: 24, borderRadius: 16, marginBottom: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.08)" };
-const topRow = { display: "flex", justifyContent: "space-between", alignItems: "center" };
+const topRow = { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 };
 const pgName = { margin: 0 };
 const statusBadge = (status) => ({ 
-  background: status === "confirmed" ? "#16a34a" : "#6b7280", 
+  background: status === "confirmed" ? "#16a34a" : status === "approved" ? "#2563eb" : "#6b7280", 
   color: "#fff", 
   padding: "6px 12px", 
   borderRadius: 20, 
@@ -482,7 +554,65 @@ const priceItem = { margin: 4, fontSize: 14 };
 const totalPrice = { marginTop: 8, fontSize: 16 };
 const btnRow = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 };
 const confirmedContainer = { marginTop: 16 };
-const paidBadge = { background: "#16a34a", color: "#fff", padding: "8px 16px", borderRadius: 20, display: "inline-block" };
+
+const paidBadge = { 
+  background: "#16a34a", 
+  color: "#fff", 
+  padding: "8px 16px", 
+  borderRadius: 20, 
+  display: "inline-block",
+  fontSize: 14,
+  fontWeight: "bold"
+};
+
+const submittedBadge = {
+  background: "#f59e0b",
+  color: "#fff",
+  padding: "8px 16px",
+  borderRadius: 20,
+  display: "inline-block",
+  fontSize: 14,
+  fontWeight: "bold"
+};
+
+const rejectedBadge = {
+  background: "#e11d48",
+  color: "#fff",
+  padding: "8px 16px",
+  borderRadius: 20,
+  display: "inline-block",
+  fontSize: 14,
+  fontWeight: "bold"
+};
+
+const pendingBadge = {
+  background: "#6b7280",
+  color: "#fff",
+  padding: "8px 16px",
+  borderRadius: 20,
+  display: "inline-block",
+  fontSize: 14,
+  fontWeight: "bold"
+};
+
+const submittedMessage = {
+  background: "#fef3c7",
+  color: "#92400e",
+  padding: "12px",
+  borderRadius: 8,
+  fontSize: 14,
+  marginTop: 10
+};
+
+const rejectedMessage = {
+  background: "#fee2e2",
+  color: "#e11d48",
+  padding: "12px",
+  borderRadius: 8,
+  fontSize: 14,
+  marginTop: 10
+};
+
 const errorBox = { padding: 40, textAlign: "center" };
 const retryBtn = { padding: "10px 20px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer" };
 const emptyState = { textAlign: "center", padding: 60 };
@@ -510,41 +640,23 @@ const upiLinkStyle = {
   background: "#2563eb",
   textDecoration: "none",
   display: "inline-block",
-  width: "80%",
-  marginTop: 10
-};
-
-const inputStyle = {
-  width: "80%",
-  padding: 10,
-  margin: "10px 0",
-  border: "1px solid #ddd",
-  borderRadius: 6,
-  fontSize: 14
+  width: "100%",
+  marginTop: 10,
+  textAlign: "center"
 };
 
 const uploadLabelStyle = {
   display: "block",
-  width: "80%",
-  margin: "10px auto",
+  width: "100%",
+  margin: "10px 0",
   padding: 12,
   background: "#f0f0f0",
   border: "2px dashed #ccc",
   borderRadius: 6,
   cursor: "pointer",
   fontSize: 14,
-  color: "#333"
-};
-
-const orTextStyle = {
-  position: "absolute",
-  top: -10,
-  left: "50%",
-  transform: "translateX(-50%)",
-  background: "#fff",
-  padding: "0 10px",
-  color: "#999",
-  fontSize: 12
+  color: "#333",
+  textAlign: "center"
 };
 
 export default UserBookingHistory;
