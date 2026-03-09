@@ -108,6 +108,7 @@ const OwnerDashboard = () => {
   const [recentBookings, setRecentBookings] = useState([]);
   const [recentEnquiries, setRecentEnquiries] = useState([]);
   const [bookingHistory, setBookingHistory] = useState([]);
+  const [pgDetailsMap, setPgDetailsMap] = useState({});
 
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
@@ -151,6 +152,51 @@ const OwnerDashboard = () => {
     return () => unsub();
   }, []);
 
+  /* ---------------- HELPER FUNCTION TO GET RENT BY ROOM TYPE ---------------- */
+  
+  const getRentByRoomType = (pg, roomType) => {
+    if (!pg) return 0;
+    
+    const roomTypeLower = roomType?.toLowerCase() || '';
+    
+    // Map room types to database fields
+    if (roomTypeLower.includes('single sharing')) {
+      return Number(pg.single_sharing) || Number(pg.single_room) || Number(pg.co_living_single_room) || Number(pg.rent_amount) || 0;
+    }
+    else if (roomTypeLower.includes('double sharing')) {
+      return Number(pg.double_sharing) || Number(pg.double_room) || Number(pg.co_living_double_room) || 0;
+    }
+    else if (roomTypeLower.includes('triple sharing')) {
+      return Number(pg.triple_sharing) || Number(pg.triple_room) || 0;
+    }
+    else if (roomTypeLower.includes('four sharing')) {
+      return Number(pg.four_sharing) || 0;
+    }
+    else if (roomTypeLower.includes('1bhk') || roomTypeLower.includes('1 bhk')) {
+      return Number(pg.price_1bhk) || 0;
+    }
+    else if (roomTypeLower.includes('2bhk') || roomTypeLower.includes('2 bhk')) {
+      return Number(pg.price_2bhk) || 0;
+    }
+    else if (roomTypeLower.includes('3bhk') || roomTypeLower.includes('3 bhk')) {
+      return Number(pg.price_3bhk) || 0;
+    }
+    else if (roomTypeLower.includes('4bhk') || roomTypeLower.includes('4 bhk')) {
+      return Number(pg.price_4bhk) || 0;
+    }
+    else {
+      // Default to general rent_amount
+      return Number(pg.rent_amount) || 0;
+    }
+  };
+
+  const getDepositByRoomType = (pg, roomType) => {
+    if (!pg) return 0;
+    
+    // Use security_deposit from PG table or default deposit_amount
+    return Number(pg.security_deposit) || Number(pg.deposit_amount) || 0;
+  };
+
   /* ---------------- LOAD DATA ---------------- */
 
   const loadAllData = useCallback(async (refresh = false) => {
@@ -173,8 +219,14 @@ const OwnerDashboard = () => {
         ? pgRes.data
         : pgRes.data?.data || [];
 
+      // Create a map of PG details for quick lookup
+      const pgMap = {};
       const properties = pgData.map(pg => {
         const photos = parseArray(pg.photos);
+        
+        // Store in map with both id and pg_id as keys
+        pgMap[pg.id] = pg;
+        pgMap[pg.pg_id] = pg;
         
         return {
           ...pg,
@@ -183,11 +235,29 @@ const OwnerDashboard = () => {
           photos,
           image: photos.length ? photos[0] : null,
           total_rooms: Number(pg.total_rooms) || 0,
-          available_rooms: Number(pg.available_rooms) || 0
+          available_rooms: Number(pg.available_rooms) || 0,
+          // Ensure these fields are numbers
+          rent_amount: Number(pg.rent_amount) || 0,
+          deposit_amount: Number(pg.deposit_amount) || 0,
+          security_deposit: Number(pg.security_deposit) || 0,
+          single_sharing: Number(pg.single_sharing) || 0,
+          double_sharing: Number(pg.double_sharing) || 0,
+          triple_sharing: Number(pg.triple_sharing) || 0,
+          four_sharing: Number(pg.four_sharing) || 0,
+          single_room: Number(pg.single_room) || 0,
+          double_room: Number(pg.double_room) || 0,
+          price_1bhk: Number(pg.price_1bhk) || 0,
+          price_2bhk: Number(pg.price_2bhk) || 0,
+          price_3bhk: Number(pg.price_3bhk) || 0,
+          price_4bhk: Number(pg.price_4bhk) || 0,
+          co_living_single_room: Number(pg.co_living_single_room) || 0,
+          co_living_double_room: Number(pg.co_living_double_room) || 0,
+          triple_room: Number(pg.triple_room) || 0
         };
       });
 
       setPGs(properties);
+      setPgDetailsMap(pgMap);
       console.log(`✅ Loaded ${properties.length} properties`);
 
       /* -------- BOOKINGS USING pgAPI -------- */
@@ -203,19 +273,33 @@ const OwnerDashboard = () => {
       // Store full booking history
       setBookingHistory(bookings);
 
-      // Enhance booking data with more details
-      const enhancedBookings = bookings.map(booking => ({
-        ...booking,
-        tenant_name: booking.name || booking.tenant_name || 'Unknown',
-        tenant_phone: booking.phone || booking.tenant_phone,
-        tenant_email: booking.email || booking.tenant_email,
-        room_type: booking.room_type || 'Not specified',
-        check_in_date: booking.check_in_date || booking.created_at,
-        amount: booking.amount || 0,
-        deposit_amount: booking.deposit_amount || 0,
-        monthly_rent: booking.monthly_rent || booking.amount || 0,
-        pg_name: booking.pg_name || 'N/A'
-      }));
+      // Enhance booking data with rent and deposit from PG table
+      const enhancedBookings = bookings.map(booking => {
+        // Find the associated PG
+        const pgId = booking.pg_id || booking.property_id;
+        const pg = pgMap[pgId];
+        
+        // Get room type from booking
+        const roomType = booking.room_type || '';
+        
+        // Calculate rent and deposit based on PG data and room type
+        const monthlyRent = getRentByRoomType(pg, roomType);
+        const deposit = getDepositByRoomType(pg, roomType);
+        
+        return {
+          ...booking,
+          tenant_name: booking.name || booking.tenant_name || 'Unknown',
+          tenant_phone: booking.phone || booking.tenant_phone,
+          tenant_email: booking.email || booking.tenant_email,
+          room_type: booking.room_type || 'Not specified',
+          check_in_date: booking.check_in_date || booking.created_at,
+          amount: Number(booking.amount) || monthlyRent || 0,
+          monthly_rent: monthlyRent,
+          deposit_amount: deposit,
+          pg_name: booking.pg_name || pg?.pg_name || 'N/A',
+          pg_details: pg // Store full PG details for reference
+        };
+      });
 
       const sortedBookings = enhancedBookings
         .sort(
@@ -240,34 +324,34 @@ const OwnerDashboard = () => {
         ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
         : 0;
 
-      // Calculate Total Rent from all confirmed bookings
-      const totalRent = bookings
+      // Calculate Total Rent from all confirmed bookings using enhanced data
+      const totalRent = enhancedBookings
         .filter(b => ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase()))
-        .reduce((a, b) => a + (Number(b.monthly_rent) || Number(b.amount) || 0), 0);
+        .reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
 
       // Calculate Total Deposit from all confirmed bookings
-      const totalDeposit = bookings
+      const totalDeposit = enhancedBookings
         .filter(b => ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase()))
         .reduce((a, b) => a + (Number(b.deposit_amount) || 0), 0);
 
       // Calculate Pending Rent (from pending bookings)
-      const pendingRent = bookings
+      const pendingRent = enhancedBookings
         .filter(b => b?.status?.toLowerCase() === "pending")
-        .reduce((a, b) => a + (Number(b.monthly_rent) || Number(b.amount) || 0), 0);
+        .reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
 
       // Calculate Pending Deposit (from pending bookings)
-      const pendingDeposit = bookings
+      const pendingDeposit = enhancedBookings
         .filter(b => b?.status?.toLowerCase() === "pending")
         .reduce((a, b) => a + (Number(b.deposit_amount) || 0), 0);
 
-      const totalEarnings = bookings
+      const totalEarnings = enhancedBookings
         .filter(b => ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase()))
         .reduce((a, b) => a + (Number(b.amount) || 0), 0);
 
       const currentMonth = new Date().getMonth();
       const currentYear = new Date().getFullYear();
 
-      const monthlyEarnings = bookings
+      const monthlyEarnings = enhancedBookings
         .filter(b => {
           if (!["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase())) return false;
           const d = new Date(b.created_at || b.check_in_date);
@@ -364,8 +448,7 @@ const OwnerDashboard = () => {
     navigate(`/owner/bookings/${bookingId}`);
   };
 
-  // ⭐ NEW: QR Code Generator Function
-  
+  // ⭐ QR Code Generator Function
   const handleGenerateQR = async (propertyId) => {
     try {
       const BRAND_BLUE = "#0B5ED7";
@@ -736,7 +819,7 @@ const OwnerDashboard = () => {
         </>
       )}
 
-      {/* COMPACT TABLE FOR RECENT BOOKINGS - 7 COLUMNS */}
+      {/* COMPACT TABLE FOR RECENT BOOKINGS - 8 COLUMNS */}
       <Box mt={4}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h5" fontWeight={600}>
@@ -762,7 +845,7 @@ const OwnerDashboard = () => {
         </Box>
 
         <TableContainer component={Paper} sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderRadius: 2, overflowX: 'auto' }}>
-          <Table sx={{ minWidth: 900 }}>
+          <Table sx={{ minWidth: 1000 }}>
             <TableHead sx={{ bgcolor: '#f8fafc' }}>
               <TableRow>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>PROPERTY</TableCell>
@@ -787,9 +870,9 @@ const OwnerDashboard = () => {
               ) : (
                 recentBookings.map((booking) => {
                   const statusStyle = getStatusBadgeStyle(booking.status);
-                  const monthlyRent = booking.monthly_rent || booking.amount || 0;
+                  const monthlyRent = booking.monthly_rent || 0;
                   const deposit = booking.deposit_amount || 0;
-                  const totalAmount = (Number(monthlyRent) + Number(deposit)) || booking.amount || 0;
+                  const totalAmount = monthlyRent + deposit;
                   
                   return (
                     <TableRow 
