@@ -23,7 +23,6 @@ export default function PrivateChat() {
   const [online, setOnline] = useState(false);
   const [loading, setLoading] = useState(true);
   const [conversationContext, setConversationContext] = useState(null);
-  const [propertyId, setPropertyId] = useState(null);
 
   const scrollBottom = () =>
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
@@ -41,32 +40,13 @@ export default function PrivateChat() {
         const meRes = await api.get("/private-chat/me", config);
         setMe(meRes.data);
 
-        // Check if we have property ID from navigation state
-        const navigationState = window.history.state?.usr;
-        const contextPropertyId = navigationState?.propertyId;
-        
-        if (contextPropertyId) {
-          setPropertyId(contextPropertyId);
-        }
-
-        // Get other user info with context
-        let url = `/private-chat/user/${userId}?currentUserId=${meRes.data.id}`;
-        if (contextPropertyId) {
-          url += `&contextId=${contextPropertyId}`;
-        }
-        
-        const userRes = await api.get(url, config);
+        // Get other user info with context (includes property info if owner is chatting)
+        const userRes = await api.get(`/private-chat/user/${userId}?currentUserId=${meRes.data.id}`, config);
         setOtherUser(userRes.data);
 
-        // Store conversation context
+        // Store conversation context (which property we're talking about)
         if (userRes.data.conversation_context) {
           setConversationContext(userRes.data.conversation_context);
-        } else if (userRes.data.pg_name) {
-          // Create context from pg_name if available
-          setConversationContext({
-            property_name: userRes.data.pg_name,
-            property_id: userRes.data.property_id
-          });
         }
 
         // Get messages
@@ -92,7 +72,7 @@ export default function PrivateChat() {
     socket.emit("join_private_room", {
       userA: me.id,
       userB: Number(userId),
-      context: conversationContext
+      context: conversationContext // Include context when joining room
     });
   }, [me, userId, conversationContext]);
 
@@ -169,7 +149,7 @@ export default function PrivateChat() {
       { 
         receiver_id: Number(userId), 
         message: text,
-        context: conversationContext
+        context: conversationContext // Include context when sending message
       },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -215,51 +195,38 @@ export default function PrivateChat() {
 
     // If current user is owner and other user is a regular user
     if (me.role === "owner" && otherUser.role === "user") {
-      // Show user's name and the property they're interested in
+      // Show user's name and the property they're interested in (if any)
       if (conversationContext?.property_name) {
         return (
           <div style={styles.headerTitleWithSub}>
-            <div style={styles.name}>{otherUser.name || "User"}</div>
+            <div>{otherUser.name}</div>
             <div style={styles.propertySubtext}>
               regarding {conversationContext.property_name}
             </div>
           </div>
         );
       }
-      return <div style={styles.name}>{otherUser.name || "User"}</div>;
+      return otherUser.name || "User";
     }
     
     // If current user is user and other user is owner
     if (me.role === "user" && otherUser.role === "owner") {
-      // Show owner's name and which property they own
+      // Show owner's name and which property they own (if we're chatting about a specific one)
       if (conversationContext?.property_name) {
         return (
           <div style={styles.headerTitleWithSub}>
-            <div style={styles.name}>{conversationContext.property_name}</div>
+            <div>{otherUser.pg_name || otherUser.name}</div>
             <div style={styles.propertySubtext}>
-              Owner: {otherUser.name || "Owner"}
+              {conversationContext.property_name}
             </div>
           </div>
         );
       }
-      
-      // Try to get from otherUser.pg_name
-      if (otherUser.pg_name) {
-        return (
-          <div style={styles.headerTitleWithSub}>
-            <div style={styles.name}>{otherUser.pg_name}</div>
-            <div style={styles.propertySubtext}>
-              Owner: {otherUser.name || "Owner"}
-            </div>
-          </div>
-        );
-      }
-      
-      return <div style={styles.name}>{otherUser.name || "Owner"}</div>;
+      return otherUser.pg_name || otherUser.name || "Owner";
     }
 
     // Fallback
-    return <div style={styles.name}>{otherUser.name || "Chat"}</div>;
+    return otherUser.name || "Chat";
   };
 
   return (
@@ -267,7 +234,11 @@ export default function PrivateChat() {
       <div style={styles.header}>
         <span onClick={() => navigate(-1)} style={styles.back}>←</span>
         <div style={styles.headerInfo}>
-          {getHeaderTitle()}
+          {typeof getHeaderTitle() === "string" ? (
+            <div style={styles.name}>{getHeaderTitle()}</div>
+          ) : (
+            getHeaderTitle()
+          )}
           <div style={styles.status}>
             {online ? "🟢 online" : "⚪ offline"}
           </div>
@@ -299,12 +270,7 @@ export default function PrivateChat() {
               </div>
 
               {m.sender_id === me?.id &&
-                <span 
-                  onClick={() => deleteMessage(m.id)} 
-                  style={styles.deleteBtn}
-                  onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
-                  onMouseLeave={(e) => e.currentTarget.style.opacity = 0}
-                >
+                <span onClick={() => deleteMessage(m.id)} style={styles.deleteBtn}>
                   🗑
                 </span>
               }
@@ -346,12 +312,11 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: 10,
-    boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
   },
 
   back: { 
     cursor: "pointer", 
-    fontSize: 24,
+    fontSize: 20,
     padding: "5px 10px",
     borderRadius: "50%",
     transition: "background 0.3s",
@@ -373,7 +338,6 @@ const styles = {
     fontSize: 11,
     opacity: 0.8,
     marginTop: 2,
-    fontStyle: "italic",
   },
 
   name: { 
@@ -390,14 +354,12 @@ const styles = {
   chatBody: { 
     flex: 1, 
     overflowY: "auto", 
-    padding: 15,
-    background: "#f1f5f9",
+    padding: 15 
   },
 
   msgRow: { 
     display: "flex", 
-    marginBottom: 10,
-    animation: "fadeIn 0.3s ease",
+    marginBottom: 10 
   },
 
   bubble: {
@@ -406,13 +368,11 @@ const styles = {
     maxWidth: "70%",
     position: "relative",
     boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-    wordWrap: "break-word",
   },
 
   tick: { 
     marginTop: 5, 
-    textAlign: "right",
-    fontSize: 10,
+    textAlign: "right" 
   },
 
   dot: {
@@ -420,7 +380,6 @@ const styles = {
     width: 8,
     borderRadius: "50%",
     display: "inline-block",
-    marginLeft: 2,
   },
 
   typing: { 
@@ -428,7 +387,6 @@ const styles = {
     marginLeft: 10, 
     color: "#555",
     fontStyle: "italic",
-    padding: "5px 10px",
   },
 
   deleteBtn: {
@@ -443,15 +401,20 @@ const styles = {
     boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
     opacity: 0,
     transition: "opacity 0.2s",
-    zIndex: 10,
+    ':hover': {
+      opacity: 1,
+    }
   },
+
+  // Show delete button on hover of message bubble
+  // This requires additional CSS but we'll handle it with inline styles limitation
+  // You might want to add this in a CSS file
 
   inputArea: {
     display: "flex",
     padding: 10,
     background: "#fff",
     borderTop: "1px solid #eee",
-    boxShadow: "0 -2px 10px rgba(0,0,0,0.05)",
   },
 
   input: {
@@ -461,7 +424,6 @@ const styles = {
     border: "1px solid #ddd",
     outline: "none",
     fontSize: 14,
-    transition: "border-color 0.3s",
     ':focus': {
       borderColor: "#667eea",
     }
@@ -476,11 +438,9 @@ const styles = {
     borderRadius: "50%",
     cursor: "pointer",
     fontSize: 16,
-    transition: "transform 0.2s, box-shadow 0.2s",
-    boxShadow: "0 2px 5px rgba(102,126,234,0.3)",
+    transition: "transform 0.2s",
     ':hover': {
       transform: "scale(1.05)",
-      boxShadow: "0 4px 10px rgba(102,126,234,0.4)",
     }
   },
 
@@ -491,22 +451,5 @@ const styles = {
     alignItems: "center",
     fontSize: 18,
     color: "#667eea",
-    background: "#f1f5f9",
   },
 };
-
-// Add global styles for animations
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-`;
-document.head.appendChild(style);
