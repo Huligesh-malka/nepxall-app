@@ -1,34 +1,34 @@
 import React, { useState, useEffect } from "react";
-import api from "../api/api";
+import api from "../../api/api";
 
 const plans = [
   {
     id: "free",
     name: "Free Plan",
     price: "₹0",
-    listings: "1 PG",
+    listings: "1 PG Listing",
     photos: "10 Photos",
     videos: "1 Video",
-    featured: "No",
-    boost: "No",
-    analytics: "Basic",
+    featured: "No Featured",
+    boost: "No Boost",
+    analytics: "Basic Analytics"
   },
   {
     id: "basic",
     name: "Basic Plan",
     price: "₹299 / month",
-    listings: "3 PG",
+    listings: "3 PG Listings",
     photos: "15 Photos",
     videos: "2 Videos",
     featured: "7 Days Featured",
     boost: "1 Boost",
-    analytics: "Basic Analytics",
+    analytics: "Basic Analytics"
   },
   {
     id: "pro",
     name: "Pro Plan",
     price: "₹999 / month",
-    listings: "10 PG",
+    listings: "10 PG Listings",
     photos: "20 Photos",
     videos: "3 Videos",
     featured: "30 Days Featured",
@@ -40,18 +40,19 @@ const plans = [
     id: "business",
     name: "Business Plan",
     price: "₹2999 / month",
-    listings: "Unlimited PG",
+    listings: "Unlimited PG Listings",
     photos: "25 Photos",
     videos: "5 Videos",
     featured: "Priority Featured",
     boost: "Unlimited Boost",
-    analytics: "Full Dashboard",
-  },
+    analytics: "Full Dashboard"
+  }
 ];
 
 export default function OwnerPremiumPlans() {
 
   const [currentPlan, setCurrentPlan] = useState("free");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadCurrentPlan();
@@ -67,100 +68,176 @@ export default function OwnerPremiumPlans() {
   };
 
   const buyPlan = async (planId) => {
-    try {
-      const res = await api.post("/owner/buy-plan", { plan: planId });
 
-      alert("Plan activated successfully");
+    if (planId === currentPlan) return;
+
+    try {
+
+      setLoading(true);
+
+      await api.post("/owner/buy-plan", { plan: planId });
+
+      alert("✅ Plan activated successfully");
 
       setCurrentPlan(planId);
 
     } catch (err) {
-      alert("Payment failed");
+
+      alert("❌ Payment failed");
+
+    } finally {
+
+      setLoading(false);
+
     }
   };
 
   return (
-    <div style={{ maxWidth: 1200, margin: "auto", padding: 30 }}>
+    <div style={container}>
 
-      <h1 style={{ textAlign: "center", marginBottom: 40 }}>
+      <h1 style={title}>
         🚀 Upgrade Your PG Listing
       </h1>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px,1fr))",
-          gap: 25,
-        }}
-      >
+      <p style={subtitle}>
+        Choose the best plan to grow your PG business
+      </p>
 
-        {plans.map((plan) => (
+      <div style={grid}>
 
-          <div
-            key={plan.id}
-            style={{
-              border: plan.highlight ? "2px solid #007bff" : "1px solid #ddd",
-              borderRadius: 12,
-              padding: 25,
-              background: plan.highlight ? "#f3f8ff" : "#fff",
-              boxShadow: "0 5px 15px rgba(0,0,0,0.05)",
-            }}
-          >
+        {plans.map((plan) => {
 
-            <h2>{plan.name}</h2>
+          const isCurrent = currentPlan === plan.id;
 
-            <h1 style={{ margin: "10px 0" }}>{plan.price}</h1>
+          return (
+            <div
+              key={plan.id}
+              style={{
+                ...card,
+                border: plan.highlight
+                  ? "2px solid #0B5ED7"
+                  : "1px solid #ddd",
+                background: plan.highlight ? "#f3f8ff" : "#fff"
+              }}
+            >
 
-            <ul style={{ lineHeight: "28px", paddingLeft: 18 }}>
-              <li>{plan.listings}</li>
-              <li>{plan.photos}</li>
-              <li>{plan.videos}</li>
-              <li>{plan.featured}</li>
-              <li>{plan.boost}</li>
-              <li>{plan.analytics}</li>
-            </ul>
+              {plan.highlight && (
+                <div style={badge}>⭐ MOST POPULAR</div>
+              )}
 
-            {currentPlan === plan.id ? (
+              <h2 style={planName}>{plan.name}</h2>
 
-              <button
-                style={{
-                  marginTop: 20,
-                  width: "100%",
-                  padding: 10,
-                  background: "#28a745",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 6,
-                }}
-              >
-                Current Plan
-              </button>
+              <h1 style={price}>{plan.price}</h1>
 
-            ) : (
+              <ul style={features}>
+                <li>{plan.listings}</li>
+                <li>{plan.photos}</li>
+                <li>{plan.videos}</li>
+                <li>{plan.featured}</li>
+                <li>{plan.boost}</li>
+                <li>{plan.analytics}</li>
+              </ul>
 
-              <button
-                onClick={() => buyPlan(plan.id)}
-                style={{
-                  marginTop: 20,
-                  width: "100%",
-                  padding: 10,
-                  background: "#007bff",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 6,
-                  cursor: "pointer",
-                }}
-              >
-                Upgrade Plan
-              </button>
+              {isCurrent ? (
 
-            )}
+                <button style={currentButton}>
+                  Current Plan
+                </button>
 
-          </div>
+              ) : (
 
-        ))}
+                <button
+                  disabled={loading}
+                  onClick={() => buyPlan(plan.id)}
+                  style={upgradeButton}
+                >
+                  {loading ? "Processing..." : "Upgrade Plan"}
+                </button>
+
+              )}
+
+            </div>
+          );
+        })}
+
       </div>
 
     </div>
   );
 }
+
+/* ================= STYLES ================= */
+
+const container = {
+  maxWidth: 1200,
+  margin: "auto",
+  padding: 40
+};
+
+const title = {
+  textAlign: "center",
+  marginBottom: 10
+};
+
+const subtitle = {
+  textAlign: "center",
+  color: "#64748b",
+  marginBottom: 40
+};
+
+const grid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(260px,1fr))",
+  gap: 25
+};
+
+const card = {
+  borderRadius: 12,
+  padding: 25,
+  boxShadow: "0 5px 15px rgba(0,0,0,0.05)",
+  position: "relative"
+};
+
+const badge = {
+  position: "absolute",
+  top: -10,
+  right: 15,
+  background: "#0B5ED7",
+  color: "#fff",
+  padding: "4px 10px",
+  fontSize: 12,
+  borderRadius: 20
+};
+
+const planName = {
+  marginBottom: 5
+};
+
+const price = {
+  marginBottom: 15
+};
+
+const features = {
+  lineHeight: "28px",
+  paddingLeft: 18,
+  marginBottom: 20
+};
+
+const upgradeButton = {
+  width: "100%",
+  padding: 12,
+  background: "#0B5ED7",
+  color: "#fff",
+  border: "none",
+  borderRadius: 8,
+  cursor: "pointer"
+};
+
+const currentButton = {
+  width: "100%",
+  padding: 12,
+  background: "#16a34a",
+  color: "#fff",
+  border: "none",
+  borderRadius: 8
+};
