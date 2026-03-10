@@ -12,9 +12,7 @@ const socket = io("https://nepxall-backend.onrender.com", {
 
 export default function PrivateChat() {
 
-  /* IMPORTANT: add pgId */
   const { userId, pgId } = useParams();
-
   const navigate = useNavigate();
   const bottomRef = useRef();
 
@@ -26,15 +24,22 @@ export default function PrivateChat() {
   const [online, setOnline] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const scrollBottom = () =>
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  const scrollBottom = () => {
+    setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
 
-  /* ================= AUTH LOAD ================= */
+  /* ================= AUTH + LOAD DATA ================= */
+
   useEffect(() => {
 
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
 
-      if (!fbUser) return navigate("/login");
+      if (!fbUser) {
+        navigate("/login");
+        return;
+      }
 
       const token = await fbUser.getIdToken();
       const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -44,7 +49,6 @@ export default function PrivateChat() {
         const meRes = await api.get("/private-chat/me", config);
         setMe(meRes.data);
 
-        /* get user + pg info */
         const userRes = await api.get(
           `/private-chat/user/${userId}/${pgId}`,
           config
@@ -52,7 +56,6 @@ export default function PrivateChat() {
 
         setOtherUser(userRes.data);
 
-        /* load messages using pgId */
         const msgRes = await api.get(
           `/private-chat/messages/${userId}/${pgId}`,
           config
@@ -62,12 +65,17 @@ export default function PrivateChat() {
 
         setLoading(false);
 
+        scrollBottom();
+
         if (!socket.connected) socket.connect();
+
         socket.emit("register", fbUser.uid);
 
       } catch (err) {
-        console.error(err);
+
+        console.error("Chat load error:", err);
         setLoading(false);
+
       }
 
     });
@@ -76,7 +84,8 @@ export default function PrivateChat() {
 
   }, [userId, pgId, navigate]);
 
-  /* ================= JOIN ROOM ================= */
+  /* ================= JOIN SOCKET ROOM ================= */
+
   useEffect(() => {
 
     if (!me) return;
@@ -84,38 +93,47 @@ export default function PrivateChat() {
     socket.emit("join_private_room", {
       userA: me.id,
       userB: Number(userId),
-      pg_id: Number(pgId)
+      pg_id: Number(pgId),
     });
 
   }, [me, userId, pgId]);
 
   /* ================= SOCKET EVENTS ================= */
+
   useEffect(() => {
 
     const receiveMessage = (msg) => {
-      setMessages(prev => [...prev, msg]);
+
+      if (msg.pg_id !== Number(pgId)) return;
+
+      setMessages((prev) => [...prev, msg]);
       scrollBottom();
+
     };
 
-    const read = () => {
-      setMessages(prev =>
-        prev.map(m =>
-          m.sender_id === me.id
+    const deletedMessage = ({ messageId }) => {
+
+      setMessages((prev) =>
+        prev.filter((m) => m.id !== messageId)
+      );
+
+    };
+
+    const readMessages = () => {
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.sender_id === me?.id
             ? { ...m, status: "read" }
             : m
         )
       );
-    };
 
-    const deleted = ({ messageId }) => {
-      setMessages(prev =>
-        prev.filter(m => m.id !== messageId)
-      );
     };
 
     socket.on("receive_private_message", receiveMessage);
-    socket.on("messages_read", read);
-    socket.on("message_deleted", deleted);
+    socket.on("message_deleted", deletedMessage);
+    socket.on("messages_read", readMessages);
 
     socket.on("user_online", () => setOnline(true));
     socket.on("user_offline", () => setOnline(false));
@@ -123,74 +141,106 @@ export default function PrivateChat() {
     socket.on("user_typing", ({ isTyping }) => setTyping(isTyping));
 
     return () => {
-      socket.off("receive_private_message");
-      socket.off("messages_read");
-      socket.off("message_deleted");
+
+      socket.off("receive_private_message", receiveMessage);
+      socket.off("message_deleted", deletedMessage);
+      socket.off("messages_read", readMessages);
       socket.off("user_online");
       socket.off("user_offline");
       socket.off("user_typing");
+
     };
 
-  }, [me]);
+  }, [me, pgId]);
 
-  /* ================= SEND ================= */
+  /* ================= SEND MESSAGE ================= */
+
   const sendMessage = async () => {
 
     if (!text.trim()) return;
 
-    const token = await auth.currentUser.getIdToken();
+    try {
 
-    const res = await api.post(
-      "/private-chat/send",
-      {
-        receiver_id: Number(userId),
-        pg_id: Number(pgId),  // IMPORTANT
-        message: text
-      },
-      {
-        headers: { Authorization: `Bearer ${token}` }
-      }
-    );
+      const token = await auth.currentUser.getIdToken();
 
-    socket.emit("send_private_message", res.data);
+      const res = await api.post(
+        "/private-chat/send",
+        {
+          receiver_id: Number(userId),
+          pg_id: Number(pgId),
+          message: text,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-    setMessages(prev => [...prev, { ...res.data, status: "sent" }]);
+      socket.emit("send_private_message", res.data);
 
-    setText("");
+      setMessages((prev) => [
+        ...prev,
+        { ...res.data, status: "sent" },
+      ]);
 
-    scrollBottom();
+      setText("");
+
+      scrollBottom();
+
+    } catch (err) {
+
+      console.error("Send message error:", err);
+
+    }
 
   };
 
-  /* ================= DELETE ================= */
+  /* ================= DELETE MESSAGE ================= */
+
   const deleteMessage = async (id) => {
 
-    const token = await auth.currentUser.getIdToken();
+    try {
 
-    await api.delete(`/private-chat/message/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+      const token = await auth.currentUser.getIdToken();
 
-    setMessages(prev => prev.filter(m => m.id !== id));
+      await api.delete(`/private-chat/message/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    socket.emit("delete_private_message", {
-      messageId: id,
-      sender_id: me.id,
-      receiver_id: Number(userId),
-      pg_id: Number(pgId)
-    });
+      setMessages((prev) =>
+        prev.filter((m) => m.id !== id)
+      );
+
+      socket.emit("delete_private_message", {
+        messageId: id,
+        sender_id: me.id,
+        receiver_id: Number(userId),
+        pg_id: Number(pgId),
+      });
+
+    } catch (err) {
+
+      console.error("Delete message error:", err);
+
+    }
 
   };
 
-  if (loading) return <div>Loading chat...</div>;
+  if (loading) {
+    return <div style={styles.loader}>Loading chat...</div>;
+  }
 
   return (
+
     <div style={styles.container}>
 
       <div style={styles.header}>
-        <span onClick={() => navigate(-1)} style={styles.back}>←</span>
+
+        <span onClick={() => navigate(-1)} style={styles.back}>
+          ←
+        </span>
 
         <div style={styles.headerInfo}>
+
           <div style={styles.name}>
             {otherUser?.pg_name || otherUser?.name}
           </div>
@@ -198,12 +248,14 @@ export default function PrivateChat() {
           <div style={styles.status}>
             {online ? "🟢 online" : "⚪ offline"}
           </div>
+
         </div>
+
       </div>
 
       <div style={styles.chatBody}>
 
-        {messages.map(m => (
+        {messages.map((m) => (
 
           <div
             key={m.id}
@@ -212,11 +264,12 @@ export default function PrivateChat() {
               justifyContent:
                 m.sender_id === me.id
                   ? "flex-end"
-                  : "flex-start"
+                  : "flex-start",
             }}
           >
 
             <div style={styles.bubble}>
+
               {m.message}
 
               {m.sender_id === me.id && (
@@ -227,13 +280,14 @@ export default function PrivateChat() {
                   🗑
                 </span>
               )}
+
             </div>
 
           </div>
 
         ))}
 
-        {typing && <div>Typing...</div>}
+        {typing && <div style={styles.typing}>Typing...</div>}
 
         <div ref={bottomRef} />
 
@@ -249,28 +303,26 @@ export default function PrivateChat() {
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
         />
 
-        <button
-          onClick={sendMessage}
-          style={styles.sendBtn}
-        >
+        <button onClick={sendMessage} style={styles.sendBtn}>
           ➤
         </button>
 
       </div>
 
     </div>
+
   );
+
 }
 
-/* styles unchanged */
-
 /* ================= STYLES ================= */
+
 const styles = {
-  container: { 
-    height: "100vh", 
-    display: "flex", 
-    flexDirection: "column", 
-    background: "#f1f5f9" 
+  container: {
+    height: "100vh",
+    display: "flex",
+    flexDirection: "column",
+    background: "#f1f5f9",
   },
 
   header: {
@@ -282,79 +334,42 @@ const styles = {
     gap: 10,
   },
 
-  back: { 
-    cursor: "pointer", 
+  back: {
+    cursor: "pointer",
     fontSize: 20,
-    padding: "5px 10px",
-    borderRadius: "50%",
-    transition: "background 0.3s",
-    ':hover': {
-      background: "rgba(255,255,255,0.1)"
-    }
   },
 
   headerInfo: {
     flex: 1,
   },
 
-  headerTitleWithSub: {
-    display: "flex",
-    flexDirection: "column",
-  },
-
-  propertySubtext: {
-    fontSize: 11,
-    opacity: 0.8,
-    marginTop: 2,
-  },
-
-  name: { 
+  name: {
     fontWeight: "bold",
     fontSize: 16,
   },
 
-  status: { 
-    fontSize: 12, 
-    opacity: 0.9,
-    marginTop: 2,
+  status: {
+    fontSize: 12,
   },
 
-  chatBody: { 
-    flex: 1, 
-    overflowY: "auto", 
-    padding: 15 
+  chatBody: {
+    flex: 1,
+    overflowY: "auto",
+    padding: 15,
   },
 
-  msgRow: { 
-    display: "flex", 
-    marginBottom: 10 
+  msgRow: {
+    display: "flex",
+    marginBottom: 10,
   },
 
   bubble: {
     padding: "10px 14px",
     borderRadius: 15,
     maxWidth: "70%",
+    background: "#fff",
     position: "relative",
     boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-  },
-
-  tick: { 
-    marginTop: 5, 
-    textAlign: "right" 
-  },
-
-  dot: {
-    height: 8,
-    width: 8,
-    borderRadius: "50%",
-    display: "inline-block",
-  },
-
-  typing: { 
-    fontSize: 12, 
-    marginLeft: 10, 
-    color: "#555",
-    fontStyle: "italic",
   },
 
   deleteBtn: {
@@ -362,21 +377,7 @@ const styles = {
     top: -8,
     right: -8,
     cursor: "pointer",
-    fontSize: 14,
-    background: "#fff",
-    borderRadius: "50%",
-    padding: "2px 5px",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
-    opacity: 0,
-    transition: "opacity 0.2s",
-    ':hover': {
-      opacity: 1,
-    }
   },
-
-  // Show delete button on hover of message bubble
-  // This requires additional CSS but we'll handle it with inline styles limitation
-  // You might want to add this in a CSS file
 
   inputArea: {
     display: "flex",
@@ -390,26 +391,16 @@ const styles = {
     padding: 12,
     borderRadius: 25,
     border: "1px solid #ddd",
-    outline: "none",
-    fontSize: 14,
-    ':focus': {
-      borderColor: "#667eea",
-    }
   },
 
   sendBtn: {
     marginLeft: 10,
-    background: "linear-gradient(135deg,#667eea,#764ba2)",
+    background: "#667eea",
     color: "#fff",
     border: "none",
     padding: "0 18px",
     borderRadius: "50%",
     cursor: "pointer",
-    fontSize: 16,
-    transition: "transform 0.2s",
-    ':hover': {
-      transform: "scale(1.05)",
-    }
   },
 
   loader: {
@@ -417,7 +408,10 @@ const styles = {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    fontSize: 18,
-    color: "#667eea",
+  },
+
+  typing: {
+    fontSize: 12,
+    color: "#555",
   },
 };
