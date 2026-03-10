@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from "react";
 import api from "../../api/api";
 
+/* ================= PLAN DATA ================= */
+
 const plans = [
   {
     id: "free",
     name: "Free Plan",
     price: "₹0",
-    listings: "1 PG Listing",
-    photos: "10 Photos",
-    videos: "1 Video",
+    listingLimit: 1,
+    photos: 10,
+    videos: 1,
     featured: "No Featured",
     boost: "No Boost",
     analytics: "Basic Analytics"
@@ -17,9 +19,9 @@ const plans = [
     id: "basic",
     name: "Basic Plan",
     price: "₹299 / month",
-    listings: "3 PG Listings",
-    photos: "15 Photos",
-    videos: "2 Videos",
+    listingLimit: 3,
+    photos: 15,
+    videos: 2,
     featured: "7 Days Featured",
     boost: "1 Boost",
     analytics: "Basic Analytics"
@@ -28,9 +30,9 @@ const plans = [
     id: "pro",
     name: "Pro Plan",
     price: "₹999 / month",
-    listings: "10 PG Listings",
-    photos: "20 Photos",
-    videos: "3 Videos",
+    listingLimit: 10,
+    photos: 20,
+    videos: 3,
     featured: "30 Days Featured",
     boost: "5 Boosts",
     analytics: "Advanced Analytics",
@@ -40,9 +42,9 @@ const plans = [
     id: "business",
     name: "Business Plan",
     price: "₹2999 / month",
-    listings: "Unlimited PG Listings",
-    photos: "25 Photos",
-    videos: "5 Videos",
+    listingLimit: "Unlimited",
+    photos: 25,
+    videos: 5,
     featured: "Priority Featured",
     boost: "Unlimited Boost",
     analytics: "Full Dashboard"
@@ -95,12 +97,10 @@ export default function OwnerPremiumPlans() {
   return (
     <div style={container}>
 
-      <h1 style={title}>
-        🚀 Upgrade Your PG Listing
-      </h1>
+      <h1 style={title}>🚀 Upgrade Your PG Listing</h1>
 
       <p style={subtitle}>
-        Choose the best plan to grow your PG business
+        Listings include <b>PG, Coliving and To-Let properties</b>
       </p>
 
       <div style={grid}>
@@ -110,6 +110,7 @@ export default function OwnerPremiumPlans() {
           const isCurrent = currentPlan === plan.id;
 
           return (
+
             <div
               key={plan.id}
               style={{
@@ -125,14 +126,18 @@ export default function OwnerPremiumPlans() {
                 <div style={badge}>⭐ MOST POPULAR</div>
               )}
 
+              {isCurrent && (
+                <div style={currentBadge}>CURRENT</div>
+              )}
+
               <h2 style={planName}>{plan.name}</h2>
 
               <h1 style={price}>{plan.price}</h1>
 
               <ul style={features}>
-                <li>{plan.listings}</li>
-                <li>{plan.photos}</li>
-                <li>{plan.videos}</li>
+                <li><b>{plan.listingLimit}</b> Listings (PG / Coliving / To-Let)</li>
+                <li>{plan.photos} Photos per listing</li>
+                <li>{plan.videos} Videos per listing</li>
                 <li>{plan.featured}</li>
                 <li>{plan.boost}</li>
                 <li>{plan.analytics}</li>
@@ -157,6 +162,7 @@ export default function OwnerPremiumPlans() {
               )}
 
             </div>
+
           );
         })}
 
@@ -203,6 +209,17 @@ const badge = {
   top: -10,
   right: 15,
   background: "#0B5ED7",
+  color: "#fff",
+  padding: "4px 10px",
+  fontSize: 12,
+  borderRadius: 20
+};
+
+const currentBadge = {
+  position: "absolute",
+  top: -10,
+  left: 15,
+  background: "#16a34a",
   color: "#fff",
   padding: "4px 10px",
   fontSize: 12,
