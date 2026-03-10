@@ -593,8 +593,8 @@ const OwnerDashboard = () => {
   /* ---------------- UI ---------------- */
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
-      <Box sx={{ width: '100%' }}>
+    <Container maxWidth="xl" sx={{ py: 3, px: { xs: 2, sm: 3, md: 4 } }}>
+      <Box sx={{ width: '100%', maxWidth: '1600px', mx: 'auto' }}>
 
         {/* HEADER */}
         <Box 
@@ -655,7 +655,7 @@ const OwnerDashboard = () => {
           </Box>
         </Box>
 
-        {/* STATS CARDS - 4 Cards with fixed layout */}
+        {/* STATS CARDS - Fixed width cards */}
         <Grid container spacing={3} mb={4}>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard 
@@ -771,7 +771,7 @@ const OwnerDashboard = () => {
           </>
         )}
 
-        {/* COMPACT TABLE FOR RECENT BOOKINGS - 5 COLUMNS (Removed Total Amount) */}
+        {/* COMPACT TABLE FOR RECENT BOOKINGS */}
         <Box mt={4}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h5" fontWeight={600}>
@@ -796,8 +796,8 @@ const OwnerDashboard = () => {
             )}
           </Box>
 
-          <TableContainer component={Paper} sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderRadius: 2 }}>
-            <Table>
+          <TableContainer component={Paper} sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderRadius: 2, overflow: 'auto' }}>
+            <Table sx={{ minWidth: 650 }}>
               <TableHead sx={{ bgcolor: '#f8fafc' }}>
                 <TableRow>
                   <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>PROPERTY</TableCell>

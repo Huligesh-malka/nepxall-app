@@ -25,7 +25,7 @@ import {
   Campaign as AnnouncementIcon,
   PlaylistAdd as PlanIcon,
   Image as ImageIcon,
-  QrCode as QrCodeIcon,  // ⭐ NEW: QR Code Icon
+  QrCode as QrCodeIcon,
   Chat as ChatIcon
 } from "@mui/icons-material";
 
@@ -43,6 +43,37 @@ const statusConfig = {
 // Backend URL from environment
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://nepxall-backend.onrender.com";
 
+// Helper function to get proper image URL
+const getImageUrl = (photo) => {
+  if (!photo) return null;
+  
+  // If it's already a full URL (Cloudinary or other)
+  if (photo.startsWith('http')) {
+    return photo;
+  }
+  
+  // If it's a path containing /uploads/
+  if (photo.includes('/uploads/')) {
+    const uploadsIndex = photo.indexOf('/uploads/');
+    if (uploadsIndex !== -1) {
+      const relativePath = photo.substring(uploadsIndex);
+      return `${BACKEND_URL}${relativePath}`;
+    }
+  }
+  
+  // If it's a relative path starting with /opt/render or similar
+  if (photo.includes('/opt/render/')) {
+    const uploadsMatch = photo.match(/\/uploads\/.*/);
+    if (uploadsMatch) {
+      return `${BACKEND_URL}${uploadsMatch[0]}`;
+    }
+  }
+  
+  // Default: just prepend backend URL
+  const normalizedPath = photo.startsWith('/') ? photo : `/${photo}`;
+  return `${BACKEND_URL}${normalizedPath}`;
+};
+
 const PropertyCard = ({
   property,
   onView,
@@ -50,56 +81,22 @@ const PropertyCard = ({
   onRooms,
   onPhotos,
   onVideos,
-  onChat,           // ⭐ Added chat handler
+  onChat,
   onToggleStatus,
   onAnnouncement,
   onCreatePlan,
-  onGenerateQR      // ⭐ NEW: QR Code handler
+  onGenerateQR
 }) => {
 
   const status = statusConfig[property.status] || statusConfig.pending;
 
-  // Get image URL with fallback
-  const getImageUrl = () => {
-    if (!property.photos?.length) {
-      return null;
-    }
-    
-    const photo = property.photos[0];
-    
-    // If it's already a full URL (Cloudinary or other), use it directly
-    if (photo.startsWith('http')) {
-      return photo;
-    }
-    
-    // If it's a path containing /uploads/
-    if (photo.includes('/uploads/')) {
-      // Extract everything after /uploads/
-      const uploadsIndex = photo.indexOf('/uploads/');
-      if (uploadsIndex !== -1) {
-        const relativePath = photo.substring(uploadsIndex);
-        return `${BACKEND_URL}${relativePath}`;
-      }
-    }
-    
-    // If it's a relative path starting with /opt/render or similar
-    if (photo.includes('/opt/render/')) {
-      // Try to extract the /uploads/ part
-      const uploadsMatch = photo.match(/\/uploads\/.*/);
-      if (uploadsMatch) {
-        return `${BACKEND_URL}${uploadsMatch[0]}`;
-      }
-    }
-    
-    // Default: just prepend backend URL
-    const normalizedPath = photo.startsWith('/') ? photo : `/${photo}`;
-    return `${BACKEND_URL}${normalizedPath}`;
-  };
+  // Get image URL with proper handling
+  const imageUrl = property.photos?.length ? getImageUrl(property.photos[0]) : null;
 
-  const imageUrl = getImageUrl();
-
-  // Log for debugging
-  console.log(`Property ${property.pg_name} image URL:`, imageUrl);
+  // Log for debugging (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`Property ${property.pg_name} image URL:`, imageUrl);
+  }
 
   return (
     <Card sx={{
@@ -108,20 +105,24 @@ const PropertyCard = ({
       borderRadius: 2,
       boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
       border: "1px solid #e2e8f0",
-      height: "100%"
+      height: "100%",
+      width: "100%",
+      overflow: "hidden"
     }}>
 
-      {/* IMAGE SECTION */}
+      {/* IMAGE SECTION - Fixed width and height with object-fit cover */}
       <Box
         sx={{
-          width: { xs: "100%", md: 260 },
-          height: { xs: 200, md: "auto" },
+          width: { xs: "100%", md: 280 },
+          height: { xs: 220, md: "auto" },
+          minHeight: { md: 220 },
           bgcolor: "#f8fafc",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           position: "relative",
-          overflow: "hidden"
+          overflow: "hidden",
+          flexShrink: 0
         }}
       >
         {imageUrl ? (
@@ -132,31 +133,24 @@ const PropertyCard = ({
             onError={(e) => {
               console.error("Image failed to load:", imageUrl);
               e.target.onerror = null;
-              e.target.style.display = "none";
-              // Show fallback
+              // Show fallback UI
               const parent = e.target.parentElement;
-              const fallbackDiv = document.createElement('div');
-              fallbackDiv.style.display = "flex";
-              fallbackDiv.style.flexDirection = "column";
-              fallbackDiv.style.alignItems = "center";
-              fallbackDiv.style.justifyContent = "center";
-              fallbackDiv.style.height = "100%";
-              fallbackDiv.style.color = "#94a3b8";
-              fallbackDiv.style.backgroundColor = "#f1f5f9";
-              fallbackDiv.style.width = "100%";
-              fallbackDiv.innerHTML = `
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                  <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <span style="margin-top: 8px; font-size: 14px;">Image not available</span>
-              `;
-              parent.innerHTML = '';
-              parent.appendChild(fallbackDiv);
+              if (parent) {
+                parent.innerHTML = `
+                  <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; background-color: #f1f5f9; color: #94a3b8;">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 8px;">
+                      <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span style="font-size: 14px;">Image not available</span>
+                  </div>
+                `;
+              }
             }}
             sx={{
               width: "100%",
               height: "100%",
-              objectFit: "cover"
+              objectFit: "cover", // This ensures images are cropped nicely without stretching
+              display: "block"
             }}
           />
         ) : (
@@ -168,9 +162,9 @@ const PropertyCard = ({
               alignItems: "center",
               justifyContent: "center",
               height: "100%",
+              width: "100%",
               color: "#94a3b8",
-              bgcolor: "#f1f5f9",
-              width: "100%"
+              bgcolor: "#f1f5f9"
             }}
           >
             <ImageIcon sx={{ fontSize: 48, color: "#cbd5e1", mb: 1 }} />
@@ -181,10 +175,10 @@ const PropertyCard = ({
         )}
       </Box>
 
-      <CardContent sx={{ flex: 1, p: 3 }}>
+      <CardContent sx={{ flex: 1, p: 3, width: "100%" }}>
 
         {/* HEADER */}
-        <Box display="flex" justifyContent="space-between" mb={2}>
+        <Box display="flex" justifyContent="space-between" mb={2} flexWrap="wrap" gap={1}>
           <Box>
             <Typography variant="h5" sx={{ fontWeight: 700 }}>
               {property.pg_name}
@@ -273,7 +267,7 @@ const PropertyCard = ({
 
         <Divider sx={{ my: 2 }} />
 
-        {/* ACTION BUTTONS */}
+        {/* ACTION BUTTONS - Responsive wrapping */}
         <Box display="flex" gap={1} flexWrap="wrap">
 
           <Tooltip title="View Property">
@@ -348,7 +342,7 @@ const PropertyCard = ({
             </Button>
           </Tooltip>
 
-          {/* ⭐ NEW: QR Code Generation Button */}
+          {/* QR Code Generation Button */}
           <Tooltip title="Generate QR Code for this property">
             <Button 
               size="small" 
