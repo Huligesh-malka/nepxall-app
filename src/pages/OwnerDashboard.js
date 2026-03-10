@@ -31,7 +31,10 @@ import {
   Hotel as RoomIcon,
   Person as PersonIcon,
   People as OccupantsIcon,
-  TrendingUp as TrendingUpIcon
+  TrendingUp as TrendingUpIcon,
+  QrCode as QrCodeIcon,
+  Download as DownloadIcon,
+  Share as ShareIcon
 } from "@mui/icons-material";
 
 import StatCard from "../components/owner/StatCard";
@@ -441,63 +444,134 @@ const OwnerDashboard = () => {
     navigate(`/owner/bookings/${bookingId}`);
   };
 
-  // ⭐ QR Code Generator Function
+  // ⭐ MODERN QR CODE GENERATOR FUNCTION - UPDATED WITH SLEEK DESIGN
   const handleGenerateQR = async (propertyId) => {
     try {
-      const BRAND_BLUE = "#0B5ED7";
-      const BRAND_GREEN = "#4CAF50";
+      const BRAND_PRIMARY = "#6366F1"; // Indigo
+      const BRAND_SECONDARY = "#8B5CF6"; // Purple
+      const BRAND_ACCENT = "#EC4899"; // Pink
 
       const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
       const propertyName = property?.pg_name || "PG";
-
+      const propertyAddress = property?.address || property?.location || "Premium Living Space";
+      const propertyPrice = property?.rent_amount || property?.single_sharing || 5000;
+      
+      const formattedPrice = formatCurrency(propertyPrice);
       const url = `https://nepxall.vercel.app/scan/${propertyId}`;
 
-      /* QR DESIGN */
+      // Create QR code with modern styling
       const qr = new QRCodeStyling({
-        width: 600,
-        height: 600,
+        width: 500,
+        height: 500,
         data: url,
         image: window.location.origin + "/logo.png",
+        margin: 10,
+        qrOptions: {
+          typeNumber: 0,
+          mode: "Byte",
+          errorCorrectionLevel: "H"
+        },
         dotsOptions: {
-          type: "rounded",
+          type: "dots", // Changed to dots for modern look
           gradient: {
             type: "linear",
-            rotation: 0,
+            rotation: 45,
             colorStops: [
-              { offset: 0, color: BRAND_BLUE },
-              { offset: 1, color: BRAND_GREEN }
+              { offset: 0, color: BRAND_PRIMARY },
+              { offset: 0.5, color: BRAND_SECONDARY },
+              { offset: 1, color: BRAND_ACCENT }
             ]
           }
         },
         cornersSquareOptions: {
           type: "extra-rounded",
-          color: BRAND_GREEN
+          gradient: {
+            type: "linear",
+            rotation: 180,
+            colorStops: [
+              { offset: 0, color: BRAND_SECONDARY },
+              { offset: 1, color: BRAND_PRIMARY }
+            ]
+          }
         },
         cornersDotOptions: {
           type: "dot",
-          color: BRAND_BLUE
+          color: BRAND_ACCENT
         },
         backgroundOptions: {
-          color: "#ffffff"
+          color: "#ffffff",
+          gradient: {
+            type: "radial",
+            colorStops: [
+              { offset: 0, color: "#ffffff" },
+              { offset: 1, color: "#f9fafb" }
+            ]
+          }
         },
         imageOptions: {
           crossOrigin: "anonymous",
-          margin: 10,
-          imageSize: 0.35
+          margin: 8,
+          imageSize: 0.4,
+          hideBackgroundDots: true
         }
       });
 
-      /* POSTER CANVAS */
+      /* MODERN POSTER CANVAS - UPDATED DESIGN */
       const canvas = document.createElement("canvas");
-      canvas.width = 900;
-      canvas.height = 1100;
+      canvas.width = 1080; // Instagram story size
+      canvas.height = 1350;
 
       const ctx = canvas.getContext("2d");
 
-      ctx.fillStyle = "#F9FAFB";
+      // Modern gradient background
+      const bgGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      bgGradient.addColorStop(0, "#f8fafc");
+      bgGradient.addColorStop(0.5, "#f1f5f9");
+      bgGradient.addColorStop(1, "#e2e8f0");
+      ctx.fillStyle = bgGradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.textAlign = "center";
+      // Decorative elements
+      ctx.save();
+      
+      // Top decorative wave
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(300, 100, 600, 50, canvas.width, 200);
+      ctx.lineTo(canvas.width, 0);
+      ctx.closePath();
+      
+      const topGradient = ctx.createLinearGradient(0, 0, canvas.width, 200);
+      topGradient.addColorStop(0, BRAND_PRIMARY + "20");
+      topGradient.addColorStop(1, BRAND_SECONDARY + "20");
+      ctx.fillStyle = topGradient;
+      ctx.fill();
+
+      // Bottom decorative wave
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height);
+      ctx.bezierCurveTo(400, canvas.height - 150, 800, canvas.height - 100, canvas.width, canvas.height - 50);
+      ctx.lineTo(canvas.width, canvas.height);
+      ctx.closePath();
+      
+      const bottomGradient = ctx.createLinearGradient(0, canvas.height - 200, canvas.width, canvas.height);
+      bottomGradient.addColorStop(0, BRAND_SECONDARY + "20");
+      bottomGradient.addColorStop(1, BRAND_ACCENT + "20");
+      ctx.fillStyle = bottomGradient;
+      ctx.fill();
+
+      ctx.restore();
+
+      // Add subtle pattern
+      ctx.save();
+      ctx.globalAlpha = 0.03;
+      for (let i = 0; i < 20; i++) {
+        ctx.beginPath();
+        ctx.arc(100 + i * 100, 300 + i * 80, 50, 0, Math.PI * 2);
+        ctx.fillStyle = BRAND_PRIMARY;
+        ctx.fill();
+      }
+      ctx.restore();
 
       /* LOAD LOGO */
       const logo = new Image();
@@ -505,45 +579,98 @@ const OwnerDashboard = () => {
       logo.src = "/logo.png";
 
       logo.onload = async () => {
-        /* LOGO */
-        ctx.drawImage(logo, 350, 40, 200, 110);
-
-        /* STRONG NEPXALL BRAND TEXT */
-        ctx.font = "900 54px Arial";
-
-        const gradient = ctx.createLinearGradient(360, 210, 540, 210);
-        gradient.addColorStop(0, BRAND_BLUE);
-        gradient.addColorStop(1, BRAND_GREEN);
-
-        ctx.fillStyle = gradient;
-
-        ctx.shadowColor = "rgba(0,0,0,0.15)";
-        ctx.shadowBlur = 2;
+        // Logo with shadow
+        ctx.save();
+        ctx.shadowColor = "rgba(99, 102, 241, 0.3)";
+        ctx.shadowBlur = 20;
         ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 1;
+        ctx.shadowOffsetY = 4;
+        ctx.drawImage(logo, 390, 60, 300, 120);
+        ctx.restore();
 
-        ctx.fillText("Nepxall", 450, 210);
+        // Main title with gradient
+        ctx.textAlign = "center";
+        
+        // "NEPXALL" text with modern style
+        ctx.save();
+        ctx.shadowColor = "rgba(0,0,0,0.1)";
+        ctx.shadowBlur = 15;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 4;
+        
+        const titleGradient = ctx.createLinearGradient(300, 200, 780, 200);
+        titleGradient.addColorStop(0, BRAND_PRIMARY);
+        titleGradient.addColorStop(0.5, BRAND_SECONDARY);
+        titleGradient.addColorStop(1, BRAND_ACCENT);
+        
+        ctx.font = "900 80px 'Poppins', 'Arial Black', sans-serif";
+        ctx.fillStyle = titleGradient;
+        ctx.fillText("NEPXALL", 540, 240);
+        ctx.restore();
 
-        ctx.shadowColor = "transparent";
+        // Tagline with modern typography
+        ctx.font = "500 28px 'Poppins', 'Arial', sans-serif";
+        ctx.fillStyle = "#475569";
+        ctx.fillText("Next Places for Living", 540, 300);
 
-        /* TAGLINE */
-        ctx.font = "26px Arial";
-        ctx.fillStyle = "#94a3b8";
-        ctx.fillText("Next Places for Living", 450, 250);
+        // Property card design
+        ctx.save();
+        
+        // Property name card
+        ctx.shadowColor = "rgba(99, 102, 241, 0.2)";
+        ctx.shadowBlur = 20;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 8;
+        
+        // White card background
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.roundRect(200, 340, 680, 120, 24);
+        ctx.fill();
+        
+        ctx.restore();
 
-        /* PROPERTY NAME */
-        ctx.font = "bold 36px Arial";
-        ctx.fillStyle = "#111827";
-        ctx.fillText(propertyName.toUpperCase(), 450, 320);
+        // Property name
+        ctx.save();
+        ctx.shadowColor = "rgba(0,0,0,0.05)";
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 2;
+        
+        ctx.font = "bold 48px 'Poppins', 'Arial', sans-serif";
+        ctx.fillStyle = "#0f172a";
+        ctx.fillText(propertyName.toUpperCase(), 540, 400);
+        ctx.restore();
 
-        /* DESCRIPTION */
-        ctx.font = "26px Arial";
-        ctx.fillStyle = BRAND_BLUE;
-        ctx.fillText("Scan QR to View Rooms", 450, 380);
+        // Address
+        ctx.font = "22px 'Poppins', 'Arial', sans-serif";
+        ctx.fillStyle = "#64748b";
+        ctx.fillText(propertyAddress.substring(0, 35) + (propertyAddress.length > 35 ? "..." : ""), 540, 460);
 
-        ctx.font = "24px Arial";
-        ctx.fillStyle = "#6B7280";
-        ctx.fillText("Book Instantly Online", 450, 415);
+        // Price highlight
+        ctx.save();
+        ctx.shadowColor = "rgba(236, 72, 153, 0.3)";
+        ctx.shadowBlur = 15;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 4;
+        
+        const priceGradient = ctx.createLinearGradient(400, 490, 680, 490);
+        priceGradient.addColorStop(0, BRAND_PRIMARY);
+        priceGradient.addColorStop(1, BRAND_ACCENT);
+        
+        ctx.font = "bold 64px 'Poppins', 'Arial', sans-serif";
+        ctx.fillStyle = priceGradient;
+        ctx.fillText(`${formattedPrice}/mo`, 540, 560);
+        ctx.restore();
+
+        // Scan instruction with icon
+        ctx.font = "26px 'Poppins', 'Arial', sans-serif";
+        ctx.fillStyle = "#334155";
+        ctx.fillText("📱 Scan to Explore Rooms", 540, 630);
+
+        ctx.font = "22px 'Poppins', 'Arial', sans-serif";
+        ctx.fillStyle = "#64748b";
+        ctx.fillText("Instant Booking • Virtual Tour • Best Offers", 540, 680);
 
         /* QR IMAGE */
         const qrBlob = await qr.getRawData("png");
@@ -551,23 +678,132 @@ const OwnerDashboard = () => {
         qrImg.src = URL.createObjectURL(qrBlob);
 
         qrImg.onload = () => {
-          ctx.drawImage(qrImg, 150, 450, 600, 600);
+          ctx.save();
+          
+          // QR Code shadow and frame
+          ctx.shadowColor = "rgba(99, 102, 241, 0.3)";
+          ctx.shadowBlur = 30;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 10;
+          
+          // White background for QR
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.roundRect(240, 710, 600, 600, 40);
+          ctx.fill();
+          
+          ctx.shadowBlur = 20;
+          ctx.drawImage(qrImg, 260, 730, 560, 560);
+          ctx.restore();
 
-          /* FOOTER */
-          ctx.font = "22px Arial";
-          ctx.fillStyle = "#6B7280";
-          ctx.fillText("Powered by Nepxall", 450, 1080);
+          // Decorative QR corners
+          ctx.save();
+          ctx.strokeStyle = BRAND_PRIMARY;
+          ctx.lineWidth = 4;
+          ctx.setLineDash([10, 10]);
+          
+          // Top-left corner
+          ctx.beginPath();
+          ctx.moveTo(280, 750);
+          ctx.lineTo(320, 750);
+          ctx.moveTo(280, 750);
+          ctx.lineTo(280, 790);
+          
+          // Top-right corner
+          ctx.beginPath();
+          ctx.moveTo(800, 750);
+          ctx.lineTo(840, 750);
+          ctx.moveTo(840, 750);
+          ctx.lineTo(840, 790);
+          
+          // Bottom-left corner
+          ctx.beginPath();
+          ctx.moveTo(280, 1250);
+          ctx.lineTo(320, 1250);
+          ctx.moveTo(280, 1250);
+          ctx.lineTo(280, 1210);
+          
+          // Bottom-right corner
+          ctx.beginPath();
+          ctx.moveTo(800, 1250);
+          ctx.lineTo(840, 1250);
+          ctx.moveTo(840, 1250);
+          ctx.lineTo(840, 1210);
+          
+          ctx.stroke();
+          ctx.restore();
+
+          /* FOOTER WITH MODERN DESIGN */
+          ctx.save();
+          
+          // Footer background
+          ctx.fillStyle = "#ffffff";
+          ctx.shadowColor = "rgba(0,0,0,0.05)";
+          ctx.shadowBlur = 15;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = -4;
+          
+          ctx.beginPath();
+          ctx.rect(0, 1300, canvas.width, 50);
+          ctx.fill();
+          
+          ctx.restore();
+
+          // Footer text
+          ctx.font = "22px 'Poppins', 'Arial', sans-serif";
+          
+          const footerGradient = ctx.createLinearGradient(300, 1325, 780, 1325);
+          footerGradient.addColorStop(0, BRAND_PRIMARY);
+          footerGradient.addColorStop(0.5, BRAND_SECONDARY);
+          footerGradient.addColorStop(1, BRAND_ACCENT);
+          
+          ctx.fillStyle = footerGradient;
+          ctx.fillText("⚡ Powered by Nepxall - Premium Living Spaces", 540, 1325);
+
+          // Add download button text
+          ctx.font = "18px 'Poppins', 'Arial', sans-serif";
+          ctx.fillStyle = "#94a3b8";
+          ctx.fillText("↓ QR Code Generated - Save to Share", 540, 1375);
 
           /* DOWNLOAD */
           const link = document.createElement("a");
           link.href = canvas.toDataURL("image/png");
-          link.download = `nepxall-${propertyName}-entrance-qr.png`;
+          link.download = `nepxall-${propertyName.toLowerCase().replace(/\s+/g, '-')}-premium-qr.png`;
           link.click();
+
+          // Show success message
+          setSnackbar({
+            open: true,
+            message: "Modern QR Code generated successfully!",
+            severity: "success"
+          });
         };
       };
     } catch (err) {
       console.error("QR Generation Error:", err);
+      setSnackbar({
+        open: true,
+        message: "Failed to generate QR code",
+        severity: "error"
+      });
     }
+  };
+
+  // Helper function for rounded rectangles
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+    if (w < 2 * r) r = w / 2;
+    if (h < 2 * r) r = h / 2;
+    this.moveTo(x + r, y);
+    this.lineTo(x + w - r, y);
+    this.quadraticCurveTo(x + w, y, x + w, y + r);
+    this.lineTo(x + w, y + h - r);
+    this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    this.lineTo(x + r, y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - r);
+    this.lineTo(x, y + r);
+    this.quadraticCurveTo(x, y, x + r, y);
+    this.closePath();
+    return this;
   };
 
   /* ---------------- LOADER ---------------- */
