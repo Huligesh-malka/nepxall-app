@@ -13,7 +13,7 @@ import {
   TableCell, TableContainer, TableHead, TableRow,
   Chip, Avatar, IconButton, Card, CardContent,
   Divider, Stack, Tooltip, Container, useMediaQuery,
-  useTheme, Fade, Zoom, Badge, Collapse
+  useTheme, Fade, Zoom, Badge, Collapse, Fab
 } from "@mui/material";
 
 import {
@@ -354,16 +354,16 @@ const OwnerDashboard = () => {
     const roomTypeLower = roomType?.toLowerCase() || '';
     
     // Map room types to database fields
-    if (roomTypeLower.includes('single sharing')) {
+    if (roomTypeLower.includes('single sharing') || roomTypeLower.includes('single')) {
       return Number(pg.single_sharing) || Number(pg.single_room) || Number(pg.co_living_single_room) || Number(pg.rent_amount) || 0;
     }
-    else if (roomTypeLower.includes('double sharing')) {
+    else if (roomTypeLower.includes('double sharing') || roomTypeLower.includes('double')) {
       return Number(pg.double_sharing) || Number(pg.double_room) || Number(pg.co_living_double_room) || 0;
     }
-    else if (roomTypeLower.includes('triple sharing')) {
+    else if (roomTypeLower.includes('triple sharing') || roomTypeLower.includes('triple')) {
       return Number(pg.triple_sharing) || Number(pg.triple_room) || 0;
     }
-    else if (roomTypeLower.includes('four sharing')) {
+    else if (roomTypeLower.includes('four sharing') || roomTypeLower.includes('four')) {
       return Number(pg.four_sharing) || 0;
     }
     else if (roomTypeLower.includes('1bhk') || roomTypeLower.includes('1 bhk')) {
