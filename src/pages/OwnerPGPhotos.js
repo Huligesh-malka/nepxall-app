@@ -40,22 +40,25 @@ const OwnerPGPhotos = () => {
       setPageLoading(true);
       setError("");
 
-      console.log("📡 Fetching PG photos for ID:", id);
+      console.log("📡 Fetching PG details for ID:", id);
       
-      // Use the dedicated photos endpoint
-      const res = await api.get(`/pg/${id}/photos`);
+      // Use the PG details endpoint which definitely exists
+      const res = await api.get(`/pg/${id}`);
       
       console.log("✅ API Response:", res.data);
 
-      // Handle response structure
+      // Extract photos from the response
       let photosArray = [];
       
-      if (res.data?.success && res.data.photos) {
+      if (res.data?.success && res.data.data) {
+        // Structure: { success: true, data: { photos: [...] } }
+        photosArray = res.data.data.photos || [];
+      } else if (res.data?.data?.photos) {
+        photosArray = res.data.data.photos;
+      } else if (res.data?.photos) {
         photosArray = res.data.photos;
       } else if (Array.isArray(res.data)) {
         photosArray = res.data;
-      } else if (res.data?.photos) {
-        photosArray = res.data.photos;
       }
 
       console.log("📸 Photos extracted:", photosArray);
@@ -63,27 +66,8 @@ const OwnerPGPhotos = () => {
 
     } catch (err) {
       console.error("❌ Load error:", err);
-      
-      // Fallback to PG details endpoint
-      try {
-        console.log("📡 Falling back to PG details endpoint");
-        const res = await api.get(`/pg/${id}`);
-        
-        let photosArray = [];
-        if (res.data?.success && res.data.data) {
-          photosArray = res.data.data.photos || [];
-        } else if (res.data?.data) {
-          photosArray = res.data.data.photos || [];
-        } else if (res.data?.photos) {
-          photosArray = res.data.photos;
-        }
-        
-        setPhotos(photosArray);
-      } catch (fallbackErr) {
-        console.error("❌ Fallback also failed:", fallbackErr);
-        setError(err.response?.data?.message || "Failed to load photos");
-        setPhotos([]);
-      }
+      setError(err.response?.data?.message || "Failed to load photos");
+      setPhotos([]);
     } finally {
       setPageLoading(false);
     }
@@ -150,17 +134,19 @@ const OwnerPGPhotos = () => {
       setReplaceFirst(false);
       alert(response.data.message || "Photos uploaded successfully!");
       
-      // Reload photos to show updated list
-      await loadPhotos();
+      // After successful upload, the backend should return the updated photos array
+      if (response.data.photos && Array.isArray(response.data.photos)) {
+        // If the response includes the photos array, use it directly
+        console.log("📸 Using photos from upload response:", response.data.photos);
+        setPhotos(response.data.photos);
+      } else {
+        // Otherwise reload from the PG details endpoint
+        console.log("📡 Reloading photos from PG details");
+        await loadPhotos();
+      }
 
     } catch (err) {
       console.error("❌ Upload error:", err);
-      
-      // Detailed error logging
-      if (err.response) {
-        console.error("Error response:", err.response.data);
-        console.error("Error status:", err.response.status);
-      }
       
       const errorMsg = err.response?.data?.message || err.message || "Upload failed";
       setError(errorMsg);
@@ -175,16 +161,25 @@ const OwnerPGPhotos = () => {
     if (!window.confirm("Are you sure you want to delete this photo?")) return;
 
     try {
+      console.log("🗑️ Deleting photo:", photo);
+
       await api.delete(`/pg/${id}/photo`, {
         data: { photo },
       });
 
+      // Update local state immediately for better UX
       setPhotos((prev) => prev.filter((p) => p !== photo));
+      
+      // Optionally reload to ensure sync with backend
+      // await loadPhotos();
+      
       alert("Photo deleted successfully!");
 
     } catch (err) {
       console.error("❌ Delete error:", err);
       alert(err.response?.data?.message || "Delete failed");
+      // Reload to revert optimistic update if needed
+      await loadPhotos();
     }
   };
 
