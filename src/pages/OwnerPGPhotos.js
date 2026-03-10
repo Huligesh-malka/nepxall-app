@@ -19,7 +19,6 @@ const OwnerPGPhotos = () => {
   const [dragIndex, setDragIndex] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState("");
-  const [replaceFirst, setReplaceFirst] = useState(false);
 
   /* ================= INIT ================= */
   useEffect(() => {
@@ -42,7 +41,7 @@ const OwnerPGPhotos = () => {
 
       console.log("📡 Fetching PG details for ID:", id);
       
-      // Use the PG details endpoint which definitely exists
+      // Use the PG details endpoint
       const res = await api.get(`/pg/${id}`);
       
       console.log("✅ API Response:", res.data);
@@ -51,7 +50,6 @@ const OwnerPGPhotos = () => {
       let photosArray = [];
       
       if (res.data?.success && res.data.data) {
-        // Structure: { success: true, data: { photos: [...] } }
         photosArray = res.data.data.photos || [];
       } else if (res.data?.data?.photos) {
         photosArray = res.data.data.photos;
@@ -106,15 +104,10 @@ const OwnerPGPhotos = () => {
       
       // Append all photos
       files.forEach((f) => formData.append("photos", f));
-      
-      // IMPORTANT: Send replaceFirst as a string 'true' or 'false'
-      formData.append("replaceFirst", replaceFirst ? "true" : "false");
 
       console.log("📤 Uploading photos to PG ID:", id);
-      console.log("🔄 Replace first image:", replaceFirst ? "true" : "false");
       console.log("📦 Number of files:", files.length);
       
-      // Using api instance with upload progress
       const response = await api.post(`/pg/${id}/upload-photos`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -131,16 +124,13 @@ const OwnerPGPhotos = () => {
 
       setFiles([]);
       setUploadProgress(0);
-      setReplaceFirst(false);
       alert(response.data.message || "Photos uploaded successfully!");
       
-      // After successful upload, the backend should return the updated photos array
+      // After successful upload, update photos from response or reload
       if (response.data.photos && Array.isArray(response.data.photos)) {
-        // If the response includes the photos array, use it directly
         console.log("📸 Using photos from upload response:", response.data.photos);
         setPhotos(response.data.photos);
       } else {
-        // Otherwise reload from the PG details endpoint
         console.log("📡 Reloading photos from PG details");
         await loadPhotos();
       }
@@ -167,18 +157,14 @@ const OwnerPGPhotos = () => {
         data: { photo },
       });
 
-      // Update local state immediately for better UX
+      // Update local state
       setPhotos((prev) => prev.filter((p) => p !== photo));
-      
-      // Optionally reload to ensure sync with backend
-      // await loadPhotos();
-      
       alert("Photo deleted successfully!");
 
     } catch (err) {
       console.error("❌ Delete error:", err);
       alert(err.response?.data?.message || "Delete failed");
-      // Reload to revert optimistic update if needed
+      // Reload to sync with backend
       await loadPhotos();
     }
   };
@@ -284,21 +270,6 @@ const OwnerPGPhotos = () => {
           • Supported formats: JPG, PNG, GIF, WEBP
         </p>
 
-        {/* Checkbox for replace first image option */}
-        <div style={{ marginBottom: 16, display: "flex", alignItems: "center" }}>
-          <input
-            type="checkbox"
-            id="replaceFirst"
-            checked={replaceFirst}
-            onChange={(e) => setReplaceFirst(e.target.checked)}
-            disabled={uploading || photos.length === 0}
-            style={{ marginRight: 8, width: 16, height: 16 }}
-          />
-          <label htmlFor="replaceFirst" style={{ color: "#4b5563" }}>
-            Replace the first image only (other uploaded images will be appended)
-          </label>
-        </div>
-
         {files.length > 0 && (
           <div style={{ marginBottom: 16 }}>
             <p style={{ color: "#4b5563", marginBottom: 8 }}>
@@ -353,12 +324,6 @@ const OwnerPGPhotos = () => {
         >
           {uploading ? `Uploading (${uploadProgress}%)` : "⬆ Upload Photos"}
         </button>
-        
-        {replaceFirst && photos.length > 0 && (
-          <p style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>
-            ⚠️ The first image will be replaced. All other uploaded images will be added to the end.
-          </p>
-        )}
       </div>
 
       {/* Gallery Section */}
