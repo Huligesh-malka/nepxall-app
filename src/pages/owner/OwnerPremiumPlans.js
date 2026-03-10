@@ -257,4 +257,4 @@ const currentButton = {
   color: "#fff",
   border: "none",
   borderRadius: 8
-}
+};
