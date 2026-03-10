@@ -263,3 +263,161 @@ export default function PrivateChat() {
 }
 
 /* styles unchanged */
+
+/* ================= STYLES ================= */
+const styles = {
+  container: { 
+    height: "100vh", 
+    display: "flex", 
+    flexDirection: "column", 
+    background: "#f1f5f9" 
+  },
+
+  header: {
+    background: "linear-gradient(135deg,#667eea,#764ba2)",
+    color: "#fff",
+    padding: "12px 15px",
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  back: { 
+    cursor: "pointer", 
+    fontSize: 20,
+    padding: "5px 10px",
+    borderRadius: "50%",
+    transition: "background 0.3s",
+    ':hover': {
+      background: "rgba(255,255,255,0.1)"
+    }
+  },
+
+  headerInfo: {
+    flex: 1,
+  },
+
+  headerTitleWithSub: {
+    display: "flex",
+    flexDirection: "column",
+  },
+
+  propertySubtext: {
+    fontSize: 11,
+    opacity: 0.8,
+    marginTop: 2,
+  },
+
+  name: { 
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+
+  status: { 
+    fontSize: 12, 
+    opacity: 0.9,
+    marginTop: 2,
+  },
+
+  chatBody: { 
+    flex: 1, 
+    overflowY: "auto", 
+    padding: 15 
+  },
+
+  msgRow: { 
+    display: "flex", 
+    marginBottom: 10 
+  },
+
+  bubble: {
+    padding: "10px 14px",
+    borderRadius: 15,
+    maxWidth: "70%",
+    position: "relative",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+  },
+
+  tick: { 
+    marginTop: 5, 
+    textAlign: "right" 
+  },
+
+  dot: {
+    height: 8,
+    width: 8,
+    borderRadius: "50%",
+    display: "inline-block",
+  },
+
+  typing: { 
+    fontSize: 12, 
+    marginLeft: 10, 
+    color: "#555",
+    fontStyle: "italic",
+  },
+
+  deleteBtn: {
+    position: "absolute",
+    top: -8,
+    right: -8,
+    cursor: "pointer",
+    fontSize: 14,
+    background: "#fff",
+    borderRadius: "50%",
+    padding: "2px 5px",
+    boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+    opacity: 0,
+    transition: "opacity 0.2s",
+    ':hover': {
+      opacity: 1,
+    }
+  },
+
+  // Show delete button on hover of message bubble
+  // This requires additional CSS but we'll handle it with inline styles limitation
+  // You might want to add this in a CSS file
+
+  inputArea: {
+    display: "flex",
+    padding: 10,
+    background: "#fff",
+    borderTop: "1px solid #eee",
+  },
+
+  input: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 25,
+    border: "1px solid #ddd",
+    outline: "none",
+    fontSize: 14,
+    ':focus': {
+      borderColor: "#667eea",
+    }
+  },
+
+  sendBtn: {
+    marginLeft: 10,
+    background: "linear-gradient(135deg,#667eea,#764ba2)",
+    color: "#fff",
+    border: "none",
+    padding: "0 18px",
+    borderRadius: "50%",
+    cursor: "pointer",
+    fontSize: 16,
+    transition: "transform 0.2s",
+    ':hover': {
+      transform: "scale(1.05)",
+    }
+  },
+
+  loader: {
+    height: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    fontSize: 18,
+    color: "#667eea",
+  },
+};
