@@ -1,8 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import logo from "../assets/nepxall-logo.png";
 
-/* ================= BRAND COLORS ================= */
 const BRAND_BLUE = "#0B5ED7";
 const BRAND_GREEN = "#4CAF50";
 
@@ -11,7 +10,25 @@ const Sidebar = () => {
   const location = useLocation();
   const role = localStorage.getItem("role");
 
-  const [open, setOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [open, setOpen] = useState(window.innerWidth >= 768);
+
+  useEffect(() => {
+
+    const handleResize = () => {
+
+      const mobile = window.innerWidth < 768;
+
+      setIsMobile(mobile);
+      setOpen(!mobile);
+
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+
+  }, []);
 
   const isActive = (path) =>
     location.pathname === path ||
@@ -20,21 +37,24 @@ const Sidebar = () => {
   const isLoggedIn = role && role !== "null" && role !== "undefined";
 
   return (
-
     <>
       {/* MOBILE TOGGLE */}
-      <button style={mobileToggle} onClick={() => setOpen(!open)}>
-        ☰
-      </button>
+      {isMobile && (
+        <button style={mobileToggle} onClick={() => setOpen(!open)}>
+          ☰
+        </button>
+      )}
 
-      <div style={{
-        ...sidebar,
-        left: open ? 0 : "-260px"
-      }}>
-
+      {/* SIDEBAR */}
+      <div
+        style={{
+          ...sidebar,
+          left: open ? 0 : "-260px"
+        }}
+      >
         {/* LOGO */}
         <div style={companyHeader}>
-          <img src={logo} alt="Nepxall logo" style={logoImage} />
+          <img src={logo} alt="logo" style={logoImage} />
 
           <div>
             <h2 style={companyName}>
@@ -52,7 +72,6 @@ const Sidebar = () => {
 
         <nav style={nav}>
 
-          {/* HOME */}
           <Link style={linkStyle(isActive("/"))} to="/">
             🏡 Home
           </Link>
@@ -75,10 +94,6 @@ const Sidebar = () => {
                 💎 Premium
               </Link>
 
-              <Link style={linkStyle(isActive("/user/aadhaar-kyc"))} to="/user/aadhaar-kyc">
-                🛂 Aadhaar KYC
-              </Link>
-
               <Link style={linkStyle(isActive("/"))} to="/">
                 🔍 Browse Properties
               </Link>
@@ -99,40 +114,12 @@ const Sidebar = () => {
                 📥 Booking Requests
               </Link>
 
-              <Link style={linkStyle(isActive("/owner/payments"))} to="/owner/payments">
-                💰 Earnings / Payments
-              </Link>
-
               <Link style={linkStyle(isActive("/owner/premium"))} to="/owner/premium">
                 ⭐ Premium Plans
               </Link>
 
               <Link style={linkStyle(isActive("/owner/add"))} to="/owner/add">
                 ➕ Add PG
-              </Link>
-
-              <Link style={linkStyle(isActive("/owner/hotels"))} to="/owner/hotels">
-                🏨 My Hotels
-              </Link>
-
-              <Link style={linkStyle(isActive("/owner/bank"))} to="/owner/bank">
-                🏦 Bank Details
-              </Link>
-            </>
-          )}
-
-          {/* ADMIN */}
-          {isLoggedIn && role === "admin" && (
-            <>
-              <hr style={divider} />
-              <p style={sectionLabel}>ADMIN</p>
-
-              <Link style={linkStyle(isActive("/admin/finance"))} to="/admin/finance">
-                📊 Finance Dashboard
-              </Link>
-
-              <Link style={linkStyle(isActive("/admin/payments"))} to="/admin/payments">
-                💳 Payment Verification
               </Link>
             </>
           )}
@@ -152,17 +139,11 @@ const Sidebar = () => {
               </span>
             </p>
 
-            <p style={{ color: "#4CAF50", fontSize: 11 }}>
-              {localStorage.getItem("email")?.split("@")[0] || "User"}
-            </p>
-
           </div>
         )}
-
       </div>
     </>
   );
-
 };
 
 export default Sidebar;
@@ -204,13 +185,11 @@ const companyHeader = {
 
 const logoImage = {
   width: 48,
-  height: 48,
-  borderRadius: 8
+  height: 48
 };
 
 const companyName = {
   fontSize: 20,
-  fontWeight: "bold",
   margin: 0
 };
 
@@ -222,8 +201,7 @@ const companyTagline = {
 const nav = {
   display: "flex",
   flexDirection: "column",
-  gap: 10,
-  flex: 1
+  gap: 10
 };
 
 const divider = {
@@ -233,8 +211,7 @@ const divider = {
 
 const sectionLabel = {
   fontSize: 11,
-  color: "#94a3b8",
-  letterSpacing: 1
+  color: "#94a3b8"
 };
 
 const userInfoStyle = {
@@ -249,6 +226,5 @@ const linkStyle = (active) => ({
   background: active
     ? "linear-gradient(90deg,#0B5ED7,#4CAF50)"
     : "transparent",
-  fontWeight: active ? "600" : "normal",
-  transition: "0.3s"
+  fontWeight: active ? "600" : "normal"
 });
