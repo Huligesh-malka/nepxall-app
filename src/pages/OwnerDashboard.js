@@ -31,7 +31,8 @@ import {
   Hotel as RoomIcon,
   Person as PersonIcon,
   People as OccupantsIcon,
-  TrendingUp as TrendingUpIcon
+  TrendingUp as TrendingUpIcon,
+  Image as ImageIcon
 } from "@mui/icons-material";
 
 import StatCard from "../components/owner/StatCard";
@@ -96,6 +97,40 @@ const getStatusBadgeStyle = (status) => {
     default:
       return { bg: '#6b7280', color: '#fff' };
   }
+};
+
+// Helper function to get proper image URL
+const getPropertyImageUrl = (photo) => {
+  if (!photo) return null;
+  
+  // If it's already a full URL (Cloudinary or other)
+  if (photo.startsWith('http')) {
+    return photo;
+  }
+  
+  // Backend URL from environment
+  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://nepxall-backend.onrender.com";
+  
+  // If it's a path containing /uploads/
+  if (photo.includes('/uploads/')) {
+    const uploadsIndex = photo.indexOf('/uploads/');
+    if (uploadsIndex !== -1) {
+      const relativePath = photo.substring(uploadsIndex);
+      return `${BACKEND_URL}${relativePath}`;
+    }
+  }
+  
+  // If it's a relative path starting with /opt/render or similar
+  if (photo.includes('/opt/render/')) {
+    const uploadsMatch = photo.match(/\/uploads\/.*/);
+    if (uploadsMatch) {
+      return `${BACKEND_URL}${uploadsMatch[0]}`;
+    }
+  }
+  
+  // Default: just prepend backend URL
+  const normalizedPath = photo.startsWith('/') ? photo : `/${photo}`;
+  return `${BACKEND_URL}${normalizedPath}`;
 };
 
 /* ---------------- COMPONENT ---------------- */
@@ -225,6 +260,9 @@ const OwnerDashboard = () => {
       const properties = pgData.map(pg => {
         const photos = parseArray(pg.photos);
         
+        // Get proper image URL for the first photo
+        const firstPhoto = photos.length > 0 ? getPropertyImageUrl(photos[0]) : null;
+        
         // Store in map with both id and pg_id as keys
         pgMap[pg.id] = pg;
         pgMap[pg.pg_id] = pg;
@@ -234,7 +272,9 @@ const OwnerDashboard = () => {
           id: pg.id || pg.pg_id,
           pg_id: pg.pg_id || pg.id,
           photos,
-          image: photos.length ? photos[0] : null,
+          photosWithUrls: photos.map(p => getPropertyImageUrl(p)).filter(Boolean),
+          image: firstPhoto,
+          imageUrl: firstPhoto, // Add this for easy access
           total_rooms: Number(pg.total_rooms) || 0,
           available_rooms: Number(pg.available_rooms) || 0,
           // Ensure these fields are numbers
@@ -655,7 +695,7 @@ const OwnerDashboard = () => {
           </Box>
         </Box>
 
-        {/* STATS CARDS - Fixed width cards */}
+        {/* STATS CARDS - 4 Cards with fixed layout */}
         <Grid container spacing={3} mb={4}>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard 

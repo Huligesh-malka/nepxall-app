@@ -21,7 +21,7 @@ const Sidebar = () => {
 
     <div style={sidebar}>
 
-      {/* LOGO */}
+      {/* ================= LOGO ================= */}
       <div style={companyHeader}>
         <img src={logo} alt="Nepxall logo" style={logoImage} />
 
@@ -41,7 +41,7 @@ const Sidebar = () => {
 
       <nav style={nav}>
 
-        {/* HOME */}
+        {/* ================= HOME ================= */}
         <Link style={linkStyle(isActive("/"))} to="/">
           🏡 Home
         </Link>
@@ -68,7 +68,7 @@ const Sidebar = () => {
               🔍 Browse Properties
             </Link>
 
-            <hr style={{ margin: "15px 0", opacity: 0.2 }} />
+            <hr style={divider} />
 
             <Link style={linkStyle(isActive("/contact"))} to="/contact">
               📞 Contact Us
@@ -102,9 +102,13 @@ const Sidebar = () => {
               📥 Booking Requests
             </Link>
 
-            {/* ⭐ NEW OWNER PAYMENTS */}
             <Link style={linkStyle(isActive("/owner/payments"))} to="/owner/payments">
               💰 Earnings / Payments
+            </Link>
+
+            {/* ⭐ PREMIUM PLAN */}
+            <Link style={linkStyle(isActive("/owner/premium"))} to="/owner/premium">
+              ⭐ Premium Plans
             </Link>
 
             <Link style={linkStyle(isActive("/owner/pgs"))} to="/owner/pgs">
@@ -129,6 +133,14 @@ const Sidebar = () => {
 
             <Link style={linkStyle(isActive("/owner/verification"))} to="/owner/verification">
               🛂 Verification
+            </Link>
+
+            <Link style={linkStyle(isActive("/owner/notifications"))} to="/owner/notifications">
+              🔔 Notifications
+            </Link>
+
+            <Link style={linkStyle(isActive("/owner/chats"))} to="/owner/chats">
+              💬 Chats
             </Link>
           </>
         )}
@@ -198,7 +210,7 @@ const Sidebar = () => {
 
       </nav>
 
-      {/* USER INFO */}
+      {/* ================= USER INFO ================= */}
       {isLoggedIn && (
         <div style={userInfoStyle}>
 

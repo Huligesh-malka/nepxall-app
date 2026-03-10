@@ -53,6 +53,9 @@ import OwnerChatList from "./pages/OwnerChatList";
 import CreatePlan from "./pages/CreatePlan";
 import OwnerPayments from "./pages/owner/OwnerPayments";
 
+/* ⭐ NEW PREMIUM PAGE */
+import OwnerPremiumPlans from "./pages/owner/OwnerPremiumPlans";
+
 /* HOTEL */
 import AddHotel from "./pages/hotels/AddHotel";
 import OwnerHotels from "./pages/hotels/OwnerHotels";
@@ -72,7 +75,7 @@ import AdminServiceBookings from "./pages/admin/AdminServiceBookings";
 /* VENDOR */
 import VendorDashboard from "./pages/VendorDashboard";
 
-/* QR SCAN PAGE */
+/* QR */
 import ScanPG from "./pages/ScanPG";
 
 /* CONFIG */
@@ -113,13 +116,12 @@ function App() {
 
     <Routes>
 
-      {/* PUBLIC ROUTES */}
+      {/* PUBLIC */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<UserPGSearch />} />
         <Route path="/pg/:id" element={<PGDetails />} />
         <Route path="/scan/:id" element={<ScanPG />} />
       </Route>
-
 
       {/* STATIC */}
       <Route path="/contact" element={<Contact />} />
@@ -127,11 +129,9 @@ function App() {
       <Route path="/refund-policy" element={<RefundPolicy />} />
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
-
       {/* AUTH */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-
 
       {/* USER ROUTES */}
       <Route
@@ -155,7 +155,6 @@ function App() {
         <Route path="/chat/private/:userId" element={<PrivateChat />} />
       </Route>
 
-
       {/* OWNER ROUTES */}
       <Route
         path="/owner"
@@ -168,8 +167,13 @@ function App() {
         }
       >
         <Route index element={<Navigate to="dashboard" replace />} />
+
         <Route path="dashboard" element={<OwnerDashboard />} />
         <Route path="payments" element={<OwnerPayments />} />
+
+        {/* ⭐ PREMIUM PLAN PAGE */}
+        <Route path="premium" element={<OwnerPremiumPlans />} />
+
         <Route path="bookings" element={<OwnerBookings />} />
         <Route path="verification" element={<OwnerVerificationPage />} />
         <Route path="bank" element={<OwnerBankDetails />} />
@@ -187,8 +191,7 @@ function App() {
         <Route path="chat/private/:userId" element={<PrivateChat />} />
       </Route>
 
-
-      {/* ADMIN ROUTES */}
+      {/* ADMIN */}
       <Route
         path="/admin"
         element={
@@ -210,8 +213,7 @@ function App() {
         <Route path="services" element={<AdminServiceBookings />} />
       </Route>
 
-
-      {/* VENDOR ROUTES */}
+      {/* VENDOR */}
       <Route
         path="/vendor"
         element={
@@ -225,7 +227,6 @@ function App() {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<VendorDashboard />} />
       </Route>
-
 
       {/* FALLBACK */}
       <Route path="*" element={<Navigate to="/" replace />} />
