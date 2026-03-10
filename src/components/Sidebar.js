@@ -11,10 +11,11 @@ const Sidebar = () => {
   const location = useLocation();
   const role = localStorage.getItem("role");
 
+  /* ⭐ NEW STATES (for responsive) */
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [open, setOpen] = useState(window.innerWidth >= 768);
 
-  /* DETECT SCREEN SIZE */
+  /* ⭐ SCREEN SIZE DETECTOR */
   useEffect(() => {
 
     const handleResize = () => {
@@ -22,7 +23,12 @@ const Sidebar = () => {
       const mobile = window.innerWidth < 768;
 
       setIsMobile(mobile);
-      setOpen(!mobile);
+
+      if (!mobile) {
+        setOpen(true);
+      } else {
+        setOpen(false);
+      }
 
     };
 
@@ -38,6 +44,7 @@ const Sidebar = () => {
 
   const isLoggedIn = role && role !== "null" && role !== "undefined";
 
+  /* ⭐ CLOSE SIDEBAR ON MOBILE CLICK */
   const closeMobile = () => {
     if (isMobile) setOpen(false);
   };
@@ -46,19 +53,18 @@ const Sidebar = () => {
 
     <>
 
-      {/* MOBILE MENU BUTTON */}
+      {/* ⭐ MOBILE MENU BUTTON */}
       {isMobile && (
         <button style={mobileToggle} onClick={() => setOpen(!open)}>
           ☰
         </button>
       )}
 
-      {/* OVERLAY */}
+      {/* ⭐ MOBILE OVERLAY */}
       {isMobile && open && (
         <div style={overlay} onClick={() => setOpen(false)} />
       )}
 
-      {/* SIDEBAR */}
       <div
         style={{
           ...sidebar,
@@ -66,7 +72,7 @@ const Sidebar = () => {
         }}
       >
 
-        {/* LOGO */}
+        {/* ================= LOGO ================= */}
         <div style={companyHeader}>
           <img src={logo} alt="Nepxall logo" style={logoImage} />
 
@@ -86,12 +92,12 @@ const Sidebar = () => {
 
         <nav style={nav}>
 
-          {/* HOME */}
+          {/* ================= HOME ================= */}
           <Link onClick={closeMobile} style={linkStyle(isActive("/"))} to="/">
             🏡 Home
           </Link>
 
-          {/* TENANT */}
+          {/* ================= TENANT ================= */}
           {isLoggedIn && (role === "tenant" || role === "user") && (
             <>
               <hr style={divider} />
@@ -105,10 +111,6 @@ const Sidebar = () => {
                 📜 My Bookings
               </Link>
 
-              <Link onClick={closeMobile} style={linkStyle(isActive("/user/premium"))} to="/user/premium">
-                💎 Premium
-              </Link>
-
               <Link onClick={closeMobile} style={linkStyle(isActive("/user/aadhaar-kyc"))} to="/user/aadhaar-kyc">
                 🛂 Aadhaar KYC
               </Link>
@@ -116,10 +118,28 @@ const Sidebar = () => {
               <Link onClick={closeMobile} style={linkStyle(isActive("/"))} to="/">
                 🔍 Browse Properties
               </Link>
+
+              <hr style={divider} />
+
+              <Link onClick={closeMobile} style={linkStyle(isActive("/contact"))} to="/contact">
+                📞 Contact Us
+              </Link>
+
+              <Link onClick={closeMobile} style={linkStyle(isActive("/terms"))} to="/terms">
+                📄 Terms & Conditions
+              </Link>
+
+              <Link onClick={closeMobile} style={linkStyle(isActive("/refund-policy"))} to="/refund-policy">
+                💰 Refund Policy
+              </Link>
+
+              <Link onClick={closeMobile} style={linkStyle(isActive("/privacy-policy"))} to="/privacy-policy">
+                🔒 Privacy Policy
+              </Link>
             </>
           )}
 
-          {/* OWNER */}
+          {/* ================= OWNER ================= */}
           {isLoggedIn && role === "owner" && (
             <>
               <hr style={divider} />
@@ -141,21 +161,57 @@ const Sidebar = () => {
                 ⭐ Premium Plans
               </Link>
 
-              <Link onClick={closeMobile} style={linkStyle(isActive("/owner/add"))} to="/owner/add">
-                ➕ Add PG
+              <Link onClick={closeMobile} style={linkStyle(isActive("/owner/pgs"))} to="/owner/pgs">
+                🏢 My PGs
               </Link>
 
               <Link onClick={closeMobile} style={linkStyle(isActive("/owner/hotels"))} to="/owner/hotels">
                 🏨 My Hotels
               </Link>
 
+              <Link onClick={closeMobile} style={linkStyle(isActive("/owner/add"))} to="/owner/add">
+                ➕ Add PG
+              </Link>
+
+              <Link onClick={closeMobile} style={linkStyle(isActive("/owner/add-hotel"))} to="/owner/add-hotel">
+                ➕ Add Hotel
+              </Link>
+
               <Link onClick={closeMobile} style={linkStyle(isActive("/owner/bank"))} to="/owner/bank">
                 🏦 Bank Details
+              </Link>
+
+              <Link onClick={closeMobile} style={linkStyle(isActive("/owner/verification"))} to="/owner/verification">
+                🛂 Verification
+              </Link>
+
+              <Link onClick={closeMobile} style={linkStyle(isActive("/owner/notifications"))} to="/owner/notifications">
+                🔔 Notifications
+              </Link>
+
+              <Link onClick={closeMobile} style={linkStyle(isActive("/owner/chats"))} to="/owner/chats">
+                💬 Chats
               </Link>
             </>
           )}
 
-          {/* ADMIN */}
+          {/* ================= VENDOR ================= */}
+          {isLoggedIn && role === "vendor" && (
+            <>
+              <hr style={divider} />
+              <p style={sectionLabel}>VENDOR</p>
+
+              <Link onClick={closeMobile} style={linkStyle(isActive("/vendor/dashboard"))} to="/vendor/dashboard">
+                📊 Dashboard
+              </Link>
+
+              <Link onClick={closeMobile} style={linkStyle(isActive("/vendor/services"))} to="/vendor/services">
+                🛠 My Assigned Services
+              </Link>
+            </>
+          )}
+
+          {/* ================= ADMIN ================= */}
           {isLoggedIn && role === "admin" && (
             <>
               <hr style={divider} />
@@ -168,20 +224,36 @@ const Sidebar = () => {
               <Link onClick={closeMobile} style={linkStyle(isActive("/admin/payments"))} to="/admin/payments">
                 💳 Payment Verification
               </Link>
+
+              <Link onClick={closeMobile} style={linkStyle(isActive("/admin/services"))} to="/admin/services">
+                🛠 Service Requests
+              </Link>
+
+              <Link onClick={closeMobile} style={linkStyle(isActive("/admin/owner-verification"))} to="/admin/owner-verification">
+                🛡️ Verify Owners
+              </Link>
+
+              <Link onClick={closeMobile} style={linkStyle(isActive("/admin/settlements"))} to="/admin/settlements">
+                💰 Settlements
+              </Link>
+
+              <Link onClick={closeMobile} style={linkStyle(isActive("/admin/settlement-history"))} to="/admin/settlement-history">
+                📜 Settlement History
+              </Link>
             </>
           )}
 
         </nav>
 
-        {/* USER INFO */}
+        {/* ================= USER INFO ================= */}
         {isLoggedIn && (
           <div style={userInfoStyle}>
 
             <hr style={divider} />
 
-            <p style={{ color: "#94a3b8", fontSize: 12 }}>
+            <p style={{ color: "#94a3b8", fontSize: 12, margin: 0 }}>
               Logged in as
-              <span style={{ color: "#fff", fontWeight: "bold" }}>
+              <span style={{ color: "#fff", fontWeight: "bold", textTransform: "capitalize" }}>
                 {" "} {role}
               </span>
             </p>
@@ -194,7 +266,6 @@ const Sidebar = () => {
         )}
 
       </div>
-
     </>
   );
 };
@@ -202,18 +273,6 @@ const Sidebar = () => {
 export default Sidebar;
 
 /* ================= STYLES ================= */
-
-const sidebar = {
-  width: 250,
-  background: "#0f172a",
-  color: "#fff",
-  minHeight: "100vh",
-  padding: 20,
-  position: "fixed",
-  top: 0,
-  transition: "0.3s",
-  zIndex: 1000
-};
 
 const overlay = {
   position: "fixed",
@@ -238,60 +297,3 @@ const mobileToggle = {
   cursor: "pointer",
   zIndex: 1200
 };
-
-const companyHeader = {
-  display: "flex",
-  alignItems: "center",
-  gap: 12,
-  marginBottom: 20
-};
-
-const logoImage = {
-  width: 48,
-  height: 48,
-  borderRadius: 8
-};
-
-const companyName = {
-  fontSize: 20,
-  fontWeight: "bold",
-  margin: 0
-};
-
-const companyTagline = {
-  fontSize: 11,
-  color: "#94a3b8"
-};
-
-const nav = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 10,
-  flex: 1
-};
-
-const divider = {
-  borderTop: "1px solid #334155",
-  margin: "12px 0"
-};
-
-const sectionLabel = {
-  fontSize: 11,
-  color: "#94a3b8",
-  letterSpacing: 1
-};
-
-const userInfoStyle = {
-  marginTop: "auto"
-};
-
-const linkStyle = (active) => ({
-  color: "#e5e7eb",
-  textDecoration: "none",
-  padding: "10px 14px",
-  borderRadius: 8,
-  background: active
-    ? "linear-gradient(90deg,#0B5ED7,#4CAF50)"
-    : "transparent",
-  fontWeight: active ? "600" : "normal"
-});
