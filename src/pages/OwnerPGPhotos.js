@@ -41,12 +41,10 @@ const OwnerPGPhotos = () => {
 
       console.log("📡 Fetching PG details for ID:", id);
       
-      // Use the PG details endpoint
       const res = await api.get(`/pg/${id}`);
       
       console.log("✅ API Response:", res.data);
 
-      // Extract photos from the response
       let photosArray = [];
       
       if (res.data?.success && res.data.data) {
@@ -77,7 +75,7 @@ const OwnerPGPhotos = () => {
 
     const valid = selected.filter((file) => {
       const isImage = file.type.startsWith("image/");
-      const isSizeOk = file.size <= 5 * 1024 * 1024; // 5MB for images
+      const isSizeOk = file.size <= 5 * 1024 * 1024;
 
       if (!isImage) alert(`${file.name} is not an image`);
       if (!isSizeOk) alert(`${file.name} exceeds 5MB`);
@@ -101,12 +99,11 @@ const OwnerPGPhotos = () => {
       setError("");
 
       const formData = new FormData();
-      
-      // Append all photos
       files.forEach((f) => formData.append("photos", f));
 
       console.log("📤 Uploading photos to PG ID:", id);
       console.log("📦 Number of files:", files.length);
+      console.log("Current photos before upload:", photos);
       
       const response = await api.post(`/pg/${id}/upload-photos`, formData, {
         headers: {
@@ -124,16 +121,33 @@ const OwnerPGPhotos = () => {
 
       setFiles([]);
       setUploadProgress(0);
-      alert(response.data.message || "Photos uploaded successfully!");
       
-      // After successful upload, update photos from response or reload
+      // FIX: Manually append new photos to existing ones
+      let updatedPhotos = [];
+      
       if (response.data.photos && Array.isArray(response.data.photos)) {
-        console.log("📸 Using photos from upload response:", response.data.photos);
-        setPhotos(response.data.photos);
+        // If backend returns only the new photos (which seems to be the case)
+        if (response.data.photos.length === files.length) {
+          // Backend returned only new photos, so append them manually
+          console.log("⚠️ Backend returned only new photos, appending manually");
+          updatedPhotos = [...photos, ...response.data.photos];
+        } else {
+          // Backend returned full list
+          updatedPhotos = response.data.photos;
+        }
       } else {
+        // No photos in response, reload from server
         console.log("📡 Reloading photos from PG details");
         await loadPhotos();
+        setUploading(false);
+        alert(response.data.message || "Photos uploaded successfully!");
+        return;
       }
+      
+      console.log("📸 Updated photos:", updatedPhotos);
+      setPhotos(updatedPhotos);
+      
+      alert(response.data.message || "Photos uploaded successfully!");
 
     } catch (err) {
       console.error("❌ Upload error:", err);
@@ -157,14 +171,12 @@ const OwnerPGPhotos = () => {
         data: { photo },
       });
 
-      // Update local state
       setPhotos((prev) => prev.filter((p) => p !== photo));
       alert("Photo deleted successfully!");
 
     } catch (err) {
       console.error("❌ Delete error:", err);
       alert(err.response?.data?.message || "Delete failed");
-      // Reload to sync with backend
       await loadPhotos();
     }
   };
@@ -191,7 +203,7 @@ const OwnerPGPhotos = () => {
     } catch (err) {
       console.error("❌ Reorder error:", err);
       alert("Failed to update photo order");
-      loadPhotos(); // Revert on error
+      loadPhotos();
     }
   };
 
@@ -199,10 +211,8 @@ const OwnerPGPhotos = () => {
   const getImageUrl = (path) => {
     if (!path) return "https://via.placeholder.com/400x300?text=No+Image";
 
-    // If it's already a full URL (Cloudinary URL)
     if (path.startsWith("http")) return path;
 
-    // Handle paths that contain /uploads/
     if (path.includes('/uploads/')) {
       const uploadsIndex = path.indexOf('/uploads/');
       if (uploadsIndex !== -1) {
@@ -211,7 +221,6 @@ const OwnerPGPhotos = () => {
       }
     }
 
-    // Handle relative paths
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
     return `${BACKEND_URL}${normalizedPath}`;
   };
@@ -223,7 +232,6 @@ const OwnerPGPhotos = () => {
     <div style={{ maxWidth: 1200, margin: "auto", padding: 20 }}>
       <h2 style={{ marginBottom: 20 }}>📷 Manage PG Photos</h2>
 
-      {/* Error Display */}
       {error && (
         <div style={{
           backgroundColor: "#fee2e2",
@@ -237,7 +245,6 @@ const OwnerPGPhotos = () => {
         </div>
       )}
 
-      {/* Upload Section */}
       <div style={{
         backgroundColor: "#f8fafc",
         padding: 24,
@@ -264,7 +271,6 @@ const OwnerPGPhotos = () => {
           />
         </div>
 
-        {/* File size info */}
         <p style={{ fontSize: 13, color: "#666", marginBottom: 16 }}>
           • Max size: <b>5MB</b> per image<br />
           • Supported formats: JPG, PNG, GIF, WEBP
@@ -326,7 +332,6 @@ const OwnerPGPhotos = () => {
         </button>
       </div>
 
-      {/* Gallery Section */}
       <div>
         <h3 style={{ marginBottom: 16 }}>
           🖼️ Photo Gallery {photos.length > 0 && `(${photos.length})`}
@@ -368,8 +373,7 @@ const OwnerPGPhotos = () => {
                   overflow: "hidden",
                   backgroundColor: "#f8fafc",
                   cursor: "grab",
-                  boxShadow: index === 0 ? "0 4px 6px rgba(59, 130, 246, 0.3)" : "0 1px 3px rgba(0,0,0,0.1)",
-                  transition: "transform 0.2s ease"
+                  boxShadow: index === 0 ? "0 4px 6px rgba(59, 130, 246, 0.3)" : "0 1px 3px rgba(0,0,0,0.1)"
                 }}
               >
                 {index === 0 && (
