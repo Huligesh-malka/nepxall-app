@@ -50,6 +50,7 @@ export default function OwnerPGVideos() {
           }
         }
 
+        console.log("📹 Loaded videos:", parsed);
         setVideos(parsed);
       }
     } catch (err) {
@@ -87,13 +88,30 @@ export default function OwnerPGVideos() {
       const formData = new FormData();
       files.forEach((file) => formData.append("videos", file));
 
-      await api.post(`/pg/${id}/videos`, formData);
+      const response = await api.post(`/pg/${id}/videos`, formData);
+      
+      console.log("✅ Upload response:", response.data);
 
       setFiles([]);
-      loadVideos();
+      
+      // Update videos based on response
+      if (response.data.videos && Array.isArray(response.data.videos)) {
+        // If backend returns only new videos (like with photos), append them
+        if (response.data.videos.length === files.length) {
+          console.log("⚠️ Backend returned only new videos, appending manually");
+          setVideos([...videos, ...response.data.videos]);
+        } else {
+          // Backend returned full list
+          setVideos(response.data.videos);
+        }
+      } else {
+        // Fallback to reload
+        await loadVideos();
+      }
 
       alert("Videos uploaded ✅");
     } catch (err) {
+      console.error("Upload error:", err);
       alert(err.response?.data?.message || "Upload failed ❌");
     } finally {
       setLoading(false);
@@ -109,10 +127,26 @@ export default function OwnerPGVideos() {
         data: { video: videoPath },
       });
 
-      loadVideos();
+      // Update local state
+      setVideos((prev) => prev.filter((v) => v !== videoPath));
+      alert("Video deleted successfully!");
     } catch (err) {
+      console.error("Delete error:", err);
       alert("Delete failed ❌");
+      await loadVideos(); // Reload on error
     }
+  };
+
+  /* ================= GET VIDEO URL ================= */
+  const getVideoUrl = (path) => {
+    if (!path) return "";
+    
+    // If it's already a full URL (Cloudinary URL)
+    if (path.startsWith("http")) return path;
+    
+    // Handle relative paths
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    return `${BACKEND_URL}${normalizedPath}`;
   };
 
   /* ================= UI ================= */
@@ -124,12 +158,39 @@ export default function OwnerPGVideos() {
 
       {/* UPLOAD */}
       <div style={{ marginBottom: 20 }}>
-        <input type="file" multiple accept="video/*" onChange={handleFileChange} />
+        <input 
+          type="file" 
+          multiple 
+          accept="video/*" 
+          onChange={handleFileChange}
+          style={{
+            padding: 10,
+            border: "1px solid #cbd5e1",
+            borderRadius: 6,
+            width: "100%",
+            maxWidth: 400
+          }}
+        />
 
-        <p style={{ fontSize: 13, color: "#666" }}>
+        <p style={{ fontSize: 13, color: "#666", marginTop: 8 }}>
           • Max size: <b>50MB</b> <br />
           • MP4, WebM, MOV
         </p>
+
+        {files.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <p style={{ color: "#4b5563", marginBottom: 8 }}>
+              Selected: {files.length} file(s)
+            </p>
+            <ul style={{ fontSize: 14, color: "#6b7280" }}>
+              {Array.from(files).map((file, i) => (
+                <li key={i}>
+                  {file.name} ({(file.size / (1024 * 1024)).toFixed(1)} MB)
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <button
           onClick={uploadVideos}
@@ -137,11 +198,13 @@ export default function OwnerPGVideos() {
           style={{
             marginTop: 10,
             padding: "10px 18px",
-            background: files.length ? "#fd7e14" : "#ccc",
+            background: files.length ? "#3b82f6" : "#9ca3af",
             color: "#fff",
             border: "none",
             borderRadius: 6,
+            fontSize: 16,
             cursor: files.length ? "pointer" : "not-allowed",
+            opacity: files.length ? 1 : 0.5
           }}
         >
           {loading ? "Uploading..." : "⬆ Upload Videos"}
@@ -149,10 +212,20 @@ export default function OwnerPGVideos() {
       </div>
 
       {/* LIST */}
-      <h3>🎥 Uploaded Videos</h3>
+      <h3>🎥 Uploaded Videos {videos.length > 0 && `(${videos.length})`}</h3>
 
       {videos.length === 0 ? (
-        <p>No videos uploaded yet</p>
+        <div style={{
+          textAlign: "center",
+          padding: 60,
+          backgroundColor: "#f8fafc",
+          borderRadius: 12,
+          border: "2px dashed #cbd5e1"
+        }}>
+          <p style={{ color: "#6b7280", fontSize: 16 }}>
+            No videos uploaded yet
+          </p>
+        </div>
       ) : (
         <div
           style={{
@@ -162,44 +235,59 @@ export default function OwnerPGVideos() {
             marginTop: 15,
           }}
         >
-          {videos.map((video, index) => (
-            <div
-              key={index}
-              style={{
-                border: "1px solid #ddd",
-                borderRadius: 8,
-                padding: 8,
-                background: "#fff",
-              }}
-            >
-              <video
-                src={`${BACKEND_URL}${video}`}
-                controls
+          {videos.map((video, index) => {
+            const videoUrl = getVideoUrl(video);
+            console.log(`🎬 Video ${index + 1} URL:`, videoUrl);
+            
+            return (
+              <div
+                key={index}
                 style={{
-                  width: "100%",
-                  height: 180,
-                  borderRadius: 6,
-                  objectFit: "cover",
-                }}
-              />
-
-              <button
-                onClick={() => deleteVideo(video)}
-                style={{
-                  marginTop: 8,
-                  width: "100%",
-                  padding: "6px",
-                  background: "#dc3545",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 4,
-                  cursor: "pointer",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 12,
+                  padding: 8,
+                  background: "#fff",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
                 }}
               >
-                ❌ Delete Video
-              </button>
-            </div>
-          ))}
+                <video
+                  src={videoUrl}
+                  controls
+                  style={{
+                    width: "100%",
+                    height: 180,
+                    borderRadius: 8,
+                    objectFit: "cover",
+                    backgroundColor: "#f1f5f9"
+                  }}
+                  onError={(e) => {
+                    console.error("❌ Video failed to load:", videoUrl);
+                    e.target.onerror = null;
+                  }}
+                >
+                  Your browser does not support the video tag.
+                </video>
+
+                <button
+                  onClick={() => deleteVideo(video)}
+                  style={{
+                    marginTop: 8,
+                    width: "100%",
+                    padding: "8px",
+                    background: "#ef4444",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontSize: 14,
+                    fontWeight: 500
+                  }}
+                >
+                  🗑️ Delete Video
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
