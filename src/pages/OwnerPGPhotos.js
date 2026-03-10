@@ -25,6 +25,7 @@ const OwnerPGPhotos = () => {
   const [dragIndex, setDragIndex] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState("");
+  const [replaceFirst, setReplaceFirst] = useState(false); // New state for replace option
 
   /* ================= LOAD PHOTOS ================= */
 
@@ -104,8 +105,12 @@ const OwnerPGPhotos = () => {
 
       const formData = new FormData();
       files.forEach((f) => formData.append("photos", f));
+      
+      // Add the replaceFirst flag to the request
+      formData.append("replaceFirst", replaceFirst);
 
       console.log("📤 Uploading photos to PG ID:", id);
+      console.log("🔄 Replace first image:", replaceFirst);
       
       await axios.post(`${API}/pg/${id}/upload-photos`, formData, {
         headers: {
@@ -122,6 +127,7 @@ const OwnerPGPhotos = () => {
 
       setFiles([]);
       setUploadProgress(0);
+      setReplaceFirst(false); // Reset the checkbox
       alert("Photos uploaded successfully!");
       await loadPhotos();
 
@@ -256,6 +262,21 @@ const OwnerPGPhotos = () => {
           />
         </div>
 
+        {/* New checkbox for replace first image option */}
+        <div style={{ marginBottom: 16, display: "flex", alignItems: "center" }}>
+          <input
+            type="checkbox"
+            id="replaceFirst"
+            checked={replaceFirst}
+            onChange={(e) => setReplaceFirst(e.target.checked)}
+            disabled={uploading || photos.length === 0}
+            style={{ marginRight: 8, width: 16, height: 16 }}
+          />
+          <label htmlFor="replaceFirst" style={{ color: "#4b5563" }}>
+            Replace the first image only (other uploaded images will be appended)
+          </label>
+        </div>
+
         {files.length > 0 && (
           <div style={{ marginBottom: 16 }}>
             <p style={{ color: "#4b5563", marginBottom: 8 }}>
@@ -310,6 +331,12 @@ const OwnerPGPhotos = () => {
         >
           {uploading ? `Uploading (${uploadProgress}%)` : "Upload Photos"}
         </button>
+        
+        {replaceFirst && photos.length > 0 && (
+          <p style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>
+            ⚠️ The first image will be replaced. All other uploaded images will be added to the end.
+          </p>
+        )}
       </div>
 
       {/* Gallery Section */}
@@ -349,18 +376,35 @@ const OwnerPGPhotos = () => {
                 onDrop={() => onDrop(index)}
                 style={{
                   position: "relative",
-                  border: "1px solid #e2e8f0",
+                  border: index === 0 ? "3px solid #3b82f6" : "1px solid #e2e8f0", // Highlight first image
                   borderRadius: 12,
                   overflow: "hidden",
                   backgroundColor: "#f8fafc",
                   cursor: "grab",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                  boxShadow: index === 0 ? "0 4px 6px rgba(59, 130, 246, 0.3)" : "0 1px 3px rgba(0,0,0,0.1)",
                   transition: "transform 0.2s ease",
                   ':hover': {
                     transform: 'scale(1.02)'
                   }
                 }}
               >
+                {index === 0 && (
+                  <div style={{
+                    position: "absolute",
+                    top: 8,
+                    left: 8,
+                    backgroundColor: "#3b82f6",
+                    color: "white",
+                    padding: "4px 8px",
+                    borderRadius: 4,
+                    fontSize: 12,
+                    fontWeight: "bold",
+                    zIndex: 1
+                  }}>
+                    First Image
+                  </div>
+                )}
+                
                 <img
                   src={getImageUrl(photo)}
                   alt={`PG photo ${index + 1}`}
