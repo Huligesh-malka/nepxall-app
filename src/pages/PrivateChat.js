@@ -44,19 +44,21 @@ export default function PrivateChat() {
         const meRes = await api.get("/private-chat/me", config);
         setMe(meRes.data);
 
-        // Load other user info with pgId
+        // Load other user info with optional pgId as query param
         const userUrl = pgId 
           ? `/private-chat/user/${userId}?pgId=${pgId}`
           : `/private-chat/user/${userId}`;
         
+        console.log("Fetching user from:", userUrl);
         const userRes = await api.get(userUrl, config);
         setOtherUser(userRes.data);
 
-        // Load messages with pgId
+        // Load messages with optional pgId as query param
         const messagesUrl = pgId
           ? `/private-chat/messages/${userId}?pgId=${pgId}`
           : `/private-chat/messages/${userId}`;
         
+        console.log("Fetching messages from:", messagesUrl);
         const msgRes = await api.get(messagesUrl, config);
         setMessages(msgRes.data);
 
@@ -90,6 +92,7 @@ export default function PrivateChat() {
       pgId: pgId ? Number(pgId) : otherUser.pg_id
     };
 
+    console.log("Joining room:", roomData);
     socket.emit("join_private_room", roomData);
 
     return () => {
@@ -100,6 +103,7 @@ export default function PrivateChat() {
   /* ================= SOCKET EVENTS ================= */
   useEffect(() => {
     const receiveMessage = (msg) => {
+      console.log("Received message:", msg);
       setMessages(prev => [...prev, msg]);
       scrollBottom();
     };
@@ -194,13 +198,17 @@ export default function PrivateChat() {
     try {
       const token = await auth.currentUser.getIdToken();
       
+      const messageData = {
+        receiver_id: Number(userId),
+        message: text,
+        pg_id: pgId ? Number(pgId) : otherUser.pg_id
+      };
+
+      console.log("Sending message:", messageData);
+
       const res = await api.post(
         "/private-chat/send",
-        {
-          receiver_id: Number(userId),
-          message: text,
-          pg_id: pgId ? Number(pgId) : otherUser.pg_id
-        },
+        messageData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

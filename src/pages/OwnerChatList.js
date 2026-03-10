@@ -206,6 +206,7 @@ const mainContainer = {
   minHeight: "100vh",
   background: "radial-gradient(circle at top left, #1a2a6c, #b21f1f, #fdbb2d)",
   pt: 6,
+  pb: 4,
 };
 
 const loaderContainer = {
