@@ -11,7 +11,6 @@ const socket = io("https://nepxall-backend.onrender.com", {
 });
 
 export default function PrivateChat() {
-
   const { userId } = useParams();
   const navigate = useNavigate();
   const bottomRef = useRef();
@@ -23,38 +22,47 @@ export default function PrivateChat() {
   const [typing, setTyping] = useState(false);
   const [online, setOnline] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [conversationContext, setConversationContext] = useState(null);
 
   const scrollBottom = () =>
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
 
   /* ================= AUTH LOAD ================= */
   useEffect(() => {
-
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
-
       if (!fbUser) return navigate("/login");
 
       const token = await fbUser.getIdToken();
       const config = { headers: { Authorization: `Bearer ${token}` } };
 
-      const [meRes, userRes, msgRes] = await Promise.all([
-        api.get("/private-chat/me", config),
-        api.get(`/private-chat/user/${userId}`, config),
-        api.get(`/private-chat/messages/${userId}`, config),
-      ]);
+      try {
+        // Get current user info
+        const meRes = await api.get("/private-chat/me", config);
+        setMe(meRes.data);
 
-      setMe(meRes.data);
-      setOtherUser(userRes.data);
-      setMessages(msgRes.data);
-      setLoading(false);
+        // Get other user info with context (includes property info if owner is chatting)
+        const userRes = await api.get(`/private-chat/user/${userId}?currentUserId=${meRes.data.id}`, config);
+        setOtherUser(userRes.data);
 
-      if (!socket.connected) socket.connect();
-      socket.emit("register", fbUser.uid);
+        // Store conversation context (which property we're talking about)
+        if (userRes.data.conversation_context) {
+          setConversationContext(userRes.data.conversation_context);
+        }
 
+        // Get messages
+        const msgRes = await api.get(`/private-chat/messages/${userId}`, config);
+        setMessages(msgRes.data);
+        setLoading(false);
+
+        if (!socket.connected) socket.connect();
+        socket.emit("register", fbUser.uid);
+      } catch (error) {
+        console.error("Error loading chat:", error);
+        setLoading(false);
+      }
     });
 
     return () => unsub?.();
-
   }, [userId, navigate]);
 
   /* ================= JOIN ROOM ================= */
@@ -64,13 +72,12 @@ export default function PrivateChat() {
     socket.emit("join_private_room", {
       userA: me.id,
       userB: Number(userId),
+      context: conversationContext // Include context when joining room
     });
-
-  }, [me, userId]);
+  }, [me, userId, conversationContext]);
 
   /* ================= AUTO MARK READ ================= */
   useEffect(() => {
-
     if (!me) return;
 
     const hasUnread = messages.some(
@@ -83,12 +90,10 @@ export default function PrivateChat() {
         userB: Number(userId),
       });
     }
-
   }, [messages, me, userId]);
 
   /* ================= SOCKET EVENTS ================= */
   useEffect(() => {
-
     const receiveMessage = (msg) => {
       setMessages(prev => [...prev, msg]);
       scrollBottom();
@@ -118,7 +123,6 @@ export default function PrivateChat() {
     socket.on("message_sent_confirmation", delivered);
     socket.on("messages_read", read);
     socket.on("message_deleted", deleted);
-
     socket.on("user_online", () => setOnline(true));
     socket.on("user_offline", () => setOnline(false));
     socket.on("user_typing", ({ isTyping }) => setTyping(isTyping));
@@ -132,33 +136,32 @@ export default function PrivateChat() {
       socket.off("user_offline");
       socket.off("user_typing");
     };
-
   }, [me]);
 
   /* ================= SEND ================= */
   const sendMessage = async () => {
-
     if (!text.trim()) return;
 
     const token = await auth.currentUser.getIdToken();
 
     const res = await api.post(
       "/private-chat/send",
-      { receiver_id: Number(userId), message: text },
+      { 
+        receiver_id: Number(userId), 
+        message: text,
+        context: conversationContext // Include context when sending message
+      },
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
     socket.emit("send_private_message", res.data);
-
     setMessages(prev => [...prev, { ...res.data, status: "sent" }]);
-
     setText("");
     scrollBottom();
   };
 
   /* ================= DELETE ================= */
   const deleteMessage = async (id) => {
-
     const token = await auth.currentUser.getIdToken();
 
     await api.delete(`/private-chat/message/${id}`, {
@@ -175,33 +178,67 @@ export default function PrivateChat() {
   };
 
   const getStatusDot = (status) => {
-
     if (status === "sent")
       return <span style={{ ...styles.dot, background: "red" }} />;
-
     if (status === "delivered")
       return <span style={{ ...styles.dot, background: "gold" }} />;
-
     if (status === "read")
       return <span style={{ ...styles.dot, background: "limegreen" }} />;
-
     return null;
   };
 
   if (loading) return <div style={styles.loader}>Loading chat...</div>;
 
-  const headerTitle =
-    me?.role === "owner"
-      ? otherUser?.name || "User"
-      : otherUser?.pg_name || otherUser?.name || "PG";
+  // Determine the correct header title based on roles and conversation context
+  const getHeaderTitle = () => {
+    if (!me || !otherUser) return "Chat";
+
+    // If current user is owner and other user is a regular user
+    if (me.role === "owner" && otherUser.role === "user") {
+      // Show user's name and the property they're interested in (if any)
+      if (conversationContext?.property_name) {
+        return (
+          <div style={styles.headerTitleWithSub}>
+            <div>{otherUser.name}</div>
+            <div style={styles.propertySubtext}>
+              regarding {conversationContext.property_name}
+            </div>
+          </div>
+        );
+      }
+      return otherUser.name || "User";
+    }
+    
+    // If current user is user and other user is owner
+    if (me.role === "user" && otherUser.role === "owner") {
+      // Show owner's name and which property they own (if we're chatting about a specific one)
+      if (conversationContext?.property_name) {
+        return (
+          <div style={styles.headerTitleWithSub}>
+            <div>{otherUser.pg_name || otherUser.name}</div>
+            <div style={styles.propertySubtext}>
+              {conversationContext.property_name}
+            </div>
+          </div>
+        );
+      }
+      return otherUser.pg_name || otherUser.name || "Owner";
+    }
+
+    // Fallback
+    return otherUser.name || "Chat";
+  };
 
   return (
     <div style={styles.container}>
-
       <div style={styles.header}>
         <span onClick={() => navigate(-1)} style={styles.back}>←</span>
-        <div>
-          <div style={styles.name}>{headerTitle}</div>
+        <div style={styles.headerInfo}>
+          {typeof getHeaderTitle() === "string" ? (
+            <div style={styles.name}>{getHeaderTitle()}</div>
+          ) : (
+            getHeaderTitle()
+          )}
           <div style={styles.status}>
             {online ? "🟢 online" : "⚪ offline"}
           </div>
@@ -230,7 +267,6 @@ export default function PrivateChat() {
                     {getStatusDot(m.status)}
                   </div>
                 }
-
               </div>
 
               {m.sender_id === me?.id &&
@@ -256,16 +292,18 @@ export default function PrivateChat() {
         />
         <button onClick={sendMessage} style={styles.sendBtn}>➤</button>
       </div>
-
     </div>
   );
 }
 
 /* ================= STYLES ================= */
-
 const styles = {
-
-  container: { height: "100vh", display: "flex", flexDirection: "column", background: "#f1f5f9" },
+  container: { 
+    height: "100vh", 
+    display: "flex", 
+    flexDirection: "column", 
+    background: "#f1f5f9" 
+  },
 
   header: {
     background: "linear-gradient(135deg,#667eea,#764ba2)",
@@ -276,23 +314,66 @@ const styles = {
     gap: 10,
   },
 
-  back: { cursor: "pointer", fontSize: 20 },
+  back: { 
+    cursor: "pointer", 
+    fontSize: 20,
+    padding: "5px 10px",
+    borderRadius: "50%",
+    transition: "background 0.3s",
+    ':hover': {
+      background: "rgba(255,255,255,0.1)"
+    }
+  },
 
-  name: { fontWeight: "bold" },
-  status: { fontSize: 12, opacity: 0.9 },
+  headerInfo: {
+    flex: 1,
+  },
 
-  chatBody: { flex: 1, overflowY: "auto", padding: 15 },
+  headerTitleWithSub: {
+    display: "flex",
+    flexDirection: "column",
+  },
 
-  msgRow: { display: "flex", marginBottom: 10 },
+  propertySubtext: {
+    fontSize: 11,
+    opacity: 0.8,
+    marginTop: 2,
+  },
+
+  name: { 
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+
+  status: { 
+    fontSize: 12, 
+    opacity: 0.9,
+    marginTop: 2,
+  },
+
+  chatBody: { 
+    flex: 1, 
+    overflowY: "auto", 
+    padding: 15 
+  },
+
+  msgRow: { 
+    display: "flex", 
+    marginBottom: 10 
+  },
 
   bubble: {
     padding: "10px 14px",
     borderRadius: 15,
     maxWidth: "70%",
     position: "relative",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
   },
 
-  tick: { marginTop: 5, textAlign: "right" },
+  tick: { 
+    marginTop: 5, 
+    textAlign: "right" 
+  },
 
   dot: {
     height: 8,
@@ -301,7 +382,12 @@ const styles = {
     display: "inline-block",
   },
 
-  typing: { fontSize: 12, marginLeft: 10, color: "#555" },
+  typing: { 
+    fontSize: 12, 
+    marginLeft: 10, 
+    color: "#555",
+    fontStyle: "italic",
+  },
 
   deleteBtn: {
     position: "absolute",
@@ -313,7 +399,16 @@ const styles = {
     borderRadius: "50%",
     padding: "2px 5px",
     boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+    opacity: 0,
+    transition: "opacity 0.2s",
+    ':hover': {
+      opacity: 1,
+    }
   },
+
+  // Show delete button on hover of message bubble
+  // This requires additional CSS but we'll handle it with inline styles limitation
+  // You might want to add this in a CSS file
 
   inputArea: {
     display: "flex",
@@ -328,6 +423,10 @@ const styles = {
     borderRadius: 25,
     border: "1px solid #ddd",
     outline: "none",
+    fontSize: 14,
+    ':focus': {
+      borderColor: "#667eea",
+    }
   },
 
   sendBtn: {
@@ -338,6 +437,11 @@ const styles = {
     padding: "0 18px",
     borderRadius: "50%",
     cursor: "pointer",
+    fontSize: 16,
+    transition: "transform 0.2s",
+    ':hover': {
+      transform: "scale(1.05)",
+    }
   },
 
   loader: {
@@ -345,6 +449,7 @@ const styles = {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
+    fontSize: 18,
+    color: "#667eea",
   },
-
 };
