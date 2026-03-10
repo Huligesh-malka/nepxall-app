@@ -273,27 +273,76 @@ const Sidebar = () => {
 export default Sidebar;
 
 /* ================= STYLES ================= */
+/* ================= EXISTING STYLES ================= */
 
-const overlay = {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  background: "rgba(0,0,0,0.4)",
-  zIndex: 900
-};
-
-const mobileToggle = {
-  position: "fixed",
-  top: 15,
-  left: 15,
-  fontSize: 22,
-  background: "#0B5ED7",
+const sidebar = {
+  width: 250,
+  background: "#0f172a",
   color: "#fff",
-  border: "none",
-  padding: "6px 10px",
-  borderRadius: 6,
-  cursor: "pointer",
-  zIndex: 1200
+  minHeight: "100vh",
+  padding: 20,
+  position: "fixed",
+  left: 0,
+  top: 0,
+  display: "flex",
+  flexDirection: "column",
+  overflowY: "auto",
 };
+
+const companyHeader = {
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  marginBottom: 20,
+};
+
+const logoImage = {
+  width: 48,
+  height: 48,
+  borderRadius: 8
+};
+
+const companyName = {
+  fontSize: 20,
+  fontWeight: "bold",
+  margin: 0
+};
+
+const companyTagline = {
+  fontSize: 11,
+  color: "#94a3b8"
+};
+
+const nav = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 10,
+  flex: 1
+};
+
+const divider = {
+  borderTop: "1px solid #334155",
+  margin: "12px 0"
+};
+
+const sectionLabel = {
+  fontSize: 11,
+  color: "#94a3b8",
+  letterSpacing: 1
+};
+
+const userInfoStyle = {
+  marginTop: "auto"
+};
+
+const linkStyle = (active) => ({
+  color: "#e5e7eb",
+  textDecoration: "none",
+  padding: "10px 14px",
+  borderRadius: 8,
+  background: active
+    ? "linear-gradient(90deg,#0B5ED7,#4CAF50)"
+    : "transparent",
+  fontWeight: active ? "600" : "normal",
+  transition: "0.3s",
+});
