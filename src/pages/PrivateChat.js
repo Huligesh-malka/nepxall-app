@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/api";
 import { io } from "socket.io-client";
 
@@ -12,9 +12,6 @@ const socket = io("https://nepxall-backend.onrender.com", {
 
 export default function PrivateChat() {
   const { userId } = useParams();
-  const [searchParams] = useSearchParams();
-  const pgId = searchParams.get("pgId");
-  
   const navigate = useNavigate();
   const bottomRef = useRef();
 
@@ -25,13 +22,12 @@ export default function PrivateChat() {
   const [typing, setTyping] = useState(false);
   const [online, setOnline] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
+  const [conversationContext, setConversationContext] = useState(null);
 
-  const scrollBottom = () => {
+  const scrollBottom = () =>
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-  };
 
-  /* ================= LOAD CHAT ================= */
+  /* ================= AUTH LOAD ================= */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
       if (!fbUser) return navigate("/login");
@@ -40,83 +36,82 @@ export default function PrivateChat() {
       const config = { headers: { Authorization: `Bearer ${token}` } };
 
       try {
-        // Load current user
+        // Get current user info
         const meRes = await api.get("/private-chat/me", config);
         setMe(meRes.data);
 
-        // Load other user info with optional pgId as query param
-        const userUrl = pgId 
-          ? `/private-chat/user/${userId}?pgId=${pgId}`
-          : `/private-chat/user/${userId}`;
-        
-        console.log("Fetching user from:", userUrl);
-        const userRes = await api.get(userUrl, config);
+        // Get other user info with context (includes property info if owner is chatting)
+        const userRes = await api.get(`/private-chat/user/${userId}?currentUserId=${meRes.data.id}`, config);
         setOtherUser(userRes.data);
 
-        // Load messages with optional pgId as query param
-        const messagesUrl = pgId
-          ? `/private-chat/messages/${userId}?pgId=${pgId}`
-          : `/private-chat/messages/${userId}`;
-        
-        console.log("Fetching messages from:", messagesUrl);
-        const msgRes = await api.get(messagesUrl, config);
+        // Store conversation context (which property we're talking about)
+        if (userRes.data.conversation_context) {
+          setConversationContext(userRes.data.conversation_context);
+        }
+
+        // Get messages
+        const msgRes = await api.get(`/private-chat/messages/${userId}`, config);
         setMessages(msgRes.data);
+        setLoading(false);
 
-        // Connect socket
-        if (!socket.connected) {
-          socket.connect();
-          socket.emit("register", fbUser.uid);
-        }
-
-        scrollBottom();
-      } catch (err) {
-        console.error("Chat load error:", err);
-        if (err.response?.status === 404) {
-          navigate("/owner/chat");
-        }
-      } finally {
+        if (!socket.connected) socket.connect();
+        socket.emit("register", fbUser.uid);
+      } catch (error) {
+        console.error("Error loading chat:", error);
         setLoading(false);
       }
     });
 
-    return () => unsub();
-  }, [userId, pgId, navigate]);
+    return () => unsub?.();
+  }, [userId, navigate]);
 
   /* ================= JOIN ROOM ================= */
   useEffect(() => {
-    if (!me || !otherUser) return;
+    if (!me) return;
 
-    const roomData = {
+    socket.emit("join_private_room", {
       userA: me.id,
       userB: Number(userId),
-      pgId: pgId ? Number(pgId) : otherUser.pg_id
-    };
+      context: conversationContext // Include context when joining room
+    });
+  }, [me, userId, conversationContext]);
 
-    console.log("Joining room:", roomData);
-    socket.emit("join_private_room", roomData);
+  /* ================= AUTO MARK READ ================= */
+  useEffect(() => {
+    if (!me) return;
 
-    return () => {
-      socket.emit("leave_private_room", roomData);
-    };
-  }, [me, userId, otherUser, pgId]);
+    const hasUnread = messages.some(
+      m => m.sender_id !== me.id && !m.is_read
+    );
+
+    if (hasUnread) {
+      socket.emit("mark_messages_read", {
+        userA: me.id,
+        userB: Number(userId),
+      });
+    }
+  }, [messages, me, userId]);
 
   /* ================= SOCKET EVENTS ================= */
   useEffect(() => {
     const receiveMessage = (msg) => {
-      console.log("Received message:", msg);
       setMessages(prev => [...prev, msg]);
       scrollBottom();
     };
 
     const delivered = (msg) => {
       setMessages(prev =>
-        prev.map(m => m.id === msg.id ? { ...m, status: "delivered" } : m)
+        prev.map(m =>
+          m.id === msg.id ? { ...m, status: "delivered" } : m
+        )
       );
     };
 
     const read = () => {
       setMessages(prev =>
-        prev.map(m => m.sender_id === me?.id ? { ...m, status: "read" } : m)
+        prev.map(m =>
+          m.sender_id === me.id ? { ...m, status: "read" } : m
+        )
       );
     };
 
@@ -143,145 +138,107 @@ export default function PrivateChat() {
     };
   }, [me]);
 
-  /* ================= AUTO READ ================= */
-  useEffect(() => {
-    if (!me || !otherUser) return;
-
-    const hasUnread = messages.some(
-      m => m.sender_id !== me.id && !m.is_read
-    );
-
-    if (hasUnread) {
-      socket.emit("mark_messages_read", {
-        userA: me.id,
-        userB: Number(userId),
-        pgId: pgId ? Number(pgId) : otherUser.pg_id
-      });
-    }
-  }, [messages, me, userId, otherUser, pgId]);
-
-  /* ================= TYPING INDICATOR ================= */
-  useEffect(() => {
-    if (!me || !otherUser) return;
-
-    const typingTimeout = setTimeout(() => {
-      socket.emit("typing", {
-        userA: me.id,
-        userB: Number(userId),
-        pgId: pgId ? Number(pgId) : otherUser.pg_id,
-        isTyping: false
-      });
-    }, 1000);
-
-    return () => clearTimeout(typingTimeout);
-  }, [text, me, userId, otherUser, pgId]);
-
-  const handleTyping = (e) => {
-    setText(e.target.value);
-    
-    if (!typing && me && otherUser) {
-      socket.emit("typing", {
-        userA: me.id,
-        userB: Number(userId),
-        pgId: pgId ? Number(pgId) : otherUser.pg_id,
-        isTyping: true
-      });
-    }
-  };
-
   /* ================= SEND ================= */
   const sendMessage = async () => {
-    if (!text.trim() || sending || !me || !otherUser) return;
+    if (!text.trim()) return;
 
-    setSending(true);
-    
-    try {
-      const token = await auth.currentUser.getIdToken();
-      
-      const messageData = {
-        receiver_id: Number(userId),
+    const token = await auth.currentUser.getIdToken();
+
+    const res = await api.post(
+      "/private-chat/send",
+      { 
+        receiver_id: Number(userId), 
         message: text,
-        pg_id: pgId ? Number(pgId) : otherUser.pg_id
-      };
+        context: conversationContext // Include context when sending message
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-      console.log("Sending message:", messageData);
-
-      const res = await api.post(
-        "/private-chat/send",
-        messageData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      socket.emit("send_private_message", res.data);
-      setMessages(prev => [...prev, { ...res.data, status: "sent" }]);
-      setText("");
-      scrollBottom();
-    } catch (err) {
-      console.error("Send message error:", err);
-    } finally {
-      setSending(false);
-    }
+    socket.emit("send_private_message", res.data);
+    setMessages(prev => [...prev, { ...res.data, status: "sent" }]);
+    setText("");
+    scrollBottom();
   };
 
   /* ================= DELETE ================= */
   const deleteMessage = async (id) => {
-    try {
-      const token = await auth.currentUser.getIdToken();
-      
-      await api.delete(`/private-chat/message/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+    const token = await auth.currentUser.getIdToken();
 
-      setMessages(prev => prev.filter(m => m.id !== id));
+    await api.delete(`/private-chat/message/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-      socket.emit("delete_private_message", {
-        messageId: id,
-        sender_id: me.id,
-        receiver_id: Number(userId),
-      });
-    } catch (err) {
-      console.error("Delete message error:", err);
-    }
+    setMessages(prev => prev.filter(m => m.id !== id));
+
+    socket.emit("delete_private_message", {
+      messageId: id,
+      sender_id: me.id,
+      receiver_id: Number(userId),
+    });
   };
 
-  /* ================= HEADER TITLE ================= */
-  const getHeaderTitle = () => {
-    if (!otherUser) return "Chat";
+  const getStatusDot = (status) => {
+    if (status === "sent")
+      return <span style={{ ...styles.dot, background: "red" }} />;
+    if (status === "delivered")
+      return <span style={{ ...styles.dot, background: "gold" }} />;
+    if (status === "read")
+      return <span style={{ ...styles.dot, background: "limegreen" }} />;
+    return null;
+  };
 
-    if (otherUser.pg_name) {
-      return (
-        <div>
-          <div>{otherUser.name}</div>
-          <div style={{ fontSize: 11, opacity: 0.8 }}>
-            {otherUser.pg_name}
+  if (loading) return <div style={styles.loader}>Loading chat...</div>;
+
+  // Determine the correct header title based on roles and conversation context
+  const getHeaderTitle = () => {
+    if (!me || !otherUser) return "Chat";
+
+    // If current user is owner and other user is a regular user
+    if (me.role === "owner" && otherUser.role === "user") {
+      // Show user's name and the property they're interested in (if any)
+      if (conversationContext?.property_name) {
+        return (
+          <div style={styles.headerTitleWithSub}>
+            <div>{otherUser.name}</div>
+            <div style={styles.propertySubtext}>
+              regarding {conversationContext.property_name}
+            </div>
           </div>
-        </div>
-      );
+        );
+      }
+      return otherUser.name || "User";
+    }
+    
+    // If current user is user and other user is owner
+    if (me.role === "user" && otherUser.role === "owner") {
+      // Show owner's name and which property they own (if we're chatting about a specific one)
+      if (conversationContext?.property_name) {
+        return (
+          <div style={styles.headerTitleWithSub}>
+            <div>{otherUser.pg_name || otherUser.name}</div>
+            <div style={styles.propertySubtext}>
+              {conversationContext.property_name}
+            </div>
+          </div>
+        );
+      }
+      return otherUser.pg_name || otherUser.name || "Owner";
     }
 
+    // Fallback
     return otherUser.name || "Chat";
   };
 
-  /* ================= LOADING ================= */
-  if (loading) {
-    return (
-      <div style={styles.loader}>
-        Loading chat...
-      </div>
-    );
-  }
-
-  /* ================= UI ================= */
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <span onClick={() => navigate(-1)} style={styles.back}>
-          ←
-        </span>
+        <span onClick={() => navigate(-1)} style={styles.back}>←</span>
         <div style={styles.headerInfo}>
-          <div style={styles.name}>
-            {getHeaderTitle()}
-          </div>
+          {typeof getHeaderTitle() === "string" ? (
+            <div style={styles.name}>{getHeaderTitle()}</div>
+          ) : (
+            getHeaderTitle()
+          )}
           <div style={styles.status}>
             {online ? "🟢 online" : "⚪ offline"}
           </div>
@@ -290,155 +247,209 @@ export default function PrivateChat() {
 
       <div style={styles.chatBody}>
         {messages.map((m) => (
-          <div
-            key={m.id}
-            style={{
-              ...styles.msgRow,
-              justifyContent: m.sender_id === me?.id ? "flex-end" : "flex-start"
-            }}
-          >
-            <div style={styles.bubble}>
-              {m.message}
-              {m.sender_id === me?.id && (
-                <span
-                  onClick={() => deleteMessage(m.id)}
-                  style={styles.deleteBtn}
-                >
+          <div key={m.id}
+               style={{
+                 ...styles.msgRow,
+                 justifyContent: m.sender_id === me?.id ? "flex-end" : "flex-start",
+               }}>
+            <div style={{ position: "relative" }}>
+              <div style={{
+                ...styles.bubble,
+                background: m.sender_id === me?.id
+                  ? "linear-gradient(135deg,#667eea,#764ba2)"
+                  : "#fff",
+                color: m.sender_id === me?.id ? "#fff" : "#000",
+              }}>
+                {m.message}
+
+                {m.sender_id === me?.id &&
+                  <div style={styles.tick}>
+                    {getStatusDot(m.status)}
+                  </div>
+                }
+              </div>
+
+              {m.sender_id === me?.id &&
+                <span onClick={() => deleteMessage(m.id)} style={styles.deleteBtn}>
                   🗑
                 </span>
-              )}
-              {m.sender_id === me?.id && m.status && (
-                <span style={styles.statusIcon}>
-                  {m.status === "sent" && "✓"}
-                  {m.status === "delivered" && "✓✓"}
-                  {m.status === "read" && "✓✓"}
-                </span>
-              )}
+              }
             </div>
           </div>
         ))}
-        
-        {typing && (
-          <div style={styles.typingIndicator}>
-            {otherUser?.name} is typing...
-          </div>
-        )}
-        
+
+        {typing && <div style={styles.typing}>Typing...</div>}
         <div ref={bottomRef} />
       </div>
 
       <div style={styles.inputArea}>
         <input
           value={text}
-          onChange={handleTyping}
-          placeholder="Type message..."
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Type a message..."
           style={styles.input}
-          onKeyDown={(e) => e.key === "Enter" && !sending && sendMessage()}
-          disabled={sending}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
         />
-        <button
-          onClick={sendMessage}
-          style={{
-            ...styles.sendBtn,
-            opacity: sending ? 0.5 : 1,
-            cursor: sending ? "not-allowed" : "pointer"
-          }}
-          disabled={sending}
-        >
-          {sending ? "..." : "➤"}
-        </button>
+        <button onClick={sendMessage} style={styles.sendBtn}>➤</button>
       </div>
     </div>
   );
 }
 
+/* ================= STYLES ================= */
 const styles = {
-  container: {
-    height: "100vh",
-    display: "flex",
-    flexDirection: "column",
-    background: "#f1f5f9"
+  container: { 
+    height: "100vh", 
+    display: "flex", 
+    flexDirection: "column", 
+    background: "#f1f5f9" 
   },
+
   header: {
-    background: "linear-gradient(135deg, #667eea, #764ba2)",
+    background: "linear-gradient(135deg,#667eea,#764ba2)",
     color: "#fff",
     padding: "12px 15px",
     display: "flex",
     alignItems: "center",
-    gap: 10
+    gap: 10,
   },
-  back: {
-    cursor: "pointer",
-    fontSize: 20
+
+  back: { 
+    cursor: "pointer", 
+    fontSize: 20,
+    padding: "5px 10px",
+    borderRadius: "50%",
+    transition: "background 0.3s",
+    ':hover': {
+      background: "rgba(255,255,255,0.1)"
+    }
   },
+
   headerInfo: {
-    flex: 1
-  },
-  name: {
-    fontWeight: "bold",
-    fontSize: 16
-  },
-  status: {
-    fontSize: 12
-  },
-  chatBody: {
     flex: 1,
-    overflowY: "auto",
-    padding: 15
   },
-  msgRow: {
+
+  headerTitleWithSub: {
     display: "flex",
-    marginBottom: 10
+    flexDirection: "column",
   },
+
+  propertySubtext: {
+    fontSize: 11,
+    opacity: 0.8,
+    marginTop: 2,
+  },
+
+  name: { 
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+
+  status: { 
+    fontSize: 12, 
+    opacity: 0.9,
+    marginTop: 2,
+  },
+
+  chatBody: { 
+    flex: 1, 
+    overflowY: "auto", 
+    padding: 15 
+  },
+
+  msgRow: { 
+    display: "flex", 
+    marginBottom: 10 
+  },
+
   bubble: {
     padding: "10px 14px",
     borderRadius: 15,
     maxWidth: "70%",
-    background: "#fff",
-    position: "relative"
+    position: "relative",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
   },
-  deleteBtn: {
-    marginLeft: 10,
-    cursor: "pointer",
-    opacity: 0.6,
-    fontSize: 12
+
+  tick: { 
+    marginTop: 5, 
+    textAlign: "right" 
   },
-  statusIcon: {
-    marginLeft: 5,
-    fontSize: 12,
-    color: "#4a90e2"
+
+  dot: {
+    height: 8,
+    width: 8,
+    borderRadius: "50%",
+    display: "inline-block",
   },
-  typingIndicator: {
-    padding: "5px 10px",
-    color: "#666",
+
+  typing: { 
+    fontSize: 12, 
+    marginLeft: 10, 
+    color: "#555",
     fontStyle: "italic",
-    fontSize: 12
   },
+
+  deleteBtn: {
+    position: "absolute",
+    top: -8,
+    right: -8,
+    cursor: "pointer",
+    fontSize: 14,
+    background: "#fff",
+    borderRadius: "50%",
+    padding: "2px 5px",
+    boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+    opacity: 0,
+    transition: "opacity 0.2s",
+    ':hover': {
+      opacity: 1,
+    }
+  },
+
+  // Show delete button on hover of message bubble
+  // This requires additional CSS but we'll handle it with inline styles limitation
+  // You might want to add this in a CSS file
+
   inputArea: {
     display: "flex",
     padding: 10,
-    background: "#fff"
+    background: "#fff",
+    borderTop: "1px solid #eee",
   },
+
   input: {
     flex: 1,
-    padding: 10,
-    borderRadius: 20,
+    padding: 12,
+    borderRadius: 25,
     border: "1px solid #ddd",
-    outline: "none"
+    outline: "none",
+    fontSize: 14,
+    ':focus': {
+      borderColor: "#667eea",
+    }
   },
+
   sendBtn: {
     marginLeft: 10,
-    padding: "0 16px",
-    background: "#667eea",
+    background: "linear-gradient(135deg,#667eea,#764ba2)",
     color: "#fff",
     border: "none",
-    borderRadius: 20,
-    cursor: "pointer"
+    padding: "0 18px",
+    borderRadius: "50%",
+    cursor: "pointer",
+    fontSize: 16,
+    transition: "transform 0.2s",
+    ':hover': {
+      transform: "scale(1.05)",
+    }
   },
+
   loader: {
     height: "100vh",
     display: "flex",
     justifyContent: "center",
-    alignItems: "center"
-  }
+    alignItems: "center",
+    fontSize: 18,
+    color: "#667eea",
+  },
 };

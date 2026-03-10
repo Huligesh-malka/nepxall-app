@@ -17,8 +17,9 @@ import { motion, AnimatePresence } from "framer-motion";
 const SOCKET_URL = "https://nepxall-backend.onrender.com";
 
 export default function OwnerChatList() {
+
   const [users, setUsers] = useState([]);
-  const [me, setMe] = useState(null);
+  const [me, setMe] = useState(null);   // ⭐ NEW
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
 
@@ -26,20 +27,25 @@ export default function OwnerChatList() {
   const socketRef = useRef(null);
 
   /* ================= LOAD CHATS ================= */
+
   const loadChats = useCallback(async () => {
     try {
       if (!auth.currentUser) return;
 
       const token = await auth.currentUser.getIdToken();
-      const config = { headers: { Authorization: `Bearer ${token}` } };
 
       const [meRes, listRes] = await Promise.all([
-        api.get("/private-chat/me", config),
-        api.get("/private-chat/list", config),
+        api.get("/private-chat/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        api.get("/private-chat/list", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
 
       setMe(meRes.data);
       setUsers(listRes.data || []);
+
     } catch (err) {
       console.error("Chat list error:", err);
     } finally {
@@ -48,6 +54,7 @@ export default function OwnerChatList() {
   }, []);
 
   /* ================= AUTH + SOCKET ================= */
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) return navigate("/login");
@@ -55,20 +62,15 @@ export default function OwnerChatList() {
       await loadChats();
 
       if (!socketRef.current) {
-        socketRef.current = io(SOCKET_URL, { 
-          transports: ["websocket"],
-          autoConnect: true
-        });
+        socketRef.current = io(SOCKET_URL, { transports: ["websocket"] });
 
-        socketRef.current.on("connect", () => {
-          setConnected(true);
-          socketRef.current.emit("register", user.uid);
-        });
-        
+        socketRef.current.on("connect", () => setConnected(true));
         socketRef.current.on("disconnect", () => setConnected(false));
       }
 
       const socket = socketRef.current;
+
+      socket.emit("register", user.uid);
 
       socket.on("receive_private_message", loadChats);
       socket.on("message_sent_confirmation", loadChats);
@@ -91,15 +93,11 @@ export default function OwnerChatList() {
       });
     });
 
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, [loadChats, navigate]);
 
   /* ================= TIME FORMAT ================= */
+
   const formatTime = (time) => {
     if (!time) return "";
     const date = new Date(time);
@@ -111,12 +109,8 @@ export default function OwnerChatList() {
       : date.toLocaleDateString();
   };
 
-  /* ================= HANDLE CHAT CLICK ================= */
-  const handleChatClick = (user) => {
-    navigate(`/owner/chat/private/${user.id}?pgId=${user.pg_id}`);
-  };
-
   /* ================= LOADER ================= */
+
   if (loading) {
     return (
       <Box sx={loaderContainer}>
@@ -126,11 +120,14 @@ export default function OwnerChatList() {
   }
 
   /* ================= UI ================= */
+
   return (
     <Box sx={mainContainer}>
       <Container maxWidth="sm">
-        <Box display="flex" justifyContent="space-between" alignItems="center">
+
+        <Box display="flex" justifyContent="space-between">
           <Typography sx={headerTitle}>Messages</Typography>
+
           <Typography
             sx={{ fontSize: 12, color: connected ? "#4caf50" : "#ff4d4f" }}
           >
@@ -139,57 +136,70 @@ export default function OwnerChatList() {
         </Box>
 
         <Typography sx={subTitle}>
-          {users.length} Active Conversation{users.length !== 1 ? 's' : ''}
+          {users.length} Active Conversations
         </Typography>
 
         <Box sx={{ mt: 4 }}>
           <AnimatePresence>
             {users.length > 0 ? (
-              users.map((user, index) => (
-                <motion.div
-                  key={`${user.id}-${user.pg_id}`}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <Box
-                    sx={chatCard}
-                    onClick={() => handleChatClick(user)}
-                  >
-                    <Badge
-                      overlap="circular"
-                      variant="dot"
-                      sx={user.online ? onlineBadge : offlineBadge}
-                    >
-                      <Avatar sx={avatarStyle}>
-                        {user.name?.charAt(0).toUpperCase()}
-                      </Avatar>
-                    </Badge>
+              users.map((u, index) => {
 
-                    <Box sx={{ flex: 1, ml: 1 }}>
-                      <Box display="flex" justifyContent="space-between">
-                        <Typography sx={nameText}>
-                          {user.name}
+                /* 🎯 ROLE BASED NAME */
+                const title =
+                  me?.role === "owner"
+                    ? u.name          // 👑 OWNER → USER NAME
+                    : u.pg_name || u.name;  // 👤 TENANT → PG NAME
+
+                return (
+                  <motion.div
+                    key={u.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <Box
+                      sx={chatCard}
+                      onClick={() => navigate(`/owner/chat/private/${u.id}`)}
+                    >
+
+                      <Badge
+                        overlap="circular"
+                        variant="dot"
+                        sx={u.online ? onlineBadge : offlineBadge}
+                      >
+                        <Avatar sx={avatarStyle}>
+                          {title?.charAt(0)}
+                        </Avatar>
+                      </Badge>
+
+                      <Box sx={{ flex: 1, ml: 1 }}>
+
+                        <Box display="flex" justifyContent="space-between">
+                          <Typography sx={nameText}>
+                            {title}
+                          </Typography>
+
+                          <Typography sx={timeText}>
+                            {formatTime(u.last_time)}
+                          </Typography>
+                        </Box>
+
+                        <Typography sx={msgText} noWrap>
+                          {u.last_sender === "me" && (
+                            <span style={{ color: "#00d2ff" }}>You: </span>
+                          )}
+                          {u.last_message}
                         </Typography>
-                        <Typography sx={timeText}>
-                          {formatTime(user.last_time)}
-                        </Typography>
+
                       </Box>
 
-                      <Typography sx={msgText} noWrap>
-                        {user.last_sender === "me" && (
-                          <span style={{ color: "#00d2ff" }}>You: </span>
-                        )}
-                        {user.last_message}
-                      </Typography>
+                      {u.unread > 0 && (
+                        <Box sx={unreadBadge}>{u.unread}</Box>
+                      )}
                     </Box>
-
-                    {user.unread > 0 && (
-                      <Box sx={unreadBadge}>{user.unread}</Box>
-                    )}
-                  </Box>
-                </motion.div>
-              ))
+                  </motion.div>
+                );
+              })
             ) : (
               <Typography sx={emptyState}>
                 No conversations yet.
@@ -202,11 +212,13 @@ export default function OwnerChatList() {
   );
 }
 
+
+
 const mainContainer = {
   minHeight: "100vh",
-  background: "radial-gradient(circle at top left, #1a2a6c, #b21f1f, #fdbb2d)",
+  background:
+    "radial-gradient(circle at top left, #1a2a6c, #b21f1f, #fdbb2d)",
   pt: 6,
-  pb: 4,
 };
 
 const loaderContainer = {
@@ -226,7 +238,6 @@ const headerTitle = {
 const subTitle = {
   fontSize: "0.9rem",
   color: "rgba(255,255,255,0.6)",
-  mt: 1,
 };
 
 const chatCard = {
@@ -263,7 +274,6 @@ const nameText = {
 const msgText = {
   fontSize: "0.85rem",
   color: "rgba(255,255,255,0.7)",
-  maxWidth: "200px",
 };
 
 const timeText = {
@@ -285,18 +295,7 @@ const unreadBadge = {
 };
 
 const onlineBadge = {
-  "& .MuiBadge-badge": { 
-    backgroundColor: "#44b700",
-    "&::after": {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      width: "100%",
-      height: "100%",
-      borderRadius: "50%",
-      content: '""',
-    }
-  },
+  "& .MuiBadge-badge": { backgroundColor: "#44b700" },
 };
 
 const offlineBadge = {
@@ -308,3 +307,5 @@ const emptyState = {
   color: "#fff",
   mt: 10,
 };
+
+
