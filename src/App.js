@@ -159,7 +159,7 @@ function App() {
         {/* ⭐ USER PREMIUM PAGE */}
         <Route path="/user/premium" element={<UserPremiumPlans />} />
 
-        <Route path="/chat/private/:userId" element={<PrivateChat />} />
+        <Route path="/chat/private/:userId/:pgId" element={<PrivateChat />} />
       </Route>
 
       {/* OWNER ROUTES */}
