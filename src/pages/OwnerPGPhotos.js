@@ -25,7 +25,7 @@ const OwnerPGPhotos = () => {
   const [dragIndex, setDragIndex] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState("");
-  const [replaceFirst, setReplaceFirst] = useState(false); // New state for replace option
+  const [replaceFirst, setReplaceFirst] = useState(false);
 
   /* ================= LOAD PHOTOS ================= */
 
@@ -34,18 +34,18 @@ const OwnerPGPhotos = () => {
       setLoading(true);
       setError("");
 
-      console.log("📡 Fetching PG details for ID:", id);
-      const res = await axios.get(`${API}/pg/${id}`);
+      console.log("📡 Fetching PG photos for ID:", id);
+      
+      // Use the dedicated photos endpoint
+      const res = await axios.get(`${API}/pg/${id}/photos`);
       
       console.log("✅ API Response:", res.data);
 
-      // Handle different response structures
+      // Handle response structure
       let photosArray = [];
       
-      if (res.data?.success && res.data.data) {
-        photosArray = res.data.data.photos || [];
-      } else if (res.data?.data) {
-        photosArray = res.data.data.photos || [];
+      if (res.data?.success && res.data.photos) {
+        photosArray = res.data.photos;
       } else if (Array.isArray(res.data)) {
         photosArray = res.data;
       } else if (res.data?.photos) {
@@ -57,8 +57,27 @@ const OwnerPGPhotos = () => {
 
     } catch (err) {
       console.error("❌ Load error:", err);
-      setError(err.response?.data?.message || "Failed to load photos");
-      setPhotos([]);
+      
+      // Fallback to PG details endpoint
+      try {
+        console.log("📡 Falling back to PG details endpoint");
+        const res = await axios.get(`${API}/pg/${id}`);
+        
+        let photosArray = [];
+        if (res.data?.success && res.data.data) {
+          photosArray = res.data.data.photos || [];
+        } else if (res.data?.data) {
+          photosArray = res.data.data.photos || [];
+        } else if (res.data?.photos) {
+          photosArray = res.data.photos;
+        }
+        
+        setPhotos(photosArray);
+      } catch (fallbackErr) {
+        console.error("❌ Fallback also failed:", fallbackErr);
+        setError(err.response?.data?.message || "Failed to load photos");
+        setPhotos([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -104,15 +123,19 @@ const OwnerPGPhotos = () => {
       console.log("🔑 Got auth token");
 
       const formData = new FormData();
+      
+      // Append all photos
       files.forEach((f) => formData.append("photos", f));
       
-      // Add the replaceFirst flag to the request
-      formData.append("replaceFirst", replaceFirst);
+      // IMPORTANT: Send replaceFirst as a string 'true' or 'false'
+      // This is crucial for the backend to parse it correctly
+      formData.append("replaceFirst", replaceFirst ? "true" : "false");
 
       console.log("📤 Uploading photos to PG ID:", id);
-      console.log("🔄 Replace first image:", replaceFirst);
+      console.log("🔄 Replace first image:", replaceFirst ? "true" : "false");
+      console.log("📦 Number of files:", files.length);
       
-      await axios.post(`${API}/pg/${id}/upload-photos`, formData, {
+      const response = await axios.post(`${API}/pg/${id}/upload-photos`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
@@ -125,14 +148,25 @@ const OwnerPGPhotos = () => {
         },
       });
 
+      console.log("✅ Upload response:", response.data);
+
       setFiles([]);
       setUploadProgress(0);
-      setReplaceFirst(false); // Reset the checkbox
-      alert("Photos uploaded successfully!");
+      setReplaceFirst(false);
+      alert(response.data.message || "Photos uploaded successfully!");
+      
+      // Reload photos to show updated list
       await loadPhotos();
 
     } catch (err) {
       console.error("❌ Upload error:", err);
+      
+      // Detailed error logging
+      if (err.response) {
+        console.error("Error response:", err.response.data);
+        console.error("Error status:", err.response.status);
+      }
+      
       const errorMsg = err.response?.data?.message || err.message || "Upload failed";
       setError(errorMsg);
       alert(`Upload failed: ${errorMsg}`);
@@ -186,6 +220,8 @@ const OwnerPGPhotos = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      console.log("✅ Photos reordered successfully");
+
     } catch (err) {
       console.error("❌ Reorder error:", err);
       alert("Failed to update photo order");
@@ -198,7 +234,7 @@ const OwnerPGPhotos = () => {
   const getImageUrl = (path) => {
     if (!path) return "https://via.placeholder.com/400x300?text=No+Image";
 
-    // If it's already a full URL
+    // If it's already a full URL (Cloudinary URL)
     if (path.startsWith("http")) return path;
 
     // Handle paths that contain /uploads/
@@ -262,7 +298,7 @@ const OwnerPGPhotos = () => {
           />
         </div>
 
-        {/* New checkbox for replace first image option */}
+        {/* Checkbox for replace first image option */}
         <div style={{ marginBottom: 16, display: "flex", alignItems: "center" }}>
           <input
             type="checkbox"
@@ -376,16 +412,13 @@ const OwnerPGPhotos = () => {
                 onDrop={() => onDrop(index)}
                 style={{
                   position: "relative",
-                  border: index === 0 ? "3px solid #3b82f6" : "1px solid #e2e8f0", // Highlight first image
+                  border: index === 0 ? "3px solid #3b82f6" : "1px solid #e2e8f0",
                   borderRadius: 12,
                   overflow: "hidden",
                   backgroundColor: "#f8fafc",
                   cursor: "grab",
                   boxShadow: index === 0 ? "0 4px 6px rgba(59, 130, 246, 0.3)" : "0 1px 3px rgba(0,0,0,0.1)",
-                  transition: "transform 0.2s ease",
-                  ':hover': {
-                    transform: 'scale(1.02)'
-                  }
+                  transition: "transform 0.2s ease"
                 }}
               >
                 {index === 0 && (
