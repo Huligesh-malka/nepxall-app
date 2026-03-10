@@ -1,43 +1,49 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { useParams } from "react-router-dom";
+import React, { useEffect, useState, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import api from "../api/api";
 
-/* ================= ENV ================= */
-
-const BACKEND_URL =
-  process.env.REACT_APP_BACKEND_URL ||
-  "https://nepxall-backend.onrender.com";
-
-const API =
-  process.env.REACT_APP_API_URL ||
-  "https://nepxall-backend.onrender.com/api";
-
-/* ================= COMPONENT ================= */
+const BACKEND_URL = import.meta.env.VITE_API_URL?.replace("/api", "") ||
+  "http://localhost:5000";
 
 const OwnerPGPhotos = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const [photos, setPhotos] = useState([]);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [dragIndex, setDragIndex] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState("");
   const [replaceFirst, setReplaceFirst] = useState(false);
 
-  /* ================= LOAD PHOTOS ================= */
+  /* ================= INIT ================= */
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loadPhotos();
+      } else {
+        navigate("/login");
+      }
+    });
 
-  const loadPhotos = async () => {
+    return unsubscribe;
+  }, [id, navigate]);
+
+  /* ================= LOAD PHOTOS ================= */
+  const loadPhotos = useCallback(async () => {
     try {
-      setLoading(true);
+      setPageLoading(true);
       setError("");
 
       console.log("📡 Fetching PG photos for ID:", id);
       
       // Use the dedicated photos endpoint
-      const res = await axios.get(`${API}/pg/${id}/photos`);
+      const res = await api.get(`/pg/${id}/photos`);
       
       console.log("✅ API Response:", res.data);
 
@@ -61,7 +67,7 @@ const OwnerPGPhotos = () => {
       // Fallback to PG details endpoint
       try {
         console.log("📡 Falling back to PG details endpoint");
-        const res = await axios.get(`${API}/pg/${id}`);
+        const res = await api.get(`/pg/${id}`);
         
         let photosArray = [];
         if (res.data?.success && res.data.data) {
@@ -79,39 +85,32 @@ const OwnerPGPhotos = () => {
         setPhotos([]);
       }
     } finally {
-      setLoading(false);
+      setPageLoading(false);
     }
-  };
-
-  useEffect(() => {
-    if (id) loadPhotos();
   }, [id]);
 
-  /* ================= UPLOAD ================= */
+  /* ================= FILE SELECT ================= */
+  const handleFileChange = (e) => {
+    const selected = Array.from(e.target.files);
 
+    const valid = selected.filter((file) => {
+      const isImage = file.type.startsWith("image/");
+      const isSizeOk = file.size <= 5 * 1024 * 1024; // 5MB for images
+
+      if (!isImage) alert(`${file.name} is not an image`);
+      if (!isSizeOk) alert(`${file.name} exceeds 5MB`);
+
+      return isImage && isSizeOk;
+    });
+
+    setFiles(valid);
+  };
+
+  /* ================= UPLOAD ================= */
   const uploadPhotos = async () => {
     if (!files.length) {
       alert("Please select photos to upload");
       return;
-    }
-
-    const user = auth.currentUser;
-    if (!user) {
-      alert("Please login again");
-      return;
-    }
-
-    // Validate files
-    for (const file of files) {
-      if (!file.type.startsWith("image/")) {
-        alert(`${file.name} is not an image file`);
-        return;
-      }
-
-      if (file.size > 5 * 1024 * 1024) {
-        alert(`${file.name} is larger than 5MB`);
-        return;
-      }
     }
 
     try {
@@ -119,25 +118,21 @@ const OwnerPGPhotos = () => {
       setUploadProgress(0);
       setError("");
 
-      const token = await user.getIdToken(true);
-      console.log("🔑 Got auth token");
-
       const formData = new FormData();
       
       // Append all photos
       files.forEach((f) => formData.append("photos", f));
       
       // IMPORTANT: Send replaceFirst as a string 'true' or 'false'
-      // This is crucial for the backend to parse it correctly
       formData.append("replaceFirst", replaceFirst ? "true" : "false");
 
       console.log("📤 Uploading photos to PG ID:", id);
       console.log("🔄 Replace first image:", replaceFirst ? "true" : "false");
       console.log("📦 Number of files:", files.length);
       
-      const response = await axios.post(`${API}/pg/${id}/upload-photos`, formData, {
+      // Using api instance with upload progress
+      const response = await api.post(`/pg/${id}/upload-photos`, formData, {
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
         },
         onUploadProgress: (progressEvent) => {
@@ -176,17 +171,11 @@ const OwnerPGPhotos = () => {
   };
 
   /* ================= DELETE ================= */
-
   const deletePhoto = async (photo) => {
     if (!window.confirm("Are you sure you want to delete this photo?")) return;
 
     try {
-      const token = await auth.currentUser.getIdToken(true);
-      
-      console.log("🗑️ Deleting photo:", photo);
-
-      await axios.delete(`${API}/pg/${id}/photo`, {
-        headers: { Authorization: `Bearer ${token}` },
+      await api.delete(`/pg/${id}/photo`, {
         data: { photo },
       });
 
@@ -200,7 +189,6 @@ const OwnerPGPhotos = () => {
   };
 
   /* ================= REORDER ================= */
-
   const onDrop = async (index) => {
     if (dragIndex === null) return;
 
@@ -212,12 +200,9 @@ const OwnerPGPhotos = () => {
     setDragIndex(null);
 
     try {
-      const token = await auth.currentUser.getIdToken(true);
-
-      await axios.put(
-        `${API}/pg/${id}/photos/order`,
-        { photos: updated },
-        { headers: { Authorization: `Bearer ${token}` } }
+      await api.put(
+        `/pg/${id}/photos/order`,
+        { photos: updated }
       );
 
       console.log("✅ Photos reordered successfully");
@@ -230,7 +215,6 @@ const OwnerPGPhotos = () => {
   };
 
   /* ================= IMAGE URL ================= */
-
   const getImageUrl = (path) => {
     if (!path) return "https://via.placeholder.com/400x300?text=No+Image";
 
@@ -252,6 +236,7 @@ const OwnerPGPhotos = () => {
   };
 
   /* ================= UI ================= */
+  if (pageLoading) return <h3 style={{ textAlign: "center" }}>Loading...</h3>;
 
   return (
     <div style={{ maxWidth: 1200, margin: "auto", padding: 20 }}>
@@ -287,7 +272,7 @@ const OwnerPGPhotos = () => {
             multiple
             accept="image/*"
             disabled={uploading}
-            onChange={(e) => setFiles([...e.target.files])}
+            onChange={handleFileChange}
             style={{
               padding: 10,
               border: "1px solid #cbd5e1",
@@ -297,6 +282,12 @@ const OwnerPGPhotos = () => {
             }}
           />
         </div>
+
+        {/* File size info */}
+        <p style={{ fontSize: 13, color: "#666", marginBottom: 16 }}>
+          • Max size: <b>5MB</b> per image<br />
+          • Supported formats: JPG, PNG, GIF, WEBP
+        </p>
 
         {/* Checkbox for replace first image option */}
         <div style={{ marginBottom: 16, display: "flex", alignItems: "center" }}>
@@ -365,7 +356,7 @@ const OwnerPGPhotos = () => {
             opacity: files.length === 0 ? 0.5 : 1
           }}
         >
-          {uploading ? `Uploading (${uploadProgress}%)` : "Upload Photos"}
+          {uploading ? `Uploading (${uploadProgress}%)` : "⬆ Upload Photos"}
         </button>
         
         {replaceFirst && photos.length > 0 && (
@@ -378,7 +369,7 @@ const OwnerPGPhotos = () => {
       {/* Gallery Section */}
       <div>
         <h3 style={{ marginBottom: 16 }}>
-          Photo Gallery {photos.length > 0 && `(${photos.length})`}
+          🖼️ Photo Gallery {photos.length > 0 && `(${photos.length})`}
         </h3>
 
         {loading ? (
