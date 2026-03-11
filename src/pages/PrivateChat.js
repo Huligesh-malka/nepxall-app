@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/api";
 import { io } from "socket.io-client";
 
@@ -14,9 +14,8 @@ const socket = io(SOCKET_URL, {
 
 export default function PrivateChat() {
 
-  const { userId } = useParams();
-  const [searchParams] = useSearchParams();
-  const pgId = searchParams.get("pg_id");
+  /* ROUTE PARAMS */
+  const { userId, pgId } = useParams();
 
   const navigate = useNavigate();
   const bottomRef = useRef();
@@ -37,15 +36,10 @@ export default function PrivateChat() {
   ========================================================= */
 
   useEffect(() => {
-
-    if (!pgId || pgId === "null") {
-
-      console.error("Missing pg_id");
-
-      navigate("/owner/messages");
-
+    if (!pgId) {
+      console.error("Missing pgId");
+      navigate(-1);
     }
-
   }, [pgId, navigate]);
 
   /* =========================================================
@@ -66,16 +60,18 @@ export default function PrivateChat() {
 
       try {
 
+        /* CURRENT USER */
         const meRes = await api.get("/private-chat/me", config);
         setMe(meRes.data);
 
+        /* OTHER USER */
         const userRes = await api.get(
           `/private-chat/user/${userId}?pg_id=${pgId}`,
           config
         );
-
         setOtherUser(userRes.data);
 
+        /* LOAD MESSAGES */
         const msgRes = await api.get(
           `/private-chat/messages/${userId}?pg_id=${pgId}`,
           config
@@ -94,7 +90,6 @@ export default function PrivateChat() {
       } catch (err) {
 
         console.error("Chat load error:", err);
-
         setLoading(false);
 
       }
@@ -132,7 +127,6 @@ export default function PrivateChat() {
       if (msg.pg_id !== Number(pgId)) return;
 
       setMessages(prev => [...prev, msg]);
-
       scrollBottom();
 
     };
@@ -213,7 +207,6 @@ export default function PrivateChat() {
     setMessages(prev => [...prev, { ...res.data, status: "sent" }]);
 
     setText("");
-
     scrollBottom();
 
   };
@@ -267,7 +260,6 @@ export default function PrivateChat() {
         <span onClick={() => navigate(-1)} style={styles.back}>←</span>
 
         <div>
-
           <div style={styles.name}>
             {otherUser?.pg_name || otherUser?.name || "Chat"}
           </div>
@@ -275,7 +267,6 @@ export default function PrivateChat() {
           <div style={styles.status}>
             {online ? "🟢 online" : "⚪ offline"}
           </div>
-
         </div>
 
       </div>
@@ -364,7 +355,6 @@ export default function PrivateChat() {
 ========================================================= */
 
 const styles = {
-
   container: {
     height: "100vh",
     display: "flex",
@@ -451,5 +441,4 @@ const styles = {
     justifyContent: "center",
     alignItems: "center"
   }
-
 };
