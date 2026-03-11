@@ -19,7 +19,7 @@ const SOCKET_URL = "https://nepxall-backend.onrender.com";
 export default function OwnerChatList() {
 
   const [users, setUsers] = useState([]);
-  const [me, setMe] = useState(null);   // ⭐ NEW
+  const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
 
@@ -29,7 +29,9 @@ export default function OwnerChatList() {
   /* ================= LOAD CHATS ================= */
 
   const loadChats = useCallback(async () => {
+
     try {
+
       if (!auth.currentUser) return;
 
       const token = await auth.currentUser.getIdToken();
@@ -47,92 +49,128 @@ export default function OwnerChatList() {
       setUsers(listRes.data || []);
 
     } catch (err) {
+
       console.error("Chat list error:", err);
+
     } finally {
+
       setLoading(false);
+
     }
+
   }, []);
 
   /* ================= AUTH + SOCKET ================= */
 
   useEffect(() => {
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+
       if (!user) return navigate("/login");
 
       await loadChats();
 
       if (!socketRef.current) {
-        socketRef.current = io(SOCKET_URL, { transports: ["websocket"] });
+
+        socketRef.current = io(SOCKET_URL, {
+          transports: ["websocket"],
+        });
 
         socketRef.current.on("connect", () => setConnected(true));
         socketRef.current.on("disconnect", () => setConnected(false));
+
       }
 
       const socket = socketRef.current;
 
       socket.emit("register", user.uid);
 
+      socket.off("receive_private_message");
+      socket.off("message_sent_confirmation");
+      socket.off("chat_list_update");
+
       socket.on("receive_private_message", loadChats);
       socket.on("message_sent_confirmation", loadChats);
       socket.on("chat_list_update", loadChats);
 
-      socket.on("user_online", ({ userId }) => {
-        setUsers((prev) =>
-          prev.map((u) =>
-            u.firebase_uid === userId ? { ...u, online: true } : u
+      socket.on("user_online", (firebaseUid) => {
+
+        setUsers(prev =>
+          prev.map(u =>
+            u.firebase_uid === firebaseUid
+              ? { ...u, online: true }
+              : u
           )
         );
+
       });
 
-      socket.on("user_offline", ({ userId }) => {
-        setUsers((prev) =>
-          prev.map((u) =>
-            u.firebase_uid === userId ? { ...u, online: false } : u
+      socket.on("user_offline", (firebaseUid) => {
+
+        setUsers(prev =>
+          prev.map(u =>
+            u.firebase_uid === firebaseUid
+              ? { ...u, online: false }
+              : u
           )
         );
+
       });
+
     });
 
     return () => unsubscribe();
+
   }, [loadChats, navigate]);
 
   /* ================= TIME FORMAT ================= */
 
   const formatTime = (time) => {
+
     if (!time) return "";
+
     const date = new Date(time);
     const now = new Date();
+
     const isToday = date.toDateString() === now.toDateString();
 
     return isToday
       ? date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       : date.toLocaleDateString();
+
   };
 
   /* ================= LOADER ================= */
 
   if (loading) {
+
     return (
       <Box sx={loaderContainer}>
         <CircularProgress sx={{ color: "#00d2ff" }} />
       </Box>
     );
+
   }
 
   /* ================= UI ================= */
 
   return (
+
     <Box sx={mainContainer}>
       <Container maxWidth="sm">
 
         <Box display="flex" justifyContent="space-between">
-          <Typography sx={headerTitle}>Messages</Typography>
+
+          <Typography sx={headerTitle}>
+            Messages
+          </Typography>
 
           <Typography
             sx={{ fontSize: 12, color: connected ? "#4caf50" : "#ff4d4f" }}
           >
             {connected ? "● Online" : "● Offline"}
           </Typography>
+
         </Box>
 
         <Typography sx={subTitle}>
@@ -140,26 +178,32 @@ export default function OwnerChatList() {
         </Typography>
 
         <Box sx={{ mt: 4 }}>
+
           <AnimatePresence>
+
             {users.length > 0 ? (
+
               users.map((u, index) => {
 
-                /* 🎯 ROLE BASED NAME */
                 const title =
                   me?.role === "owner"
-                    ? u.name          // 👑 OWNER → USER NAME
-                    : u.pg_name || u.name;  // 👤 TENANT → PG NAME
+                    ? u.name
+                    : u.pg_name || u.name;
 
                 return (
+
                   <motion.div
-                    key={u.id}
+                    key={`${u.id}_${u.pg_id}`}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                   >
+
                     <Box
                       sx={chatCard}
-                      onClick={() => navigate(`/owner/chat/private/${u.id}`)}
+                      onClick={() =>
+                        navigate(`/owner/chat/private/${u.id}?pg_id=${u.pg_id}`)
+                      }
                     >
 
                       <Badge
@@ -167,14 +211,17 @@ export default function OwnerChatList() {
                         variant="dot"
                         sx={u.online ? onlineBadge : offlineBadge}
                       >
+
                         <Avatar sx={avatarStyle}>
                           {title?.charAt(0)}
                         </Avatar>
+
                       </Badge>
 
                       <Box sx={{ flex: 1, ml: 1 }}>
 
                         <Box display="flex" justifyContent="space-between">
+
                           <Typography sx={nameText}>
                             {title}
                           </Typography>
@@ -182,37 +229,57 @@ export default function OwnerChatList() {
                           <Typography sx={timeText}>
                             {formatTime(u.last_time)}
                           </Typography>
+
                         </Box>
 
                         <Typography sx={msgText} noWrap>
+
                           {u.last_sender === "me" && (
-                            <span style={{ color: "#00d2ff" }}>You: </span>
+                            <span style={{ color: "#00d2ff" }}>
+                              You:
+                            </span>
                           )}
-                          {u.last_message}
+
+                          {" "}{u.last_message}
+
                         </Typography>
 
                       </Box>
 
                       {u.unread > 0 && (
-                        <Box sx={unreadBadge}>{u.unread}</Box>
+                        <Box sx={unreadBadge}>
+                          {u.unread}
+                        </Box>
                       )}
+
                     </Box>
+
                   </motion.div>
+
                 );
+
               })
+
             ) : (
+
               <Typography sx={emptyState}>
                 No conversations yet.
               </Typography>
+
             )}
+
           </AnimatePresence>
+
         </Box>
+
       </Container>
     </Box>
+
   );
+
 }
 
-
+/* ================= STYLES ================= */
 
 const mainContainer = {
   minHeight: "100vh",
@@ -307,5 +374,3 @@ const emptyState = {
   color: "#fff",
   mt: 10,
 };
-
-
