@@ -14,7 +14,6 @@ const socket = io(SOCKET_URL, {
 
 export default function PrivateChat() {
 
-  /* ROUTE PARAMS */
   const { userId, pgId } = useParams();
 
   const navigate = useNavigate();
@@ -29,36 +28,41 @@ export default function PrivateChat() {
   const [loading, setLoading] = useState(true);
 
   const scrollBottom = () =>
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+    setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
 
-  /* =========================================================
-     SAFETY CHECK
-  ========================================================= */
+  /* ============================
+     CHECK PARAMS
+  ============================ */
 
   useEffect(() => {
-    if (!pgId) {
-      console.error("Missing pgId");
+    if (!userId || !pgId) {
+      console.error("Missing chat params");
       navigate(-1);
     }
-  }, [pgId, navigate]);
+  }, [userId, pgId, navigate]);
 
-  /* =========================================================
-     AUTH LOAD
-  ========================================================= */
+  /* ============================
+     AUTH + LOAD DATA
+  ============================ */
 
   useEffect(() => {
 
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
 
-      if (!fbUser) return navigate("/login");
-
-      const token = await fbUser.getIdToken();
-
-      const config = {
-        headers: { Authorization: `Bearer ${token}` }
-      };
+      if (!fbUser) {
+        navigate("/login");
+        return;
+      }
 
       try {
+
+        const token = await fbUser.getIdToken();
+
+        const config = {
+          headers: { Authorization: `Bearer ${token}` }
+        };
 
         /* CURRENT USER */
         const meRes = await api.get("/private-chat/me", config);
@@ -69,15 +73,16 @@ export default function PrivateChat() {
           `/private-chat/user/${userId}?pg_id=${pgId}`,
           config
         );
+
         setOtherUser(userRes.data);
 
-        /* LOAD MESSAGES */
+        /* MESSAGES */
         const msgRes = await api.get(
           `/private-chat/messages/${userId}?pg_id=${pgId}`,
           config
         );
 
-        setMessages(msgRes.data);
+        setMessages(msgRes.data || []);
 
         setLoading(false);
 
@@ -100,13 +105,13 @@ export default function PrivateChat() {
 
   }, [userId, pgId, navigate]);
 
-  /* =========================================================
-     JOIN SOCKET ROOM
-  ========================================================= */
+  /* ============================
+     JOIN ROOM
+  ============================ */
 
   useEffect(() => {
 
-    if (!me || !pgId) return;
+    if (!me) return;
 
     socket.emit("join_private_room", {
       userA: me.id,
@@ -116,9 +121,9 @@ export default function PrivateChat() {
 
   }, [me, userId, pgId]);
 
-  /* =========================================================
+  /* ============================
      SOCKET EVENTS
-  ========================================================= */
+  ============================ */
 
   useEffect(() => {
 
@@ -153,14 +158,11 @@ export default function PrivateChat() {
 
     const deleted = ({ messageId }) => {
 
-      setMessages(prev => prev.filter(m => m.id !== messageId));
+      setMessages(prev =>
+        prev.filter(m => m.id !== messageId)
+      );
 
     };
-
-    socket.off("receive_private_message");
-    socket.off("message_sent_confirmation");
-    socket.off("messages_read");
-    socket.off("message_deleted");
 
     socket.on("receive_private_message", receiveMessage);
     socket.on("message_sent_confirmation", delivered);
@@ -182,55 +184,79 @@ export default function PrivateChat() {
 
   }, [me, pgId]);
 
-  /* =========================================================
+  /* ============================
      SEND MESSAGE
-  ========================================================= */
+  ============================ */
 
   const sendMessage = async () => {
 
     if (!text.trim()) return;
 
-    const token = await auth.currentUser.getIdToken();
+    try {
 
-    const res = await api.post(
-      "/private-chat/send",
-      {
-        receiver_id: Number(userId),
-        pg_id: Number(pgId),
-        message: text
-      },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+      const token = await auth.currentUser.getIdToken();
 
-    socket.emit("send_private_message", res.data);
+      const res = await api.post(
+        "/private-chat/send",
+        {
+          receiver_id: Number(userId),
+          pg_id: Number(pgId),
+          message: text
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
 
-    setMessages(prev => [...prev, { ...res.data, status: "sent" }]);
+      socket.emit("send_private_message", res.data);
 
-    setText("");
-    scrollBottom();
+      setMessages(prev => [
+        ...prev,
+        { ...res.data, status: "sent" }
+      ]);
+
+      setText("");
+
+      scrollBottom();
+
+    } catch (err) {
+
+      console.error("Send message error", err);
+
+    }
 
   };
 
-  /* =========================================================
+  /* ============================
      DELETE MESSAGE
-  ========================================================= */
+  ============================ */
 
   const deleteMessage = async (id) => {
 
-    const token = await auth.currentUser.getIdToken();
+    try {
 
-    await api.delete(`/private-chat/message/${id}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+      const token = await auth.currentUser.getIdToken();
 
-    setMessages(prev => prev.filter(m => m.id !== id));
+      await api.delete(`/private-chat/message/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-    socket.emit("delete_private_message", {
-      messageId: id,
-      sender_id: me.id,
-      receiver_id: Number(userId),
-      pg_id: Number(pgId)
-    });
+      setMessages(prev =>
+        prev.filter(m => m.id !== id)
+      );
+
+      socket.emit("delete_private_message", {
+        messageId: id,
+        sender_id: me.id,
+        receiver_id: Number(userId),
+        pg_id: Number(pgId)
+      });
+
+    } catch (err) {
+
+      console.error("Delete error", err);
+
+    }
 
   };
 
@@ -260,6 +286,7 @@ export default function PrivateChat() {
         <span onClick={() => navigate(-1)} style={styles.back}>←</span>
 
         <div>
+
           <div style={styles.name}>
             {otherUser?.pg_name || otherUser?.name || "Chat"}
           </div>
@@ -267,6 +294,7 @@ export default function PrivateChat() {
           <div style={styles.status}>
             {online ? "🟢 online" : "⚪ offline"}
           </div>
+
         </div>
 
       </div>
@@ -350,11 +378,12 @@ export default function PrivateChat() {
 
 }
 
-/* =========================================================
+/* ============================
    STYLES
-========================================================= */
+============================ */
 
 const styles = {
+
   container: {
     height: "100vh",
     display: "flex",
@@ -441,4 +470,5 @@ const styles = {
     justifyContent: "center",
     alignItems: "center"
   }
+
 };
