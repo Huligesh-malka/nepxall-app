@@ -5,7 +5,9 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api from "../api/api";
 import { io } from "socket.io-client";
 
-const socket = io("https://nepxall-backend.onrender.com", {
+const SOCKET_URL = "https://nepxall-backend.onrender.com";
+
+const socket = io(SOCKET_URL, {
   autoConnect: false,
   transports: ["websocket"],
 });
@@ -14,7 +16,7 @@ export default function PrivateChat() {
 
   const { userId } = useParams();
   const [searchParams] = useSearchParams();
-  const pgId = searchParams.get("pg_id");   // ✅ PROPERTY ID
+  const pgId = searchParams.get("pg_id");
 
   const navigate = useNavigate();
   const bottomRef = useRef();
@@ -30,7 +32,26 @@ export default function PrivateChat() {
   const scrollBottom = () =>
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
 
-  /* ================= AUTH LOAD ================= */
+  /* =========================================================
+     SAFETY CHECK
+  ========================================================= */
+
+  useEffect(() => {
+
+    if (!pgId || pgId === "null") {
+
+      console.error("Missing pg_id");
+
+      navigate("/owner/messages");
+
+    }
+
+  }, [pgId, navigate]);
+
+  /* =========================================================
+     AUTH LOAD
+  ========================================================= */
+
   useEffect(() => {
 
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
@@ -38,27 +59,44 @@ export default function PrivateChat() {
       if (!fbUser) return navigate("/login");
 
       const token = await fbUser.getIdToken();
-      const config = { headers: { Authorization: `Bearer ${token}` } };
+
+      const config = {
+        headers: { Authorization: `Bearer ${token}` }
+      };
 
       try {
 
         const meRes = await api.get("/private-chat/me", config);
         setMe(meRes.data);
 
-        const userRes = await api.get(`/private-chat/user/${userId}?pg_id=${pgId}`, config);
+        const userRes = await api.get(
+          `/private-chat/user/${userId}?pg_id=${pgId}`,
+          config
+        );
+
         setOtherUser(userRes.data);
 
-        const msgRes = await api.get(`/private-chat/messages/${userId}?pg_id=${pgId}`, config);
+        const msgRes = await api.get(
+          `/private-chat/messages/${userId}?pg_id=${pgId}`,
+          config
+        );
+
         setMessages(msgRes.data);
 
         setLoading(false);
 
+        scrollBottom();
+
         if (!socket.connected) socket.connect();
+
         socket.emit("register", fbUser.uid);
 
       } catch (err) {
-        console.error(err);
+
+        console.error("Chat load error:", err);
+
         setLoading(false);
+
       }
 
     });
@@ -67,10 +105,13 @@ export default function PrivateChat() {
 
   }, [userId, pgId, navigate]);
 
-  /* ================= JOIN ROOM ================= */
+  /* =========================================================
+     JOIN SOCKET ROOM
+  ========================================================= */
+
   useEffect(() => {
 
-    if (!me) return;
+    if (!me || !pgId) return;
 
     socket.emit("join_private_room", {
       userA: me.id,
@@ -80,38 +121,58 @@ export default function PrivateChat() {
 
   }, [me, userId, pgId]);
 
-  /* ================= SOCKET EVENTS ================= */
+  /* =========================================================
+     SOCKET EVENTS
+  ========================================================= */
+
   useEffect(() => {
 
     const receiveMessage = (msg) => {
+
+      if (msg.pg_id !== Number(pgId)) return;
+
       setMessages(prev => [...prev, msg]);
+
       scrollBottom();
+
     };
 
     const delivered = (msg) => {
+
       setMessages(prev =>
         prev.map(m =>
           m.id === msg.id ? { ...m, status: "delivered" } : m
         )
       );
+
     };
 
     const read = () => {
+
       setMessages(prev =>
         prev.map(m =>
           m.sender_id === me?.id ? { ...m, status: "read" } : m
         )
       );
+
     };
 
     const deleted = ({ messageId }) => {
+
       setMessages(prev => prev.filter(m => m.id !== messageId));
+
     };
+
+    socket.off("receive_private_message");
+    socket.off("message_sent_confirmation");
+    socket.off("messages_read");
+    socket.off("message_deleted");
 
     socket.on("receive_private_message", receiveMessage);
     socket.on("message_sent_confirmation", delivered);
     socket.on("messages_read", read);
     socket.on("message_deleted", deleted);
+
     socket.on("user_online", () => setOnline(true));
     socket.on("user_offline", () => setOnline(false));
     socket.on("user_typing", ({ isTyping }) => setTyping(isTyping));
@@ -122,15 +183,15 @@ export default function PrivateChat() {
       socket.off("message_sent_confirmation", delivered);
       socket.off("messages_read", read);
       socket.off("message_deleted", deleted);
-      socket.off("user_online");
-      socket.off("user_offline");
-      socket.off("user_typing");
 
     };
 
-  }, [me]);
+  }, [me, pgId]);
 
-  /* ================= SEND MESSAGE ================= */
+  /* =========================================================
+     SEND MESSAGE
+  ========================================================= */
+
   const sendMessage = async () => {
 
     if (!text.trim()) return;
@@ -141,7 +202,7 @@ export default function PrivateChat() {
       "/private-chat/send",
       {
         receiver_id: Number(userId),
-        pg_id: Number(pgId),     // ✅ IMPORTANT
+        pg_id: Number(pgId),
         message: text
       },
       { headers: { Authorization: `Bearer ${token}` } }
@@ -150,18 +211,23 @@ export default function PrivateChat() {
     socket.emit("send_private_message", res.data);
 
     setMessages(prev => [...prev, { ...res.data, status: "sent" }]);
+
     setText("");
+
     scrollBottom();
 
   };
 
-  /* ================= DELETE MESSAGE ================= */
+  /* =========================================================
+     DELETE MESSAGE
+  ========================================================= */
+
   const deleteMessage = async (id) => {
 
     const token = await auth.currentUser.getIdToken();
 
     await api.delete(`/private-chat/message/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}` }
     });
 
     setMessages(prev => prev.filter(m => m.id !== id));
@@ -170,6 +236,7 @@ export default function PrivateChat() {
       messageId: id,
       sender_id: me.id,
       receiver_id: Number(userId),
+      pg_id: Number(pgId)
     });
 
   };
@@ -192,12 +259,15 @@ export default function PrivateChat() {
   if (loading) return <div style={styles.loader}>Loading chat...</div>;
 
   return (
+
     <div style={styles.container}>
 
       <div style={styles.header}>
+
         <span onClick={() => navigate(-1)} style={styles.back}>←</span>
 
         <div>
+
           <div style={styles.name}>
             {otherUser?.pg_name || otherUser?.name || "Chat"}
           </div>
@@ -205,6 +275,7 @@ export default function PrivateChat() {
           <div style={styles.status}>
             {online ? "🟢 online" : "⚪ offline"}
           </div>
+
         </div>
 
       </div>
@@ -218,7 +289,7 @@ export default function PrivateChat() {
             style={{
               ...styles.msgRow,
               justifyContent:
-                m.sender_id === me?.id ? "flex-end" : "flex-start",
+                m.sender_id === me?.id ? "flex-end" : "flex-start"
             }}
           >
 
@@ -231,26 +302,28 @@ export default function PrivateChat() {
                     m.sender_id === me?.id
                       ? "linear-gradient(135deg,#667eea,#764ba2)"
                       : "#fff",
-                  color: m.sender_id === me?.id ? "#fff" : "#000",
+                  color: m.sender_id === me?.id ? "#fff" : "#000"
                 }}
               >
+
                 {m.message}
 
-                {m.sender_id === me?.id && (
+                {m.sender_id === me?.id &&
                   <div style={styles.tick}>
                     {getStatusDot(m.status)}
                   </div>
-                )}
+                }
+
               </div>
 
-              {m.sender_id === me?.id && (
+              {m.sender_id === me?.id &&
                 <span
                   onClick={() => deleteMessage(m.id)}
                   style={styles.deleteBtn}
                 >
                   🗑
                 </span>
-              )}
+              }
 
             </div>
 
@@ -281,14 +354,23 @@ export default function PrivateChat() {
       </div>
 
     </div>
+
   );
 
 }
 
-/* ================= STYLES ================= */
+/* =========================================================
+   STYLES
+========================================================= */
 
 const styles = {
-  container: { height: "100vh", display: "flex", flexDirection: "column", background: "#f1f5f9" },
+
+  container: {
+    height: "100vh",
+    display: "flex",
+    flexDirection: "column",
+    background: "#f1f5f9"
+  },
 
   header: {
     background: "linear-gradient(135deg,#667eea,#764ba2)",
@@ -296,7 +378,7 @@ const styles = {
     padding: 12,
     display: "flex",
     alignItems: "center",
-    gap: 10,
+    gap: 10
   },
 
   back: { cursor: "pointer", fontSize: 20 },
@@ -305,15 +387,28 @@ const styles = {
 
   status: { fontSize: 12 },
 
-  chatBody: { flex: 1, overflowY: "auto", padding: 15 },
+  chatBody: {
+    flex: 1,
+    overflowY: "auto",
+    padding: 15
+  },
 
   msgRow: { display: "flex", marginBottom: 10 },
 
-  bubble: { padding: "10px 14px", borderRadius: 15, maxWidth: "70%" },
+  bubble: {
+    padding: "10px 14px",
+    borderRadius: 15,
+    maxWidth: "70%"
+  },
 
   tick: { marginTop: 5, textAlign: "right" },
 
-  dot: { height: 8, width: 8, borderRadius: "50%", display: "inline-block" },
+  dot: {
+    height: 8,
+    width: 8,
+    borderRadius: "50%",
+    display: "inline-block"
+  },
 
   typing: { fontSize: 12, marginLeft: 10 },
 
@@ -322,14 +417,14 @@ const styles = {
     top: -8,
     right: -8,
     cursor: "pointer",
-    fontSize: 14,
+    fontSize: 14
   },
 
   inputArea: {
     display: "flex",
     padding: 10,
     background: "#fff",
-    borderTop: "1px solid #eee",
+    borderTop: "1px solid #eee"
   },
 
   input: {
@@ -337,7 +432,7 @@ const styles = {
     padding: 12,
     borderRadius: 25,
     border: "1px solid #ddd",
-    outline: "none",
+    outline: "none"
   },
 
   sendBtn: {
@@ -347,13 +442,14 @@ const styles = {
     border: "none",
     padding: "0 18px",
     borderRadius: "50%",
-    cursor: "pointer",
+    cursor: "pointer"
   },
 
   loader: {
     height: "100vh",
     display: "flex",
     justifyContent: "center",
-    alignItems: "center",
-  },
+    alignItems: "center"
+  }
+
 };
