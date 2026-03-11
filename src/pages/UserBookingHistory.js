@@ -426,10 +426,9 @@ const UserBookingHistory = () => {
                   >
                     🏠 View PG
                   </button>
-
                   <button
   style={chatBtn}
-  onClick={() => navigate(`/chat/private/${b.owner_id}/${b.pg_id}`)}
+  onClick={() => navigate(`/chat/private/${b.owner_id}?pg_id=${b.pg_id}`)}
 >
   💬 Chat Owner
 </button>
