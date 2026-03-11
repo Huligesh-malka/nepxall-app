@@ -200,11 +200,11 @@ export default function OwnerChatList() {
                   >
 
                     <Box
-                      sx={chatCard}
-                      onClick={() =>
-                        navigate(`/owner/chat/private/${u.id}?pg_id=${u.pg_id}`)
-                      }
-                    >
+  sx={chatCard}
+  onClick={() =>
+    navigate(`/chat/private/${u.id}/${u.pg_id}`)
+  }
+>
 
                       <Badge
                         overlap="circular"
