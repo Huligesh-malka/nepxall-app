@@ -287,17 +287,23 @@ export default function PrivateChat() {
 
         <div>
 
-          <div style={styles.name}>
-            {otherUser?.name || "User"}
-          </div>
+  <div style={styles.name}>
+    {otherUser?.name && !otherUser.name.startsWith("+")
+      ? otherUser.name
+      : otherUser?.pg_name || "User"}
+  </div>
 
-          <div style={styles.status}>
-            {online ? "🟢 online" : "⚪ offline"}
-          </div>
+  {otherUser?.pg_name && (
+    <div style={{ fontSize: 12, opacity: 0.8 }}>
+      {otherUser.pg_name}
+    </div>
+  )}
 
-        </div>
+  <div style={styles.status}>
+    {online ? "🟢 online" : "⚪ offline"}
+  </div>
 
-      </div>
+</div>
 
       <div style={styles.chatBody}>
 
