@@ -63,6 +63,11 @@ const Sidebar = () => {
             <Link style={linkStyle(isActive("/user/aadhaar-kyc"))} to="/user/aadhaar-kyc">
               🛂 Aadhaar KYC
             </Link>
+                {/* ⭐ NEW DIGILOCKER KYC */}
+    <Link style={linkStyle(isActive("/user/digilocker"))} to="/user/digilocker">
+      🔐 DigiLocker KYC
+    </Link>
+
 
             <Link style={linkStyle(isActive("/"))} to="/">
               🔍 Browse Properties
