@@ -71,7 +71,7 @@ const AgreementForm = () => {
 
       const result = await res.json();
 
-      alert(result.message || "Agreement form submitted");
+      alert(result.message || "Agreement submitted");
 
     } catch (error) {
       console.error(error);
@@ -79,75 +79,182 @@ const AgreementForm = () => {
     }
   };
 
+  const inputStyle = {
+    padding: "12px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+    width: "100%",
+    fontSize: "14px"
+  };
+
+  const fileBox = {
+    border: "1px dashed #bbb",
+    padding: "15px",
+    borderRadius: "10px",
+    textAlign: "center",
+    background: "#fafafa"
+  };
+
   return (
-    <div style={{ maxWidth: 700, margin: "auto" }}>
-      <h2>Rental Agreement Form</h2>
 
-      <form onSubmit={handleSubmit}>
+    <div style={{
+      background:"#f6f8fb",
+      minHeight:"100vh",
+      padding:"40px 20px"
+    }}>
 
-        <input name="full_name" placeholder="Full Name" onChange={handleChange} required />
+      <div style={{
+        maxWidth:"900px",
+        margin:"auto",
+        background:"#fff",
+        padding:"30px",
+        borderRadius:"12px",
+        boxShadow:"0 5px 25px rgba(0,0,0,0.08)"
+      }}>
 
-        <input name="father_name" placeholder="Father Name" onChange={handleChange} />
+        <h2 style={{
+          marginBottom:"25px",
+          textAlign:"center"
+        }}>
+          Rental Agreement Form
+        </h2>
 
-        <input type="date" name="dob" onChange={handleChange} />
+        <form onSubmit={handleSubmit}>
 
-        <input name="mobile" placeholder="Mobile Number" onChange={handleChange} required />
+          {/* PERSONAL INFO */}
 
-        <input name="email" placeholder="Email" onChange={handleChange} />
+          <h3>Personal Details</h3>
 
-        <input name="occupation" placeholder="Occupation" onChange={handleChange} />
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"15px"}}>
 
-        <input name="company_name" placeholder="Company / College" onChange={handleChange} />
+            <input style={inputStyle} name="full_name" placeholder="Full Name" onChange={handleChange} required />
 
-        <textarea name="address" placeholder="Address" onChange={handleChange} />
+            <input style={inputStyle} name="father_name" placeholder="Father Name" onChange={handleChange} />
 
-        <input name="city" placeholder="City" onChange={handleChange} />
+            <input style={inputStyle} type="date" name="dob" onChange={handleChange} />
 
-        <input name="state" placeholder="State" onChange={handleChange} />
+            <input style={inputStyle} name="mobile" placeholder="Mobile Number" onChange={handleChange} required />
 
-        <input name="pincode" placeholder="Pincode" onChange={handleChange} />
+            <input style={inputStyle} name="email" placeholder="Email" onChange={handleChange} />
 
-        <h4>Aadhaar Details</h4>
+            <input style={inputStyle} name="occupation" placeholder="Occupation" onChange={handleChange} />
 
-        <input name="aadhaar_number" placeholder="Aadhaar Number" onChange={handleChange} />
+            <input style={inputStyle} name="company_name" placeholder="Company / College" onChange={handleChange} />
 
-        <input name="aadhaar_last4" placeholder="Last 4 Digits Aadhaar" onChange={handleChange} />
+            <input style={inputStyle} name="city" placeholder="City" onChange={handleChange} />
 
-        <label>Aadhaar Front</label>
-        <input type="file" name="aadhaar_front" onChange={handleFileChange} />
+            <input style={inputStyle} name="state" placeholder="State" onChange={handleChange} />
 
-        <label>Aadhaar Back</label>
-        <input type="file" name="aadhaar_back" onChange={handleFileChange} />
+            <input style={inputStyle} name="pincode" placeholder="Pincode" onChange={handleChange} />
 
-        <h4>PAN Details</h4>
+          </div>
 
-        <input name="pan_number" placeholder="PAN Number" onChange={handleChange} />
+          <br/>
 
-        <input type="file" name="pan_card" onChange={handleFileChange} />
+          <textarea
+            style={{...inputStyle,height:"80px"}}
+            name="address"
+            placeholder="Full Address"
+            onChange={handleChange}
+          />
 
-        <h4>Rental Details</h4>
+          {/* AADHAAR */}
 
-        <input type="date" name="checkin_date" onChange={handleChange} />
+          <h3 style={{marginTop:"30px"}}>Aadhaar Verification</h3>
 
-        <input name="agreement_months" placeholder="Agreement Months" onChange={handleChange} />
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"15px"}}>
 
-        <input name="rent" placeholder="Rent" onChange={handleChange} />
+            <input style={inputStyle} name="aadhaar_number" placeholder="Aadhaar Number" onChange={handleChange} />
 
-        <input name="deposit" placeholder="Deposit" onChange={handleChange} />
+            <input style={inputStyle} name="aadhaar_last4" placeholder="Last 4 digits Aadhaar" onChange={handleChange} />
 
-        <input name="maintenance" placeholder="Maintenance" onChange={handleChange} />
+          </div>
 
-        <h4>Signature</h4>
+          <br/>
 
-        <input type="file" name="signature" onChange={handleFileChange} />
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"15px"}}>
 
-        <br /><br />
+            <div style={fileBox}>
+              <label>Aadhaar Front</label>
+              <input type="file" name="aadhaar_front" onChange={handleFileChange} />
+            </div>
 
-        <button type="submit">Submit Agreement</button>
+            <div style={fileBox}>
+              <label>Aadhaar Back</label>
+              <input type="file" name="aadhaar_back" onChange={handleFileChange} />
+            </div>
 
-      </form>
+          </div>
+
+          {/* PAN */}
+
+          <h3 style={{marginTop:"30px"}}>PAN Details</h3>
+
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"15px"}}>
+
+            <input style={inputStyle} name="pan_number" placeholder="PAN Number" onChange={handleChange} />
+
+            <div style={fileBox}>
+              <label>Upload PAN</label>
+              <input type="file" name="pan_card" onChange={handleFileChange} />
+            </div>
+
+          </div>
+
+          {/* RENT */}
+
+          <h3 style={{marginTop:"30px"}}>Rental Details</h3>
+
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"15px"}}>
+
+            <input style={inputStyle} type="date" name="checkin_date" onChange={handleChange} />
+
+            <input style={inputStyle} name="agreement_months" placeholder="Agreement Months" onChange={handleChange} />
+
+            <input style={inputStyle} name="rent" placeholder="Rent Amount" onChange={handleChange} />
+
+            <input style={inputStyle} name="deposit" placeholder="Security Deposit" onChange={handleChange} />
+
+            <input style={inputStyle} name="maintenance" placeholder="Maintenance" onChange={handleChange} />
+
+          </div>
+
+          {/* SIGNATURE */}
+
+          <h3 style={{marginTop:"30px"}}>Digital Signature</h3>
+
+          <div style={fileBox}>
+            <label>Upload Signature</label>
+            <input type="file" name="signature" onChange={handleFileChange} />
+          </div>
+
+          <br/>
+
+          <button
+            type="submit"
+            style={{
+              width:"100%",
+              padding:"14px",
+              border:"none",
+              borderRadius:"10px",
+              background:"#4f46e5",
+              color:"#fff",
+              fontSize:"16px",
+              fontWeight:"bold",
+              cursor:"pointer"
+            }}
+          >
+            Submit Agreement
+          </button>
+
+        </form>
+
+      </div>
+
     </div>
+
   );
+
 };
 
 export default AgreementForm;
