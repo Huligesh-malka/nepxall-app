@@ -4,6 +4,8 @@ import api from "../api/api";
 const AgreementForm = () => {
 
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -17,9 +19,8 @@ const AgreementForm = () => {
     city: "",
     state: "",
     pincode: "",
-    aadhaar_number: "",
+    aadhaar_name: "",
     aadhaar_last4: "",
-    pan_number: "",
     checkin_date: "",
     agreement_months: "",
     rent: "",
@@ -30,22 +31,19 @@ const AgreementForm = () => {
   const [files, setFiles] = useState({
     aadhaar_front: null,
     aadhaar_back: null,
-    pan_card: null,
     signature: null
   });
 
-  /* ================= HANDLE INPUT ================= */
+  /* INPUT CHANGE */
 
   const handleChange = (e) => {
-
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
-
   };
 
-  /* ================= HANDLE FILE ================= */
+  /* FILE CHANGE */
 
   const handleFileChange = (e) => {
 
@@ -58,11 +56,48 @@ const AgreementForm = () => {
 
   };
 
-  /* ================= SUBMIT ================= */
+  /* VALIDATION */
+
+  const validateForm = () => {
+
+    if (!formData.aadhaar_name) {
+      return "Please enter Aadhaar name";
+    }
+
+    if (!formData.aadhaar_last4) {
+      return "Please enter last 4 digits of Aadhaar";
+    }
+
+    if (formData.aadhaar_last4.length !== 4) {
+      return "Last 4 digits must be 4 numbers";
+    }
+
+    if (!files.aadhaar_front || !files.aadhaar_back) {
+      return "Please upload Aadhaar front and back images";
+    }
+
+    if (!files.signature) {
+      return "Please upload your signature";
+    }
+
+    return null;
+  };
+
+  /* SUBMIT */
 
   const handleSubmit = async (e) => {
 
     e.preventDefault();
+
+    setError("");
+    setSuccess("");
+
+    const validationError = validateForm();
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
 
     if (loading) return;
 
@@ -84,18 +119,23 @@ const AgreementForm = () => {
 
       const res = await api.post(
         "/agreements-form/submit",
-        data
+        data,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data"
+          }
+        }
       );
 
-      alert(res.data.message || "Agreement submitted successfully");
+      setSuccess(res.data.message || "Agreement submitted successfully");
 
     } catch (error) {
 
       console.error(error);
 
-      alert(
+      setError(
         error?.response?.data?.message ||
-        "Failed to submit agreement"
+        "Agreement submission failed"
       );
 
     } finally {
@@ -106,7 +146,7 @@ const AgreementForm = () => {
 
   };
 
-  /* ================= STYLES ================= */
+  /* STYLES */
 
   const inputStyle = {
     padding: "12px",
@@ -130,41 +170,52 @@ const AgreementForm = () => {
     gap: "15px"
   };
 
-  /* ================= UI ================= */
-
   return (
 
-    <div
-      style={{
-        background: "#f6f8fb",
-        minHeight: "100vh",
-        padding: "40px 20px"
-      }}
-    >
+    <div style={{
+      background: "#f6f8fb",
+      minHeight: "100vh",
+      padding: "40px 20px"
+    }}>
 
-      <div
-        style={{
-          maxWidth: "900px",
-          margin: "auto",
-          background: "#fff",
-          padding: "30px",
-          borderRadius: "12px",
-          boxShadow: "0 5px 25px rgba(0,0,0,0.08)"
-        }}
-      >
+      <div style={{
+        maxWidth: "900px",
+        margin: "auto",
+        background: "#fff",
+        padding: "30px",
+        borderRadius: "12px",
+        boxShadow: "0 5px 25px rgba(0,0,0,0.08)"
+      }}>
 
-        <h2
-          style={{
-            marginBottom: "25px",
-            textAlign: "center"
-          }}
-        >
+        <h2 style={{ textAlign: "center" }}>
           Rental Agreement Form
         </h2>
 
-        <form onSubmit={handleSubmit}>
+        {error && (
+          <div style={{
+            background: "#ffe4e6",
+            color: "#991b1b",
+            padding: "10px",
+            borderRadius: "8px",
+            marginBottom: "15px"
+          }}>
+            {error}
+          </div>
+        )}
 
-          {/* PERSONAL */}
+        {success && (
+          <div style={{
+            background: "#e6fffa",
+            color: "#065f46",
+            padding: "10px",
+            borderRadius: "8px",
+            marginBottom: "15px"
+          }}>
+            {success}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
 
           <h3>Personal Details</h3>
 
@@ -201,15 +252,24 @@ const AgreementForm = () => {
             onChange={handleChange}
           />
 
-          {/* AADHAAR */}
-
           <h3 style={{ marginTop: "30px" }}>Aadhaar Verification</h3>
 
           <div style={grid}>
 
-            <input style={inputStyle} name="aadhaar_number" placeholder="Aadhaar Number" onChange={handleChange} />
+            <input
+              style={inputStyle}
+              name="aadhaar_name"
+              placeholder="Name as per Aadhaar"
+              onChange={handleChange}
+            />
 
-            <input style={inputStyle} name="aadhaar_last4" placeholder="Last 4 digits Aadhaar" onChange={handleChange} />
+            <input
+              style={inputStyle}
+              name="aadhaar_last4"
+              placeholder="Last 4 digits of Aadhaar"
+              maxLength={4}
+              onChange={handleChange}
+            />
 
           </div>
 
@@ -220,59 +280,20 @@ const AgreementForm = () => {
             <div style={fileBox}>
               <label>Aadhaar Front</label>
               <input type="file" name="aadhaar_front" onChange={handleFileChange} />
-              {files.aadhaar_front && <p>{files.aadhaar_front.name}</p>}
             </div>
 
             <div style={fileBox}>
               <label>Aadhaar Back</label>
               <input type="file" name="aadhaar_back" onChange={handleFileChange} />
-              {files.aadhaar_back && <p>{files.aadhaar_back.name}</p>}
             </div>
 
           </div>
-
-          {/* PAN */}
-
-          <h3 style={{ marginTop: "30px" }}>PAN Details</h3>
-
-          <div style={grid}>
-
-            <input style={inputStyle} name="pan_number" placeholder="PAN Number" onChange={handleChange} />
-
-            <div style={fileBox}>
-              <label>Upload PAN</label>
-              <input type="file" name="pan_card" onChange={handleFileChange} />
-              {files.pan_card && <p>{files.pan_card.name}</p>}
-            </div>
-
-          </div>
-
-          {/* RENT */}
-
-          <h3 style={{ marginTop: "30px" }}>Rental Details</h3>
-
-          <div style={grid}>
-
-            <input style={inputStyle} type="date" name="checkin_date" onChange={handleChange} />
-
-            <input style={inputStyle} name="agreement_months" placeholder="Agreement Months" onChange={handleChange} />
-
-            <input style={inputStyle} name="rent" placeholder="Rent Amount" onChange={handleChange} />
-
-            <input style={inputStyle} name="deposit" placeholder="Security Deposit" onChange={handleChange} />
-
-            <input style={inputStyle} name="maintenance" placeholder="Maintenance" onChange={handleChange} />
-
-          </div>
-
-          {/* SIGNATURE */}
 
           <h3 style={{ marginTop: "30px" }}>Digital Signature</h3>
 
           <div style={fileBox}>
             <label>Upload Signature</label>
             <input type="file" name="signature" onChange={handleFileChange} />
-            {files.signature && <p>{files.signature.name}</p>}
           </div>
 
           <br />
@@ -292,7 +313,7 @@ const AgreementForm = () => {
               cursor: "pointer"
             }}
           >
-            {loading ? "Uploading..." : "Submit Agreement"}
+            {loading ? "Uploading documents..." : "Submit Agreement"}
           </button>
 
         </form>
