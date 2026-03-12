@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 
-const API = import.meta.env.VITE_API_URL;
+const API = process.env.REACT_APP_API_URL;
 
 export default function DigiLockerVerify() {
 
@@ -9,19 +9,30 @@ export default function DigiLockerVerify() {
   const [error, setError] = useState("");
 
   const startVerification = async () => {
+
     try {
 
       setLoading(true);
+      setError("");
 
-      const res = await axios.get(`${API}/api/digilocker/link`, {
+      console.log("API:", API);
+
+      const res = await axios.get(`${API}/digilocker/link`, {
         withCredentials: true
       });
 
-      const url = res.data?.data?.data?.url || res.data?.data?.url;
+      console.log("Digilocker response:", res.data);
+
+      const url =
+        res?.data?.url ||
+        res?.data?.data?.url ||
+        res?.data?.data?.data?.url;
 
       if (!url) {
         throw new Error("Invalid DigiLocker response");
       }
+
+      console.log("Redirecting to:", url);
 
       window.location.href = url;
 
@@ -29,15 +40,22 @@ export default function DigiLockerVerify() {
 
       console.error("DigiLocker error:", err);
 
-      setError("Failed to start verification");
+      setError(
+        err?.response?.data?.message ||
+        "Failed to start DigiLocker verification"
+      );
 
     } finally {
+
       setLoading(false);
+
     }
+
   };
 
   return (
-    <div style={{ padding: "40px", textAlign: "center" }}>
+
+    <div style={{ padding: 40, textAlign: "center" }}>
 
       <h2>DigiLocker Verification</h2>
 
@@ -55,11 +73,19 @@ export default function DigiLockerVerify() {
           cursor: "pointer"
         }}
       >
+
         {loading ? "Starting..." : "Verify with DigiLocker"}
+
       </button>
 
-      {error && <p style={{ color: "red", marginTop: "15px" }}>{error}</p>}
+      {error && (
+        <p style={{ color: "red", marginTop: 15 }}>
+          {error}
+        </p>
+      )}
 
     </div>
+
   );
+
 }
