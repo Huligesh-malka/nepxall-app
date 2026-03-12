@@ -292,6 +292,7 @@ const UserBookingHistory = () => {
     if (!status) {
       return {
         showPayButton: bookingStatus === "approved",
+        showAgreementButton: false,
         message: null,
         badge: null,
         canPay: bookingStatus === "approved"
@@ -302,6 +303,7 @@ const UserBookingHistory = () => {
       case "paid":
         return {
           showPayButton: false,
+          showAgreementButton: true, // Show agreement button when payment is verified
           message: null,
           badge: { text: "Payment Verified", style: "paid" },
           canPay: false
@@ -310,6 +312,7 @@ const UserBookingHistory = () => {
       case "submitted":
         return {
           showPayButton: false,
+          showAgreementButton: false,
           message: "Payment submitted. Waiting for verification...",
           badge: { text: "Pending Verification", style: "submitted" },
           canPay: false
@@ -318,6 +321,7 @@ const UserBookingHistory = () => {
       case "rejected":
         return {
           showPayButton: true,
+          showAgreementButton: false,
           message: "Payment was rejected. Please try again.",
           badge: { text: "Payment Rejected", style: "rejected" },
           canPay: true
@@ -326,6 +330,7 @@ const UserBookingHistory = () => {
       case "pending":
         return {
           showPayButton: true,
+          showAgreementButton: false,
           message: null,
           badge: { text: "Payment Pending", style: "pending" },
           canPay: true
@@ -334,12 +339,18 @@ const UserBookingHistory = () => {
       default:
         return {
           showPayButton: bookingStatus === "approved",
+          showAgreementButton: false,
           message: null,
           badge: null,
           canPay: bookingStatus === "approved"
         };
     }
   }, [paymentStatuses]);
+
+  // Handle agreement form navigation
+  const handleFillAgreement = useCallback((bookingId) => {
+    navigate(`/agreement-form/${bookingId}`);
+  }, [navigate]);
 
   // Loading state
   if (loading) {
@@ -547,7 +558,7 @@ const UserBookingHistory = () => {
                         title="View Agreement"
                       >
                         <span style={styles.buttonIcon}>📄</span>
-                        <span>Agreement</span>
+                        <span>View</span>
                       </button>
                       <button
                         style={styles.iconButton}
@@ -559,25 +570,39 @@ const UserBookingHistory = () => {
                       </button>
                     </div>
 
-                    {showPayButton && (
-                      <button
-                        style={styles.payButton}
-                        onClick={() => handlePayNow(booking)}
-                        disabled={payingId === booking.id}
-                      >
-                        {payingId === booking.id ? (
-                          <>
-                            <span style={styles.buttonSpinner}></span>
-                            Processing...
-                          </>
-                        ) : (
-                          <>
-                            <span>💳</span>
-                            Pay ₹{total.toLocaleString()}
-                          </>
-                        )}
-                      </button>
-                    )}
+                    <div style={styles.actionRow}>
+                      {showPayButton && (
+                        <button
+                          style={styles.payButton}
+                          onClick={() => handlePayNow(booking)}
+                          disabled={payingId === booking.id}
+                        >
+                          {payingId === booking.id ? (
+                            <>
+                              <span style={styles.buttonSpinner}></span>
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <span>💳</span>
+                              Pay ₹{total.toLocaleString()}
+                            </>
+                          )}
+                        </button>
+                      )}
+
+                      {/* Fill Agreement Button - Shows only when payment is verified */}
+                      {paymentDisplay.showAgreementButton && (
+                        <button
+                          style={styles.agreementButton}
+                          onClick={() => handleFillAgreement(booking.id)}
+                          title="Fill Agreement Form"
+                        >
+                          <span style={styles.buttonIcon}>📝</span>
+                          <span>Fill Agreement</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Confirmed Badge */}
@@ -1090,6 +1115,12 @@ const styles = {
     gap: 8,
   },
   
+  actionRow: {
+    display: "flex",
+    gap: 8,
+    width: "100%",
+  },
+  
   iconButton: {
     padding: "10px",
     background: "#f3f4f6",
@@ -1115,7 +1146,7 @@ const styles = {
   },
   
   payButton: {
-    width: "100%",
+    flex: 1,
     padding: "14px",
     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     border: "none",
@@ -1137,6 +1168,27 @@ const styles = {
       opacity: 0.5,
       cursor: "not-allowed",
       transform: "none",
+    }
+  },
+  
+  agreementButton: {
+    flex: 1,
+    padding: "14px",
+    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    border: "none",
+    borderRadius: 14,
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    ":hover": {
+      transform: "translateY(-2px)",
+      boxShadow: "0 10px 20px rgba(16,185,129,0.3)",
     }
   },
   

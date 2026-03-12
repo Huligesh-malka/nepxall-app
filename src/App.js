@@ -28,6 +28,7 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentPage from "./pages/PaymentPage";
 import NotificationBell from "./pages/NotificationBell";
 import AgreementPage from "./pages/AgreementPage";
+import AgreementForm from "./pages/AgreementForm"; // ⭐ NEW
 import UserActiveStay from "./pages/UserActiveStay";
 import AadhaarKyc from "./pages/AadhaarKyc";
 import VisitSchedulePage from "./pages/VisitSchedulePage";
@@ -150,13 +151,17 @@ function App() {
         <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/payment/:bookingId" element={<PaymentPage />} />
         <Route path="/agreement/:bookingId" element={<AgreementPage />} />
+
+        {/* ⭐ NEW AGREEMENT FORM */}
+        <Route path="/agreement-form/:bookingId" element={<AgreementForm />} />
+
         <Route path="/user/my-stay" element={<UserActiveStay />} />
         <Route path="/user/notifications" element={<NotificationBell />} />
         <Route path="/user/aadhaar-kyc" element={<AadhaarKyc />} />
         <Route path="/user/visit-schedule/:bookingId" element={<VisitSchedulePage />} />
         <Route path="/public/agreement/:hash" element={<PublicAgreementPage />} />
 
-        {/* ⭐ USER PREMIUM PAGE */}
+        {/* ⭐ USER PREMIUM */}
         <Route path="/user/premium" element={<UserPremiumPlans />} />
 
         <Route path="/chat/private/:userId/:pgId" element={<PrivateChat />} />
@@ -178,7 +183,6 @@ function App() {
         <Route path="dashboard" element={<OwnerDashboard />} />
         <Route path="payments" element={<OwnerPayments />} />
 
-        {/* ⭐ OWNER PREMIUM PAGE */}
         <Route path="premium" element={<OwnerPremiumPlans />} />
 
         <Route path="bookings" element={<OwnerBookings />} />
