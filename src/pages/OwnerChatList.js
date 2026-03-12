@@ -18,15 +18,15 @@ const SOCKET_URL = "https://nepxall-backend.onrender.com";
 
 export default function OwnerChatList() {
 
-  const [users, setUsers] = useState([]);
-  const [me, setMe] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [connected, setConnected] = useState(false);
+  const [users,setUsers] = useState([]);
+  const [me,setMe] = useState(null);
+  const [loading,setLoading] = useState(true);
+  const [connected,setConnected] = useState(false);
 
   const navigate = useNavigate();
   const socketRef = useRef(null);
 
-  /* ================= LOAD CHATS ================= */
+  /* ================= LOAD CHAT LIST ================= */
 
   const loadChats = useCallback(async () => {
 
@@ -36,21 +36,21 @@ export default function OwnerChatList() {
 
       const token = await auth.currentUser.getIdToken();
 
-      const [meRes, listRes] = await Promise.all([
-        api.get("/private-chat/me", {
-          headers: { Authorization: `Bearer ${token}` },
+      const [meRes,listRes] = await Promise.all([
+        api.get("/private-chat/me",{
+          headers:{Authorization:`Bearer ${token}`}
         }),
-        api.get("/private-chat/list", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+        api.get("/private-chat/list",{
+          headers:{Authorization:`Bearer ${token}`}
+        })
       ]);
 
       setMe(meRes.data);
       setUsers(listRes.data || []);
 
-    } catch (err) {
+    } catch(err) {
 
-      console.error("Chat list error:", err);
+      console.error("Chat list error:",err);
 
     } finally {
 
@@ -58,59 +58,88 @@ export default function OwnerChatList() {
 
     }
 
-  }, []);
+  },[]);
 
   /* ================= AUTH + SOCKET ================= */
 
-  useEffect(() => {
+  useEffect(()=>{
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user)=>{
 
-      if (!user) return navigate("/login");
+      if(!user){
+        navigate("/login");
+        return;
+      }
 
       await loadChats();
 
-      if (!socketRef.current) {
+      /* CREATE SOCKET */
 
-        socketRef.current = io(SOCKET_URL, {
-          transports: ["websocket"],
+      if(!socketRef.current){
+
+        socketRef.current = io(SOCKET_URL,{
+          transports:["websocket"],
+          autoConnect:true
         });
 
-        socketRef.current.on("connect", () => setConnected(true));
-        socketRef.current.on("disconnect", () => setConnected(false));
+        socketRef.current.on("connect",()=>{
+          setConnected(true);
+        });
+
+        socketRef.current.on("disconnect",()=>{
+          setConnected(false);
+        });
 
       }
 
       const socket = socketRef.current;
 
-      socket.emit("register", user.uid);
+      /* REGISTER USER */
+
+      socket.emit("register",user.uid);
+
+      /* REMOVE OLD LISTENERS */
 
       socket.off("receive_private_message");
       socket.off("message_sent_confirmation");
       socket.off("chat_list_update");
+      socket.off("user_online");
+      socket.off("user_offline");
 
-      socket.on("receive_private_message", loadChats);
-      socket.on("message_sent_confirmation", loadChats);
-      socket.on("chat_list_update", loadChats);
+      /* NEW MESSAGE */
 
-      socket.on("user_online", (firebaseUid) => {
+      socket.on("receive_private_message",()=>{
+        loadChats();
+      });
+
+      socket.on("message_sent_confirmation",()=>{
+        loadChats();
+      });
+
+      socket.on("chat_list_update",()=>{
+        loadChats();
+      });
+
+      /* ONLINE STATUS */
+
+      socket.on("user_online",(firebaseUid)=>{
 
         setUsers(prev =>
           prev.map(u =>
             u.firebase_uid === firebaseUid
-              ? { ...u, online: true }
+              ? {...u,online:true}
               : u
           )
         );
 
       });
 
-      socket.on("user_offline", (firebaseUid) => {
+      socket.on("user_offline",(firebaseUid)=>{
 
         setUsers(prev =>
           prev.map(u =>
             u.firebase_uid === firebaseUid
-              ? { ...u, online: false }
+              ? {...u,online:false}
               : u
           )
         );
@@ -119,15 +148,23 @@ export default function OwnerChatList() {
 
     });
 
-    return () => unsubscribe();
+    return ()=>{
 
-  }, [loadChats, navigate]);
+      unsubscribe();
+
+      if(socketRef.current){
+        socketRef.current.disconnect();
+      }
+
+    };
+
+  },[loadChats,navigate]);
 
   /* ================= TIME FORMAT ================= */
 
-  const formatTime = (time) => {
+  const formatTime = (time)=>{
 
-    if (!time) return "";
+    if(!time) return "";
 
     const date = new Date(time);
     const now = new Date();
@@ -135,18 +172,21 @@ export default function OwnerChatList() {
     const isToday = date.toDateString() === now.toDateString();
 
     return isToday
-      ? date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      ? date.toLocaleTimeString([],{
+          hour:"2-digit",
+          minute:"2-digit"
+        })
       : date.toLocaleDateString();
 
   };
 
   /* ================= LOADER ================= */
 
-  if (loading) {
+  if(loading){
 
-    return (
+    return(
       <Box sx={loaderContainer}>
-        <CircularProgress sx={{ color: "#00d2ff" }} />
+        <CircularProgress sx={{color:"#00d2ff"}}/>
       </Box>
     );
 
@@ -154,9 +194,10 @@ export default function OwnerChatList() {
 
   /* ================= UI ================= */
 
-  return (
+  return(
 
     <Box sx={mainContainer}>
+
       <Container maxWidth="sm">
 
         <Box display="flex" justifyContent="space-between">
@@ -166,7 +207,10 @@ export default function OwnerChatList() {
           </Typography>
 
           <Typography
-            sx={{ fontSize: 12, color: connected ? "#4caf50" : "#ff4d4f" }}
+            sx={{
+              fontSize:12,
+              color: connected ? "#4caf50" : "#ff4d4f"
+            }}
           >
             {connected ? "● Online" : "● Offline"}
           </Typography>
@@ -177,30 +221,30 @@ export default function OwnerChatList() {
           {users.length} Active Conversations
         </Typography>
 
-        <Box sx={{ mt: 4 }}>
+        <Box sx={{mt:4}}>
 
           <AnimatePresence>
 
             {users.length > 0 ? (
 
-              users.map((u, index) => {
+              users.map((u,index)=>{
 
                 const title = u.name || u.pg_name || "User";
-                return (
+
+                return(
 
                   <motion.div
                     key={`${u.id}_${u.pg_id}`}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
+                    initial={{opacity:0,y:20}}
+                    animate={{opacity:1,y:0}}
+                    exit={{opacity:0}}
+                    transition={{delay:index * 0.05}}
                   >
 
                     <Box
-  sx={chatCard}
-  onClick={() =>
-    navigate(`/chat/private/${u.id}/${u.pg_id}`)
-  }
->
+                      sx={chatCard}
+                      onClick={()=>navigate(`/chat/private/${u.id}/${u.pg_id}`)}
+                    >
 
                       <Badge
                         overlap="circular"
@@ -214,7 +258,7 @@ export default function OwnerChatList() {
 
                       </Badge>
 
-                      <Box sx={{ flex: 1, ml: 1 }}>
+                      <Box sx={{flex:1,ml:1}}>
 
                         <Box display="flex" justifyContent="space-between">
 
@@ -223,7 +267,7 @@ export default function OwnerChatList() {
                           </Typography>
 
                           <Typography sx={timeText}>
-                            {formatTime(u.last_time)}
+                            {formatTime(u.last_message_time)}
                           </Typography>
 
                         </Box>
@@ -231,7 +275,7 @@ export default function OwnerChatList() {
                         <Typography sx={msgText} noWrap>
 
                           {u.last_sender === "me" && (
-                            <span style={{ color: "#00d2ff" }}>
+                            <span style={{color:"#00d2ff"}}>
                               You:
                             </span>
                           )}
@@ -269,6 +313,7 @@ export default function OwnerChatList() {
         </Box>
 
       </Container>
+
     </Box>
 
   );
@@ -278,95 +323,98 @@ export default function OwnerChatList() {
 /* ================= STYLES ================= */
 
 const mainContainer = {
-  minHeight: "100vh",
-  background:
-    "radial-gradient(circle at top left, #1a2a6c, #b21f1f, #fdbb2d)",
-  pt: 6,
+  minHeight:"100vh",
+  background:"radial-gradient(circle at top left,#1a2a6c,#b21f1f,#fdbb2d)",
+  pt:6
 };
 
 const loaderContainer = {
-  height: "100vh",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  background: "#0f0c29",
+  height:"100vh",
+  display:"flex",
+  justifyContent:"center",
+  alignItems:"center",
+  background:"#0f0c29"
 };
 
 const headerTitle = {
-  fontSize: "2.2rem",
-  fontWeight: 800,
-  color: "#fff",
+  fontSize:"2.2rem",
+  fontWeight:800,
+  color:"#fff"
 };
 
 const subTitle = {
-  fontSize: "0.9rem",
-  color: "rgba(255,255,255,0.6)",
+  fontSize:"0.9rem",
+  color:"rgba(255,255,255,0.6)"
 };
 
 const chatCard = {
-  display: "flex",
-  alignItems: "center",
-  gap: 2,
-  p: "18px",
-  mb: 2,
-  borderRadius: "20px",
-  cursor: "pointer",
-  background: "rgba(255,255,255,0.08)",
-  backdropFilter: "blur(10px)",
-  transition: "0.3s",
-  "&:hover": {
-    transform: "translateY(-4px)",
-    background: "rgba(255,255,255,0.12)",
-  },
+  display:"flex",
+  alignItems:"center",
+  gap:2,
+  p:"18px",
+  mb:2,
+  borderRadius:"20px",
+  cursor:"pointer",
+  background:"rgba(255,255,255,0.08)",
+  backdropFilter:"blur(10px)",
+  transition:"0.3s",
+  "&:hover":{
+    transform:"translateY(-4px)",
+    background:"rgba(255,255,255,0.12)"
+  }
 };
 
 const avatarStyle = {
-  width: 55,
-  height: 55,
-  fontSize: "1.2rem",
-  fontWeight: 700,
-  background: "linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)",
+  width:55,
+  height:55,
+  fontSize:"1.2rem",
+  fontWeight:700,
+  background:"linear-gradient(135deg,#00d2ff 0%,#3a7bd5 100%)"
 };
 
 const nameText = {
-  fontSize: "1.05rem",
-  fontWeight: 700,
-  color: "#fff",
+  fontSize:"1.05rem",
+  fontWeight:700,
+  color:"#fff"
 };
 
 const msgText = {
-  fontSize: "0.85rem",
-  color: "rgba(255,255,255,0.7)",
+  fontSize:"0.85rem",
+  color:"rgba(255,255,255,0.7)"
 };
 
 const timeText = {
-  fontSize: "0.7rem",
-  color: "rgba(255,255,255,0.4)",
+  fontSize:"0.7rem",
+  color:"rgba(255,255,255,0.4)"
 };
 
 const unreadBadge = {
-  background: "#ff4d4f",
-  minWidth: "22px",
-  height: "22px",
-  borderRadius: "11px",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: "0.7rem",
-  fontWeight: 800,
-  color: "#fff",
+  background:"#ff4d4f",
+  minWidth:"22px",
+  height:"22px",
+  borderRadius:"11px",
+  display:"flex",
+  alignItems:"center",
+  justifyContent:"center",
+  fontSize:"0.7rem",
+  fontWeight:800,
+  color:"#fff"
 };
 
 const onlineBadge = {
-  "& .MuiBadge-badge": { backgroundColor: "#44b700" },
+  "& .MuiBadge-badge":{
+    backgroundColor:"#44b700"
+  }
 };
 
 const offlineBadge = {
-  "& .MuiBadge-badge": { backgroundColor: "#999" },
+  "& .MuiBadge-badge":{
+    backgroundColor:"#999"
+  }
 };
 
 const emptyState = {
-  textAlign: "center",
-  color: "#fff",
-  mt: 10,
+  textAlign:"center",
+  color:"#fff",
+  mt:10
 };
