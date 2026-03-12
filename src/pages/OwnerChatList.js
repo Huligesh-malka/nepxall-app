@@ -185,11 +185,7 @@ export default function OwnerChatList() {
 
               users.map((u, index) => {
 
-                const title =
-                  me?.role === "owner"
-                    ? u.name
-                    : u.pg_name || u.name;
-
+                const title = u.name || u.pg_name || "User";
                 return (
 
                   <motion.div
