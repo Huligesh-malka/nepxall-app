@@ -15,7 +15,6 @@ const socket = io(SOCKET_URL, {
 export default function PrivateChat() {
 
   const { userId, pgId } = useParams();
-
   const navigate = useNavigate();
   const bottomRef = useRef();
 
@@ -26,6 +25,9 @@ export default function PrivateChat() {
   const [typing, setTyping] = useState(false);
   const [online, setOnline] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  /* ⭐ NEW STATE TO PREVENT MULTIPLE SEND */
+  const [sending, setSending] = useState(false);
 
   const scrollBottom = () =>
     setTimeout(() => {
@@ -64,11 +66,9 @@ export default function PrivateChat() {
           headers: { Authorization: `Bearer ${token}` }
         };
 
-        /* CURRENT USER */
         const meRes = await api.get("/private-chat/me", config);
         setMe(meRes.data);
 
-        /* OTHER USER */
         const userRes = await api.get(
           `/private-chat/user/${userId}?pg_id=${pgId}`,
           config
@@ -76,7 +76,6 @@ export default function PrivateChat() {
 
         setOtherUser(userRes.data);
 
-        /* MESSAGES */
         const msgRes = await api.get(
           `/private-chat/messages/${userId}?pg_id=${pgId}`,
           config
@@ -85,7 +84,6 @@ export default function PrivateChat() {
         setMessages(msgRes.data || []);
 
         setLoading(false);
-
         scrollBottom();
 
         if (!socket.connected) socket.connect();
@@ -190,7 +188,9 @@ export default function PrivateChat() {
 
   const sendMessage = async () => {
 
-    if (!text.trim()) return;
+    if (!text.trim() || sending) return;
+
+    setSending(true);
 
     try {
 
@@ -216,7 +216,6 @@ export default function PrivateChat() {
       ]);
 
       setText("");
-
       scrollBottom();
 
     } catch (err) {
@@ -224,6 +223,8 @@ export default function PrivateChat() {
       console.error("Send message error", err);
 
     }
+
+    setSending(false);
 
   };
 
@@ -244,13 +245,6 @@ export default function PrivateChat() {
       setMessages(prev =>
         prev.filter(m => m.id !== id)
       );
-
-      socket.emit("delete_private_message", {
-        messageId: id,
-        sender_id: me.id,
-        receiver_id: Number(userId),
-        pg_id: Number(pgId)
-      });
 
     } catch (err) {
 
@@ -371,10 +365,18 @@ export default function PrivateChat() {
           onChange={(e) => setText(e.target.value)}
           placeholder="Type message..."
           style={styles.input}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !sending) {
+              sendMessage();
+            }
+          }}
         />
 
-        <button onClick={sendMessage} style={styles.sendBtn}>
+        <button
+          onClick={sendMessage}
+          style={styles.sendBtn}
+          disabled={sending}
+        >
           ➤
         </button>
 
@@ -417,10 +419,7 @@ const styles = {
 
   name: { fontWeight: "bold" },
 
-  pgName: { 
-    fontSize: 12, 
-    opacity: 0.85 
-  },
+  pgName: { fontSize: 12, opacity: 0.85 },
 
   status: { fontSize: 12 },
 
