@@ -1,6 +1,9 @@
 import React, { useState } from "react";
+import api from "../api/api";
 
 const AgreementForm = () => {
+
+  const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -31,53 +34,79 @@ const AgreementForm = () => {
     signature: null
   });
 
+  /* ================= HANDLE INPUT ================= */
+
   const handleChange = (e) => {
+
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+
   };
+
+  /* ================= HANDLE FILE ================= */
 
   const handleFileChange = (e) => {
+
+    const file = e.target.files[0];
+
     setFiles({
       ...files,
-      [e.target.name]: e.target.files[0]
+      [e.target.name]: file
     });
+
   };
+
+  /* ================= SUBMIT ================= */
 
   const handleSubmit = async (e) => {
+
     e.preventDefault();
 
-    const data = new FormData();
+    if (loading) return;
 
-    Object.keys(formData).forEach((key) => {
-      data.append(key, formData[key]);
-    });
-
-    Object.keys(files).forEach((key) => {
-      if (files[key]) {
-        data.append(key, files[key]);
-      }
-    });
+    setLoading(true);
 
     try {
-      const res = await fetch(
-        "https://your-backend-url/api/agreements-form/submit",
-        {
-          method: "POST",
-          body: data
+
+      const data = new FormData();
+
+      Object.keys(formData).forEach((key) => {
+        data.append(key, formData[key]);
+      });
+
+      Object.keys(files).forEach((key) => {
+        if (files[key]) {
+          data.append(key, files[key]);
         }
+      });
+
+      const res = await api.post(
+        "/agreements-form/submit",
+        data
       );
 
-      const result = await res.json();
-
-      alert(result.message || "Agreement submitted");
+      alert(res.data.message || "Agreement submitted successfully");
 
     } catch (error) {
+
       console.error(error);
-      alert("Submission failed");
+
+      alert(
+        error?.response?.data?.message ||
+        "Failed to submit agreement"
+      );
+
+    } finally {
+
+      setLoading(false);
+
     }
+
   };
+
+  /* ================= STYLES ================= */
 
   const inputStyle = {
     padding: "12px",
@@ -95,37 +124,51 @@ const AgreementForm = () => {
     background: "#fafafa"
   };
 
+  const grid = {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "15px"
+  };
+
+  /* ================= UI ================= */
+
   return (
 
-    <div style={{
-      background:"#f6f8fb",
-      minHeight:"100vh",
-      padding:"40px 20px"
-    }}>
+    <div
+      style={{
+        background: "#f6f8fb",
+        minHeight: "100vh",
+        padding: "40px 20px"
+      }}
+    >
 
-      <div style={{
-        maxWidth:"900px",
-        margin:"auto",
-        background:"#fff",
-        padding:"30px",
-        borderRadius:"12px",
-        boxShadow:"0 5px 25px rgba(0,0,0,0.08)"
-      }}>
+      <div
+        style={{
+          maxWidth: "900px",
+          margin: "auto",
+          background: "#fff",
+          padding: "30px",
+          borderRadius: "12px",
+          boxShadow: "0 5px 25px rgba(0,0,0,0.08)"
+        }}
+      >
 
-        <h2 style={{
-          marginBottom:"25px",
-          textAlign:"center"
-        }}>
+        <h2
+          style={{
+            marginBottom: "25px",
+            textAlign: "center"
+          }}
+        >
           Rental Agreement Form
         </h2>
 
         <form onSubmit={handleSubmit}>
 
-          {/* PERSONAL INFO */}
+          {/* PERSONAL */}
 
           <h3>Personal Details</h3>
 
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"15px"}}>
+          <div style={grid}>
 
             <input style={inputStyle} name="full_name" placeholder="Full Name" onChange={handleChange} required />
 
@@ -149,10 +192,10 @@ const AgreementForm = () => {
 
           </div>
 
-          <br/>
+          <br />
 
           <textarea
-            style={{...inputStyle,height:"80px"}}
+            style={{ ...inputStyle, height: "80px" }}
             name="address"
             placeholder="Full Address"
             onChange={handleChange}
@@ -160,9 +203,9 @@ const AgreementForm = () => {
 
           {/* AADHAAR */}
 
-          <h3 style={{marginTop:"30px"}}>Aadhaar Verification</h3>
+          <h3 style={{ marginTop: "30px" }}>Aadhaar Verification</h3>
 
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"15px"}}>
+          <div style={grid}>
 
             <input style={inputStyle} name="aadhaar_number" placeholder="Aadhaar Number" onChange={handleChange} />
 
@@ -170,42 +213,45 @@ const AgreementForm = () => {
 
           </div>
 
-          <br/>
+          <br />
 
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"15px"}}>
+          <div style={grid}>
 
             <div style={fileBox}>
               <label>Aadhaar Front</label>
               <input type="file" name="aadhaar_front" onChange={handleFileChange} />
+              {files.aadhaar_front && <p>{files.aadhaar_front.name}</p>}
             </div>
 
             <div style={fileBox}>
               <label>Aadhaar Back</label>
               <input type="file" name="aadhaar_back" onChange={handleFileChange} />
+              {files.aadhaar_back && <p>{files.aadhaar_back.name}</p>}
             </div>
 
           </div>
 
           {/* PAN */}
 
-          <h3 style={{marginTop:"30px"}}>PAN Details</h3>
+          <h3 style={{ marginTop: "30px" }}>PAN Details</h3>
 
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"15px"}}>
+          <div style={grid}>
 
             <input style={inputStyle} name="pan_number" placeholder="PAN Number" onChange={handleChange} />
 
             <div style={fileBox}>
               <label>Upload PAN</label>
               <input type="file" name="pan_card" onChange={handleFileChange} />
+              {files.pan_card && <p>{files.pan_card.name}</p>}
             </div>
 
           </div>
 
           {/* RENT */}
 
-          <h3 style={{marginTop:"30px"}}>Rental Details</h3>
+          <h3 style={{ marginTop: "30px" }}>Rental Details</h3>
 
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"15px"}}>
+          <div style={grid}>
 
             <input style={inputStyle} type="date" name="checkin_date" onChange={handleChange} />
 
@@ -221,30 +267,32 @@ const AgreementForm = () => {
 
           {/* SIGNATURE */}
 
-          <h3 style={{marginTop:"30px"}}>Digital Signature</h3>
+          <h3 style={{ marginTop: "30px" }}>Digital Signature</h3>
 
           <div style={fileBox}>
             <label>Upload Signature</label>
             <input type="file" name="signature" onChange={handleFileChange} />
+            {files.signature && <p>{files.signature.name}</p>}
           </div>
 
-          <br/>
+          <br />
 
           <button
             type="submit"
+            disabled={loading}
             style={{
-              width:"100%",
-              padding:"14px",
-              border:"none",
-              borderRadius:"10px",
-              background:"#4f46e5",
-              color:"#fff",
-              fontSize:"16px",
-              fontWeight:"bold",
-              cursor:"pointer"
+              width: "100%",
+              padding: "14px",
+              border: "none",
+              borderRadius: "10px",
+              background: loading ? "#999" : "#4f46e5",
+              color: "#fff",
+              fontSize: "16px",
+              fontWeight: "bold",
+              cursor: "pointer"
             }}
           >
-            Submit Agreement
+            {loading ? "Uploading..." : "Submit Agreement"}
           </button>
 
         </form>
