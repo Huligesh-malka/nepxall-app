@@ -7,8 +7,7 @@ import { io } from "socket.io-client";
 import {
   format,
   isToday,
-  isYesterday,
-  formatDistanceToNow
+  isYesterday
 } from "date-fns";
 
 const SOCKET_URL = "https://nepxall-backend.onrender.com";
@@ -25,8 +24,8 @@ export default function PrivateChat() {
   const { userId, pgId } = useParams();
   const navigate = useNavigate();
   const bottomRef = useRef();
-  const fileInputRef = useRef();
   const messagesContainerRef = useRef();
+  const longPressTimer = useRef();
 
   const [messages, setMessages] = useState([]);
   const [me, setMe] = useState(null);
@@ -38,16 +37,11 @@ export default function PrivateChat() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [editingMessage, setEditingMessage] = useState(null);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [selectedMessages, setSelectedMessages] = useState([]);
-  const [selectionMode, setSelectionMode] = useState(false);
+  const [activeMessageId, setActiveMessageId] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [showAttachments, setShowAttachments] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("connected");
   const [unreadCount, setUnreadCount] = useState(0);
-  const [chatInfo, setChatInfo] = useState(null);
 
   const typingTimeoutRef = useRef();
 
@@ -283,11 +277,6 @@ export default function PrivateChat() {
       }
     };
 
-    // Chat list update
-    const handleChatListUpdate = () => {
-      // Refresh chat list if needed
-    };
-
     socket.on("receive_private_message", handleReceiveMessage);
     socket.on("message_sent_confirmation", handleMessageSent);
     socket.on("message_deleted", handleMessageDeleted);
@@ -295,7 +284,6 @@ export default function PrivateChat() {
     socket.on("messages_read", handleMessagesRead);
     socket.on("user_online", handleUserOnline);
     socket.on("user_offline", handleUserOffline);
-    socket.on("chat_list_update", handleChatListUpdate);
 
     return () => {
       socket.off("receive_private_message", handleReceiveMessage);
@@ -305,7 +293,6 @@ export default function PrivateChat() {
       socket.off("messages_read", handleMessagesRead);
       socket.off("user_online", handleUserOnline);
       socket.off("user_offline", handleUserOffline);
-      socket.off("chat_list_update", handleChatListUpdate);
     };
   }, [pgId, me?.id, userId, otherUser?.firebase_uid]);
 
@@ -392,7 +379,6 @@ export default function PrivateChat() {
 
     } catch (err) {
       console.error("Error sending message:", err);
-      // Show error toast
     } finally {
       setSending(false);
     }
@@ -405,6 +391,7 @@ export default function PrivateChat() {
   const startEditing = (message) => {
     setEditingMessage(message);
     setText(message.message);
+    setActiveMessageId(null);
   };
 
   const cancelEditing = () => {
@@ -444,6 +431,7 @@ export default function PrivateChat() {
   const confirmDelete = (message) => {
     setMessageToDelete(message);
     setShowDeleteConfirm(true);
+    setActiveMessageId(null);
   };
 
   const deleteMessage = async () => {
@@ -478,82 +466,51 @@ export default function PrivateChat() {
   };
 
   /* =========================
-     BULK DELETE
+     LONG PRESS HANDLER
   ========================= */
 
-  const toggleMessageSelection = (messageId) => {
-    setSelectedMessages(prev =>
-      prev.includes(messageId)
-        ? prev.filter(id => id !== messageId)
-        : [...prev, messageId]
-    );
+  const handleTouchStart = (messageId) => {
+    longPressTimer.current = setTimeout(() => {
+      setActiveMessageId(messageId);
+    }, 500); // 500ms long press
   };
 
-  const deleteSelectedMessages = async () => {
-    if (selectedMessages.length === 0) return;
+  const handleTouchEnd = () => {
+    clearTimeout(longPressTimer.current);
+  };
 
-    try {
-      const token = await auth.currentUser.getIdToken();
+  const handleTouchMove = () => {
+    clearTimeout(longPressTimer.current);
+  };
 
-      await Promise.all(
-        selectedMessages.map(id =>
-          api.delete(`/private-chat/message/${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-        )
-      );
+  const handleMouseDown = (messageId) => {
+    longPressTimer.current = setTimeout(() => {
+      setActiveMessageId(messageId);
+    }, 500);
+  };
 
-      setMessages(prev =>
-        prev.filter(m => !selectedMessages.includes(m.id))
-      );
+  const handleMouseUp = () => {
+    clearTimeout(longPressTimer.current);
+  };
 
-      setSelectedMessages([]);
-      setSelectionMode(false);
-
-    } catch (err) {
-      console.error("Error deleting messages:", err);
-    }
+  const handleMouseLeave = () => {
+    clearTimeout(longPressTimer.current);
   };
 
   /* =========================
-     FILE UPLOAD
+     CLICK OUTSIDE TO CLOSE ACTIVE MENU
   ========================= */
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.message-actions')) {
+        setActiveMessageId(null);
+      }
+    };
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("receiver_id", userId);
-    formData.append("pg_id", pgId);
-
-    try {
-      const token = await auth.currentUser.getIdToken();
-
-      const res = await api.post("/private-chat/upload", formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data"
-        },
-        onUploadProgress: (progressEvent) => {
-          const percent = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          );
-          setUploadProgress(percent);
-        }
-      });
-
-      setUploadProgress(0);
-      setShowAttachments(false);
-
-      // Message will be added via socket
-
-    } catch (err) {
-      console.error("Error uploading file:", err);
-      setUploadProgress(0);
-    }
-  };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   /* =========================
      RENDER
@@ -604,79 +561,7 @@ export default function PrivateChat() {
             </div>
           </div>
         </div>
-
-        <div style={styles.headerActions}>
-          {selectionMode ? (
-            <>
-              <button 
-                onClick={deleteSelectedMessages}
-                style={styles.headerAction}
-                disabled={selectedMessages.length === 0}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M3 6H21M19 6V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V6H19ZM8 4V2H16V4H8Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              </button>
-              <button 
-                onClick={() => {
-                  setSelectedMessages([]);
-                  setSelectionMode(false);
-                }}
-                style={styles.headerAction}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              </button>
-            </>
-          ) : (
-            <button 
-              onClick={() => setShowAttachments(!showAttachments)}
-              style={styles.headerAction}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            </button>
-          )}
-        </div>
       </div>
-
-      {/* Attachments Menu */}
-      {showAttachments && (
-        <div style={styles.attachmentsMenu}>
-          <button 
-            onClick={() => fileInputRef.current.click()}
-            style={styles.attachmentItem}
-          >
-            <span style={styles.attachmentIcon}>📎</span>
-            <span>Document</span>
-          </button>
-          <button style={styles.attachmentItem}>
-            <span style={styles.attachmentIcon}>📷</span>
-            <span>Image</span>
-          </button>
-          <button style={styles.attachmentItem}>
-            <span style={styles.attachmentIcon}>📍</span>
-            <span>Location</span>
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            onChange={handleFileUpload}
-            style={{ display: "none" }}
-          />
-        </div>
-      )}
-
-      {/* Upload Progress */}
-      {uploadProgress > 0 && (
-        <div style={styles.progressBar}>
-          <div style={{...styles.progressFill, width: `${uploadProgress}%`}}>
-            {uploadProgress}%
-          </div>
-        </div>
-      )}
 
       {/* Messages */}
       <div ref={messagesContainerRef} style={styles.messagesContainer}>
@@ -707,24 +592,29 @@ export default function PrivateChat() {
                     </div>
                   )}
 
-                  <div style={{ maxWidth: "70%" }}>
+                  <div style={{ maxWidth: "70%", position: "relative" }}>
                     <div
-                      style={{
-                        ...styles.messageContent,
-                        ...(selectionMode && styles.selectableMessage),
-                        ...(selectedMessages.includes(msg.id) && styles.selectedMessage)
-                      }}
-                      onClick={() => selectionMode && toggleMessageSelection(msg.id)}
+                      className="message-content"
+                      style={styles.messageContent}
+                      onTouchStart={() => isMine && handleTouchStart(msg.id)}
+                      onTouchEnd={handleTouchEnd}
+                      onTouchMove={handleTouchMove}
+                      onMouseDown={() => isMine && handleMouseDown(msg.id)}
+                      onMouseUp={handleMouseUp}
+                      onMouseLeave={handleMouseLeave}
                     >
                       <div
                         style={{
                           ...styles.messageBubble,
                           background: isMine
-                            ? "linear-gradient(135deg, #667eea, #764ba2)"
+                            ? "linear-gradient(135deg, #FF6B6B, #4ECDC4)"
                             : "#ffffff",
-                          color: isMine ? "#ffffff" : "#1a1a1a",
+                          color: isMine ? "#ffffff" : "#2d3436",
                           borderBottomRightRadius: isMine ? 4 : 18,
                           borderBottomLeftRadius: !isMine ? 4 : 18,
+                          boxShadow: isMine 
+                            ? "0 4px 15px rgba(255, 107, 107, 0.2)"
+                            : "0 2px 10px rgba(0,0,0,0.05)"
                         }}
                       >
                         {msg.message}
@@ -740,35 +630,45 @@ export default function PrivateChat() {
                         </span>
                         
                         {isMine && (
-                          <>
-                            <span style={styles.messageStatus}>
-                              {msg.is_read ? "✓✓" : msg.status === "sending" ? "..." : "✓"}
-                            </span>
-                            
-                            {!selectionMode && (
-                              <div style={styles.messageActions}>
-                                <button
-                                  onClick={() => startEditing(msg)}
-                                  style={styles.messageAction}
-                                >
-                                  ✏️
-                                </button>
-                                <button
-                                  onClick={() => confirmDelete(msg)}
-                                  style={styles.messageAction}
-                                >
-                                  🗑️
-                                </button>
-                              </div>
-                            )}
-                          </>
+                          <span style={{
+                            ...styles.messageStatus,
+                            color: msg.is_read ? "#4ECDC4" : msg.status === "sending" ? "#FFB347" : "#95a5a6"
+                          }}>
+                            {msg.is_read ? "✓✓" : msg.status === "sending" ? "⌛" : "✓"}
+                          </span>
                         )}
                       </div>
                     </div>
+
+                    {/* Action Menu - Shows on long press */}
+                    {isMine && activeMessageId === msg.id && (
+                      <div className="message-actions" style={{
+                        ...styles.actionMenu,
+                        [isMine ? 'right' : 'left']: 0
+                      }}>
+                        <button
+                          onClick={() => startEditing(msg)}
+                          style={styles.actionButton}
+                        >
+                          <span style={styles.actionIcon}>✏️</span>
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => confirmDelete(msg)}
+                          style={{...styles.actionButton, color: "#FF6B6B"}}
+                        >
+                          <span style={styles.actionIcon}>🗑️</span>
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {isMine && showAvatar && (
-                    <div style={styles.messageAvatar}>
+                    <div style={{
+                      ...styles.messageAvatar,
+                      background: "linear-gradient(135deg, #FF6B6B, #4ECDC4)"
+                    }}>
                       {me?.name?.charAt(0) || "M"}
                     </div>
                   )}
@@ -803,32 +703,24 @@ export default function PrivateChat() {
 
       {/* Input Area */}
       <div style={styles.inputContainer}>
-        <button 
-          onClick={() => setSelectionMode(!selectionMode)}
-          style={styles.inputAction}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
-            <path d="M20 21V19C20 16.7909 18.2091 15 16 15H8C5.79086 15 4 16.7909 4 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        </button>
-
         <input
           value={text}
           onChange={onTextChange}
-          placeholder="Type a message..."
-          style={styles.input}
+          placeholder={editingMessage ? "Edit message..." : "Type a message..."}
+          style={{
+            ...styles.input,
+            borderColor: editingMessage ? "#4ECDC4" : "#e2e8f0"
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               editingMessage ? updateMessage() : sendMessage();
             }
           }}
-          disabled={selectionMode}
         />
 
         {editingMessage ? (
-          <>
+          <div style={styles.editActions}>
             <button onClick={updateMessage} style={styles.sendButton}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                 <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -839,14 +731,17 @@ export default function PrivateChat() {
                 <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
             </button>
-          </>
+          </div>
         ) : (
           <button 
             onClick={sendMessage}
-            disabled={!text.trim() || sending || selectionMode}
+            disabled={!text.trim() || sending}
             style={{
               ...styles.sendButton,
-              opacity: !text.trim() || sending || selectionMode ? 0.5 : 1
+              opacity: !text.trim() || sending ? 0.5 : 1,
+              background: !text.trim() || sending 
+                ? "#cbd5e0" 
+                : "linear-gradient(135deg, #FF6B6B, #4ECDC4)"
             }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -894,7 +789,7 @@ const styles = {
     height: "100vh",
     display: "flex",
     flexDirection: "column",
-    background: "#f8fafc",
+    background: "#f7f9fc",
     position: "relative",
   },
 
@@ -904,8 +799,8 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: 12,
-    borderBottom: "1px solid #e2e8f0",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+    borderBottom: "1px solid #eef2f6",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.02)",
   },
 
   backButton: {
@@ -913,12 +808,15 @@ const styles = {
     border: "none",
     padding: 8,
     cursor: "pointer",
-    color: "#64748b",
-    borderRadius: 8,
+    color: "#4a5568",
+    borderRadius: 12,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     transition: "all 0.2s",
+    ":hover": {
+      background: "#f7f9fc"
+    }
   },
 
   headerInfo: {
@@ -934,8 +832,8 @@ const styles = {
   avatar: {
     width: 44,
     height: 44,
-    borderRadius: 12,
-    background: "linear-gradient(135deg, #667eea, #764ba2)",
+    borderRadius: 14,
+    background: "linear-gradient(135deg, #FF6B6B, #4ECDC4)",
     color: "#ffffff",
     display: "flex",
     alignItems: "center",
@@ -943,6 +841,7 @@ const styles = {
     fontWeight: "600",
     fontSize: 18,
     textTransform: "uppercase",
+    boxShadow: "0 4px 10px rgba(255, 107, 107, 0.2)",
   },
 
   userDetails: {
@@ -952,91 +851,28 @@ const styles = {
   },
 
   userName: {
-    fontWeight: "600",
+    fontWeight: "700",
     fontSize: 16,
-    color: "#1e293b",
+    color: "#2d3748",
   },
 
   userSubtitle: {
     fontSize: 13,
-    color: "#64748b",
+    color: "#718096",
   },
 
   pgName: {
-    color: "#667eea",
+    color: "#4ECDC4",
+    fontWeight: "500",
   },
 
   online: {
-    color: "#10b981",
+    color: "#4ECDC4",
+    fontWeight: "500",
   },
 
   offline: {
-    color: "#94a3b8",
-  },
-
-  headerActions: {
-    display: "flex",
-    gap: 8,
-  },
-
-  headerAction: {
-    background: "none",
-    border: "none",
-    padding: 8,
-    cursor: "pointer",
-    color: "#64748b",
-    borderRadius: 8,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all 0.2s",
-  },
-
-  attachmentsMenu: {
-    position: "absolute",
-    top: 80,
-    right: 16,
-    background: "#ffffff",
-    borderRadius: 12,
-    boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
-    padding: 8,
-    zIndex: 10,
-    border: "1px solid #e2e8f0",
-  },
-
-  attachmentItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    padding: "10px 16px",
-    width: "100%",
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    color: "#334155",
-    fontSize: 14,
-    borderRadius: 8,
-    transition: "all 0.2s",
-  },
-
-  attachmentIcon: {
-    fontSize: 18,
-  },
-
-  progressBar: {
-    height: 4,
-    background: "#e2e8f0",
-    overflow: "hidden",
-  },
-
-  progressFill: {
-    height: "100%",
-    background: "linear-gradient(135deg, #667eea, #764ba2)",
-    transition: "width 0.3s ease",
-    fontSize: 10,
-    color: "#ffffff",
-    textAlign: "center",
-    lineHeight: "4px",
+    color: "#a0aec0",
   },
 
   messagesContainer: {
@@ -1048,15 +884,17 @@ const styles = {
   dateDivider: {
     display: "flex",
     justifyContent: "center",
-    margin: "20px 0",
+    margin: "24px 0",
   },
 
   dateText: {
     background: "#e2e8f0",
-    padding: "6px 12px",
+    padding: "6px 16px",
     borderRadius: 20,
     fontSize: 12,
-    color: "#475569",
+    fontWeight: "500",
+    color: "#4a5568",
+    letterSpacing: "0.3px",
   },
 
   messageWrapper: {
@@ -1070,8 +908,8 @@ const styles = {
     width: 32,
     height: 32,
     borderRadius: 10,
-    background: "#cbd5e1",
-    color: "#475569",
+    background: "#cbd5e0",
+    color: "#ffffff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -1079,6 +917,7 @@ const styles = {
     fontWeight: "600",
     textTransform: "uppercase",
     flexShrink: 0,
+    boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
   },
 
   messageContent: {
@@ -1086,27 +925,20 @@ const styles = {
     cursor: "pointer",
   },
 
-  selectableMessage: {
-    cursor: "pointer",
-  },
-
-  selectedMessage: {
-    opacity: 0.7,
-  },
-
   messageBubble: {
-    padding: "10px 14px",
+    padding: "12px 16px",
     borderRadius: 18,
     fontSize: 14,
     lineHeight: 1.5,
     wordBreak: "break-word",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+    transition: "all 0.2s",
   },
 
   editedIndicator: {
     fontSize: 11,
-    opacity: 0.7,
+    opacity: 0.8,
     fontStyle: "italic",
+    marginLeft: 4,
   },
 
   messageMeta: {
@@ -1118,29 +950,51 @@ const styles = {
   },
 
   messageTime: {
-    fontSize: 11,
-    color: "#94a3b8",
+    fontSize: 10,
+    color: "#a0aec0",
+    fontWeight: "500",
   },
 
   messageStatus: {
     fontSize: 12,
-    color: "#667eea",
+    fontWeight: "600",
+    transition: "color 0.2s",
   },
 
-  messageActions: {
+  actionMenu: {
+    position: "absolute",
+    top: -40,
+    background: "#ffffff",
+    borderRadius: 30,
+    padding: 4,
     display: "flex",
     gap: 4,
-    marginLeft: 8,
+    boxShadow: "0 4px 15px rgba(0,0,0,0.15)",
+    border: "1px solid #eef2f6",
+    zIndex: 10,
+    animation: "slideUp 0.2s ease",
   },
 
-  messageAction: {
+  actionButton: {
     background: "none",
     border: "none",
-    padding: 4,
+    padding: "8px 12px",
+    borderRadius: 25,
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#4a5568",
     cursor: "pointer",
-    fontSize: 12,
-    opacity: 0.5,
-    transition: "opacity 0.2s",
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    transition: "all 0.2s",
+    ":hover": {
+      background: "#f7f9fc"
+    }
+  },
+
+  actionIcon: {
+    fontSize: 16,
   },
 
   typingIndicator: {
@@ -1150,17 +1004,18 @@ const styles = {
   },
 
   typingBubble: {
-    background: "#e2e8f0",
+    background: "#ffffff",
     padding: "12px 16px",
     borderRadius: 20,
     display: "flex",
     gap: 4,
+    boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
   },
 
   typingDot: {
     width: 8,
     height: 8,
-    background: "#64748b",
+    background: "#4ECDC4",
     borderRadius: "50%",
     animation: "typing 1.4s infinite",
   },
@@ -1168,71 +1023,79 @@ const styles = {
   connectionStatus: {
     textAlign: "center",
     padding: "8px",
-    background: "#fee2e2",
-    color: "#dc2626",
+    background: "#fed7d7",
+    color: "#FF6B6B",
     fontSize: 12,
+    fontWeight: "500",
   },
 
   inputContainer: {
     background: "#ffffff",
-    borderTop: "1px solid #e2e8f0",
+    borderTop: "1px solid #eef2f6",
     padding: "16px",
     display: "flex",
     gap: 12,
     alignItems: "center",
-  },
-
-  inputAction: {
-    background: "none",
-    border: "none",
-    padding: 8,
-    cursor: "pointer",
-    color: "#64748b",
-    borderRadius: 8,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all 0.2s",
+    boxShadow: "0 -2px 10px rgba(0,0,0,0.02)",
   },
 
   input: {
     flex: 1,
-    padding: "12px 16px",
-    border: "1px solid #e2e8f0",
-    borderRadius: 24,
+    padding: "14px 18px",
+    border: "2px solid #e2e8f0",
+    borderRadius: 30,
     fontSize: 14,
     outline: "none",
     transition: "all 0.2s",
     background: "#f8fafc",
+    ":focus": {
+      borderColor: "#4ECDC4",
+      background: "#ffffff",
+    }
+  },
+
+  editActions: {
+    display: "flex",
+    gap: 8,
   },
 
   sendButton: {
-    background: "linear-gradient(135deg, #667eea, #764ba2)",
+    background: "linear-gradient(135deg, #FF6B6B, #4ECDC4)",
     border: "none",
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
     color: "#ffffff",
     transition: "all 0.2s",
-    boxShadow: "0 4px 6px rgba(102, 126, 234, 0.25)",
+    boxShadow: "0 4px 15px rgba(78, 205, 196, 0.3)",
+    ":hover": {
+      transform: "scale(1.05)",
+    },
+    ":disabled": {
+      transform: "none",
+    }
   },
 
   cancelButton: {
     background: "#f1f5f9",
     border: "none",
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
-    color: "#64748b",
+    color: "#4a5568",
     transition: "all 0.2s",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+    ":hover": {
+      background: "#e2e8f0",
+    }
   },
 
   loaderContainer: {
@@ -1241,22 +1104,23 @@ const styles = {
     flexDirection: "column",
     justifyContent: "center",
     alignItems: "center",
-    background: "#f8fafc",
+    background: "#f7f9fc",
   },
 
   loader: {
     width: 48,
     height: 48,
     border: "3px solid #e2e8f0",
-    borderTopColor: "#667eea",
+    borderTopColor: "#4ECDC4",
     borderRadius: "50%",
     animation: "spin 1s linear infinite",
   },
 
   loaderText: {
     marginTop: 16,
-    color: "#64748b",
+    color: "#718096",
     fontSize: 14,
+    fontWeight: "500",
   },
 
   modalOverlay: {
@@ -1270,26 +1134,28 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     zIndex: 1000,
+    backdropFilter: "blur(5px)",
   },
 
   modal: {
     background: "#ffffff",
-    borderRadius: 16,
+    borderRadius: 24,
     padding: 24,
     width: "90%",
-    maxWidth: 400,
+    maxWidth: 340,
+    boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
   },
 
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1e293b",
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#2d3748",
     marginBottom: 12,
   },
 
   modalText: {
     fontSize: 14,
-    color: "#64748b",
+    color: "#718096",
     marginBottom: 24,
     lineHeight: 1.6,
   },
@@ -1301,25 +1167,36 @@ const styles = {
   },
 
   modalCancel: {
-    padding: "10px 20px",
+    padding: "12px 24px",
     background: "#f1f5f9",
     border: "none",
-    borderRadius: 8,
+    borderRadius: 30,
     fontSize: 14,
-    color: "#475569",
+    fontWeight: "600",
+    color: "#4a5568",
     cursor: "pointer",
     transition: "all 0.2s",
+    flex: 1,
+    ":hover": {
+      background: "#e2e8f0",
+    }
   },
 
   modalConfirm: {
-    padding: "10px 20px",
-    background: "#ef4444",
+    padding: "12px 24px",
+    background: "linear-gradient(135deg, #FF6B6B, #FF8E8E)",
     border: "none",
-    borderRadius: 8,
+    borderRadius: 30,
     fontSize: 14,
+    fontWeight: "600",
     color: "#ffffff",
     cursor: "pointer",
     transition: "all 0.2s",
+    flex: 1,
+    boxShadow: "0 4px 15px rgba(255, 107, 107, 0.3)",
+    ":hover": {
+      transform: "translateY(-2px)",
+    }
   },
 };
 
@@ -1334,9 +1211,33 @@ styleSheet.textContent = `
     0%, 60%, 100% { transform: translateY(0); }
     30% { transform: translateY(-6px); }
   }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
   
   .typing-dot:nth-child(1) { animation-delay: 0s; }
   .typing-dot:nth-child(2) { animation-delay: 0.2s; }
   .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  .message-content:hover .message-actions {
+    opacity: 1;
+  }
+
+  .message-actions {
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .message-content:hover .message-actions {
+    opacity: 1;
+  }
 `;
 document.head.appendChild(styleSheet);
