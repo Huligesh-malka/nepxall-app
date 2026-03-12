@@ -285,25 +285,27 @@ export default function PrivateChat() {
 
         <span onClick={() => navigate(-1)} style={styles.back}>←</span>
 
-        <div>
+        <div style={styles.headerInfo}>
 
-  <div style={styles.name}>
-    {otherUser?.name && !otherUser.name.startsWith("+")
-      ? otherUser.name
-      : otherUser?.pg_name || "User"}
-  </div>
+          <div style={styles.name}>
+            {otherUser?.name && !otherUser.name.match(/^\+?\d+/)
+              ? otherUser.name
+              : otherUser?.pg_name || "User"}
+          </div>
 
-  {otherUser?.pg_name && (
-    <div style={{ fontSize: 12, opacity: 0.8 }}>
-      {otherUser.pg_name}
-    </div>
-  )}
+          {otherUser?.pg_name && (
+            <div style={styles.pgName}>
+              {otherUser.pg_name}
+            </div>
+          )}
 
-  <div style={styles.status}>
-    {online ? "🟢 online" : "⚪ offline"}
-  </div>
+          <div style={styles.status}>
+            {online ? "🟢 online" : "⚪ offline"}
+          </div>
 
-</div>
+        </div>
+
+      </div>
 
       <div style={styles.chatBody}>
 
@@ -406,9 +408,19 @@ const styles = {
     gap: 10
   },
 
+  headerInfo: {
+    display: "flex",
+    flexDirection: "column"
+  },
+
   back: { cursor: "pointer", fontSize: 20 },
 
   name: { fontWeight: "bold" },
+
+  pgName: { 
+    fontSize: 12, 
+    opacity: 0.85 
+  },
 
   status: { fontSize: 12 },
 
