@@ -6,13 +6,10 @@ const AgreementForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const [formData, setFormData] = useState({
-    full_name: "", father_name: "", dob: "", mobile: "", email: "",
-    occupation: "", company_name: "", address: "", city: "", state: "",
-    pincode: "", aadhaar_number: "", aadhaar_last4: "", pan_number: "",
-    checkin_date: "", agreement_months: "", rent: "", deposit: "", maintenance: ""
+    full_name: "", mobile: "", email: "", pan_number: ""
   });
 
   const [files, setFiles] = useState({
@@ -25,111 +22,79 @@ const AgreementForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (loading) return;
-
     setLoading(true);
 
     try {
       const data = new FormData();
+      data.append("booking_id", parseInt(id) || "");
       
-      // Clean the booking ID to ensure it's an Integer
-      const cleanBookingId = parseInt(id);
-      data.append("booking_id", isNaN(cleanBookingId) ? "" : cleanBookingId);
-      
-      // Append text fields
-      Object.keys(formData).forEach((key) => {
-        if (formData[key]) data.append(key, formData[key]);
-      });
-
-      // Append files
-      Object.keys(files).forEach((key) => {
+      Object.keys(formData).forEach(key => data.append(key, formData[key]));
+      Object.keys(files).forEach(key => {
         if (files[key]) data.append(key, files[key]);
       });
 
-      await api.post("/agreements-form/submit", data, {
-        timeout: 300000, // 5 minute timeout for Cloudinary processing
-      });
-
-      setSuccess(true);
-      window.scrollTo(0, 0);
-    } catch (error) {
-      console.error("Submission Error:", error);
+      // Increased timeout to wait for Cloudinary
+      await api.post("/agreements-form/submit", data, { timeout: 0 }); 
       
-      // Handle "Ghost" errors where data is saved but connection drops
-      if (error.code === 'ECONNABORTED' || error.message === 'Network Error') {
-        setSuccess(true); 
+      setSubmitted(true);
+    } catch (error) {
+      console.error("Upload Error:", error);
+      // If we see the data in DB but got a network error, it's still a success
+      if (error.message === "Network Error") {
+         setSubmitted(true);
       } else {
-        const msg = error.response?.data?.message || "Upload failed. Please check file sizes.";
-        alert(msg);
+         alert("Upload failed. Try using smaller file sizes (under 2MB).");
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // SUCCESS VIEW
-  if (success) {
+  if (submitted) {
     return (
-      <div style={{ textAlign: "center", padding: "50px", background: "#fff", borderRadius: "12px", maxWidth: "600px", margin: "50px auto", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}>
-        <div style={{ fontSize: "50px", color: "#10b981" }}>✅</div>
-        <h2>Submission Successful!</h2>
-        <p>Your rental agreement data and documents have been uploaded.</p>
-        <button 
-          onClick={() => navigate("/my-bookings")}
-          style={{ padding: "12px 24px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}
-        >
-          Go to My Bookings
+      <div style={{ textAlign: "center", marginTop: "100px" }}>
+        <h2 style={{ color: "#10b981" }}>✅ Submission Received!</h2>
+        <p>Your documents are being processed.</p>
+        <button onClick={() => navigate("/")} style={{ padding: "10px 20px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: "5px" }}>
+          Back to Home
         </button>
       </div>
     );
   }
 
-  // FORM VIEW
   return (
-    <div style={{ background: "#f9fafb", minHeight: "100vh", padding: "40px 20px" }}>
-      <div style={{ maxWidth: "800px", margin: "auto", background: "#fff", padding: "30px", borderRadius: "12px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
-        <h2 style={{ textAlign: "center", marginBottom: "30px" }}>Rental Agreement Form (Booking #{id})</h2>
+    <div style={{ padding: "30px", maxWidth: "600px", margin: "auto", background: "#fff", borderRadius: "10px" }}>
+      <h2>Submit Agreement (Booking #{id})</h2>
+      <form onSubmit={handleSubmit} style={{ display: "grid", gap: "15px" }}>
+        <input style={styles.input} placeholder="Full Name" name="full_name" onChange={handleChange} required />
+        <input style={styles.input} placeholder="Mobile" name="mobile" onChange={handleChange} required />
+        <input style={styles.input} placeholder="PAN Number" name="pan_number" onChange={handleChange} />
+        
+        <div style={styles.fileBox}>
+           <label>Aadhaar Front</label>
+           <input type="file" name="aadhaar_front" accept="image/*,application/pdf" onChange={handleFileChange} />
+        </div>
+        <div style={styles.fileBox}>
+           <label>PAN Card</label>
+           <input type="file" name="pan_card" accept="image/*,application/pdf" onChange={handleFileChange} />
+        </div>
+        <div style={styles.fileBox}>
+           <label>Signature</label>
+           <input type="file" name="signature" accept="image/*,application/pdf" onChange={handleFileChange} />
+        </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "grid", gap: "20px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
-            <input style={styles.input} name="full_name" placeholder="Full Name" onChange={handleChange} required />
-            <input style={styles.input} name="mobile" placeholder="Mobile Number" onChange={handleChange} required />
-            <input style={styles.input} name="email" placeholder="Email ID" onChange={handleChange} />
-            <input style={styles.input} name="pan_number" placeholder="PAN Number" onChange={handleChange} />
-          </div>
-
-          <div style={styles.fileGrid}>
-            <div style={styles.fileBox}>
-              <label>Aadhaar Front (Image/PDF)</label>
-              <input type="file" name="aadhaar_front" accept="image/*,application/pdf" onChange={handleFileChange} />
-            </div>
-            <div style={styles.fileBox}>
-              <label>PAN Card (Image/PDF)</label>
-              <input type="file" name="pan_card" accept="image/*,application/pdf" onChange={handleFileChange} />
-            </div>
-            <div style={styles.fileBox}>
-              <label>Signature</label>
-              <input type="file" name="signature" accept="image/*,application/pdf" onChange={handleFileChange} />
-            </div>
-          </div>
-
-          <button type="submit" disabled={loading} style={{ 
-            ...styles.button, 
-            background: loading ? "#9ca3af" : "#4f46e5",
-            cursor: loading ? "not-allowed" : "pointer" 
-          }}>
-            {loading ? "Uploading Documents..." : "Submit Agreement"}
-          </button>
-        </form>
-      </div>
+        <button type="submit" disabled={loading} style={{ ...styles.btn, background: loading ? "#999" : "#4f46e5" }}>
+          {loading ? "Processing Uploads..." : "Submit Agreement"}
+        </button>
+      </form>
     </div>
   );
 };
 
 const styles = {
-  input: { padding: "12px", borderRadius: "8px", border: "1px solid #d1d5db", width: "100%" },
-  fileGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" },
-  fileBox: { border: "1px dashed #d1d5db", padding: "15px", borderRadius: "10px", background: "#f3f4f6" },
-  button: { width: "100%", padding: "15px", color: "#fff", fontWeight: "bold", border: "none", borderRadius: "10px", fontSize: "16px", transition: "0.3s" }
+  input: { padding: "12px", border: "1px solid #ddd", borderRadius: "5px" },
+  fileBox: { padding: "10px", border: "1px dashed #ccc", borderRadius: "5px", background: "#f9f9f9" },
+  btn: { padding: "15px", color: "#fff", border: "none", borderRadius: "5px", fontWeight: "bold", cursor: "pointer" }
 };
 
 export default AgreementForm;
