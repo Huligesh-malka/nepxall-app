@@ -41,7 +41,7 @@ export default function PrivateChat() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("connected");
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const typingTimeoutRef = useRef();
 
@@ -154,6 +154,12 @@ export default function PrivateChat() {
           config
         );
         setMessages(msgRes.data || []);
+        
+        // Mark messages as read
+        const unreadMsgs = msgRes.data.filter(
+          m => m.sender_id === Number(userId) && !m.is_read
+        ).length;
+        setUnreadCount(unreadMsgs);
 
         setLoading(false);
         scrollToBottom(false);
@@ -170,6 +176,16 @@ export default function PrivateChat() {
           userB: Number(userId),
           pg_id: Number(pgId)
         });
+
+        // Mark messages as read via socket
+        if (unreadMsgs > 0) {
+          socket.emit("mark_messages_read", {
+            userA: meRes.data.id,
+            userB: Number(userId),
+            pg_id: Number(pgId),
+            messageIds: msgRes.data.filter(m => !m.is_read).map(m => m.id)
+          });
+        }
 
       } catch (err) {
         console.error("Error loading chat:", err);
@@ -456,7 +472,7 @@ export default function PrivateChat() {
   const handleTouchStart = (messageId) => {
     longPressTimer.current = setTimeout(() => {
       setActiveMessageId(messageId);
-    }, 500);
+    }, 500); // 500ms long press
   };
 
   const handleTouchEnd = () => {
@@ -536,22 +552,14 @@ export default function PrivateChat() {
               </div>
               <div style={styles.userSubtitle}>
                 {me?.role !== "tenant" && otherUser?.pg_name && (
-                  <span style={styles.pgName}>{otherUser.pg_name}</span>
+                  <span style={styles.pgName}>{otherUser.pg_name} • </span>
                 )}
                 <span style={online ? styles.online : styles.offline}>
-                  • {online ? "Online" : "Offline"}
+                  {online ? "Online" : "Offline"}
                 </span>
               </div>
             </div>
           </div>
-        </div>
-
-        <div style={styles.headerActions}>
-          <button style={styles.headerAction}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M3 5H21M3 12H21M3 19H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </button>
         </div>
       </div>
 
@@ -569,7 +577,6 @@ export default function PrivateChat() {
               const isMine = msg.sender_id === me?.id;
               const showAvatar = index === 0 || 
                 groupedMessages[date][index - 1]?.sender_id !== msg.sender_id;
-              const showName = !isMine && showAvatar && otherUser?.name;
 
               return (
                 <div
@@ -579,17 +586,13 @@ export default function PrivateChat() {
                     justifyContent: isMine ? "flex-end" : "flex-start"
                   }}
                 >
-                  {!isMine && (
+                  {!isMine && showAvatar && (
                     <div style={styles.messageAvatar}>
                       {otherUser?.name?.charAt(0) || "U"}
                     </div>
                   )}
 
                   <div style={{ maxWidth: "70%", position: "relative" }}>
-                    {showName && (
-                      <div style={styles.senderName}>{otherUser.name}</div>
-                    )}
-                    
                     <div
                       className="message-content"
                       style={styles.messageContent}
@@ -604,17 +607,20 @@ export default function PrivateChat() {
                         style={{
                           ...styles.messageBubble,
                           background: isMine
-                            ? "#dcf8c6"
+                            ? "linear-gradient(135deg, #FF6B6B, #4ECDC4)"
                             : "#ffffff",
-                          color: "#111111",
+                          color: isMine ? "#ffffff" : "#2d3436",
                           borderBottomRightRadius: isMine ? 4 : 18,
                           borderBottomLeftRadius: !isMine ? 4 : 18,
+                          boxShadow: isMine 
+                            ? "0 4px 15px rgba(255, 107, 107, 0.2)"
+                            : "0 2px 10px rgba(0,0,0,0.05)"
                         }}
                       >
                         {msg.message}
                         
                         {msg.edited && (
-                          <span style={styles.editedIndicator}> edited</span>
+                          <span style={styles.editedIndicator}> (edited)</span>
                         )}
                       </div>
 
@@ -626,7 +632,7 @@ export default function PrivateChat() {
                         {isMine && (
                           <span style={{
                             ...styles.messageStatus,
-                            color: msg.is_read ? "#34b7f1" : msg.status === "sending" ? "#999" : "#999"
+                            color: msg.is_read ? "#4ECDC4" : msg.status === "sending" ? "#FFB347" : "#95a5a6"
                           }}>
                             {msg.is_read ? "✓✓" : msg.status === "sending" ? "⌛" : "✓"}
                           </span>
@@ -638,7 +644,6 @@ export default function PrivateChat() {
                     {isMine && activeMessageId === msg.id && (
                       <div className="message-actions" style={{
                         ...styles.actionMenu,
-                        top: -45,
                         [isMine ? 'right' : 'left']: 0
                       }}>
                         <button
@@ -646,21 +651,24 @@ export default function PrivateChat() {
                           style={styles.actionButton}
                         >
                           <span style={styles.actionIcon}>✏️</span>
-                          <span style={styles.actionText}>Edit</span>
+                          <span>Edit</span>
                         </button>
                         <button
                           onClick={() => confirmDelete(msg)}
-                          style={{...styles.actionButton, color: "#f44336"}}
+                          style={{...styles.actionButton, color: "#FF6B6B"}}
                         >
                           <span style={styles.actionIcon}>🗑️</span>
-                          <span style={styles.actionText}>Delete</span>
+                          <span>Delete</span>
                         </button>
                       </div>
                     )}
                   </div>
 
-                  {isMine && (
-                    <div style={styles.messageAvatar}>
+                  {isMine && showAvatar && (
+                    <div style={{
+                      ...styles.messageAvatar,
+                      background: "linear-gradient(135deg, #FF6B6B, #4ECDC4)"
+                    }}>
                       {me?.name?.charAt(0) || "M"}
                     </div>
                   )}
@@ -673,9 +681,6 @@ export default function PrivateChat() {
         {/* Typing Indicator */}
         {otherTyping && (
           <div style={styles.typingIndicator}>
-            <div style={styles.typingAvatar}>
-              {otherUser?.name?.charAt(0) || "U"}
-            </div>
             <div style={styles.typingBubble}>
               <span style={styles.typingDot}></span>
               <span style={styles.typingDot}></span>
@@ -696,25 +701,16 @@ export default function PrivateChat() {
         </div>
       )}
 
-      {/* Input Area - WhatsApp Style */}
+      {/* Input Area */}
       <div style={styles.inputContainer}>
-        <button 
-          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          style={styles.emojiButton}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-            <circle cx="8" cy="9" r="1.5" fill="currentColor"/>
-            <circle cx="16" cy="9" r="1.5" fill="currentColor"/>
-            <path d="M8 14C8 14 9.5 16 12 16C14.5 16 16 14 16 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        </button>
-
         <input
           value={text}
           onChange={onTextChange}
-          placeholder="Type a message"
-          style={styles.input}
+          placeholder={editingMessage ? "Edit message..." : "Type a message..."}
+          style={{
+            ...styles.input,
+            borderColor: editingMessage ? "#4ECDC4" : "#e2e8f0"
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
@@ -722,15 +718,6 @@ export default function PrivateChat() {
             }
           }}
         />
-
-        <button 
-          onClick={() => {/* Attachment functionality */}}
-          style={styles.attachButton}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M16.5 6.5V16C16.5 18.5 14.5 20.5 12 20.5C9.5 20.5 7.5 18.5 7.5 16V6C7.5 4.5 8.5 3.5 10 3.5C11.5 3.5 12.5 4.5 12.5 6V15.5C12.5 16 12 16.5 11.5 16.5C11 16.5 10.5 16 10.5 15.5V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        </button>
 
         {editingMessage ? (
           <div style={styles.editActions}>
@@ -751,8 +738,10 @@ export default function PrivateChat() {
             disabled={!text.trim() || sending}
             style={{
               ...styles.sendButton,
-              background: !text.trim() || sending ? "#e0e0e0" : "#25d366",
-              cursor: !text.trim() || sending ? "not-allowed" : "pointer"
+              opacity: !text.trim() || sending ? 0.5 : 1,
+              background: !text.trim() || sending 
+                ? "#cbd5e0" 
+                : "linear-gradient(135deg, #FF6B6B, #4ECDC4)"
             }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -768,7 +757,7 @@ export default function PrivateChat() {
           <div style={styles.modal}>
             <h3 style={styles.modalTitle}>Delete Message</h3>
             <p style={styles.modalText}>
-              Are you sure you want to delete this message?
+              Are you sure you want to delete this message? This action cannot be undone.
             </p>
             <div style={styles.modalActions}>
               <button 
@@ -792,7 +781,7 @@ export default function PrivateChat() {
 }
 
 /* =========================
-   STYLES - WhatsApp Inspired
+   STYLES
 ========================= */
 
 const styles = {
@@ -800,18 +789,18 @@ const styles = {
     height: "100vh",
     display: "flex",
     flexDirection: "column",
-    background: "#e5ded8",
+    background: "#f7f9fc",
     position: "relative",
   },
 
   header: {
-    background: "#075e54",
-    padding: "10px 16px",
+    background: "#ffffff",
+    padding: "12px 16px",
     display: "flex",
     alignItems: "center",
-    gap: 16,
-    color: "#ffffff",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+    gap: 12,
+    borderBottom: "1px solid #eef2f6",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.02)",
   },
 
   backButton: {
@@ -819,12 +808,15 @@ const styles = {
     border: "none",
     padding: 8,
     cursor: "pointer",
-    color: "#ffffff",
-    borderRadius: "50%",
+    color: "#4a5568",
+    borderRadius: 12,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     transition: "all 0.2s",
+    ":hover": {
+      background: "#f7f9fc"
+    }
   },
 
   headerInfo: {
@@ -838,10 +830,10 @@ const styles = {
   },
 
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: "50%",
-    background: "#128c7e",
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    background: "linear-gradient(135deg, #FF6B6B, #4ECDC4)",
     color: "#ffffff",
     display: "flex",
     alignItems: "center",
@@ -849,111 +841,83 @@ const styles = {
     fontWeight: "600",
     fontSize: 18,
     textTransform: "uppercase",
+    boxShadow: "0 4px 10px rgba(255, 107, 107, 0.2)",
   },
 
   userDetails: {
     display: "flex",
     flexDirection: "column",
-    gap: 2,
+    gap: 4,
   },
 
   userName: {
-    fontWeight: "600",
+    fontWeight: "700",
     fontSize: 16,
-    color: "#ffffff",
+    color: "#2d3748",
   },
 
   userSubtitle: {
     fontSize: 13,
-    color: "#dcf8c6",
-    opacity: 0.9,
+    color: "#718096",
   },
 
   pgName: {
-    color: "#ffffff",
+    color: "#4ECDC4",
     fontWeight: "500",
-    marginRight: 4,
   },
 
   online: {
-    color: "#dcf8c6",
+    color: "#4ECDC4",
+    fontWeight: "500",
   },
 
   offline: {
-    color: "#b0b0b0",
-  },
-
-  headerActions: {
-    display: "flex",
-    gap: 8,
-  },
-
-  headerAction: {
-    background: "none",
-    border: "none",
-    padding: 8,
-    cursor: "pointer",
-    color: "#ffffff",
-    borderRadius: "50%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all 0.2s",
+    color: "#a0aec0",
   },
 
   messagesContainer: {
     flex: 1,
     overflowY: "auto",
-    padding: "20px 12px",
-    background: "url('https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b4080c59a.png')",
-    backgroundSize: "cover",
+    padding: "20px 16px",
   },
 
   dateDivider: {
     display: "flex",
     justifyContent: "center",
-    margin: "16px 0",
+    margin: "24px 0",
   },
 
   dateText: {
-    background: "rgba(225, 245, 254, 0.92)",
-    padding: "6px 12px",
-    borderRadius: 16,
+    background: "#e2e8f0",
+    padding: "6px 16px",
+    borderRadius: 20,
     fontSize: 12,
     fontWeight: "500",
-    color: "#1f7a6b",
-    boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+    color: "#4a5568",
+    letterSpacing: "0.3px",
   },
 
   messageWrapper: {
     display: "flex",
     alignItems: "flex-end",
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 16,
   },
 
   messageAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: "50%",
-    background: "#128c7e",
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    background: "#cbd5e0",
     color: "#ffffff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "600",
     textTransform: "uppercase",
     flexShrink: 0,
-    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-  },
-
-  senderName: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#1f7a6b",
-    marginBottom: 2,
-    marginLeft: 4,
+    boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
   },
 
   messageContent: {
@@ -962,17 +926,17 @@ const styles = {
   },
 
   messageBubble: {
-    padding: "8px 12px",
+    padding: "12px 16px",
     borderRadius: 18,
     fontSize: 14,
     lineHeight: 1.5,
     wordBreak: "break-word",
-    boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+    transition: "all 0.2s",
   },
 
   editedIndicator: {
-    fontSize: 10,
-    color: "#888",
+    fontSize: 11,
+    opacity: 0.8,
     fontStyle: "italic",
     marginLeft: 4,
   },
@@ -980,96 +944,78 @@ const styles = {
   messageMeta: {
     display: "flex",
     alignItems: "center",
-    gap: 4,
-    marginTop: 2,
+    gap: 6,
+    marginTop: 4,
     padding: "0 4px",
-    justifyContent: "flex-end",
   },
 
   messageTime: {
-    fontSize: 11,
-    color: "#999",
+    fontSize: 10,
+    color: "#a0aec0",
+    fontWeight: "500",
   },
 
   messageStatus: {
     fontSize: 12,
-    fontWeight: "500",
+    fontWeight: "600",
+    transition: "color 0.2s",
   },
 
   actionMenu: {
     position: "absolute",
+    top: -40,
     background: "#ffffff",
-    borderRadius: 8,
+    borderRadius: 30,
     padding: 4,
     display: "flex",
-    gap: 2,
-    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
-    border: "none",
+    gap: 4,
+    boxShadow: "0 4px 15px rgba(0,0,0,0.15)",
+    border: "1px solid #eef2f6",
     zIndex: 10,
-    animation: "fadeIn 0.2s ease",
+    animation: "slideUp 0.2s ease",
   },
 
   actionButton: {
     background: "none",
     border: "none",
     padding: "8px 12px",
-    borderRadius: 6,
+    borderRadius: 25,
     fontSize: 13,
-    color: "#333",
+    fontWeight: "500",
+    color: "#4a5568",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     transition: "all 0.2s",
-    minWidth: 90,
     ":hover": {
-      background: "#f5f5f5",
-    },
+      background: "#f7f9fc"
+    }
   },
 
   actionIcon: {
     fontSize: 16,
   },
 
-  actionText: {
-    fontSize: 13,
-  },
-
   typingIndicator: {
     display: "flex",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-  },
-
-  typingAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: "50%",
-    background: "#128c7e",
-    color: "#ffffff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 12,
-    fontWeight: "600",
-    textTransform: "uppercase",
+    justifyContent: "flex-start",
+    marginBottom: 16,
   },
 
   typingBubble: {
     background: "#ffffff",
     padding: "12px 16px",
-    borderRadius: 18,
+    borderRadius: 20,
     display: "flex",
     gap: 4,
-    boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-    borderBottomLeftRadius: 4,
+    boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
   },
 
   typingDot: {
     width: 8,
     height: 8,
-    background: "#128c7e",
+    background: "#4ECDC4",
     borderRadius: "50%",
     animation: "typing 1.4s infinite",
   },
@@ -1077,67 +1023,35 @@ const styles = {
   connectionStatus: {
     textAlign: "center",
     padding: "8px",
-    background: "#fff3cd",
-    color: "#856404",
+    background: "#fed7d7",
+    color: "#FF6B6B",
     fontSize: 12,
     fontWeight: "500",
   },
 
   inputContainer: {
-    background: "#f0f2f5",
-    padding: "10px 16px",
+    background: "#ffffff",
+    borderTop: "1px solid #eef2f6",
+    padding: "16px",
     display: "flex",
-    gap: 8,
+    gap: 12,
     alignItems: "center",
-  },
-
-  emojiButton: {
-    background: "none",
-    border: "none",
-    padding: 8,
-    cursor: "pointer",
-    color: "#54656f",
-    borderRadius: "50%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all 0.2s",
-    ":hover": {
-      background: "#e9edf0",
-    },
-  },
-
-  attachButton: {
-    background: "none",
-    border: "none",
-    padding: 8,
-    cursor: "pointer",
-    color: "#54656f",
-    borderRadius: "50%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all 0.2s",
-    ":hover": {
-      background: "#e9edf0",
-    },
+    boxShadow: "0 -2px 10px rgba(0,0,0,0.02)",
   },
 
   input: {
     flex: 1,
-    padding: "12px 16px",
-    border: "none",
-    borderRadius: 24,
+    padding: "14px 18px",
+    border: "2px solid #e2e8f0",
+    borderRadius: 30,
     fontSize: 14,
     outline: "none",
-    background: "#ffffff",
-    color: "#111",
+    transition: "all 0.2s",
+    background: "#f8fafc",
     ":focus": {
-      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-    },
-    "::placeholder": {
-      color: "#999",
-    },
+      borderColor: "#4ECDC4",
+      background: "#ffffff",
+    }
   },
 
   editActions: {
@@ -1146,38 +1060,42 @@ const styles = {
   },
 
   sendButton: {
+    background: "linear-gradient(135deg, #FF6B6B, #4ECDC4)",
     border: "none",
-    width: 44,
-    height: 44,
-    borderRadius: "50%",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
     color: "#ffffff",
     transition: "all 0.2s",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+    boxShadow: "0 4px 15px rgba(78, 205, 196, 0.3)",
     ":hover": {
       transform: "scale(1.05)",
     },
+    ":disabled": {
+      transform: "none",
+    }
   },
 
   cancelButton: {
-    background: "#f44336",
+    background: "#f1f5f9",
     border: "none",
-    width: 44,
-    height: 44,
-    borderRadius: "50%",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
-    color: "#ffffff",
+    color: "#4a5568",
     transition: "all 0.2s",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
     ":hover": {
-      background: "#d32f2f",
-    },
+      background: "#e2e8f0",
+    }
   },
 
   loaderContainer: {
@@ -1186,21 +1104,21 @@ const styles = {
     flexDirection: "column",
     justifyContent: "center",
     alignItems: "center",
-    background: "#e5ded8",
+    background: "#f7f9fc",
   },
 
   loader: {
     width: 48,
     height: 48,
-    border: "3px solid #e0e0e0",
-    borderTopColor: "#075e54",
+    border: "3px solid #e2e8f0",
+    borderTopColor: "#4ECDC4",
     borderRadius: "50%",
     animation: "spin 1s linear infinite",
   },
 
   loaderText: {
     marginTop: 16,
-    color: "#075e54",
+    color: "#718096",
     fontSize: 14,
     fontWeight: "500",
   },
@@ -1216,29 +1134,30 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     zIndex: 1000,
+    backdropFilter: "blur(5px)",
   },
 
   modal: {
     background: "#ffffff",
-    borderRadius: 8,
+    borderRadius: 24,
     padding: 24,
     width: "90%",
-    maxWidth: 320,
-    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+    maxWidth: 340,
+    boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
   },
 
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#075e54",
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#2d3748",
     marginBottom: 12,
   },
 
   modalText: {
     fontSize: 14,
-    color: "#666",
+    color: "#718096",
     marginBottom: 24,
-    lineHeight: 1.5,
+    lineHeight: 1.6,
   },
 
   modalActions: {
@@ -1248,33 +1167,36 @@ const styles = {
   },
 
   modalCancel: {
-    padding: "10px 20px",
-    background: "#f0f2f5",
+    padding: "12px 24px",
+    background: "#f1f5f9",
     border: "none",
-    borderRadius: 4,
+    borderRadius: 30,
     fontSize: 14,
-    fontWeight: "500",
-    color: "#075e54",
+    fontWeight: "600",
+    color: "#4a5568",
     cursor: "pointer",
     transition: "all 0.2s",
+    flex: 1,
     ":hover": {
-      background: "#e5e5e5",
-    },
+      background: "#e2e8f0",
+    }
   },
 
   modalConfirm: {
-    padding: "10px 20px",
-    background: "#f44336",
+    padding: "12px 24px",
+    background: "linear-gradient(135deg, #FF6B6B, #FF8E8E)",
     border: "none",
-    borderRadius: 4,
+    borderRadius: 30,
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: "600",
     color: "#ffffff",
     cursor: "pointer",
     transition: "all 0.2s",
+    flex: 1,
+    boxShadow: "0 4px 15px rgba(255, 107, 107, 0.3)",
     ":hover": {
-      background: "#d32f2f",
-    },
+      transform: "translateY(-2px)",
+    }
   },
 };
 
@@ -1290,10 +1212,10 @@ styleSheet.textContent = `
     30% { transform: translateY(-6px); }
   }
 
-  @keyframes fadeIn {
+  @keyframes slideUp {
     from {
       opacity: 0;
-      transform: translateY(5px);
+      transform: translateY(10px);
     }
     to {
       opacity: 1;
@@ -1316,24 +1238,6 @@ styleSheet.textContent = `
 
   .message-content:hover .message-actions {
     opacity: 1;
-  }
-
-  /* Scrollbar Styling */
-  ::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: #f0f2f5;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: #c0c0c0;
-    border-radius: 3px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: #a0a0a0;
   }
 `;
 document.head.appendChild(styleSheet);
