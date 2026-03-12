@@ -25,8 +25,6 @@ export default function PrivateChat() {
   const [typing, setTyping] = useState(false);
   const [online, setOnline] = useState(false);
   const [loading, setLoading] = useState(true);
-
-  /* ⭐ NEW STATE TO PREVENT MULTIPLE SEND */
   const [sending, setSending] = useState(false);
 
   const scrollBottom = () =>
@@ -34,20 +32,19 @@ export default function PrivateChat() {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 100);
 
-  /* ============================
+  /* =========================
      CHECK PARAMS
-  ============================ */
+  ========================= */
 
   useEffect(() => {
     if (!userId || !pgId) {
-      console.error("Missing chat params");
       navigate(-1);
     }
   }, [userId, pgId, navigate]);
 
-  /* ============================
+  /* =========================
      AUTH + LOAD DATA
-  ============================ */
+  ========================= */
 
   useEffect(() => {
 
@@ -91,10 +88,7 @@ export default function PrivateChat() {
         socket.emit("register", fbUser.uid);
 
       } catch (err) {
-
-        console.error("Chat load error:", err);
-        setLoading(false);
-
+        console.error(err);
       }
 
     });
@@ -103,9 +97,9 @@ export default function PrivateChat() {
 
   }, [userId, pgId, navigate]);
 
-  /* ============================
+  /* =========================
      JOIN ROOM
-  ============================ */
+  ========================= */
 
   useEffect(() => {
 
@@ -119,9 +113,9 @@ export default function PrivateChat() {
 
   }, [me, userId, pgId]);
 
-  /* ============================
+  /* =========================
      SOCKET EVENTS
-  ============================ */
+  ========================= */
 
   useEffect(() => {
 
@@ -129,62 +123,30 @@ export default function PrivateChat() {
 
       if (msg.pg_id !== Number(pgId)) return;
 
-      setMessages(prev => [...prev, msg]);
+      setMessages(prev => {
+
+        const exists = prev.some(m => m.id === msg.id);
+        if (exists) return prev;
+
+        return [...prev, msg];
+
+      });
+
       scrollBottom();
 
     };
 
-    const delivered = (msg) => {
-
-      setMessages(prev =>
-        prev.map(m =>
-          m.id === msg.id ? { ...m, status: "delivered" } : m
-        )
-      );
-
-    };
-
-    const read = () => {
-
-      setMessages(prev =>
-        prev.map(m =>
-          m.sender_id === me?.id ? { ...m, status: "read" } : m
-        )
-      );
-
-    };
-
-    const deleted = ({ messageId }) => {
-
-      setMessages(prev =>
-        prev.filter(m => m.id !== messageId)
-      );
-
-    };
-
     socket.on("receive_private_message", receiveMessage);
-    socket.on("message_sent_confirmation", delivered);
-    socket.on("messages_read", read);
-    socket.on("message_deleted", deleted);
-
-    socket.on("user_online", () => setOnline(true));
-    socket.on("user_offline", () => setOnline(false));
-    socket.on("user_typing", ({ isTyping }) => setTyping(isTyping));
 
     return () => {
-
       socket.off("receive_private_message", receiveMessage);
-      socket.off("message_sent_confirmation", delivered);
-      socket.off("messages_read", read);
-      socket.off("message_deleted", deleted);
-
     };
 
-  }, [me, pgId]);
+  }, [pgId]);
 
-  /* ============================
+  /* =========================
      SEND MESSAGE
-  ============================ */
+  ========================= */
 
   const sendMessage = async () => {
 
@@ -210,27 +172,29 @@ export default function PrivateChat() {
 
       socket.emit("send_private_message", res.data);
 
-      setMessages(prev => [
-        ...prev,
-        { ...res.data, status: "sent" }
-      ]);
+      setMessages(prev => {
+
+        const exists = prev.some(m => m.id === res.data.id);
+        if (exists) return prev;
+
+        return [...prev, { ...res.data, status: "sent" }];
+
+      });
 
       setText("");
       scrollBottom();
 
     } catch (err) {
-
-      console.error("Send message error", err);
-
+      console.error(err);
     }
 
     setSending(false);
 
   };
 
-  /* ============================
+  /* =========================
      DELETE MESSAGE
-  ============================ */
+  ========================= */
 
   const deleteMessage = async (id) => {
 
@@ -247,29 +211,12 @@ export default function PrivateChat() {
       );
 
     } catch (err) {
-
-      console.error("Delete error", err);
-
+      console.error(err);
     }
 
   };
 
-  const getStatusDot = (status) => {
-
-    if (status === "sent")
-      return <span style={{ ...styles.dot, background: "red" }} />;
-
-    if (status === "delivered")
-      return <span style={{ ...styles.dot, background: "gold" }} />;
-
-    if (status === "read")
-      return <span style={{ ...styles.dot, background: "limegreen" }} />;
-
-    return null;
-
-  };
-
-  if (loading) return <div style={styles.loader}>Loading chat...</div>;
+  if (loading) return <div style={styles.loader}>Loading...</div>;
 
   return (
 
@@ -282,14 +229,14 @@ export default function PrivateChat() {
         <div style={styles.headerInfo}>
 
           <div style={styles.name}>
-            {otherUser?.name && !otherUser.name.match(/^\+?\d+/)
-              ? otherUser.name
-              : otherUser?.pg_name || "User"}
+            {me?.role === "tenant"
+              ? otherUser?.pg_name || "PG"
+              : otherUser?.name || "User"}
           </div>
 
-          {otherUser?.pg_name && (
+          {me?.role !== "tenant" && (
             <div style={styles.pgName}>
-              {otherUser.pg_name}
+              {otherUser?.pg_name}
             </div>
           )}
 
@@ -326,15 +273,7 @@ export default function PrivateChat() {
                   color: m.sender_id === me?.id ? "#fff" : "#000"
                 }}
               >
-
                 {m.message}
-
-                {m.sender_id === me?.id &&
-                  <div style={styles.tick}>
-                    {getStatusDot(m.status)}
-                  </div>
-                }
-
               </div>
 
               {m.sender_id === me?.id &&
@@ -352,8 +291,6 @@ export default function PrivateChat() {
 
         ))}
 
-        {typing && <div style={styles.typing}>Typing...</div>}
-
         <div ref={bottomRef} />
 
       </div>
@@ -366,7 +303,8 @@ export default function PrivateChat() {
           placeholder="Type message..."
           style={styles.input}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !sending) {
+            if (e.key === "Enter") {
+              e.preventDefault();
               sendMessage();
             }
           }}
@@ -388,9 +326,9 @@ export default function PrivateChat() {
 
 }
 
-/* ============================
+/* =========================
    STYLES
-============================ */
+========================= */
 
 const styles = {
 
@@ -419,7 +357,7 @@ const styles = {
 
   name: { fontWeight: "bold" },
 
-  pgName: { fontSize: 12, opacity: 0.85 },
+  pgName: { fontSize: 12, opacity: 0.8 },
 
   status: { fontSize: 12 },
 
@@ -436,17 +374,6 @@ const styles = {
     borderRadius: 15,
     maxWidth: "70%"
   },
-
-  tick: { marginTop: 5, textAlign: "right" },
-
-  dot: {
-    height: 8,
-    width: 8,
-    borderRadius: "50%",
-    display: "inline-block"
-  },
-
-  typing: { fontSize: 12, marginLeft: 10 },
 
   deleteBtn: {
     position: "absolute",
