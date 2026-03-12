@@ -41,7 +41,6 @@ export default function PrivateChat() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("connected");
-  const [unreadCount, setUnreadCount] = useState(0);
 
   const typingTimeoutRef = useRef();
 
@@ -154,12 +153,6 @@ export default function PrivateChat() {
           config
         );
         setMessages(msgRes.data || []);
-        
-        // Mark messages as read
-        const unreadMsgs = msgRes.data.filter(
-          m => m.sender_id === Number(userId) && !m.is_read
-        ).length;
-        setUnreadCount(unreadMsgs);
 
         setLoading(false);
         scrollToBottom(false);
@@ -176,16 +169,6 @@ export default function PrivateChat() {
           userB: Number(userId),
           pg_id: Number(pgId)
         });
-
-        // Mark messages as read via socket
-        if (unreadMsgs > 0) {
-          socket.emit("mark_messages_read", {
-            userA: meRes.data.id,
-            userB: Number(userId),
-            pg_id: Number(pgId),
-            messageIds: msgRes.data.filter(m => !m.is_read).map(m => m.id)
-          });
-        }
 
       } catch (err) {
         console.error("Error loading chat:", err);
@@ -217,12 +200,6 @@ export default function PrivateChat() {
       setMessages(prev => {
         const exists = prev.some(m => m.id === msg.id);
         if (exists) return prev;
-
-        // Play notification sound if not from current user
-        if (msg.sender_id !== me?.id) {
-          const audio = new Audio("/notification.mp3");
-          audio.play().catch(() => {});
-        }
 
         return [...prev, msg];
       });
@@ -472,7 +449,7 @@ export default function PrivateChat() {
   const handleTouchStart = (messageId) => {
     longPressTimer.current = setTimeout(() => {
       setActiveMessageId(messageId);
-    }, 500); // 500ms long press
+    }, 500);
   };
 
   const handleTouchEnd = () => {
@@ -534,30 +511,25 @@ export default function PrivateChat() {
       {/* Header */}
       <div style={styles.header}>
         <button onClick={() => navigate(-1)} style={styles.backButton}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
         </button>
 
         <div style={styles.headerInfo}>
-          <div style={styles.userInfo}>
-            <div style={styles.avatar}>
-              {otherUser?.name?.charAt(0) || "U"}
+          <div style={styles.avatar}>
+            {otherUser?.name?.charAt(0) || "U"}
+          </div>
+          <div style={styles.userDetails}>
+            <div style={styles.userName}>
+              {me?.role === "tenant"
+                ? otherUser?.pg_name || "PG"
+                : otherUser?.name || "User"}
             </div>
-            <div style={styles.userDetails}>
-              <div style={styles.userName}>
-                {me?.role === "tenant"
-                  ? otherUser?.pg_name || "PG"
-                  : otherUser?.name || "User"}
-              </div>
-              <div style={styles.userSubtitle}>
-                {me?.role !== "tenant" && otherUser?.pg_name && (
-                  <span style={styles.pgName}>{otherUser.pg_name} • </span>
-                )}
-                <span style={online ? styles.online : styles.offline}>
-                  {online ? "Online" : "Offline"}
-                </span>
-              </div>
+            <div style={styles.userStatus}>
+              <span style={online ? styles.online : styles.offline}>
+                {online ? "● Online" : "○ Offline"}
+              </span>
             </div>
           </div>
         </div>
@@ -606,21 +578,16 @@ export default function PrivateChat() {
                       <div
                         style={{
                           ...styles.messageBubble,
-                          background: isMine
-                            ? "linear-gradient(135deg, #FF6B6B, #4ECDC4)"
-                            : "#ffffff",
-                          color: isMine ? "#ffffff" : "#2d3436",
-                          borderBottomRightRadius: isMine ? 4 : 18,
-                          borderBottomLeftRadius: !isMine ? 4 : 18,
-                          boxShadow: isMine 
-                            ? "0 4px 15px rgba(255, 107, 107, 0.2)"
-                            : "0 2px 10px rgba(0,0,0,0.05)"
+                          background: isMine ? "#7C3AED" : "#F3F4F6",
+                          color: isMine ? "#FFFFFF" : "#1F2937",
+                          borderBottomRightRadius: isMine ? 4 : 16,
+                          borderBottomLeftRadius: !isMine ? 4 : 16,
                         }}
                       >
                         {msg.message}
                         
                         {msg.edited && (
-                          <span style={styles.editedIndicator}> (edited)</span>
+                          <span style={styles.editedIndicator}> • edited</span>
                         )}
                       </div>
 
@@ -632,9 +599,9 @@ export default function PrivateChat() {
                         {isMine && (
                           <span style={{
                             ...styles.messageStatus,
-                            color: msg.is_read ? "#4ECDC4" : msg.status === "sending" ? "#FFB347" : "#95a5a6"
+                            color: msg.is_read ? "#10B981" : "#9CA3AF"
                           }}>
-                            {msg.is_read ? "✓✓" : msg.status === "sending" ? "⌛" : "✓"}
+                            {msg.is_read ? "✓✓" : "✓"}
                           </span>
                         )}
                       </div>
@@ -642,33 +609,25 @@ export default function PrivateChat() {
 
                     {/* Action Menu - Shows on long press */}
                     {isMine && activeMessageId === msg.id && (
-                      <div className="message-actions" style={{
-                        ...styles.actionMenu,
-                        [isMine ? 'right' : 'left']: 0
-                      }}>
+                      <div className="message-actions" style={styles.actionMenu}>
                         <button
                           onClick={() => startEditing(msg)}
                           style={styles.actionButton}
                         >
-                          <span style={styles.actionIcon}>✏️</span>
-                          <span>Edit</span>
+                          ✏️ Edit
                         </button>
                         <button
                           onClick={() => confirmDelete(msg)}
-                          style={{...styles.actionButton, color: "#FF6B6B"}}
+                          style={{...styles.actionButton, color: "#EF4444"}}
                         >
-                          <span style={styles.actionIcon}>🗑️</span>
-                          <span>Delete</span>
+                          🗑️ Delete
                         </button>
                       </div>
                     )}
                   </div>
 
                   {isMine && showAvatar && (
-                    <div style={{
-                      ...styles.messageAvatar,
-                      background: "linear-gradient(135deg, #FF6B6B, #4ECDC4)"
-                    }}>
+                    <div style={{...styles.messageAvatar, background: "#7C3AED"}}>
                       {me?.name?.charAt(0) || "M"}
                     </div>
                   )}
@@ -681,6 +640,9 @@ export default function PrivateChat() {
         {/* Typing Indicator */}
         {otherTyping && (
           <div style={styles.typingIndicator}>
+            <div style={styles.typingAvatar}>
+              {otherUser?.name?.charAt(0) || "U"}
+            </div>
             <div style={styles.typingBubble}>
               <span style={styles.typingDot}></span>
               <span style={styles.typingDot}></span>
@@ -707,10 +669,7 @@ export default function PrivateChat() {
           value={text}
           onChange={onTextChange}
           placeholder={editingMessage ? "Edit message..." : "Type a message..."}
-          style={{
-            ...styles.input,
-            borderColor: editingMessage ? "#4ECDC4" : "#e2e8f0"
-          }}
+          style={styles.input}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
@@ -722,13 +681,13 @@ export default function PrivateChat() {
         {editingMessage ? (
           <div style={styles.editActions}>
             <button onClick={updateMessage} style={styles.sendButton}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                <path d="M20 6L9 17L4 12"/>
               </svg>
             </button>
             <button onClick={cancelEditing} style={styles.cancelButton}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                <path d="M18 6L6 18M6 6L18 18"/>
               </svg>
             </button>
           </div>
@@ -739,13 +698,11 @@ export default function PrivateChat() {
             style={{
               ...styles.sendButton,
               opacity: !text.trim() || sending ? 0.5 : 1,
-              background: !text.trim() || sending 
-                ? "#cbd5e0" 
-                : "linear-gradient(135deg, #FF6B6B, #4ECDC4)"
+              background: !text.trim() || sending ? "#9CA3AF" : "#7C3AED"
             }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
             </svg>
           </button>
         )}
@@ -757,7 +714,7 @@ export default function PrivateChat() {
           <div style={styles.modal}>
             <h3 style={styles.modalTitle}>Delete Message</h3>
             <p style={styles.modalText}>
-              Are you sure you want to delete this message? This action cannot be undone.
+              Are you sure you want to delete this message?
             </p>
             <div style={styles.modalActions}>
               <button 
@@ -781,7 +738,7 @@ export default function PrivateChat() {
 }
 
 /* =========================
-   STYLES
+   STYLES - Unique Modern Design
 ========================= */
 
 const styles = {
@@ -789,59 +746,57 @@ const styles = {
     height: "100vh",
     display: "flex",
     flexDirection: "column",
-    background: "#f7f9fc",
+    background: "#FFFFFF",
     position: "relative",
   },
 
   header: {
-    background: "#ffffff",
-    padding: "12px 16px",
+    background: "#7C3AED",
+    padding: "16px 20px",
     display: "flex",
     alignItems: "center",
-    gap: 12,
-    borderBottom: "1px solid #eef2f6",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.02)",
+    gap: 16,
+    color: "#FFFFFF",
+    boxShadow: "0 4px 20px rgba(124, 58, 237, 0.2)",
   },
 
   backButton: {
-    background: "none",
+    background: "rgba(255,255,255,0.2)",
     border: "none",
     padding: 8,
     cursor: "pointer",
-    color: "#4a5568",
+    color: "#FFFFFF",
     borderRadius: 12,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     transition: "all 0.2s",
     ":hover": {
-      background: "#f7f9fc"
+      background: "rgba(255,255,255,0.3)",
+      transform: "scale(1.05)",
     }
   },
 
   headerInfo: {
     flex: 1,
-  },
-
-  userInfo: {
     display: "flex",
     alignItems: "center",
     gap: 12,
   },
 
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    background: "linear-gradient(135deg, #FF6B6B, #4ECDC4)",
-    color: "#ffffff",
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    background: "#FFFFFF",
+    color: "#7C3AED",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontWeight: "600",
-    fontSize: 18,
+    fontSize: 20,
     textTransform: "uppercase",
-    boxShadow: "0 4px 10px rgba(255, 107, 107, 0.2)",
+    boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
   },
 
   userDetails: {
@@ -851,50 +806,44 @@ const styles = {
   },
 
   userName: {
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 16,
-    color: "#2d3748",
+    color: "#FFFFFF",
   },
 
-  userSubtitle: {
+  userStatus: {
     fontSize: 13,
-    color: "#718096",
-  },
-
-  pgName: {
-    color: "#4ECDC4",
-    fontWeight: "500",
   },
 
   online: {
-    color: "#4ECDC4",
-    fontWeight: "500",
+    color: "#A7F3D0",
   },
 
   offline: {
-    color: "#a0aec0",
+    color: "#E5E7EB",
+    opacity: 0.8,
   },
 
   messagesContainer: {
     flex: 1,
     overflowY: "auto",
     padding: "20px 16px",
+    background: "#F9FAFB",
   },
 
   dateDivider: {
     display: "flex",
     justifyContent: "center",
-    margin: "24px 0",
+    margin: "20px 0",
   },
 
   dateText: {
-    background: "#e2e8f0",
+    background: "#E5E7EB",
     padding: "6px 16px",
-    borderRadius: 20,
+    borderRadius: 30,
     fontSize: 12,
     fontWeight: "500",
-    color: "#4a5568",
-    letterSpacing: "0.3px",
+    color: "#4B5563",
   },
 
   messageWrapper: {
@@ -908,8 +857,8 @@ const styles = {
     width: 32,
     height: 32,
     borderRadius: 10,
-    background: "#cbd5e0",
-    color: "#ffffff",
+    background: "#9CA3AF",
+    color: "#FFFFFF",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -917,7 +866,6 @@ const styles = {
     fontWeight: "600",
     textTransform: "uppercase",
     flexShrink: 0,
-    boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
   },
 
   messageContent: {
@@ -927,18 +875,17 @@ const styles = {
 
   messageBubble: {
     padding: "12px 16px",
-    borderRadius: 18,
+    borderRadius: 16,
     fontSize: 14,
     lineHeight: 1.5,
     wordBreak: "break-word",
-    transition: "all 0.2s",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
   },
 
   editedIndicator: {
-    fontSize: 11,
-    opacity: 0.8,
+    fontSize: 10,
+    opacity: 0.7,
     fontStyle: "italic",
-    marginLeft: 4,
   },
 
   messageMeta: {
@@ -947,75 +894,85 @@ const styles = {
     gap: 6,
     marginTop: 4,
     padding: "0 4px",
+    justifyContent: "flex-end",
   },
 
   messageTime: {
     fontSize: 10,
-    color: "#a0aec0",
-    fontWeight: "500",
+    color: "#9CA3AF",
   },
 
   messageStatus: {
     fontSize: 12,
-    fontWeight: "600",
-    transition: "color 0.2s",
+    fontWeight: "500",
   },
 
   actionMenu: {
     position: "absolute",
-    top: -40,
-    background: "#ffffff",
+    top: -45,
+    right: 0,
+    background: "#FFFFFF",
     borderRadius: 30,
     padding: 4,
     display: "flex",
     gap: 4,
-    boxShadow: "0 4px 15px rgba(0,0,0,0.15)",
-    border: "1px solid #eef2f6",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+    border: "1px solid #F3F4F6",
     zIndex: 10,
-    animation: "slideUp 0.2s ease",
+    animation: "fadeIn 0.2s ease",
   },
 
   actionButton: {
     background: "none",
     border: "none",
-    padding: "8px 12px",
+    padding: "8px 16px",
     borderRadius: 25,
     fontSize: 13,
     fontWeight: "500",
-    color: "#4a5568",
+    color: "#4B5563",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
     transition: "all 0.2s",
     ":hover": {
-      background: "#f7f9fc"
+      background: "#F9FAFB",
     }
-  },
-
-  actionIcon: {
-    fontSize: 16,
   },
 
   typingIndicator: {
     display: "flex",
-    justifyContent: "flex-start",
+    alignItems: "center",
+    gap: 8,
     marginBottom: 16,
   },
 
+  typingAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    background: "#9CA3AF",
+    color: "#FFFFFF",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
   typingBubble: {
-    background: "#ffffff",
+    background: "#F3F4F6",
     padding: "12px 16px",
-    borderRadius: 20,
+    borderRadius: 16,
     display: "flex",
     gap: 4,
-    boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+    borderBottomLeftRadius: 4,
   },
 
   typingDot: {
     width: 8,
     height: 8,
-    background: "#4ECDC4",
+    background: "#7C3AED",
     borderRadius: "50%",
     animation: "typing 1.4s infinite",
   },
@@ -1023,34 +980,38 @@ const styles = {
   connectionStatus: {
     textAlign: "center",
     padding: "8px",
-    background: "#fed7d7",
-    color: "#FF6B6B",
+    background: "#FEE2E2",
+    color: "#EF4444",
     fontSize: 12,
     fontWeight: "500",
   },
 
   inputContainer: {
-    background: "#ffffff",
-    borderTop: "1px solid #eef2f6",
-    padding: "16px",
+    background: "#FFFFFF",
+    borderTop: "1px solid #F3F4F6",
+    padding: "16px 20px",
     display: "flex",
     gap: 12,
     alignItems: "center",
-    boxShadow: "0 -2px 10px rgba(0,0,0,0.02)",
+    boxShadow: "0 -4px 10px rgba(0,0,0,0.02)",
   },
 
   input: {
     flex: 1,
     padding: "14px 18px",
-    border: "2px solid #e2e8f0",
+    border: "2px solid #F3F4F6",
     borderRadius: 30,
     fontSize: 14,
     outline: "none",
     transition: "all 0.2s",
-    background: "#f8fafc",
+    background: "#F9FAFB",
+    color: "#1F2937",
     ":focus": {
-      borderColor: "#4ECDC4",
-      background: "#ffffff",
+      borderColor: "#7C3AED",
+      background: "#FFFFFF",
+    },
+    "::placeholder": {
+      color: "#9CA3AF",
     }
   },
 
@@ -1060,7 +1021,7 @@ const styles = {
   },
 
   sendButton: {
-    background: "linear-gradient(135deg, #FF6B6B, #4ECDC4)",
+    background: "#7C3AED",
     border: "none",
     width: 48,
     height: 48,
@@ -1069,19 +1030,17 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
-    color: "#ffffff",
+    color: "#FFFFFF",
     transition: "all 0.2s",
-    boxShadow: "0 4px 15px rgba(78, 205, 196, 0.3)",
+    boxShadow: "0 4px 12px rgba(124, 58, 237, 0.3)",
     ":hover": {
       transform: "scale(1.05)",
+      background: "#6D28D9",
     },
-    ":disabled": {
-      transform: "none",
-    }
   },
 
   cancelButton: {
-    background: "#f1f5f9",
+    background: "#EF4444",
     border: "none",
     width: 48,
     height: 48,
@@ -1090,11 +1049,12 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
-    color: "#4a5568",
+    color: "#FFFFFF",
     transition: "all 0.2s",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+    boxShadow: "0 4px 12px rgba(239, 68, 68, 0.3)",
     ":hover": {
-      background: "#e2e8f0",
+      transform: "scale(1.05)",
+      background: "#DC2626",
     }
   },
 
@@ -1104,23 +1064,22 @@ const styles = {
     flexDirection: "column",
     justifyContent: "center",
     alignItems: "center",
-    background: "#f7f9fc",
+    background: "#F9FAFB",
   },
 
   loader: {
     width: 48,
     height: 48,
-    border: "3px solid #e2e8f0",
-    borderTopColor: "#4ECDC4",
+    border: "3px solid #F3F4F6",
+    borderTopColor: "#7C3AED",
     borderRadius: "50%",
     animation: "spin 1s linear infinite",
   },
 
   loaderText: {
     marginTop: 16,
-    color: "#718096",
+    color: "#6B7280",
     fontSize: 14,
-    fontWeight: "500",
   },
 
   modalOverlay: {
@@ -1134,68 +1093,66 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     zIndex: 1000,
-    backdropFilter: "blur(5px)",
+    backdropFilter: "blur(4px)",
   },
 
   modal: {
-    background: "#ffffff",
+    background: "#FFFFFF",
     borderRadius: 24,
     padding: 24,
     width: "90%",
-    maxWidth: 340,
+    maxWidth: 320,
     boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
   },
 
   modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#2d3748",
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#1F2937",
     marginBottom: 12,
   },
 
   modalText: {
     fontSize: 14,
-    color: "#718096",
+    color: "#6B7280",
     marginBottom: 24,
-    lineHeight: 1.6,
+    lineHeight: 1.5,
   },
 
   modalActions: {
     display: "flex",
     gap: 12,
-    justifyContent: "flex-end",
   },
 
   modalCancel: {
-    padding: "12px 24px",
-    background: "#f1f5f9",
+    flex: 1,
+    padding: "12px",
+    background: "#F3F4F6",
     border: "none",
-    borderRadius: 30,
+    borderRadius: 12,
     fontSize: 14,
-    fontWeight: "600",
-    color: "#4a5568",
+    fontWeight: "500",
+    color: "#4B5563",
     cursor: "pointer",
     transition: "all 0.2s",
-    flex: 1,
     ":hover": {
-      background: "#e2e8f0",
+      background: "#E5E7EB",
     }
   },
 
   modalConfirm: {
-    padding: "12px 24px",
-    background: "linear-gradient(135deg, #FF6B6B, #FF8E8E)",
+    flex: 1,
+    padding: "12px",
+    background: "#EF4444",
     border: "none",
-    borderRadius: 30,
+    borderRadius: 12,
     fontSize: 14,
-    fontWeight: "600",
-    color: "#ffffff",
+    fontWeight: "500",
+    color: "#FFFFFF",
     cursor: "pointer",
     transition: "all 0.2s",
-    flex: 1,
-    boxShadow: "0 4px 15px rgba(255, 107, 107, 0.3)",
     ":hover": {
-      transform: "translateY(-2px)",
+      background: "#DC2626",
     }
   },
 };
@@ -1212,10 +1169,10 @@ styleSheet.textContent = `
     30% { transform: translateY(-6px); }
   }
 
-  @keyframes slideUp {
+  @keyframes fadeIn {
     from {
       opacity: 0;
-      transform: translateY(10px);
+      transform: translateY(5px);
     }
     to {
       opacity: 1;
@@ -1227,17 +1184,21 @@ styleSheet.textContent = `
   .typing-dot:nth-child(2) { animation-delay: 0.2s; }
   .typing-dot:nth-child(3) { animation-delay: 0.4s; }
 
-  .message-content:hover .message-actions {
-    opacity: 1;
+  ::-webkit-scrollbar {
+    width: 6px;
   }
 
-  .message-actions {
-    opacity: 0;
-    transition: opacity 0.2s;
+  ::-webkit-scrollbar-track {
+    background: #F3F4F6;
   }
 
-  .message-content:hover .message-actions {
-    opacity: 1;
+  ::-webkit-scrollbar-thumb {
+    background: #9CA3AF;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #6B7280;
   }
 `;
 document.head.appendChild(styleSheet);
