@@ -17,24 +17,33 @@ const AgreementForm = () => {
   const [files, setFiles] = useState({
     aadhaar_front: null,
     aadhaar_back: null,
-    pan_card: null, // Added to match backend
+    pan_card: null,
     signature: null
   });
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-  const handleFileChange = (e) => setFiles({ ...files, [e.target.name]: e.target.files[0] });
+  
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      setFiles({ ...files, [e.target.name]: selectedFile });
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (loading) return;
     setLoading(true);
+    setSuccessMsg("");
 
     try {
       const data = new FormData();
       data.append("booking_id", id);
       
       // Append text data
-      Object.keys(formData).forEach(key => data.append(key, formData[key]));
+      Object.keys(formData).forEach(key => {
+        if (formData[key]) data.append(key, formData[key]);
+      });
       
       // Append files
       Object.keys(files).forEach(key => {
@@ -45,10 +54,11 @@ const AgreementForm = () => {
         headers: { "Content-Type": "multipart/form-data" }
       });
 
-      setSuccessMsg("Success! Your agreement has been submitted.");
+      setSuccessMsg("Success! Your agreement documents have been uploaded.");
       window.scrollTo(0, 0);
     } catch (error) {
-      const errorMsg = error.response?.data?.message || "Submission failed.";
+      console.error("Upload Error:", error);
+      const errorMsg = error.response?.data?.message || "Upload failed. Ensure files are under 10MB.";
       alert(errorMsg);
     } finally {
       setLoading(false);
@@ -56,39 +66,65 @@ const AgreementForm = () => {
   };
 
   const inputStyle = { padding: "12px", borderRadius: "8px", border: "1px solid #ddd", width: "100%" };
-  const fileBox = { border: "1px dashed #bbb", padding: "10px", borderRadius: "8px", background: "#f9f9f9" };
+  const fileBox = { border: "1px dashed #bbb", padding: "15px", borderRadius: "8px", background: "#f9f9f9", textAlign: 'center' };
 
   return (
-    <div style={{ padding: "40px", maxWidth: "800px", margin: "auto" }}>
-      <h2>Submit Agreement (Booking #{id})</h2>
-      {successMsg && <div style={{ color: "green", padding: "10px", border: "1px solid green" }}>{successMsg}</div>}
+    <div style={{ padding: "40px", maxWidth: "800px", margin: "auto", fontFamily: 'sans-serif' }}>
+      <h2 style={{ textAlign: 'center' }}>Rental Agreement Documents (Booking #{id})</h2>
       
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: "15px" }}>
-        <input style={inputStyle} name="full_name" placeholder="Full Name" onChange={handleChange} required />
-        <input style={inputStyle} name="mobile" placeholder="Mobile" onChange={handleChange} required />
+      {successMsg && (
+        <div style={{ background: "#dcfce7", color: "#166534", padding: "15px", borderRadius: "8px", marginBottom: "20px", textAlign: 'center' }}>
+          {successMsg}
+        </div>
+      )}
+      
+      <form onSubmit={handleSubmit} style={{ display: "grid", gap: "20px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
+          <input style={inputStyle} name="full_name" placeholder="Full Name" onChange={handleChange} required />
+          <input style={inputStyle} name="mobile" placeholder="Mobile Number" onChange={handleChange} required />
+        </div>
+
         <input style={inputStyle} name="pan_number" placeholder="PAN Card Number" onChange={handleChange} />
         
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+        <h3 style={{ margin: "10px 0 0 0" }}>Upload Documents (JPG, PNG, or PDF)</h3>
+        
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
           <div style={fileBox}>
-            <label>Aadhaar Front</label>
-            <input type="file" name="aadhaar_front" onChange={handleFileChange} />
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Aadhaar Front</label>
+            <input type="file" name="aadhaar_front" accept="image/*,application/pdf" onChange={handleFileChange} />
           </div>
+          
           <div style={fileBox}>
-            <label>PAN Card</label>
-            <input type="file" name="pan_card" onChange={handleFileChange} />
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Aadhaar Back</label>
+            <input type="file" name="aadhaar_back" accept="image/*,application/pdf" onChange={handleFileChange} />
           </div>
+
           <div style={fileBox}>
-            <label>Signature Image</label>
-            <input type="file" name="signature" onChange={handleFileChange} />
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>PAN Card</label>
+            <input type="file" name="pan_card" accept="image/*,application/pdf" onChange={handleFileChange} />
+          </div>
+
+          <div style={fileBox}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Signature</label>
+            <input type="file" name="signature" accept="image/*,application/pdf" onChange={handleFileChange} />
           </div>
         </div>
 
         <button 
           type="submit" 
           disabled={loading} 
-          style={{ background: loading ? "#ccc" : "#4f46e5", color: "#fff", padding: "15px", cursor: "pointer" }}
+          style={{ 
+            background: loading ? "#94a3b8" : "#4f46e5", 
+            color: "#fff", 
+            padding: "16px", 
+            borderRadius: "8px",
+            border: "none",
+            fontWeight: "bold",
+            fontSize: "16px",
+            cursor: loading ? "not-allowed" : "pointer" 
+          }}
         >
-          {loading ? "Uploading..." : "Submit Form"}
+          {loading ? "Uploading to Cloudinary..." : "Submit Agreement"}
         </button>
       </form>
     </div>
