@@ -28,12 +28,16 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentPage from "./pages/PaymentPage";
 import NotificationBell from "./pages/NotificationBell";
 import AgreementPage from "./pages/AgreementPage";
-import AgreementForm from "./pages/AgreementForm"; // ⭐ NEW
+import AgreementForm from "./pages/AgreementForm";
 import UserActiveStay from "./pages/UserActiveStay";
 import AadhaarKyc from "./pages/AadhaarKyc";
 import VisitSchedulePage from "./pages/VisitSchedulePage";
 import PublicAgreementPage from "./pages/PublicAgreementPage";
 import ServicesPage from "./pages/ServicesPage";
+
+/* ⭐ DIGILOCKER */
+import DigiLockerVerify from "./pages/DigiLockerVerify";
+import DigiLockerCallback from "./pages/DigiLockerCallback";
 
 /* ⭐ USER PREMIUM */
 import UserPremiumPlans from "./pages/UserPremiumPlans";
@@ -145,6 +149,7 @@ function App() {
           </PrivateRoute>
         }
       >
+
         <Route path="/booking/:pgId" element={<BookingForm />} />
         <Route path="/user/bookings" element={<UserBookingHistory />} />
         <Route path="/user/services/:bookingId" element={<ServicesPage />} />
@@ -152,19 +157,23 @@ function App() {
         <Route path="/payment/:bookingId" element={<PaymentPage />} />
         <Route path="/agreement/:bookingId" element={<AgreementPage />} />
 
-        {/* ⭐ NEW AGREEMENT FORM */}
         <Route path="/agreement-form/:bookingId" element={<AgreementForm />} />
 
         <Route path="/user/my-stay" element={<UserActiveStay />} />
         <Route path="/user/notifications" element={<NotificationBell />} />
         <Route path="/user/aadhaar-kyc" element={<AadhaarKyc />} />
+
+        {/* ⭐ DIGILOCKER KYC */}
+        <Route path="/user/digilocker" element={<DigiLockerVerify />} />
+        <Route path="/digilocker/callback" element={<DigiLockerCallback />} />
+
         <Route path="/user/visit-schedule/:bookingId" element={<VisitSchedulePage />} />
         <Route path="/public/agreement/:hash" element={<PublicAgreementPage />} />
 
-        {/* ⭐ USER PREMIUM */}
         <Route path="/user/premium" element={<UserPremiumPlans />} />
 
         <Route path="/chat/private/:userId/:pgId" element={<PrivateChat />} />
+
       </Route>
 
       {/* OWNER ROUTES */}
@@ -178,13 +187,12 @@ function App() {
           </PrivateRoute>
         }
       >
+
         <Route index element={<Navigate to="dashboard" replace />} />
 
         <Route path="dashboard" element={<OwnerDashboard />} />
         <Route path="payments" element={<OwnerPayments />} />
-
         <Route path="premium" element={<OwnerPremiumPlans />} />
-
         <Route path="bookings" element={<OwnerBookings />} />
         <Route path="verification" element={<OwnerVerificationPage />} />
         <Route path="bank" element={<OwnerBankDetails />} />
@@ -200,6 +208,7 @@ function App() {
         <Route path="notifications" element={<OwnerNotifications />} />
         <Route path="chats" element={<OwnerChatList />} />
         <Route path="chat/private/:userId" element={<PrivateChat />} />
+
       </Route>
 
       {/* ADMIN */}
@@ -213,7 +222,9 @@ function App() {
           </PrivateRoute>
         }
       >
+
         <Route index element={<Navigate to="finance" replace />} />
+
         <Route path="finance" element={<AdminFinanceDashboard />} />
         <Route path="payments" element={<AdminPayments />} />
         <Route path="settlements" element={<AdminSettlements />} />
@@ -222,6 +233,7 @@ function App() {
         <Route path="pg/:id" element={<AdminPGDetails />} />
         <Route path="owner-verification" element={<AdminOwnerVerification />} />
         <Route path="services" element={<AdminServiceBookings />} />
+
       </Route>
 
       {/* VENDOR */}
@@ -235,8 +247,10 @@ function App() {
           </PrivateRoute>
         }
       >
+
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<VendorDashboard />} />
+
       </Route>
 
       {/* FALLBACK */}
