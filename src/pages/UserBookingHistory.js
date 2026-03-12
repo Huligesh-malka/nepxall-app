@@ -15,7 +15,7 @@ const UserBookingHistory = () => {
   const [paymentData, setPaymentData] = useState(null);
   
   // Timer state
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(300);
   const [isExpired, setIsExpired] = useState(false);
   const timerRef = useRef(null);
   
@@ -24,16 +24,22 @@ const UserBookingHistory = () => {
   const [screenshotPreview, setScreenshotPreview] = useState("");
   const [uploading, setUploading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
 
   // Constants
-  const PAYMENT_TIMEOUT = 300; // 5 minutes in seconds
-  const STATUS_POLL_INTERVAL = 10000; // 10 seconds
+  const PAYMENT_TIMEOUT = 300;
 
-  //////////////////////////////////////////////////////
-  // TIMER FUNCTIONS
-  //////////////////////////////////////////////////////
+  // Filter bookings based on active tab
+  const filteredBookings = useMemo(() => {
+    if (activeTab === "all") return bookings;
+    if (activeTab === "pending") return bookings.filter(b => b.status === "pending");
+    if (activeTab === "approved") return bookings.filter(b => b.status === "approved");
+    if (activeTab === "confirmed") return bookings.filter(b => b.status === "confirmed");
+    return bookings;
+  }, [bookings, activeTab]);
+
+  // Timer functions
   const startTimer = useCallback(() => {
-    // Clear any existing timer
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
@@ -59,23 +65,7 @@ const UserBookingHistory = () => {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  const getTimerColor = useMemo(() => {
-    if (timeLeft > 180) return "#4CAF50";
-    if (timeLeft > 60) return "#FF9800";
-    return "#f44336";
-  }, [timeLeft]);
-
-  // Calculate circle progress for SVG
-  const circleProgress = useMemo(() => {
-    const radius = 45;
-    const circumference = 2 * Math.PI * radius;
-    const offset = circumference * (1 - timeLeft / PAYMENT_TIMEOUT);
-    return { circumference, offset };
-  }, [timeLeft, PAYMENT_TIMEOUT]);
-
-  //////////////////////////////////////////////////////
-  // LOAD BOOKINGS
-  //////////////////////////////////////////////////////
+  // Load bookings
   const loadBookings = useCallback(async (showLoading = true) => {
     try {
       if (showLoading) setLoading(true);
@@ -95,9 +85,7 @@ const UserBookingHistory = () => {
     }
   }, []);
 
-  //////////////////////////////////////////////////////
-  // CHECK PAYMENT STATUS FOR ALL BOOKINGS
-  //////////////////////////////////////////////////////
+  // Check payment status
   const checkAllPaymentStatuses = useCallback(async (bookingsList) => {
     try {
       const statusMap = { ...paymentStatuses };
@@ -109,7 +97,6 @@ const UserBookingHistory = () => {
             statusMap[booking.id] = res.data.data.status;
           }
         } catch (err) {
-          // Silently fail for individual booking status checks
           console.log(`No payment found for booking ${booking.id}`);
         }
       }));
@@ -119,17 +106,6 @@ const UserBookingHistory = () => {
       console.error("Error checking payment statuses:", err);
     }
   }, [paymentStatuses]);
-
-  // Auto-refresh payment status
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (bookings.length > 0) {
-        checkAllPaymentStatuses(bookings);
-      }
-    }, STATUS_POLL_INTERVAL);
-
-    return () => clearInterval(interval);
-  }, [bookings, checkAllPaymentStatuses, STATUS_POLL_INTERVAL]);
 
   // Initial load
   useEffect(() => {
@@ -142,15 +118,12 @@ const UserBookingHistory = () => {
     };
   }, [loadBookings]);
 
-  //////////////////////////////////////////////////////
-  // CREATE UPI PAYMENT
-  //////////////////////////////////////////////////////
+  // Create payment
   const handlePayNow = useCallback(async (booking) => {
     try {
       setPayingId(booking.id);
       setError("");
 
-      // Calculate total amount
       const rent = Number(booking.rent_amount || booking.rent || 0);
       const deposit = Number(booking.security_deposit || 0);
       const maintenance = Number(booking.maintenance_amount || 0);
@@ -184,20 +157,16 @@ const UserBookingHistory = () => {
     } catch (err) {
       console.error("PAYMENT ERROR:", err);
       setError(err.message || "Payment initialization failed");
-      alert(err.message || "Payment initialization failed");
     } finally {
       setPayingId(null);
     }
   }, [startTimer]);
 
-  //////////////////////////////////////////////////////
-  // HANDLE SCREENSHOT UPLOAD
-  //////////////////////////////////////////////////////
+  // Handle screenshot
   const handleScreenshotChange = useCallback((e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate file
     if (file.size > 5 * 1024 * 1024) {
       alert("File size too large. Please upload less than 5MB");
       return;
@@ -210,7 +179,6 @@ const UserBookingHistory = () => {
 
     setScreenshot(file);
     
-    // Create preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setScreenshotPreview(reader.result);
@@ -218,9 +186,7 @@ const UserBookingHistory = () => {
     reader.readAsDataURL(file);
   }, []);
 
-  //////////////////////////////////////////////////////
-  // SUBMIT PAYMENT WITH SCREENSHOT
-  //////////////////////////////////////////////////////
+  // Submit payment
   const submitPaymentWithScreenshot = useCallback(async () => {
     if (!screenshot) {
       alert("Please upload payment screenshot");
@@ -228,7 +194,7 @@ const UserBookingHistory = () => {
     }
 
     if (isExpired) {
-      alert("⏰ Payment time expired. Please refresh QR code.");
+      alert("Payment time expired. Please refresh QR code.");
       return;
     }
 
@@ -250,39 +216,30 @@ const UserBookingHistory = () => {
         throw new Error(res.data.message || "Failed to submit payment");
       }
 
-      alert("✅ Payment submitted successfully! Waiting for admin verification.");
-
-      // Clear timer
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
 
-      // Update payment status
       setPaymentStatuses(prev => ({
         ...prev,
         [paymentData.bookingId]: "submitted"
       }));
 
-      // Close modal
       setPaymentData(null);
       setScreenshot(null);
       setScreenshotPreview("");
       
-      // Refresh bookings
       loadBookings(false);
 
     } catch (err) {
       console.error("Submit error:", err);
       setError(err.message || "Failed to submit payment");
-      alert(err.message || "Failed to submit payment. Please try again.");
     } finally {
       setUploading(false);
     }
   }, [screenshot, isExpired, paymentData, loadBookings]);
 
-  //////////////////////////////////////////////////////
-  // REFRESH QR
-  //////////////////////////////////////////////////////
+  // Refresh QR
   const refreshQR = useCallback(async () => {
     if (!paymentData) return;
     
@@ -312,15 +269,12 @@ const UserBookingHistory = () => {
     } catch (err) {
       console.error("REFRESH QR ERROR:", err);
       setError(err.message || "Failed to refresh QR code");
-      alert(err.message || "Failed to refresh QR code");
     } finally {
       setRefreshing(false);
     }
   }, [paymentData, startTimer]);
 
-  //////////////////////////////////////////////////////
-  // CLOSE MODAL
-  //////////////////////////////////////////////////////
+  // Close modal
   const closeModal = useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -331,9 +285,7 @@ const UserBookingHistory = () => {
     setError("");
   }, []);
 
-  //////////////////////////////////////////////////////
-  // GET PAYMENT STATUS DISPLAY
-  //////////////////////////////////////////////////////
+  // Get payment status
   const getPaymentStatusDisplay = useCallback((bookingId, bookingStatus) => {
     const status = paymentStatuses[bookingId];
     
@@ -351,23 +303,23 @@ const UserBookingHistory = () => {
         return {
           showPayButton: false,
           message: null,
-          badge: { text: "✅ Payment Verified", style: "paid" },
+          badge: { text: "Payment Verified", style: "paid" },
           canPay: false
         };
       
       case "submitted":
         return {
           showPayButton: false,
-          message: "⏳ Payment submitted. Waiting for admin verification...",
-          badge: { text: "⏳ Pending Verification", style: "submitted" },
+          message: "Payment submitted. Waiting for verification...",
+          badge: { text: "Pending Verification", style: "submitted" },
           canPay: false
         };
       
       case "rejected":
         return {
           showPayButton: true,
-          message: "❌ Payment was rejected. Please pay again with correct screenshot.",
-          badge: { text: "❌ Payment Rejected", style: "rejected" },
+          message: "Payment was rejected. Please try again.",
+          badge: { text: "Payment Rejected", style: "rejected" },
           canPay: true
         };
       
@@ -375,7 +327,7 @@ const UserBookingHistory = () => {
         return {
           showPayButton: true,
           message: null,
-          badge: { text: "💰 Payment Pending", style: "pending" },
+          badge: { text: "Payment Pending", style: "pending" },
           canPay: true
         };
       
@@ -389,17 +341,7 @@ const UserBookingHistory = () => {
     }
   }, [paymentStatuses]);
 
-  // Badge styles mapping
-  const badgeStyles = {
-    paid: { background: "#16a34a", color: "#fff" },
-    submitted: { background: "#f59e0b", color: "#fff" },
-    rejected: { background: "#e11d48", color: "#fff" },
-    pending: { background: "#6b7280", color: "#fff" }
-  };
-
-  //////////////////////////////////////////////////////
-  // RENDER LOADING STATE
-  //////////////////////////////////////////////////////
+  // Loading state
   if (loading) {
     return (
       <div style={styles.loadingContainer}>
@@ -409,13 +351,11 @@ const UserBookingHistory = () => {
     );
   }
 
-  //////////////////////////////////////////////////////
-  // RENDER ERROR STATE
-  //////////////////////////////////////////////////////
+  // Error state
   if (error && !bookings.length) {
     return (
       <div style={styles.errorContainer}>
-        <div style={styles.errorIcon}>❌</div>
+        <div style={styles.errorIcon}>⚠️</div>
         <p style={styles.errorText}>{error}</p>
         <button style={styles.retryBtn} onClick={() => loadBookings()}>
           Try Again
@@ -424,29 +364,51 @@ const UserBookingHistory = () => {
     );
   }
 
-  //////////////////////////////////////////////////////
-  // MAIN RENDER
-  //////////////////////////////////////////////////////
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>📜 My Bookings</h2>
+      {/* Header */}
+      <div style={styles.header}>
+        <h1 style={styles.title}>My Bookings</h1>
+        <p style={styles.subtitle}>Manage your property bookings and payments</p>
+      </div>
 
-      {bookings.length === 0 ? (
+      {/* Tabs */}
+      {bookings.length > 0 && (
+        <div style={styles.tabsContainer}>
+          {["all", "pending", "approved", "confirmed"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                ...styles.tab,
+                ...(activeTab === tab ? styles.activeTab : {})
+              }}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              <span style={styles.tabCount}>
+                {bookings.filter(b => tab === "all" ? true : b.status === tab).length}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Bookings List */}
+      {filteredBookings.length === 0 ? (
         <div style={styles.emptyState}>
           <div style={styles.emptyIcon}>🏠</div>
-          <p style={styles.emptyText}>No bookings found</p>
+          <h3 style={styles.emptyTitle}>No bookings found</h3>
+          <p style={styles.emptyText}>Start your journey by browsing our properties</p>
           <button 
             style={styles.browseBtn} 
             onClick={() => navigate("/")}
-            aria-label="Browse properties"
           >
             Browse Properties
           </button>
         </div>
       ) : (
-        <div style={styles.bookingsList}>
-          {bookings.map((booking) => {
-            // Calculate amounts
+        <div style={styles.bookingsGrid}>
+          {filteredBookings.map((booking) => {
             const rent = Number(booking.rent_amount || booking.rent || 0);
             const deposit = Number(booking.security_deposit || 0);
             const maintenance = Number(booking.maintenance_amount || 0);
@@ -459,136 +421,174 @@ const UserBookingHistory = () => {
             );
 
             return (
-              <article key={booking.id} style={styles.card}>
+              <div key={booking.id} style={styles.card}>
+                {/* Card Header */}
                 <div style={styles.cardHeader}>
-                  <h3 style={styles.pgName}>{booking.pg_name || "PG Name"}</h3>
-                  <span 
-                    style={{
+                  <div>
+                    <h3 style={styles.pgName}>{booking.pg_name || "Property Name"}</h3>
+                    <p style={styles.pgLocation}>{booking.location || "Location not specified"}</p>
+                  </div>
+                  <div style={styles.badgeGroup}>
+                    <span style={{
                       ...styles.statusBadge,
                       ...(booking.status === "confirmed" ? styles.statusConfirmed :
                          booking.status === "approved" ? styles.statusApproved :
                          styles.statusPending)
-                    }}
-                  >
-                    {booking.status?.toUpperCase() || "PENDING"}
-                  </span>
-                </div>
-
-                {paymentDisplay.badge && (
-                  <div style={styles.badgeContainer}>
-                    <span style={{
-                      ...styles.paymentBadge,
-                      ...badgeStyles[paymentDisplay.badge.style]
                     }}>
-                      {paymentDisplay.badge.text}
+                      {booking.status}
                     </span>
-                  </div>
-                )}
-
-                <div style={styles.detailsGrid}>
-                  <p style={styles.detailItem}>📞 {booking.phone || "N/A"}</p>
-                  <p style={styles.detailItem}>
-                    📅 {booking.check_in_date
-                      ? new Date(booking.check_in_date).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric"
-                        })
-                      : "N/A"}
-                  </p>
-                  <p style={styles.detailItem}>🛏 {booking.room_type || "Single Room"}</p>
-                  {booking.room_no && (
-                    <p style={styles.detailItem}>🚪 Room No: {booking.room_no}</p>
-                  )}
-                </div>
-
-                <div style={styles.priceBreakdown}>
-                  <div style={styles.priceRow}>
-                    <span>💸 Rent:</span>
-                    <span>₹{rent.toLocaleString()}</span>
-                  </div>
-                  <div style={styles.priceRow}>
-                    <span>🔐 Deposit:</span>
-                    <span>₹{deposit.toLocaleString()}</span>
-                  </div>
-                  <div style={styles.priceRow}>
-                    <span>🧰 Maintenance:</span>
-                    <span>₹{maintenance.toLocaleString()}</span>
-                  </div>
-                  <div style={styles.totalPrice}>
-                    <span>🧾 Total:</span>
-                    <span><b>₹{total.toLocaleString()}</b></span>
-                  </div>
-                </div>
-
-                {paymentDisplay.message && (
-                  <div style={styles.messageBox(paymentDisplay.badge?.style)}>
-                    {paymentDisplay.message}
-                  </div>
-                )}
-
-                {(booking.status === "approved" || booking.status === "confirmed") && (
-                  <div style={styles.actionButtons}>
-                    <button
-                      style={styles.viewBtn}
-                      onClick={() => navigate(`/pg/${booking.pg_id}`)}
-                      aria-label="View PG details"
-                    >
-                      🏠 View PG
-                    </button>
-
-                    <button
-                      style={styles.chatBtn}
-                      onClick={() => navigate(`/chat/private/${booking.owner_id}/${booking.pg_id}`)}
-                      aria-label="Chat with owner"
-                    >
-                      💬 Chat Owner
-                    </button>
-
-                    <button
-                      style={styles.agreementBtn}
-                      onClick={() => navigate(`/agreement/${booking.id}`)}
-                      aria-label="Preview agreement"
-                    >
-                      📄 Agreement
-                    </button>
-
-                    <button
-                      style={styles.serviceBtn}
-                      onClick={() => navigate(`/user/services/${booking.id}`)}
-                      aria-label="Add services"
-                    >
-                      🚚 Services
-                    </button>
-                  </div>
-                )}
-
-                {showPayButton && (
-                  <button
-                    style={styles.payButton}
-                    onClick={() => handlePayNow(booking)}
-                    disabled={payingId === booking.id}
-                    aria-label={`Pay ₹${total.toLocaleString()}`}
-                  >
-                    {payingId === booking.id ? (
-                      <>
-                        <span style={styles.buttonSpinner}></span>
-                        Processing...
-                      </>
-                    ) : (
-                      `💳 Pay ₹${total.toLocaleString()}`
+                    {paymentDisplay.badge && (
+                      <span style={{
+                        ...styles.paymentBadge,
+                        ...styles[`paymentBadge${paymentDisplay.badge.style}`]
+                      }}>
+                        {paymentDisplay.badge.text}
+                      </span>
                     )}
-                  </button>
-                )}
+                  </div>
+                </div>
 
-                {booking.status === "confirmed" && paymentStatuses[booking.id] === "paid" && (
-                  <div style={styles.confirmedContainer}>
-                    <div style={styles.confirmedBadge}>
-                      ✅ Payment Verified - Booking Confirmed
+                {/* Card Content */}
+                <div style={styles.cardContent}>
+                  {/* Details Grid */}
+                  <div style={styles.detailsGrid}>
+                    <div style={styles.detailItem}>
+                      <span style={styles.detailIcon}>📞</span>
+                      <div>
+                        <span style={styles.detailLabel}>Contact</span>
+                        <span style={styles.detailValue}>{booking.phone || "N/A"}</span>
+                      </div>
+                    </div>
+                    <div style={styles.detailItem}>
+                      <span style={styles.detailIcon}>📅</span>
+                      <div>
+                        <span style={styles.detailLabel}>Check-in</span>
+                        <span style={styles.detailValue}>
+                          {booking.check_in_date
+                            ? new Date(booking.check_in_date).toLocaleDateString("en-US", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric"
+                              })
+                            : "N/A"}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={styles.detailItem}>
+                      <span style={styles.detailIcon}>🛏️</span>
+                      <div>
+                        <span style={styles.detailLabel}>Room Type</span>
+                        <span style={styles.detailValue}>{booking.room_type || "Single"}</span>
+                      </div>
+                    </div>
+                    {booking.room_no && (
+                      <div style={styles.detailItem}>
+                        <span style={styles.detailIcon}>🚪</span>
+                        <div>
+                          <span style={styles.detailLabel}>Room No</span>
+                          <span style={styles.detailValue}>{booking.room_no}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Price Breakdown */}
+                  <div style={styles.priceSection}>
+                    <div style={styles.priceRow}>
+                      <span>Rent</span>
+                      <span>₹{rent.toLocaleString()}</span>
+                    </div>
+                    <div style={styles.priceRow}>
+                      <span>Security Deposit</span>
+                      <span>₹{deposit.toLocaleString()}</span>
+                    </div>
+                    <div style={styles.priceRow}>
+                      <span>Maintenance</span>
+                      <span>₹{maintenance.toLocaleString()}</span>
+                    </div>
+                    <div style={styles.totalPrice}>
+                      <span>Total Amount</span>
+                      <span>₹{total.toLocaleString()}</span>
                     </div>
                   </div>
-                )}
-              </article>
+
+                  {/* Message if any */}
+                  {paymentDisplay.message && (
+                    <div style={{
+                      ...styles.messageBox,
+                      ...styles[`messageBox${paymentDisplay.badge?.style}`]
+                    }}>
+                      {paymentDisplay.message}
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div style={styles.actionGroup}>
+                    <div style={styles.actionButtons}>
+                      <button
+                        style={styles.iconButton}
+                        onClick={() => navigate(`/pg/${booking.pg_id}`)}
+                        title="View Property"
+                      >
+                        <span style={styles.buttonIcon}>🏠</span>
+                        <span>View</span>
+                      </button>
+                      <button
+                        style={styles.iconButton}
+                        onClick={() => navigate(`/chat/private/${booking.owner_id}/${booking.pg_id}`)}
+                        title="Chat with Owner"
+                      >
+                        <span style={styles.buttonIcon}>💬</span>
+                        <span>Chat</span>
+                      </button>
+                      <button
+                        style={styles.iconButton}
+                        onClick={() => navigate(`/agreement/${booking.id}`)}
+                        title="View Agreement"
+                      >
+                        <span style={styles.buttonIcon}>📄</span>
+                        <span>Agreement</span>
+                      </button>
+                      <button
+                        style={styles.iconButton}
+                        onClick={() => navigate(`/user/services/${booking.id}`)}
+                        title="Add Services"
+                      >
+                        <span style={styles.buttonIcon}>🚚</span>
+                        <span>Services</span>
+                      </button>
+                    </div>
+
+                    {showPayButton && (
+                      <button
+                        style={styles.payButton}
+                        onClick={() => handlePayNow(booking)}
+                        disabled={payingId === booking.id}
+                      >
+                        {payingId === booking.id ? (
+                          <>
+                            <span style={styles.buttonSpinner}></span>
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <span>💳</span>
+                            Pay ₹{total.toLocaleString()}
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Confirmed Badge */}
+                  {booking.status === "confirmed" && paymentStatuses[booking.id] === "paid" && (
+                    <div style={styles.confirmedBadge}>
+                      <span>✅</span>
+                      <span>Booking Confirmed</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             );
           })}
         </div>
@@ -596,36 +596,22 @@ const UserBookingHistory = () => {
 
       {/* Payment Modal */}
       {paymentData && (
-        <div 
-          style={styles.modalOverlay} 
-          onClick={closeModal}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Payment modal"
-        >
-          <div 
-            style={styles.modalContent} 
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button 
-              style={styles.modalCloseBtn}
-              onClick={closeModal}
-              aria-label="Close modal"
-            >
-              ✕
-            </button>
-            
-            <h3 style={styles.modalTitle}>Complete Payment</h3>
+        <div style={styles.modalOverlay} onClick={closeModal}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div style={styles.modalHeader}>
+              <h2 style={styles.modalTitle}>Complete Payment</h2>
+              <button style={styles.modalClose} onClick={closeModal}>×</button>
+            </div>
 
             {/* Amount and Timer */}
-            <div style={styles.modalHeader}>
-              <div style={styles.amountBox}>
-                <span style={styles.amountLabel}>Amount</span>
-                <span style={styles.amountValue}>₹{paymentData.amount.toLocaleString()}</span>
+            <div style={styles.modalAmountSection}>
+              <div style={styles.modalAmount}>
+                <span style={styles.modalAmountLabel}>Amount to Pay</span>
+                <span style={styles.modalAmountValue}>₹{paymentData.amount.toLocaleString()}</span>
               </div>
-              
-              <div style={styles.timerContainer}>
-                <svg width="70" height="70" viewBox="0 0 100 100">
+              <div style={styles.modalTimer}>
+                <svg width="60" height="60" viewBox="0 0 100 100">
                   <circle
                     cx="50"
                     cy="50"
@@ -639,17 +625,17 @@ const UserBookingHistory = () => {
                     cy="50"
                     r="45"
                     fill="none"
-                    stroke={getTimerColor}
+                    stroke={timeLeft > 180 ? "#10b981" : timeLeft > 60 ? "#f59e0b" : "#ef4444"}
                     strokeWidth="8"
                     strokeLinecap="round"
-                    strokeDasharray={circleProgress.circumference}
-                    strokeDashoffset={circleProgress.offset}
+                    strokeDasharray={2 * Math.PI * 45}
+                    strokeDashoffset={2 * Math.PI * 45 * (1 - timeLeft / PAYMENT_TIMEOUT)}
                     transform="rotate(-90 50 50)"
                     style={styles.timerCircle}
                   />
                 </svg>
                 <div style={styles.timerText}>
-                  <span style={{ color: getTimerColor, fontWeight: "bold" }}>
+                  <span style={{ color: timeLeft > 180 ? "#10b981" : timeLeft > 60 ? "#f59e0b" : "#ef4444" }}>
                     {formatTime(timeLeft)}
                   </span>
                 </div>
@@ -657,97 +643,81 @@ const UserBookingHistory = () => {
             </div>
 
             {/* Order ID */}
-            <div style={styles.orderIdBox}>
+            <div style={styles.orderIdSection}>
               <span style={styles.orderIdLabel}>Order ID:</span>
-              <span style={styles.orderIdValue}>{paymentData.orderId}</span>
+              <code style={styles.orderIdValue}>{paymentData.orderId}</code>
               <button 
-                style={styles.copyBtn}
+                style={styles.copyButton}
                 onClick={() => {
                   navigator.clipboard.writeText(paymentData.orderId);
-                  alert("Order ID copied!");
                 }}
-                aria-label="Copy order ID"
+                title="Copy Order ID"
               >
                 📋
               </button>
             </div>
 
             {/* Account Details */}
-            <div style={styles.accountCard}>
+            <div style={styles.accountDetails}>
               <div style={styles.accountIcon}>🏦</div>
               <div style={styles.accountInfo}>
                 <div style={styles.accountRow}>
                   <span>UPI ID:</span>
-                  <span style={styles.accountValue}>huligeshmalka-1@oksbi</span>
+                  <strong>huligeshmalka-1@oksbi</strong>
                 </div>
                 <div style={styles.accountRow}>
                   <span>Account:</span>
-                  <span style={styles.accountValue}>Huligesh</span>
+                  <strong>Huligesh Malka</strong>
                 </div>
               </div>
             </div>
 
             {/* QR Code */}
-            <div style={styles.qrContainer}>
+            <div style={styles.qrSection}>
               <img 
                 src={paymentData.qr} 
-                alt="UPI QR Code" 
+                alt="Payment QR Code" 
                 style={styles.qrImage}
-                loading="lazy"
               />
+              <a
+                href={paymentData.upiLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={styles.upiButton}
+              >
+                <span>📱</span>
+                Open in UPI App
+              </a>
             </div>
 
-            {/* UPI Link */}
-            <a
-              href={paymentData.upiLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={styles.upiLink}
-              aria-label="Open in UPI app"
-            >
-              <span>📱</span>
-              Open in UPI App
-            </a>
-
-            {/* Warning */}
-            <div style={styles.warningBox}>
-              <span>⚠️</span>
-              <span style={styles.warningText}>
-                Pay only once. Multiple payments will be rejected.
-              </span>
-            </div>
-
-            {/* Screenshot Upload */}
-            <div style={styles.uploadContainer}>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleScreenshotChange}
-                style={styles.hiddenInput}
-                id="screenshot-upload"
-                aria-label="Upload payment screenshot"
-              />
-              <label htmlFor="screenshot-upload" style={styles.uploadLabel}>
-                <span>📸</span>
-                {screenshot ? "Change Screenshot" : "Upload Payment Screenshot"}
+            {/* Upload Section */}
+            <div style={styles.uploadSection}>
+              <label style={styles.uploadLabel}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleScreenshotChange}
+                  style={styles.hiddenInput}
+                />
+                <span style={styles.uploadIcon}>📸</span>
+                <span>{screenshot ? "Change Screenshot" : "Upload Payment Screenshot"}</span>
               </label>
               
               {screenshotPreview && (
-                <div style={styles.previewContainer}>
+                <div style={styles.previewWrapper}>
                   <img
                     src={screenshotPreview}
-                    alt="Screenshot preview"
+                    alt="Preview"
                     style={styles.previewImage}
                   />
                   <button 
-                    style={styles.removeImageBtn}
+                    style={styles.removePreview}
                     onClick={() => {
                       setScreenshot(null);
                       setScreenshotPreview("");
                     }}
-                    aria-label="Remove screenshot"
                   >
-                    ✕
+                    ×
                   </button>
                 </div>
               )}
@@ -760,7 +730,6 @@ const UserBookingHistory = () => {
                   style={styles.refreshButton}
                   onClick={refreshQR}
                   disabled={refreshing}
-                  aria-label="Refresh QR code"
                 >
                   {refreshing ? (
                     <>
@@ -768,7 +737,10 @@ const UserBookingHistory = () => {
                       Refreshing...
                     </>
                   ) : (
-                    "⟳ Refresh QR Code"
+                    <>
+                      <span>⟳</span>
+                      Refresh QR Code
+                    </>
                   )}
                 </button>
               ) : (
@@ -776,7 +748,6 @@ const UserBookingHistory = () => {
                   style={styles.submitButton}
                   onClick={submitPaymentWithScreenshot}
                   disabled={uploading || !screenshot}
-                  aria-label="Submit payment"
                 >
                   {uploading ? (
                     <>
@@ -784,455 +755,605 @@ const UserBookingHistory = () => {
                       Submitting...
                     </>
                   ) : (
-                    "✅ Submit for Verification"
+                    <>
+                      <span>✅</span>
+                      Submit for Verification
+                    </>
                   )}
                 </button>
               )}
             </div>
 
-            {/* Error message */}
+            {/* Warning */}
+            <div style={styles.warningBox}>
+              <span>⚠️</span>
+              <span>Pay only once. Multiple payments will be rejected.</span>
+            </div>
+
+            {/* Error Message */}
             {error && (
-              <div style={styles.modalError}>
+              <div style={styles.errorBox}>
                 {error}
               </div>
             )}
           </div>
         </div>
       )}
+
+      {/* Add keyframe animations */}
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+          @keyframes slideIn {
+            from {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}
+      </style>
     </div>
   );
 };
 
-// PropTypes for better type checking
-UserBookingHistory.propTypes = {
-  // Add any props if needed
-};
-
-////////////////////////////////////////////////////////
-// STYLES
-////////////////////////////////////////////////////////
+// Modern Styles
 const styles = {
   container: {
-    maxWidth: 900,
-    margin: "40px auto",
-    padding: "0 20px"
+    maxWidth: 1200,
+    margin: "0 auto",
+    padding: "40px 24px",
+    minHeight: "100vh",
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    animation: "slideIn 0.5s ease-out",
+  },
+  
+  header: {
+    textAlign: "center",
+    marginBottom: 40,
   },
   
   title: {
-    fontSize: "clamp(24px, 5vw, 32px)",
-    fontWeight: 600,
-    marginBottom: 30,
-    color: "#1e293b"
-  },
-  
-  // Loading states
-  loadingContainer: {
-    textAlign: "center",
-    marginTop: 100
-  },
-  
-  loadingSpinner: {
-    width: 50,
-    height: 50,
-    border: "4px solid #f3f3f3",
-    borderTop: "4px solid #2563eb",
-    borderRadius: "50%",
-    margin: "0 auto 20px",
-    animation: "spin 1s linear infinite"
-  },
-  
-  loadingText: {
-    color: "#64748b",
-    fontSize: 16
-  },
-  
-  // Error states
-  errorContainer: {
-    textAlign: "center",
-    marginTop: 100,
-    padding: 40
-  },
-  
-  errorIcon: {
-    fontSize: 48,
-    marginBottom: 16
-  },
-  
-  errorText: {
-    color: "#e11d48",
-    fontSize: 16,
-    marginBottom: 20
-  },
-  
-  retryBtn: {
-    padding: "12px 24px",
-    background: "#2563eb",
+    fontSize: "clamp(32px, 6vw, 48px)",
+    fontWeight: 800,
     color: "#fff",
-    border: "none",
-    borderRadius: 10,
+    marginBottom: 8,
+    textShadow: "0 2px 4px rgba(0,0,0,0.1)",
+    letterSpacing: "-0.5px",
+  },
+  
+  subtitle: {
     fontSize: 16,
-    fontWeight: 500,
-    cursor: "pointer",
-    transition: "background 0.2s",
-    ":hover": {
-      background: "#1d4ed8"
-    }
+    color: "rgba(255,255,255,0.9)",
+    fontWeight: 400,
   },
   
-  // Empty state
-  emptyState: {
-    textAlign: "center",
-    padding: "60px 20px",
-    background: "#f8fafc",
-    borderRadius: 20
-  },
-  
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-    opacity: 0.5
-  },
-  
-  emptyText: {
-    color: "#64748b",
-    fontSize: 18,
-    marginBottom: 24
-  },
-  
-  browseBtn: {
-    padding: "14px 28px",
-    background: "#2563eb",
-    color: "#fff",
-    border: "none",
-    borderRadius: 12,
-    fontSize: 16,
-    fontWeight: 500,
-    cursor: "pointer",
-    transition: "transform 0.2s, background 0.2s",
-    ":hover": {
-      background: "#1d4ed8",
-      transform: "translateY(-2px)"
-    }
-  },
-  
-  // Bookings list
-  bookingsList: {
+  tabsContainer: {
     display: "flex",
-    flexDirection: "column",
-    gap: 20
+    gap: 12,
+    marginBottom: 32,
+    flexWrap: "wrap",
+    justifyContent: "center",
   },
   
-  // Card styles
-  card: {
-    background: "#fff",
-    padding: "clamp(16px, 4vw, 24px)",
-    borderRadius: 20,
-    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-    transition: "transform 0.2s, boxShadow 0.2s",
+  tab: {
+    padding: "12px 24px",
+    background: "rgba(255,255,255,0.1)",
+    border: "1px solid rgba(255,255,255,0.2)",
+    borderRadius: 40,
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: 500,
+    cursor: "pointer",
+    backdropFilter: "blur(10px)",
+    transition: "all 0.3s ease",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
     ":hover": {
+      background: "rgba(255,255,255,0.2)",
       transform: "translateY(-2px)",
-      boxShadow: "0 8px 30px rgba(0,0,0,0.12)"
+    }
+  },
+  
+  activeTab: {
+    background: "#fff",
+    color: "#667eea",
+    borderColor: "#fff",
+    boxShadow: "0 4px 15px rgba(0,0,0,0.2)",
+  },
+  
+  tabCount: {
+    background: "rgba(0,0,0,0.1)",
+    padding: "2px 8px",
+    borderRadius: 20,
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  
+  bookingsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
+    gap: 24,
+  },
+  
+  card: {
+    background: "rgba(255,255,255,0.95)",
+    backdropFilter: "blur(10px)",
+    borderRadius: 24,
+    overflow: "hidden",
+    boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
+    transition: "all 0.3s ease",
+    animation: "slideIn 0.5s ease-out",
+    border: "1px solid rgba(255,255,255,0.2)",
+    ":hover": {
+      transform: "translateY(-4px)",
+      boxShadow: "0 30px 60px rgba(0,0,0,0.15)",
     }
   },
   
   cardHeader: {
+    padding: "20px 24px",
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    color: "#fff",
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     flexWrap: "wrap",
     gap: 12,
-    marginBottom: 16
   },
   
   pgName: {
     margin: 0,
-    fontSize: "clamp(18px, 4vw, 20px)",
+    fontSize: 18,
     fontWeight: 600,
-    color: "#1e293b"
+    marginBottom: 4,
+  },
+  
+  pgLocation: {
+    margin: 0,
+    fontSize: 13,
+    opacity: 0.9,
+  },
+  
+  badgeGroup: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap",
   },
   
   statusBadge: {
-    padding: "6px 14px",
+    padding: "6px 12px",
     borderRadius: 30,
     fontSize: 12,
-    fontWeight: 500,
-    letterSpacing: "0.5px"
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
   },
   
   statusConfirmed: {
-    background: "#16a34a",
-    color: "#fff"
+    background: "#10b981",
+    color: "#fff",
   },
   
   statusApproved: {
-    background: "#2563eb",
-    color: "#fff"
+    background: "#3b82f6",
+    color: "#fff",
   },
   
   statusPending: {
-    background: "#6b7280",
-    color: "#fff"
-  },
-  
-  badgeContainer: {
-    marginBottom: 12
+    background: "#f59e0b",
+    color: "#fff",
   },
   
   paymentBadge: {
-    display: "inline-block",
-    padding: "6px 14px",
+    padding: "6px 12px",
     borderRadius: 30,
-    fontSize: 13,
-    fontWeight: 500
+    fontSize: 12,
+    fontWeight: 600,
+    background: "#fff",
+  },
+  
+  paymentBadgepaid: {
+    background: "#10b981",
+    color: "#fff",
+  },
+  
+  paymentBadgesubmitted: {
+    background: "#f59e0b",
+    color: "#fff",
+  },
+  
+  paymentBadgerejected: {
+    background: "#ef4444",
+    color: "#fff",
+  },
+  
+  paymentBadgepending: {
+    background: "#6b7280",
+    color: "#fff",
+  },
+  
+  cardContent: {
+    padding: 24,
   },
   
   detailsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-    gap: 12,
-    marginBottom: 16
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: 16,
+    marginBottom: 20,
   },
   
   detailItem: {
-    margin: 0,
-    color: "#475569",
-    fontSize: 14,
     display: "flex",
     alignItems: "center",
-    gap: 8
+    gap: 12,
   },
   
-  priceBreakdown: {
-    background: "#f8fafc",
-    padding: 16,
+  detailIcon: {
+    fontSize: 24,
+    background: "#f3f4f6",
+    width: 40,
+    height: 40,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: 12,
-    marginBottom: 16
+  },
+  
+  detailLabel: {
+    display: "block",
+    fontSize: 11,
+    color: "#6b7280",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+    marginBottom: 2,
+  },
+  
+  detailValue: {
+    display: "block",
+    fontSize: 14,
+    fontWeight: 600,
+    color: "#1f2937",
+  },
+  
+  priceSection: {
+    background: "#f9fafb",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
   },
   
   priceRow: {
     display: "flex",
     justifyContent: "space-between",
-    marginBottom: 8,
-    color: "#475569",
-    fontSize: 14
+    padding: "8px 0",
+    color: "#4b5563",
+    fontSize: 14,
+    borderBottom: "1px dashed #e5e7eb",
+    ":last-child": {
+      borderBottom: "none",
+    }
   },
   
   totalPrice: {
     display: "flex",
     justifyContent: "space-between",
-    marginTop: 12,
-    paddingTop: 12,
-    borderTop: "1px solid #e2e8f0",
+    marginTop: 8,
+    paddingTop: 8,
+    borderTop: "2px solid #e5e7eb",
     fontSize: 16,
-    color: "#1e293b"
+    fontWeight: 700,
+    color: "#1f2937",
   },
   
-  messageBox: (type) => ({
+  messageBox: {
     padding: "12px 16px",
-    borderRadius: 10,
+    borderRadius: 12,
     marginBottom: 16,
-    fontSize: 14,
-    background: type === "rejected" ? "#fee2e2" : "#fef3c7",
-    color: type === "rejected" ? "#e11d48" : "#92400e"
-  }),
+    fontSize: 13,
+    fontWeight: 500,
+  },
+  
+  messageBoxrejected: {
+    background: "#fee2e2",
+    color: "#991b1b",
+    border: "1px solid #fecaca",
+  },
+  
+  messageBoxsubmitted: {
+    background: "#fef3c7",
+    color: "#92400e",
+    border: "1px solid #fde68a",
+  },
+  
+  actionGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
+  },
   
   actionButtons: {
-    display: "flex",
-    gap: 10,
-    flexWrap: "wrap",
-    marginBottom: 16
+    display: "grid",
+    gridTemplateColumns: "repeat(4, 1fr)",
+    gap: 8,
   },
   
-  baseButton: {
-    padding: "10px 18px",
+  iconButton: {
+    padding: "10px",
+    background: "#f3f4f6",
     border: "none",
-    borderRadius: 10,
-    cursor: "pointer",
+    borderRadius: 12,
+    fontSize: 12,
     fontWeight: 500,
-    fontSize: 14,
-    transition: "transform 0.2s, opacity 0.2s",
+    color: "#4b5563",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 4,
     ":hover": {
-      transform: "translateY(-2px)"
-    },
-    ":active": {
-      transform: "translateY(0)"
+      background: "#e5e7eb",
+      transform: "translateY(-2px)",
     }
   },
   
-  viewBtn: {
-    padding: "10px 18px",
-    border: "none",
-    borderRadius: 10,
-    cursor: "pointer",
-    fontWeight: 500,
-    fontSize: 14,
-    background: "#2563eb",
-    color: "#fff"
-  },
-  
-  chatBtn: {
-    padding: "10px 18px",
-    border: "none",
-    borderRadius: 10,
-    cursor: "pointer",
-    fontWeight: 500,
-    fontSize: 14,
-    background: "#25d366",
-    color: "#fff"
-  },
-  
-  agreementBtn: {
-    padding: "10px 18px",
-    border: "none",
-    borderRadius: 10,
-    cursor: "pointer",
-    fontWeight: 500,
-    fontSize: 14,
-    background: "#7c3aed",
-    color: "#fff"
-  },
-  
-  serviceBtn: {
-    padding: "10px 18px",
-    border: "none",
-    borderRadius: 10,
-    cursor: "pointer",
-    fontWeight: 500,
-    fontSize: 14,
-    background: "#f59e0b",
-    color: "#fff"
+  buttonIcon: {
+    fontSize: 18,
   },
   
   payButton: {
     width: "100%",
     padding: "14px",
-    background: "#e11d48",
-    color: "#fff",
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     border: "none",
-    borderRadius: 12,
+    borderRadius: 14,
+    color: "#fff",
     fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
-    transition: "background 0.2s",
+    transition: "all 0.3s ease",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
     ":hover": {
-      background: "#be123c"
+      transform: "translateY(-2px)",
+      boxShadow: "0 10px 20px rgba(102,126,234,0.3)",
     },
     ":disabled": {
-      background: "#94a3b8",
-      cursor: "not-allowed"
+      opacity: 0.5,
+      cursor: "not-allowed",
+      transform: "none",
     }
   },
   
-  confirmedContainer: {
-    marginTop: 16
-  },
-  
   confirmedBadge: {
-    background: "#16a34a",
+    marginTop: 16,
+    padding: "12px",
+    background: "#10b981",
     color: "#fff",
-    padding: "10px 16px",
     borderRadius: 12,
-    textAlign: "center",
     fontSize: 14,
-    fontWeight: 500
+    fontWeight: 600,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
   },
   
-  // Modal styles
+  emptyState: {
+    textAlign: "center",
+    padding: "60px 20px",
+    background: "rgba(255,255,255,0.95)",
+    backdropFilter: "blur(10px)",
+    borderRadius: 32,
+    border: "1px solid rgba(255,255,255,0.2)",
+  },
+  
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: 700,
+    color: "#1f2937",
+    marginBottom: 8,
+  },
+  
+  emptyText: {
+    fontSize: 16,
+    color: "#6b7280",
+    marginBottom: 24,
+  },
+  
+  browseBtn: {
+    padding: "14px 32px",
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    border: "none",
+    borderRadius: 40,
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+    ":hover": {
+      transform: "translateY(-2px)",
+      boxShadow: "0 10px 20px rgba(102,126,234,0.3)",
+    }
+  },
+  
+  loadingContainer: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: "100vh",
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+  },
+  
+  loadingSpinner: {
+    width: 50,
+    height: 50,
+    border: "3px solid rgba(255,255,255,0.3)",
+    borderTop: "3px solid #fff",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite",
+    marginBottom: 16,
+  },
+  
+  loadingText: {
+    color: "#fff",
+    fontSize: 16,
+  },
+  
+  errorContainer: {
+    textAlign: "center",
+    padding: "60px 20px",
+    background: "rgba(255,255,255,0.95)",
+    backdropFilter: "blur(10px)",
+    borderRadius: 32,
+    margin: "40px auto",
+    maxWidth: 400,
+  },
+  
+  errorIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  
+  errorText: {
+    fontSize: 16,
+    color: "#ef4444",
+    marginBottom: 24,
+  },
+  
+  retryBtn: {
+    padding: "12px 24px",
+    background: "#3b82f6",
+    border: "none",
+    borderRadius: 40,
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    ":hover": {
+      background: "#2563eb",
+    }
+  },
+  
   modalOverlay: {
     position: "fixed",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    background: "rgba(0,0,0,0.6)",
+    background: "rgba(0,0,0,0.7)",
     backdropFilter: "blur(8px)",
     display: "flex",
-    justifyContent: "center",
     alignItems: "center",
+    justifyContent: "center",
     zIndex: 1000,
-    padding: 20
+    padding: 20,
+    animation: "fadeIn 0.3s ease",
   },
   
   modalContent: {
     background: "#fff",
-    borderRadius: 28,
-    padding: "clamp(20px, 5vw, 32px)",
+    borderRadius: 32,
     width: "100%",
     maxWidth: 480,
     maxHeight: "90vh",
     overflow: "auto",
     position: "relative",
-    boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)"
-  },
-  
-  modalCloseBtn: {
-    position: "absolute",
-    top: 16,
-    right: 16,
-    width: 36,
-    height: 36,
-    background: "#f1f5f9",
-    border: "none",
-    borderRadius: "50%",
-    fontSize: 18,
-    cursor: "pointer",
-    color: "#475569",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "background 0.2s",
-    ":hover": {
-      background: "#e2e8f0"
-    }
-  },
-  
-  modalTitle: {
-    fontSize: "clamp(20px, 5vw, 24px)",
-    fontWeight: 700,
-    textAlign: "center",
-    marginBottom: 24,
-    background: "linear-gradient(135deg, #2563eb, #4CAF50)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent"
+    animation: "slideIn 0.3s ease",
   },
   
   modalHeader: {
+    padding: "24px 24px 0",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20
+    marginBottom: 20,
   },
   
-  amountBox: {
-    background: "linear-gradient(135deg, #2563eb, #4CAF50)",
-    color: "#fff",
-    padding: "16px 20px",
-    borderRadius: 16,
-    flex: 1,
-    marginRight: 16
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 700,
+    color: "#1f2937",
+    margin: 0,
   },
   
-  amountLabel: {
-    display: "block",
+  modalClose: {
+    width: 40,
+    height: 40,
+    background: "#f3f4f6",
+    border: "none",
+    borderRadius: "50%",
+    fontSize: 20,
+    cursor: "pointer",
+    color: "#6b7280",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "all 0.2s ease",
+    ":hover": {
+      background: "#e5e7eb",
+      color: "#1f2937",
+    }
+  },
+  
+  modalAmountSection: {
+    padding: "0 24px 20px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderBottom: "1px solid #e5e7eb",
+  },
+  
+  modalAmount: {
+    display: "flex",
+    flexDirection: "column",
+  },
+  
+  modalAmountLabel: {
     fontSize: 12,
-    opacity: 0.9,
-    marginBottom: 4
+    color: "#6b7280",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+    marginBottom: 4,
   },
   
-  amountValue: {
-    display: "block",
-    fontSize: "clamp(20px, 4vw, 24px)",
-    fontWeight: 700
+  modalAmountValue: {
+    fontSize: 32,
+    fontWeight: 800,
+    color: "#1f2937",
+    lineHeight: 1,
   },
   
-  timerContainer: {
+  modalTimer: {
     position: "relative",
-    width: 70,
-    height: 70
+    width: 60,
+    height: 60,
   },
   
   timerCircle: {
-    transition: "stroke-dashoffset 1s linear"
+    transition: "stroke-dashoffset 1s linear",
   },
   
   timerText: {
@@ -1240,148 +1361,118 @@ const styles = {
     top: "50%",
     left: "50%",
     transform: "translate(-50%, -50%)",
-    textAlign: "center"
+    fontSize: 14,
+    fontWeight: 700,
   },
   
-  orderIdBox: {
-    background: "#f8fafc",
-    padding: "12px 16px",
-    borderRadius: 14,
-    marginBottom: 20,
+  orderIdSection: {
+    padding: "16px 24px",
+    background: "#f9fafb",
     display: "flex",
     alignItems: "center",
     gap: 12,
-    flexWrap: "wrap"
+    borderBottom: "1px solid #e5e7eb",
   },
   
   orderIdLabel: {
     fontSize: 14,
-    color: "#64748b",
-    whiteSpace: "nowrap"
+    color: "#6b7280",
   },
   
   orderIdValue: {
     fontSize: 14,
     fontWeight: 600,
-    color: "#1e293b",
-    wordBreak: "break-all",
-    flex: 1
+    color: "#1f2937",
+    background: "#fff",
+    padding: "6px 12px",
+    borderRadius: 8,
+    border: "1px solid #e5e7eb",
+    fontFamily: "monospace",
+    flex: 1,
   },
   
-  copyBtn: {
-    background: "none",
-    border: "none",
-    fontSize: 18,
+  copyButton: {
+    background: "#fff",
+    border: "1px solid #e5e7eb",
+    borderRadius: 8,
+    padding: "6px 10px",
+    fontSize: 16,
     cursor: "pointer",
-    padding: "4px 8px",
-    borderRadius: 6,
-    transition: "background 0.2s",
+    transition: "all 0.2s ease",
     ":hover": {
-      background: "#e2e8f0"
+      background: "#f3f4f6",
+      borderColor: "#d1d5db",
     }
   },
   
-  accountCard: {
-    background: "#eff6ff",
-    border: "2px solid #2563eb",
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 20,
+  accountDetails: {
+    padding: "20px 24px",
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    color: "#fff",
     display: "flex",
     alignItems: "center",
-    gap: 16
+    gap: 16,
   },
   
   accountIcon: {
-    fontSize: 32,
-    background: "#2563eb",
-    color: "#fff",
-    width: 54,
-    height: 54,
+    width: 48,
+    height: 48,
+    background: "rgba(255,255,255,0.2)",
+    borderRadius: "50%",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: "50%"
+    fontSize: 24,
   },
   
   accountInfo: {
-    flex: 1
+    flex: 1,
   },
   
   accountRow: {
     display: "flex",
     justifyContent: "space-between",
-    marginBottom: 8,
     fontSize: 14,
-    ":lastChild": {
-      marginBottom: 0
+    marginBottom: 8,
+    ":last-child": {
+      marginBottom: 0,
     }
   },
   
-  accountValue: {
-    fontWeight: 700,
-    color: "#2563eb"
-  },
-  
-  qrContainer: {
+  qrSection: {
+    padding: "24px",
     textAlign: "center",
-    marginBottom: 20,
-    background: "#fff",
-    padding: 16,
-    borderRadius: 20,
-    boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
   },
   
   qrImage: {
-    width: "min(250px, 70vw)",
+    width: "min(200px, 50vw)",
     height: "auto",
     aspectRatio: "1",
-    borderRadius: 16
+    marginBottom: 16,
+    borderRadius: 16,
+    boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
   },
   
-  upiLink: {
-    display: "flex",
+  upiButton: {
+    display: "inline-flex",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    background: "#2563eb",
+    gap: 8,
+    padding: "12px 24px",
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     color: "#fff",
     textDecoration: "none",
-    padding: "14px",
-    borderRadius: 14,
-    fontSize: 16,
-    fontWeight: 500,
-    marginBottom: 16,
-    transition: "transform 0.2s",
+    borderRadius: 40,
+    fontSize: 14,
+    fontWeight: 600,
+    transition: "all 0.3s ease",
     ":hover": {
       transform: "translateY(-2px)",
-      background: "#1d4ed8"
+      boxShadow: "0 10px 20px rgba(102,126,234,0.3)",
     }
   },
   
-  warningBox: {
-    background: "#fff3cd",
-    border: "1px solid #ffeeba",
-    borderRadius: 14,
-    padding: "12px 16px",
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 20
-  },
-  
-  warningText: {
-    fontSize: 13,
-    color: "#856404",
-    lineHeight: 1.5
-  },
-  
-  uploadContainer: {
-    marginBottom: 20
-  },
-  
-  hiddenInput: {
-    display: "none"
+  uploadSection: {
+    padding: "0 24px 20px",
   },
   
   uploadLabel: {
@@ -1389,40 +1480,46 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    background: "#f8fafc",
-    border: "2px dashed #cbd5e1",
-    borderRadius: 14,
     padding: "16px",
+    background: "#f9fafb",
+    border: "2px dashed #e5e7eb",
+    borderRadius: 16,
     cursor: "pointer",
-    fontSize: 14,
-    color: "#475569",
-    transition: "border-color 0.2s, background 0.2s",
+    transition: "all 0.2s ease",
     ":hover": {
-      borderColor: "#2563eb",
-      background: "#f1f5f9"
+      borderColor: "#667eea",
+      background: "#f3f4f6",
     }
   },
   
-  previewContainer: {
-    marginTop: 12,
+  hiddenInput: {
+    display: "none",
+  },
+  
+  uploadIcon: {
+    fontSize: 20,
+  },
+  
+  previewWrapper: {
     position: "relative",
-    display: "inline-block"
+    marginTop: 12,
+    display: "inline-block",
   },
   
   previewImage: {
     maxWidth: "100%",
-    maxHeight: 150,
+    maxHeight: 120,
     borderRadius: 12,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
   },
   
-  removeImageBtn: {
+  removePreview: {
     position: "absolute",
     top: -8,
     right: -8,
-    width: 28,
-    height: 28,
-    background: "#e11d48",
+    width: 24,
+    height: 24,
+    background: "#ef4444",
     color: "#fff",
     border: "none",
     borderRadius: "50%",
@@ -1431,54 +1528,66 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     fontSize: 14,
-    boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-    transition: "transform 0.2s",
+    transition: "all 0.2s ease",
     ":hover": {
-      transform: "scale(1.1)"
+      transform: "scale(1.1)",
+      background: "#dc2626",
     }
   },
   
   modalActions: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 12
+    padding: "0 24px 20px",
   },
   
   submitButton: {
-    background: "#16a34a",
-    color: "#fff",
-    border: "none",
-    borderRadius: 14,
+    width: "100%",
     padding: "16px",
+    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    border: "none",
+    borderRadius: 16,
+    color: "#fff",
     fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
-    transition: "background 0.2s",
+    transition: "all 0.3s ease",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
     ":hover": {
-      background: "#15803d"
+      transform: "translateY(-2px)",
+      boxShadow: "0 10px 20px rgba(16,185,129,0.3)",
     },
     ":disabled": {
-      background: "#94a3b8",
-      cursor: "not-allowed"
+      opacity: 0.5,
+      cursor: "not-allowed",
+      transform: "none",
     }
   },
   
   refreshButton: {
-    background: "#2563eb",
-    color: "#fff",
-    border: "none",
-    borderRadius: 14,
+    width: "100%",
     padding: "16px",
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    border: "none",
+    borderRadius: 16,
+    color: "#fff",
     fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
-    transition: "background 0.2s",
+    transition: "all 0.3s ease",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
     ":hover": {
-      background: "#1d4ed8"
+      transform: "translateY(-2px)",
+      boxShadow: "0 10px 20px rgba(102,126,234,0.3)",
     },
     ":disabled": {
-      background: "#94a3b8",
-      cursor: "not-allowed"
+      opacity: 0.5,
+      cursor: "not-allowed",
+      transform: "none",
     }
   },
   
@@ -1490,29 +1599,33 @@ const styles = {
     borderTopColor: "transparent",
     borderRadius: "50%",
     animation: "spin 1s linear infinite",
-    marginRight: 8,
-    verticalAlign: "middle"
   },
   
-  modalError: {
-    marginTop: 16,
+  warningBox: {
+    margin: "0 24px 24px",
+    padding: "12px 16px",
+    background: "#fef3c7",
+    borderRadius: 12,
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    fontSize: 13,
+    color: "#92400e",
+    border: "1px solid #fde68a",
+  },
+  
+  errorBox: {
+    margin: "0 24px 24px",
     padding: "12px 16px",
     background: "#fee2e2",
-    color: "#e11d48",
     borderRadius: 12,
+    color: "#991b1b",
     fontSize: 14,
-    textAlign: "center"
-  }
+    textAlign: "center",
+    border: "1px solid #fecaca",
+  },
 };
 
-// Add keyframes for animations
-const styleSheet = document.createElement("style");
-styleSheet.textContent = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`;
-document.head.appendChild(styleSheet);
+UserBookingHistory.propTypes = {};
 
 export default UserBookingHistory;
