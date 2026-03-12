@@ -288,7 +288,7 @@ export default function PrivateChat() {
         <div>
 
           <div style={styles.name}>
-            {otherUser?.pg_name || otherUser?.name || "Chat"}
+            {otherUser?.name || "User"}
           </div>
 
           <div style={styles.status}>
