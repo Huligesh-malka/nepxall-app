@@ -2,120 +2,87 @@ import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/api";
 
-/* ================= CLOUDINARY CONFIG ================= */
-
 const CLOUDINARY_URL =
-  "https://api.cloudinary.com/v1_1/dgr4iqtng/auto/upload"; // change cloud name if needed
+"https://api.cloudinary.com/v1_1/dgr4iqtng/image/upload";
 
-const CLOUDINARY_UPLOAD_PRESET = "nepxall_unsigned"; // your unsigned preset
+const CLOUDINARY_UPLOAD_PRESET = "nepxall_unsigned";
 
 const AgreementForm = () => {
 
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(false);
+  const [loading,setLoading] = useState(false);
 
-  const [formData, setFormData] = useState({
-    full_name: "",
-    mobile: "",
-    email: "",
-    pan_number: ""
+  const [formData,setFormData] = useState({
+    full_name:"",
+    mobile:"",
+    email:"",
+    pan_number:""
   });
 
-  const [files, setFiles] = useState({
-    aadhaar_front: null,
-    pan_card: null,
-    signature: null
+  const [files,setFiles] = useState({
+    aadhaar_front:null,
+    pan_card:null,
+    signature:null
   });
 
-  /* ================= INPUT HANDLER ================= */
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  const handleChange = (e)=>{
+    setFormData({...formData,[e.target.name]:e.target.value});
   };
 
-  /* ================= FILE HANDLER ================= */
-
-  const handleFileChange = (e) => {
-
-    const file = e.target.files[0];
-
-    if (!file) return;
-
-    // optional size limit
-    if (file.size > 5 * 1024 * 1024) {
-      alert("File must be under 5MB");
-      return;
-    }
-
-    setFiles({
-      ...files,
-      [e.target.name]: file
-    });
-
+  const handleFileChange = (e)=>{
+    setFiles({...files,[e.target.name]:e.target.files[0]});
   };
 
-  /* ================= CLOUDINARY UPLOAD ================= */
+  const uploadToCloudinary = async(file)=>{
 
-  const uploadToCloudinary = async (file) => {
-
-    if (!file) return null;
+    if(!file) return null;
 
     const data = new FormData();
-    data.append("file", file);
-    data.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+    data.append("file",file);
+    data.append("upload_preset",CLOUDINARY_UPLOAD_PRESET);
 
-    const res = await fetch(CLOUDINARY_URL, {
-      method: "POST",
-      body: data
+    const response = await fetch(CLOUDINARY_URL,{
+      method:"POST",
+      body:data
     });
 
-    if (!res.ok) {
-      throw new Error("Cloudinary upload failed");
-    }
+    const result = await response.json();
 
-    const result = await res.json();
+    if(!response.ok){
+      console.error(result);
+      throw new Error(result.error.message);
+    }
 
     return result.secure_url;
   };
 
-  /* ================= SUBMIT FORM ================= */
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = async(e)=>{
 
     e.preventDefault();
-
-    if (!files.aadhaar_front || !files.pan_card || !files.signature) {
-      alert("Please upload all required documents");
-      return;
-    }
-
     setLoading(true);
 
-    try {
+    try{
 
-      /* Upload files to Cloudinary in parallel */
+      /* Upload images in parallel */
 
-      const [aadhaar_url, pan_url, sign_url] = await Promise.all([
+      const [aadhaar_url,pan_url,sign_url] = await Promise.all([
         uploadToCloudinary(files.aadhaar_front),
         uploadToCloudinary(files.pan_card),
         uploadToCloudinary(files.signature)
       ]);
 
-      /* Send URLs to backend */
+      /* Send only URLs to backend */
 
-      await api.post("/agreements-form/submit", {
+      await api.post("/agreements-form/submit",{
 
-        booking_id: id,
+        booking_id:id,
         ...formData,
 
-        aadhaar_front: aadhaar_url,
-        pan_card: pan_url,
-        signature: sign_url
+        aadhaar_front:aadhaar_url,
+        pan_card:pan_url,
+        signature:sign_url
 
       });
 
@@ -123,89 +90,65 @@ const AgreementForm = () => {
 
       navigate("/");
 
-    } catch (err) {
+    }catch(err){
 
-      console.error("Upload Error:", err);
-      alert("Upload failed. Please try again.");
+      console.error("Upload Error:",err);
+      alert("Upload failed");
 
     }
 
     setLoading(false);
-
   };
 
-  /* ================= UI ================= */
+  return(
 
-  return (
+    <form onSubmit={handleSubmit}>
 
-    <div style={{ maxWidth: "500px", margin: "auto", padding: "20px" }}>
+      <input
+        name="full_name"
+        placeholder="Full Name"
+        onChange={handleChange}
+        required
+      />
 
-      <h2>Submit Agreement (Booking #{id})</h2>
+      <input
+        name="mobile"
+        placeholder="Mobile"
+        onChange={handleChange}
+        required
+      />
 
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: "12px" }}>
+      <input
+        name="pan_number"
+        placeholder="PAN Number"
+        onChange={handleChange}
+      />
 
-        <input
-          name="full_name"
-          placeholder="Full Name"
-          onChange={handleChange}
-          required
-        />
+      <input
+        type="file"
+        name="aadhaar_front"
+        onChange={handleFileChange}
+      />
 
-        <input
-          name="mobile"
-          placeholder="Mobile"
-          onChange={handleChange}
-          required
-        />
+      <input
+        type="file"
+        name="pan_card"
+        onChange={handleFileChange}
+      />
 
-        <input
-          name="email"
-          placeholder="Email"
-          onChange={handleChange}
-        />
+      <input
+        type="file"
+        name="signature"
+        onChange={handleFileChange}
+      />
 
-        <input
-          name="pan_number"
-          placeholder="PAN Number"
-          onChange={handleChange}
-        />
+      <button type="submit">
+        {loading ? "Uploading..." : "Submit Agreement"}
+      </button>
 
-        <label>Aadhaar Front</label>
-        <input
-          type="file"
-          name="aadhaar_front"
-          accept="image/*,application/pdf"
-          onChange={handleFileChange}
-        />
-
-        <label>PAN Card</label>
-        <input
-          type="file"
-          name="pan_card"
-          accept="image/*,application/pdf"
-          onChange={handleFileChange}
-        />
-
-        <label>Signature</label>
-        <input
-          type="file"
-          name="signature"
-          accept="image/*,application/pdf"
-          onChange={handleFileChange}
-        />
-
-        <button type="submit" disabled={loading}>
-
-          {loading ? "Uploading Documents..." : "Submit Agreement"}
-
-        </button>
-
-      </form>
-
-    </div>
+    </form>
 
   );
-
 };
 
 export default AgreementForm;
