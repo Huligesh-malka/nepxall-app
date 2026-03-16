@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/api";
-import imageCompression from "browser-image-compression";
+
+const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/auto/upload";
+const CLOUDINARY_UPLOAD_PRESET = "YOUR_UPLOAD_PRESET";
 
 const AgreementForm = () => {
 
@@ -9,7 +11,6 @@ const AgreementForm = () => {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -20,244 +21,97 @@ const AgreementForm = () => {
 
   const [files, setFiles] = useState({
     aadhaar_front: null,
-    aadhaar_back: null,
     pan_card: null,
     signature: null
   });
 
-  /* ================= INPUT CHANGE ================= */
-
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
+    setFormData({...formData,[e.target.name]:e.target.value});
+  };
+
+  const handleFileChange = (e) => {
+    setFiles({...files,[e.target.name]:e.target.files[0]});
+  };
+
+  /* Upload file directly to Cloudinary */
+
+  const uploadToCloudinary = async (file) => {
+
+    const data = new FormData();
+    data.append("file", file);
+    data.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+    const res = await fetch(CLOUDINARY_URL,{
+      method:"POST",
+      body:data
     });
+
+    const result = await res.json();
+
+    return result.secure_url;
   };
-
-  /* ================= FILE CHANGE ================= */
-
-  const handleFileChange = async (e) => {
-
-    const file = e.target.files[0];
-    if (!file) return;
-
-    try {
-
-      // Allow PDF without compression
-      if (file.type === "application/pdf") {
-
-        setFiles(prev => ({
-          ...prev,
-          [e.target.name]: file
-        }));
-
-        return;
-      }
-
-      // Compress images
-      const options = {
-        maxSizeMB: 0.5,
-        maxWidthOrHeight: 1200,
-        useWebWorker: true
-      };
-
-      const compressed = await imageCompression(file, options);
-
-      setFiles(prev => ({
-        ...prev,
-        [e.target.name]: compressed
-      }));
-
-    } catch (err) {
-      console.error("Compression failed", err);
-      alert("Image compression failed");
-    }
-
-  };
-
-  /* ================= SUBMIT ================= */
 
   const handleSubmit = async (e) => {
 
     e.preventDefault();
-    if (loading) return;
-
     setLoading(true);
 
-    try {
+    try{
 
-      const data = new FormData();
+      /* Upload all files in parallel */
 
-      data.append("booking_id", id);
+      const [aadhaar_url,pan_url,sign_url] = await Promise.all([
+        uploadToCloudinary(files.aadhaar_front),
+        uploadToCloudinary(files.pan_card),
+        uploadToCloudinary(files.signature)
+      ]);
 
-      Object.keys(formData).forEach(key => {
-        data.append(key, formData[key]);
+      /* Send only URLs to backend */
+
+      await api.post("/agreements-form/submit",{
+
+        booking_id:id,
+        ...formData,
+
+        aadhaar_front:aadhaar_url,
+        pan_card:pan_url,
+        signature:sign_url
+
       });
 
-      Object.keys(files).forEach(key => {
-        if (files[key]) data.append(key, files[key]);
-      });
+      alert("Agreement submitted successfully");
 
-      await api.post("/agreements-form/submit", data, {
-        headers: {
-          "Content-Type": "multipart/form-data"
-        }
-      });
+      navigate("/");
 
-      setSubmitted(true);
+    }catch(err){
 
-    } catch (error) {
-
-      console.error("Upload Error:", error);
-
-      alert("Upload failed. Try smaller files.");
-
-    } finally {
-
-      setLoading(false);
+      console.error(err);
+      alert("Upload failed");
 
     }
 
+    setLoading(false);
   };
-
-  /* ================= SUCCESS ================= */
-
-  if (submitted) {
-
-    return (
-      <div style={{ textAlign: "center", marginTop: "100px" }}>
-        <h2 style={{ color: "#10b981" }}>✅ Submission Received!</h2>
-        <p>Your documents are being processed.</p>
-
-        <button
-          onClick={() => navigate("/")}
-          style={{
-            padding: "10px 20px",
-            background: "#4f46e5",
-            color: "#fff",
-            border: "none",
-            borderRadius: "5px"
-          }}
-        >
-          Back to Home
-        </button>
-      </div>
-    );
-
-  }
-
-  /* ================= FORM ================= */
 
   return (
 
-    <div style={{
-      padding: "30px",
-      maxWidth: "600px",
-      margin: "auto",
-      background: "#fff",
-      borderRadius: "10px"
-    }}>
+    <form onSubmit={handleSubmit}>
 
-      <h2>Submit Agreement (Booking #{id})</h2>
+      <input name="full_name" placeholder="Full Name" onChange={handleChange} required/>
+      <input name="mobile" placeholder="Mobile" onChange={handleChange} required/>
+      <input name="pan_number" placeholder="PAN Number" onChange={handleChange}/>
 
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: "15px" }}>
+      <input type="file" name="aadhaar_front" onChange={handleFileChange}/>
+      <input type="file" name="pan_card" onChange={handleFileChange}/>
+      <input type="file" name="signature" onChange={handleFileChange}/>
 
-        <input
-          style={styles.input}
-          placeholder="Full Name"
-          name="full_name"
-          onChange={handleChange}
-          required
-        />
+      <button type="submit">
+        {loading ? "Uploading..." : "Submit Agreement"}
+      </button>
 
-        <input
-          style={styles.input}
-          placeholder="Mobile"
-          name="mobile"
-          onChange={handleChange}
-          required
-        />
-
-        <input
-          style={styles.input}
-          placeholder="PAN Number"
-          name="pan_number"
-          onChange={handleChange}
-        />
-
-        <div style={styles.fileBox}>
-          <label>Aadhaar Front</label>
-          <input
-            type="file"
-            name="aadhaar_front"
-            accept="image/*,application/pdf"
-            onChange={handleFileChange}
-          />
-        </div>
-
-        <div style={styles.fileBox}>
-          <label>PAN Card</label>
-          <input
-            type="file"
-            name="pan_card"
-            accept="image/*,application/pdf"
-            onChange={handleFileChange}
-          />
-        </div>
-
-        <div style={styles.fileBox}>
-          <label>Signature</label>
-          <input
-            type="file"
-            name="signature"
-            accept="image/*,application/pdf"
-            onChange={handleFileChange}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            ...styles.btn,
-            background: loading ? "#999" : "#4f46e5"
-          }}
-        >
-          {loading ? "Uploading..." : "Submit Agreement"}
-        </button>
-
-      </form>
-
-    </div>
+    </form>
 
   );
-
-};
-
-const styles = {
-
-  input: {
-    padding: "12px",
-    border: "1px solid #ddd",
-    borderRadius: "5px"
-  },
-
-  fileBox: {
-    padding: "10px",
-    border: "1px dashed #ccc",
-    borderRadius: "5px",
-    background: "#f9f9f9"
-  },
-
-  btn: {
-    padding: "15px",
-    color: "#fff",
-    border: "none",
-    borderRadius: "5px",
-    fontWeight: "bold",
-    cursor: "pointer"
-  }
-
 };
 
 export default AgreementForm;
