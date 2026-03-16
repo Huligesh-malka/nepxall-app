@@ -29,14 +29,16 @@ const AgreementForm = () => {
     signature: null
   });
 
-  /* ================= INPUT HANDLERS ================= */
+  /* ================= TEXT INPUT ================= */
 
   const handleChange = (e) => {
-    setFormData(prev => ({
-      ...prev,
+    setFormData({
+      ...formData,
       [e.target.name]: e.target.value
-    }));
+    });
   };
+
+  /* ================= FILE INPUT ================= */
 
   const handleFileChange = (e) => {
 
@@ -44,17 +46,15 @@ const AgreementForm = () => {
 
     if (!file) return;
 
-    /* Validate file size (max 5MB) */
-
     if (file.size > 5 * 1024 * 1024) {
-      alert("File size must be under 5MB");
+      alert("File must be under 5MB");
       return;
     }
 
-    setFiles(prev => ({
-      ...prev,
+    setFiles({
+      ...files,
       [e.target.name]: file
-    }));
+    });
   };
 
   /* ================= CLOUDINARY UPLOAD ================= */
@@ -93,12 +93,12 @@ const AgreementForm = () => {
       return result.secure_url;
 
     } catch (error) {
-      console.error("Upload Error:", error);
+      console.error("Cloudinary Upload Error:", error);
       throw error;
     }
   };
 
-  /* ================= SUBMIT ================= */
+  /* ================= FORM SUBMIT ================= */
 
   const handleSubmit = async (e) => {
 
@@ -107,7 +107,7 @@ const AgreementForm = () => {
     if (loading) return;
 
     if (!files.aadhaar_front || !files.pan_card || !files.signature) {
-      alert("Please upload all required documents.");
+      alert("Please upload all documents.");
       return;
     }
 
@@ -117,7 +117,7 @@ const AgreementForm = () => {
 
       setProgress("Uploading documents...");
 
-      /* Upload all images in parallel */
+      /* Upload images in parallel */
 
       const [aadhaar_url, pan_url, sign_url] = await Promise.all([
         uploadToCloudinary(files.aadhaar_front, "Aadhaar"),
@@ -135,19 +135,38 @@ const AgreementForm = () => {
         signature: sign_url
       });
 
+      /* ⭐ Clear progress before success */
+
+      setProgress("");
+      setLoading(false);
+
       alert("✅ Agreement submitted successfully");
+
+      /* Reset form */
+
+      setFormData({
+        full_name: "",
+        mobile: "",
+        email: "",
+        pan_number: ""
+      });
+
+      setFiles({
+        aadhaar_front: null,
+        pan_card: null,
+        signature: null
+      });
 
       navigate("/");
 
     } catch (error) {
 
       console.error("Submission Error:", error);
-      alert("❌ Upload failed. Please try again.");
-
-    } finally {
 
       setLoading(false);
       setProgress("");
+
+      alert("❌ Upload failed. Please try again.");
 
     }
 
