@@ -25,6 +25,8 @@ const AgreementForm = () => {
     signature: null
   });
 
+  /* ================= TEXT INPUT ================= */
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -32,7 +34,8 @@ const AgreementForm = () => {
     });
   };
 
-  // 🚀 COMPRESS IMAGE BEFORE UPLOAD
+  /* ================= FILE INPUT ================= */
+
   const handleFileChange = async (e) => {
 
     const file = e.target.files[0];
@@ -40,12 +43,20 @@ const AgreementForm = () => {
 
     try {
 
-      // if PDF skip compression
+      // allow PDF without compression
       if (file.type === "application/pdf") {
+
         setFiles(prev => ({
           ...prev,
           [e.target.name]: file
         }));
+
+        return;
+      }
+
+      // size check
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File must be under 5MB");
         return;
       }
 
@@ -62,15 +73,21 @@ const AgreementForm = () => {
         [e.target.name]: compressedFile
       }));
 
-    } catch (err) {
-      console.error("Compression failed", err);
+    } catch (error) {
+
+      console.error("Compression error:", error);
       alert("Image compression failed");
+
     }
+
   };
+
+  /* ================= SUBMIT FORM ================= */
 
   const handleSubmit = async (e) => {
 
     e.preventDefault();
+
     if (loading) return;
 
     setLoading(true);
@@ -79,7 +96,7 @@ const AgreementForm = () => {
 
       const data = new FormData();
 
-      data.append("booking_id", parseInt(id) || "");
+      data.append("booking_id", id);
 
       Object.keys(formData).forEach(key => {
         data.append(key, formData[key]);
@@ -91,7 +108,11 @@ const AgreementForm = () => {
         }
       });
 
-      await api.post("/agreements-form/submit", data);
+      await api.post("/agreements-form/submit", data, {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        }
+      });
 
       setSubmitted(true);
 
@@ -99,10 +120,10 @@ const AgreementForm = () => {
 
       console.error("Upload Error:", error);
 
-      if (error.message === "Network Error") {
-        setSubmitted(true);
+      if (error.response) {
+        alert(error.response.data?.message || "Upload failed");
       } else {
-        alert("Upload failed. Try smaller files (under 2MB).");
+        alert("Network error. Try again.");
       }
 
     } finally {
@@ -110,13 +131,18 @@ const AgreementForm = () => {
       setLoading(false);
 
     }
+
   };
 
+  /* ================= SUCCESS PAGE ================= */
+
   if (submitted) {
+
     return (
       <div style={{ textAlign: "center", marginTop: "100px" }}>
+
         <h2 style={{ color: "#10b981" }}>✅ Submission Received!</h2>
-        <p>Your documents are being processed.</p>
+        <p>Your agreement documents were uploaded successfully.</p>
 
         <button
           onClick={() => navigate("/")}
@@ -133,7 +159,10 @@ const AgreementForm = () => {
 
       </div>
     );
+
   }
+
+  /* ================= FORM UI ================= */
 
   return (
 
@@ -163,6 +192,13 @@ const AgreementForm = () => {
           name="mobile"
           onChange={handleChange}
           required
+        />
+
+        <input
+          style={styles.input}
+          placeholder="Email"
+          name="email"
+          onChange={handleChange}
         />
 
         <input
@@ -220,13 +256,15 @@ const AgreementForm = () => {
             background: loading ? "#999" : "#4f46e5"
           }}
         >
-          {loading ? "Processing Uploads..." : "Submit Agreement"}
+          {loading ? "Uploading..." : "Submit Agreement"}
         </button>
 
       </form>
 
     </div>
+
   );
+
 };
 
 const styles = {
