@@ -29,16 +29,12 @@ const AgreementForm = () => {
     signature: null
   });
 
-  /* ================= TEXT INPUT ================= */
-
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
   };
-
-  /* ================= FILE INPUT ================= */
 
   const handleFileChange = (e) => {
 
@@ -55,50 +51,43 @@ const AgreementForm = () => {
       ...files,
       [e.target.name]: file
     });
+
   };
 
   /* ================= CLOUDINARY UPLOAD ================= */
 
   const uploadToCloudinary = async (file, label) => {
 
-    if (!file) return null;
+    setProgress(`Compressing ${label}...`);
 
-    try {
+    const compressedFile = await imageCompression(file, {
+      maxSizeMB: 0.5,
+      maxWidthOrHeight: 1280,
+      useWebWorker: true
+    });
 
-      setProgress(`Compressing ${label}...`);
+    setProgress(`Uploading ${label}...`);
 
-      const compressedFile = await imageCompression(file, {
-        maxSizeMB: 0.5,
-        maxWidthOrHeight: 1280,
-        useWebWorker: true
-      });
+    const data = new FormData();
+    data.append("file", compressedFile);
+    data.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
 
-      setProgress(`Uploading ${label}...`);
+    const response = await fetch(CLOUDINARY_URL, {
+      method: "POST",
+      body: data
+    });
 
-      const data = new FormData();
-      data.append("file", compressedFile);
-      data.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+    const result = await response.json();
 
-      const response = await fetch(CLOUDINARY_URL, {
-        method: "POST",
-        body: data
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error?.message || "Cloudinary upload failed");
-      }
-
-      return result.secure_url;
-
-    } catch (error) {
-      console.error("Cloudinary Upload Error:", error);
-      throw error;
+    if (!response.ok) {
+      throw new Error(result.error?.message || "Upload failed");
     }
+
+    return result.secure_url;
+
   };
 
-  /* ================= FORM SUBMIT ================= */
+  /* ================= SUBMIT ================= */
 
   const handleSubmit = async (e) => {
 
@@ -117,8 +106,6 @@ const AgreementForm = () => {
 
       setProgress("Uploading documents...");
 
-      /* Upload images in parallel */
-
       const [aadhaar_url, pan_url, sign_url] = await Promise.all([
         uploadToCloudinary(files.aadhaar_front, "Aadhaar"),
         uploadToCloudinary(files.pan_card, "PAN Card"),
@@ -127,70 +114,57 @@ const AgreementForm = () => {
 
       setProgress("Saving agreement data...");
 
-      await api.post("/agreements-form/submit", {
-        booking_id: id,
-        ...formData,
-        aadhaar_front: aadhaar_url,
-        pan_card: pan_url,
-        signature: sign_url
-      });
+      /* Timeout protection (20s) */
 
-      /* ⭐ Clear progress before success */
+      const response = await Promise.race([
+        api.post("/agreements-form/submit", {
+          booking_id: id,
+          ...formData,
+          aadhaar_front: aadhaar_url,
+          pan_card: pan_url,
+          signature: sign_url
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Server timeout")), 20000)
+        )
+      ]);
 
       setProgress("");
       setLoading(false);
 
-      alert("✅ Agreement submitted successfully");
-
-      /* Reset form */
-
-      setFormData({
-        full_name: "",
-        mobile: "",
-        email: "",
-        pan_number: ""
-      });
-
-      setFiles({
-        aadhaar_front: null,
-        pan_card: null,
-        signature: null
-      });
-
-      navigate("/");
+      if (response?.data?.success) {
+        alert("✅ Agreement submitted successfully");
+        navigate("/");
+      } else {
+        alert("Saved but server response missing");
+      }
 
     } catch (error) {
 
-      console.error("Submission Error:", error);
+      console.error(error);
 
-      setLoading(false);
       setProgress("");
+      setLoading(false);
 
-      alert("❌ Upload failed. Please try again.");
+      alert("Server did not respond. Please try again.");
 
     }
 
   };
 
-  /* ================= UI ================= */
-
   return (
-    <div
-      style={{
-        maxWidth: "600px",
-        margin: "auto",
-        padding: "30px",
-        background: "#fff",
-        borderRadius: "10px"
-      }}
-    >
+
+    <div style={{
+      maxWidth: "600px",
+      margin: "auto",
+      padding: "30px",
+      background: "#fff",
+      borderRadius: "10px"
+    }}>
 
       <h2>Submit Agreement (Booking #{id})</h2>
 
-      <form
-        onSubmit={handleSubmit}
-        style={{ display: "grid", gap: "15px" }}
-      >
+      <form onSubmit={handleSubmit} style={{ display: "grid", gap: "15px" }}>
 
         <input
           name="full_name"
@@ -228,7 +202,6 @@ const AgreementForm = () => {
           name="aadhaar_front"
           accept="image/*"
           onChange={handleFileChange}
-          required
         />
 
         <label>PAN Card</label>
@@ -237,7 +210,6 @@ const AgreementForm = () => {
           name="pan_card"
           accept="image/*"
           onChange={handleFileChange}
-          required
         />
 
         <label>Signature</label>
@@ -246,7 +218,6 @@ const AgreementForm = () => {
           name="signature"
           accept="image/*"
           onChange={handleFileChange}
-          required
         />
 
         <button
@@ -258,8 +229,7 @@ const AgreementForm = () => {
             color: "#fff",
             border: "none",
             borderRadius: "6px",
-            fontWeight: "bold",
-            cursor: "pointer"
+            fontWeight: "bold"
           }}
         >
           {loading ? "Uploading..." : "Submit Agreement"}
@@ -272,8 +242,11 @@ const AgreementForm = () => {
         )}
 
       </form>
+
     </div>
+
   );
+
 };
 
 export default AgreementForm;
