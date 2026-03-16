@@ -9,6 +9,7 @@ const CLOUDINARY_URL =
 const CLOUDINARY_UPLOAD_PRESET = "nepxall_unsigned";
 
 const AgreementForm = () => {
+
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -28,31 +29,43 @@ const AgreementForm = () => {
     signature: null
   });
 
-  /* ================= TEXT INPUT ================= */
+  /* ================= INPUT HANDLERS ================= */
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
   };
 
-  /* ================= FILE INPUT ================= */
-
   const handleFileChange = (e) => {
-    setFiles({
-      ...files,
-      [e.target.name]: e.target.files[0]
-    });
+
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    /* Validate file size (max 5MB) */
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size must be under 5MB");
+      return;
+    }
+
+    setFiles(prev => ({
+      ...prev,
+      [e.target.name]: file
+    }));
   };
 
   /* ================= CLOUDINARY UPLOAD ================= */
 
   const uploadToCloudinary = async (file, label) => {
+
     if (!file) return null;
 
     try {
 
       setProgress(`Compressing ${label}...`);
-
-      /* Compress image */
 
       const compressedFile = await imageCompression(file, {
         maxSizeMB: 0.5,
@@ -74,24 +87,29 @@ const AgreementForm = () => {
       const result = await response.json();
 
       if (!response.ok) {
-        console.error(result);
-        throw new Error(result.error.message);
+        throw new Error(result.error?.message || "Cloudinary upload failed");
       }
 
       return result.secure_url;
 
     } catch (error) {
-      console.error("Cloudinary Upload Error:", error);
+      console.error("Upload Error:", error);
       throw error;
     }
   };
 
-  /* ================= FORM SUBMIT ================= */
+  /* ================= SUBMIT ================= */
 
   const handleSubmit = async (e) => {
+
     e.preventDefault();
 
     if (loading) return;
+
+    if (!files.aadhaar_front || !files.pan_card || !files.signature) {
+      alert("Please upload all required documents.");
+      return;
+    }
 
     setLoading(true);
 
@@ -109,8 +127,6 @@ const AgreementForm = () => {
 
       setProgress("Saving agreement data...");
 
-      /* Send URLs to backend */
-
       await api.post("/agreements-form/submit", {
         booking_id: id,
         ...formData,
@@ -124,32 +140,43 @@ const AgreementForm = () => {
       navigate("/");
 
     } catch (error) {
+
       console.error("Submission Error:", error);
       alert("❌ Upload failed. Please try again.");
+
+    } finally {
+
+      setLoading(false);
+      setProgress("");
+
     }
 
-    setLoading(false);
-    setProgress("");
   };
 
   /* ================= UI ================= */
 
   return (
-    <div style={{
-      maxWidth: "600px",
-      margin: "auto",
-      padding: "30px",
-      background: "#fff",
-      borderRadius: "10px"
-    }}>
+    <div
+      style={{
+        maxWidth: "600px",
+        margin: "auto",
+        padding: "30px",
+        background: "#fff",
+        borderRadius: "10px"
+      }}
+    >
 
       <h2>Submit Agreement (Booking #{id})</h2>
 
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: "15px" }}>
+      <form
+        onSubmit={handleSubmit}
+        style={{ display: "grid", gap: "15px" }}
+      >
 
         <input
           name="full_name"
           placeholder="Full Name"
+          value={formData.full_name}
           onChange={handleChange}
           required
         />
@@ -157,6 +184,7 @@ const AgreementForm = () => {
         <input
           name="mobile"
           placeholder="Mobile"
+          value={formData.mobile}
           onChange={handleChange}
           required
         />
@@ -164,12 +192,14 @@ const AgreementForm = () => {
         <input
           name="email"
           placeholder="Email"
+          value={formData.email}
           onChange={handleChange}
         />
 
         <input
           name="pan_number"
           placeholder="PAN Number"
+          value={formData.pan_number}
           onChange={handleChange}
         />
 
@@ -179,6 +209,7 @@ const AgreementForm = () => {
           name="aadhaar_front"
           accept="image/*"
           onChange={handleFileChange}
+          required
         />
 
         <label>PAN Card</label>
@@ -187,6 +218,7 @@ const AgreementForm = () => {
           name="pan_card"
           accept="image/*"
           onChange={handleFileChange}
+          required
         />
 
         <label>Signature</label>
@@ -195,6 +227,7 @@ const AgreementForm = () => {
           name="signature"
           accept="image/*"
           onChange={handleFileChange}
+          required
         />
 
         <button
@@ -206,14 +239,15 @@ const AgreementForm = () => {
             color: "#fff",
             border: "none",
             borderRadius: "6px",
-            fontWeight: "bold"
+            fontWeight: "bold",
+            cursor: "pointer"
           }}
         >
           {loading ? "Uploading..." : "Submit Agreement"}
         </button>
 
         {progress && (
-          <p style={{ color: "#555", fontSize: "14px" }}>
+          <p style={{ fontSize: "14px", color: "#555" }}>
             {progress}
           </p>
         )}
