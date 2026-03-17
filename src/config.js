@@ -186,4 +186,4 @@ if (typeof window !== "undefined" && !IS_PRODUCTION) {
   window.API_CONFIG = API_CONFIG;
   window.testBackend = testBackendConnection;
   window.getImageUrl = getImageUrl;
-}
+}  
