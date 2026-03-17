@@ -9,7 +9,6 @@ const CLOUDINARY_URL =
 const CLOUDINARY_UPLOAD_PRESET = "nepxall_unsigned";
 
 const AgreementForm = () => {
-
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -29,6 +28,8 @@ const AgreementForm = () => {
     signature: null
   });
 
+  /* ================= INPUT ================= */
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -37,9 +38,7 @@ const AgreementForm = () => {
   };
 
   const handleFileChange = (e) => {
-
     const file = e.target.files[0];
-
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
@@ -51,13 +50,11 @@ const AgreementForm = () => {
       ...files,
       [e.target.name]: file
     });
-
   };
 
-  /* ================= CLOUDINARY UPLOAD ================= */
+  /* ================= CLOUDINARY ================= */
 
   const uploadToCloudinary = async (file, label) => {
-
     setProgress(`Compressing ${label}...`);
 
     const compressedFile = await imageCompression(file, {
@@ -84,13 +81,22 @@ const AgreementForm = () => {
     }
 
     return result.secure_url;
+  };
 
+  /* ================= BACKEND WAKE ================= */
+
+  const wakeBackend = async () => {
+    try {
+      await fetch("https://nepxall-backend.onrender.com/api/health");
+      console.log("✅ Backend awake");
+    } catch (err) {
+      console.warn("⚠️ Backend wake failed");
+    }
   };
 
   /* ================= SUBMIT ================= */
 
   const handleSubmit = async (e) => {
-
     e.preventDefault();
 
     if (loading) return;
@@ -103,8 +109,10 @@ const AgreementForm = () => {
     setLoading(true);
 
     try {
+      setProgress("🔄 Preparing backend...");
+      await wakeBackend(); // 🔥 FIX
 
-      setProgress("Uploading documents...");
+      setProgress("📤 Uploading documents...");
 
       const [aadhaar_url, pan_url, sign_url] = await Promise.all([
         uploadToCloudinary(files.aadhaar_front, "Aadhaar"),
@@ -112,22 +120,16 @@ const AgreementForm = () => {
         uploadToCloudinary(files.signature, "Signature")
       ]);
 
-      setProgress("Saving agreement data...");
+      setProgress("💾 Saving agreement...");
 
-      /* Timeout protection (20s) */
-
-      const response = await Promise.race([
-        api.post("/agreements-form/submit", {
-          booking_id: id,
-          ...formData,
-          aadhaar_front: aadhaar_url,
-          pan_card: pan_url,
-          signature: sign_url
-        }),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Server timeout")), 20000)
-        )
-      ]);
+      // ✅ REMOVED Promise.race (NO TIMEOUT BUG)
+      const response = await api.post("/agreements-form/submit", {
+        booking_id: id,
+        ...formData,
+        aadhaar_front: aadhaar_url,
+        pan_card: pan_url,
+        signature: sign_url
+      });
 
       setProgress("");
       setLoading(false);
@@ -136,36 +138,38 @@ const AgreementForm = () => {
         alert("✅ Agreement submitted successfully");
         navigate("/");
       } else {
-        alert("Saved but server response missing");
+        alert("Saved but unexpected response");
       }
 
     } catch (error) {
-
-      console.error(error);
+      console.error("❌ ERROR:", error);
 
       setProgress("");
       setLoading(false);
 
-      alert("Server did not respond. Please try again.");
-
+      if (error.message.includes("Network")) {
+        alert("⚠️ Network issue. Please check internet.");
+      } else {
+        alert("❌ Server error. Please try again.");
+      }
     }
-
   };
 
+  /* ================= UI ================= */
+
   return (
-
-    <div style={{
-      maxWidth: "600px",
-      margin: "auto",
-      padding: "30px",
-      background: "#fff",
-      borderRadius: "10px"
-    }}>
-
+    <div
+      style={{
+        maxWidth: "600px",
+        margin: "auto",
+        padding: "30px",
+        background: "#fff",
+        borderRadius: "10px"
+      }}
+    >
       <h2>Submit Agreement (Booking #{id})</h2>
 
       <form onSubmit={handleSubmit} style={{ display: "grid", gap: "15px" }}>
-
         <input
           name="full_name"
           placeholder="Full Name"
@@ -232,7 +236,7 @@ const AgreementForm = () => {
             fontWeight: "bold"
           }}
         >
-          {loading ? "Uploading..." : "Submit Agreement"}
+          {loading ? "Processing..." : "Submit Agreement"}
         </button>
 
         {progress && (
@@ -240,13 +244,9 @@ const AgreementForm = () => {
             {progress}
           </p>
         )}
-
       </form>
-
     </div>
-
   );
-
 };
 
 export default AgreementForm;
