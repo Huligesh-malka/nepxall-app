@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/api";
 
 const AgreementForm = () => {
-  const { id } = useParams(); // Get booking_id from URL
+  const { id } = useParams(); 
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
@@ -49,23 +49,19 @@ const AgreementForm = () => {
 
     try {
       const data = new FormData();
-      
-      // text fields
       data.append("full_name", formData.full_name);
       data.append("mobile", formData.mobile);
       data.append("email", formData.email);
       data.append("pan_number", formData.pan_number);
       
-      // ✅ Safety check: Only append booking_id if it's a real value
+      // ✅ Sends null if id is missing instead of the string "undefined"
       if (id && id !== "undefined") {
         data.append("booking_id", id);
       }
 
-      // Grab user_id from localStorage if you use it
       const userId = localStorage.getItem("user_id");
       if (userId) data.append("user_id", userId);
 
-      // Files
       data.append("aadhaar_front", files.aadhaar_front);
       data.append("pan_card", files.pan_card);
       data.append("signature", files.signature);
@@ -82,15 +78,19 @@ const AgreementForm = () => {
       console.error("❌ Submission error:", error);
       alert(error.response?.data?.message || "Server Error. Please try again.");
     } finally {
+      // ✅ This ensures the button resets even if there is an error
       setLoading(false);
       setProgress("");
     }
   };
 
+  const inputStyle = { padding: "12px", border: "1px solid #ddd", borderRadius: "6px" };
+  const fileBoxStyle = { display: "flex", flexDirection: "column", gap: "5px", fontSize: "14px", fontWeight: "bold" };
+
   return (
     <div style={{ maxWidth: "600px", margin: "40px auto", padding: "30px", background: "#fff", borderRadius: "10px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
       <h2 style={{ textAlign: "center", color: "#333" }}>Agreement Submission</h2>
-      <p style={{ textAlign: "center", color: "#666" }}>Booking ID: {id || "N/A"}</p>
+      <p style={{ textAlign: "center", color: "#666" }}>Booking ID: {id && id !== "undefined" ? id : "N/A"}</p>
       
       <form onSubmit={handleSubmit} style={{ display: "grid", gap: "15px" }}>
         <input name="full_name" placeholder="Full Name (as per Aadhaar)" onChange={handleChange} required style={inputStyle} />
@@ -100,12 +100,12 @@ const AgreementForm = () => {
 
         <div style={fileBoxStyle}>
           <label>Aadhaar Front</label>
-          <input type="file" name="aadhaar_front" accept="image/*" onChange={handleFileChange} required />
+          <input type="file" name="aadhaar_front" accept="image/*,application/pdf" onChange={handleFileChange} required />
         </div>
 
         <div style={fileBoxStyle}>
           <label>PAN Card</label>
-          <input type="file" name="pan_card" accept="image/*" onChange={handleFileChange} required />
+          <input type="file" name="pan_card" accept="image/*,application/pdf" onChange={handleFileChange} required />
         </div>
 
         <div style={fileBoxStyle}>
@@ -128,13 +128,10 @@ const AgreementForm = () => {
         >
           {loading ? "Processing..." : "Submit Agreement"}
         </button>
-        {progress && <p style={{ textAlign: "center", color: "#6366f1" }}>{progress}</p>}
+        {progress && <p style={{ textAlign: "center", color: "#6366f1", marginTop: "10px" }}>{progress}</p>}
       </form>
     </div>
   );
 };
-
-const inputStyle = { padding: "12px", border: "1px solid #ddd", borderRadius: "6px" };
-const fileBoxStyle = { display: "flex", flexDirection: "column", gap: "5px", fontSize: "14px", fontWeight: "bold" };
 
 export default AgreementForm;
