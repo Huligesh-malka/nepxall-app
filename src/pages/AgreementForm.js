@@ -3,99 +3,106 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/api";
 
 const AgreementForm = () => {
-  const { id } = useParams(); 
+  const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState("");
 
   const [formData, setFormData] = useState({
-    full_name: "", father_name: "", dob: "", mobile: "", email: "",
-    occupation: "", company_name: "", address: "", city: "", state: "", pincode: "",
-    aadhaar_number: "", pan_number: "", checkin_date: "",
-    agreement_months: "", rent: "", deposit: "", maintenance: ""
+    full_name: "", father_name: "", mobile: "", email: "",
+    address: "", city: "", state: "", pincode: "",
+    aadhaar_last4: "", pan_number: "",
+    checkin_date: "", agreement_months: "",
+    rent: "", deposit: "", maintenance: "0"
   });
 
-  const [files, setFiles] = useState({
-    aadhaar_front: null, aadhaar_back: null, pan_card: null, signature: null
-  });
+  const [signature, setSignature] = useState(null);
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file && file.size > 5 * 1024 * 1024) return alert("File under 5MB only");
-    setFiles({ ...files, [e.target.name]: file });
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    // Limit Aadhaar to 4 digits
+    if (name === "aadhaar_last4" && value.length > 4) return;
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!signature) return alert("Signature is required");
+
     setLoading(true);
-    setProgress("📤 Submitting Agreement...");
+    const data = new FormData();
+    
+    // Append all text fields
+    Object.keys(formData).forEach(key => data.append(key, formData[key]));
+    
+    // Metadata
+    if (id && id !== "undefined") data.append("booking_id", id);
+    const userId = localStorage.getItem("user_id");
+    if (userId) data.append("user_id", userId);
+
+    // Signature File
+    data.append("signature", signature);
 
     try {
-      const data = new FormData();
-      // Append all text fields
-      Object.keys(formData).forEach(key => data.append(key, formData[key]));
-      
-      // Append ID and Files
-      if (id && id !== "undefined") data.append("booking_id", id);
-      const userId = localStorage.getItem("user_id");
-      if (userId) data.append("user_id", userId);
-
-      data.append("aadhaar_front", files.aadhaar_front);
-      data.append("aadhaar_back", files.aadhaar_back);
-      data.append("pan_card", files.pan_card);
-      data.append("signature", files.signature);
-
-      const response = await api.post("/agreements-form/submit", data);
-      if (response.data.success) {
-        alert("✅ Submitted Successfully!");
+      const res = await api.post("/agreements-form/submit", data);
+      if (res.data.success) {
+        alert("✅ Agreement Saved!");
         navigate("/");
       }
     } catch (err) {
-      alert("Submission failed");
+      alert("Error saving data");
     } finally {
       setLoading(false);
-      setProgress("");
     }
   };
 
-  const inputStyle = { padding: "10px", border: "1px solid #ccc", borderRadius: "5px" };
+  const inputStyle = { padding: "12px", border: "1px solid #ddd", borderRadius: "6px", width: "100%" };
 
   return (
-    <div style={{ maxWidth: "800px", margin: "20px auto", padding: "20px", background: "#f9f9f9" }}>
-      <h2>Complete Agreement Form</h2>
-      <form onSubmit={handleSubmit} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
-        <input name="full_name" placeholder="Full Name" onChange={handleChange} required style={inputStyle} />
-        <input name="father_name" placeholder="Father's Name" onChange={handleChange} style={inputStyle} />
-        <input name="dob" type="date" placeholder="DOB" onChange={handleChange} style={inputStyle} />
-        <input name="mobile" placeholder="Mobile" onChange={handleChange} required style={inputStyle} />
-        <input name="email" placeholder="Email" onChange={handleChange} style={inputStyle} />
-        <input name="occupation" placeholder="Occupation" onChange={handleChange} style={inputStyle} />
-        <input name="company_name" placeholder="Company/College" onChange={handleChange} style={inputStyle} />
-        <input name="address" placeholder="Full Address" onChange={handleChange} style={{...inputStyle, gridColumn: "span 2"}} />
-        <input name="city" placeholder="City" onChange={handleChange} style={inputStyle} />
-        <input name="state" placeholder="State" onChange={handleChange} style={inputStyle} />
-        <input name="pincode" placeholder="Pincode" onChange={handleChange} style={inputStyle} />
-        <input name="aadhaar_number" placeholder="Aadhaar Number" onChange={handleChange} style={inputStyle} />
-        <input name="pan_number" placeholder="PAN Number" onChange={handleChange} style={inputStyle} />
-        <input name="checkin_date" type="date" onChange={handleChange} style={inputStyle} />
+    <div style={{ maxWidth: "700px", margin: "40px auto", padding: "30px", background: "white", boxShadow: "0 5px 15px rgba(0,0,0,0.1)" }}>
+      <h2 style={{ textAlign: "center" }}>Rental Agreement Form</h2>
+      <form onSubmit={handleSubmit} style={{ display: "grid", gap: "15px" }}>
         
-        <div style={{gridColumn: "span 2", display: "flex", gap: "10px"}}>
-          <input name="rent" type="number" placeholder="Rent" onChange={handleChange} style={inputStyle} />
-          <input name="deposit" type="number" placeholder="Deposit" onChange={handleChange} style={inputStyle} />
-          <input name="agreement_months" type="number" placeholder="Months" onChange={handleChange} style={inputStyle} />
+        <div style={{ display: "flex", gap: "10px" }}>
+          <input name="full_name" placeholder="Full Name" onChange={handleChange} required style={inputStyle} />
+          <input name="father_name" placeholder="Father's Name" onChange={handleChange} style={inputStyle} />
         </div>
 
-        <div style={{gridColumn: "span 2"}}>
-          <label>Aadhaar Front</label><input type="file" name="aadhaar_front" onChange={handleFileChange} required />
-          <label>Aadhaar Back</label><input type="file" name="aadhaar_back" onChange={handleFileChange} required />
-          <label>PAN Card</label><input type="file" name="pan_card" onChange={handleFileChange} required />
-          <label>Signature</label><input type="file" name="signature" onChange={handleFileChange} required />
+        <div style={{ display: "flex", gap: "10px" }}>
+          <input name="mobile" placeholder="Mobile" onChange={handleChange} required style={inputStyle} />
+          <input name="email" placeholder="Email" onChange={handleChange} style={inputStyle} />
         </div>
 
-        <button disabled={loading} style={{ gridColumn: "span 2", padding: "15px", background: "blue", color: "white" }}>
-          {loading ? "Processing..." : "Submit Full Agreement"}
+        <textarea name="address" placeholder="Current Full Address" onChange={handleChange} required style={{ ...inputStyle, height: "80px" }} />
+
+        <div style={{ display: "flex", gap: "10px" }}>
+          <input name="city" placeholder="City" onChange={handleChange} style={inputStyle} />
+          <input name="state" placeholder="State" onChange={handleChange} style={inputStyle} />
+          <input name="pincode" placeholder="Pincode" onChange={handleChange} style={inputStyle} />
+        </div>
+
+        <div style={{ display: "flex", gap: "10px" }}>
+          <input name="aadhaar_last4" placeholder="Aadhaar (Last 4 Digits)" type="number" onChange={handleChange} required style={inputStyle} />
+          <input name="pan_number" placeholder="PAN Number" onChange={handleChange} style={inputStyle} />
+        </div>
+
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <label style={{ flex: 1 }}>Check-in Date: <input name="checkin_date" type="date" onChange={handleChange} required style={inputStyle} /></label>
+          <input name="agreement_months" type="number" placeholder="Months (e.g. 11)" onChange={handleChange} required style={inputStyle} />
+        </div>
+
+        <div style={{ display: "flex", gap: "10px" }}>
+          <input name="rent" type="number" placeholder="Rent Amount" onChange={handleChange} required style={inputStyle} />
+          <input name="deposit" type="number" placeholder="Deposit Amount" onChange={handleChange} required style={inputStyle} />
+          <input name="maintenance" type="number" placeholder="Maintenance" onChange={handleChange} style={inputStyle} />
+        </div>
+
+        <div>
+          <label style={{ fontWeight: "bold" }}>Digital Signature (Image):</label>
+          <input type="file" name="signature" accept="image/*" onChange={(e) => setSignature(e.target.files[0])} required />
+        </div>
+
+        <button type="submit" disabled={loading} style={{ padding: "15px", background: "#4f46e5", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" }}>
+          {loading ? "Saving..." : "Submit Agreement"}
         </button>
       </form>
     </div>
