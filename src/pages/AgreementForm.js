@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/api";
 
 const AgreementForm = () => {
-  const { id } = useParams();
+  const { id } = useParams(); // This is the booking_id
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
@@ -13,7 +13,8 @@ const AgreementForm = () => {
     full_name: "",
     mobile: "",
     email: "",
-    pan_number: ""
+    pan_number: "",
+    user_id: localStorage.getItem("user_id") || "" // Grab user_id if stored
   });
 
   const [files, setFiles] = useState({
@@ -40,23 +41,22 @@ const AgreementForm = () => {
     if (loading) return;
 
     if (!files.aadhaar_front || !files.pan_card || !files.signature) {
-      alert("Please upload all required documents.");
+      alert("Please upload Aadhaar Front, PAN Card, and Signature.");
       return;
     }
 
     setLoading(true);
-    setProgress("📤 Uploading & Saving...");
+    setProgress("📤 Uploading documents and saving agreement...");
 
     try {
-      // Use FormData to send actual file objects
       const data = new FormData();
+      // Append text fields
+      Object.keys(formData).forEach(key => {
+        data.append(key, formData[key]);
+      });
       data.append("booking_id", id);
-      data.append("full_name", formData.full_name);
-      data.append("mobile", formData.mobile);
-      data.append("email", formData.email);
-      data.append("pan_number", formData.pan_number);
 
-      // Append raw files
+      // Append files
       data.append("aadhaar_front", files.aadhaar_front);
       data.append("pan_card", files.pan_card);
       data.append("signature", files.signature);
@@ -66,12 +66,13 @@ const AgreementForm = () => {
       });
 
       if (response?.data?.success) {
-        alert("✅ Agreement submitted successfully");
+        alert("✅ Agreement submitted successfully!");
         navigate("/");
       }
     } catch (error) {
       console.error("❌ Submission error:", error);
-      alert(error.response?.data?.message || "Server Error. Please try again.");
+      const errorMsg = error.response?.data?.message || "Server Error. The database might be down.";
+      alert(errorMsg);
     } finally {
       setLoading(false);
       setProgress("");
@@ -79,30 +80,83 @@ const AgreementForm = () => {
   };
 
   return (
-    <div style={{ maxWidth: "600px", margin: "auto", padding: "30px", background: "#fff", borderRadius: "10px", boxShadow: "0 4px 6px rgba(0,0,0,0.1)" }}>
-      <h2>Submit Agreement (Booking #{id})</h2>
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: "15px" }}>
-        <input name="full_name" placeholder="Full Name" onChange={handleChange} required style={{ padding: '10px' }} />
-        <input name="mobile" placeholder="Mobile" onChange={handleChange} required style={{ padding: '10px' }} />
-        <input name="email" placeholder="Email" onChange={handleChange} style={{ padding: '10px' }} />
-        <input name="pan_number" placeholder="PAN Number" onChange={handleChange} style={{ padding: '10px' }} />
+    <div style={{ maxWidth: "600px", margin: "40px auto", padding: "30px", background: "#fff", borderRadius: "12px", boxShadow: "0 10px 25px rgba(0,0,0,0.1)" }}>
+      <h2 style={{ marginBottom: "20px", color: "#1e293b" }}>Agreement Form (Booking #{id})</h2>
+      
+      <form onSubmit={handleSubmit} style={{ display: "grid", gap: "20px" }}>
+        <div>
+          <label style={{ display: "block", marginBottom: "5px", fontWeight: "600" }}>Full Name</label>
+          <input name="full_name" placeholder="As per Aadhaar" onChange={handleChange} required style={inputStyle} />
+        </div>
 
-        <label>Aadhaar Front</label>
-        <input type="file" name="aadhaar_front" accept="image/*" onChange={handleFileChange} />
+        <div>
+          <label style={{ display: "block", marginBottom: "5px", fontWeight: "600" }}>Mobile Number</label>
+          <input name="mobile" placeholder="10-digit mobile" onChange={handleChange} required style={inputStyle} />
+        </div>
 
-        <label>PAN Card</label>
-        <input type="file" name="pan_card" accept="image/*" onChange={handleFileChange} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
+          <div>
+            <label style={{ display: "block", marginBottom: "5px", fontWeight: "600" }}>Email</label>
+            <input name="email" type="email" placeholder="Email" onChange={handleChange} style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ display: "block", marginBottom: "5px", fontWeight: "600" }}>PAN Number</label>
+            <input name="pan_number" placeholder="PAN Number" onChange={handleChange} style={inputStyle} />
+          </div>
+        </div>
 
-        <label>Signature</label>
-        <input type="file" name="signature" accept="image/*" onChange={handleFileChange} />
+        <hr style={{ border: "0", borderTop: "1px solid #e2e8f0", margin: "10px 0" }} />
 
-        <button type="submit" disabled={loading} style={{ padding: "12px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer" }}>
+        <div>
+          <label style={{ display: "block", marginBottom: "5px", fontWeight: "600" }}>Aadhaar Front</label>
+          <input type="file" name="aadhaar_front" accept="image/*" onChange={handleFileChange} required />
+        </div>
+
+        <div>
+          <label style={{ display: "block", marginBottom: "5px", fontWeight: "600" }}>PAN Card</label>
+          <input type="file" name="pan_card" accept="image/*" onChange={handleFileChange} required />
+        </div>
+
+        <div>
+          <label style={{ display: "block", marginBottom: "5px", fontWeight: "600" }}>Signature</label>
+          <input type="file" name="signature" accept="image/*" onChange={handleFileChange} required />
+        </div>
+
+        <button 
+          type="submit" 
+          disabled={loading} 
+          style={{ 
+            padding: "14px", 
+            background: loading ? "#94a3b8" : "#4f46e5", 
+            color: "#fff", 
+            border: "none", 
+            borderRadius: "8px", 
+            fontWeight: "bold", 
+            fontSize: "16px",
+            cursor: loading ? "not-allowed" : "pointer",
+            transition: "background 0.2s"
+          }}
+        >
           {loading ? "Processing..." : "Submit Agreement"}
         </button>
-        {progress && <p style={{ fontSize: "14px", color: "#555", textAlign: "center" }}>{progress}</p>}
+
+        {progress && (
+          <p style={{ fontSize: "14px", color: "#6366f1", textAlign: "center", fontWeight: "500" }}>
+            {progress}
+          </p>
+        )}
       </form>
     </div>
   );
+};
+
+const inputStyle = {
+  width: "100%",
+  padding: "12px",
+  border: "1px solid #cbd5e1",
+  borderRadius: "6px",
+  fontSize: "14px",
+  boxSizing: "border-box"
 };
 
 export default AgreementForm;
