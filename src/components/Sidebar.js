@@ -63,11 +63,10 @@ const Sidebar = () => {
             <Link style={linkStyle(isActive("/user/aadhaar-kyc"))} to="/user/aadhaar-kyc">
               🛂 Aadhaar KYC
             </Link>
-                {/* ⭐ NEW DIGILOCKER KYC */}
-    <Link style={linkStyle(isActive("/user/digilocker"))} to="/user/digilocker">
-      🔐 DigiLocker KYC
-    </Link>
 
+            <Link style={linkStyle(isActive("/user/digilocker"))} to="/user/digilocker">
+              🔐 DigiLocker KYC
+            </Link>
 
             <Link style={linkStyle(isActive("/"))} to="/">
               🔍 Browse Properties
@@ -111,7 +110,6 @@ const Sidebar = () => {
               💰 Earnings / Payments
             </Link>
 
-            {/* ⭐ PREMIUM PLAN */}
             <Link style={linkStyle(isActive("/owner/premium"))} to="/owner/premium">
               ⭐ Premium Plans
             </Link>
@@ -150,22 +148,6 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* ================= VENDOR ================= */}
-        {isLoggedIn && role === "vendor" && (
-          <>
-            <hr style={divider} />
-            <p style={sectionLabel}>VENDOR</p>
-
-            <Link style={linkStyle(isActive("/vendor/dashboard"))} to="/vendor/dashboard">
-              📊 Dashboard
-            </Link>
-
-            <Link style={linkStyle(isActive("/vendor/services"))} to="/vendor/services">
-              🛠 My Assigned Services
-            </Link>
-          </>
-        )}
-
         {/* ================= ADMIN ================= */}
         {isLoggedIn && role === "admin" && (
           <>
@@ -195,6 +177,28 @@ const Sidebar = () => {
             <Link style={linkStyle(isActive("/admin/settlement-history"))} to="/admin/settlement-history">
               📜 Settlement History
             </Link>
+
+            {/* ✅ NEW AGREEMENT MENU */}
+            <Link style={linkStyle(isActive("/admin/agreements"))} to="/admin/agreements">
+              📄 Agreements
+            </Link>
+
+          </>
+        )}
+
+        {/* ================= VENDOR ================= */}
+        {isLoggedIn && role === "vendor" && (
+          <>
+            <hr style={divider} />
+            <p style={sectionLabel}>VENDOR</p>
+
+            <Link style={linkStyle(isActive("/vendor/dashboard"))} to="/vendor/dashboard">
+              📊 Dashboard
+            </Link>
+
+            <Link style={linkStyle(isActive("/vendor/services"))} to="/vendor/services">
+              🛠 My Assigned Services
+            </Link>
           </>
         )}
 
@@ -218,18 +222,15 @@ const Sidebar = () => {
       {/* ================= USER INFO ================= */}
       {isLoggedIn && (
         <div style={userInfoStyle}>
-
           <hr style={divider} />
 
           <p style={{ color: "#94a3b8", fontSize: 12, margin: 0 }}>
             Logged in as
-            <span
-              style={{
-                color: "#fff",
-                fontWeight: "bold",
-                textTransform: "capitalize",
-              }}
-            >
+            <span style={{
+              color: "#fff",
+              fontWeight: "bold",
+              textTransform: "capitalize",
+            }}>
               {" "} {role}
             </span>
           </p>
@@ -237,14 +238,11 @@ const Sidebar = () => {
           <p style={{ color: "#4CAF50", fontSize: 11 }}>
             {localStorage.getItem("email")?.split("@")[0] || "User"}
           </p>
-
         </div>
       )}
 
     </div>
-
   );
-
 };
 
 export default Sidebar;

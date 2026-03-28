@@ -76,9 +76,11 @@ import AdminSettlements from "./pages/admin/AdminSettlements";
 import AdminFinanceDashboard from "./pages/admin/AdminFinanceDashboard";
 import SettlementHistory from "./pages/admin/SettlementHistory";
 import AdminPayments from "./pages/admin/AdminPayments";
-
-/* ADMIN SERVICE */
 import AdminServiceBookings from "./pages/admin/AdminServiceBookings";
+
+/* ✅ NEW ADMIN AGREEMENT PAGES */
+import AdminAgreements from "./pages/admin/AdminAgreements";
+import AdminAgreementDetails from "./pages/admin/AdminAgreementDetails";
 
 /* VENDOR */
 import VendorDashboard from "./pages/VendorDashboard";
@@ -94,15 +96,11 @@ function App() {
   const [user, setUser] = useState(undefined);
 
   useEffect(() => {
-
     testBackendConnection();
-
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
     });
-
     return unsub;
-
   }, []);
 
   if (user === undefined) return null;
@@ -111,17 +109,13 @@ function App() {
     user ? children : <Navigate to="/login" replace />;
 
   const RoleRoute = ({ children, allowedRole }) => {
-
     const role = localStorage.getItem("role");
-
     return user && role === allowedRole
       ? children
       : <Navigate to="/" replace />;
-
   };
 
   return (
-
     <Routes>
 
       {/* PUBLIC */}
@@ -142,13 +136,7 @@ function App() {
       <Route path="/register" element={<Register />} />
 
       {/* USER ROUTES */}
-      <Route
-        element={
-          <PrivateRoute>
-            <MainLayout />
-          </PrivateRoute>
-        }
-      >
+      <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
 
         <Route path="/booking/:pgId" element={<BookingForm />} />
         <Route path="/user/bookings" element={<UserBookingHistory />} />
@@ -156,40 +144,31 @@ function App() {
         <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/payment/:bookingId" element={<PaymentPage />} />
         <Route path="/agreement/:bookingId" element={<AgreementPage />} />
-
         <Route path="/agreement-form/:bookingId" element={<AgreementForm />} />
-
         <Route path="/user/my-stay" element={<UserActiveStay />} />
         <Route path="/user/notifications" element={<NotificationBell />} />
         <Route path="/user/aadhaar-kyc" element={<AadhaarKyc />} />
 
-        {/* ⭐ DIGILOCKER KYC */}
         <Route path="/user/digilocker" element={<DigiLockerVerify />} />
         <Route path="/digilocker/callback" element={<DigiLockerCallback />} />
 
         <Route path="/user/visit-schedule/:bookingId" element={<VisitSchedulePage />} />
         <Route path="/public/agreement/:hash" element={<PublicAgreementPage />} />
-
         <Route path="/user/premium" element={<UserPremiumPlans />} />
 
         <Route path="/chat/private/:userId/:pgId" element={<PrivateChat />} />
 
       </Route>
 
-      {/* OWNER ROUTES */}
-      <Route
-        path="/owner"
-        element={
-          <PrivateRoute>
-            <RoleRoute allowedRole="owner">
-              <OwnerLayout />
-            </RoleRoute>
-          </PrivateRoute>
-        }
-      >
-
+      {/* OWNER */}
+      <Route path="/owner" element={
+        <PrivateRoute>
+          <RoleRoute allowedRole="owner">
+            <OwnerLayout />
+          </RoleRoute>
+        </PrivateRoute>
+      }>
         <Route index element={<Navigate to="dashboard" replace />} />
-
         <Route path="dashboard" element={<OwnerDashboard />} />
         <Route path="payments" element={<OwnerPayments />} />
         <Route path="premium" element={<OwnerPremiumPlans />} />
@@ -207,24 +186,17 @@ function App() {
         <Route path="property/:propertyId/plans" element={<CreatePlan />} />
         <Route path="notifications" element={<OwnerNotifications />} />
         <Route path="chats" element={<OwnerChatList />} />
-        <Route path="chat/private/:userId" element={<PrivateChat />} />
-
       </Route>
 
       {/* ADMIN */}
-      <Route
-        path="/admin"
-        element={
-          <PrivateRoute>
-            <RoleRoute allowedRole="admin">
-              <AdminLayout />
-            </RoleRoute>
-          </PrivateRoute>
-        }
-      >
-
+      <Route path="/admin" element={
+        <PrivateRoute>
+          <RoleRoute allowedRole="admin">
+            <AdminLayout />
+          </RoleRoute>
+        </PrivateRoute>
+      }>
         <Route index element={<Navigate to="finance" replace />} />
-
         <Route path="finance" element={<AdminFinanceDashboard />} />
         <Route path="payments" element={<AdminPayments />} />
         <Route path="settlements" element={<AdminSettlements />} />
@@ -234,32 +206,28 @@ function App() {
         <Route path="owner-verification" element={<AdminOwnerVerification />} />
         <Route path="services" element={<AdminServiceBookings />} />
 
+        {/* ✅ NEW AGREEMENT ROUTES */}
+        <Route path="agreements" element={<AdminAgreements />} />
+        <Route path="agreement/:id" element={<AdminAgreementDetails />} />
       </Route>
 
       {/* VENDOR */}
-      <Route
-        path="/vendor"
-        element={
-          <PrivateRoute>
-            <RoleRoute allowedRole="vendor">
-              <VendorLayout />
-            </RoleRoute>
-          </PrivateRoute>
-        }
-      >
-
+      <Route path="/vendor" element={
+        <PrivateRoute>
+          <RoleRoute allowedRole="vendor">
+            <VendorLayout />
+          </RoleRoute>
+        </PrivateRoute>
+      }>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<VendorDashboard />} />
-
       </Route>
 
       {/* FALLBACK */}
       <Route path="*" element={<Navigate to="/" replace />} />
 
     </Routes>
-
   );
-
 }
 
 export default App;
