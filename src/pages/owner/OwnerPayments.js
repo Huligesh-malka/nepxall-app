@@ -37,7 +37,7 @@ import {
 } from "@mui/icons-material";
 
 const API = "https://nepxall-backend.onrender.com/api/owner";
-const BASE_URL = "https://nepxall-backend.onrender.com"; // For PDF links
+const BASE_URL = "https://nepxall-backend.onrender.com"; // Base URL for PDF access
 
 export default function OwnerPayments() {
   const [data, setData] = useState([]);
@@ -49,6 +49,7 @@ export default function OwnerPayments() {
 
   const token = localStorage.getItem("token");
 
+  // Decode token to get user info
   useEffect(() => {
     if (token) {
       try {
@@ -62,6 +63,7 @@ export default function OwnerPayments() {
     }
   }, [token]);
 
+  // Fetch Payments
   const fetchPayments = async (showRefreshing = false) => {
     try {
       if (showRefreshing) setRefreshing(true);
@@ -122,10 +124,17 @@ export default function OwnerPayments() {
     }).format(amount || 0);
   };
 
-  // Function to open PDF
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      day: 'numeric', month: 'short', year: 'numeric'
+    });
+  };
+
+  // Logic to open the PDF in a new tab
   const handleViewPdf = (pdfPath) => {
     if (!pdfPath) return;
-    // Handle both absolute and relative paths
+    // Check if the path is already a full URL or needs the base prefix
     const fullUrl = pdfPath.startsWith('http') ? pdfPath : `${BASE_URL}/${pdfPath}`;
     window.open(fullUrl, '_blank');
   };
@@ -148,14 +157,14 @@ export default function OwnerPayments() {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4} sx={{ flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
         <Box>
           <Typography variant="h4" fontWeight="bold">💰 Owner Dashboard</Typography>
-          <Typography variant="body2" color="text.secondary">Manage your earnings and signed agreements</Typography>
+          <Typography variant="body2" color="text.secondary">Track payments and download signed agreements</Typography>
         </Box>
         <Button variant="contained" onClick={() => loadAllData(true)} disabled={refreshing} startIcon={<Refresh />}>
           {refreshing ? 'Refreshing...' : 'Refresh'}
         </Button>
       </Box>
 
-      {/* Stats */}
+      {/* Summary Stats */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={4}>
           <Card sx={{ bgcolor: 'primary.main', color: 'white' }}>
@@ -194,12 +203,13 @@ export default function OwnerPayments() {
               <TableCell align="right"><strong>Amount</strong></TableCell>
               <TableCell align="center"><strong>Status</strong></TableCell>
               <TableCell align="center"><strong>Agreement</strong></TableCell> {/* NEW COLUMN */}
+              <TableCell><strong>Date</strong></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 5 }}>No records found</TableCell>
+                <TableCell colSpan={7} align="center" sx={{ py: 8 }}>No records found</TableCell>
               </TableRow>
             ) : (
               data.map((item, index) => (
@@ -214,13 +224,17 @@ export default function OwnerPayments() {
                     {formatCurrency(item.amount || item.owner_amount)}
                   </TableCell>
                   <TableCell align="center">
-                    <Chip label={getPaymentStatusLabel(item.payment_status)} color={getPaymentStatusColor(item.payment_status)} size="small" />
+                    <Chip 
+                      label={getPaymentStatusLabel(item.payment_status)} 
+                      color={getPaymentStatusColor(item.payment_status)} 
+                      size="small" 
+                    />
                   </TableCell>
                   
-                  {/* PDF VIEW CELL */}
+                  {/* PDF AGREEMENT CELL */}
                   <TableCell align="center">
                     {item.final_pdf ? (
-                      <Tooltip title="View Signed Agreement">
+                      <Tooltip title="View/Download Signed Agreement">
                         <Button
                           variant="outlined"
                           size="small"
@@ -233,11 +247,17 @@ export default function OwnerPayments() {
                         </Button>
                       </Tooltip>
                     ) : (
-                      <Typography variant="caption" color="text.secondary">
-                        <PendingActions sx={{ fontSize: 14, verticalAlign: 'middle', mr: 0.5 }} />
-                        Not Uploaded
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
+                        <PendingActions sx={{ fontSize: 16, mr: 0.5 }} />
+                        <Typography variant="caption">N/A</Typography>
+                      </Box>
                     )}
+                  </TableCell>
+
+                  <TableCell>
+                    <Typography variant="caption">
+                      {formatDate(item.payment_date || item.booking_date)}
+                    </Typography>
                   </TableCell>
                 </TableRow>
               ))
