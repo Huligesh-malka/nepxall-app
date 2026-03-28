@@ -7,6 +7,8 @@ const AdminAgreementDetails = () => {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
 
   const BACKEND_URL = "https://nepxall-backend.onrender.com";
 
@@ -24,6 +26,33 @@ const AdminAgreementDetails = () => {
     }
   };
 
+  const handleFileChange = (e) => {
+    setSelectedFile(e.target.files[0]);
+  };
+
+  const handleUploadPDF = async () => {
+    if (!selectedFile) return alert("Please select a PDF file first");
+    
+    const formData = new FormData();
+    formData.append("final_pdf", selectedFile);
+
+    setUploading(true);
+    try {
+      const res = await api.put(`/agreements/admin/${id}/upload-pdf`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (res.data.success) {
+        alert("PDF Uploaded Successfully!");
+        fetchData(); // Refresh data to show the PDF link
+      }
+    } catch (err) {
+      alert("Failed to upload PDF");
+    } finally {
+      setUploading(false);
+      setSelectedFile(null);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, [id]);
@@ -31,11 +60,7 @@ const AdminAgreementDetails = () => {
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    return date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   };
 
   if (loading) return <div style={loaderWrap}>Loading Details...</div>;
@@ -44,9 +69,7 @@ const AdminAgreementDetails = () => {
   return (
     <div style={container}>
       <div style={topNav}>
-        <button onClick={() => navigate(-1)} style={backBtn}>
-          ← Back to List
-        </button>
+        <button onClick={() => navigate(-1)} style={backBtn}>← Back to List</button>
       </div>
 
       <div style={headerSection}>
@@ -57,46 +80,64 @@ const AdminAgreementDetails = () => {
         <span style={statusBadge(data.status)}>{data.status || "Pending"}</span>
       </div>
 
+      {/* PDF UPLOAD SECTION */}
+      <div style={{ ...card, marginBottom: "24px", border: "2px dashed #2563eb", backgroundColor: "#eff6ff" }}>
+        <div style={cardContent}>
+          <h3 style={{ ...cardTitle, backgroundColor: "transparent", border: "none", padding: 0 }}>📄 Upload Final Signed PDF</h3>
+          <p style={{ fontSize: "14px", color: "#1e40af", marginBottom: "15px" }}>Upload the final agreement PDF here to share it with the user.</p>
+          
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <input type="file" accept="application/pdf" onChange={handleFileChange} style={fileInput} />
+            <button 
+              onClick={handleUploadPDF} 
+              disabled={uploading || !selectedFile} 
+              style={uploadBtn}
+            >
+              {uploading ? "Uploading..." : "Upload & Approve"}
+            </button>
+          </div>
+
+          {data.final_pdf && (
+            <div style={{ marginTop: "15px" }}>
+              <a 
+                href={`${BACKEND_URL}/${data.final_pdf.replace(/\\/g, '/')}`} 
+                target="_blank" 
+                rel="noreferrer"
+                style={viewPdfLink}
+              >
+                👁️ View Existing PDF
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div style={grid}>
-        {/* Card 1: Personal */}
         <div style={card}>
           <h3 style={cardTitle}>👤 Personal Information</h3>
           <div style={cardContent}>
             <DataField label="Full Name" value={data.full_name} />
-            <DataField label="Father's Name" value={data.father_name} />
-            <DataField label="Mobile Number" value={data.mobile} />
-            <DataField label="Email Address" value={data.email} />
-            <DataField label="Aadhaar (Last 4)" value={data.aadhaar_last4} />
-            <DataField label="PAN Number" value={data.pan_number} />
+            <DataField label="Mobile" value={data.mobile} />
+            <DataField label="Email" value={data.email} />
+            <DataField label="PAN" value={data.pan_number} />
           </div>
         </div>
 
-        {/* Card 2: Property */}
         <div style={card}>
-          <h3 style={cardTitle}>🏠 Property & Financials</h3>
+          <h3 style={cardTitle}>🏠 Property Details</h3>
           <div style={cardContent}>
-            <DataField label="Address" value={data.address} />
-            <DataField label="Location" value={`${data.city}, ${data.state} - ${data.pincode}`} />
-            <DataField label="Check-in Date" value={formatDate(data.checkin_date)} highlight />
-            <DataField label="Stay Duration" value={`${data.agreement_months} Months`} />
-            <DataField label="Monthly Rent" value={`₹${data.rent}`} isMoney />
-            <DataField label="Security Deposit" value={`₹${data.deposit}`} isMoney />
-            <DataField label="Maintenance" value={`₹${data.maintenance}`} isMoney />
+            <DataField label="Rent" value={`₹${data.rent}`} isMoney />
+            <DataField label="Deposit" value={`₹${data.deposit}`} isMoney />
+            <DataField label="Check-in" value={formatDate(data.checkin_date)} highlight />
           </div>
         </div>
       </div>
 
-      {/* Signature Section */}
       <div style={{ ...card, marginTop: "24px" }}>
         <h3 style={cardTitle}>✍️ Digital Signature</h3>
         <div style={sigContainer}>
           {data.signature ? (
-            <img
-              src={`${BACKEND_URL}/${data.signature.replace(/\\/g, '/')}`}
-              alt="Signature"
-              style={sigImg}
-              onError={(e) => { e.target.src = "https://via.placeholder.com/300x150?text=Signature+Image+Missing"; }}
-            />
+            <img src={`${BACKEND_URL}/${data.signature.replace(/\\/g, '/')}`} alt="Signature" style={sigImg} />
           ) : (
             <div style={noSig}>No signature provided</div>
           )}
@@ -106,21 +147,12 @@ const AdminAgreementDetails = () => {
   );
 };
 
-/* --- Helper Components --- */
-const DataField = ({ label, value, highlight, isMoney }) => (
-  <div style={fieldRow}>
-    <span style={fieldLabel}>{label}</span>
-    <span style={{ 
-      ...fieldValue, 
-      color: highlight ? "#2563eb" : isMoney ? "#059669" : "#1e293b",
-      fontWeight: isMoney || highlight ? "700" : "500"
-    }}>
-      {value || "Not Provided"}
-    </span>
-  </div>
-);
+/* --- Updated Styles --- */
+const fileInput = { padding: "8px", border: "1px solid #bfdbfe", borderRadius: "6px", backgroundColor: "#fff" };
+const uploadBtn = { backgroundColor: "#2563eb", color: "#fff", border: "none", padding: "10px 20px", borderRadius: "8px", fontWeight: "600", cursor: "pointer", opacity: "1" };
+const viewPdfLink = { display: "inline-block", color: "#2563eb", fontWeight: "600", textDecoration: "none", marginTop: "10px" };
 
-/* --- Modern Styles --- */
+/* ... Existing Styles From Previous Response ... */
 const container = { padding: "40px", maxWidth: "1100px", margin: "0 auto", backgroundColor: "#f8fafc", minHeight: "100vh" };
 const topNav = { display: "flex", justifyContent: "flex-start", alignItems: "center", marginBottom: "30px" };
 const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "32px" };
@@ -136,20 +168,27 @@ const fieldValue = { fontSize: "15px" };
 const sigContainer = { padding: "40px", textAlign: "center", backgroundColor: "#fdfdfd" };
 const sigImg = { maxHeight: "180px", width: "auto", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "10px", backgroundColor: "#fff" };
 const noSig = { color: "#94a3b8", fontStyle: "italic" };
-
 const backBtn = { background: "#fff", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: "8px", color: "#64748b", cursor: "pointer", fontWeight: "600" };
 const loaderWrap = { display: "grid", placeItems: "center", height: "100vh", fontSize: "18px", color: "#64748b" };
+
+const DataField = ({ label, value, highlight, isMoney }) => (
+    <div style={fieldRow}>
+      <span style={fieldLabel}>{label}</span>
+      <span style={{ 
+        ...fieldValue, 
+        color: highlight ? "#2563eb" : isMoney ? "#059669" : "#1e293b",
+        fontWeight: isMoney || highlight ? "700" : "500"
+      }}>
+        {value || "Not Provided"}
+      </span>
+    </div>
+  );
 
 const statusBadge = (status) => {
   const isApproved = status === "approved";
   const isRejected = status === "rejected";
   return {
-    padding: "6px 16px",
-    borderRadius: "99px",
-    fontSize: "14px",
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: "0.5px",
+    padding: "6px 16px", borderRadius: "99px", fontSize: "14px", fontWeight: "700", textTransform: "uppercase",
     backgroundColor: isApproved ? "#dcfce7" : isRejected ? "#fee2e2" : "#fef9c3",
     color: isApproved ? "#15803d" : isRejected ? "#b91c1c" : "#a16207",
     border: `1px solid ${isApproved ? "#86efac" : isRejected ? "#fca5a5" : "#fef08a"}`
