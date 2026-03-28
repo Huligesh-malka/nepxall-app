@@ -10,7 +10,7 @@ const AdminAgreementDetails = () => {
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
 
-  // Use the production backend URL for local assets (signatures)
+  // Use the production backend URL for local assets
   const BACKEND_URL = "https://nepxall-backend.onrender.com";
 
   const fetchData = async () => {
@@ -27,11 +27,6 @@ const AdminAgreementDetails = () => {
     }
   };
 
-  /**
-   * Helper to format image/PDF URLs.
-   * If it's a Cloudinary link (starts with http), use it as is.
-   * If it's a local path (uploads/...), prepend the backend URL.
-   */
   const formatUrl = (path) => {
     if (!path) return null;
     if (path.startsWith("http")) return path; 
@@ -42,23 +37,25 @@ const AdminAgreementDetails = () => {
     setSelectedFile(e.target.files[0]);
   };
 
-  const handleUploadPDF = async () => {
-    if (!selectedFile) return alert("Please select a PDF file first");
+  const handleUploadImage = async () => {
+    if (!selectedFile) return alert("Please select an image file first");
 
     const formData = new FormData();
-    formData.append("final_pdf", selectedFile);
+    // Note: You might need to update your backend key if it strictly expects "final_pdf"
+    formData.append("final_image", selectedFile); 
 
     setUploading(true);
     try {
-      const res = await api.put(`/agreements/admin/${id}/upload-pdf`, formData, {
+      // Assuming your backend endpoint can handle image uploads
+      const res = await api.put(`/agreements/admin/${id}/upload-image`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       if (res.data.success) {
-        alert("PDF Uploaded & Agreement Approved Successfully!");
-        fetchData(); // Refresh to update status and PDF link
+        alert("Agreement Image Uploaded & Approved!");
+        fetchData();
       }
     } catch (err) {
-      alert("Failed to upload PDF");
+      alert("Failed to upload image. Ensure backend supports image/multipart uploads.");
     } finally {
       setUploading(false);
       setSelectedFile(null);
@@ -100,25 +97,25 @@ const AdminAgreementDetails = () => {
         </span>
       </div>
 
-      {/* PDF UPLOAD & VIEW SECTION */}
+      {/* IMAGE UPLOAD & VIEW SECTION */}
       <div style={uploadCard}>
         <div style={cardContent}>
-          <h3 style={uploadCardTitle}>📄 Final Agreement PDF</h3>
+          <h3 style={uploadCardTitle}>📸 Final Signed Agreement Image</h3>
           <p style={uploadSubtitle}>
-            {data.final_pdf 
-              ? "The final agreement has been uploaded. You can re-upload to replace it." 
-              : "Upload the final signed agreement PDF to approve this request."}
+            {data.final_image || data.final_pdf 
+              ? "An agreement file exists. Upload a new image to replace it." 
+              : "Upload the photo of the signed agreement to approve."}
           </p>
 
           <div style={actionRow}>
             <input
               type="file"
-              accept="application/pdf"
+              accept="image/*"
               onChange={handleFileChange}
               style={fileInput}
             />
             <button
-              onClick={handleUploadPDF}
+              onClick={handleUploadImage}
               disabled={uploading || !selectedFile}
               style={{
                 ...uploadBtn,
@@ -130,15 +127,23 @@ const AdminAgreementDetails = () => {
             </button>
           </div>
 
-          {data.final_pdf && (
+          {(data.final_image || data.final_pdf) && (
             <div style={viewSection}>
+              <p style={{fontWeight: 'bold', marginBottom: '10px'}}>Current Document Preview:</p>
+              <img 
+                src={formatUrl(data.final_image || data.final_pdf)} 
+                alt="Final Agreement" 
+                style={previewImg}
+                onError={(e) => { e.target.style.display = 'none'; }} 
+              />
+              <br/>
               <a
-                href={formatUrl(data.final_pdf)}
+                href={formatUrl(data.final_image || data.final_pdf)}
                 target="_blank"
                 rel="noreferrer"
                 style={viewPdfLink}
               >
-                👁️ View Signed PDF
+                🔗 Open Image in New Tab
               </a>
             </div>
           )}
@@ -218,6 +223,7 @@ const uploadCardTitle = { fontSize: "18px", fontWeight: "700", color: "#1e40af",
 const uploadSubtitle = { fontSize: "14px", color: "#1e40af", marginBottom: "15px" };
 const actionRow = { display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" };
 const viewSection = { marginTop: "15px", paddingTop: "15px", borderTop: "1px solid #dbeafe" };
+const previewImg = { maxWidth: "100%", maxHeight: "300px", borderRadius: "8px", border: "1px solid #bfdbfe", marginBottom: "10px", objectFit: "contain" };
 
 const grid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(450px, 1fr))", gap: "24px" };
 const card = { background: "#fff", borderRadius: "16px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", overflow: "hidden" };
@@ -235,7 +241,7 @@ const noSig = { color: "#94a3b8", fontStyle: "italic" };
 const backBtn = { background: "#fff", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: "8px", color: "#64748b", cursor: "pointer", fontWeight: "600" };
 const fileInput = { padding: "8px", border: "1px solid #bfdbfe", borderRadius: "6px", backgroundColor: "#fff", flex: 1 };
 const uploadBtn = { backgroundColor: "#2563eb", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "8px", fontWeight: "600" };
-const viewPdfLink = { display: "inline-block", color: "#2563eb", fontWeight: "700", textDecoration: "underline", fontSize: "16px" };
+const viewPdfLink = { display: "inline-block", color: "#2563eb", fontWeight: "700", textDecoration: "underline", fontSize: "14px" };
 const loaderWrap = { display: "grid", placeItems: "center", height: "100vh", fontSize: "18px", color: "#64748b" };
 
 const statusBadge = (status) => {
