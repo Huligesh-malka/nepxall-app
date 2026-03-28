@@ -23,12 +23,21 @@ const AdminAgreements = () => {
     fetchAgreements();
   }, []);
 
+  const getStatusStyle = (status) => {
+    switch (status) {
+      case "approved": return { bg: "#dcfce7", text: "#166534" };
+      case "signed": return { bg: "#e0e7ff", text: "#4338ca" }; // Indigo for owner signed
+      case "rejected": return { bg: "#fee2e2", text: "#991b1b" };
+      default: return { bg: "#fef9c3", text: "#854d0e" };
+    }
+  };
+
   if (loading) return <p style={centered}>Loading Agreements...</p>;
 
   return (
     <div style={{ padding: "30px", maxWidth: "1200px", margin: "0 auto" }}>
       <h2 style={{ marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
-        📄 All Agreements <span style={countBadge}>{agreements.length}</span>
+        📄 Agreement Management <span style={countBadge}>{agreements.length} Total</span>
       </h2>
 
       <div style={tableContainer}>
@@ -36,8 +45,7 @@ const AdminAgreements = () => {
           <thead>
             <tr style={{ background: "#f8fafc", borderBottom: "2px solid #e2e8f0" }}>
               <th style={th}>ID</th>
-              <th style={th}>Applicant Name</th>
-              <th style={th}>Mobile</th>
+              <th style={th}>Applicant</th>
               <th style={th}>City</th>
               <th style={th}>Rent</th>
               <th style={th}>Status</th>
@@ -45,33 +53,31 @@ const AdminAgreements = () => {
             </tr>
           </thead>
           <tbody>
-            {agreements.length > 0 ? (
-              agreements.map((item) => (
+            {agreements.map((item) => {
+              const style = getStatusStyle(item.status);
+              return (
                 <tr key={item.id} style={trHover}>
                   <td style={td}>#{item.id}</td>
-                  <td style={td}><strong>{item.full_name}</strong></td>
-                  <td style={td}>{item.mobile}</td>
+                  <td style={td}>
+                    <div style={{ fontWeight: "700" }}>{item.full_name}</div>
+                    <div style={{ fontSize: "12px", color: "#64748b" }}>{item.mobile}</div>
+                  </td>
                   <td style={td}>{item.city || "N/A"}</td>
                   <td style={td}>₹{item.rent}</td>
                   <td style={td}>
-                    <span style={statusBadge(item.status)}>
+                    <span style={{ 
+                      padding: "4px 12px", borderRadius: "20px", fontSize: "11px", fontWeight: "700", 
+                      textTransform: "uppercase", backgroundColor: style.bg, color: style.text 
+                    }}>
                       {item.status || "pending"}
                     </span>
                   </td>
                   <td style={td}>
-                    <Link to={`/admin/agreement/${item.id}`} style={viewBtn}>
-                      View Details
-                    </Link>
+                    <Link to={`/admin/agreement/${item.id}`} style={viewBtn}>View Details →</Link>
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="7" style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
-                  No agreements found.
-                </td>
-              </tr>
-            )}
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -80,22 +86,12 @@ const AdminAgreements = () => {
 };
 
 /* --- Styles --- */
-const centered = { textAlign: "center", marginTop: "50px", fontSize: "18px", color: "#64748b" };
-const tableContainer = { background: "#fff", borderRadius: "12px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)", overflow: "hidden" };
-const th = { padding: "16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#475569" };
-const td = { padding: "16px", fontSize: "14px", color: "#1e293b", borderBottom: "1px solid #f1f5f9" };
+const centered = { textAlign: "center", marginTop: "50px", color: "#64748b" };
+const tableContainer = { background: "#fff", borderRadius: "12px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", border: "1px solid #e2e8f0" };
+const th = { padding: "16px", textAlign: "left", fontSize: "13px", color: "#64748b", textTransform: "uppercase" };
+const td = { padding: "16px", fontSize: "14px", borderBottom: "1px solid #f1f5f9" };
 const trHover = { transition: "background 0.2s" };
-const viewBtn = { color: "#3b82f6", textDecoration: "none", fontWeight: "600", fontSize: "13px" };
-const countBadge = { background: "#e2e8f0", padding: "2px 10px", borderRadius: "12px", fontSize: "14px" };
-
-const statusBadge = (status) => ({
-  padding: "4px 12px",
-  borderRadius: "20px",
-  fontSize: "12px",
-  fontWeight: "600",
-  textTransform: "capitalize",
-  background: status === "approved" ? "#dcfce7" : status === "pending" ? "#fef9c3" : "#f1f5f9",
-  color: status === "approved" ? "#166534" : status === "pending" ? "#854d0e" : "#475569",
-});
+const viewBtn = { color: "#2563eb", textDecoration: "none", fontWeight: "700" };
+const countBadge = { background: "#3b82f6", color: "#fff", padding: "2px 10px", borderRadius: "12px", fontSize: "12px" };
 
 export default AdminAgreements;
