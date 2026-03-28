@@ -9,7 +9,6 @@ import { userAPI } from "../api/api";
 import { useNavigate } from "react-router-dom";
 
 const PhoneLogin = () => {
-
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [confirmObj, setConfirmObj] = useState(null);
@@ -80,10 +79,14 @@ const PhoneLogin = () => {
       });
 
       if (res.data.success) {
+        // ✅ Storing session data
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("role", res.data.role);
         localStorage.setItem("name", res.data.name);
-        localStorage.setItem("userId", res.data.user?.id || "");
+        
+        // 🚨 CRITICAL FIX: Changed from "userId" to "user_id" 
+        // to match what AgreementForm.js expects
+        localStorage.setItem("user_id", res.data.user?.id || "");
 
         setSuccess(`Welcome ${res.data.name}`);
 
@@ -100,7 +103,6 @@ const PhoneLogin = () => {
 
   /* ================= SEND OTP ================= */
   const sendOtp = async () => {
-
     if (phone.length !== 10) {
       return setError("Enter valid 10 digit number");
     }
@@ -121,7 +123,7 @@ const PhoneLogin = () => {
       setSuccess("OTP sent successfully");
 
     } catch (err) {
-      setError("Failed to send OTP");
+      setError("Failed to send OTP. Please refresh and try again.");
     } finally {
       setLoading(false);
     }
@@ -129,14 +131,11 @@ const PhoneLogin = () => {
 
   /* ================= VERIFY OTP ================= */
   const verifyOtp = async () => {
-
     if (otp.length !== 6) return setError("Enter valid 6 digit OTP");
 
     try {
       setLoading(true);
-
       const res = await confirmObj.confirm(otp);
-
       setFirebaseUser(res.user);
 
       if (res._tokenResponse?.isNewUser) {
@@ -160,23 +159,25 @@ const PhoneLogin = () => {
 
   /* ================= UI ================= */
   return (
-    <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-
-      <Paper sx={{ p: 4, width: 360 }}>
-
-        <Typography variant="h5" align="center" mb={2}>
-          {isNewUser ? "Complete Registration" : "Phone Login"}
+    <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" bgcolor="#f5f5f5">
+      <Paper elevation={3} sx={{ p: 4, width: 360, borderRadius: 2 }}>
+        <Typography variant="h5" align="center" mb={2} fontWeight="bold">
+          {isNewUser ? "Complete Registration" : "Nepxall Login"}
         </Typography>
 
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-        <Snackbar open={!!success} autoHideDuration={2500}>
+        <Snackbar 
+          open={!!success} 
+          autoHideDuration={2500} 
+          onClose={() => setSuccess("")}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
           <Alert severity="success" variant="filled">
             {success}
           </Alert>
         </Snackbar>
 
-        {/* ================= PHONE INPUT ================= */}
         {!confirmObj && !isNewUser && (
           <>
             <TextField
@@ -187,47 +188,58 @@ const PhoneLogin = () => {
               margin="normal"
               inputProps={{ maxLength: 10 }}
               InputProps={{
-                startAdornment: <Typography mr={1}>+91</Typography>
+                startAdornment: <Typography mr={1} color="textSecondary">+91</Typography>
               }}
             />
-
-            <Button fullWidth variant="contained" onClick={sendOtp} disabled={loading}>
-              {loading ? <CircularProgress size={24} /> : "Send OTP"}
+            <Button 
+              fullWidth 
+              variant="contained" 
+              onClick={sendOtp} 
+              disabled={loading}
+              sx={{ mt: 2, py: 1.2 }}
+            >
+              {loading ? <CircularProgress size={24} color="inherit" /> : "Send OTP"}
             </Button>
           </>
         )}
 
-        {/* ================= OTP INPUT ================= */}
         {confirmObj && !isNewUser && (
           <>
             <TextField
               fullWidth
-              label="Enter OTP"
+              label="Enter 6-Digit OTP"
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
               margin="normal"
               inputProps={{ maxLength: 6 }}
             />
-
-            <Button fullWidth variant="contained" onClick={verifyOtp} disabled={loading}>
-              {loading ? <CircularProgress size={24} /> : "Verify OTP"}
+            <Button 
+              fullWidth 
+              variant="contained" 
+              onClick={verifyOtp} 
+              disabled={loading}
+              sx={{ mt: 2, py: 1.2 }}
+            >
+              {loading ? <CircularProgress size={24} color="inherit" /> : "Verify & Login"}
             </Button>
-
-            {otpTimer > 0 && (
-              <Typography variant="caption" display="block" mt={1}>
-                Resend OTP in {otpTimer}s
+            {otpTimer > 0 ? (
+              <Typography variant="caption" display="block" mt={2} align="center">
+                Resend available in {otpTimer}s
               </Typography>
+            ) : (
+              <Button size="small" fullWidth onClick={sendOtp} sx={{ mt: 1 }}>
+                Resend OTP
+              </Button>
             )}
           </>
         )}
 
-        {/* ================= ROLE SELECTION ================= */}
         {isNewUser && (
           <>
             <TextField
               select
               fullWidth
-              label="Register as"
+              label="I am a..."
               value={role}
               onChange={(e) => setRole(e.target.value)}
               margin="normal"
@@ -236,15 +248,19 @@ const PhoneLogin = () => {
               <MenuItem value="owner">Owner</MenuItem>
               <MenuItem value="vendor">Vendor</MenuItem>
             </TextField>
-
-            <Button fullWidth variant="contained" onClick={completeRegistration}>
-              Continue
+            <Button 
+              fullWidth 
+              variant="contained" 
+              onClick={completeRegistration}
+              sx={{ mt: 2, py: 1.2 }}
+              disabled={loading}
+            >
+              {loading ? <CircularProgress size={24} color="inherit" /> : "Finish Registration"}
             </Button>
           </>
         )}
 
         <div id="recaptcha-container"></div>
-
       </Paper>
     </Box>
   );
