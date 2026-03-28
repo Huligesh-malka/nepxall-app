@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { auth } from "../firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { Button, Box, CircularProgress } from "@mui/material";
+import { Button, Box, CircularProgress, Typography } from "@mui/material";
 import { userAPI } from "../api/api"; // Ensure this points to your axios instance
 
 const MainLayout = () => {
@@ -14,7 +14,7 @@ const MainLayout = () => {
   const [role, setRole] = useState(null);
   const [authReady, setAuthReady] = useState(false);
 
-  /* ✅ HELPER: GET & CLEAN DATA */
+  /* ✅ HELPER: NORMALIZE & FETCH LOCAL DATA */
   const getSessionData = useCallback(() => {
     const r = localStorage.getItem("role");
     const uid = localStorage.getItem("user_id");
@@ -25,34 +25,39 @@ const MainLayout = () => {
     return { role: validRole, userId: validId };
   }, []);
 
-  /* ✅ BACKGROUND RECOVERY: If localStorage is empty but Firebase is active */
+  /* ✅ SESSION RECOVERY: Rebuilds localStorage if Firebase is active but local data is lost */
   const recoverSession = async (currentUser) => {
     try {
-      const idToken = await currentUser.getIdToken();
-      // Hit your auth endpoint to get the DB user details again
+      console.log("🛠️ Attempting Session Recovery...");
+      const idToken = await currentUser.getIdToken(true);
+      
+      // Hit your existing auth endpoint to get the DB details
       const res = await userAPI.post("/auth/firebase", { idToken });
       
       if (res.data.success) {
-        console.log("🛠️ Session Recovered from Backend");
-        localStorage.setItem("role", res.data.role);
-        localStorage.setItem("user_id", res.data.user?.id || res.data.userId);
+        const recoveredRole = res.data.role;
+        const recoveredId = res.data.user?.id || res.data.userId;
+
+        localStorage.setItem("role", recoveredRole);
+        localStorage.setItem("user_id", recoveredId);
         localStorage.setItem("token", res.data.token);
-        setRole(res.data.role);
+        
+        setRole(recoveredRole);
+        console.log("✅ Session Recovered:", { recoveredRole, recoveredId });
       }
     } catch (err) {
-      console.error("Session recovery failed:", err);
+      console.error("❌ Session recovery failed:", err);
     }
   };
 
   /* ✅ FIREBASE AUTH LISTENER */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (currentUser) => {
-      const session = getSessionData();
-      
       setUser(currentUser);
-      
+      const session = getSessionData();
+
       if (currentUser) {
-        // If we have a user but no role/id in storage, trigger recovery
+        // If Firebase is logged in but local storage is empty, recover it
         if (!session.role || !session.userId) {
           await recoverSession(currentUser);
         } else {
@@ -68,7 +73,7 @@ const MainLayout = () => {
     return () => unsub();
   }, [getSessionData]);
 
-  /* ✅ LISTEN FOR STORAGE EVENTS (Sync across components) */
+  /* ✅ GLOBAL STATE SYNC */
   useEffect(() => {
     const syncUI = () => {
       const session = getSessionData();
@@ -97,6 +102,7 @@ const MainLayout = () => {
     }
   };
 
+  /* ⏳ INITIAL LOADING SCREEN */
   if (!authReady) {
     return (
       <Box height="100vh" display="flex" justifyContent="center" alignItems="center" bgcolor="#f8fafc">
@@ -106,54 +112,53 @@ const MainLayout = () => {
   }
 
   return (
-    <div style={{ display: "flex", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
-      {/* Sidebar hidden on login/register pages if they use the layout */}
+    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f8fafc" }}>
+      {/* Sidebar navigation */}
       <Sidebar role={role} />
 
       <div
         style={{
-          marginLeft: 250,
+          marginLeft: 250, // Match sidebar width
           padding: "24px",
           width: "calc(100% - 250px)",
-          transition: "all 0.3s ease"
+          transition: "margin 0.3s ease"
         }}
       >
-        {/* HEADER / NAVBAR */}
+        {/* TOP NAVIGATION BAR */}
         <Box
           sx={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             backgroundColor: "white",
-            padding: "16px 28px",
+            padding: "14px 28px",
             borderRadius: "16px",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.03)",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
             mb: 4
           }}
         >
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 800, color: "#1e293b", fontSize: '1.1rem' }}>
-              {location.pathname === "/" ? "Dashboard" : 
-               location.pathname.split("/").pop().replace("-", " ").toUpperCase()}
-            </Typography>
-          </Box>
+          {/* Dynamic Page Title */}
+          <Typography variant="h6" sx={{ fontWeight: 800, color: "#1e293b", fontSize: '1.1rem' }}>
+            {location.pathname === "/" ? "Dashboard" : 
+             location.pathname.split("/").pop().replace(/-/g, " ").toUpperCase()}
+          </Typography>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
             {user && (
               <Box sx={{ textAlign: 'right' }}>
-                <Typography sx={{ color: "#1e293b", fontSize: "14px", fontWeight: 700 }}>
-                  {user.email?.split("@")[0] || user.phoneNumber}
+                <Typography sx={{ color: "#1e293b", fontSize: "14px", fontWeight: 700, lineHeight: 1.2 }}>
+                  {user.phoneNumber || user.email?.split("@")[0]}
                 </Typography>
-                <Typography sx={{ color: '#6366f1', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>
-                  {role || 'Syncing...'}
+                <Typography sx={{ color: '#6366f1', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase' }}>
+                  {role || 'Detecting Role...'}
                 </Typography>
               </Box>
             )}
 
             {!user ? (
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button onClick={() => navigate("/login")} variant="text" sx={{ fontWeight: 700 }}>Login</Button>
-                <Button onClick={() => navigate("/register")} variant="contained" sx={{ borderRadius: '8px', boxShadow: 'none' }}>Join</Button>
+              <Box display="flex" gap={1}>
+                <Button onClick={() => navigate("/login")} variant="outlined" size="small">Login</Button>
+                <Button onClick={() => navigate("/register")} variant="contained" size="small">Join</Button>
               </Box>
             ) : (
               <Button 
@@ -161,7 +166,7 @@ const MainLayout = () => {
                 color="error" 
                 size="small" 
                 onClick={handleLogout}
-                sx={{ borderRadius: '8px', fontWeight: 700, px: 2 }}
+                sx={{ borderRadius: '8px', fontWeight: 700, textTransform: 'none' }}
               >
                 Logout
               </Button>
@@ -169,8 +174,8 @@ const MainLayout = () => {
           </Box>
         </Box>
 
-        {/* MAIN PAGE CONTENT */}
-        <Box component="main" sx={{ animation: "fadeIn 0.5s ease-in" }}>
+        {/* MAIN ROUTE CONTENT */}
+        <Box component="main" sx={{ animation: "fadeIn 0.4s ease-in" }}>
           <Outlet context={{ user, role }} />
         </Box>
       </div>
