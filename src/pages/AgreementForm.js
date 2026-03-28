@@ -1,9 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/api";
 
 const AgreementForm = () => {
-  // 1. Updated to match the /:bookingId param in your App.js
   const { bookingId } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -29,8 +28,6 @@ const AgreementForm = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    // Strict Rule: Aadhaar must be exactly 4 digits
     if (name === "aadhaar_last4") {
       const onlyNums = value.replace(/[^0-9]/g, "");
       if (onlyNums.length > 4) return;
@@ -43,7 +40,7 @@ const AgreementForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validations
+    // 1. Validation
     if (formData.aadhaar_last4.length !== 4) {
       return alert("Please enter exactly 4 digits for Aadhaar.");
     }
@@ -51,47 +48,46 @@ const AgreementForm = () => {
       return alert("Digital Signature image is required");
     }
 
+    // 2. UNIVERSAL ID RECOVERY
+    // Checks every possible key your app might have used to store the ID
+    const userId = localStorage.getItem("user_id") || 
+                   localStorage.getItem("userId") || 
+                   localStorage.getItem("id");
+    
+    if (!userId || userId === "null" || userId === "undefined") {
+      console.error("DEBUG: LocalStorage state during failure:", localStorage);
+      return alert("User session not found (ID is null). Please logout and login again to refresh your session.");
+    }
+
     setLoading(true);
     const data = new FormData();
 
-    // 2. Append all text fields
+    // 3. Append All Data
     Object.keys(formData).forEach((key) => {
       data.append(key, formData[key]);
     });
 
-    // 3. Append ID references
-    // We use booking_id (backend field name) and bookingId (from useParams)
+    // Use 'user_id' for the backend request, but the value from our recovery check
+    data.append("user_id", userId);
+    
     if (bookingId && bookingId !== "undefined") {
       data.append("booking_id", bookingId);
     }
 
-    const userId = localStorage.getItem("user_id");
-    if (userId) {
-      data.append("user_id", userId);
-    } else {
-      alert("User session not found. Please log in again.");
-      setLoading(false);
-      return;
-    }
-
-    // 4. Append File
     data.append("signature", signature);
 
     try {
-      // Endpoint matches the plural fixed route in your server.js
       const res = await api.post("/agreements-form/submit", data, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       if (res.data.success) {
         alert("✅ Agreement Submitted Successfully!");
-        navigate("/"); 
+        navigate("/my-bookings"); 
       }
     } catch (err) {
       console.error("Submission Error:", err.response?.data || err.message);
-      alert(err.response?.data?.message || "Error saving data. Please try again.");
+      alert(err.response?.data?.message || "Error saving agreement.");
     } finally {
       setLoading(false);
     }
@@ -100,24 +96,24 @@ const AgreementForm = () => {
   /* ================= STYLES ================= */
   const containerStyle = {
     maxWidth: "800px",
-    margin: "50px auto",
-    padding: "40px",
+    margin: "30px auto",
+    padding: "35px",
     backgroundColor: "#ffffff",
     borderRadius: "16px",
-    boxShadow: "0 10px 25px rgba(0,0,0,0.05)",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
     fontFamily: "'Inter', sans-serif",
   };
 
   const sectionTitle = {
-    fontSize: "14px",
+    fontSize: "12px",
     textTransform: "uppercase",
-    letterSpacing: "1px",
-    color: "#6366f1",
-    fontWeight: "700",
+    letterSpacing: "1.2px",
+    color: "#4f46e5",
+    fontWeight: "800",
     marginBottom: "15px",
     marginTop: "25px",
-    borderBottom: "1px solid #f0f0f0",
-    paddingBottom: "5px",
+    borderBottom: "2px solid #f1f5f9",
+    paddingBottom: "8px",
   };
 
   const inputStyle = {
@@ -125,8 +121,6 @@ const AgreementForm = () => {
     border: "1px solid #e2e8f0",
     borderRadius: "8px",
     fontSize: "15px",
-    outline: "none",
-    transition: "border-color 0.2s",
     width: "100%",
     backgroundColor: "#f8fafc",
   };
@@ -134,137 +128,62 @@ const AgreementForm = () => {
   const gridStyle = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-    gap: "20px",
-  };
-
-  const labelStyle = {
-    display: "block",
-    fontSize: "13px",
-    fontWeight: "600",
-    color: "#475569",
-    marginBottom: "6px",
-    marginLeft: "2px",
+    gap: "15px",
   };
 
   return (
     <div style={containerStyle}>
-      <div style={{ textAlign: "center", marginBottom: "30px" }}>
-        <h2 style={{ fontSize: "28px", fontWeight: "800", color: "#1e293b", margin: "0" }}>
-          Rental Agreement
-        </h2>
-        <p style={{ color: "#64748b", marginTop: "8px" }}>
-          Please provide accurate details for your digital contract.
-        </p>
-      </div>
-
+      <h2 style={{ textAlign: 'center', fontWeight: '800', color: '#1e293b' }}>Rental Agreement</h2>
+      
       <form onSubmit={handleSubmit}>
-        <div style={sectionTitle}>Personal Details</div>
+        <div style={sectionTitle}>Tenant Information</div>
         <div style={gridStyle}>
           <div style={{ gridColumn: "span 2" }}>
-            <label style={labelStyle}>Full Name (As per Aadhaar)</label>
-            <input name="full_name" placeholder="John Doe" onChange={handleChange} required style={inputStyle} />
+            <label style={{ fontSize: '13px', fontWeight: '600' }}>Full Name</label>
+            <input name="full_name" placeholder="Name as per Aadhaar" onChange={handleChange} required style={inputStyle} />
           </div>
-          <div>
-            <label style={labelStyle}>Mobile Number</label>
-            <input name="mobile" placeholder="+91 0000000000" onChange={handleChange} required style={inputStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>Email Address</label>
-            <input name="email" type="email" placeholder="john@example.com" onChange={handleChange} style={inputStyle} />
-          </div>
+          <input name="mobile" placeholder="Mobile Number" onChange={handleChange} required style={inputStyle} />
+          <input name="email" type="email" placeholder="Email" onChange={handleChange} style={inputStyle} />
         </div>
 
-        <div style={sectionTitle}>Address Information</div>
-        <div style={{ marginBottom: "20px" }}>
-          <label style={labelStyle}>Full Address</label>
-          <textarea
-            name="address"
-            placeholder="House No, Street, Area..."
-            onChange={handleChange}
-            required
-            style={{ ...inputStyle, height: "80px", resize: "none" }}
-          />
-        </div>
+        <div style={sectionTitle}>Current Address</div>
+        <textarea
+          name="address"
+          placeholder="Complete Address..."
+          onChange={handleChange}
+          required
+          style={{ ...inputStyle, height: "70px", resize: "none", marginBottom: '15px' }}
+        />
         <div style={gridStyle}>
           <input name="city" placeholder="City" onChange={handleChange} style={inputStyle} />
           <input name="state" placeholder="State" onChange={handleChange} style={inputStyle} />
           <input name="pincode" placeholder="Pincode" onChange={handleChange} style={inputStyle} />
         </div>
 
-        <div style={sectionTitle}>Identity & Verification</div>
+        <div style={sectionTitle}>Identity Verification</div>
         <div style={gridStyle}>
-          <div>
-            <label style={labelStyle}>Aadhaar (Last 4 Digits Only)</label>
-            <input
-              name="aadhaar_last4"
-              type="text"
-              placeholder="Ex: 5542"
-              value={formData.aadhaar_last4}
-              onChange={handleChange}
-              required
-              style={{
-                ...inputStyle,
-                borderColor: formData.aadhaar_last4.length === 4 ? "#10b981" : "#e2e8f0",
-              }}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>PAN Number</label>
-            <input name="pan_number" placeholder="ABCDE1234F" onChange={handleChange} style={inputStyle} />
-          </div>
+          <input
+            name="aadhaar_last4"
+            placeholder="Aadhaar Last 4 Digits"
+            value={formData.aadhaar_last4}
+            onChange={handleChange}
+            required
+            style={{ ...inputStyle, borderColor: formData.aadhaar_last4.length === 4 ? "#10b981" : "#e2e8f0" }}
+          />
+          <input name="pan_number" placeholder="PAN (Optional)" onChange={handleChange} style={inputStyle} />
         </div>
 
         <div style={sectionTitle}>Contract Details</div>
         <div style={gridStyle}>
-          <div>
-            <label style={labelStyle}>Check-in Date</label>
-            <input name="checkin_date" type="date" onChange={handleChange} required style={inputStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>Agreement Period (Months)</label>
-            <input name="agreement_months" type="number" placeholder="11" onChange={handleChange} required style={inputStyle} />
-          </div>
+          <input name="checkin_date" type="date" onChange={handleChange} required style={inputStyle} />
+          <input name="agreement_months" type="number" placeholder="Months (e.g. 11)" onChange={handleChange} required style={inputStyle} />
+          <input name="rent" type="number" placeholder="Monthly Rent" onChange={handleChange} required style={inputStyle} />
+          <input name="deposit" type="number" placeholder="Security Deposit" onChange={handleChange} required style={inputStyle} />
         </div>
 
-        <div style={{ ...gridStyle, marginTop: "20px" }}>
-          <div>
-            <label style={labelStyle}>Monthly Rent</label>
-            <input name="rent" type="number" placeholder="8000" onChange={handleChange} required style={inputStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>Security Deposit</label>
-            <input name="deposit" type="number" placeholder="16000" onChange={handleChange} required style={inputStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>Maintenance</label>
-            <input name="maintenance" type="number" placeholder="500" onChange={handleChange} style={inputStyle} />
-          </div>
-        </div>
-
-        <div
-          style={{
-            marginTop: "30px",
-            padding: "20px",
-            border: "2px dashed #e2e8f0",
-            borderRadius: "12px",
-            textAlign: "center",
-            backgroundColor: "#fdfdfd",
-          }}
-        >
-          <label style={{ display: "block", fontWeight: "700", marginBottom: "10px", color: "#475569" }}>
-            🖋️ Upload Digital Signature
-          </label>
-          <input
-            type="file"
-            name="signature"
-            accept="image/*"
-            onChange={(e) => setSignature(e.target.files[0])}
-            required
-            style={{ fontSize: "14px" }}
-          />
-          <p style={{ fontSize: "12px", color: "#94a3b8", marginTop: "5px" }}>
-            Upload a clear image of your signature on white paper.
-          </p>
+        <div style={{ marginTop: "30px", padding: "20px", border: "2px dashed #e2e8f0", borderRadius: "12px", textAlign: "center" }}>
+          <label style={{ display: "block", fontWeight: "700", marginBottom: "8px" }}>🖋️ Digital Signature</label>
+          <input type="file" accept="image/*" onChange={(e) => setSignature(e.target.files[0])} required />
         </div>
 
         <button
@@ -274,22 +193,15 @@ const AgreementForm = () => {
             width: "100%",
             marginTop: "30px",
             padding: "16px",
-            background: loading
-              ? "#94a3b8"
-              : "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+            background: loading ? "#94a3b8" : "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
             color: "white",
             border: "none",
             borderRadius: "10px",
-            fontSize: "16px",
             fontWeight: "700",
-            cursor: loading ? "not-allowed" : "pointer",
-            boxShadow: "0 4px 12px rgba(79, 70, 229, 0.3)",
-            transition: "transform 0.2s",
+            cursor: "pointer"
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-2px)")}
-          onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
         >
-          {loading ? "Processing..." : "Submit Agreement"}
+          {loading ? "Submitting..." : "Submit Agreement"}
         </button>
       </form>
     </div>
