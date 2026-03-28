@@ -8,9 +8,6 @@ const AdminAgreementDetails = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  
-  // State for the E-Stamp file
-  const [estampFile, setEstampFile] = useState(null);
 
   const BACKEND_URL = "https://nepxall-backend.onrender.com";
 
@@ -28,25 +25,17 @@ const AdminAgreementDetails = () => {
     }
   };
 
-  const handleApproveAndUpload = async () => {
-    if (!estampFile) {
-      alert("Please select the E-Stamp Paper PDF or Image first!");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("status", "approved");
-    formData.append("estamp_paper", estampFile);
-
+  const updateStatus = async (newStatus) => {
+    if (!window.confirm(`Are you sure you want to mark this as ${newStatus}?`)) return;
     setUpdating(true);
     try {
-      const res = await api.put(`/agreements/admin/${id}/status`, formData);
+      const res = await api.put(`/agreements/admin/${id}/status`, { status: newStatus });
       if (res.data.success) {
-        alert("E-Stamp Uploaded & Agreement Approved!");
-        fetchData(); 
+        setData({ ...data, status: newStatus });
+        alert(`Agreement ${newStatus} successfully!`);
       }
     } catch (err) {
-      alert("Failed to upload E-Stamp");
+      alert("Failed to update status");
     } finally {
       setUpdating(false);
     }
@@ -56,147 +45,153 @@ const AdminAgreementDetails = () => {
     fetchData();
   }, [id]);
 
-  if (loading) return <div style={loaderWrap}>Loading...</div>;
-  if (!data) return <div style={loaderWrap}>Not found.</div>;
+  // Clean date formatter
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  if (loading) return <div style={loaderWrap}>Loading Details...</div>;
+  if (!data) return <div style={loaderWrap}>Agreement not found.</div>;
 
   return (
     <div style={container}>
-      {/* Top Header / Navigation */}
+      {/* Top Header */}
       <div style={topNav}>
-        <button onClick={() => navigate(-1)} style={backBtn}>← Back to List</button>
-        <span style={statusBadgeStyle(data.status)}>{data.status}</span>
+        <button onClick={() => navigate(-1)} style={backBtn}>
+          ← Back to List
+        </button>
+        <div style={actionGroup}>
+          <button 
+            onClick={() => updateStatus("rejected")} 
+            disabled={updating || data.status === 'rejected'}
+            style={rejectBtn}
+          >
+            Reject
+          </button>
+          <button 
+            onClick={() => updateStatus("approved")} 
+            disabled={updating || data.status === 'approved'}
+            style={approveBtn}
+          >
+            Approve Agreement
+          </button>
+        </div>
       </div>
 
       <div style={headerSection}>
-        <h1 style={title}>Review Agreement #ID-{data.id}</h1>
-        <p style={subtitle}>Submitted by {data.full_name} on {new Date(data.created_at).toLocaleDateString()}</p>
+        <div>
+          <h1 style={title}>Agreement #ID-{data.id}</h1>
+          <p style={subtitle}>Submitted on {formatDate(data.created_at)}</p>
+        </div>
+        <span style={statusBadge(data.status)}>{data.status || "Pending"}</span>
       </div>
 
-      {/* STEP 1: ADMIN ACTION AREA - SHOWS ONLY IF PENDING */}
-      {data.status === 'pending' && (
-        <div style={uploadCard}>
-          <div style={uploadInfo}>
-            <h3 style={{ margin: '0 0 10px 0', color: '#1e293b' }}>🚀 Action Required: Upload E-Stamp</h3>
-            <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>
-              To approve this agreement, please upload the legal E-Stamp paper. 
-              Once uploaded, the Owner will be notified to sign.
-            </p>
-          </div>
-          <div style={uploadControls}>
-            <input 
-              type="file" 
-              accept=".pdf, .jpg, .jpeg, .png"
-              onChange={(e) => setEstampFile(e.target.files[0])} 
-              style={fileInputCustom} 
-            />
-            <div style={actionGroup}>
-              <button onClick={handleApproveAndUpload} disabled={updating || !estampFile} style={approveBtn}>
-                {updating ? "Uploading..." : "Approve & Upload"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* DISPLAY UPLOADED DOCUMENT IF EXISTS */}
-      {data.estamp_paper && (
-        <div style={documentCard}>
-          <h3 style={cardTitle}>📜 Final E-Stamp Document</h3>
-          <div style={documentBody}>
-            <p>The e-stamp has been successfully attached to this record.</p>
-            <a href={`${BACKEND_URL}/${data.estamp_paper}`} target="_blank" rel="noreferrer" style={viewBtn}>
-              View Document ↗
-            </a>
-          </div>
-        </div>
-      )}
-
-      {/* TENANT DETAILS SECTION */}
       <div style={grid}>
+        {/* Card 1: Personal */}
         <div style={card}>
-          <h3 style={cardTitle}>👤 Tenant Information</h3>
+          <h3 style={cardTitle}>👤 Personal Information</h3>
           <div style={cardContent}>
-            <DetailRow label="Name" value={data.full_name} />
-            <DetailRow label="Mobile" value={data.mobile} />
-            <DetailRow label="Email" value={data.email} />
-            <DetailRow label="Aadhaar" value={`XXXX-XXXX-${data.aadhaar_last4}`} />
+            <DataField label="Full Name" value={data.full_name} />
+            <DataField label="Father's Name" value={data.father_name} />
+            <DataField label="Mobile Number" value={data.mobile} />
+            <DataField label="Email Address" value={data.email} />
+            <DataField label="Aadhaar (Last 4)" value={data.aadhaar_last4} />
+            <DataField label="PAN Number" value={data.pan_number} />
           </div>
         </div>
 
+        {/* Card 2: Property */}
         <div style={card}>
-          <h3 style={cardTitle}>🏠 Agreement Terms</h3>
+          <h3 style={cardTitle}>🏠 Property & Financials</h3>
           <div style={cardContent}>
-            <DetailRow label="Monthly Rent" value={`₹${data.rent}`} highlight />
-            <DetailRow label="Security Deposit" value={`₹${data.deposit}`} highlight />
-            <DetailRow label="Duration" value={`${data.agreement_months} Months`} />
+            <DataField label="Address" value={data.address} />
+            <DataField label="Location" value={`${data.city}, ${data.state} - ${data.pincode}`} />
+            <DataField label="Check-in Date" value={formatDate(data.checkin_date)} highlight />
+            <DataField label="Stay Duration" value={`${data.agreement_months} Months`} />
+            <DataField label="Monthly Rent" value={`₹${data.rent}`} isMoney />
+            <DataField label="Security Deposit" value={`₹${data.deposit}`} isMoney />
+            <DataField label="Maintenance" value={`₹${data.maintenance}`} isMoney />
           </div>
         </div>
       </div>
 
-      {/* SIGNATURE SECTION */}
+      {/* Signature Section */}
       <div style={{ ...card, marginTop: "24px" }}>
-        <h3 style={cardTitle}>✍️ Tenant Signature</h3>
+        <h3 style={cardTitle}>✍️ Digital Signature</h3>
         <div style={sigContainer}>
-          <img src={`${BACKEND_URL}/${data.signature?.replace(/\\/g, '/')}`} alt="Tenant Signature" style={sigImg} />
+          {data.signature ? (
+            <img
+              src={`${BACKEND_URL}/${data.signature.replace(/\\/g, '/')}`}
+              alt="Signature"
+              style={sigImg}
+              onError={(e) => { e.target.src = "https://via.placeholder.com/300x150?text=Signature+Image+Missing"; }}
+            />
+          ) : (
+            <div style={noSig}>No signature provided</div>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-/* --- UI Components --- */
-const DetailRow = ({ label, value, highlight }) => (
-  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f1f5f9' }}>
-    <span style={{ color: '#94a3b8', fontSize: '14px' }}>{label}</span>
-    <span style={{ fontWeight: '600', color: highlight ? '#2563eb' : '#1e293b' }}>{value}</span>
+/* --- Helper Components --- */
+const DataField = ({ label, value, highlight, isMoney }) => (
+  <div style={fieldRow}>
+    <span style={fieldLabel}>{label}</span>
+    <span style={{ 
+      ...fieldValue, 
+      color: highlight ? "#2563eb" : isMoney ? "#059669" : "#1e293b",
+      fontWeight: isMoney || highlight ? "700" : "500"
+    }}>
+      {value || "Not Provided"}
+    </span>
   </div>
 );
 
-/* --- Styles --- */
-const container = { padding: "40px", maxWidth: "1000px", margin: "0 auto", fontFamily: 'Inter, sans-serif' };
-const topNav = { display: "flex", justifyContent: "space-between", marginBottom: "20px" };
+/* --- Modern Styles --- */
+const container = { padding: "40px", maxWidth: "1100px", margin: "0 auto", backgroundColor: "#f8fafc", minHeight: "100vh" };
+const topNav = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" };
+const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "32px" };
 const title = { fontSize: "28px", fontWeight: "800", color: "#0f172a", margin: 0 };
-const subtitle = { color: "#64748b", fontSize: "16px" };
-const headerSection = { marginBottom: "30px" };
+const subtitle = { color: "#64748b", marginTop: "4px" };
+const grid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(450px, 1fr))", gap: "24px" };
+const card = { background: "#fff", borderRadius: "16px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", overflow: "hidden" };
+const cardTitle = { padding: "16px 24px", borderBottom: "1px solid #f1f5f9", margin: 0, fontSize: "16px", fontWeight: "700", color: "#334155", backgroundColor: "#fcfdfe" };
+const cardContent = { padding: "24px" };
+const fieldRow = { display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #f8fafc" };
+const fieldLabel = { color: "#94a3b8", fontSize: "14px", fontWeight: "500" };
+const fieldValue = { fontSize: "15px" };
+const sigContainer = { padding: "40px", textAlign: "center", backgroundColor: "#fdfdfd" };
+const sigImg = { maxHeight: "180px", width: "auto", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "10px", backgroundColor: "#fff" };
+const noSig = { color: "#94a3b8", fontStyle: "italic" };
 
-const uploadCard = { 
-  background: "#ffffff", 
-  padding: "25px", 
-  borderRadius: "16px", 
-  border: "2px dashed #cbd5e1", 
-  display: "flex", 
-  flexDirection: "column", 
-  gap: "20px",
-  marginBottom: "30px"
+const backBtn = { background: "#fff", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: "8px", color: "#64748b", cursor: "pointer", fontWeight: "600", transition: "all 0.2s" };
+const actionGroup = { display: "flex", gap: "12px" };
+const approveBtn = { backgroundColor: "#2563eb", color: "#fff", border: "none", padding: "10px 20px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" };
+const rejectBtn = { backgroundColor: "#fff", color: "#dc2626", border: "1px solid #fecaca", padding: "10px 20px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" };
+const loaderWrap = { display: "grid", placeItems: "center", height: "100vh", fontSize: "18px", color: "#64748b" };
+
+const statusBadge = (status) => {
+  const isApproved = status === "approved";
+  const isRejected = status === "rejected";
+  return {
+    padding: "6px 16px",
+    borderRadius: "99px",
+    fontSize: "14px",
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+    backgroundColor: isApproved ? "#dcfce7" : isRejected ? "#fee2e2" : "#fef9c3",
+    color: isApproved ? "#15803d" : isRejected ? "#b91c1c" : "#a16207",
+    border: `1px solid ${isApproved ? "#86efac" : isRejected ? "#fca5a5" : "#fef08a"}`
+  };
 };
-
-const documentCard = { 
-  background: "#eff6ff", 
-  borderRadius: "12px", 
-  border: "1px solid #bfdbfe", 
-  marginBottom: "30px",
-  overflow: "hidden"
-};
-
-const documentBody = { padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" };
-const viewBtn = { backgroundColor: "#2563eb", color: "#fff", padding: "10px 20px", borderRadius: "8px", textDecoration: "none", fontWeight: "600" };
-
-const card = { background: "#fff", borderRadius: "12px", border: "1px solid #e2e8f0", overflow: "hidden" };
-const cardTitle = { padding: "12px 20px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", fontSize: "14px", fontWeight: "700", textTransform: "uppercase", color: "#64748b" };
-const cardContent = { padding: "20px" };
-const grid = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" };
-
-const approveBtn = { backgroundColor: "#059669", color: "#fff", border: "none", padding: "12px 24px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" };
-const fileInputCustom = { padding: "10px", border: "1px solid #e2e8f0", borderRadius: "8px", width: "100%", background: "#f8fafc" };
-const sigContainer = { padding: "30px", textAlign: "center", background: "#fcfcfc" };
-const sigImg = { maxHeight: "120px", filter: "contrast(1.2)" };
-const backBtn = { background: "#fff", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", fontWeight: "600" };
-const loaderWrap = { textAlign: "center", marginTop: "100px", fontSize: "18px", color: "#64748b" };
-
-const statusBadgeStyle = (status) => ({
-  padding: "6px 16px", borderRadius: "20px", fontSize: "12px", fontWeight: "800", textTransform: "uppercase",
-  backgroundColor: status === "approved" ? "#dcfce7" : status === "signed" ? "#e0e7ff" : "#fee2e2",
-  color: status === "approved" ? "#166534" : status === "signed" ? "#4338ca" : "#991b1b"
-});
 
 export default AdminAgreementDetails;
