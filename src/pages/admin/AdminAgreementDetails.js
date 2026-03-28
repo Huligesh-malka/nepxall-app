@@ -7,7 +7,6 @@ const AdminAgreementDetails = () => {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
 
   const BACKEND_URL = "https://nepxall-backend.onrender.com";
 
@@ -22,22 +21,6 @@ const AdminAgreementDetails = () => {
       alert("Error loading details");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const updateStatus = async (newStatus) => {
-    if (!window.confirm(`Are you sure you want to mark this as ${newStatus}?`)) return;
-    setUpdating(true);
-    try {
-      const res = await api.put(`/agreements/admin/${id}/status`, { status: newStatus });
-      if (res.data.success) {
-        setData({ ...data, status: newStatus });
-        alert(`Agreement ${newStatus} successfully!`);
-      }
-    } catch (err) {
-      alert("Failed to update status");
-    } finally {
-      setUpdating(false);
     }
   };
 
@@ -64,15 +47,6 @@ const AdminAgreementDetails = () => {
         <button onClick={() => navigate(-1)} style={backBtn}>
           ← Back to List
         </button>
-        <div style={actionGroup}>
-          <button 
-            onClick={() => updateStatus("rejected")} 
-            disabled={updating || data.status === 'rejected'}
-            style={rejectBtn}
-          >
-            Reject Agreement
-          </button>
-        </div>
       </div>
 
       <div style={headerSection}>
@@ -84,6 +58,7 @@ const AdminAgreementDetails = () => {
       </div>
 
       <div style={grid}>
+        {/* Card 1: Personal */}
         <div style={card}>
           <h3 style={cardTitle}>👤 Personal Information</h3>
           <div style={cardContent}>
@@ -96,6 +71,7 @@ const AdminAgreementDetails = () => {
           </div>
         </div>
 
+        {/* Card 2: Property */}
         <div style={card}>
           <h3 style={cardTitle}>🏠 Property & Financials</h3>
           <div style={cardContent}>
@@ -110,6 +86,7 @@ const AdminAgreementDetails = () => {
         </div>
       </div>
 
+      {/* Signature Section */}
       <div style={{ ...card, marginTop: "24px" }}>
         <h3 style={cardTitle}>✍️ Digital Signature</h3>
         <div style={sigContainer}>
@@ -145,7 +122,7 @@ const DataField = ({ label, value, highlight, isMoney }) => (
 
 /* --- Modern Styles --- */
 const container = { padding: "40px", maxWidth: "1100px", margin: "0 auto", backgroundColor: "#f8fafc", minHeight: "100vh" };
-const topNav = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" };
+const topNav = { display: "flex", justifyContent: "flex-start", alignItems: "center", marginBottom: "30px" };
 const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "32px" };
 const title = { fontSize: "28px", fontWeight: "800", color: "#0f172a", margin: 0 };
 const subtitle = { color: "#64748b", marginTop: "4px" };
@@ -161,8 +138,6 @@ const sigImg = { maxHeight: "180px", width: "auto", border: "1px solid #e2e8f0",
 const noSig = { color: "#94a3b8", fontStyle: "italic" };
 
 const backBtn = { background: "#fff", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: "8px", color: "#64748b", cursor: "pointer", fontWeight: "600" };
-const actionGroup = { display: "flex", gap: "12px" };
-const rejectBtn = { backgroundColor: "#dc2626", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" };
 const loaderWrap = { display: "grid", placeItems: "center", height: "100vh", fontSize: "18px", color: "#64748b" };
 
 const statusBadge = (status) => {
