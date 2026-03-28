@@ -11,7 +11,6 @@ import {
   TableCell,
   TableBody,
   Chip,
-  Avatar,
   Box,
   CircularProgress,
   Alert,
@@ -30,12 +29,11 @@ import {
   CheckCircle,
   PendingActions,
   Refresh,
-  Info,
   PictureAsPdf
 } from "@mui/icons-material";
 
 const API = "https://nepxall-backend.onrender.com/api/owner";
-const BASE_URL = "https://nepxall-backend.onrender.com"; // For PDF file paths
+const BASE_URL = "https://nepxall-backend.onrender.com"; // Required to construct full PDF URL
 
 export default function OwnerPayments() {
   const [data, setData] = useState([]);
@@ -46,6 +44,7 @@ export default function OwnerPayments() {
 
   const token = localStorage.getItem("token");
 
+  // Decode token to get user context
   useEffect(() => {
     if (token) {
       try {
@@ -116,6 +115,7 @@ export default function OwnerPayments() {
 
   const handleViewPdf = (pdfPath) => {
     if (!pdfPath) return;
+    // Check if the path is already a full URL or needs the base prefix
     const fullUrl = pdfPath.startsWith('http') ? pdfPath : `${BASE_URL}/${pdfPath}`;
     window.open(fullUrl, '_blank');
   };
@@ -137,9 +137,7 @@ export default function OwnerPayments() {
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
         <Box>
-          <Typography variant="h4" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            💰 Owner Dashboard
-          </Typography>
+          <Typography variant="h4" fontWeight="bold">💰 Owner Dashboard</Typography>
           <Typography variant="body2" color="text.secondary">
             Manage your earnings and signed agreements
           </Typography>
@@ -153,6 +151,9 @@ export default function OwnerPayments() {
           {refreshing ? 'Refreshing...' : 'Refresh'}
         </Button>
       </Box>
+
+      {/* Error Message */}
+      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
       {/* Summary Stats */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -253,9 +254,12 @@ export default function OwnerPayments() {
                         </Button>
                       </Tooltip>
                     ) : (
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                        <PendingActions sx={{ fontSize: 14 }} /> Not Uploaded
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                        <PendingActions sx={{ fontSize: 16, color: 'text.secondary' }} />
+                        <Typography variant="caption" color="text.secondary">
+                          Not Uploaded
+                        </Typography>
+                      </Box>
                     )}
                   </TableCell>
                 </TableRow>
