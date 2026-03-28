@@ -65,7 +65,7 @@ const PhoneLogin = () => {
     else navigate("/");
   };
 
-  /* ================= BACKEND LOGIN ================= */
+  /* ================= BACKEND LOGIN & SYNC ================= */
   const syncUser = async (user, selectedRole = null) => {
     try {
       setLoading(true);
@@ -79,22 +79,29 @@ const PhoneLogin = () => {
       });
 
       if (res.data.success) {
-        // ✅ Storing session data
+        // ✅ 1. Standard Session Storage
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("role", res.data.role);
         localStorage.setItem("name", res.data.name);
         
-        // 🚨 CRITICAL FIX: Changed from "userId" to "user_id" 
-        // to match what AgreementForm.js expects
-        localStorage.setItem("user_id", res.data.user?.id || "");
+        // ✅ 2. Critical ID Storage (Matches your DB schema 'id')
+        const userId = res.data.user?.id || res.data.userId;
+        localStorage.setItem("user_id", userId);
+
+        // ✅ 3. FORCE REFRESH EVENT
+        // This tells MainLayout and Sidebar to update their state immediately
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new Event("role-updated"));
 
         setSuccess(`Welcome ${res.data.name}`);
 
-        setTimeout(() => redirect(res.data.role), 800);
+        // Small delay to ensure localStorage is written before navigation
+        setTimeout(() => redirect(res.data.role), 1000);
       }
 
     } catch (err) {
-      setError(err?.response?.data?.message || "Login failed");
+      console.error("Sync Error:", err);
+      setError(err?.response?.data?.message || "Login failed to sync with server");
       await auth.signOut();
     } finally {
       setLoading(false);
@@ -123,6 +130,7 @@ const PhoneLogin = () => {
       setSuccess("OTP sent successfully");
 
     } catch (err) {
+      console.error("Firebase SMS Error:", err);
       setError("Failed to send OTP. Please refresh and try again.");
     } finally {
       setLoading(false);
@@ -138,14 +146,16 @@ const PhoneLogin = () => {
       const res = await confirmObj.confirm(otp);
       setFirebaseUser(res.user);
 
+      // Check if this is a brand new Firebase user
       if (res._tokenResponse?.isNewUser) {
         setIsNewUser(true);
       } else {
+        // Existing user, sync directly
         await syncUser(res.user, null);
       }
 
-    } catch {
-      setError("Invalid OTP");
+    } catch (err) {
+      setError("Invalid OTP or session expired");
     } finally {
       setLoading(false);
     }
@@ -157,15 +167,18 @@ const PhoneLogin = () => {
     await syncUser(firebaseUser, role);
   };
 
-  /* ================= UI ================= */
+  /* ================= UI RENDERING ================= */
   return (
-    <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" bgcolor="#f5f5f5">
-      <Paper elevation={3} sx={{ p: 4, width: 360, borderRadius: 2 }}>
-        <Typography variant="h5" align="center" mb={2} fontWeight="bold">
-          {isNewUser ? "Complete Registration" : "Nepxall Login"}
+    <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" bgcolor="#f8fafc">
+      <Paper elevation={0} sx={{ p: 4, width: 380, borderRadius: 4, border: '1px solid #e2e8f0', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }}>
+        <Typography variant="h5" align="center" mb={1} fontWeight="800" color="#1e293b">
+          {isNewUser ? "Select Your Role" : "Nepxall Login"}
+        </Typography>
+        <Typography variant="body2" align="center" mb={3} color="textSecondary">
+          {isNewUser ? "Tell us how you'll use the platform" : "Enter your number to continue"}
         </Typography>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
 
         <Snackbar 
           open={!!success} 
@@ -173,89 +186,100 @@ const PhoneLogin = () => {
           onClose={() => setSuccess("")}
           anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         >
-          <Alert severity="success" variant="filled">
+          <Alert severity="success" variant="filled" sx={{ borderRadius: 2 }}>
             {success}
           </Alert>
         </Snackbar>
 
+        {/* STEP 1: PHONE NUMBER */}
         {!confirmObj && !isNewUser && (
           <>
             <TextField
               fullWidth
               label="Mobile Number"
+              variant="outlined"
               value={phone}
               onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
               margin="normal"
               inputProps={{ maxLength: 10 }}
               InputProps={{
-                startAdornment: <Typography mr={1} color="textSecondary">+91</Typography>
+                startAdornment: <Typography mr={1} fontWeight="bold" color="#64748b">+91</Typography>
               }}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
             <Button 
               fullWidth 
               variant="contained" 
               onClick={sendOtp} 
-              disabled={loading}
-              sx={{ mt: 2, py: 1.2 }}
+              disabled={loading || phone.length < 10}
+              sx={{ mt: 2, py: 1.5, borderRadius: 2, textTransform: 'none', fontWeight: 'bold', fontSize: '16px', boxShadow: 'none' }}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : "Send OTP"}
+              {loading ? <CircularProgress size={24} color="inherit" /> : "Get OTP"}
             </Button>
           </>
         )}
 
+        {/* STEP 2: OTP VERIFICATION */}
         {confirmObj && !isNewUser && (
           <>
             <TextField
               fullWidth
-              label="Enter 6-Digit OTP"
+              label="Verification Code"
+              placeholder="000000"
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
               margin="normal"
-              inputProps={{ maxLength: 6 }}
+              inputProps={{ maxLength: 6, style: { textAlign: 'center', letterSpacing: '8px', fontSize: '20px' } }}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
             <Button 
               fullWidth 
               variant="contained" 
               onClick={verifyOtp} 
-              disabled={loading}
-              sx={{ mt: 2, py: 1.2 }}
+              disabled={loading || otp.length < 6}
+              sx={{ mt: 2, py: 1.5, borderRadius: 2, textTransform: 'none', fontWeight: 'bold', fontSize: '16px' }}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : "Verify & Login"}
+              {loading ? <CircularProgress size={24} color="inherit" /> : "Verify & Continue"}
             </Button>
-            {otpTimer > 0 ? (
-              <Typography variant="caption" display="block" mt={2} align="center">
-                Resend available in {otpTimer}s
-              </Typography>
-            ) : (
-              <Button size="small" fullWidth onClick={sendOtp} sx={{ mt: 1 }}>
-                Resend OTP
-              </Button>
-            )}
+            
+            <Box textAlign="center" mt={3}>
+              {otpTimer > 0 ? (
+                <Typography variant="body2" color="textSecondary">
+                  Resend OTP in <strong>{otpTimer}s</strong>
+                </Typography>
+              ) : (
+                <Button variant="text" size="small" onClick={sendOtp} sx={{ textTransform: 'none', fontWeight: '600' }}>
+                  Didn't get code? Resend
+                </Button>
+              )}
+            </Box>
           </>
         )}
 
+        {/* STEP 3: NEW USER ROLE SELECTION */}
         {isNewUser && (
           <>
             <TextField
               select
               fullWidth
-              label="I am a..."
+              label="Account Type"
               value={role}
               onChange={(e) => setRole(e.target.value)}
               margin="normal"
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             >
-              <MenuItem value="tenant">Tenant</MenuItem>
-              <MenuItem value="owner">Owner</MenuItem>
-              <MenuItem value="vendor">Vendor</MenuItem>
+              <MenuItem value="tenant">Tenant (Looking for stay)</MenuItem>
+              <MenuItem value="owner">Owner (Listing property)</MenuItem>
+              <MenuItem value="vendor">Vendor (Services)</MenuItem>
             </TextField>
             <Button 
               fullWidth 
               variant="contained" 
               onClick={completeRegistration}
-              sx={{ mt: 2, py: 1.2 }}
               disabled={loading}
+              sx={{ mt: 2, py: 1.5, borderRadius: 2, textTransform: 'none', fontWeight: 'bold', fontSize: '16px' }}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : "Finish Registration"}
+              {loading ? <CircularProgress size={24} color="inherit" /> : "Create Account"}
             </Button>
           </>
         )}
