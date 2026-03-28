@@ -45,7 +45,6 @@ const AdminAgreementDetails = () => {
     fetchData();
   }, [id]);
 
-  // Clean date formatter
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
@@ -61,7 +60,6 @@ const AdminAgreementDetails = () => {
 
   return (
     <div style={container}>
-      {/* Top Header */}
       <div style={topNav}>
         <button onClick={() => navigate(-1)} style={backBtn}>
           ← Back to List
@@ -72,14 +70,7 @@ const AdminAgreementDetails = () => {
             disabled={updating || data.status === 'rejected'}
             style={rejectBtn}
           >
-            Reject
-          </button>
-          <button 
-            onClick={() => updateStatus("approved")} 
-            disabled={updating || data.status === 'approved'}
-            style={approveBtn}
-          >
-            Approve Agreement
+            Reject Agreement
           </button>
         </div>
       </div>
@@ -93,7 +84,6 @@ const AdminAgreementDetails = () => {
       </div>
 
       <div style={grid}>
-        {/* Card 1: Personal */}
         <div style={card}>
           <h3 style={cardTitle}>👤 Personal Information</h3>
           <div style={cardContent}>
@@ -106,7 +96,6 @@ const AdminAgreementDetails = () => {
           </div>
         </div>
 
-        {/* Card 2: Property */}
         <div style={card}>
           <h3 style={cardTitle}>🏠 Property & Financials</h3>
           <div style={cardContent}>
@@ -121,7 +110,6 @@ const AdminAgreementDetails = () => {
         </div>
       </div>
 
-      {/* Signature Section */}
       <div style={{ ...card, marginTop: "24px" }}>
         <h3 style={cardTitle}>✍️ Digital Signature</h3>
         <div style={sigContainer}>
@@ -172,10 +160,9 @@ const sigContainer = { padding: "40px", textAlign: "center", backgroundColor: "#
 const sigImg = { maxHeight: "180px", width: "auto", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "10px", backgroundColor: "#fff" };
 const noSig = { color: "#94a3b8", fontStyle: "italic" };
 
-const backBtn = { background: "#fff", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: "8px", color: "#64748b", cursor: "pointer", fontWeight: "600", transition: "all 0.2s" };
+const backBtn = { background: "#fff", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: "8px", color: "#64748b", cursor: "pointer", fontWeight: "600" };
 const actionGroup = { display: "flex", gap: "12px" };
-const approveBtn = { backgroundColor: "#2563eb", color: "#fff", border: "none", padding: "10px 20px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" };
-const rejectBtn = { backgroundColor: "#fff", color: "#dc2626", border: "1px solid #fecaca", padding: "10px 20px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" };
+const rejectBtn = { backgroundColor: "#dc2626", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" };
 const loaderWrap = { display: "grid", placeItems: "center", height: "100vh", fontSize: "18px", color: "#64748b" };
 
 const statusBadge = (status) => {
