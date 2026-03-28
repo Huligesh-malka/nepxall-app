@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { auth } from "../firebase";
@@ -12,52 +12,73 @@ const MainLayout = () => {
   const [role, setRole] = useState(null);
   const [authReady, setAuthReady] = useState(false);
 
-  /* 🔥 NORMALIZE ROLE */
-  const getStoredRole = () => {
+  /* ✅ HELPER: NORMALIZE SESSION DATA */
+  const getSessionData = useCallback(() => {
     const r = localStorage.getItem("role");
-    if (!r || r === "null" || r === "undefined") return null;
-    return r;
-  };
+    const uid = localStorage.getItem("user_id");
+    
+    // Safety check for common "null" string issues
+    const validRole = (!r || r === "null" || r === "undefined") ? null : r;
+    const validId = (!uid || uid === "null" || uid === "undefined") ? null : uid;
+
+    return { role: validRole, userId: validId };
+  }, []);
 
   /* ✅ FIREBASE AUTH LISTENER */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (currentUser) => {
+      const session = getSessionData();
+      
       setUser(currentUser);
-      setRole(getStoredRole());
+      setRole(session.role);
       setAuthReady(true);
 
-      console.log("Auth changed:", currentUser?.email, getStoredRole());
+      // DEBUGGING: Log session state every time auth state flickers
+      if (currentUser) {
+        console.log("🛡️ Auth Active:", {
+          firebaseUser: currentUser.email || currentUser.phoneNumber,
+          storedRole: session.role,
+          storedUserId: session.userId
+        });
+      } else {
+        console.log("🛡️ Auth: No Firebase user detected.");
+      }
     });
 
     return () => unsub();
-  }, []);
+  }, [getSessionData]);
 
-  /* ✅ LISTEN ROLE UPDATE (same tab) */
+  /* ✅ LISTEN FOR SESSION UPDATES (across tabs or same-tab events) */
   useEffect(() => {
-    const updateRole = () => {
-      const newRole = getStoredRole();
-      console.log("Role updated:", newRole);
-      setRole(newRole);
+    const syncUI = () => {
+      const session = getSessionData();
+      console.log("🔄 Session Synced:", session);
+      setRole(session.role);
     };
 
-    window.addEventListener("role-updated", updateRole);
-    window.addEventListener("storage", updateRole);
+    window.addEventListener("role-updated", syncUI);
+    window.addEventListener("storage", syncUI); // Captures changes from other tabs
 
     return () => {
-      window.removeEventListener("role-updated", updateRole);
-      window.removeEventListener("storage", updateRole);
+      window.removeEventListener("role-updated", syncUI);
+      window.removeEventListener("storage", syncUI);
     };
-  }, []);
+  }, [getSessionData]);
 
   /* ✅ LOGOUT */
   const handleLogout = async () => {
-    await signOut(auth);
-    localStorage.clear();
-    setUser(null);
-    setRole(null);
-    navigate("/", { replace: true });
+    try {
+      await signOut(auth);
+      localStorage.clear(); // Wipe everything on logout
+      setUser(null);
+      setRole(null);
+      navigate("/", { replace: true });
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
   };
 
+  /* ⏳ LOADING STATE */
   if (!authReady) {
     return (
       <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
@@ -68,6 +89,7 @@ const MainLayout = () => {
 
   return (
     <div style={{ display: "flex" }}>
+      {/* Passing role to Sidebar ensures the menu updates immediately */}
       <Sidebar role={role} />
 
       <div
@@ -76,45 +98,53 @@ const MainLayout = () => {
           padding: 20,
           width: "calc(100% - 250px)",
           background: "#f8fafc",
-          minHeight: "100vh"
+          minHeight: "100vh",
+          transition: "margin 0.3s"
         }}
       >
+        {/* TOP NAVBAR */}
         <Box
           sx={{
             display: "flex",
             justifyContent: "flex-end",
-            gap: 1,
-            mb: 2,
+            gap: 2,
+            mb: 3,
             alignItems: "center",
             backgroundColor: "white",
-            padding: "10px 20px",
-            borderRadius: "8px",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
+            padding: "12px 24px",
+            borderRadius: "12px",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.05)"
           }}
         >
           {user && (
-            <span style={{ marginRight: "auto", color: "#64748b" }}>
-              Welcome, <strong>{user.email?.split("@")[0]}</strong>
+            <span style={{ marginRight: "auto", color: "#475569", fontSize: "14px" }}>
+              Logged in as: <strong>{user.email?.split("@")[0] || user.phoneNumber}</strong> 
+              <span style={{ marginLeft: '10px', color: '#6366f1', textTransform: 'uppercase', fontSize: '11px' }}>
+                ({role || 'No Role'})
+              </span>
             </span>
           )}
 
           {!user ? (
             <>
-              <Button onClick={() => navigate("/login")} variant="outlined">
+              <Button onClick={() => navigate("/login")} variant="outlined" size="small">
                 Login
               </Button>
-              <Button onClick={() => navigate("/register")} variant="contained">
+              <Button onClick={() => navigate("/register")} variant="contained" size="small">
                 Register
               </Button>
             </>
           ) : (
-            <Button variant="contained" color="error" onClick={handleLogout}>
+            <Button variant="contained" color="error" size="small" onClick={handleLogout}>
               Logout
             </Button>
           )}
         </Box>
 
-        <Outlet />
+        {/* PAGE CONTENT */}
+        <Box component="main">
+          <Outlet />
+        </Box>
       </div>
     </div>
   );
