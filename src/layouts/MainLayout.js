@@ -19,14 +19,14 @@ const MainLayout = () => {
     const r = localStorage.getItem("role");
     const uid = localStorage.getItem("user_id");
     
-    // Convert string "null" or "undefined" back to actual null
+    // Clean up string-based "null"/"undefined" artifacts
     const validRole = (!r || r === "null" || r === "undefined") ? null : r;
     const validId = (!uid || uid === "null" || uid === "undefined") ? null : uid;
 
     return { role: validRole, userId: validId };
   }, []);
 
-  /* ✅ SESSION RECOVERY: Fixed to handle your specific DB 'id' field */
+  /* ✅ SESSION RECOVERY: High-Resilience Extraction */
   const recoverSession = async (currentUser) => {
     try {
       console.log("🛠️ Attempting Session Recovery...");
@@ -35,30 +35,43 @@ const MainLayout = () => {
       const res = await userAPI.post("/auth/firebase", { idToken });
       
       if (res.data.success) {
-        // Look for ID in all common locations returned by Express/Sequelize
-        const recoveredId = 
+        // 1. Try body extraction (Common keys based on your DB schema)
+        let recoveredId = 
           res.data.user?.id || 
           res.data.userId || 
           res.data.id || 
           res.data.data?.id;
 
-        const recoveredRole = res.data.role || res.data.user?.role;
+        // 2. BACKUP: Extract from JWT Payload if body extraction failed
+        // Your logs show res.data.token exists, we can use it.
+        if (!recoveredId && res.data.token) {
+          try {
+            const base64Url = res.data.token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const payload = JSON.parse(window.atob(base64));
+            recoveredId = payload.id || payload.userId || payload.sub;
+            console.log("🔑 ID extracted from JWT Payload:", recoveredId);
+          } catch (e) {
+            console.error("JWT Decode failed", e);
+          }
+        }
 
-        // CRITICAL: Only set if the ID is actually a value, not undefined
-        if (recoveredId && recoveredId !== "undefined") {
+        const recoveredRole = res.data.role || res.data.user?.role || "tenant";
+
+        // 3. FINAL VALIDATION & STORAGE
+        if (recoveredId && String(recoveredId) !== "undefined") {
           localStorage.setItem("role", recoveredRole);
-          localStorage.setItem("user_id", recoveredId);
+          localStorage.setItem("user_id", String(recoveredId));
           localStorage.setItem("token", res.data.token);
           
           setRole(recoveredRole);
-          console.log("✅ Session Successfully Recovered:", { recoveredRole, recoveredId });
+          console.log("✅ Session Fully Recovered:", { recoveredRole, recoveredId });
         } else {
-          console.warn("⚠️ Backend succeeded but no valid ID found in response:", res.data);
+          console.error("❌ CRITICAL: No ID found in API response. Response Data:", res.data);
         }
       }
     } catch (err) {
       console.error("❌ Session recovery failed:", err);
-      // Optional: if recovery fails repeatedly, you might want to force logout
     }
   };
 
@@ -69,7 +82,7 @@ const MainLayout = () => {
       const session = getSessionData();
 
       if (currentUser) {
-        // If Firebase is logged in but local storage is missing data, recover it
+        // If Firebase is active but local data is missing or corrupted, recover it
         if (!session.role || !session.userId) {
           await recoverSession(currentUser);
         } else {
@@ -85,7 +98,7 @@ const MainLayout = () => {
     return () => unsub();
   }, [getSessionData]);
 
-  /* ✅ GLOBAL STATE SYNC (For Login/Logout events) */
+  /* ✅ GLOBAL STATE SYNC */
   useEffect(() => {
     const syncUI = () => {
       const session = getSessionData();
@@ -128,7 +141,7 @@ const MainLayout = () => {
 
       <div
         style={{
-          marginLeft: 250,
+          marginLeft: 250, 
           padding: "24px",
           width: "calc(100% - 250px)",
           transition: "margin 0.3s ease"
