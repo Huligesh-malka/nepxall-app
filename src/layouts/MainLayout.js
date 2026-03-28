@@ -4,7 +4,7 @@ import Sidebar from "../components/Sidebar";
 import { auth } from "../firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { Button, Box, CircularProgress, Typography } from "@mui/material";
-import { userAPI } from "../api/api"; // Ensure this points to your axios instance
+import { userAPI } from "../api/api";
 
 const MainLayout = () => {
   const navigate = useNavigate();
@@ -19,34 +19,46 @@ const MainLayout = () => {
     const r = localStorage.getItem("role");
     const uid = localStorage.getItem("user_id");
     
+    // Convert string "null" or "undefined" back to actual null
     const validRole = (!r || r === "null" || r === "undefined") ? null : r;
     const validId = (!uid || uid === "null" || uid === "undefined") ? null : uid;
 
     return { role: validRole, userId: validId };
   }, []);
 
-  /* ✅ SESSION RECOVERY: Rebuilds localStorage if Firebase is active but local data is lost */
+  /* ✅ SESSION RECOVERY: Fixed to handle your specific DB 'id' field */
   const recoverSession = async (currentUser) => {
     try {
       console.log("🛠️ Attempting Session Recovery...");
       const idToken = await currentUser.getIdToken(true);
       
-      // Hit your existing auth endpoint to get the DB details
       const res = await userAPI.post("/auth/firebase", { idToken });
       
       if (res.data.success) {
-        const recoveredRole = res.data.role;
-        const recoveredId = res.data.user?.id || res.data.userId;
+        // Look for ID in all common locations returned by Express/Sequelize
+        const recoveredId = 
+          res.data.user?.id || 
+          res.data.userId || 
+          res.data.id || 
+          res.data.data?.id;
 
-        localStorage.setItem("role", recoveredRole);
-        localStorage.setItem("user_id", recoveredId);
-        localStorage.setItem("token", res.data.token);
-        
-        setRole(recoveredRole);
-        console.log("✅ Session Recovered:", { recoveredRole, recoveredId });
+        const recoveredRole = res.data.role || res.data.user?.role;
+
+        // CRITICAL: Only set if the ID is actually a value, not undefined
+        if (recoveredId && recoveredId !== "undefined") {
+          localStorage.setItem("role", recoveredRole);
+          localStorage.setItem("user_id", recoveredId);
+          localStorage.setItem("token", res.data.token);
+          
+          setRole(recoveredRole);
+          console.log("✅ Session Successfully Recovered:", { recoveredRole, recoveredId });
+        } else {
+          console.warn("⚠️ Backend succeeded but no valid ID found in response:", res.data);
+        }
       }
     } catch (err) {
       console.error("❌ Session recovery failed:", err);
+      // Optional: if recovery fails repeatedly, you might want to force logout
     }
   };
 
@@ -57,7 +69,7 @@ const MainLayout = () => {
       const session = getSessionData();
 
       if (currentUser) {
-        // If Firebase is logged in but local storage is empty, recover it
+        // If Firebase is logged in but local storage is missing data, recover it
         if (!session.role || !session.userId) {
           await recoverSession(currentUser);
         } else {
@@ -73,7 +85,7 @@ const MainLayout = () => {
     return () => unsub();
   }, [getSessionData]);
 
-  /* ✅ GLOBAL STATE SYNC */
+  /* ✅ GLOBAL STATE SYNC (For Login/Logout events) */
   useEffect(() => {
     const syncUI = () => {
       const session = getSessionData();
@@ -102,7 +114,6 @@ const MainLayout = () => {
     }
   };
 
-  /* ⏳ INITIAL LOADING SCREEN */
   if (!authReady) {
     return (
       <Box height="100vh" display="flex" justifyContent="center" alignItems="center" bgcolor="#f8fafc">
@@ -113,18 +124,16 @@ const MainLayout = () => {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f8fafc" }}>
-      {/* Sidebar navigation */}
       <Sidebar role={role} />
 
       <div
         style={{
-          marginLeft: 250, // Match sidebar width
+          marginLeft: 250,
           padding: "24px",
           width: "calc(100% - 250px)",
           transition: "margin 0.3s ease"
         }}
       >
-        {/* TOP NAVIGATION BAR */}
         <Box
           sx={{
             display: "flex",
@@ -137,10 +146,9 @@ const MainLayout = () => {
             mb: 4
           }}
         >
-          {/* Dynamic Page Title */}
           <Typography variant="h6" sx={{ fontWeight: 800, color: "#1e293b", fontSize: '1.1rem' }}>
-            {location.pathname === "/" ? "Dashboard" : 
-             location.pathname.split("/").pop().replace(/-/g, " ").toUpperCase()}
+            {location.pathname === "/" ? "DASHBOARD" : 
+             location.pathname.split("/").filter(x => x).pop()?.replace(/-/g, " ").toUpperCase() || "HOME"}
           </Typography>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
@@ -174,8 +182,7 @@ const MainLayout = () => {
           </Box>
         </Box>
 
-        {/* MAIN ROUTE CONTENT */}
-        <Box component="main" sx={{ animation: "fadeIn 0.4s ease-in" }}>
+        <Box component="main">
           <Outlet context={{ user, role }} />
         </Box>
       </div>
