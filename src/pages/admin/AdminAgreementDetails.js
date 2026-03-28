@@ -7,8 +7,8 @@ const AdminAgreementDetails = () => {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
 
-  // Dynamic Backend URL for images
   const BACKEND_URL = "https://nepxall-backend.onrender.com";
 
   const fetchData = async () => {
@@ -25,84 +25,173 @@ const AdminAgreementDetails = () => {
     }
   };
 
+  const updateStatus = async (newStatus) => {
+    if (!window.confirm(`Are you sure you want to mark this as ${newStatus}?`)) return;
+    setUpdating(true);
+    try {
+      const res = await api.put(`/agreements/admin/${id}/status`, { status: newStatus });
+      if (res.data.success) {
+        setData({ ...data, status: newStatus });
+        alert(`Agreement ${newStatus} successfully!`);
+      }
+    } catch (err) {
+      alert("Failed to update status");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, [id]);
 
-  if (loading) return <p style={{ textAlign: "center", padding: "50px" }}>Loading Details...</p>;
-  if (!data) return <p style={{ textAlign: "center", padding: "50px" }}>Agreement not found.</p>;
+  // Clean date formatter
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  if (loading) return <div style={loaderWrap}>Loading Details...</div>;
+  if (!data) return <div style={loaderWrap}>Agreement not found.</div>;
 
   return (
-    <div style={{ padding: "30px", maxWidth: "900px", margin: "0 auto" }}>
-      <button onClick={() => navigate(-1)} style={backBtn}>
-        ← Back to List
-      </button>
-
-      <div style={header}>
-        <h2>📄 Agreement Details</h2>
-        <span style={statusLarge(data.status)}>{data.status || "Pending"}</span>
-      </div>
-
-      <div style={contentGrid}>
-        <section style={box}>
-          <h3 style={sectionTitle}>Personal Information</h3>
-          <InfoRow label="Full Name" value={data.full_name} />
-          <InfoRow label="Father's Name" value={data.father_name} />
-          <InfoRow label="Mobile" value={data.mobile} />
-          <InfoRow label="Email" value={data.email} />
-          <InfoRow label="Aadhaar (Last 4)" value={data.aadhaar_last4} />
-          <InfoRow label="PAN Number" value={data.pan_number} />
-        </section>
-
-        <section style={box}>
-          <h3 style={sectionTitle}>Property & Financials</h3>
-          <InfoRow label="City/State" value={`${data.city}, ${data.state}`} />
-          <InfoRow label="Pincode" value={data.pincode} />
-          <InfoRow label="Check-in Date" value={data.checkin_date} />
-          <InfoRow label="Duration" value={`${data.agreement_months} Months`} />
-          <InfoRow label="Monthly Rent" value={`₹${data.rent}`} highlight />
-          <InfoRow label="Security Deposit" value={`₹${data.deposit}`} />
-        </section>
-      </div>
-
-      {data.signature && (
-        <div style={{ ...box, marginTop: "20px", textAlign: "center" }}>
-          <h3 style={sectionTitle}>Digital Signature</h3>
-          <img
-            src={`${BACKEND_URL}/${data.signature.replace(/\\/g, '/')}`}
-            alt="User Signature"
-            style={sigImage}
-            onError={(e) => { e.target.src = "https://via.placeholder.com/200?text=Signature+Not+Found"; }}
-          />
+    <div style={container}>
+      {/* Top Header */}
+      <div style={topNav}>
+        <button onClick={() => navigate(-1)} style={backBtn}>
+          ← Back to List
+        </button>
+        <div style={actionGroup}>
+          <button 
+            onClick={() => updateStatus("rejected")} 
+            disabled={updating || data.status === 'rejected'}
+            style={rejectBtn}
+          >
+            Reject
+          </button>
+          <button 
+            onClick={() => updateStatus("approved")} 
+            disabled={updating || data.status === 'approved'}
+            style={approveBtn}
+          >
+            Approve Agreement
+          </button>
         </div>
-      )}
+      </div>
+
+      <div style={headerSection}>
+        <div>
+          <h1 style={title}>Agreement #ID-{data.id}</h1>
+          <p style={subtitle}>Submitted on {formatDate(data.created_at)}</p>
+        </div>
+        <span style={statusBadge(data.status)}>{data.status || "Pending"}</span>
+      </div>
+
+      <div style={grid}>
+        {/* Card 1: Personal */}
+        <div style={card}>
+          <h3 style={cardTitle}>👤 Personal Information</h3>
+          <div style={cardContent}>
+            <DataField label="Full Name" value={data.full_name} />
+            <DataField label="Father's Name" value={data.father_name} />
+            <DataField label="Mobile Number" value={data.mobile} />
+            <DataField label="Email Address" value={data.email} />
+            <DataField label="Aadhaar (Last 4)" value={data.aadhaar_last4} />
+            <DataField label="PAN Number" value={data.pan_number} />
+          </div>
+        </div>
+
+        {/* Card 2: Property */}
+        <div style={card}>
+          <h3 style={cardTitle}>🏠 Property & Financials</h3>
+          <div style={cardContent}>
+            <DataField label="Address" value={data.address} />
+            <DataField label="Location" value={`${data.city}, ${data.state} - ${data.pincode}`} />
+            <DataField label="Check-in Date" value={formatDate(data.checkin_date)} highlight />
+            <DataField label="Stay Duration" value={`${data.agreement_months} Months`} />
+            <DataField label="Monthly Rent" value={`₹${data.rent}`} isMoney />
+            <DataField label="Security Deposit" value={`₹${data.deposit}`} isMoney />
+            <DataField label="Maintenance" value={`₹${data.maintenance}`} isMoney />
+          </div>
+        </div>
+      </div>
+
+      {/* Signature Section */}
+      <div style={{ ...card, marginTop: "24px" }}>
+        <h3 style={cardTitle}>✍️ Digital Signature</h3>
+        <div style={sigContainer}>
+          {data.signature ? (
+            <img
+              src={`${BACKEND_URL}/${data.signature.replace(/\\/g, '/')}`}
+              alt="Signature"
+              style={sigImg}
+              onError={(e) => { e.target.src = "https://via.placeholder.com/300x150?text=Signature+Image+Missing"; }}
+            />
+          ) : (
+            <div style={noSig}>No signature provided</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
 
-/* --- UI Components --- */
-const InfoRow = ({ label, value, highlight }) => (
-  <div style={infoRowStyle}>
-    <span style={{ color: "#64748b", fontSize: "14px" }}>{label}</span>
-    <span style={{ fontWeight: "600", color: highlight ? "#2563eb" : "#1e293b" }}>{value || "N/A"}</span>
+/* --- Helper Components --- */
+const DataField = ({ label, value, highlight, isMoney }) => (
+  <div style={fieldRow}>
+    <span style={fieldLabel}>{label}</span>
+    <span style={{ 
+      ...fieldValue, 
+      color: highlight ? "#2563eb" : isMoney ? "#059669" : "#1e293b",
+      fontWeight: isMoney || highlight ? "700" : "500"
+    }}>
+      {value || "Not Provided"}
+    </span>
   </div>
 );
 
-/* --- Styles --- */
-const header = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" };
-const contentGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "20px" };
-const box = { background: "#fff", padding: "24px", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", border: "1px solid #e2e8f0" };
-const sectionTitle = { fontSize: "16px", color: "#0f172a", marginBottom: "16px", borderBottom: "1px solid #f1f5f9", paddingBottom: "8px" };
-const infoRowStyle = { display: "flex", justifyContent: "space-between", marginBottom: "10px" };
-const sigImage = { maxWidth: "300px", height: "auto", border: "1px dashed #cbd5e1", borderRadius: "8px", marginTop: "10px", padding: "10px" };
-const backBtn = { background: "none", border: "none", color: "#64748b", cursor: "pointer", marginBottom: "15px", fontWeight: "600" };
+/* --- Modern Styles --- */
+const container = { padding: "40px", maxWidth: "1100px", margin: "0 auto", backgroundColor: "#f8fafc", minHeight: "100vh" };
+const topNav = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" };
+const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "32px" };
+const title = { fontSize: "28px", fontWeight: "800", color: "#0f172a", margin: 0 };
+const subtitle = { color: "#64748b", marginTop: "4px" };
+const grid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(450px, 1fr))", gap: "24px" };
+const card = { background: "#fff", borderRadius: "16px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", overflow: "hidden" };
+const cardTitle = { padding: "16px 24px", borderBottom: "1px solid #f1f5f9", margin: 0, fontSize: "16px", fontWeight: "700", color: "#334155", backgroundColor: "#fcfdfe" };
+const cardContent = { padding: "24px" };
+const fieldRow = { display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #f8fafc" };
+const fieldLabel = { color: "#94a3b8", fontSize: "14px", fontWeight: "500" };
+const fieldValue = { fontSize: "15px" };
+const sigContainer = { padding: "40px", textAlign: "center", backgroundColor: "#fdfdfd" };
+const sigImg = { maxHeight: "180px", width: "auto", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "10px", backgroundColor: "#fff" };
+const noSig = { color: "#94a3b8", fontStyle: "italic" };
 
-const statusLarge = (status) => ({
-  padding: "6px 16px",
-  borderRadius: "8px",
-  fontWeight: "bold",
-  background: status === "approved" ? "#dcfce7" : "#fef9c3",
-  color: status === "approved" ? "#166534" : "#854d0e",
-});
+const backBtn = { background: "#fff", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: "8px", color: "#64748b", cursor: "pointer", fontWeight: "600", transition: "all 0.2s" };
+const actionGroup = { display: "flex", gap: "12px" };
+const approveBtn = { backgroundColor: "#2563eb", color: "#fff", border: "none", padding: "10px 20px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" };
+const rejectBtn = { backgroundColor: "#fff", color: "#dc2626", border: "1px solid #fecaca", padding: "10px 20px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" };
+const loaderWrap = { display: "grid", placeItems: "center", height: "100vh", fontSize: "18px", color: "#64748b" };
+
+const statusBadge = (status) => {
+  const isApproved = status === "approved";
+  const isRejected = status === "rejected";
+  return {
+    padding: "6px 16px",
+    borderRadius: "99px",
+    fontSize: "14px",
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+    backgroundColor: isApproved ? "#dcfce7" : isRejected ? "#fee2e2" : "#fef9c3",
+    color: isApproved ? "#15803d" : isRejected ? "#b91c1c" : "#a16207",
+    border: `1px solid ${isApproved ? "#86efac" : isRejected ? "#fca5a5" : "#fef08a"}`
+  };
+};
 
 export default AdminAgreementDetails;
