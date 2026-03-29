@@ -5,7 +5,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import {
   Container, Typography, Paper, Table, TableHead, TableRow, TableCell,
   TableBody, Chip, Box, CircularProgress, Alert, Button,
-  Modal, Backdrop, Fade, Checkbox,
+  Modal, Fade, Checkbox,
   FormControlLabel, TextField, Divider
 } from "@mui/material";
 
@@ -18,9 +18,9 @@ const API = "https://nepxall-backend.onrender.com/api/owner";
 const BASE_URL = "https://nepxall-backend.onrender.com";
 
 export default function OwnerPayments() {
+
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
   const [openSignModal, setOpenSignModal] = useState(false);
@@ -33,32 +33,25 @@ export default function OwnerPayments() {
   const sigCanvas = useRef({});
   const token = localStorage.getItem("token");
 
-  const fetchPayments = async (showRefreshing = false) => {
-    try {
-      if (showRefreshing) setRefreshing(true);
-      else setLoading(true);
-
-      const res = await axios.get(`${API}/payments`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (res.data?.success) {
-        setData(res.data.data || []);
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to load payments");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
   useEffect(() => {
     fetchPayments();
   }, []);
 
-  const handleOpenSign = (booking) => {
-    setSelectedBooking(booking);
+  const fetchPayments = async () => {
+    try {
+      const res = await axios.get(`${API}/payments`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setData(res.data.data || []);
+    } catch {
+      setError("Failed to load");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenSign = (item) => {
+    setSelectedBooking(item);
     setStep(1);
     setAgreed(false);
     setMobile("");
@@ -67,61 +60,49 @@ export default function OwnerPayments() {
 
   const clearSig = () => sigCanvas.current.clear();
 
-  const handleFinalSubmit = async () => {
+  const handleViewPdf = (pdfPath) => {
+    const url = pdfPath.startsWith("http") ? pdfPath : `${BASE_URL}/${pdfPath}`;
+    window.open(url, "_blank");
+  };
+
+  const handleSubmit = async () => {
+    if (!agreed) return alert("Accept terms first");
     if (!mobile || mobile.length < 10) return alert("Enter valid mobile");
     if (sigCanvas.current.isEmpty()) return alert("Sign required");
 
+    const signature = sigCanvas.current.getTrimmedCanvas().toDataURL("image/png");
+
     setIsSubmitting(true);
-    const signatureBase64 = sigCanvas.current.getTrimmedCanvas().toDataURL('image/png');
 
     try {
-      const res = await axios.post(`${API}/sign-agreement`, {
+      await axios.post(`${API}/sign-agreement`, {
         booking_id: selectedBooking.booking_id,
         owner_mobile: mobile,
-        owner_signature: signatureBase64
+        owner_signature: signature,
+        accepted_terms: true
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (res.data.success) {
-        alert("Signed successfully!");
-        setOpenSignModal(false);
-        fetchPayments();
-      }
-    } catch (err) {
-      alert("Error signing");
+      alert("Agreement Signed Successfully ✅");
+      setOpenSignModal(false);
+      fetchPayments();
+
+    } catch {
+      alert("Error signing agreement");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const formatCurrency = (amount) =>
-    new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0
-    }).format(amount || 0);
-
-  const handleViewPdf = (pdfPath) => {
-    const fullUrl = pdfPath.startsWith('http') ? pdfPath : `${BASE_URL}/${pdfPath}`;
-    window.open(fullUrl, '_blank');
-  };
-
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" mt={10}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  if (loading) return <CircularProgress />;
 
   return (
-    <Container maxWidth="lg">
+    <Container>
+
       <Box display="flex" justifyContent="space-between" my={3}>
         <Typography variant="h5">Owner Dashboard</Typography>
-        <Button onClick={() => fetchPayments(true)} startIcon={<Refresh />}>
-          Refresh
-        </Button>
+        <Button onClick={fetchPayments} startIcon={<Refresh />}>Refresh</Button>
       </Box>
 
       {error && <Alert severity="error">{error}</Alert>}
@@ -133,8 +114,8 @@ export default function OwnerPayments() {
               <TableCell>Booking</TableCell>
               <TableCell>Tenant</TableCell>
               <TableCell>PG</TableCell>
-              <TableCell align="center">Amount</TableCell>
-              <TableCell align="center">Agreement</TableCell>
+              <TableCell>Amount</TableCell>
+              <TableCell>Agreement</TableCell>
             </TableRow>
           </TableHead>
 
@@ -144,12 +125,9 @@ export default function OwnerPayments() {
                 <TableCell>#{item.booking_id}</TableCell>
                 <TableCell>{item.tenant_name}</TableCell>
                 <TableCell>{item.pg_name}</TableCell>
-                <TableCell align="center">
-                  {formatCurrency(item.owner_amount)}
-                </TableCell>
+                <TableCell>₹{item.owner_amount}</TableCell>
 
-                {/* ✅ FIXED LOGIC */}
-                <TableCell align="center">
+                <TableCell>
                   {!item.final_pdf ? (
                     <Chip label="Waiting PDF" />
                   ) : item.owner_signed ? (
@@ -158,7 +136,7 @@ export default function OwnerPayments() {
                       startIcon={<PictureAsPdf />}
                       onClick={() => handleViewPdf(item.final_pdf)}
                     >
-                      VIEW PDF
+                      VIEW SIGNED
                     </Button>
                   ) : (
                     <Button
@@ -166,7 +144,7 @@ export default function OwnerPayments() {
                       startIcon={<SignIcon />}
                       onClick={() => handleOpenSign(item)}
                     >
-                      SIGN NOW
+                      SIGN AGREEMENT
                     </Button>
                   )}
                 </TableCell>
@@ -186,39 +164,73 @@ export default function OwnerPayments() {
             left: "50%",
             transform: "translate(-50%, -50%)",
             bgcolor: "white",
-            p: 3,
-            borderRadius: 2
+            p: 4,
+            borderRadius: 2,
+            width: 400
           }}>
 
-            {step === 1 ? (
+            {step === 1 && (
               <>
-                <Typography>Confirm Agreement</Typography>
+                <Typography variant="h6">📄 Agreement Terms</Typography>
+                <Divider sx={{ my: 2 }} />
+
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<PictureAsPdf />}
+                  onClick={() => handleViewPdf(selectedBooking.final_pdf)}
+                >
+                  View Agreement PDF
+                </Button>
+
+                <Box sx={{ mt: 2, p: 2, bgcolor: "#f5f5f5", maxHeight: 120, overflow: "auto" }}>
+                  <Typography variant="caption">
+                    I confirm that I have read and understood this agreement.
+                    I agree to all terms and conditions legally binding between owner and tenant.
+                  </Typography>
+                </Box>
+
                 <FormControlLabel
                   control={<Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />}
-                  label="I agree"
+                  label="I accept Terms & Conditions"
                 />
-                <Button disabled={!agreed} onClick={() => setStep(2)}>
+
+                <Button
+                  fullWidth
+                  disabled={!agreed}
+                  onClick={() => setStep(2)}
+                >
                   Next
                 </Button>
               </>
-            ) : (
+            )}
+
+            {step === 2 && (
               <>
+                <Typography variant="h6">✍️ Sign Agreement</Typography>
+
                 <TextField
                   fullWidth
-                  label="Mobile"
+                  label="Mobile Number"
                   value={mobile}
                   onChange={(e) => setMobile(e.target.value)}
+                  sx={{ my: 2 }}
                 />
 
                 <SignatureCanvas
                   ref={sigCanvas}
-                  canvasProps={{ width: 300, height: 150 }}
+                  canvasProps={{ width: 350, height: 150 }}
                 />
 
                 <Button onClick={clearSig}>Clear</Button>
 
-                <Button onClick={handleFinalSubmit} disabled={isSubmitting}>
-                  Submit
+                <Button
+                  fullWidth
+                  variant="contained"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                >
+                  Submit & Sign
                 </Button>
               </>
             )}
@@ -226,6 +238,7 @@ export default function OwnerPayments() {
           </Box>
         </Fade>
       </Modal>
+
     </Container>
   );
 }
