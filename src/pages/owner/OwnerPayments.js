@@ -4,18 +4,21 @@ import SignatureCanvas from "react-signature-canvas";
 import {
   Container, Typography, Paper, Table, TableHead, TableRow, TableCell,
   TableBody, Chip, Box, CircularProgress, Button,
-  Modal, Fade, Checkbox, TextField
+  Modal, Fade, Checkbox, TextField, IconButton, Alert,
+  Stepper, Step, StepLabel, Card, CardContent, Divider,
+  Backdrop, useTheme
 } from "@mui/material";
-import { Refresh } from "@mui/icons-material";
+import { Refresh, Close, Draw, Phone, Verified, Gavel, CheckCircle } from "@mui/icons-material";
 
-// 🔥 OTP
+// Firebase OTP
 import { auth } from "../../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
 const API = "https://nepxall-backend.onrender.com/api/owner";
 
 export default function OwnerPayments() {
-
+  const theme = useTheme();
+  
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,27 +34,38 @@ export default function OwnerPayments() {
   const [otpVerified, setOtpVerified] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [otpSending, setOtpSending] = useState(false);
 
   const sigCanvas = useRef(null);
   const token = localStorage.getItem("token");
+
+  const steps = ['Legal Agreement', 'Verify Mobile', 'Sign Document'];
 
   useEffect(() => {
     fetchPayments();
   }, []);
 
-  /* ================= PREVENT REFRESH ================= */
+  // Prevent refresh during OTP/Sign process
   useEffect(() => {
     const handler = (e) => {
       if (step === 2 || step === 3) {
         e.preventDefault();
-        e.returnValue = "";
+        e.returnValue = "You have an ongoing signing process. Are you sure you want to leave?";
       }
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [step]);
 
-  /* ================= FETCH ================= */
+  // Clear signature when step changes to sign
+  useEffect(() => {
+    if (step === 3 && otpVerified) {
+      setTimeout(() => {
+        sigCanvas.current?.clear();
+      }, 200);
+    }
+  }, [step, otpVerified]);
+
   const fetchPayments = async () => {
     try {
       setLoading(true);
@@ -66,38 +80,32 @@ export default function OwnerPayments() {
     }
   };
 
-  /* ================= VIEW ================= */
   const handleViewPdf = async (bookingId, filePath) => {
     await axios.post(`${API}/agreements/viewed`, { booking_id: bookingId }, {
       headers: { Authorization: `Bearer ${token}` }
     });
-
     window.open(filePath, "_blank");
     fetchPayments();
   };
 
-  /* ================= OPEN SIGN ================= */
   const handleOpenSign = (item) => {
     setSelectedBooking(item);
-
     setStep(1);
     setAgreed(false);
     setMobile("");
     setOtp("");
     setConfirmObj(null);
     setOtpVerified(false);
-
     setOpenSignModal(true);
-
-    setTimeout(() => sigCanvas.current?.clear(), 200);
   };
 
-  /* ================= SEND OTP ================= */
   const sendOtp = async () => {
     if (!/^[6-9]\d{9}$/.test(mobile)) {
-      return alert("Enter valid mobile");
+      alert("Please enter a valid 10-digit mobile number");
+      return;
     }
 
+    setOtpSending(true);
     try {
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(
@@ -114,44 +122,50 @@ export default function OwnerPayments() {
       );
 
       setConfirmObj(confirmation);
-      alert("OTP Sent ✅");
-
-    } catch {
-      alert("OTP failed ❌");
+      alert("OTP sent successfully! ✅");
+    } catch (error) {
+      console.error(error);
+      alert("Failed to send OTP. Please try again. ❌");
+    } finally {
+      setOtpSending(false);
     }
   };
 
-  /* ================= VERIFY OTP ================= */
+  // 🔥 FIXED VERIFY OTP FUNCTION
   const verifyOtp = async () => {
     try {
       await confirmObj.confirm(otp);
-
-      setOtpVerified(true);
-
-      // 🔥 MOVE TO SIGN STEP (IMPORTANT FIX)
-      setStep(3);
-
-      alert("OTP Verified ✅");
-
-    } catch {
-      alert("Invalid OTP ❌");
+      
+      // Force reset and set verified
+      setOtpVerified(false);
+      
+      setTimeout(() => {
+        setOtpVerified(true);
+        setStep(3);
+      }, 100);
+      
+      alert("OTP Verified Successfully! ✅");
+    } catch (error) {
+      console.error(error);
+      alert("Invalid OTP. Please try again. ❌");
     }
   };
 
-  /* ================= SUBMIT ================= */
   const handleSubmit = async () => {
-
-    if (!otpVerified) return alert("Verify OTP first");
+    if (!otpVerified) {
+      alert("Please verify OTP first");
+      return;
+    }
 
     if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
-      return alert("Signature required");
+      alert("Please draw your signature");
+      return;
     }
 
     const signature = sigCanvas.current.getCanvas().toDataURL("image/png");
 
     try {
       setIsSubmitting(true);
-
       await axios.post(`${API}/agreements/sign`, {
         booking_id: selectedBooking.booking_id,
         owner_mobile: mobile,
@@ -162,79 +176,130 @@ export default function OwnerPayments() {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      alert("Signed Successfully ✅");
-
+      alert("Document signed successfully! ✅");
       setOpenSignModal(false);
       fetchPayments();
-
-    } catch {
-      alert("Signing failed ❌");
+    } catch (error) {
+      console.error(error);
+      alert("Failed to sign document. Please try again. ❌");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   if (loading) {
-    return <Box p={5} textAlign="center"><CircularProgress /></Box>;
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
-    <Container sx={{ py: 4 }}>
-
-      <Box display="flex" justifyContent="space-between" mb={3}>
-        <Typography variant="h5" fontWeight="bold">
-          Owner Settlement Dashboard
-        </Typography>
-
-        <Button onClick={fetchPayments} startIcon={<Refresh />} variant="outlined">
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      {/* Header */}
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box>
+          <Typography variant="h4" fontWeight="bold" gutterBottom>
+            Owner Settlement Dashboard
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Manage and sign legal agreements for completed bookings
+          </Typography>
+        </Box>
+        <Button
+          onClick={fetchPayments}
+          startIcon={<Refresh />}
+          variant="contained"
+          sx={{ bgcolor: '#1976d2' }}
+        >
           Refresh
         </Button>
       </Box>
 
-      <Paper elevation={3}>
+      {/* Stats Cards */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 3, mb: 4 }}>
+        <Card sx={{ bgcolor: '#e3f2fd' }}>
+          <CardContent>
+            <Typography color="text.secondary" gutterBottom>Total Bookings</Typography>
+            <Typography variant="h4" fontWeight="bold">{data.length}</Typography>
+          </CardContent>
+        </Card>
+        <Card sx={{ bgcolor: '#e8f5e9' }}>
+          <CardContent>
+            <Typography color="text.secondary" gutterBottom>Settled</Typography>
+            <Typography variant="h4" fontWeight="bold" color="success.main">
+              {data.filter(item => item.signed_pdf).length}
+            </Typography>
+          </CardContent>
+        </Card>
+        <Card sx={{ bgcolor: '#fff3e0' }}>
+          <CardContent>
+            <Typography color="text.secondary" gutterBottom>Pending Signature</Typography>
+            <Typography variant="h4" fontWeight="bold" color="warning.main">
+              {data.filter(item => item.viewed_by_owner && !item.signed_pdf).length}
+            </Typography>
+          </CardContent>
+        </Card>
+      </Box>
+
+      {/* Payments Table */}
+      <Paper elevation={3} sx={{ overflowX: 'auto', borderRadius: 2 }}>
         <Table>
-          <TableHead>
+          <TableHead sx={{ bgcolor: '#f5f5f5' }}>
             <TableRow>
-              <TableCell>Booking</TableCell>
-              <TableCell>Tenant</TableCell>
-              <TableCell>Amount</TableCell>
-              <TableCell>Status</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Booking ID</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Tenant Name</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Amount</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Status / Action</TableCell>
             </TableRow>
           </TableHead>
-
           <TableBody>
-            {data.map(item => {
+            {data.map((item) => {
               const isSigned = !!item.signed_pdf;
+              const canSign = item.viewed_by_owner && !isSigned && item.final_pdf;
 
               return (
-                <TableRow key={item.booking_id}>
+                <TableRow key={item.booking_id} hover>
                   <TableCell>#{item.booking_id}</TableCell>
                   <TableCell>{item.tenant_name}</TableCell>
-                  <TableCell>₹{item.owner_amount}</TableCell>
-
+                  <TableCell>
+                    <Typography fontWeight="bold">₹{item.owner_amount}</Typography>
+                  </TableCell>
                   <TableCell>
                     {!item.final_pdf ? (
-                      <Chip label="Processing" />
+                      <Chip label="Processing" color="default" size="small" />
                     ) : isSigned ? (
-                      <Button color="success" variant="contained"
-                        onClick={() => handleViewPdf(item.booking_id, item.signed_pdf)}>
-                        VIEW SIGNED
+                      <Button
+                        variant="contained"
+                        color="success"
+                        size="small"
+                        onClick={() => handleViewPdf(item.booking_id, item.signed_pdf)}
+                        startIcon={<Verified />}
+                      >
+                        View Signed
                       </Button>
                     ) : (
-                      <>
-                        <Button onClick={() =>
-                          handleViewPdf(item.booking_id, item.final_pdf)}>
-                          VIEW PDF
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => handleViewPdf(item.booking_id, item.final_pdf)}
+                        >
+                          View PDF
                         </Button>
-
-                        {item.viewed_by_owner && (
+                        {canSign && (
                           <Button
+                            variant="contained"
                             color="warning"
-                            onClick={() => handleOpenSign(item)}>
-                            SIGN
+                            size="small"
+                            onClick={() => handleOpenSign(item)}
+                            startIcon={<Draw />}
+                          >
+                            Sign
                           </Button>
                         )}
-                      </>
+                      </Box>
                     )}
                   </TableCell>
                 </TableRow>
@@ -244,72 +309,221 @@ export default function OwnerPayments() {
         </Table>
       </Paper>
 
-      {/* ================= MODAL ================= */}
-      <Modal open={openSignModal}>
+      {/* Signature Modal */}
+      <Modal
+        open={openSignModal}
+        onClose={() => !isSubmitting && setOpenSignModal(false)}
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{ timeout: 500 }}
+      >
         <Fade in={openSignModal}>
-          <Box sx={{ p: 4, bgcolor: "#fff", width: 400, m: "auto", mt: "10%" }}>
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: { xs: '95%', sm: 500 },
+              bgcolor: 'background.paper',
+              borderRadius: 3,
+              boxShadow: 24,
+              maxHeight: '90vh',
+              overflow: 'auto'
+            }}
+          >
+            {/* Modal Header */}
+            <Box sx={{ 
+              p: 3, 
+              bgcolor: theme.palette.primary.main, 
+              color: 'white',
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <Typography variant="h6" fontWeight="bold">
+                Sign Agreement
+              </Typography>
+              <IconButton
+                onClick={() => setOpenSignModal(false)}
+                sx={{ color: 'white' }}
+                disabled={isSubmitting}
+              >
+                <Close />
+              </IconButton>
+            </Box>
 
-            {/* STEP 1 */}
+            {/* Stepper */}
+            <Box sx={{ px: 3, pt: 3 }}>
+              <Stepper activeStep={step - 1} alternativeLabel>
+                {steps.map((label) => (
+                  <Step key={label}>
+                    <StepLabel>{label}</StepLabel>
+                  </Step>
+                ))}
+              </Stepper>
+            </Box>
+
+            <Divider sx={{ my: 2 }} />
+
+            {/* Step 1 - Legal Agreement */}
             {step === 1 && (
-              <>
-                <Typography>Legal Consent</Typography>
-                <Checkbox checked={agreed}
-                  onChange={(e) => setAgreed(e.target.checked)} />
+              <Box sx={{ p: 3 }}>
+                <Card variant="outlined" sx={{ mb: 3, bgcolor: '#f9f9f9' }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <Gavel sx={{ mr: 1, color: theme.palette.primary.main }} />
+                      <Typography variant="h6">Legal Terms & Conditions</Typography>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" paragraph>
+                      By signing this agreement, you confirm that:
+                    </Typography>
+                    <ul style={{ marginTop: 0, paddingLeft: 20 }}>
+                      <li><Typography variant="body2">You have reviewed the rental agreement thoroughly</Typography></li>
+                      <li><Typography variant="body2">All information provided is accurate and complete</Typography></li>
+                      <li><Typography variant="body2">You agree to the terms and conditions of the rental</Typography></li>
+                      <li><Typography variant="body2">You authorize the release of payment as per the agreement</Typography></li>
+                    </ul>
+                  </CardContent>
+                </Card>
 
-                <Button disabled={!agreed}
-                  onClick={() => setStep(2)}>
-                  Continue
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                  <Checkbox
+                    checked={agreed}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                    sx={{ '&.Mui-checked': { color: theme.palette.primary.main } }}
+                  />
+                  <Typography>
+                    I have read and agree to the terms and conditions
+                  </Typography>
+                </Box>
+
+                <Button
+                  fullWidth
+                  variant="contained"
+                  disabled={!agreed}
+                  onClick={() => setStep(2)}
+                  size="large"
+                >
+                  Continue to Verification
                 </Button>
-              </>
+              </Box>
             )}
 
-            {/* STEP 2 */}
+            {/* Step 2 - OTP Verification */}
             {step === 2 && (
-              <>
-                <TextField fullWidth label="Mobile"
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value)} />
-
-                <Button onClick={sendOtp}>Send OTP</Button>
+              <Box sx={{ p: 3 }}>
+                <Card variant="outlined" sx={{ mb: 3, p: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Phone sx={{ mr: 1, color: theme.palette.primary.main }} />
+                    <Typography variant="h6">Mobile Verification</Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Enter your registered mobile number to receive verification code
+                  </Typography>
+                  
+                  <TextField
+                    fullWidth
+                    label="Mobile Number"
+                    value={mobile}
+                    onChange={(e) => setMobile(e.target.value)}
+                    placeholder="9876543210"
+                    variant="outlined"
+                    disabled={!!confirmObj}
+                    sx={{ mb: 2 }}
+                  />
+                  
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={sendOtp}
+                    disabled={otpSending || !mobile || confirmObj}
+                  >
+                    {otpSending ? "Sending..." : "Send OTP"}
+                  </Button>
+                </Card>
 
                 {confirmObj && (
-                  <>
-                    <TextField fullWidth label="OTP"
+                  <Card variant="outlined" sx={{ p: 2 }}>
+                    <TextField
+                      fullWidth
+                      label="Enter OTP"
                       value={otp}
-                      onChange={(e) => setOtp(e.target.value)} />
-
-                    <Button onClick={verifyOtp}>Verify OTP</Button>
-                  </>
+                      onChange={(e) => setOtp(e.target.value)}
+                      placeholder="123456"
+                      variant="outlined"
+                      sx={{ mb: 2 }}
+                    />
+                    
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      onClick={verifyOtp}
+                      disabled={!otp}
+                      size="large"
+                    >
+                      Verify OTP
+                    </Button>
+                  </Card>
                 )}
 
                 <div id="recaptcha-container"></div>
-              </>
+              </Box>
             )}
 
-            {/* STEP 3 🔥 SIGNATURE */}
-            {step === 3 && (
-              <>
-                <Typography mb={2}>Draw Signature</Typography>
-
-                <SignatureCanvas
-                  ref={sigCanvas}
-                  canvasProps={{ width: 350, height: 150 }}
-                />
-
-                <Box mt={2} display="flex" justifyContent="space-between">
-                  <Button onClick={() => sigCanvas.current.clear()}>
-                    Clear
-                  </Button>
-
-                  <Button variant="contained"
-                    disabled={isSubmitting}
-                    onClick={handleSubmit}>
-                    {isSubmitting ? "Signing..." : "Final Sign"}
-                  </Button>
-                </Box>
-              </>
+            {/* Step 3 - Signature */}
+            {step === 3 && otpVerified && (
+              <Box sx={{ p: 3 }}>
+                <Card variant="outlined" sx={{ mb: 3, p: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Draw sx={{ mr: 1, color: theme.palette.primary.main }} />
+                    <Typography variant="h6">Draw Your Signature</Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Use your mouse or touch to draw your signature in the box below
+                  </Typography>
+                  
+                  <Box sx={{ 
+                    border: '2px solid #e0e0e0', 
+                    borderRadius: 2, 
+                    overflow: 'hidden',
+                    bgcolor: '#fff'
+                  }}>
+                    <SignatureCanvas
+                      ref={sigCanvas}
+                      canvasProps={{ 
+                        width: '100%', 
+                        height: 200,
+                        style: { width: '100%', height: '200px' }
+                      }}
+                      backgroundColor="white"
+                      penColor="black"
+                    />
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => sigCanvas.current?.clear()}
+                      fullWidth
+                    >
+                      Clear
+                    </Button>
+                    <Button
+                      variant="contained"
+                      onClick={handleSubmit}
+                      disabled={isSubmitting}
+                      fullWidth
+                      startIcon={isSubmitting ? <CircularProgress size={20} /> : <CheckCircle />}
+                    >
+                      {isSubmitting ? "Signing..." : "Final Sign"}
+                    </Button>
+                  </Box>
+                </Card>
+              </Box>
             )}
-
           </Box>
         </Fade>
       </Modal>
