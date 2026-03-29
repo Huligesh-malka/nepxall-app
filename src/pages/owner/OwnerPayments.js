@@ -55,10 +55,8 @@ export default function OwnerPayments() {
       console.error("View update failed", err);
     }
 
-    const url = filePath;
-    window.open(url, "_blank");
-
-    fetchPayments(); // refresh UI
+    window.open(filePath, "_blank");
+    fetchPayments();
   };
 
   /* ================= OPEN SIGN ================= */
@@ -75,8 +73,8 @@ export default function OwnerPayments() {
   /* ================= SUBMIT SIGN ================= */
   const handleSubmit = async () => {
 
-    if (!mobile || mobile.length < 10) {
-      return alert("Enter valid mobile number");
+    if (!/^[6-9]\d{9}$/.test(mobile)) {
+      return alert("Enter valid Indian mobile number");
     }
 
     if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
@@ -234,12 +232,17 @@ export default function OwnerPayments() {
 
             {step === 1 ? (
               <>
-                <Typography variant="h6">Confirm Terms</Typography>
+                <Typography variant="h6">Legal Consent</Typography>
                 <Divider sx={{ my: 2 }} />
+
+                <Typography fontSize={14} mb={2}>
+                  I agree that this digital signature is legally binding.
+                  I confirm that I am the authorized owner and accept all agreement terms.
+                </Typography>
 
                 <FormControlLabel
                   control={<Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />}
-                  label="I accept all terms"
+                  label="I accept all terms & conditions"
                 />
 
                 <Button
@@ -268,7 +271,7 @@ export default function OwnerPayments() {
                   canvasProps={{
                     width: 350,
                     height: 150,
-                    style: { background: "#fff" }
+                    style: { background: "#fff", border: "1px solid #ccc" }
                   }}
                 />
 
