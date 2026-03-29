@@ -19,7 +19,7 @@ export default function OwnerPayments() {
   const [openSignModal, setOpenSignModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
 
-  // ✅ LOAD FROM LOCAL STORAGE
+  // ✅ PERSIST STATE
   const [viewedPdfs, setViewedPdfs] = useState(() => {
     const saved = localStorage.getItem("viewedPdfs");
     return saved ? JSON.parse(saved) : [];
@@ -30,7 +30,7 @@ export default function OwnerPayments() {
   const [mobile, setMobile] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const sigCanvas = useRef();
+  const sigCanvas = useRef(null);
   const token = localStorage.getItem("token");
 
   /* ================= FETCH ================= */
@@ -59,8 +59,6 @@ export default function OwnerPayments() {
     if (!viewedPdfs.includes(bookingId)) {
       updated = [...viewedPdfs, bookingId];
       setViewedPdfs(updated);
-
-      // ✅ SAVE IN LOCAL STORAGE
       localStorage.setItem("viewedPdfs", JSON.stringify(updated));
     }
 
@@ -82,11 +80,16 @@ export default function OwnerPayments() {
 
   /* ================= SUBMIT SIGN ================= */
   const handleSubmit = async () => {
+
     if (!mobile || mobile.length < 10) {
       return alert("Enter valid mobile number");
     }
 
-    if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
+    if (!sigCanvas.current) {
+      return alert("Signature pad not ready");
+    }
+
+    if (sigCanvas.current.isEmpty()) {
       return alert("Signature required");
     }
 
@@ -112,7 +115,7 @@ export default function OwnerPayments() {
 
       alert("Agreement Signed Successfully ✅");
 
-      // ✅ REMOVE FROM VIEWED AFTER SIGN
+      // remove from viewed after signing
       const updated = viewedPdfs.filter(
         id => id !== selectedBooking.booking_id
       );
@@ -142,6 +145,7 @@ export default function OwnerPayments() {
   return (
     <Container sx={{ py: 4 }}>
 
+      {/* HEADER */}
       <Box display="flex" justifyContent="space-between" mb={3}>
         <Typography variant="h5" fontWeight="bold">
           Owner Settlement Dashboard
@@ -152,6 +156,7 @@ export default function OwnerPayments() {
         </Button>
       </Box>
 
+      {/* TABLE */}
       <Paper elevation={3}>
         <Table>
           <TableHead>
@@ -174,6 +179,7 @@ export default function OwnerPayments() {
                   <TableCell>₹{item.owner_amount}</TableCell>
 
                   <TableCell align="center">
+
                     {!item.final_pdf ? (
                       <Chip label="Processing PDF" />
                     ) : isSigned ? (
@@ -213,6 +219,7 @@ export default function OwnerPayments() {
 
                       </Box>
                     )}
+
                   </TableCell>
                 </TableRow>
               );
@@ -222,29 +229,70 @@ export default function OwnerPayments() {
       </Paper>
 
       {/* MODAL */}
-      <Modal open={openSignModal}>
+      <Modal open={openSignModal} onClose={() => setOpenSignModal(false)}>
         <Fade in={openSignModal}>
-          <Box sx={{ p: 4, bgcolor: "white", width: 400, margin: "auto", mt: "10%" }}>
+          <Box sx={{
+            p: 4,
+            bgcolor: "white",
+            width: 400,
+            margin: "auto",
+            mt: "10%",
+            borderRadius: 2
+          }}>
 
             {step === 1 ? (
               <>
+                <Typography variant="h6">Confirm Terms</Typography>
+                <Divider sx={{ my: 2 }} />
+
                 <FormControlLabel
                   control={<Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />}
-                  label="Accept Terms"
+                  label="I accept all terms"
                 />
-                <Button disabled={!agreed} onClick={() => setStep(2)}>Continue</Button>
+
+                <Button
+                  fullWidth
+                  variant="contained"
+                  disabled={!agreed}
+                  onClick={() => setStep(2)}
+                  sx={{ mt: 2 }}
+                >
+                  Continue
+                </Button>
               </>
             ) : (
               <>
-                <TextField fullWidth label="Mobile" value={mobile} onChange={(e) => setMobile(e.target.value)} />
+                <Typography variant="h6">Draw Signature</Typography>
+
+                <TextField
+                  fullWidth
+                  label="Mobile Number"
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
+                  sx={{ my: 2 }}
+                />
 
                 <SignatureCanvas
                   ref={(ref) => (sigCanvas.current = ref)}
                   canvasProps={{ width: 350, height: 150 }}
                 />
 
-                <Button onClick={() => sigCanvas.current.clear()}>Clear</Button>
-                <Button onClick={handleSubmit}>Submit</Button>
+                <Button onClick={() => sigCanvas.current.clear()}>
+                  Clear
+                </Button>
+
+                <Box display="flex" gap={2} mt={2}>
+                  <Button fullWidth onClick={() => setStep(1)}>Back</Button>
+
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    onClick={handleSubmit}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Signing..." : "Submit"}
+                  </Button>
+                </Box>
               </>
             )}
 
