@@ -9,6 +9,10 @@ import {
 import { Refresh, PictureAsPdf, CheckCircle } from "@mui/icons-material";
 import { HistoryEdu as SignIcon } from "@mui/icons-material";
 
+// 🔥 OTP IMPORT
+import { auth } from "../firebase";
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+
 const API = "https://nepxall-backend.onrender.com/api/owner";
 
 export default function OwnerPayments() {
@@ -22,6 +26,13 @@ export default function OwnerPayments() {
   const [step, setStep] = useState(1);
   const [agreed, setAgreed] = useState(false);
   const [mobile, setMobile] = useState("");
+
+  // 🔥 OTP STATES
+  const [otp, setOtp] = useState("");
+  const [confirmObj, setConfirmObj] = useState(null);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const sigCanvas = useRef(null);
@@ -39,24 +50,18 @@ export default function OwnerPayments() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setData(res.data.data || []);
-    } catch (err) {
+    } catch {
       alert("Failed to load payments ❌");
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= VIEW PDF ================= */
+  /* ================= VIEW ================= */
   const handleViewPdf = async (bookingId, filePath) => {
-    try {
-      await axios.post(
-        `${API}/agreements/viewed`,
-        { booking_id: bookingId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-    } catch (err) {
-      console.error("View update failed", err);
-    }
+    await axios.post(`${API}/agreements/viewed`, { booking_id: bookingId }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
 
     window.open(filePath, "_blank");
     fetchPayments();
@@ -64,111 +69,115 @@ export default function OwnerPayments() {
 
   /* ================= OPEN SIGN ================= */
   const handleOpenSign = (item) => {
-    if (item.signed_pdf) return;
-
     setSelectedBooking(item);
     setStep(1);
     setAgreed(false);
     setMobile("");
+    setOtp("");
+    setConfirmObj(null);
+    setOtpVerified(false);
 
-    // CLEAR CANVAS PROPERLY
-    setTimeout(() => {
-      if (sigCanvas.current) {
-        sigCanvas.current.clear();
-      }
-    }, 100);
-
+    setTimeout(() => sigCanvas.current?.clear(), 100);
     setOpenSignModal(true);
   };
 
-  /* ================= SUBMIT SIGN ================= */
+  /* ================= SEND OTP ================= */
+  const sendOtp = async () => {
+    if (!/^[6-9]\d{9}$/.test(mobile)) {
+      return alert("Enter valid mobile");
+    }
+
+    try {
+      setSendingOtp(true);
+
+      if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(
+          auth,
+          "recaptcha-container",
+          { size: "invisible" }
+        );
+      }
+
+      const confirmation = await signInWithPhoneNumber(
+        auth,
+        `+91${mobile}`,
+        window.recaptchaVerifier
+      );
+
+      setConfirmObj(confirmation);
+      alert("OTP Sent ✅");
+
+    } catch {
+      alert("OTP failed ❌");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  /* ================= VERIFY OTP ================= */
+  const verifyOtp = async () => {
+    try {
+      await confirmObj.confirm(otp);
+      setOtpVerified(true);
+      alert("OTP Verified ✅");
+    } catch {
+      alert("Invalid OTP ❌");
+    }
+  };
+
+  /* ================= SUBMIT ================= */
   const handleSubmit = async () => {
 
-    if (isSubmitting) return; // prevent double click
-
-    if (!/^[6-9]\d{9}$/.test(mobile)) {
-      return alert("Enter valid Indian mobile number");
-    }
+    if (!otpVerified) return alert("Verify OTP first");
 
     if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
       return alert("Signature required");
     }
 
-    const signature = sigCanvas.current
-      .getCanvas()
-      .toDataURL("image/png");
-
-    setIsSubmitting(true);
+    const signature = sigCanvas.current.getCanvas().toDataURL("image/png");
 
     try {
-      await axios.post(
-        `${API}/agreements/sign`,
-        {
-          booking_id: selectedBooking.booking_id,
-          owner_mobile: mobile,
-          owner_signature: signature,
-          accepted_terms: true
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
+      setIsSubmitting(true);
 
-      alert("Agreement Signed Successfully ✅");
+      await axios.post(`${API}/agreements/sign`, {
+        booking_id: selectedBooking.booking_id,
+        owner_mobile: mobile,
+        owner_signature: signature,
+        accepted_terms: true,
+        otp_verified: true // 🔥 IMPORTANT
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-      // RESET EVERYTHING
+      alert("Signed Successfully ✅");
+
       setOpenSignModal(false);
-      setSelectedBooking(null);
-      setStep(1);
-      setAgreed(false);
-      setMobile("");
-
       fetchPayments();
 
-    } catch (err) {
-      console.error(err);
-
-      if (err.response?.status === 400) {
-        alert(err.response.data.message || "Already signed");
-      } else if (err.response?.status === 500) {
-        alert("Server error. Try again later ❌");
-      } else {
-        alert("Signing failed ❌");
-      }
-
+    } catch {
+      alert("Signing failed ❌");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  /* ================= LOADING ================= */
   if (loading) {
-    return (
-      <Box p={5} textAlign="center">
-        <CircularProgress />
-      </Box>
-    );
+    return <Box p={5} textAlign="center"><CircularProgress /></Box>;
   }
 
   return (
     <Container sx={{ py: 4 }}>
 
-      {/* HEADER */}
       <Box display="flex" justifyContent="space-between" mb={3}>
         <Typography variant="h5" fontWeight="bold">
           Owner Settlement Dashboard
         </Typography>
 
-        <Button
-          onClick={fetchPayments}
-          startIcon={<Refresh />}
-          variant="outlined"
-        >
+        <Button onClick={fetchPayments} startIcon={<Refresh />} variant="outlined">
           Refresh
         </Button>
       </Box>
 
-      {/* TABLE */}
       <Paper elevation={3}>
         <Table>
           <TableHead>
@@ -181,7 +190,7 @@ export default function OwnerPayments() {
           </TableHead>
 
           <TableBody>
-            {data.map((item) => {
+            {data.map(item => {
               const isSigned = !!item.signed_pdf;
 
               return (
@@ -191,47 +200,30 @@ export default function OwnerPayments() {
                   <TableCell>₹{item.owner_amount}</TableCell>
 
                   <TableCell align="center">
-
                     {!item.final_pdf ? (
                       <Chip label="Processing PDF" />
                     ) : isSigned ? (
-                      <Button
-                        variant="contained"
-                        color="success"
-                        startIcon={<CheckCircle />}
-                        onClick={() =>
-                          handleViewPdf(item.booking_id, item.signed_pdf)
-                        }
-                      >
+                      <Button color="success" variant="contained"
+                        onClick={() => handleViewPdf(item.booking_id, item.signed_pdf)}>
                         VIEW SIGNED
                       </Button>
                     ) : (
-                      <Box display="flex" gap={1} justifyContent="center">
-
-                        <Button
-                          variant="outlined"
-                          startIcon={<PictureAsPdf />}
-                          onClick={() =>
-                            handleViewPdf(item.booking_id, item.final_pdf)
-                          }
-                        >
+                      <Box display="flex" gap={1}>
+                        <Button onClick={() =>
+                          handleViewPdf(item.booking_id, item.final_pdf)}>
                           VIEW PDF
                         </Button>
 
                         {item.viewed_by_owner && (
                           <Button
-                            variant="contained"
                             color="warning"
-                            startIcon={<SignIcon />}
-                            onClick={() => handleOpenSign(item)}
-                          >
+                            variant="contained"
+                            onClick={() => handleOpenSign(item)}>
                             SIGN
                           </Button>
                         )}
-
                       </Box>
                     )}
-
                   </TableCell>
                 </TableRow>
               );
@@ -241,78 +233,55 @@ export default function OwnerPayments() {
       </Paper>
 
       {/* MODAL */}
-      <Modal open={openSignModal} onClose={() => !isSubmitting && setOpenSignModal(false)}>
+      <Modal open={openSignModal}>
         <Fade in={openSignModal}>
-          <Box sx={{
-            p: 4,
-            bgcolor: "#fff",
-            width: 400,
-            margin: "auto",
-            mt: "10%",
-            borderRadius: 2
-          }}>
+          <Box sx={{ p: 4, bgcolor: "#fff", width: 400, m: "auto", mt: "10%" }}>
 
             {step === 1 ? (
               <>
-                <Typography variant="h6">Legal Consent</Typography>
-                <Divider sx={{ my: 2 }} />
-
-                <Typography fontSize={14} mb={2}>
-                  This digital signature is legally binding under Indian IT Act.
-                </Typography>
-
-                <FormControlLabel
-                  control={<Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />}
-                  label="I accept terms"
-                />
-
-                <Button
-                  fullWidth
-                  variant="contained"
-                  disabled={!agreed}
-                  onClick={() => setStep(2)}
-                >
-                  Continue
-                </Button>
+                <Typography>Legal Consent</Typography>
+                <Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+                <Button disabled={!agreed} onClick={() => setStep(2)}>Continue</Button>
               </>
             ) : (
               <>
-                <Typography variant="h6">Draw Signature</Typography>
-
                 <TextField
                   fullWidth
-                  label="Mobile Number"
+                  label="Mobile"
                   value={mobile}
                   onChange={(e) => setMobile(e.target.value)}
-                  sx={{ my: 2 }}
                 />
 
-                <SignatureCanvas
-                  ref={sigCanvas}
-                  penColor="black"
-                  canvasProps={{
-                    width: 350,
-                    height: 150,
-                    style: { border: "1px solid #ccc" }
-                  }}
-                />
+                <Button onClick={sendOtp}>Send OTP</Button>
 
-                <Button onClick={() => sigCanvas.current.clear()}>
-                  Clear
-                </Button>
+                {confirmObj && (
+                  <>
+                    <TextField
+                      fullWidth
+                      label="OTP"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                    />
+                    <Button onClick={verifyOtp}>Verify OTP</Button>
+                  </>
+                )}
 
-                <Box display="flex" gap={2} mt={2}>
-                  <Button fullWidth onClick={() => setStep(1)}>Back</Button>
+                {otpVerified && (
+                  <>
+                    <SignatureCanvas ref={sigCanvas}
+                      canvasProps={{ width: 350, height: 150 }} />
 
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    onClick={handleSubmit}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? "Signing..." : "Submit"}
-                  </Button>
-                </Box>
+                    <Button onClick={() => sigCanvas.current.clear()}>
+                      Clear
+                    </Button>
+
+                    <Button onClick={handleSubmit}>
+                      Final Sign
+                    </Button>
+                  </>
+                )}
+
+                <div id="recaptcha-container"></div>
               </>
             )}
 
