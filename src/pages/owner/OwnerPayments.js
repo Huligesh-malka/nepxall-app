@@ -3,38 +3,15 @@ import axios from "axios";
 import SignatureCanvas from 'react-signature-canvas';
 
 import {
-  Container,
-  Typography,
-  Paper,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-  Chip,
-  Box,
-  CircularProgress,
-  Alert,
-  Button,
-  Card,
-  CardContent,
-  Grid,
-  Tooltip,
-  Modal,
-  Backdrop,
-  Fade,
-  Checkbox,
-  FormControlLabel,
-  TextField,
-  Divider
+  Container, Typography, Paper, Table, TableHead, TableRow, TableCell,
+  TableBody, Chip, Box, CircularProgress, Alert, Button, Card,
+  CardContent, Grid, Tooltip, Modal, Backdrop, Fade, Checkbox,
+  FormControlLabel, TextField, Divider
 } from "@mui/material";
 
 import {
-  AccountBalanceWallet,
-  Refresh,
-  PictureAsPdf,
-  PendingActions,
-  Edit as EditIcon
+  AccountBalanceWallet, Refresh, PictureAsPdf, 
+  HistoryEdu as SignIcon
 } from "@mui/icons-material";
 
 const API = "https://nepxall-backend.onrender.com/api/owner";
@@ -49,7 +26,7 @@ export default function OwnerPayments() {
   // Signature Modal States
   const [openSignModal, setOpenSignModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
-  const [step, setStep] = useState(1); // 1: Terms, 2: Signature
+  const [step, setStep] = useState(1);
   const [agreed, setAgreed] = useState(false);
   const [mobile, setMobile] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -115,7 +92,7 @@ export default function OwnerPayments() {
       if (res.data.success) {
         alert("Agreement signed and approved!");
         setOpenSignModal(false);
-        fetchPayments(); // Refresh list to show "View PDF"
+        fetchPayments(); 
       }
     } catch (err) {
       alert(err.response?.data?.message || "Error saving signature");
@@ -128,17 +105,14 @@ export default function OwnerPayments() {
   const getPaymentStatusColor = (status) => {
     switch(status?.toLowerCase()) {
       case "paid": return "success";
-      case "submitted": return "info";
       case "pending": return "warning";
-      case "rejected": return "error";
       default: return "default";
     }
   };
 
   const getSettlementStatusColor = (status) => {
     switch(status?.toUpperCase()) {
-      case "DONE":
-      case "COMPLETED": return "success";
+      case "DONE": return "success";
       case "PENDING": return "warning";
       default: return "default";
     }
@@ -156,14 +130,10 @@ export default function OwnerPayments() {
     window.open(fullUrl, '_blank');
   };
 
-  const verifiedCount = data.filter(item => item.payment_status?.toLowerCase() === 'paid').length;
-  const totalAmount = data.reduce((sum, item) => sum + (Number(item.owner_amount) || 0), 0);
-
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 2 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
         <CircularProgress size={60} thickness={4} />
-        <Typography color="text.secondary">Loading your earnings...</Typography>
       </Box>
     );
   }
@@ -179,7 +149,7 @@ export default function OwnerPayments() {
         <Button 
           variant="contained" 
           onClick={() => fetchPayments(true)} 
-          disabled={refreshing} 
+          disabled={refreshing}
           startIcon={refreshing ? <CircularProgress size={20} color="inherit" /> : <Refresh />}
         >
           {refreshing ? 'Refreshing...' : 'Refresh'}
@@ -187,13 +157,6 @@ export default function OwnerPayments() {
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
-
-      {/* Summary Stats */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={4}><Card sx={{ bgcolor: '#1976d2', color: 'white' }}><CardContent><Typography variant="body2" sx={{ opacity: 0.9 }}>Total Bookings</Typography><Typography variant="h4" fontWeight="bold">{data.length}</Typography></CardContent></Card></Grid>
-        <Grid item xs={12} sm={4}><Card sx={{ bgcolor: '#388e3c', color: 'white' }}><CardContent><Typography variant="body2" sx={{ opacity: 0.9 }}>Total Earnings</Typography><Typography variant="h4" fontWeight="bold">{formatCurrency(totalAmount)}</Typography></CardContent></Card></Grid>
-        <Grid item xs={12} sm={4}><Card sx={{ bgcolor: '#0288d1', color: 'white' }}><CardContent><Typography variant="body2" sx={{ opacity: 0.9 }}>Verified Payments</Typography><Typography variant="h4" fontWeight="bold">{verifiedCount}</Typography></CardContent></Card></Grid>
-      </Grid>
 
       {/* Main Table */}
       <Paper sx={{ borderRadius: 2, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
@@ -217,7 +180,7 @@ export default function OwnerPayments() {
                 <TableRow key={item.booking_id || index} hover>
                   <TableCell>#{item.booking_id}</TableCell>
                   <TableCell>
-                    <Typography variant="body2" fontWeight="500">{item.tenant_name || "N/A"}</Typography>
+                    <Typography variant="body2" fontWeight="500">{item.tenant_name}</Typography>
                     <Typography variant="caption" color="text.secondary">{item.phone}</Typography>
                   </TableCell>
                   <TableCell>{item.pg_name}</TableCell>
@@ -230,13 +193,36 @@ export default function OwnerPayments() {
                   <TableCell align="center">
                     <Chip label={item.owner_settlement?.toUpperCase() || "PENDING"} color={getSettlementStatusColor(item.owner_settlement)} variant="outlined" size="small" />
                   </TableCell>
+                  
+                  {/* STRAIGHT COLUMN WITH SEPARATED ACTION LOGIC */}
                   <TableCell align="center">
-                    {item.final_pdf ? (
-                      <Button variant="contained" size="small" color="info" startIcon={<PictureAsPdf />} onClick={() => handleViewPdf(item.final_pdf)}>View PDF</Button>
-                    ) : (
-                      <Button variant="outlined" size="small" color="warning" startIcon={<EditIcon />} onClick={() => handleOpenSign(item)}>Sign Now</Button>
-                    )}
+                    <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                      {item.final_pdf ? (
+                        <Button
+                          variant="contained"
+                          size="small"
+                          color="info"
+                          startIcon={<PictureAsPdf />}
+                          onClick={() => handleViewPdf(item.final_pdf)}
+                          sx={{ textTransform: 'none', width: '120px', fontSize: '0.75rem' }}
+                        >
+                          VIEW PDF
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          color="warning"
+                          startIcon={<SignIcon />}
+                          onClick={() => handleOpenSign(item)}
+                          sx={{ textTransform: 'none', width: '120px', fontSize: '0.75rem', fontWeight: 'bold' }}
+                        >
+                          SIGN NOW
+                        </Button>
+                      )}
+                    </Box>
                   </TableCell>
+
                 </TableRow>
               ))
             )}
@@ -256,44 +242,25 @@ export default function OwnerPayments() {
                 <Typography variant="h6" fontWeight="bold">Agreement Terms</Typography>
                 <Divider sx={{ my: 2 }} />
                 <Typography variant="body2"><strong>Tenant:</strong> {selectedBooking?.tenant_name}</Typography>
-                <Typography variant="body2"><strong>Property:</strong> {selectedBooking?.pg_name}</Typography>
                 <Typography variant="body2" sx={{ mb: 2 }}><strong>Earnings:</strong> {formatCurrency(selectedBooking?.owner_amount)}</Typography>
-                
                 <Box sx={{ bgcolor: '#fff9c4', p: 2, borderRadius: 1, mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    I confirm that the booking details are correct and I am ready to digitally sign this rental agreement.
-                  </Typography>
+                  <Typography variant="caption" color="text.secondary">I confirm that the details are correct and I am ready to sign.</Typography>
                 </Box>
-                <FormControlLabel
-                  control={<Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />}
-                  label="I agree to the terms and verify the details."
-                />
+                <FormControlLabel control={<Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />} label="I agree to the terms." />
                 <Button fullWidth variant="contained" sx={{ mt: 2 }} disabled={!agreed} onClick={() => setStep(2)}>Next: Signature</Button>
               </Box>
             ) : (
               <Box>
                 <Typography variant="h6" fontWeight="bold">Sign Agreement</Typography>
                 <Divider sx={{ my: 1 }} />
-                <TextField 
-                  fullWidth label="Confirm Mobile Number" variant="outlined" size="small"
-                  sx={{ my: 2 }} value={mobile} onChange={(e) => setMobile(e.target.value)}
-                />
-                <Typography variant="caption" color="text.secondary">Use mouse/touch to draw signature:</Typography>
-                <Box sx={{ border: '1px solid #ccc', borderRadius: 1, mt: 1, bgcolor: '#fafafa' }}>
-                  <SignatureCanvas 
-                    ref={sigCanvas} 
-                    penColor='black' 
-                    canvasProps={{ width: 435, height: 180, className: 'sigCanvas' }} 
-                  />
+                <TextField fullWidth label="Mobile Number" variant="outlined" size="small" sx={{ my: 2 }} value={mobile} onChange={(e) => setMobile(e.target.value)} />
+                <Box sx={{ border: '1px solid #ccc', borderRadius: 1, bgcolor: '#fafafa' }}>
+                  <SignatureCanvas ref={sigCanvas} penColor='black' canvasProps={{ width: 435, height: 180, className: 'sigCanvas' }} />
                 </Box>
-                <Button size="small" onClick={clearSig} color="error" sx={{ mt: 1 }}>Clear Signature</Button>
-
+                <Button size="small" onClick={clearSig} color="error" sx={{ mt: 1 }}>Clear</Button>
                 <Box display="flex" gap={2} mt={3}>
                   <Button fullWidth variant="outlined" onClick={() => setStep(1)}>Back</Button>
-                  <Button 
-                    fullWidth variant="contained" color="success" 
-                    onClick={handleFinalSubmit} disabled={isSubmitting}
-                  >
+                  <Button fullWidth variant="contained" color="success" onClick={handleFinalSubmit} disabled={isSubmitting}>
                     {isSubmitting ? <CircularProgress size={24} /> : "Submit & Sign"}
                   </Button>
                 </Box>
