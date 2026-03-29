@@ -22,41 +22,22 @@ import {
 } from "@mui/material";
 
 import {
-  ReceiptLong,
-  Person,
-  Home,
   AccountBalanceWallet,
-  CheckCircle,
-  PendingActions,
   Refresh,
-  PictureAsPdf
+  PictureAsPdf,
+  PendingActions
 } from "@mui/icons-material";
 
 const API = "https://nepxall-backend.onrender.com/api/owner";
-const BASE_URL = "https://nepxall-backend.onrender.com"; // Required to construct full PDF URL
+const BASE_URL = "https://nepxall-backend.onrender.com";
 
 export default function OwnerPayments() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
-  const [userInfo, setUserInfo] = useState(null);
 
   const token = localStorage.getItem("token");
-
-  // Decode token to get user context
-  useEffect(() => {
-    if (token) {
-      try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const payload = JSON.parse(window.atob(base64));
-        setUserInfo(payload);
-      } catch (e) {
-        console.error("Could not decode token:", e);
-      }
-    }
-  }, [token]);
 
   const fetchPayments = async (showRefreshing = false) => {
     try {
@@ -115,13 +96,14 @@ export default function OwnerPayments() {
 
   const handleViewPdf = (pdfPath) => {
     if (!pdfPath) return;
-    // Check if the path is already a full URL or needs the base prefix
+    // Checks if the path is a Cloudinary link (starts with http) or a local server path
     const fullUrl = pdfPath.startsWith('http') ? pdfPath : `${BASE_URL}/${pdfPath}`;
     window.open(fullUrl, '_blank');
   };
 
   const verifiedCount = data.filter(item => item.payment_status?.toLowerCase() === 'paid').length;
-  const totalAmount = data.reduce((sum, item) => sum + (Number(item.amount) || Number(item.owner_amount) || 0), 0);
+  // Use owner_amount specifically as it's the owner's share
+  const totalAmount = data.reduce((sum, item) => sum + (Number(item.owner_amount) || 0), 0);
 
   if (loading) {
     return (
@@ -137,7 +119,9 @@ export default function OwnerPayments() {
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
         <Box>
-          <Typography variant="h4" fontWeight="bold">💰 Owner Dashboard</Typography>
+          <Typography variant="h4" fontWeight="bold">
+            💰 Owner Dashboard
+          </Typography>
           <Typography variant="body2" color="text.secondary">
             Manage your earnings and signed agreements
           </Typography>
@@ -152,7 +136,7 @@ export default function OwnerPayments() {
         </Button>
       </Box>
 
-      {/* Error Message */}
+      {/* Error Alert */}
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
       {/* Summary Stats */}
@@ -176,7 +160,7 @@ export default function OwnerPayments() {
         <Grid item xs={12} sm={4}>
           <Card sx={{ bgcolor: '#0288d1', color: 'white' }}>
             <CardContent>
-              <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>Verified</Typography>
+              <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>Verified Payments</Typography>
               <Typography variant="h4" fontWeight="bold">{verifiedCount}</Typography>
             </CardContent>
           </Card>
@@ -216,7 +200,7 @@ export default function OwnerPayments() {
                   <TableCell>{item.pg_name}</TableCell>
                   <TableCell align="center">
                     <Typography fontWeight="bold" color="primary.main">
-                      {formatCurrency(item.amount || item.owner_amount)}
+                      {formatCurrency(item.owner_amount)}
                     </Typography>
                   </TableCell>
                   <TableCell align="center">
@@ -228,7 +212,6 @@ export default function OwnerPayments() {
                     />
                   </TableCell>
                   
-                  {/* Settlement Column */}
                   <TableCell align="center">
                     <Chip 
                       label={item.owner_settlement?.toUpperCase() || "PENDING"} 
@@ -238,7 +221,6 @@ export default function OwnerPayments() {
                     />
                   </TableCell>
 
-                  {/* Agreement Column */}
                   <TableCell align="center">
                     {item.final_pdf ? (
                       <Tooltip title="View Signed Agreement">
