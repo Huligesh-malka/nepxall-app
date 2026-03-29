@@ -27,7 +27,7 @@ export default function OwnerPayments() {
   const sigCanvas = useRef();
   const token = localStorage.getItem("token");
 
-  /* ================= FETCH DATA ================= */
+  /* ================= FETCH ================= */
   const fetchPayments = async () => {
     try {
       const res = await axios.get(`${API}/payments`, {
@@ -58,7 +58,7 @@ export default function OwnerPayments() {
     window.open(url, "_blank");
   };
 
-  /* ================= OPEN SIGN MODAL ================= */
+  /* ================= OPEN SIGN ================= */
   const handleOpenSign = (item) => {
     setSelectedBooking(item);
     setStep(1);
@@ -125,11 +125,7 @@ export default function OwnerPayments() {
           Owner Settlement Dashboard
         </Typography>
 
-        <Button
-          onClick={fetchPayments}
-          startIcon={<Refresh />}
-          variant="outlined"
-        >
+        <Button onClick={fetchPayments} startIcon={<Refresh />} variant="outlined">
           Refresh
         </Button>
       </Box>
@@ -147,66 +143,70 @@ export default function OwnerPayments() {
           </TableHead>
 
           <TableBody>
-            {data.map((item) => (
-              <TableRow key={item.booking_id}>
-                <TableCell>#{item.booking_id}</TableCell>
-                <TableCell>{item.tenant_name}</TableCell>
-                <TableCell>₹{item.owner_amount}</TableCell>
+            {data.map((item) => {
+              const isSigned = !!item.signed_pdf; // ✅ FINAL FIX
 
-                <TableCell align="center">
-                  {!item.final_pdf ? (
-                    <Chip label="Processing PDF" />
-                  ) : item.owner_signed ? (
-                    /* ✅ SIGNED */
-                    <Button
-                      variant="contained"
-                      color="success"
-                      startIcon={<CheckCircle />}
-                      onClick={() =>
-                        handleViewPdf(
-                          item.booking_id,
-                          item.signed_pdf || item.final_pdf
-                        )
-                      }
-                    >
-                      VIEW SIGNED
-                    </Button>
-                  ) : (
-                    <Box display="flex" gap={1} justifyContent="center">
+              return (
+                <TableRow key={item.booking_id}>
+                  <TableCell>#{item.booking_id}</TableCell>
+                  <TableCell>{item.tenant_name}</TableCell>
+                  <TableCell>₹{item.owner_amount}</TableCell>
 
-                      {/* VIEW PDF */}
+                  <TableCell align="center">
+                    {!item.final_pdf ? (
+                      <Chip label="Processing PDF" />
+                    ) : isSigned ? (
+                      /* ✅ SHOW ONLY IF SIGNED_PDF EXISTS */
                       <Button
-                        variant="outlined"
-                        startIcon={<PictureAsPdf />}
+                        variant="contained"
+                        color="success"
+                        startIcon={<CheckCircle />}
                         onClick={() =>
-                          handleViewPdf(item.booking_id, item.final_pdf)
+                          handleViewPdf(
+                            item.booking_id,
+                            item.signed_pdf
+                          )
                         }
                       >
-                        VIEW PDF
+                        VIEW SIGNED
                       </Button>
+                    ) : (
+                      <Box display="flex" gap={1} justifyContent="center">
 
-                      {/* SIGN BUTTON AFTER VIEW */}
-                      {viewedPdfs.includes(item.booking_id) && (
+                        {/* VIEW PDF */}
                         <Button
-                          variant="contained"
-                          color="warning"
-                          startIcon={<SignIcon />}
-                          onClick={() => handleOpenSign(item)}
+                          variant="outlined"
+                          startIcon={<PictureAsPdf />}
+                          onClick={() =>
+                            handleViewPdf(item.booking_id, item.final_pdf)
+                          }
                         >
-                          SIGN
+                          VIEW PDF
                         </Button>
-                      )}
 
-                    </Box>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
+                        {/* SIGN ONLY AFTER VIEW */}
+                        {viewedPdfs.includes(item.booking_id) && (
+                          <Button
+                            variant="contained"
+                            color="warning"
+                            startIcon={<SignIcon />}
+                            onClick={() => handleOpenSign(item)}
+                          >
+                            SIGN
+                          </Button>
+                        )}
+
+                      </Box>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </Paper>
 
-      {/* SIGN MODAL */}
+      {/* MODAL */}
       <Modal open={openSignModal} onClose={() => !isSubmitting && setOpenSignModal(false)}>
         <Fade in={openSignModal}>
           <Box sx={{
@@ -219,19 +219,13 @@ export default function OwnerPayments() {
             borderRadius: 2,
             width: { xs: "90%", sm: 450 }
           }}>
-
             {step === 1 ? (
               <>
                 <Typography variant="h6">Confirm Terms</Typography>
                 <Divider sx={{ my: 2 }} />
 
                 <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={agreed}
-                      onChange={(e) => setAgreed(e.target.checked)}
-                    />
-                  }
+                  control={<Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />}
                   label="I accept all terms"
                 />
 
@@ -258,23 +252,13 @@ export default function OwnerPayments() {
                 />
 
                 <Box sx={{ border: "1px dashed #ccc", mb: 1 }}>
-                  <SignatureCanvas
-                    ref={sigCanvas}
-                    canvasProps={{
-                      width: 380,
-                      height: 150
-                    }}
-                  />
+                  <SignatureCanvas ref={sigCanvas} canvasProps={{ width: 380, height: 150 }} />
                 </Box>
 
-                <Button onClick={() => sigCanvas.current.clear()}>
-                  Clear
-                </Button>
+                <Button onClick={() => sigCanvas.current.clear()}>Clear</Button>
 
                 <Box display="flex" gap={2} mt={2}>
-                  <Button fullWidth onClick={() => setStep(1)}>
-                    Back
-                  </Button>
+                  <Button fullWidth onClick={() => setStep(1)}>Back</Button>
 
                   <Button
                     fullWidth
@@ -287,7 +271,6 @@ export default function OwnerPayments() {
                 </Box>
               </>
             )}
-
           </Box>
         </Fade>
       </Modal>
