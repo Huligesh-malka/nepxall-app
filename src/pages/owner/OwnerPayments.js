@@ -4,12 +4,11 @@ import SignatureCanvas from "react-signature-canvas";
 import {
   Container, Typography, Paper, Table, TableHead, TableRow, TableCell,
   TableBody, Chip, Box, CircularProgress, Button,
-  Modal, Fade, Checkbox, FormControlLabel, TextField, Divider
+  Modal, Fade, Checkbox, TextField
 } from "@mui/material";
-import { Refresh, PictureAsPdf, CheckCircle } from "@mui/icons-material";
-import { HistoryEdu as SignIcon } from "@mui/icons-material";
+import { Refresh } from "@mui/icons-material";
 
-// 🔥 OTP IMPORT
+// 🔥 OTP
 import { auth } from "../../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
@@ -27,11 +26,9 @@ export default function OwnerPayments() {
   const [agreed, setAgreed] = useState(false);
   const [mobile, setMobile] = useState("");
 
-  // 🔥 OTP STATES
   const [otp, setOtp] = useState("");
   const [confirmObj, setConfirmObj] = useState(null);
   const [otpVerified, setOtpVerified] = useState(false);
-  const [sendingOtp, setSendingOtp] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -41,6 +38,18 @@ export default function OwnerPayments() {
   useEffect(() => {
     fetchPayments();
   }, []);
+
+  /* ================= PREVENT REFRESH ================= */
+  useEffect(() => {
+    const handler = (e) => {
+      if (step === 2 || step === 3) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [step]);
 
   /* ================= FETCH ================= */
   const fetchPayments = async () => {
@@ -70,6 +79,7 @@ export default function OwnerPayments() {
   /* ================= OPEN SIGN ================= */
   const handleOpenSign = (item) => {
     setSelectedBooking(item);
+
     setStep(1);
     setAgreed(false);
     setMobile("");
@@ -77,8 +87,9 @@ export default function OwnerPayments() {
     setConfirmObj(null);
     setOtpVerified(false);
 
-    setTimeout(() => sigCanvas.current?.clear(), 100);
     setOpenSignModal(true);
+
+    setTimeout(() => sigCanvas.current?.clear(), 200);
   };
 
   /* ================= SEND OTP ================= */
@@ -88,8 +99,6 @@ export default function OwnerPayments() {
     }
 
     try {
-      setSendingOtp(true);
-
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(
           auth,
@@ -109,8 +118,6 @@ export default function OwnerPayments() {
 
     } catch {
       alert("OTP failed ❌");
-    } finally {
-      setSendingOtp(false);
     }
   };
 
@@ -118,8 +125,14 @@ export default function OwnerPayments() {
   const verifyOtp = async () => {
     try {
       await confirmObj.confirm(otp);
+
       setOtpVerified(true);
+
+      // 🔥 MOVE TO SIGN STEP (IMPORTANT FIX)
+      setStep(3);
+
       alert("OTP Verified ✅");
+
     } catch {
       alert("Invalid OTP ❌");
     }
@@ -144,7 +157,7 @@ export default function OwnerPayments() {
         owner_mobile: mobile,
         owner_signature: signature,
         accepted_terms: true,
-        otp_verified: true // 🔥 IMPORTANT
+        otp_verified: true
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -182,10 +195,10 @@ export default function OwnerPayments() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell><b>Booking</b></TableCell>
-              <TableCell><b>Tenant</b></TableCell>
-              <TableCell><b>Amount</b></TableCell>
-              <TableCell align="center"><b>Status</b></TableCell>
+              <TableCell>Booking</TableCell>
+              <TableCell>Tenant</TableCell>
+              <TableCell>Amount</TableCell>
+              <TableCell>Status</TableCell>
             </TableRow>
           </TableHead>
 
@@ -199,16 +212,16 @@ export default function OwnerPayments() {
                   <TableCell>{item.tenant_name}</TableCell>
                   <TableCell>₹{item.owner_amount}</TableCell>
 
-                  <TableCell align="center">
+                  <TableCell>
                     {!item.final_pdf ? (
-                      <Chip label="Processing PDF" />
+                      <Chip label="Processing" />
                     ) : isSigned ? (
                       <Button color="success" variant="contained"
                         onClick={() => handleViewPdf(item.booking_id, item.signed_pdf)}>
                         VIEW SIGNED
                       </Button>
                     ) : (
-                      <Box display="flex" gap={1}>
+                      <>
                         <Button onClick={() =>
                           handleViewPdf(item.booking_id, item.final_pdf)}>
                           VIEW PDF
@@ -217,12 +230,11 @@ export default function OwnerPayments() {
                         {item.viewed_by_owner && (
                           <Button
                             color="warning"
-                            variant="contained"
                             onClick={() => handleOpenSign(item)}>
                             SIGN
                           </Button>
                         )}
-                      </Box>
+                      </>
                     )}
                   </TableCell>
                 </TableRow>
@@ -232,56 +244,69 @@ export default function OwnerPayments() {
         </Table>
       </Paper>
 
-      {/* MODAL */}
+      {/* ================= MODAL ================= */}
       <Modal open={openSignModal}>
         <Fade in={openSignModal}>
           <Box sx={{ p: 4, bgcolor: "#fff", width: 400, m: "auto", mt: "10%" }}>
 
-            {step === 1 ? (
+            {/* STEP 1 */}
+            {step === 1 && (
               <>
                 <Typography>Legal Consent</Typography>
-                <Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-                <Button disabled={!agreed} onClick={() => setStep(2)}>Continue</Button>
+                <Checkbox checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)} />
+
+                <Button disabled={!agreed}
+                  onClick={() => setStep(2)}>
+                  Continue
+                </Button>
               </>
-            ) : (
+            )}
+
+            {/* STEP 2 */}
+            {step === 2 && (
               <>
-                <TextField
-                  fullWidth
-                  label="Mobile"
+                <TextField fullWidth label="Mobile"
                   value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
-                />
+                  onChange={(e) => setMobile(e.target.value)} />
 
                 <Button onClick={sendOtp}>Send OTP</Button>
 
                 {confirmObj && (
                   <>
-                    <TextField
-                      fullWidth
-                      label="OTP"
+                    <TextField fullWidth label="OTP"
                       value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                    />
+                      onChange={(e) => setOtp(e.target.value)} />
+
                     <Button onClick={verifyOtp}>Verify OTP</Button>
                   </>
                 )}
 
-                {otpVerified && (
-                  <>
-                    <SignatureCanvas ref={sigCanvas}
-                      canvasProps={{ width: 350, height: 150 }} />
-
-                    <Button onClick={() => sigCanvas.current.clear()}>
-                      Clear
-                    </Button>
-
-                    <Button onClick={handleSubmit}>
-                      Final Sign
-                    </Button>
-                  </>
-                )}
-
                 <div id="recaptcha-container"></div>
+              </>
+            )}
+
+            {/* STEP 3 🔥 SIGNATURE */}
+            {step === 3 && (
+              <>
+                <Typography mb={2}>Draw Signature</Typography>
+
+                <SignatureCanvas
+                  ref={sigCanvas}
+                  canvasProps={{ width: 350, height: 150 }}
+                />
+
+                <Box mt={2} display="flex" justifyContent="space-between">
+                  <Button onClick={() => sigCanvas.current.clear()}>
+                    Clear
+                  </Button>
+
+                  <Button variant="contained"
+                    disabled={isSubmitting}
+                    onClick={handleSubmit}>
+                    {isSubmitting ? "Signing..." : "Final Sign"}
+                  </Button>
+                </Box>
               </>
             )}
 
