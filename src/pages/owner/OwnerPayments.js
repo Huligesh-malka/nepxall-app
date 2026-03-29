@@ -10,7 +10,7 @@ import { Refresh, PictureAsPdf, CheckCircle } from "@mui/icons-material";
 import { HistoryEdu as SignIcon } from "@mui/icons-material";
 
 // 🔥 OTP IMPORT
-import { auth } from "../firebase";
+import { auth } from "../../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
 const API = "https://nepxall-backend.onrender.com/api/owner";
