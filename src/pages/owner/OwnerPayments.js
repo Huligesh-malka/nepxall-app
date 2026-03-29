@@ -15,6 +15,7 @@ export default function OwnerPayments() {
 
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [openSignModal, setOpenSignModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
 
@@ -30,8 +31,10 @@ export default function OwnerPayments() {
     fetchPayments();
   }, []);
 
+  /* ================= FETCH ================= */
   const fetchPayments = async () => {
     try {
+      setLoading(true);
       const res = await axios.get(`${API}/payments`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -67,11 +70,21 @@ export default function OwnerPayments() {
     setStep(1);
     setAgreed(false);
     setMobile("");
+
+    // CLEAR CANVAS PROPERLY
+    setTimeout(() => {
+      if (sigCanvas.current) {
+        sigCanvas.current.clear();
+      }
+    }, 100);
+
     setOpenSignModal(true);
   };
 
   /* ================= SUBMIT SIGN ================= */
   const handleSubmit = async () => {
+
+    if (isSubmitting) return; // prevent double click
 
     if (!/^[6-9]\d{9}$/.test(mobile)) {
       return alert("Enter valid Indian mobile number");
@@ -103,7 +116,13 @@ export default function OwnerPayments() {
 
       alert("Agreement Signed Successfully ✅");
 
+      // RESET EVERYTHING
       setOpenSignModal(false);
+      setSelectedBooking(null);
+      setStep(1);
+      setAgreed(false);
+      setMobile("");
+
       fetchPayments();
 
     } catch (err) {
@@ -122,6 +141,7 @@ export default function OwnerPayments() {
     }
   };
 
+  /* ================= LOADING ================= */
   if (loading) {
     return (
       <Box p={5} textAlign="center">
@@ -239,12 +259,11 @@ export default function OwnerPayments() {
 
                 <Typography fontSize={14} mb={2}>
                   This digital signature is legally binding under Indian IT Act.
-                  You confirm ownership and accept all agreement terms.
                 </Typography>
 
                 <FormControlLabel
                   control={<Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />}
-                  label="I accept all terms & conditions"
+                  label="I accept terms"
                 />
 
                 <Button
@@ -263,18 +282,18 @@ export default function OwnerPayments() {
                 <TextField
                   fullWidth
                   label="Mobile Number"
-                  placeholder="Enter registered mobile"
                   value={mobile}
                   onChange={(e) => setMobile(e.target.value)}
                   sx={{ my: 2 }}
                 />
 
                 <SignatureCanvas
-                  ref={(ref) => (sigCanvas.current = ref)}
+                  ref={sigCanvas}
+                  penColor="black"
                   canvasProps={{
                     width: 350,
                     height: 150,
-                    style: { background: "#fff", border: "1px solid #ccc" }
+                    style: { border: "1px solid #ccc" }
                   }}
                 />
 
