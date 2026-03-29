@@ -61,7 +61,9 @@ export default function OwnerPayments() {
   const clearSig = () => sigCanvas.current.clear();
 
   const handleViewPdf = (pdfPath) => {
-    const url = pdfPath.startsWith("http") ? pdfPath : `${BASE_URL}/${pdfPath}`;
+    const url = pdfPath?.startsWith("http")
+      ? pdfPath
+      : `${BASE_URL}/${pdfPath}`;
     window.open(url, "_blank");
   };
 
@@ -70,7 +72,9 @@ export default function OwnerPayments() {
     if (!mobile || mobile.length < 10) return alert("Enter valid mobile");
     if (sigCanvas.current.isEmpty()) return alert("Sign required");
 
-    const signature = sigCanvas.current.getTrimmedCanvas().toDataURL("image/png");
+    const signature = sigCanvas.current
+      .getTrimmedCanvas()
+      .toDataURL("image/png");
 
     setIsSubmitting(true);
 
@@ -102,7 +106,9 @@ export default function OwnerPayments() {
 
       <Box display="flex" justifyContent="space-between" my={3}>
         <Typography variant="h5">Owner Dashboard</Typography>
-        <Button onClick={fetchPayments} startIcon={<Refresh />}>Refresh</Button>
+        <Button onClick={fetchPayments} startIcon={<Refresh />}>
+          Refresh
+        </Button>
       </Box>
 
       {error && <Alert severity="error">{error}</Alert>}
@@ -127,26 +133,53 @@ export default function OwnerPayments() {
                 <TableCell>{item.pg_name}</TableCell>
                 <TableCell>₹{item.owner_amount}</TableCell>
 
+                {/* 🔥 FINAL AGREEMENT LOGIC */}
                 <TableCell>
+
                   {!item.final_pdf ? (
+
                     <Chip label="Waiting PDF" />
+
                   ) : item.owner_signed ? (
+
                     <Button
                       variant="contained"
+                      color="success"
                       startIcon={<PictureAsPdf />}
-                      onClick={() => handleViewPdf(item.final_pdf)}
+                      onClick={() =>
+                        handleViewPdf(item.signed_pdf || item.final_pdf)
+                      }
                     >
                       VIEW SIGNED
                     </Button>
+
                   ) : (
-                    <Button
-                      variant="outlined"
-                      startIcon={<SignIcon />}
-                      onClick={() => handleOpenSign(item)}
-                    >
-                      SIGN AGREEMENT
-                    </Button>
+
+                    <Box display="flex" gap={1}>
+
+                      {/* VIEW FIRST */}
+                      <Button
+                        variant="outlined"
+                        startIcon={<PictureAsPdf />}
+                        onClick={() => handleViewPdf(item.final_pdf)}
+                      >
+                        VIEW
+                      </Button>
+
+                      {/* THEN SIGN */}
+                      <Button
+                        variant="contained"
+                        color="warning"
+                        startIcon={<SignIcon />}
+                        onClick={() => handleOpenSign(item)}
+                      >
+                        SIGN
+                      </Button>
+
+                    </Box>
+
                   )}
+
                 </TableCell>
 
               </TableRow>
@@ -178,20 +211,33 @@ export default function OwnerPayments() {
                   fullWidth
                   variant="outlined"
                   startIcon={<PictureAsPdf />}
-                  onClick={() => handleViewPdf(selectedBooking.final_pdf)}
+                  onClick={() =>
+                    handleViewPdf(selectedBooking?.final_pdf)
+                  }
                 >
                   View Agreement PDF
                 </Button>
 
-                <Box sx={{ mt: 2, p: 2, bgcolor: "#f5f5f5", maxHeight: 120, overflow: "auto" }}>
+                <Box sx={{
+                  mt: 2,
+                  p: 2,
+                  bgcolor: "#f5f5f5",
+                  maxHeight: 120,
+                  overflow: "auto"
+                }}>
                   <Typography variant="caption">
                     I confirm that I have read and understood this agreement.
-                    I agree to all terms and conditions legally binding between owner and tenant.
+                    I agree to all terms and conditions legally binding.
                   </Typography>
                 </Box>
 
                 <FormControlLabel
-                  control={<Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />}
+                  control={
+                    <Checkbox
+                      checked={agreed}
+                      onChange={(e) => setAgreed(e.target.checked)}
+                    />
+                  }
                   label="I accept Terms & Conditions"
                 />
 
