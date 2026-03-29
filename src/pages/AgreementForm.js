@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import SignatureCanvas from "react-signature-canvas"; // For drawing
+import SignatureCanvas from "react-signature-canvas"; 
 import api from "../api/api";
 
 const AgreementForm = () => {
   const { bookingId } = useParams();
   const navigate = useNavigate();
-  const sigPad = useRef(null); // Ref for drawing pad
+  const sigPad = useRef(null);
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -32,7 +32,7 @@ const AgreementForm = () => {
 
   const [signatureFile, setSignatureFile] = useState(null);
 
-  // ✅ 1. CHECK IF ALREADY SUBMITTED ON LOAD
+  // 1. CHECK STATUS ON LOAD
   useEffect(() => {
     const checkStatus = async () => {
       try {
@@ -54,7 +54,7 @@ const AgreementForm = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  // ✅ 2. INITIAL SUBMISSION (Form + File Upload)
+  // 2. INITIAL SUBMISSION
   const handleSubmit = async (e) => {
     e.preventDefault();
     const userId = localStorage.getItem("user_id") || localStorage.getItem("userId");
@@ -72,7 +72,7 @@ const AgreementForm = () => {
     try {
       const res = await api.post("/agreements-form/submit", data);
       if (res.data.success) {
-        alert("✅ Submitted Successfully!");
+        alert("✅ Details Submitted!");
         window.location.reload();
       }
     } catch (err) {
@@ -82,12 +82,11 @@ const AgreementForm = () => {
     }
   };
 
-  // ✅ 3. FINAL SIGNING (Drawing on Owner-Signed PDF)
+  // 3. FINAL TENANT SIGNATURE (Drawing on E-Stamp)
   const handleFinalSign = async () => {
     if (sigPad.current.isEmpty()) return alert("Please draw your signature");
 
     setLoading(true);
-    // Get drawing as Base64
     const signatureData = sigPad.current.getTrimmedCanvas().toDataURL("image/png");
 
     try {
@@ -108,19 +107,33 @@ const AgreementForm = () => {
     }
   };
 
-  if (fetching) {
-    return <div style={{ textAlign: "center", marginTop: "100px" }}>Loading details...</div>;
+  if (fetching) return <div style={{ textAlign: "center", marginTop: "100px" }}>Loading...</div>;
+
+  // --- RENDERING LOGIC ---
+
+  // CASE 1: AGREEMENT COMPLETED
+  if (existingAgreement?.agreement_status === "completed") {
+    return (
+      <div style={{ maxWidth: "600px", margin: "50px auto", textAlign: "center", padding: "40px", backgroundColor: "#fff", borderRadius: "16px", boxShadow: "0 10px 25px rgba(0,0,0,0.1)" }}>
+        <div style={{ fontSize: "60px" }}>✅</div>
+        <h2>Agreement Completed</h2>
+        <p>Your rental agreement is fully signed and finalized.</p>
+        <button onClick={() => navigate("/my-bookings")} style={{ marginTop: "20px", padding: "10px 20px", cursor: "pointer" }}>Go to Bookings</button>
+      </div>
+    );
   }
 
-  /* ================= CASE 1: OWNER HAS SIGNED (FINAL STEP) ================= */
-  if (existingAgreement?.signed_pdf && existingAgreement.agreement_status === "approved") {
+  // CASE 2: READY FOR FINAL SIGNING (Admin has uploaded e-stamp)
+  // We check for final_pdf because that's what the tenant signs on
+  if (existingAgreement?.final_pdf) {
     return (
       <div style={{ maxWidth: "850px", margin: "30px auto", padding: "35px", backgroundColor: "#fff", borderRadius: "16px", boxShadow: "0 10px 30px rgba(0,0,0,0.1)", fontFamily: "'Inter', sans-serif" }}>
-        <h2 style={{ textAlign: "center", color: "#1e293b", fontWeight: "800" }}>Final Signing</h2>
-        <p style={{ textAlign: "center", color: "#64748b" }}>The owner has signed. Please review and draw your signature below.</p>
+        <h2 style={{ textAlign: "center", color: "#1e293b", fontWeight: "800" }}>Review & Final Sign</h2>
+        <p style={{ textAlign: "center", color: "#64748b" }}>Admin has prepared the e-stamp. Review the document and draw your signature to finish.</p>
 
-        <div style={{ margin: "20px 0", border: "1px solid #e2e8f0", borderRadius: "8px", overflow: "hidden" }}>
-          <img src={existingAgreement.signed_pdf} alt="Agreement Preview" style={{ width: "100%" }} />
+        <div style={{ margin: "20px 0", border: "1px solid #e2e8f0", borderRadius: "8px", overflow: "hidden", maxHeight: "500px", overflowY: "scroll" }}>
+          {/* Tenant signs the Owner-Signed version if it exists, otherwise the base final_pdf */}
+          <img src={existingAgreement.signed_pdf || existingAgreement.final_pdf} alt="Agreement Preview" style={{ width: "100%" }} />
         </div>
 
         <div style={{ backgroundColor: "#f8fafc", padding: "25px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
@@ -140,37 +153,36 @@ const AgreementForm = () => {
           disabled={loading}
           style={{ width: "100%", marginTop: "30px", padding: "18px", backgroundColor: "#10b981", color: "white", border: "none", borderRadius: "12px", fontWeight: "800", cursor: "pointer" }}
         >
-          {loading ? "Completing Agreement..." : "Finalize & Sign Agreement"}
+          {loading ? "Processing..." : "Finalize & Sign Agreement"}
         </button>
       </div>
     );
   }
 
-  /* ================= CASE 2: WAITING FOR OWNER ================= */
-  if (existingAgreement && existingAgreement.agreement_status === "pending") {
+  // CASE 3: WAITING FOR ADMIN/OWNER (Submitted but no e-stamp yet)
+  if (existingAgreement && !existingAgreement.final_pdf) {
     return (
       <div style={{ maxWidth: "600px", margin: "50px auto", textAlign: "center", padding: "40px", backgroundColor: "#fff", borderRadius: "16px", boxShadow: "0 10px 25px rgba(0,0,0,0.1)", fontFamily: "'Inter', sans-serif" }}>
         <div style={{ fontSize: "60px", marginBottom: "20px" }}>⏳</div>
-        <h2 style={{ color: "#1e293b", fontWeight: "800" }}>Waiting for Owner</h2>
+        <h2 style={{ color: "#1e293b", fontWeight: "800" }}>Application Under Review</h2>
         <p style={{ color: "#64748b", lineHeight: "1.6" }}>
-          Your details are recorded. <br />
-          <strong>Current Status:</strong> <span style={{ color: "#4f46e5", fontWeight: "700" }}>PENDING OWNER REVIEW</span>
+          Your details have been submitted successfully.<br />
+          The admin is currently processing your <strong>E-Stamp</strong>. Once ready, you will be able to sign the final document here.
         </p>
         <button onClick={() => navigate("/my-bookings")} style={{ marginTop: "30px", padding: "12px 24px", backgroundColor: "#4f46e5", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" }}>Back to Bookings</button>
       </div>
     );
   }
 
-  /* ================= CASE 3: RENDER INITIAL FORM ================= */
-  const containerStyle = { maxWidth: "800px", margin: "30px auto", padding: "35px", backgroundColor: "#ffffff", borderRadius: "16px", boxShadow: "0 10px 30px rgba(0,0,0,0.08)", fontFamily: "'Inter', sans-serif" };
+  // CASE 4: INITIAL FORM (No entry in database yet)
   const sectionTitle = { fontSize: "12px", textTransform: "uppercase", letterSpacing: "1.2px", color: "#4f46e5", fontWeight: "800", marginBottom: "15px", marginTop: "25px", borderBottom: "2px solid #f1f5f9", paddingBottom: "8px" };
   const inputStyle = { padding: "12px 16px", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "15px", width: "100%", backgroundColor: "#f8fafc" };
   const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" };
 
   return (
-    <div style={containerStyle}>
+    <div style={{ maxWidth: "800px", margin: "30px auto", padding: "35px", backgroundColor: "#ffffff", borderRadius: "16px", boxShadow: "0 10px 30px rgba(0,0,0,0.08)", fontFamily: "'Inter', sans-serif" }}>
       <h2 style={{ textAlign: 'center', fontWeight: '800', color: '#1e293b' }}>Rental Agreement Form</h2>
-      <p style={{ textAlign: 'center', color: '#64748b', fontSize: '14px', marginBottom: '30px' }}>Fill details and upload signature to start.</p>
+      <p style={{ textAlign: 'center', color: '#64748b', fontSize: '14px', marginBottom: '30px' }}>Please provide your details to generate the draft agreement.</p>
       
       <form onSubmit={handleSubmit}>
         <div style={sectionTitle}>Tenant Information</div>
@@ -203,12 +215,12 @@ const AgreementForm = () => {
         </div>
 
         <div style={{ marginTop: "40px", padding: "30px", border: "2px dashed #cbd5e1", borderRadius: "12px", textAlign: "center", backgroundColor: '#f8fafc' }}>
-          <label style={{ display: "block", fontWeight: "800", marginBottom: "12px" }}>🖋️ Upload Signature Photo</label>
+          <label style={{ display: "block", fontWeight: "800", marginBottom: "12px" }}>🖋️ Upload Signature Photo (Clear background)</label>
           <input type="file" accept="image/*" onChange={(e) => setSignatureFile(e.target.files[0])} required />
         </div>
 
         <button type="submit" disabled={loading} style={{ width: "100%", marginTop: "30px", padding: "18px", background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)", color: "white", border: "none", borderRadius: "12px", fontWeight: "800", cursor: "pointer" }}>
-          {loading ? "Submitting..." : "Submit for Owner Review"}
+          {loading ? "Submitting..." : "Submit for Draft Generation"}
         </button>
       </form>
     </div>
