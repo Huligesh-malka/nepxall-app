@@ -37,7 +37,7 @@ export default function OwnerPayments() {
       });
       setData(res.data.data || []);
     } catch (err) {
-      console.error(err);
+      alert("Failed to load payments ❌");
     } finally {
       setLoading(false);
     }
@@ -111,6 +111,8 @@ export default function OwnerPayments() {
 
       if (err.response?.status === 400) {
         alert(err.response.data.message || "Already signed");
+      } else if (err.response?.status === 500) {
+        alert("Server error. Try again later ❌");
       } else {
         alert("Signing failed ❌");
       }
@@ -236,8 +238,8 @@ export default function OwnerPayments() {
                 <Divider sx={{ my: 2 }} />
 
                 <Typography fontSize={14} mb={2}>
-                  I agree that this digital signature is legally binding.
-                  I confirm that I am the authorized owner and accept all agreement terms.
+                  This digital signature is legally binding under Indian IT Act.
+                  You confirm ownership and accept all agreement terms.
                 </Typography>
 
                 <FormControlLabel
@@ -261,6 +263,7 @@ export default function OwnerPayments() {
                 <TextField
                   fullWidth
                   label="Mobile Number"
+                  placeholder="Enter registered mobile"
                   value={mobile}
                   onChange={(e) => setMobile(e.target.value)}
                   sx={{ my: 2 }}
