@@ -19,11 +19,6 @@ export default function OwnerPayments() {
   const [openSignModal, setOpenSignModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
 
-  const [viewedPdfs, setViewedPdfs] = useState(() => {
-    const saved = localStorage.getItem("viewedPdfs");
-    return saved ? JSON.parse(saved) : [];
-  });
-
   const [step, setStep] = useState(1);
   const [agreed, setAgreed] = useState(false);
   const [mobile, setMobile] = useState("");
@@ -49,14 +44,17 @@ export default function OwnerPayments() {
     }
   };
 
-  /* ================= VIEW ================= */
-  const handleViewPdf = (bookingId, filePath) => {
-    let updated = viewedPdfs;
+  /* ================= VIEW PDF ================= */
+  const handleViewPdf = async (bookingId, filePath) => {
 
-    if (!viewedPdfs.includes(bookingId)) {
-      updated = [...viewedPdfs, bookingId];
-      setViewedPdfs(updated);
-      localStorage.setItem("viewedPdfs", JSON.stringify(updated));
+    try {
+      await axios.post(
+        `${API}/agreements/viewed`,
+        { booking_id: bookingId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (err) {
+      console.error("VIEW ERROR:", err);
     }
 
     const url = filePath?.startsWith("http")
@@ -64,11 +62,13 @@ export default function OwnerPayments() {
       : `${BASE_URL}/${filePath}`;
 
     window.open(url, "_blank");
+
+    fetchPayments(); // refresh
   };
 
   /* ================= OPEN SIGN ================= */
   const handleOpenSign = (item) => {
-    if (item.signed_pdf) return; // ✅ prevent re-sign
+    if (item.signed_pdf) return;
 
     setSelectedBooking(item);
     setStep(1);
@@ -77,7 +77,7 @@ export default function OwnerPayments() {
     setOpenSignModal(true);
   };
 
-  /* ================= SUBMIT ================= */
+  /* ================= SUBMIT SIGN ================= */
   const handleSubmit = async () => {
 
     if (!mobile || mobile.length < 10) {
@@ -110,20 +110,12 @@ export default function OwnerPayments() {
 
       alert("Agreement Signed Successfully ✅");
 
-      const updated = viewedPdfs.filter(
-        id => id !== selectedBooking.booking_id
-      );
-
-      setViewedPdfs(updated);
-      localStorage.setItem("viewedPdfs", JSON.stringify(updated));
-
       setOpenSignModal(false);
       fetchPayments();
 
     } catch (err) {
       console.error(err);
 
-      // ✅ HANDLE 400 ERROR
       if (err.response?.status === 400) {
         alert(err.response.data.message || "Already signed");
       } else {
@@ -211,7 +203,7 @@ export default function OwnerPayments() {
                           VIEW PDF
                         </Button>
 
-                        {viewedPdfs.includes(item.booking_id) && (
+                        {item.viewed_by_owner && (
                           <Button
                             variant="contained"
                             color="warning"
