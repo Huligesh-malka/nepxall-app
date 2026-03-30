@@ -130,6 +130,7 @@ const AgreementForm = () => {
   if (existingAgreement) {
     const status = existingAgreement.agreement_status;
 
+    // CASE 1: Agreement is fully signed by both parties
     if (status === "completed") {
       return (
         <div style={containerStyle}>
@@ -148,13 +149,14 @@ const AgreementForm = () => {
       );
     }
 
+    // CASE 2: Owner has signed, now Tenant needs to provide final digital signature
     if (status === "approved") {
       return (
         <div style={containerStyle}>
-          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '35px' }}>
             <h2 style={{ color: '#1e293b', fontWeight: '800', marginBottom: '10px' }}>Final Step: Provide Your Signature</h2>
             <p style={{ color: '#475569', fontSize: '16px', lineHeight: '1.6' }}>
-              The owner has signed the agreement. Please review and provide your final digital signature below.
+              The owner has signed the agreement. Please provide your final digital signature below to complete the process.
             </p>
           </div>
           
@@ -177,7 +179,7 @@ const AgreementForm = () => {
           <button 
             onClick={handleFinalTenantSign} 
             disabled={loading}
-            style={{ width: "100%", marginTop: "30px", padding: "20px", background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)", color: "white", border: "none", borderRadius: "12px", fontWeight: "800", cursor: "pointer", fontSize: "16px", boxShadow: '0 10px 15px -3px rgba(79, 70, 229, 0.3)' }}
+            style={{ width: "100%", marginTop: "35px", padding: "20px", background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)", color: "white", border: "none", borderRadius: "12px", fontWeight: "800", cursor: "pointer", fontSize: "16px", boxShadow: '0 10px 15px -3px rgba(79, 70, 229, 0.3)' }}
           >
             {loading ? "Processing..." : "Complete & Sign Agreement"}
           </button>
@@ -185,6 +187,7 @@ const AgreementForm = () => {
       );
     }
 
+    // CASE 3: Details submitted but waiting for Admin/Owner
     return (
       <div style={containerStyle}>
         <div style={{ textAlign: "center" }}>
@@ -192,7 +195,7 @@ const AgreementForm = () => {
           <h2 style={{ color: "#1e293b" }}>Awaiting Owner Signature</h2>
           <p style={{ color: "#64748b" }}>
             Your details have been submitted. We are currently processing the document. 
-            Once the owner has signed, you will be able to provide your final signature here.
+            Once the owner has signed, this page will update for your final signature.
           </p>
           <button onClick={() => navigate("/my-bookings")} style={{ marginTop: "20px", color: "#4f46e5", background: "none", border: "none", cursor: "pointer", fontWeight: "600" }}>
             ← Back to My Bookings
@@ -202,6 +205,7 @@ const AgreementForm = () => {
     );
   }
 
+  // CASE 4: Initial form for first-time submission
   return (
     <div style={containerStyle}>
       <h2 style={{ textAlign: 'center', fontWeight: '800', color: '#1e293b', marginBottom: '5px' }}>Rental Agreement Form</h2>
