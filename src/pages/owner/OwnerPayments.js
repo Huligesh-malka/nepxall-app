@@ -4,9 +4,9 @@ import SignatureCanvas from "react-signature-canvas";
 import {
   Container, Typography, Paper, Table, TableHead, TableRow, TableCell,
   TableBody, Chip, Box, CircularProgress, Button,
-  Modal, Fade, Checkbox, TextField, Backdrop
+  Modal, Fade, Checkbox, TextField, Backdrop, IconButton
 } from "@mui/material";
-import { Refresh } from "@mui/icons-material";
+import { Refresh, ArrowBack } from "@mui/icons-material";
 
 import { auth } from "../../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
@@ -37,7 +37,7 @@ export default function OwnerPayments() {
     fetchPayments();
   }, []);
 
-  // Ensure canvas clears and resizes correctly when entering step 3
+  // Fix: Clear canvas only when step 3 is reached to avoid "stale" drawings
   useEffect(() => {
     if (step === 3 && openSignModal) {
       const timer = setTimeout(() => {
@@ -76,7 +76,6 @@ export default function OwnerPayments() {
 
   const handleOpenSign = (item) => {
     setSelectedBooking(item);
-    // Reset flow states
     setStep(1);
     setAgreed(false);
     setMobile("");
@@ -90,6 +89,7 @@ export default function OwnerPayments() {
     if (!/^[6-9]\d{9}$/.test(mobile)) return alert("Enter valid 10-digit mobile");
 
     try {
+      setIsSubmitting(true);
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(
           auth,
@@ -107,8 +107,14 @@ export default function OwnerPayments() {
       setConfirmObj(confirmation);
       alert("OTP Sent ✅");
     } catch (error) {
-      console.error(error);
-      alert("OTP failed to send. Please try again.");
+      console.error("OTP Error:", error);
+      alert("OTP failed to send. Check your connection or mobile number.");
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = null;
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -116,14 +122,12 @@ export default function OwnerPayments() {
     if (!otp) return alert("Please enter OTP");
     try {
       setIsSubmitting(true);
-      // Firebase verification
       await confirmObj.confirm(otp);
       
-      // Success logic
       setOtpVerified(true);
-      setStep(3); // Move to Signature Step
-      alert("OTP Verified ✅");
+      setStep(3); // Direct move to step 3 upon success
     } catch (error) {
+      console.error("Verification Error:", error);
       alert("Invalid OTP ❌");
     } finally {
       setIsSubmitting(false);
@@ -131,7 +135,7 @@ export default function OwnerPayments() {
   };
 
   const handleSubmit = async () => {
-    if (!otpVerified) return alert("Verify OTP first");
+    if (!otpVerified) return alert("Please verify OTP first");
     if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
       return alert("Please provide a signature");
     }
@@ -222,7 +226,7 @@ export default function OwnerPayments() {
       >
         <Fade in={openSignModal}>
           <Box sx={{
-            width: { xs: '90%', sm: 420 },
+            width: { xs: '95%', sm: 420 },
             bgcolor: "background.paper",
             borderRadius: 3,
             p: 4,
@@ -230,8 +234,18 @@ export default function OwnerPayments() {
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            boxShadow: 24
+            boxShadow: 24,
+            outline: 'none'
           }}>
+
+            <Box display="flex" alignItems="center" mb={2}>
+               {step > 1 && (
+                 <IconButton onClick={() => setStep(step - 1)} size="small" sx={{ mr: 1 }}>
+                   <ArrowBack />
+                 </IconButton>
+               )}
+               <Typography variant="h6">Sign Agreement</Typography>
+            </Box>
 
             {/* STEP BAR */}
             <Box display="flex" justifyContent="space-between" mb={4}>
@@ -252,9 +266,11 @@ export default function OwnerPayments() {
             {/* STEP 1: CONSENT */}
             {step === 1 && (
               <Box>
-                <Box display="flex" alignItems="center" mb={3}>
-                  <Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-                  <Typography variant="body2">I have read and agree to the settlement terms.</Typography>
+                <Box display="flex" alignItems="flex-start" mb={3} sx={{ bgcolor: '#f9f9f9', p: 2, borderRadius: 2 }}>
+                  <Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} sx={{ p: 0, mr: 1 }} />
+                  <Typography variant="body2">
+                    I acknowledge that I have reviewed the settlement PDF and agree to the terms listed therein.
+                  </Typography>
                 </Box>
                 <Button fullWidth variant="contained" disabled={!agreed} onClick={() => setStep(2)}>
                   Continue to Verification
@@ -270,17 +286,18 @@ export default function OwnerPayments() {
                   variant="outlined" value={mobile} 
                   placeholder="9876543210"
                   onChange={(e) => setMobile(e.target.value)} 
-                  disabled={!!confirmObj}
+                  disabled={!!confirmObj || isSubmitting}
                 />
                 {!confirmObj ? (
-                  <Button fullWidth variant="contained" sx={{ mt: 2 }} onClick={sendOtp}>
-                    Send OTP
+                  <Button fullWidth variant="contained" sx={{ mt: 2 }} onClick={sendOtp} disabled={isSubmitting}>
+                    {isSubmitting ? <CircularProgress size={24} /> : "Send OTP"}
                   </Button>
                 ) : (
                   <>
                     <TextField 
-                      fullWidth sx={{ mt: 2 }} label="Enter OTP" 
+                      fullWidth sx={{ mt: 2 }} label="6-Digit OTP" 
                       value={otp} onChange={(e) => setOtp(e.target.value)} 
+                      autoFocus
                     />
                     <Button 
                       fullWidth sx={{ mt: 2 }} variant="contained" 
@@ -288,7 +305,7 @@ export default function OwnerPayments() {
                     >
                       {isSubmitting ? <CircularProgress size={24} color="inherit" /> : "Verify & Proceed"}
                     </Button>
-                    <Button fullWidth sx={{ mt: 1 }} size="small" onClick={() => setConfirmObj(null)}>
+                    <Button fullWidth sx={{ mt: 1 }} size="small" onClick={() => setConfirmObj(null)} disabled={isSubmitting}>
                       Change Number
                     </Button>
                   </>
@@ -301,20 +318,19 @@ export default function OwnerPayments() {
             {step === 3 && (
               <Box>
                 <Typography variant="subtitle2" mb={1}>Draw your signature below:</Typography>
-                <Box sx={{ border: "1px solid #ddd", borderRadius: 1, overflow: 'hidden' }}>
+                <Box sx={{ border: "1px solid #ddd", borderRadius: 1, overflow: 'hidden', bgcolor: '#fafafa' }}>
                   <SignatureCanvas
                     ref={sigCanvas}
                     penColor="black"
                     canvasProps={{
                       width: 356,
                       height: 180,
-                      className: "sigCanvas",
-                      style: { background: "#fafafa", cursor: 'crosshair' }
+                      className: "sigCanvas"
                     }}
                   />
                 </Box>
                 <Box mt={3} display="flex" gap={2}>
-                  <Button variant="outlined" fullWidth onClick={() => sigCanvas.current.clear()}>
+                  <Button variant="outlined" fullWidth onClick={() => sigCanvas.current.clear()} disabled={isSubmitting}>
                     Clear
                   </Button>
                   <Button 
