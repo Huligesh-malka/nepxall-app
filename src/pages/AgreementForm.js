@@ -150,6 +150,7 @@ const AgreementForm = () => {
     try {
       const signatureDataURL = sigCanvas.current.toDataURL("image/png");
       
+      // REMOVED: full_name is no longer sent in this payload to avoid showing it in the digital signature stamp
       const res = await api.post("/agreements-form/tenant/sign", {
         booking_id: bookingId,
         tenant_signature: signatureDataURL,
@@ -173,7 +174,6 @@ const AgreementForm = () => {
         <Box textAlign="center" mt={10}><CircularProgress /></Box>
       ) : (
         <>
-          {/* 1. COMPLETED STATUS */}
           {existingAgreement?.agreement_status === "completed" && (
             <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
               <Typography variant="h5" color="success.main" mb={2} fontWeight="bold">✅ Agreement Completed</Typography>
@@ -181,7 +181,6 @@ const AgreementForm = () => {
             </Paper>
           )}
 
-          {/* 2. UNDER REVIEW BY ADMIN */}
           {existingAgreement?.agreement_status === "pending" && (
             <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
               <Typography variant="h5" color="info.main" fontWeight="bold">⏳ Under Review</Typography>
@@ -189,30 +188,10 @@ const AgreementForm = () => {
             </Paper>
           )}
 
-          {/* 3. WAITING FOR OWNER SIGNATURE (The part you added) */}
-          {existingAgreement?.agreement_status === "approved" && !existingAgreement?.owner_signed && (
-            <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
-              <Typography variant="h5" color="warning.main" fontWeight="bold">
-                ⏳ Waiting for Owner Signature
-              </Typography>
-              <Typography mt={1}>
-                Admin uploaded the agreement. Please wait until the owner signs it.
-              </Typography>
-            </Paper>
-          )}
-
-          {/* 4. TENANT SIGNATURE FLOW (Show only after owner signs) */}
-          {existingAgreement?.agreement_status === "approved" && existingAgreement?.owner_signed && existingAgreement.signed_pdf && (
+          {existingAgreement?.agreement_status === "approved" && existingAgreement.signed_pdf && (
             <Paper sx={{ p: 4, borderRadius: 3 }}>
               <Typography variant="h6" mb={2} fontWeight="bold">Final Step: Digital Signature</Typography>
-              
-              <iframe 
-                src={existingAgreement.signed_pdf} 
-                width="100%" 
-                height="500px" 
-                style={{ marginBottom: "20px", borderRadius: '8px', border: '1px solid #ddd' }} 
-                title="Agreement" 
-              />
+              <iframe src={existingAgreement.signed_pdf} width="100%" height="500px" style={{ marginBottom: "20px", borderRadius: '8px', border: '1px solid #ddd' }} title="Agreement" />
               
               {!isVerified ? (
                 <Box sx={{ bgcolor: '#f8fafc', p: 3, borderRadius: 2, border: '1px solid #e2e8f0' }}>
@@ -256,7 +235,6 @@ const AgreementForm = () => {
             </Paper>
           )}
 
-          {/* 5. INITIAL FORM (If no agreement started) */}
           {!existingAgreement && (
             <Paper sx={{ p: 4, borderRadius: 3 }}>
               <Typography variant="h5" mb={3} fontWeight="800">Agreement Details Form</Typography>
@@ -288,9 +266,7 @@ const AgreementForm = () => {
           )}
         </>
       )}
-      
       <div id="recaptcha-container"></div>
-      
       <Snackbar open={!!success} autoHideDuration={3000} onClose={() => setSuccess("")} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         <Alert severity="success">{success}</Alert>
       </Snackbar>
