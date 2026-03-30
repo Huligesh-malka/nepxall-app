@@ -14,8 +14,8 @@ const MainLayout = () => {
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /* ================= FETCH ROLE ONLY ONCE ================= */
-  const fetchRoleOnce = async (currentUser) => {
+  /* ================= FETCH ROLE ================= */
+  const fetchUser = async (currentUser) => {
     try {
       const idToken = await currentUser.getIdToken();
 
@@ -24,8 +24,11 @@ const MainLayout = () => {
       if (res.data.success) {
         setRole(res.data.role);
 
+        // store only for API usage (not UI)
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("user_id", res.data.userId);
+
+        console.log("✅ Role:", res.data.role);
       }
     } catch (err) {
       console.error("❌ Error:", err);
@@ -41,7 +44,7 @@ const MainLayout = () => {
       setUser(currentUser);
 
       if (currentUser) {
-        await fetchRoleOnce(currentUser);
+        await fetchUser(currentUser);
       } else {
         setRole(null);
         setLoading(false);
@@ -72,14 +75,27 @@ const MainLayout = () => {
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
 
-      {/* ✅ PASS BOTH USER + ROLE */}
+      {/* ✅ PASS ROLE + USER */}
       <Sidebar role={role} user={user} />
 
-      <div style={{ marginLeft: 250, padding: 24, width: "100%" }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}>
-          <Typography variant="h6">
-            {location.pathname === "/" ? "DASHBOARD" :
-              location.pathname.split("/").pop()?.toUpperCase()}
+      <div
+        style={{
+          marginLeft: 250,
+          padding: 24,
+          width: "100%"
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            mb: 4
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 800 }}>
+            {location.pathname === "/"
+              ? "DASHBOARD"
+              : location.pathname.split("/").pop()?.toUpperCase()}
           </Typography>
 
           {user && (
