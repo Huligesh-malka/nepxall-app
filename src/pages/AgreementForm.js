@@ -3,10 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/api";
 import SignatureCanvas from "react-signature-canvas";
 
-// 🔥 OTP IMPORTS
-import { auth } from "../firebase";
-import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
-
 const AgreementForm = () => {
   const { bookingId } = useParams();
   const navigate = useNavigate();
@@ -16,12 +12,6 @@ const AgreementForm = () => {
   const [fetching, setFetching] = useState(true);
   const [existingAgreement, setExistingAgreement] = useState(null);
   const [error, setError] = useState(null);
-
-  // 🔥 OTP STATES
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [confirmObj, setConfirmObj] = useState(null);
-  const [otpVerified, setOtpVerified] = useState(false);
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -62,82 +52,86 @@ const AgreementForm = () => {
     if (bookingId) checkStatus();
   }, [bookingId]);
 
-  /* ================= OTP SETUP (FIXED) ================= */
-  useEffect(() => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(
-        "recaptcha-container", // ✅ FIXED ORDER
-        {
-          size: "invisible",
-        },
-        auth
-      );
-    }
-  }, []);
-
-  /* ================= OTP SEND ================= */
-  const sendOtp = async () => {
-    if (phone.length !== 10) return alert("Enter valid number");
-
-    const confirmation = await signInWithPhoneNumber(
-      auth,
-      `+91${phone}`,
-      window.recaptchaVerifier
-    );
-
-    setConfirmObj(confirmation);
-    alert("OTP sent");
+  /* ================= FORM ================= */
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
-  /* ================= OTP VERIFY ================= */
-  const verifyOtp = async () => {
-    if (otp.length !== 6) return alert("Invalid OTP");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-    try {
-      await confirmObj.confirm(otp);
-      setOtpVerified(true);
-      alert("OTP Verified ✅");
-    } catch {
-      alert("Invalid OTP");
-    }
-  };
+    const userId =
+      localStorage.getItem("user_id") || localStorage.getItem("userId");
 
-  /* ================= FINAL SIGN ================= */
-  const handleFinalTenantSign = async () => {
-    if (!otpVerified) return alert("Verify OTP first");
-
-    if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
-      return alert("Please draw your signature");
-    }
+    if (!userId) return alert("Session expired");
+    if (!signatureFile) return alert("Signature required");
 
     setLoading(true);
 
-    try {
-      const signatureDataURL = sigCanvas.current.toDataURL("image/png");
+    const data = new FormData();
+    Object.keys(formData).forEach((key) =>
+      data.append(key, formData[key])
+    );
 
-      const res = await api.post("/agreements-form/tenant/sign", {
-        booking_id: bookingId,
-        tenant_signature: signatureDataURL,
-        tenant_mobile: phone,
-      });
+    data.append("user_id", userId);
+    data.append("booking_id", bookingId);
+    data.append("signature", signatureFile);
+
+    try {
+      const res = await api.post("/agreements-form/submit", data);
 
       if (res.data.success) {
-        alert("✅ Agreement signed successfully!");
+        alert("Submitted successfully!");
 
-        if (res.data.url) {
-          window.open(res.data.url, "_blank");
+        const statusRes = await api.get(
+          `/agreements-form/status/${bookingId}`
+        );
+
+        if (statusRes.data.exists) {
+          setExistingAgreement(statusRes.data.data);
         }
-
-        navigate("/my-bookings");
       }
     } catch (err) {
-      console.error("Sign error:", err);
-      alert("❌ Signing failed");
+      alert("Error saving agreement");
     } finally {
       setLoading(false);
     }
   };
 
+  /* ================= FINAL SIGN ================= */
+  const handleFinalTenantSign = async () => {
+  if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
+    return alert("Please draw your signature");
+  }
+
+  setLoading(true);
+
+  try {
+    const signatureDataURL = sigCanvas.current.toDataURL("image/png");
+
+    const res = await api.post("/agreements-form/tenant/sign", {
+      booking_id: bookingId,
+      tenant_signature: signatureDataURL,
+    });
+
+    if (res.data.success) {
+      alert("✅ Agreement signed successfully!");
+
+      if (res.data.url) {
+        window.open(res.data.url, "_blank");
+      }
+
+      navigate("/my-bookings");
+    }
+  } catch (err) {
+    console.error("Sign error:", err);
+    alert("❌ Signing failed");
+  } finally {
+    setLoading(false);
+  }
+};
+  /* ================= STYLES ================= */
   const containerStyle = {
     maxWidth: "800px",
     margin: "30px auto",
@@ -147,24 +141,40 @@ const AgreementForm = () => {
     boxShadow: "0 5px 20px rgba(0,0,0,0.08)",
   };
 
-  if (fetching) return <div>Loading...</div>;
-  if (error) return <div>{error}</div>;
+  if (fetching) return <div style={{ textAlign: "center" }}>Loading...</div>;
+  if (error) return <div style={{ textAlign: "center" }}>{error}</div>;
+
+  /* ================= AGREEMENT FLOW ================= */
 
   if (existingAgreement) {
     const status = existingAgreement.agreement_status;
 
+    /* ✅ COMPLETED */
     if (status === "completed") {
       return (
         <div style={containerStyle}>
           <h2>✅ Agreement Completed</h2>
-          <button onClick={() => window.open(existingAgreement.signed_pdf)}>
-            Download PDF
+          <button
+            onClick={() =>
+              window.open(existingAgreement.signed_pdf, "_blank")
+            }
+          >
+            Download Final PDF
           </button>
         </div>
       );
     }
 
+    /* ✅ OWNER SIGN DONE → USER SIGN */
     if (status === "approved") {
+      if (!existingAgreement.signed_pdf) {
+        return (
+          <div style={containerStyle}>
+            <h2>⏳ Waiting for Owner Signature</h2>
+          </div>
+        );
+      }
+
       return (
         <div style={containerStyle}>
           <h2>Final Step: Sign</h2>
@@ -173,61 +183,86 @@ const AgreementForm = () => {
             src={existingAgreement.signed_pdf}
             width="100%"
             height="500px"
+            title="Agreement"
+            style={{ marginBottom: "20px" }}
           />
 
-          <h3>Verify Mobile</h3>
+          <h3>Draw Signature</h3>
 
-          {!confirmObj && (
-            <>
-              <input
-                placeholder="Enter Mobile"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-              <button onClick={sendOtp}>Send OTP</button>
-            </>
-          )}
+          <SignatureCanvas
+            ref={sigCanvas}
+            penColor="black"
+            canvasProps={{
+              width: 700,
+              height: 200,
+              style: { border: "1px solid #ccc" },
+            }}
+          />
 
-          {confirmObj && !otpVerified && (
-            <>
-              <input
-                placeholder="Enter OTP"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-              />
-              <button onClick={verifyOtp}>Verify OTP</button>
-            </>
-          )}
+          <br />
 
-          {otpVerified && (
-            <>
-              <h3>Draw Signature</h3>
+          <button onClick={() => sigCanvas.current.clear()}>
+            Clear
+          </button>
 
-              <SignatureCanvas
-                ref={sigCanvas}
-                penColor="black"
-                canvasProps={{ width: 700, height: 200 }}
-              />
-
-              <button onClick={() => sigCanvas.current.clear()}>
-                Clear
-              </button>
-
-              <button onClick={handleFinalTenantSign}>
-                {loading ? "Signing..." : "Finish Signing"}
-              </button>
-            </>
-          )}
-
-          <div id="recaptcha-container"></div>
+          <button
+            onClick={handleFinalTenantSign}
+            disabled={loading}
+            style={{ marginLeft: "10px" }}
+          >
+            {loading ? "Signing..." : "Finish Signing"}
+          </button>
         </div>
       );
     }
 
-    return <div>Waiting...</div>;
+    /* ⏳ WAITING */
+    return (
+      <div style={containerStyle}>
+        <h2>⏳ Waiting for Process</h2>
+        <p>Admin preparing / Owner not signed</p>
+      </div>
+    );
   }
 
-  return <div>No Data</div>;
+  /* ================= FORM ================= */
+
+  return (
+    <div style={containerStyle}>
+      <h2>Agreement Form</h2>
+
+      <form onSubmit={handleSubmit}>
+        <input
+          name="full_name"
+          placeholder="Full Name"
+          onChange={handleChange}
+          required
+        />
+
+        <input
+          name="mobile"
+          placeholder="Mobile"
+          onChange={handleChange}
+          required
+        />
+
+        <br />
+
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setSignatureFile(e.target.files[0])}
+          required
+        />
+
+        <br /><br />
+
+        <button type="submit" disabled={loading}>
+          {loading ? "Submitting..." : "Submit"}
+        </button>
+      </form>
+    </div>
+  );
 };
 
 export default AgreementForm;
