@@ -1,38 +1,70 @@
-// src/layouts/OwnerLayout.jsx
 import React, { useEffect, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { Box, CircularProgress } from "@mui/material";
+import { userAPI } from "../api/api";
 
 const OwnerLayout = () => {
   const navigate = useNavigate();
+
+  const [user, setUser] = useState(null);
+  const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      const role = (localStorage.getItem("role") || "").toLowerCase();
 
-      if (!user) {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+
+      if (!currentUser) {
         navigate("/login", { replace: true });
         return;
       }
 
-      if (role !== "owner") {
-        navigate("/", { replace: true });
-        return;
+      try {
+        const idToken = await currentUser.getIdToken();
+
+        const res = await userAPI.post("/auth/firebase", { idToken });
+
+        if (!res.data.success) {
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        const backendRole = res.data.role?.toLowerCase().trim();
+
+        // 🔐 ROLE PROTECTION
+        if (backendRole !== "owner") {
+          navigate("/", { replace: true });
+          return;
+        }
+
+        setUser(currentUser);
+        setRole(backendRole);
+
+      } catch (err) {
+        console.error("❌ Error:", err);
+        navigate("/login", { replace: true });
+      } finally {
+        setLoading(false);
       }
 
-      setLoading(false);
     });
 
     return () => unsubscribe();
+
   }, [navigate]);
 
-  if (loading) {
+  /* ================= LOADING ================= */
+  if (loading || !role) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
+      <Box sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh"
+      }}>
         <CircularProgress />
       </Box>
     );
@@ -40,10 +72,10 @@ const OwnerLayout = () => {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f8fafc" }}>
-      {/* Sidebar - Your existing component */}
-      <Sidebar />
-      
-      {/* Main Content - No Topbar, just direct content */}
+
+      {/* 🔐 SECURE SIDEBAR */}
+      <Sidebar role={role} user={user} />
+
       <div
         style={{
           marginLeft: 250,
