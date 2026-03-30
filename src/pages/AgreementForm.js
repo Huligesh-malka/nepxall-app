@@ -101,40 +101,36 @@ const AgreementForm = () => {
 
   /* ================= FINAL SIGN ================= */
   const handleFinalTenantSign = async () => {
-    if (sigCanvas.current.isEmpty()) {
-      return alert("Please draw your signature");
-    }
+  if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
+    return alert("Please draw your signature");
+  }
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      const signatureDataURL = sigCanvas.current
-        .getTrimmedCanvas()
-        .toDataURL("image/png");
+  try {
+    const signatureDataURL = sigCanvas.current.toDataURL("image/png");
 
-      const res = await api.post("/tenant/sign", {
-        booking_id: bookingId,
-        tenant_signature: signatureDataURL,
-      });
+    const res = await api.post("/tenant/sign", {
+      booking_id: bookingId,
+      tenant_signature: signatureDataURL,
+    });
 
-      if (res.data.success) {
-        alert("✅ Agreement signed successfully!");
+    if (res.data.success) {
+      alert("✅ Agreement signed successfully!");
 
-        // 🔥 OPEN FINAL PDF
-        if (res.data.url) {
-          window.open(res.data.url, "_blank");
-        }
-
-        navigate("/my-bookings");
+      if (res.data.url) {
+        window.open(res.data.url, "_blank");
       }
-    } catch (err) {
-      console.error(err);
-      alert("❌ Signing failed");
-    } finally {
-      setLoading(false);
-    }
-  };
 
+      navigate("/my-bookings");
+    }
+  } catch (err) {
+    console.error("Sign error:", err);
+    alert("❌ Signing failed");
+  } finally {
+    setLoading(false);
+  }
+};
   /* ================= STYLES ================= */
   const containerStyle = {
     maxWidth: "800px",
