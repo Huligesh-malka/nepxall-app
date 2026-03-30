@@ -10,19 +10,17 @@ const AdminAgreementDetails = () => {
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
 
-  // Fallback URL for local assets if not using Cloudinary
   const BACKEND_URL = "https://nepxall-backend.onrender.com";
 
   const fetchData = async () => {
     try {
-      // Matches the backend route: /api/agreements-form/admin/:id
       const res = await api.get(`/agreements-form/admin/${id}`);
       if (res.data.success) {
         setData(res.data.data);
       }
     } catch (err) {
       console.error("Fetch Error:", err);
-      alert("Agreement not found or error loading data.");
+      alert("Agreement not found.");
     } finally {
       setLoading(false);
     }
@@ -45,8 +43,15 @@ const AdminAgreementDetails = () => {
   const handleUploadImage = async () => {
     if (!selectedFile) return alert("Please select a file first");
 
+    // Re-upload confirmation if signatures already exist
+    if (data.signed_pdf) {
+      const confirmReset = window.confirm(
+        "Warning: A signed version already exists. Uploading a new draft will delete the existing signatures and the Owner/Tenant must sign again. Continue?"
+      );
+      if (!confirmReset) return;
+    }
+
     const formData = new FormData();
-    // Key "final_image" matches the backend uploadAgreement.single("final_image")
     formData.append("final_image", selectedFile); 
 
     setUploading(true);
@@ -55,24 +60,35 @@ const AdminAgreementDetails = () => {
         headers: { "Content-Type": "multipart/form-data" },
       });
       if (res.data.success) {
-        alert("Agreement Approved & Final Image Uploaded!");
-        fetchData(); // Refresh UI with new data
+        alert("Draft Updated! Previous signatures (if any) have been reset.");
+        fetchData(); 
         setSelectedFile(null);
       }
     } catch (err) {
-      console.error(err);
-      alert("Upload failed. Check console for details.");
+      alert("Upload failed.");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to permanently delete this agreement application? This cannot be undone.")) return;
+
+    try {
+      const res = await api.delete(`/agreements-form/admin/${id}`);
+      if (res.data.success) {
+        alert("Agreement Deleted Successfully");
+        navigate("/admin/agreements"); // Redirect to list view
+      }
+    } catch (err) {
+      alert("Delete failed.");
     }
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
+      day: "2-digit", month: "short", year: "numeric",
     });
   };
 
@@ -81,12 +97,11 @@ const AdminAgreementDetails = () => {
 
   return (
     <div style={container}>
-      {/* Top Navigation */}
       <div style={topNav}>
-        <button onClick={() => navigate(-1)} style={backBtn}> ← Back to Dashboard </button>
+        <button onClick={() => navigate(-1)} style={backBtn}> ← Back </button>
+        <button onClick={handleDelete} style={deleteBtn}> 🗑️ Delete Record </button>
       </div>
 
-      {/* Header Info */}
       <div style={headerSection}>
         <div>
           <h1 style={title}>Agreement Application #{data.id}</h1>
@@ -100,9 +115,11 @@ const AdminAgreementDetails = () => {
       {/* --- ADMIN ACTION SECTION --- */}
       <div style={uploadCard}>
         <div style={cardContent}>
-          <h3 style={uploadCardTitle}>🛡️ Admin Approval Action</h3>
+          <h3 style={uploadCardTitle}>🛡️ Admin Approval / Re-upload</h3>
           <p style={uploadSubtitle}>
-            Upload the final signed document image to approve this agreement and notify the tenant.
+            {data.final_pdf 
+              ? "Upload a new file to replace the current draft. Note: This will clear existing signatures."
+              : "Upload the initial agreement draft to enable Owner & Tenant signing."}
           </p>
 
           <div style={actionRow}>
@@ -112,22 +129,28 @@ const AdminAgreementDetails = () => {
               disabled={uploading || !selectedFile}
               style={{...uploadBtn, opacity: (uploading || !selectedFile) ? 0.6 : 1}}
             >
-              {uploading ? "Processing..." : "Upload & Approve"}
+              {uploading ? "Uploading..." : data.final_pdf ? "Replace Draft" : "Approve & Upload"}
             </button>
           </div>
 
-          {(data.final_pdf || data.final_image) && (
-            <div style={viewSection}>
-              <p style={{fontWeight: '700', fontSize:'14px', marginBottom: '10px', color: '#1e40af'}}>Current Approved Document:</p>
-              <img src={formatUrl(data.final_pdf || data.final_image)} alt="Final" style={previewImg} />
-            </div>
-          )}
+          <div style={previewGrid}>
+            {data.final_pdf && (
+              <div style={previewBox}>
+                <p style={previewLabel}>Current Unsigned Draft:</p>
+                <img src={formatUrl(data.final_pdf)} alt="Draft" style={previewImg} />
+              </div>
+            )}
+            {data.signed_pdf && (
+              <div style={previewBox}>
+                <p style={previewLabel}>Latest Signed Version:</p>
+                <img src={formatUrl(data.signed_pdf)} alt="Signed" style={{...previewImg, borderColor: '#059669'}} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Data Grid */}
       <div style={grid}>
-        {/* Personal Details */}
         <div style={card}>
           <h3 style={cardTitle}>👤 Personal Details</h3>
           <div style={cardContent}>
@@ -140,7 +163,6 @@ const AdminAgreementDetails = () => {
           </div>
         </div>
 
-        {/* Financial & Stay */}
         <div style={card}>
           <h3 style={cardTitle}>💰 Financials & Stay</h3>
           <div style={cardContent}>
@@ -154,13 +176,12 @@ const AdminAgreementDetails = () => {
         </div>
       </div>
 
-      {/* Documents Gallery */}
       <h3 style={{margin: '30px 0 15px', color: '#475569', fontSize: '18px'}}>🗂️ Verification Documents</h3>
       <div style={docGrid}>
          <DocItem title="Aadhaar Front" url={formatUrl(data.aadhaar_front)} />
          <DocItem title="Aadhaar Back" url={formatUrl(data.aadhaar_back)} />
          <DocItem title="PAN Card" url={formatUrl(data.pan_card)} />
-         <DocItem title="Tenant Signature" url={formatUrl(data.signature)} isSig />
+         <DocItem title="Tenant Applied Signature" url={formatUrl(data.signature)} isSig />
       </div>
     </div>
   );
@@ -193,10 +214,10 @@ const DocItem = ({ title, url, isSig }) => (
 
 /* --- STYLES --- */
 const container = { padding: "40px", maxWidth: "1200px", margin: "0 auto", backgroundColor: "#f8fafc", minHeight: "100vh", fontFamily: "'Inter', sans-serif" };
-const topNav = { marginBottom: "20px" };
+const topNav = { marginBottom: "20px", display: 'flex', justifyContent: 'space-between' };
 const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" };
-const title = { fontSize: "26px", fontWeight: "800", color: "#0f172a", margin: 0 };
-const subtitle = { color: "#64748b", margin: 0, fontSize: "15px" };
+const title = { fontSize: "24px", fontWeight: "800", color: "#0f172a", margin: 0 };
+const subtitle = { color: "#64748b", margin: 0, fontSize: "14px" };
 
 const uploadCard = { background: "#eff6ff", borderRadius: "16px", border: "2px dashed #bfdbfe", marginBottom: "30px" };
 const uploadCardTitle = { fontSize: "18px", fontWeight: "700", color: "#1e40af", marginBottom: "8px" };
@@ -204,7 +225,8 @@ const uploadSubtitle = { fontSize: "13px", color: "#60a5fa", marginBottom: "20px
 const cardContent = { padding: "24px" };
 const actionRow = { display: "flex", gap: "12px", alignItems: "center" };
 const fileInput = { background: '#fff', border: "1px solid #cbd5e1", padding: "10px", borderRadius: "8px", flex: 1, fontSize: "13px" };
-const uploadBtn = { backgroundColor: "#2563eb", color: "#fff", border: "none", padding: "12px 24px", borderRadius: "8px", fontWeight: "600", cursor: "pointer", transition: '0.2s' };
+const uploadBtn = { backgroundColor: "#2563eb", color: "#fff", border: "none", padding: "12px 24px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" };
+const deleteBtn = { backgroundColor: "#fee2e2", color: "#dc2626", border: "1px solid #fecaca", padding: "10px 18px", borderRadius: "10px", cursor: "pointer", fontWeight: "600", fontSize: "13px" };
 
 const grid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(350px, 1fr))", gap: "24px" };
 const docGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "20px" };
@@ -215,9 +237,12 @@ const fieldRow = { display: "flex", justifyContent: "space-between", padding: "1
 const fieldLabel = { color: "#94a3b8", fontSize: "13px" };
 const fieldValue = { fontSize: "14px" };
 const backBtn = { background: "#fff", border: "1px solid #e2e8f0", padding: "10px 18px", borderRadius: "10px", cursor: "pointer", fontSize: "14px", fontWeight: '600', color: '#475569' };
-const loaderWrap = { display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", color: "#64748b", fontWeight: "600" };
-const previewImg = { maxWidth: "100%", borderRadius: "12px", border: "1px solid #dbeafe", marginTop: "10px", boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' };
-const viewSection = { marginTop: "24px", borderTop: "1px solid #dbeafe", paddingTop: "20px" };
+const loaderWrap = { display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", color: "#64748b" };
+
+const previewGrid = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' };
+const previewBox = { display: 'flex', flexDirection: 'column' };
+const previewLabel = { fontWeight: '700', fontSize: '13px', color: '#1e40af', marginBottom: '8px' };
+const previewImg = { width: "100%", borderRadius: "12px", border: "2px solid #dbeafe", boxShadow: '0 4px 10px rgba(0,0,0,0.05)' };
 
 const statusBadge = (status) => {
   const s = status?.toLowerCase();
@@ -225,7 +250,7 @@ const statusBadge = (status) => {
     ? {bg: "#dcfce7", text: "#15803d", border: "#b9f6ca"} 
     : {bg: "#fef9c3", text: "#a16207", border: "#fef08a"};
   return { 
-    padding: "8px 16px", borderRadius: "99px", fontSize: "13px", fontWeight: "700", 
+    padding: "8px 16px", borderRadius: "99px", fontSize: "12px", fontWeight: "700", 
     backgroundColor: colors.bg, color: colors.text, border: `1px solid ${colors.border}` 
   };
 };
