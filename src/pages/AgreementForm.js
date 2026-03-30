@@ -110,7 +110,7 @@ const AgreementForm = () => {
   try {
     const signatureDataURL = sigCanvas.current.toDataURL("image/png");
 
-    const res = await api.post("/tenant/sign", {
+    const res = await api.post("/agreements-form/tenant/sign", {
       booking_id: bookingId,
       tenant_signature: signatureDataURL,
     });
