@@ -10,22 +10,27 @@ const AdminAgreementDetails = () => {
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
 
-  // Use the production backend URL for local assets
+  // Fallback URL for local assets if not using Cloudinary
   const BACKEND_URL = "https://nepxall-backend.onrender.com";
 
   const fetchData = async () => {
     try {
-      const res = await api.get(`/agreements/admin/${id}`);
+      // Matches the backend route: /api/agreements-form/admin/:id
+      const res = await api.get(`/agreements-form/admin/${id}`);
       if (res.data.success) {
         setData(res.data.data);
       }
     } catch (err) {
-      console.error(err);
-      alert("Error loading details");
+      console.error("Fetch Error:", err);
+      alert("Agreement not found or error loading data.");
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, [id]);
 
   const formatUrl = (path) => {
     if (!path) return null;
@@ -38,221 +43,190 @@ const AdminAgreementDetails = () => {
   };
 
   const handleUploadImage = async () => {
-    if (!selectedFile) return alert("Please select an image file first");
+    if (!selectedFile) return alert("Please select a file first");
 
     const formData = new FormData();
-    // Note: You might need to update your backend key if it strictly expects "final_pdf"
+    // Key "final_image" matches the backend uploadAgreement.single("final_image")
     formData.append("final_image", selectedFile); 
 
     setUploading(true);
     try {
-      // Assuming your backend endpoint can handle image uploads
-      const res = await api.put(`/agreements/admin/${id}/upload-image`, formData, {
+      const res = await api.put(`/agreements-form/admin/${id}/upload-image`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       if (res.data.success) {
-        alert("Agreement Image Uploaded & Approved!");
-        fetchData();
+        alert("Agreement Approved & Final Image Uploaded!");
+        fetchData(); // Refresh UI with new data
+        setSelectedFile(null);
       }
     } catch (err) {
-      alert("Failed to upload image. Ensure backend supports image/multipart uploads.");
+      console.error(err);
+      alert("Upload failed. Check console for details.");
     } finally {
       setUploading(false);
-      setSelectedFile(null);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [id]);
-
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
+    return new Date(dateString).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
       year: "numeric",
-      month: "long",
-      day: "numeric",
     });
   };
 
-  if (loading) return <div style={loaderWrap}>Loading Details...</div>;
-  if (!data) return <div style={loaderWrap}>Agreement not found.</div>;
+  if (loading) return <div style={loaderWrap}>Fetching Agreement Details...</div>;
+  if (!data) return <div style={loaderWrap}>Agreement Not Found</div>;
 
   return (
     <div style={container}>
+      {/* Top Navigation */}
       <div style={topNav}>
-        <button onClick={() => navigate(-1)} style={backBtn}>
-          ← Back to List
-        </button>
+        <button onClick={() => navigate(-1)} style={backBtn}> ← Back to Dashboard </button>
       </div>
 
+      {/* Header Info */}
       <div style={headerSection}>
         <div>
-          <h1 style={title}>Agreement #ID-{data.id}</h1>
-          <p style={subtitle}>Submitted on {formatDate(data.form_submitted || data.created_at)}</p>
+          <h1 style={title}>Agreement Application #{data.id}</h1>
+          <p style={subtitle}>Booking ID: <span style={{fontWeight:'700', color:'#2563eb'}}>BK-{data.booking_id}</span></p>
         </div>
-        <span style={statusBadge(data.agreement_status)}>
-          {data.agreement_status || "Pending"}
-        </span>
+        <div style={statusBadge(data.agreement_status)}>
+          {data.agreement_status?.toUpperCase() || "PENDING"}
+        </div>
       </div>
 
-      {/* IMAGE UPLOAD & VIEW SECTION */}
+      {/* --- ADMIN ACTION SECTION --- */}
       <div style={uploadCard}>
         <div style={cardContent}>
-          <h3 style={uploadCardTitle}>📸 Final Signed Agreement Image</h3>
+          <h3 style={uploadCardTitle}>🛡️ Admin Approval Action</h3>
           <p style={uploadSubtitle}>
-            {data.final_image || data.final_pdf 
-              ? "An agreement file exists. Upload a new image to replace it." 
-              : "Upload the photo of the signed agreement to approve."}
+            Upload the final signed document image to approve this agreement and notify the tenant.
           </p>
 
           <div style={actionRow}>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              style={fileInput}
-            />
-            <button
-              onClick={handleUploadImage}
+            <input type="file" accept="image/*" onChange={handleFileChange} style={fileInput} />
+            <button 
+              onClick={handleUploadImage} 
               disabled={uploading || !selectedFile}
-              style={{
-                ...uploadBtn,
-                opacity: uploading || !selectedFile ? 0.6 : 1,
-                cursor: uploading || !selectedFile ? "not-allowed" : "pointer"
-              }}
+              style={{...uploadBtn, opacity: (uploading || !selectedFile) ? 0.6 : 1}}
             >
-              {uploading ? "Uploading..." : "Upload & Approve"}
+              {uploading ? "Processing..." : "Upload & Approve"}
             </button>
           </div>
 
-          {(data.final_image || data.final_pdf) && (
+          {(data.final_pdf || data.final_image) && (
             <div style={viewSection}>
-              <p style={{fontWeight: 'bold', marginBottom: '10px'}}>Current Document Preview:</p>
-              <img 
-                src={formatUrl(data.final_image || data.final_pdf)} 
-                alt="Final Agreement" 
-                style={previewImg}
-                onError={(e) => { e.target.style.display = 'none'; }} 
-              />
-              <br/>
-              <a
-                href={formatUrl(data.final_image || data.final_pdf)}
-                target="_blank"
-                rel="noreferrer"
-                style={viewPdfLink}
-              >
-                🔗 Open Image in New Tab
-              </a>
+              <p style={{fontWeight: '700', fontSize:'14px', marginBottom: '10px', color: '#1e40af'}}>Current Approved Document:</p>
+              <img src={formatUrl(data.final_pdf || data.final_image)} alt="Final" style={previewImg} />
             </div>
           )}
         </div>
       </div>
 
+      {/* Data Grid */}
       <div style={grid}>
+        {/* Personal Details */}
         <div style={card}>
-          <h3 style={cardTitle}>👤 Personal Information</h3>
+          <h3 style={cardTitle}>👤 Personal Details</h3>
           <div style={cardContent}>
             <DataField label="Full Name" value={data.full_name} />
             <DataField label="Father's Name" value={data.father_name} />
             <DataField label="Mobile" value={data.mobile} />
             <DataField label="Email" value={data.email} />
-            <DataField label="PAN Card" value={data.pan_number} />
+            <DataField label="PAN Number" value={data.pan_number} />
             <DataField label="Aadhaar (Last 4)" value={data.aadhaar_last4} />
           </div>
         </div>
 
+        {/* Financial & Stay */}
         <div style={card}>
-          <h3 style={cardTitle}>🏠 Property & Stay Details</h3>
+          <h3 style={cardTitle}>💰 Financials & Stay</h3>
           <div style={cardContent}>
-            <DataField label="Rent" value={`₹${data.rent}`} isMoney />
-            <DataField label="Deposit" value={`₹${data.deposit}`} isMoney />
+            <DataField label="Monthly Rent" value={`₹${data.rent}`} isMoney />
+            <DataField label="Security Deposit" value={`₹${data.deposit}`} isMoney />
             <DataField label="Maintenance" value={`₹${data.maintenance}`} isMoney />
             <DataField label="Check-in Date" value={formatDate(data.checkin_date)} highlight />
-            <DataField label="Agreement Duration" value={`${data.agreement_months} Months`} />
-            <DataField label="City/State" value={`${data.city}, ${data.state}`} />
+            <DataField label="Duration" value={`${data.agreement_months} Months`} />
+            <DataField label="Location" value={`${data.city}, ${data.state}`} />
           </div>
         </div>
       </div>
 
-      <div style={{ ...card, marginTop: "24px" }}>
-        <h3 style={cardTitle}>✍️ User Signature</h3>
-        <div style={sigContainer}>
-          {data.signature ? (
-            <img 
-              src={formatUrl(data.signature)} 
-              alt="Signature" 
-              style={sigImg} 
-              onError={(e) => { e.target.src = "https://placehold.co/200x100?text=Signature+Error"; }}
-            />
-          ) : (
-            <div style={noSig}>No signature provided</div>
-          )}
-        </div>
+      {/* Documents Gallery */}
+      <h3 style={{margin: '30px 0 15px', color: '#475569', fontSize: '18px'}}>🗂️ Verification Documents</h3>
+      <div style={docGrid}>
+         <DocItem title="Aadhaar Front" url={formatUrl(data.aadhaar_front)} />
+         <DocItem title="Aadhaar Back" url={formatUrl(data.aadhaar_back)} />
+         <DocItem title="PAN Card" url={formatUrl(data.pan_card)} />
+         <DocItem title="Tenant Signature" url={formatUrl(data.signature)} isSig />
       </div>
     </div>
   );
 };
 
-/* --- UI COMPONENTS --- */
+/* --- SUB-COMPONENTS --- */
 const DataField = ({ label, value, highlight, isMoney }) => (
   <div style={fieldRow}>
     <span style={fieldLabel}>{label}</span>
-    <span
-      style={{
-        ...fieldValue,
-        color: highlight ? "#2563eb" : isMoney ? "#059669" : "#1e293b",
-        fontWeight: isMoney || highlight ? "700" : "500",
-      }}
-    >
-      {value || "N/A"}
+    <span style={{...fieldValue, color: highlight ? "#2563eb" : isMoney ? "#059669" : "#1e293b", fontWeight: highlight || isMoney ? "700" : "500"}}>
+      {value || "Not Provided"}
     </span>
   </div>
 );
 
+const DocItem = ({ title, url, isSig }) => (
+  <div style={card}>
+    <h3 style={cardTitle}>{title}</h3>
+    <div style={{padding:'15px', textAlign:'center', backgroundColor: isSig ? '#fdfdfd' : '#fff'}}>
+      {url ? (
+        <a href={url} target="_blank" rel="noreferrer">
+            <img src={url} alt={title} style={{maxWidth:'100%', borderRadius:'8px', maxHeight: isSig ? '100px' : '200px', border: '1px solid #f1f5f9'}} />
+        </a>
+      ) : (
+        <div style={{padding: '40px 0', color:'#94a3b8', fontSize:'12px', fontStyle: 'italic'}}>Missing Document</div>
+      )}
+    </div>
+  </div>
+);
+
 /* --- STYLES --- */
-const container = { padding: "40px", maxWidth: "1100px", margin: "0 auto", backgroundColor: "#f8fafc", minHeight: "100vh" };
-const topNav = { marginBottom: "30px" };
-const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "32px" };
-const title = { fontSize: "28px", fontWeight: "800", color: "#0f172a", margin: 0 };
-const subtitle = { color: "#64748b", marginTop: "4px" };
+const container = { padding: "40px", maxWidth: "1200px", margin: "0 auto", backgroundColor: "#f8fafc", minHeight: "100vh", fontFamily: "'Inter', sans-serif" };
+const topNav = { marginBottom: "20px" };
+const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" };
+const title = { fontSize: "26px", fontWeight: "800", color: "#0f172a", margin: 0 };
+const subtitle = { color: "#64748b", margin: 0, fontSize: "15px" };
 
-const uploadCard = { background: "#fff", borderRadius: "16px", border: "2px dashed #2563eb", backgroundColor: "#eff6ff", marginBottom: "24px", overflow: "hidden" };
+const uploadCard = { background: "#eff6ff", borderRadius: "16px", border: "2px dashed #bfdbfe", marginBottom: "30px" };
 const uploadCardTitle = { fontSize: "18px", fontWeight: "700", color: "#1e40af", marginBottom: "8px" };
-const uploadSubtitle = { fontSize: "14px", color: "#1e40af", marginBottom: "15px" };
-const actionRow = { display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" };
-const viewSection = { marginTop: "15px", paddingTop: "15px", borderTop: "1px solid #dbeafe" };
-const previewImg = { maxWidth: "100%", maxHeight: "300px", borderRadius: "8px", border: "1px solid #bfdbfe", marginBottom: "10px", objectFit: "contain" };
-
-const grid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(450px, 1fr))", gap: "24px" };
-const card = { background: "#fff", borderRadius: "16px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", overflow: "hidden" };
-const cardTitle = { padding: "16px 24px", borderBottom: "1px solid #f1f5f9", margin: 0, fontSize: "16px", fontWeight: "700", color: "#334155", backgroundColor: "#fcfdfe" };
+const uploadSubtitle = { fontSize: "13px", color: "#60a5fa", marginBottom: "20px" };
 const cardContent = { padding: "24px" };
+const actionRow = { display: "flex", gap: "12px", alignItems: "center" };
+const fileInput = { background: '#fff', border: "1px solid #cbd5e1", padding: "10px", borderRadius: "8px", flex: 1, fontSize: "13px" };
+const uploadBtn = { backgroundColor: "#2563eb", color: "#fff", border: "none", padding: "12px 24px", borderRadius: "8px", fontWeight: "600", cursor: "pointer", transition: '0.2s' };
 
-const fieldRow = { display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #f8fafc" };
-const fieldLabel = { color: "#94a3b8", fontSize: "14px", fontWeight: "500" };
-const fieldValue = { fontSize: "15px" };
+const grid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(350px, 1fr))", gap: "24px" };
+const docGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "20px" };
+const card = { background: "#fff", borderRadius: "16px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.02)", overflow: "hidden" };
+const cardTitle = { padding: "12px 20px", borderBottom: "1px solid #f1f5f9", margin: 0, fontSize: "14px", fontWeight: "700", color: "#64748b", backgroundColor: "#f8fafc" };
 
-const sigContainer = { padding: "40px", textAlign: "center", backgroundColor: "#fdfdfd" };
-const sigImg = { maxHeight: "150px", width: "auto", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "10px", backgroundColor: "#fff" };
-const noSig = { color: "#94a3b8", fontStyle: "italic" };
-
-const backBtn = { background: "#fff", border: "1px solid #e2e8f0", padding: "8px 16px", borderRadius: "8px", color: "#64748b", cursor: "pointer", fontWeight: "600" };
-const fileInput = { padding: "8px", border: "1px solid #bfdbfe", borderRadius: "6px", backgroundColor: "#fff", flex: 1 };
-const uploadBtn = { backgroundColor: "#2563eb", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "8px", fontWeight: "600" };
-const viewPdfLink = { display: "inline-block", color: "#2563eb", fontWeight: "700", textDecoration: "underline", fontSize: "14px" };
-const loaderWrap = { display: "grid", placeItems: "center", height: "100vh", fontSize: "18px", color: "#64748b" };
+const fieldRow = { display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid #f1f5f9" };
+const fieldLabel = { color: "#94a3b8", fontSize: "13px" };
+const fieldValue = { fontSize: "14px" };
+const backBtn = { background: "#fff", border: "1px solid #e2e8f0", padding: "10px 18px", borderRadius: "10px", cursor: "pointer", fontSize: "14px", fontWeight: '600', color: '#475569' };
+const loaderWrap = { display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", color: "#64748b", fontWeight: "600" };
+const previewImg = { maxWidth: "100%", borderRadius: "12px", border: "1px solid #dbeafe", marginTop: "10px", boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' };
+const viewSection = { marginTop: "24px", borderTop: "1px solid #dbeafe", paddingTop: "20px" };
 
 const statusBadge = (status) => {
   const s = status?.toLowerCase();
-  const isApproved = s === "approved";
-  const isRejected = s === "rejected";
-  return {
-    padding: "6px 16px", borderRadius: "99px", fontSize: "12px", fontWeight: "800", textTransform: "uppercase",
-    backgroundColor: isApproved ? "#dcfce7" : isRejected ? "#fee2e2" : "#fef9c3",
-    color: isApproved ? "#15803d" : isRejected ? "#b91c1c" : "#a16207",
-    border: `1px solid ${isApproved ? "#86efac" : isRejected ? "#fca5a5" : "#fef08a"}`
+  const colors = (s === "approved" || s === "completed") 
+    ? {bg: "#dcfce7", text: "#15803d", border: "#b9f6ca"} 
+    : {bg: "#fef9c3", text: "#a16207", border: "#fef08a"};
+  return { 
+    padding: "8px 16px", borderRadius: "99px", fontSize: "13px", fontWeight: "700", 
+    backgroundColor: colors.bg, color: colors.text, border: `1px solid ${colors.border}` 
   };
 };
 
