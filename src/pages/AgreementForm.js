@@ -6,7 +6,7 @@ import { auth } from "../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { 
   Box, TextField, Button, Typography, CircularProgress, 
-  Alert, Snackbar, Paper 
+  Alert, Snackbar, Paper, Grid 
 } from "@mui/material";
 
 const AgreementForm = () => {
@@ -36,34 +36,6 @@ const AgreementForm = () => {
 
   const [signatureFile, setSignatureFile] = useState(null);
 
-  /* ================= RECAPTCHA & TIMER ================= */
-  useEffect(() => {
-    const initRecaptcha = () => {
-      if (!window.recaptchaVerifier) {
-        const container = document.getElementById("recaptcha-container");
-        if (container) {
-          window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-            size: "invisible",
-          });
-        }
-      }
-    };
-    initRecaptcha();
-    return () => {
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
-        window.recaptchaVerifier = null;
-      }
-    };
-  }, [fetching]);
-
-  useEffect(() => {
-    if (otpTimer > 0) {
-      const timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [otpTimer]);
-
   /* ================= FETCH STATUS ================= */
   useEffect(() => {
     const checkStatus = async () => {
@@ -82,21 +54,50 @@ const AgreementForm = () => {
     if (bookingId) checkStatus();
   }, [bookingId]);
 
+  /* ================= RECAPTCHA & TIMER ================= */
+  const setupRecaptcha = () => {
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+        size: "invisible",
+        callback: (response) => {
+          console.log("Recaptcha resolved");
+        }
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (otpTimer > 0) {
+      const timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpTimer]);
+
   /* ================= OTP FUNCTIONS ================= */
   const sendOtp = async () => {
+    // We use the mobile number that was stored in the database during form submission
     const phone = existingAgreement?.mobile;
-    if (!phone || phone.length !== 10) return setError("Invalid phone number in record.");
+    if (!phone || phone.length < 10) return setError("Valid phone number not found in record.");
 
     try {
       setLoading(true);
       setError(null);
-      const confirmation = await signInWithPhoneNumber(auth, `+91${phone}`, window.recaptchaVerifier);
+      setupRecaptcha();
+      
+      const appVerifier = window.recaptchaVerifier;
+      const formatPh = `+91${phone}`;
+      
+      const confirmation = await signInWithPhoneNumber(auth, formatPh, appVerifier);
       setConfirmObj(confirmation);
       setOtpTimer(60);
-      setSuccess("OTP sent to your registered mobile.");
+      setSuccess("OTP sent successfully!");
     } catch (err) {
       console.error("SMS Error:", err);
-      setError("Failed to send OTP. Please refresh and try again.");
+      setError("Failed to send OTP. Try again later.");
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = null;
+      }
     } finally {
       setLoading(false);
     }
@@ -108,7 +109,7 @@ const AgreementForm = () => {
       setLoading(true);
       await confirmObj.confirm(otp);
       setIsVerified(true);
-      setSuccess("Mobile Verified! Please sign below.");
+      setSuccess("Identity Verified!");
     } catch (err) {
       setError("Invalid OTP code.");
     } finally {
@@ -124,8 +125,8 @@ const AgreementForm = () => {
   const handleSubmitInitialForm = async (e) => {
     e.preventDefault();
     const userId = localStorage.getItem("user_id") || localStorage.getItem("userId");
-    if (!userId) return alert("Session expired");
-    if (!signatureFile) return alert("Initial signature photo required");
+    if (!userId) return setError("Session expired. Please login again.");
+    if (!signatureFile) return setError("Please upload your draft signature photo.");
 
     setLoading(true);
     const data = new FormData();
@@ -137,18 +138,18 @@ const AgreementForm = () => {
     try {
       const res = await api.post("/agreements-form/submit", data);
       if (res.data.success) {
-        alert("Form submitted! Waiting for approval.");
-        window.location.reload();
+        setSuccess("Details submitted successfully!");
+        setTimeout(() => window.location.reload(), 1500);
       }
     } catch (err) {
-      alert("Error saving agreement");
+      setError("Error saving agreement details.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleFinalTenantSign = async () => {
-    if (!sigCanvas.current || sigCanvas.current.isEmpty()) return alert("Please draw signature");
+    if (!sigCanvas.current || sigCanvas.current.isEmpty()) return setError("Please draw your signature.");
     
     setLoading(true);
     try {
@@ -156,152 +157,176 @@ const AgreementForm = () => {
       const res = await api.post("/agreements-form/tenant/sign", {
         booking_id: bookingId,
         tenant_signature: signatureDataURL,
-        tenant_mobile: existingAgreement.mobile
+        // Passing the mobile from database to ensure consistency in the stamped PDF
+        tenant_mobile: existingAgreement.mobile 
       });
 
       if (res.data.success) {
-        alert("✅ Agreement signed successfully!");
-        navigate("/my-bookings");
+        setSuccess("Agreement signed and completed!");
+        setTimeout(() => navigate("/my-bookings"), 2000);
       }
     } catch (err) {
-      alert("❌ Signing failed");
+      setError("Failed to process signature. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const containerStyle = {
-    maxWidth: "800px", margin: "30px auto", padding: "30px", borderRadius: "16px",
-  };
-
   return (
-    <Box>
-      <div style={containerStyle}>
-        {fetching ? (
-          <Box textAlign="center" mt={10}><CircularProgress /></Box>
-        ) : (
-          <>
-            {/* 1. COMPLETED STATUS */}
-            {existingAgreement?.agreement_status === "completed" && (
-              <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
-                <Typography variant="h5" color="success.main" mb={2} fontWeight="bold">✅ Agreement Completed</Typography>
-                <Typography color="textSecondary" mb={3}>You have successfully verified and signed the agreement.</Typography>
-                <Button variant="contained" size="large" onClick={() => window.open(existingAgreement.signed_pdf, "_blank")}>
-                  Download Final PDF
-                </Button>
-              </Paper>
-            )}
+    <Box sx={{ maxWidth: "900px", margin: "auto", p: { xs: 2, md: 4 } }}>
+      {fetching ? (
+        <Box textAlign="center" mt={10}><CircularProgress /></Box>
+      ) : (
+        <>
+          {/* 1. COMPLETED */}
+          {existingAgreement?.agreement_status === "completed" && (
+            <Paper elevation={3} sx={{ p: 4, textAlign: 'center', borderRadius: 4 }}>
+              <Typography variant="h4" color="success.main" gutterBottom fontWeight="bold">Agreement Completed</Typography>
+              <Typography variant="body1" mb={4}>Your signed agreement is ready for download.</Typography>
+              <Button variant="contained" size="large" onClick={() => window.open(existingAgreement.signed_pdf, "_blank")}>
+                View / Download PDF
+              </Button>
+            </Paper>
+          )}
 
-            {/* 2. APPROVED BY ADMIN BUT NOT YET SIGNED BY OWNER */}
-            {existingAgreement?.agreement_status === "approved" && !existingAgreement.signed_pdf && (
-              <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
-                <Typography variant="h5" color="warning.main" mb={2} fontWeight="bold">⏳ Waiting for Owner Signature</Typography>
-                <Typography color="textSecondary">
-                  Your details have been approved! We are now waiting for the property owner to sign the document. 
-                  Once they sign, you will be able to complete the final verification here.
-                </Typography>
-                <Box mt={3}>
-                    <CircularProgress size={24} sx={{ mb: 1 }} />
-                    <Typography variant="body2" display="block">Checking for updates...</Typography>
-                </Box>
-              </Paper>
-            )}
+          {/* 2. APPROVED BY ADMIN - WAITING FOR OWNER */}
+          {existingAgreement?.agreement_status === "approved" && !existingAgreement.signed_pdf && (
+            <Paper elevation={3} sx={{ p: 4, textAlign: 'center', borderRadius: 4 }}>
+              <Typography variant="h5" color="warning.main" fontWeight="bold">Waiting for Owner Signature</Typography>
+              <Typography mt={2}>We have approved your details. The property owner will sign shortly.</Typography>
+              <Box mt={4}><CircularProgress size={30} /></Box>
+            </Paper>
+          )}
 
-            {/* 3. APPROVED BY OWNER - READY FOR TENANT OTP & SIGN */}
-            {existingAgreement?.agreement_status === "approved" && existingAgreement.signed_pdf && (
-              <Paper elevation={3} sx={{ p: 4 }}>
-                <Typography variant="h5" mb={3} fontWeight="bold">Final Step: Verify & Sign</Typography>
-                <Typography variant="body2" color="textSecondary" mb={2}>Please review the document signed by the owner before proceeding.</Typography>
-                <iframe src={existingAgreement.signed_pdf} width="100%" height="450px" style={{ marginBottom: "20px", border: '1px solid #ddd', borderRadius: '8px' }} title="Agreement" />
+          {/* 3. READY FOR FINAL TENANT SIGN */}
+          {existingAgreement?.agreement_status === "approved" && existingAgreement.signed_pdf && (
+            <Paper elevation={3} sx={{ p: 4, borderRadius: 4 }}>
+              <Typography variant="h5" mb={3} fontWeight="bold">Final Review & Verification</Typography>
+              
+              <Box sx={{ width: '100%', height: '500px', border: '1px solid #ddd', mb: 3, borderRadius: 2, overflow: 'hidden' }}>
+                 <iframe src={existingAgreement.signed_pdf} width="100%" height="100%" title="Owner Signed Agreement" />
+              </Box>
 
-                {!isVerified ? (
-                  <Box sx={{ bgcolor: '#f8fafc', p: 3, borderRadius: 2, border: '1px solid #e2e8f0' }}>
-                    <Typography variant="subtitle1" mb={2}>Verify identity via <b>+91 {existingAgreement.mobile}</b></Typography>
-                    {!confirmObj ? (
-                      <Button variant="contained" onClick={sendOtp} disabled={loading} size="large">
-                        {loading ? "Sending..." : "Send OTP to Sign"}
-                      </Button>
-                    ) : (
-                      <Box>
-                        <TextField 
-                          fullWidth label="6-Digit OTP" value={otp} 
-                          onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} 
-                          sx={{ mb: 2, bgcolor: 'white' }} 
-                        />
-                        <Button variant="contained" fullWidth onClick={verifyOtp} disabled={loading} size="large">
-                          {loading ? "Verifying..." : "Verify OTP"}
-                        </Button>
-                        {otpTimer > 0 ? (
-                          <Typography variant="caption" display="block" mt={1}>Resend available in {otpTimer}s</Typography>
-                        ) : (
-                          <Button size="small" onClick={sendOtp} sx={{ mt: 1 }}>Resend OTP</Button>
-                        )}
-                      </Box>
-                    )}
-                  </Box>
-                ) : (
-                  <Box mt={3}>
-                    <Alert severity="success" sx={{ mb: 2 }}>Verification Successful. Please Draw your Signature below.</Alert>
-                    <Box border="2px dashed #cbd5e1" borderRadius={2} bgcolor="#fff" overflow="hidden">
-                      <SignatureCanvas
-                        ref={sigCanvas}
-                        penColor="black"
-                        canvasProps={{ width: 740, height: 200, className: "sigCanvas" }}
+              {!isVerified ? (
+                <Box sx={{ bgcolor: '#f0f4f8', p: 3, borderRadius: 3 }}>
+                  <Typography variant="h6" gutterBottom>Verify Mobile to Sign</Typography>
+                  <Typography variant="body2" mb={2}>An OTP will be sent to <b>+91 {existingAgreement.mobile}</b></Typography>
+                  
+                  {!confirmObj ? (
+                    <Button variant="contained" onClick={sendOtp} disabled={loading}>
+                      {loading ? "Processing..." : "Send OTP"}
+                    </Button>
+                  ) : (
+                    <Box>
+                      <TextField 
+                        label="6-Digit OTP" 
+                        fullWidth 
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                        sx={{ mb: 2, bgcolor: 'white' }}
                       />
-                    </Box>
-                    <Box mt={2} display="flex" gap={2}>
-                      <Button variant="outlined" onClick={() => sigCanvas.current.clear()}>Clear Signature</Button>
-                      <Button variant="contained" color="success" onClick={handleFinalTenantSign} disabled={loading}>
-                        {loading ? "Saving..." : "Apply Signature & Finish"}
+                      <Button variant="contained" fullWidth onClick={verifyOtp} disabled={loading}>
+                        Verify OTP
                       </Button>
+                      {otpTimer > 0 ? (
+                        <Typography variant="caption" mt={1} display="block">Resend in {otpTimer}s</Typography>
+                      ) : (
+                        <Button size="small" onClick={sendOtp} sx={{ mt: 1 }}>Resend OTP</Button>
+                      )}
                     </Box>
+                  )}
+                </Box>
+              ) : (
+                <Box mt={3}>
+                  <Typography variant="h6" gutterBottom>Draw your Signature</Typography>
+                  <Box border="2px dashed #94a3b8" borderRadius={2} bgcolor="#fff">
+                    <SignatureCanvas
+                      ref={sigCanvas}
+                      penColor="black"
+                      canvasProps={{ width: 750, height: 200, className: "sigCanvas" }}
+                    />
                   </Box>
-                )}
-              </Paper>
-            )}
-
-            {/* 4. PENDING STATUS (Waiting for Admin Approval) */}
-            {existingAgreement?.agreement_status === "pending" && (
-              <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
-                <Typography variant="h5" color="info.main" mb={2} fontWeight="bold">⏳ Under Review</Typography>
-                <Typography color="textSecondary">
-                  Our team is currently reviewing your agreement details and documents. 
-                  You will be notified once the process moves to the next stage.
-                </Typography>
-              </Paper>
-            )}
-
-            {/* 5. INITIAL FORM (Only if record doesn't exist) */}
-            {!existingAgreement && (
-              <Paper elevation={3} sx={{ p: 4 }}>
-                <Typography variant="h5" mb={3} fontWeight="bold">Rent Agreement Form</Typography>
-                <form onSubmit={handleSubmitInitialForm}>
-                  <Box display="grid" gridTemplateColumns={{xs: '1fr', md: '1fr 1fr'}} gap={2}>
-                    <TextField name="full_name" label="Full Name" required onChange={handleChange} />
-                    <TextField name="mobile" label="Mobile Number" required onChange={handleChange} inputProps={{ maxLength: 10 }} />
-                    <TextField name="father_name" label="Father's Name" onChange={handleChange} />
-                    <TextField name="email" label="Email Address" type="email" onChange={handleChange} />
-                    <TextField name="address" label="Permanent Address" multiline rows={2} sx={{ gridColumn: {md: 'span 2'} }} onChange={handleChange} />
+                  <Box mt={2} display="flex" gap={2}>
+                    <Button variant="outlined" onClick={() => sigCanvas.current.clear()}>Clear</Button>
+                    <Button variant="contained" color="success" onClick={handleFinalTenantSign} disabled={loading}>
+                      {loading ? "Processing..." : "Finish & Save Agreement"}
+                    </Button>
                   </Box>
-                  <Typography variant="subtitle2" mt={3} mb={1}>Upload Signature Image (Draft Signature):</Typography>
+                </Box>
+              )}
+            </Paper>
+          )}
+
+          {/* 4. PENDING ADMIN APPROVAL */}
+          {existingAgreement?.agreement_status === "pending" && (
+            <Paper elevation={3} sx={{ p: 4, textAlign: 'center', borderRadius: 4 }}>
+              <Typography variant="h5" color="primary" fontWeight="bold">Details Under Review</Typography>
+              <Typography mt={2}>The admin is checking your documents. Check back soon!</Typography>
+            </Paper>
+          )}
+
+          {/* 5. INITIAL FORM SUBMISSION */}
+          {!existingAgreement && (
+            <Paper elevation={3} sx={{ p: 4, borderRadius: 4 }}>
+              <Typography variant="h5" mb={4} fontWeight="bold">Rent Agreement Details</Typography>
+              <form onSubmit={handleSubmitInitialForm}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <TextField fullWidth name="full_name" label="Full Name (as per Aadhaar)" required onChange={handleChange} />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField fullWidth name="mobile" label="Mobile Number" required onChange={handleChange} inputProps={{ maxLength: 10 }} />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField fullWidth name="father_name" label="Father's Name" required onChange={handleChange} />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField fullWidth name="email" label="Email Address" type="email" onChange={handleChange} />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField fullWidth name="address" label="Permanent Address" multiline rows={2} onChange={handleChange} required />
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <TextField fullWidth name="city" label="City" onChange={handleChange} required />
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <TextField fullWidth name="state" label="State" onChange={handleChange} required />
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <TextField fullWidth name="pincode" label="Pincode" onChange={handleChange} required />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField fullWidth name="aadhaar_last4" label="Last 4 Digits of Aadhaar" onChange={handleChange} inputProps={{ maxLength: 4 }} required />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField fullWidth name="pan_number" label="PAN Number" onChange={handleChange} />
+                  </Grid>
+                </Grid>
+
+                <Box mt={3}>
+                  <Typography variant="subtitle2" gutterBottom>Upload Photo of your Signature (For Draft):</Typography>
                   <input type="file" accept="image/*" onChange={(e) => setSignatureFile(e.target.files[0])} required />
-                  <Button type="submit" variant="contained" fullWidth sx={{ mt: 4, py: 1.5 }} disabled={loading}>
-                    {loading ? "Submitting..." : "Submit Agreement Details"}
-                  </Button>
-                </form>
-              </Paper>
-            )}
-          </>
-        )}
+                </Box>
 
-        <Snackbar open={!!success} autoHideDuration={3000} onClose={() => setSuccess("")}>
-          <Alert severity="success" sx={{ width: '100%' }}>{success}</Alert>
-        </Snackbar>
-        
-        {error && <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+                <Button type="submit" variant="contained" fullWidth sx={{ mt: 4, py: 1.5 }} disabled={loading}>
+                  {loading ? <CircularProgress size={24} color="inherit" /> : "Submit for Approval"}
+                </Button>
+              </form>
+            </Paper>
+          )}
+        </>
+      )}
 
-        <div id="recaptcha-container"></div>
-      </div>
+      {/* RECAPTCHA HIDDEN CONTAINER */}
+      <div id="recaptcha-container"></div>
+
+      {/* FEEDBACK */}
+      <Snackbar open={!!success} autoHideDuration={4000} onClose={() => setSuccess("")}>
+        <Alert severity="success" sx={{ width: '100%' }}>{success}</Alert>
+      </Snackbar>
+      <Snackbar open={!!error} autoHideDuration={4000} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{ width: '100%' }}>{error}</Alert>
+      </Snackbar>
     </Box>
   );
 };
