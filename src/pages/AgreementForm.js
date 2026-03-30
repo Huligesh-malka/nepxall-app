@@ -13,10 +13,6 @@ const AgreementForm = () => {
   const [existingAgreement, setExistingAgreement] = useState(null);
   const [error, setError] = useState(null);
 
-  // ✅ NEW STATES
-  const [showSignaturePad, setShowSignaturePad] = useState(false);
-  const [pdfLoaded, setPdfLoaded] = useState(false);
-
   const [formData, setFormData] = useState({
     full_name: "",
     father_name: "",
@@ -47,7 +43,7 @@ const AgreementForm = () => {
           setExistingAgreement(res.data.data);
         }
       } catch (err) {
-        setError("Failed to connect to server. Please refresh.");
+        setError("Failed to connect to server. Please refresh the page.");
       } finally {
         setFetching(false);
       }
@@ -64,11 +60,12 @@ const AgreementForm = () => {
     e.preventDefault();
     const userId = localStorage.getItem("user_id") || localStorage.getItem("userId");
 
-    if (!userId) return alert("Login again");
+    if (!userId) return alert("Session expired.");
     if (!signatureFile) return alert("Signature required");
 
     setLoading(true);
     const data = new FormData();
+
     Object.keys(formData).forEach((key) => data.append(key, formData[key]));
     data.append("user_id", userId);
     data.append("booking_id", bookingId);
@@ -77,19 +74,19 @@ const AgreementForm = () => {
     try {
       const res = await api.post("/agreements-form/submit", data);
       if (res.data.success) {
-        alert("✅ Submitted!");
+        alert("Submitted!");
         const statusRes = await api.get(`/agreements-form/status/${bookingId}`);
         if (statusRes.data.exists) setExistingAgreement(statusRes.data.data);
       }
     } catch {
-      alert("Error saving");
+      alert("Error saving agreement");
     } finally {
       setLoading(false);
     }
   };
 
   const handleFinalTenantSign = async () => {
-    if (sigCanvas.current.isEmpty()) return alert("Please sign");
+    if (sigCanvas.current.isEmpty()) return alert("Draw signature");
 
     setLoading(true);
     try {
@@ -101,11 +98,11 @@ const AgreementForm = () => {
       });
 
       if (res.data.success) {
-        alert("✅ Completed!");
+        alert("Agreement completed!");
         navigate("/my-bookings");
       }
     } catch {
-      alert("Failed");
+      alert("Failed signing");
     } finally {
       setLoading(false);
     }
@@ -115,20 +112,19 @@ const AgreementForm = () => {
     maxWidth: "800px",
     margin: "30px auto",
     padding: "35px",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fff",
     borderRadius: "16px",
   };
 
   if (fetching) return <div style={{ textAlign: "center" }}>Loading...</div>;
+  if (error) return <div style={{ textAlign: "center" }}>{error}</div>;
 
-  if (error) return <div>{error}</div>;
-
-  /* ================= STATUS FLOW ================= */
+  /* ================= FIXED LOGIC ================= */
 
   if (existingAgreement) {
     const status = existingAgreement.agreement_status;
 
-    // ✅ COMPLETED
+    /* ✅ COMPLETED */
     if (status === "completed") {
       return (
         <div style={containerStyle}>
@@ -140,66 +136,50 @@ const AgreementForm = () => {
       );
     }
 
-    // ✅ APPROVED (MAIN FIX HERE)
+    /* ✅ OWNER SIGN STEP */
     if (status === "approved") {
+      // 🔥 FIX: Don't show PDF until ready
+      if (!existingAgreement.signed_pdf) {
+        return (
+          <div style={containerStyle}>
+            <h2>⏳ Waiting for Owner Signature</h2>
+            <p>Please wait. Owner is signing the agreement.</p>
+          </div>
+        );
+      }
+
       return (
         <div style={containerStyle}>
-          <h2 style={{ textAlign: "center" }}>Final Step: Signature</h2>
+          <h2>Final Step: Sign</h2>
 
-          {/* PDF */}
-          <div style={{ marginBottom: "20px" }}>
-            <iframe
-              src={existingAgreement.signed_pdf}
-              width="100%"
-              height="450px"
-              title="preview"
-              onLoad={() => {
-                setPdfLoaded(true);
-                setTimeout(() => setShowSignaturePad(true), 1000);
-              }}
-            ></iframe>
-          </div>
+          {/* ✅ SHOW PDF ONLY HERE */}
+          <iframe
+            src={existingAgreement.signed_pdf}
+            width="100%"
+            height="500px"
+            title="Agreement"
+          />
 
-          {/* Show loading until PDF loads */}
-          {!pdfLoaded && (
-            <p style={{ textAlign: "center" }}>📄 Loading agreement...</p>
-          )}
+          <SignatureCanvas
+            ref={sigCanvas}
+            penColor="black"
+            canvasProps={{ width: 700, height: 200 }}
+          />
 
-          {/* ✅ SIGNATURE ONLY AFTER PDF LOAD */}
-          {showSignaturePad && (
-            <div style={{ padding: "20px", border: "2px dashed gray" }}>
-              <p style={{ textAlign: "center" }}>Draw Signature</p>
-
-              <SignatureCanvas
-                ref={sigCanvas}
-                penColor="black"
-                canvasProps={{ width: 700, height: 200 }}
-              />
-
-              <button onClick={() => sigCanvas.current.clear()}>
-                Clear
-              </button>
-            </div>
-          )}
-
-          <button
-            onClick={handleFinalTenantSign}
-            disabled={!showSignaturePad || loading}
-            style={{
-              marginTop: "20px",
-              width: "100%",
-              padding: "15px",
-              background: showSignaturePad ? "green" : "gray",
-              color: "#fff",
-            }}
-          >
-            {loading ? "Processing..." : "Finish Signing"}
+          <button onClick={handleFinalTenantSign}>
+            Finish Signing
           </button>
         </div>
       );
     }
 
-    return <div>Waiting for owner...</div>;
+    /* ✅ DEFAULT WAITING */
+    return (
+      <div style={containerStyle}>
+        <h2>⏳ Waiting for Process</h2>
+        <p>Admin preparing stamp paper / Owner not signed yet</p>
+      </div>
+    );
   }
 
   /* ================= FORM ================= */
@@ -219,7 +199,9 @@ const AgreementForm = () => {
           required
         />
 
-        <button type="submit">{loading ? "Saving..." : "Submit"}</button>
+        <button type="submit" disabled={loading}>
+          Submit
+        </button>
       </form>
     </div>
   );
