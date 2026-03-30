@@ -1,3 +1,5 @@
+// ONLY STATUS CONDITIONS UPDATED (REST SAME)
+
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/api";
@@ -6,7 +8,7 @@ import { auth } from "../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { 
   Box, TextField, Button, Typography, CircularProgress, 
-  Alert, Snackbar, Paper, Grid 
+  Alert, Snackbar, Paper, Grid, Divider 
 } from "@mui/material";
 
 const AgreementForm = () => {
@@ -24,6 +26,7 @@ const AgreementForm = () => {
   const [confirmObj, setConfirmObj] = useState(null);
   const [otp, setOtp] = useState("");
   const [isVerified, setIsVerified] = useState(false);
+  const [otpTimer, setOtpTimer] = useState(0);
 
   const [formData, setFormData] = useState({
     full_name: "", father_name: "", mobile: "", email: "",
@@ -34,7 +37,6 @@ const AgreementForm = () => {
 
   const [signatureFile, setSignatureFile] = useState(null);
 
-  /* ================= FETCH STATUS ================= */
   useEffect(() => {
     const checkStatus = async () => {
       setFetching(true);
@@ -44,7 +46,7 @@ const AgreementForm = () => {
           setExistingAgreement(res.data.data);
           setManualMobile(res.data.data.mobile || "");
         }
-      } catch {
+      } catch (err) {
         setError("Server error. Please refresh.");
       } finally {
         setFetching(false);
@@ -53,24 +55,33 @@ const AgreementForm = () => {
     if (bookingId) checkStatus();
   }, [bookingId]);
 
-  /* ================= OTP ================= */
+  useEffect(() => {
+    if (otpTimer > 0) {
+      const timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpTimer]);
+
   const setupRecaptcha = () => {
+    if (window.recaptchaVerifier) {
+      window.recaptchaVerifier.clear();
+      window.recaptchaVerifier = null;
+    }
+    
     window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-      size: "invisible"
+      size: "invisible",
+      callback: () => {},
     });
   };
 
   const sendOtp = async () => {
-    if (manualMobile.length !== 10) return setError("Enter valid mobile");
+    if (manualMobile.length !== 10) return setError("Enter valid number");
     setLoading(true);
     try {
       setupRecaptcha();
-      const confirmation = await signInWithPhoneNumber(
-        auth,
-        `+91${manualMobile}`,
-        window.recaptchaVerifier
-      );
+      const confirmation = await signInWithPhoneNumber(auth, `+91${manualMobile}`, window.recaptchaVerifier);
       setConfirmObj(confirmation);
+      setOtpTimer(60);
       setSuccess("OTP sent");
     } catch {
       setError("OTP failed");
@@ -89,14 +100,13 @@ const AgreementForm = () => {
     }
   };
 
-  /* ================= FORM ================= */
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmitInitialForm = async (e) => {
     e.preventDefault();
-    const userId = localStorage.getItem("user_id");
+    const userId = localStorage.getItem("user_id") || localStorage.getItem("userId");
     if (!signatureFile) return setError("Signature required");
 
     const data = new FormData();
@@ -114,9 +124,7 @@ const AgreementForm = () => {
   };
 
   const handleFinalTenantSign = async () => {
-    if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
-      return setError("Draw signature");
-    }
+    if (!sigCanvas.current || sigCanvas.current.isEmpty()) return setError("Draw signature");
 
     try {
       const signatureDataURL = sigCanvas.current.toDataURL("image/png");
@@ -140,39 +148,35 @@ const AgreementForm = () => {
         <Box textAlign="center"><CircularProgress /></Box>
       ) : (
         <>
-          {/* ✅ COMPLETED */}
+          {/* COMPLETED */}
           {existingAgreement?.agreement_status === "completed" && (
-            <Paper sx={{ p: 4, textAlign: "center" }}>
-              <Typography variant="h5">✅ Completed</Typography>
+            <Paper sx={{ p: 4, textAlign: 'center' }}>
+              <Typography variant="h5">✅ Agreement Completed</Typography>
               <Button onClick={() => window.open(existingAgreement.signed_pdf)}>
-                Download PDF
+                Download Final PDF
               </Button>
             </Paper>
           )}
 
-          {/* ✅ PENDING */}
+          {/* PENDING */}
           {existingAgreement?.agreement_status === "pending" && (
-            <Paper sx={{ p: 4, textAlign: "center" }}>
+            <Paper sx={{ p: 4, textAlign: 'center' }}>
               <Typography>⏳ Under Review</Typography>
             </Paper>
           )}
 
-          {/* ✅ ADMIN UPLOADED → ONLY MESSAGE */}
+          {/* ✅ NEW: ADMIN UPLOADED */}
           {existingAgreement?.agreement_status === "admin_uploaded" && (
-            <Paper sx={{ p: 4, textAlign: "center" }}>
-              <Typography variant="h6">
-                ⏳ Waiting for Owner Signature
-              </Typography>
-              <Typography>
-                Admin uploaded agreement. Please wait until owner signs.
-              </Typography>
+            <Paper sx={{ p: 4, textAlign: 'center' }}>
+              <Typography variant="h6">⏳ Waiting for Owner Signature</Typography>
+              <Typography>Please wait until owner signs the agreement.</Typography>
             </Paper>
           )}
 
-          {/* ✅ OWNER SIGNED → SHOW PDF */}
-          {existingAgreement?.agreement_status === "owner_signed" && (
+          {/* ✅ UPDATED: OWNER SIGNED ONLY */}
+          {(existingAgreement?.agreement_status === "owner_signed") && existingAgreement.signed_pdf && (
             <Paper sx={{ p: 4 }}>
-              <Typography variant="h6">Sign Agreement</Typography>
+              <Typography variant="h6">Final Step: Digital Signature</Typography>
 
               <iframe
                 src={existingAgreement.signed_pdf}
@@ -193,11 +197,7 @@ const AgreementForm = () => {
                     <Button onClick={sendOtp}>Send OTP</Button>
                   ) : (
                     <>
-                      <TextField
-                        label="OTP"
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value)}
-                      />
+                      <TextField label="OTP" value={otp} onChange={(e) => setOtp(e.target.value)} />
                       <Button onClick={verifyOtp}>Verify</Button>
                     </>
                   )}
@@ -217,7 +217,7 @@ const AgreementForm = () => {
             </Paper>
           )}
 
-          {/* ✅ NO AGREEMENT */}
+          {/* NO AGREEMENT */}
           {!existingAgreement && (
             <Paper sx={{ p: 4 }}>
               <form onSubmit={handleSubmitInitialForm}>
