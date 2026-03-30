@@ -11,6 +11,7 @@ const AgreementForm = () => {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [existingAgreement, setExistingAgreement] = useState(null);
+  const [error, setError] = useState(null);
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -34,13 +35,17 @@ const AgreementForm = () => {
 
   useEffect(() => {
     const checkStatus = async () => {
+      setFetching(true);
+      setError(null);
       try {
         const res = await api.get(`/agreements-form/status/${bookingId}`);
+        // If API returns success but no record, existingAgreement remains null
         if (res.data.exists) {
           setExistingAgreement(res.data.data);
         }
       } catch (err) {
         console.error("Error checking agreement status", err);
+        setError("Failed to connect to server. Please refresh the page.");
       } finally {
         setFetching(false);
       }
@@ -53,7 +58,6 @@ const AgreementForm = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  // Initial Form Submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     const userId = localStorage.getItem("user_id") || localStorage.getItem("userId");
@@ -72,24 +76,24 @@ const AgreementForm = () => {
       const res = await api.post("/agreements-form/submit", data);
       if (res.data.success) {
         alert("✅ Details Submitted Successfully!");
-        // Refresh to trigger the useEffect and show the "Waiting" screen
-        window.location.reload();
+        // Instead of reload, we fetch status again
+        const statusRes = await api.get(`/agreements-form/status/${bookingId}`);
+        if (statusRes.data.exists) setExistingAgreement(statusRes.data.data);
       }
     } catch (err) {
-      alert("Error saving agreement.");
+      alert("Error saving agreement. Please check all fields.");
     } finally {
       setLoading(false);
     }
   };
 
-  // FINAL SIGNATURE (After Owner has signed)
   const handleFinalTenantSign = async () => {
     if (sigCanvas.current.isEmpty()) return alert("Please provide a signature on the pad.");
 
     setLoading(true);
     try {
       const signatureDataURL = sigCanvas.current.getTrimmedCanvas().toDataURL("image/png");
-      const res = await api.post("/agreements-form/tenant-final-sign", {
+      const res = await api.post("/tenant/sign", {
         booking_id: bookingId,
         tenant_signature: signatureDataURL,
       });
@@ -105,20 +109,29 @@ const AgreementForm = () => {
     }
   };
 
-  if (fetching) return <div style={{ textAlign: "center", marginTop: "100px" }}>Loading details...</div>;
-
   // Styles
   const containerStyle = { maxWidth: "800px", margin: "30px auto", padding: "35px", backgroundColor: "#ffffff", borderRadius: "16px", boxShadow: "0 10px 30px rgba(0,0,0,0.08)", fontFamily: "'Inter', sans-serif" };
-  const inputStyle = { padding: "12px 16px", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "15px", width: "100%", backgroundColor: "#f8fafc" };
+  const inputStyle = { padding: "12px 16px", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "15px", width: "100%", backgroundColor: "#f8fafc", marginBottom: "10px" };
   const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" };
   const sectionTitle = { fontSize: "12px", textTransform: "uppercase", letterSpacing: "1.2px", color: "#4f46e5", fontWeight: "800", marginBottom: "15px", marginTop: "25px", borderBottom: "2px solid #f1f5f9", paddingBottom: "8px" };
+
+  if (fetching) return <div style={{ textAlign: "center", marginTop: "100px" }}>Loading details...</div>;
+
+  if (error) return (
+    <div style={containerStyle}>
+        <div style={{ textAlign: "center", color: "#ef4444" }}>
+            <h2>⚠️ Error</h2>
+            <p>{error}</p>
+            <button onClick={() => window.location.reload()} style={{ padding: "10px 20px", borderRadius: "8px", cursor: "pointer" }}>Retry</button>
+        </div>
+    </div>
+  );
 
   /* ================= CONDITIONAL RENDERING LOGIC ================= */
 
   if (existingAgreement) {
     const status = existingAgreement.agreement_status;
 
-    // CASE 1: COMPLETED
     if (status === "completed") {
       return (
         <div style={containerStyle}>
@@ -137,7 +150,6 @@ const AgreementForm = () => {
       );
     }
 
-    // CASE 2: OWNER SIGNED (APPROVED) -> TENANT MUST SIGN FINAL
     if (status === "approved") {
       return (
         <div style={containerStyle}>
@@ -153,9 +165,9 @@ const AgreementForm = () => {
             <label style={{ display: "block", fontWeight: "700", marginBottom: "10px", textAlign: "center" }}>🖋️ Draw your signature below</label>
             <div style={{ background: "#fff", border: "1px solid #ddd" }}>
               <SignatureCanvas 
-                 ref={sigCanvas}
-                 penColor="black" 
-                 canvasProps={{ width: 730, height: 200, className: "sigCanvas" }} 
+                  ref={sigCanvas}
+                  penColor="black" 
+                  canvasProps={{ width: 730, height: 200, className: "sigCanvas" }} 
               />
             </div>
             <button onClick={() => sigCanvas.current.clear()} style={{ marginTop: "10px", fontSize: "12px", color: "#ef4444", border: "none", background: "none", cursor: "pointer" }}>Clear Signature</button>
@@ -172,8 +184,6 @@ const AgreementForm = () => {
       );
     }
 
-    // CASE 3: WAITING (PENDING or any other state after submission)
-    // If the record exists but isn't 'approved' or 'completed', show this screen.
     return (
       <div style={containerStyle}>
         <div style={{ textAlign: "center" }}>
@@ -191,7 +201,6 @@ const AgreementForm = () => {
     );
   }
 
-  /* ================= INITIAL FORM (ONLY IF NO RECORD EXISTS) ================= */
   return (
     <div style={containerStyle}>
       <h2 style={{ textAlign: 'center', fontWeight: '800', color: '#1e293b', marginBottom: '5px' }}>Rental Agreement Form</h2>
@@ -219,7 +228,7 @@ const AgreementForm = () => {
         </div>
 
         <div style={sectionTitle}>Permanent Address</div>
-        <textarea name="address" placeholder="Full Permanent Address" onChange={handleChange} required style={{ ...inputStyle, height: '80px', resize: 'none', marginBottom: '15px' }} />
+        <textarea name="address" placeholder="Full Permanent Address" onChange={handleChange} required style={{ ...inputStyle, height: '80px', resize: 'none' }} />
         <div style={gridStyle}>
           <input name="city" placeholder="City" onChange={handleChange} required style={inputStyle} />
           <input name="state" placeholder="State" onChange={handleChange} required style={inputStyle} />
