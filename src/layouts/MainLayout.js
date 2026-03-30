@@ -17,17 +17,15 @@ const MainLayout = () => {
   /* ================= FETCH ROLE ================= */
   const fetchUser = async (currentUser) => {
     try {
-      const idToken = await currentUser.getIdToken(); // ✅ no force refresh
+      const idToken = await currentUser.getIdToken();
 
       const res = await userAPI.post("/auth/firebase", { idToken });
 
       if (res.data.success) {
-        // 🔐 normalize role
         const backendRole = res.data.role?.toLowerCase().trim();
 
         setRole(backendRole);
 
-        // only for API usage
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("user_id", res.data.userId);
 
@@ -69,7 +67,7 @@ const MainLayout = () => {
   };
 
   /* ================= LOADING ================= */
-  if (loading || (user && !role)) {
+  if (loading) {
     return (
       <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
         <CircularProgress />
@@ -80,12 +78,12 @@ const MainLayout = () => {
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
 
-      {/* 🔐 ONLY SHOW WHEN READY */}
-      {user && role && <Sidebar role={role} user={user} />}
+      {/* ✅ ALWAYS SHOW SIDEBAR */}
+      <Sidebar role={role} user={user} />
 
       <div
         style={{
-          marginLeft: user && role ? 250 : 0,
+          marginLeft: 250,
           padding: 24,
           width: "100%"
         }}
