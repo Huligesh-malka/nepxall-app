@@ -13,8 +13,9 @@ const MainLayout = () => {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
   const [authReady, setAuthReady] = useState(false);
+  const [loadingRole, setLoadingRole] = useState(true); // 🔥 NEW
 
-  /* ================= GET ROLE FROM BACKEND ================= */
+  /* ================= FETCH ROLE ================= */
   const fetchUserFromBackend = async (currentUser) => {
     try {
       const idToken = await currentUser.getIdToken(true);
@@ -22,22 +23,22 @@ const MainLayout = () => {
       const res = await userAPI.post("/auth/firebase", { idToken });
 
       if (res.data.success) {
-        // ✅ Only backend decides role
         setRole(res.data.role);
 
-        // store only token + id (not role)
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("user_id", res.data.userId);
 
-        console.log("✅ Role from backend:", res.data.role);
+        console.log("✅ Role:", res.data.role);
       }
     } catch (err) {
       console.error("❌ Backend sync failed:", err);
       handleLogout();
+    } finally {
+      setLoadingRole(false); // 🔥 IMPORTANT
     }
   };
 
-  /* ================= FIREBASE AUTH ================= */
+  /* ================= AUTH ================= */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
@@ -46,6 +47,7 @@ const MainLayout = () => {
         await fetchUserFromBackend(currentUser);
       } else {
         setRole(null);
+        setLoadingRole(false);
       }
 
       setAuthReady(true);
@@ -67,23 +69,26 @@ const MainLayout = () => {
     }
   };
 
-  if (!authReady) {
+  /* ================= LOADING SCREEN ================= */
+  if (!authReady || loadingRole) {
     return (
-      <Box height="100vh" display="flex" justifyContent="center" alignItems="center" bgcolor="#f8fafc">
-        <CircularProgress thickness={5} size={50} sx={{ color: '#6366f1' }} />
+      <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
+        <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f8fafc" }}>
-      <Sidebar role={role} />
+    <div style={{ display: "flex", minHeight: "100vh" }}>
+
+      {/* 🔥 ONLY SHOW SIDEBAR WHEN ROLE READY */}
+      {role && <Sidebar role={role} />}
 
       <div
         style={{
-          marginLeft: 250,
+          marginLeft: role ? 250 : 0,
           padding: "24px",
-          width: "calc(100% - 250px)"
+          width: "100%"
         }}
       >
         <Box
@@ -94,13 +99,12 @@ const MainLayout = () => {
             backgroundColor: "white",
             padding: "14px 28px",
             borderRadius: "16px",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
             mb: 4
           }}
         >
           <Typography variant="h6" sx={{ fontWeight: 800 }}>
             {location.pathname === "/" ? "DASHBOARD" :
-              location.pathname.split("/").filter(x => x).pop()?.replace(/-/g, " ").toUpperCase() || "HOME"}
+              location.pathname.split("/").filter(x => x).pop()?.replace(/-/g, " ").toUpperCase()}
           </Typography>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
@@ -110,7 +114,7 @@ const MainLayout = () => {
                   {user.phoneNumber || user.email?.split("@")[0]}
                 </Typography>
                 <Typography sx={{ fontSize: '11px', fontWeight: 800 }}>
-                  {role || "Loading..."}
+                  {role}
                 </Typography>
               </Box>
             )}
