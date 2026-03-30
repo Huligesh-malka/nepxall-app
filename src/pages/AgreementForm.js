@@ -6,7 +6,7 @@ import { auth } from "../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { 
   Box, TextField, Button, Typography, CircularProgress, 
-  Alert, Snackbar, Paper, InputAdornment 
+  Alert, Snackbar, Paper 
 } from "@mui/material";
 
 const AgreementForm = () => {
@@ -21,8 +21,7 @@ const AgreementForm = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState("");
 
-  // OTP & Manual Phone Logic
-  const [manualPhone, setManualPhone] = useState(""); 
+  // OTP Logic States
   const [confirmObj, setConfirmObj] = useState(null);
   const [otp, setOtp] = useState("");
   const [isVerified, setIsVerified] = useState(false);
@@ -73,10 +72,6 @@ const AgreementForm = () => {
         const res = await api.get(`/agreements-form/status/${bookingId}`);
         if (res.data.exists) {
           setExistingAgreement(res.data.data);
-          // Set manualPhone from backend record if it exists
-          if (res.data.data.mobile) {
-            setManualPhone(res.data.data.mobile);
-          }
         }
       } catch (err) {
         setError("Server error. Please refresh.");
@@ -89,25 +84,19 @@ const AgreementForm = () => {
 
   /* ================= OTP FUNCTIONS ================= */
   const sendOtp = async () => {
-    if (!manualPhone || manualPhone.length !== 10) {
-      return setError("Please enter a valid 10-digit mobile number.");
-    }
+    const phone = existingAgreement?.mobile;
+    if (!phone || phone.length !== 10) return setError("Invalid phone number in record.");
 
     try {
       setLoading(true);
       setError(null);
-      // Ensure recaptcha is ready
-      if (!window.recaptchaVerifier) {
-         window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", { size: "invisible" });
-      }
-      
-      const confirmation = await signInWithPhoneNumber(auth, `+91${manualPhone}`, window.recaptchaVerifier);
+      const confirmation = await signInWithPhoneNumber(auth, `+91${phone}`, window.recaptchaVerifier);
       setConfirmObj(confirmation);
       setOtpTimer(60);
-      setSuccess("OTP sent successfully!");
+      setSuccess("OTP sent to your registered mobile.");
     } catch (err) {
       console.error("SMS Error:", err);
-      setError("Failed to send OTP. Check if your number is correct.");
+      setError("Failed to send OTP. Please refresh and try again.");
     } finally {
       setLoading(false);
     }
@@ -119,9 +108,9 @@ const AgreementForm = () => {
       setLoading(true);
       await confirmObj.confirm(otp);
       setIsVerified(true);
-      setSuccess("Mobile Verified! You can now sign.");
+      setSuccess("Mobile Verified! Please sign below.");
     } catch (err) {
-      setError("Invalid OTP code. Please try again.");
+      setError("Invalid OTP code.");
     } finally {
       setLoading(false);
     }
@@ -136,7 +125,7 @@ const AgreementForm = () => {
     e.preventDefault();
     const userId = localStorage.getItem("user_id") || localStorage.getItem("userId");
     if (!userId) return alert("Session expired");
-    if (!signatureFile) return alert("Signature photo required");
+    if (!signatureFile) return alert("Initial signature photo required");
 
     setLoading(true);
     const data = new FormData();
@@ -148,6 +137,7 @@ const AgreementForm = () => {
     try {
       const res = await api.post("/agreements-form/submit", data);
       if (res.data.success) {
+        alert("Form submitted! Waiting for approval.");
         window.location.reload();
       }
     } catch (err) {
@@ -166,7 +156,7 @@ const AgreementForm = () => {
       const res = await api.post("/agreements-form/tenant/sign", {
         booking_id: bookingId,
         tenant_signature: signatureDataURL,
-        tenant_mobile: manualPhone // Use the verified manual phone
+        tenant_mobile: existingAgreement.mobile
       });
 
       if (res.data.success) {
@@ -181,7 +171,7 @@ const AgreementForm = () => {
   };
 
   const containerStyle = {
-    maxWidth: "850px", margin: "20px auto", padding: "25px", borderRadius: "12px",
+    maxWidth: "800px", margin: "30px auto", padding: "30px", borderRadius: "16px",
   };
 
   return (
@@ -191,94 +181,78 @@ const AgreementForm = () => {
           <Box textAlign="center" mt={10}><CircularProgress /></Box>
         ) : (
           <>
-            {/* 1. COMPLETED */}
+            {/* 1. COMPLETED STATUS */}
             {existingAgreement?.agreement_status === "completed" && (
-              <Paper elevation={2} sx={{ p: 4, textAlign: 'center' }}>
-                <Typography variant="h5" color="success.main" gutterBottom>✅ Agreement Completed</Typography>
-                <Button variant="contained" onClick={() => window.open(existingAgreement.signed_pdf, "_blank")}>
+              <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
+                <Typography variant="h5" color="success.main" mb={2} fontWeight="bold">✅ Agreement Completed</Typography>
+                <Typography color="textSecondary" mb={3}>You have successfully verified and signed the agreement.</Typography>
+                <Button variant="contained" size="large" onClick={() => window.open(existingAgreement.signed_pdf, "_blank")}>
                   Download Final PDF
                 </Button>
               </Paper>
             )}
 
-            {/* 2. APPROVED - OTP & SIGNING FLOW */}
-            {existingAgreement?.agreement_status === "approved" && (
-              <Paper elevation={3} sx={{ p: 3 }}>
-                <Typography variant="h6" mb={2} fontWeight="bold">Digital Signature Verification</Typography>
-                
-                {/* PDF Preview */}
-                <iframe 
-                  src={existingAgreement.signed_pdf} 
-                  width="100%" 
-                  height="450px" 
-                  style={{ marginBottom: "20px", border: '1px solid #ddd', borderRadius: '8px' }} 
-                  title="Agreement Preview" 
-                />
+            {/* 2. APPROVED BY ADMIN BUT NOT YET SIGNED BY OWNER */}
+            {existingAgreement?.agreement_status === "approved" && !existingAgreement.signed_pdf && (
+              <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
+                <Typography variant="h5" color="warning.main" mb={2} fontWeight="bold">⏳ Waiting for Owner Signature</Typography>
+                <Typography color="textSecondary">
+                  Your details have been approved! We are now waiting for the property owner to sign the document. 
+                  Once they sign, you will be able to complete the final verification here.
+                </Typography>
+                <Box mt={3}>
+                    <CircularProgress size={24} sx={{ mb: 1 }} />
+                    <Typography variant="body2" display="block">Checking for updates...</Typography>
+                </Box>
+              </Paper>
+            )}
+
+            {/* 3. APPROVED BY OWNER - READY FOR TENANT OTP & SIGN */}
+            {existingAgreement?.agreement_status === "approved" && existingAgreement.signed_pdf && (
+              <Paper elevation={3} sx={{ p: 4 }}>
+                <Typography variant="h5" mb={3} fontWeight="bold">Final Step: Verify & Sign</Typography>
+                <Typography variant="body2" color="textSecondary" mb={2}>Please review the document signed by the owner before proceeding.</Typography>
+                <iframe src={existingAgreement.signed_pdf} width="100%" height="450px" style={{ marginBottom: "20px", border: '1px solid #ddd', borderRadius: '8px' }} title="Agreement" />
 
                 {!isVerified ? (
-                  <Box sx={{ bgcolor: '#fdfdfd', p: 3, borderRadius: 2, border: '1px solid #eee' }}>
-                    <Typography variant="subtitle2" color="textSecondary" mb={1}>Enter Mobile Number for OTP Verification</Typography>
-                    
-                    <Box display="flex" gap={1} mb={2}>
-                      <TextField 
-                        fullWidth 
-                        variant="outlined"
-                        placeholder="Enter 10 digit mobile"
-                        value={manualPhone}
-                        onChange={(e) => setManualPhone(e.target.value.replace(/\D/g, ""))}
-                        disabled={!!confirmObj || loading}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">+91</InputAdornment>,
-                        }}
-                      />
-                      {!confirmObj && (
-                        <Button 
-                          variant="contained" 
-                          onClick={sendOtp} 
-                          disabled={loading || manualPhone.length !== 10}
-                          sx={{ whiteSpace: 'nowrap', px: 3 }}
-                        >
-                          {loading ? <CircularProgress size={24} color="inherit" /> : "Get OTP"}
-                        </Button>
-                      )}
-                    </Box>
-
-                    {confirmObj && (
+                  <Box sx={{ bgcolor: '#f8fafc', p: 3, borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                    <Typography variant="subtitle1" mb={2}>Verify identity via <b>+91 {existingAgreement.mobile}</b></Typography>
+                    {!confirmObj ? (
+                      <Button variant="contained" onClick={sendOtp} disabled={loading} size="large">
+                        {loading ? "Sending..." : "Send OTP to Sign"}
+                      </Button>
+                    ) : (
                       <Box>
                         <TextField 
-                          fullWidth 
-                          label="Enter 6-Digit OTP" 
-                          value={otp} 
+                          fullWidth label="6-Digit OTP" value={otp} 
                           onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} 
-                          sx={{ mb: 2 }} 
+                          sx={{ mb: 2, bgcolor: 'white' }} 
                         />
-                        <Button variant="contained" fullWidth onClick={verifyOtp} disabled={loading}>
-                          {loading ? "Verifying..." : "Verify & Unlock Signature"}
+                        <Button variant="contained" fullWidth onClick={verifyOtp} disabled={loading} size="large">
+                          {loading ? "Verifying..." : "Verify OTP"}
                         </Button>
-                        <Box mt={1} textAlign="center">
-                           {otpTimer > 0 ? (
-                             <Typography variant="caption">Resend OTP in {otpTimer}s</Typography>
-                           ) : (
-                             <Button size="small" onClick={sendOtp}>Resend OTP</Button>
-                           )}
-                        </Box>
+                        {otpTimer > 0 ? (
+                          <Typography variant="caption" display="block" mt={1}>Resend available in {otpTimer}s</Typography>
+                        ) : (
+                          <Button size="small" onClick={sendOtp} sx={{ mt: 1 }}>Resend OTP</Button>
+                        )}
                       </Box>
                     )}
                   </Box>
                 ) : (
-                  <Box mt={3} sx={{ animation: 'fadeIn 0.5s' }}>
-                    <Alert severity="success" sx={{ mb: 2 }}>Mobile Verified! Please Draw your Signature below.</Alert>
-                    <Box border="2px dashed #90caf9" borderRadius={2} bgcolor="#fff" overflow="hidden">
+                  <Box mt={3}>
+                    <Alert severity="success" sx={{ mb: 2 }}>Verification Successful. Please Draw your Signature below.</Alert>
+                    <Box border="2px dashed #cbd5e1" borderRadius={2} bgcolor="#fff" overflow="hidden">
                       <SignatureCanvas
                         ref={sigCanvas}
                         penColor="black"
-                        canvasProps={{ width: 750, height: 200, className: "sigCanvas" }}
+                        canvasProps={{ width: 740, height: 200, className: "sigCanvas" }}
                       />
                     </Box>
-                    <Box mt={2} display="flex" gap={2} justifyContent="flex-end">
-                      <Button variant="text" color="error" onClick={() => sigCanvas.current.clear()}>Clear Canvas</Button>
+                    <Box mt={2} display="flex" gap={2}>
+                      <Button variant="outlined" onClick={() => sigCanvas.current.clear()}>Clear Signature</Button>
                       <Button variant="contained" color="success" onClick={handleFinalTenantSign} disabled={loading}>
-                        {loading ? "Signing..." : "Apply Signature & Finish"}
+                        {loading ? "Saving..." : "Apply Signature & Finish"}
                       </Button>
                     </Box>
                   </Box>
@@ -286,30 +260,33 @@ const AgreementForm = () => {
               </Paper>
             )}
 
-            {/* 3. PENDING */}
+            {/* 4. PENDING STATUS (Waiting for Admin Approval) */}
             {existingAgreement?.agreement_status === "pending" && (
-              <Paper elevation={2} sx={{ p: 4, textAlign: 'center' }}>
-                <Typography variant="h5" color="warning.main">⏳ Approval Pending</Typography>
-                <Typography mt={1} color="textSecondary">The property owner is reviewing your details. Please check back later.</Typography>
+              <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
+                <Typography variant="h5" color="info.main" mb={2} fontWeight="bold">⏳ Under Review</Typography>
+                <Typography color="textSecondary">
+                  Our team is currently reviewing your agreement details and documents. 
+                  You will be notified once the process moves to the next stage.
+                </Typography>
               </Paper>
             )}
 
-            {/* 4. INITIAL FORM */}
+            {/* 5. INITIAL FORM (Only if record doesn't exist) */}
             {!existingAgreement && (
               <Paper elevation={3} sx={{ p: 4 }}>
-                <Typography variant="h5" mb={3} fontWeight="bold">New Rent Agreement Details</Typography>
+                <Typography variant="h5" mb={3} fontWeight="bold">Rent Agreement Form</Typography>
                 <form onSubmit={handleSubmitInitialForm}>
-                  <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }} gap={2}>
+                  <Box display="grid" gridTemplateColumns={{xs: '1fr', md: '1fr 1fr'}} gap={2}>
                     <TextField name="full_name" label="Full Name" required onChange={handleChange} />
                     <TextField name="mobile" label="Mobile Number" required onChange={handleChange} inputProps={{ maxLength: 10 }} />
                     <TextField name="father_name" label="Father's Name" onChange={handleChange} />
                     <TextField name="email" label="Email Address" type="email" onChange={handleChange} />
-                    <TextField name="address" label="Permanent Address" multiline rows={2} sx={{ gridColumn: { md: 'span 2' } }} onChange={handleChange} />
+                    <TextField name="address" label="Permanent Address" multiline rows={2} sx={{ gridColumn: {md: 'span 2'} }} onChange={handleChange} />
                   </Box>
-                  <Typography variant="subtitle2" mt={3} mb={1}>Signature Photo (For Initial Draft):</Typography>
+                  <Typography variant="subtitle2" mt={3} mb={1}>Upload Signature Image (Draft Signature):</Typography>
                   <input type="file" accept="image/*" onChange={(e) => setSignatureFile(e.target.files[0])} required />
                   <Button type="submit" variant="contained" fullWidth sx={{ mt: 4, py: 1.5 }} disabled={loading}>
-                    Submit for Approval
+                    {loading ? "Submitting..." : "Submit Agreement Details"}
                   </Button>
                 </form>
               </Paper>
@@ -317,8 +294,8 @@ const AgreementForm = () => {
           </>
         )}
 
-        <Snackbar open={!!success} autoHideDuration={4000} onClose={() => setSuccess("")}>
-          <Alert severity="success">{success}</Alert>
+        <Snackbar open={!!success} autoHideDuration={3000} onClose={() => setSuccess("")}>
+          <Alert severity="success" sx={{ width: '100%' }}>{success}</Alert>
         </Snackbar>
         
         {error && <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError(null)}>{error}</Alert>}
