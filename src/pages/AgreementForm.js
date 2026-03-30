@@ -1,11 +1,9 @@
-// 🔥 ONLY ADDITIONS: OTP BELOW PDF (NO REMOVAL)
-
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/api";
 import SignatureCanvas from "react-signature-canvas";
 
-// 🔥 ADD THIS
+// 🔥 ADD OTP IMPORTS
 import { auth } from "../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
@@ -19,7 +17,7 @@ const AgreementForm = () => {
   const [existingAgreement, setExistingAgreement] = useState(null);
   const [error, setError] = useState(null);
 
-  // 🔥 OTP STATES (NEW)
+  // 🔥 OTP STATES
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [confirmObj, setConfirmObj] = useState(null);
@@ -27,7 +25,20 @@ const AgreementForm = () => {
 
   const [formData, setFormData] = useState({
     full_name: "",
+    father_name: "",
     mobile: "",
+    email: "",
+    address: "",
+    city: "",
+    state: "",
+    pincode: "",
+    aadhaar_last4: "",
+    pan_number: "",
+    checkin_date: "",
+    agreement_months: "11",
+    rent: "",
+    deposit: "",
+    maintenance: "0",
   });
 
   const [signatureFile, setSignatureFile] = useState(null);
@@ -51,7 +62,7 @@ const AgreementForm = () => {
     if (bookingId) checkStatus();
   }, [bookingId]);
 
-  /* ================= RECAPTCHA ================= */
+  /* ================= OTP SETUP ================= */
   useEffect(() => {
     if (!window.recaptchaVerifier) {
       window.recaptchaVerifier = new RecaptchaVerifier(
@@ -62,7 +73,6 @@ const AgreementForm = () => {
     }
   }, []);
 
-  /* ================= OTP SEND ================= */
   const sendOtp = async () => {
     if (phone.length !== 10) return alert("Enter valid number");
 
@@ -76,7 +86,6 @@ const AgreementForm = () => {
     alert("OTP sent");
   };
 
-  /* ================= OTP VERIFY ================= */
   const verifyOtp = async () => {
     if (otp.length !== 6) return alert("Invalid OTP");
 
@@ -89,11 +98,56 @@ const AgreementForm = () => {
     }
   };
 
+  /* ================= FORM ================= */
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const userId =
+      localStorage.getItem("user_id") || localStorage.getItem("userId");
+
+    if (!userId) return alert("Session expired");
+    if (!signatureFile) return alert("Signature required");
+
+    setLoading(true);
+
+    const data = new FormData();
+    Object.keys(formData).forEach((key) =>
+      data.append(key, formData[key])
+    );
+
+    data.append("user_id", userId);
+    data.append("booking_id", bookingId);
+    data.append("signature", signatureFile);
+
+    try {
+      const res = await api.post("/agreements-form/submit", data);
+
+      if (res.data.success) {
+        alert("Submitted successfully!");
+
+        const statusRes = await api.get(
+          `/agreements-form/status/${bookingId}`
+        );
+
+        if (statusRes.data.exists) {
+          setExistingAgreement(statusRes.data.data);
+        }
+      }
+    } catch (err) {
+      alert("Error saving agreement");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   /* ================= FINAL SIGN ================= */
   const handleFinalTenantSign = async () => {
-    if (!otpVerified) {
-      return alert("Please verify OTP first");
-    }
+    if (!otpVerified) return alert("Verify OTP first");
 
     if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
       return alert("Please draw your signature");
@@ -133,10 +187,13 @@ const AgreementForm = () => {
     padding: "35px",
     backgroundColor: "#fff",
     borderRadius: "16px",
+    boxShadow: "0 5px 20px rgba(0,0,0,0.08)",
   };
 
   if (fetching) return <div>Loading...</div>;
   if (error) return <div>{error}</div>;
+
+  /* ================= AGREEMENT FLOW ================= */
 
   if (existingAgreement) {
     const status = existingAgreement.agreement_status;
@@ -153,34 +210,24 @@ const AgreementForm = () => {
     }
 
     if (status === "approved") {
-      if (!existingAgreement.signed_pdf) {
-        return (
-          <div style={containerStyle}>
-            <h2>⏳ Waiting for Owner Signature</h2>
-          </div>
-        );
-      }
-
       return (
         <div style={containerStyle}>
           <h2>Final Step: Sign</h2>
 
-          {/* ✅ KEEP PDF (NO CHANGE) */}
+          {/* ✅ PDF SHOW */}
           <iframe
             src={existingAgreement.signed_pdf}
             width="100%"
             height="500px"
-            title="Agreement"
           />
 
-          {/* 🔥 NEW OTP SECTION BELOW PDF */}
-
+          {/* 🔥 OTP SECTION BELOW PDF */}
           <h3>Verify Mobile</h3>
 
           {!confirmObj && (
             <>
               <input
-                placeholder="Enter Mobile Number"
+                placeholder="Enter Mobile"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
               />
@@ -199,7 +246,7 @@ const AgreementForm = () => {
             </>
           )}
 
-          {/* 🔥 SIGNATURE (ONLY AFTER OTP) */}
+          {/* 🔥 SIGNATURE */}
           {otpVerified && (
             <>
               <h3>Draw Signature</h3>
