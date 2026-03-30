@@ -149,44 +149,37 @@ const AgreementForm = () => {
     }
 
     if (status === "approved") {
-      // Logic to show signed copy if owner finished, otherwise show the stamp paper
-      const docPreviewUrl = existingAgreement.signed_pdf || existingAgreement.final_pdf;
-
       return (
         <div style={containerStyle}>
-          <h2 style={{ textAlign: 'center', color: '#1e293b', fontWeight: '800' }}>Final Step: Provide Your Signature</h2>
-          <p style={{ textAlign: 'center', color: '#475569', marginBottom: '25px', fontSize: '15px', lineHeight: '1.6' }}>
-            The owner has signed the agreement. Please review and provide your final digital signature below.
-          </p>
-          
-          <div style={{ marginBottom: "25px", border: "1px solid #e2e8f0", borderRadius: "12px", overflow: "hidden", boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-              <p style={{ padding: "12px", background: "#f8fafc", fontSize: "13px", margin: 0, fontWeight: '600', borderBottom: '1px solid #e2e8f0', color: '#64748b' }}>
-                📄 E-Stamp & Signed Document Preview
-              </p>
-              {/* Displaying as Image for better visibility of the stamp/signature */}
-              <div style={{ height: "500px", overflowY: "auto", background: "#f1f5f9", textAlign: 'center' }}>
-                <img src={docPreviewUrl} alt="Agreement Preview" style={{ width: '100%', height: 'auto' }} />
-              </div>
+          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+            <h2 style={{ color: '#1e293b', fontWeight: '800', marginBottom: '10px' }}>Final Step: Provide Your Signature</h2>
+            <p style={{ color: '#475569', fontSize: '16px', lineHeight: '1.6' }}>
+              The owner has signed the agreement. Please review and provide your final digital signature below.
+            </p>
           </div>
-
-          <div style={{ backgroundColor: "#fdfdfd", padding: "20px", borderRadius: "12px", border: "2px dashed #4f46e5" }}>
-            <label style={{ display: "block", fontWeight: "700", marginBottom: "12px", textAlign: "center", color: '#1e293b' }}>🖋️ Draw your final signature below</label>
-            <div style={{ background: "#fff", border: "1px solid #cbd5e1", borderRadius: '8px' }}>
+          
+          <div style={{ backgroundColor: "#f8fafc", padding: "30px", borderRadius: "16px", border: "2px dashed #4f46e5" }}>
+            <label style={{ display: "block", fontWeight: "700", marginBottom: "15px", textAlign: "center", color: '#1e293b' }}>🖋️ Draw your signature on the pad below</label>
+            <div style={{ background: "#fff", border: "1px solid #cbd5e1", borderRadius: '8px', overflow: 'hidden' }}>
               <SignatureCanvas 
                   ref={sigCanvas}
                   penColor="black" 
                   canvasProps={{ width: 730, height: 200, className: "sigCanvas" }} 
               />
             </div>
-            <button onClick={() => sigCanvas.current.clear()} style={{ marginTop: "12px", fontSize: "13px", color: "#ef4444", border: "none", background: "none", cursor: "pointer", fontWeight: '600' }}>Clear Signature Pad</button>
+            <div style={{ textAlign: 'center' }}>
+                <button onClick={() => sigCanvas.current.clear()} style={{ marginTop: "15px", fontSize: "14px", color: "#ef4444", border: "none", background: "none", cursor: "pointer", fontWeight: '600' }}>
+                    Clear Signature & Try Again
+                </button>
+            </div>
           </div>
 
           <button 
             onClick={handleFinalTenantSign} 
             disabled={loading}
-            style={{ width: "100%", marginTop: "30px", padding: "18px", background: "linear-gradient(135deg, #059669 0%, #10b981 100%)", color: "white", border: "none", borderRadius: "12px", fontWeight: "800", cursor: "pointer", boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.3)' }}
+            style={{ width: "100%", marginTop: "30px", padding: "20px", background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)", color: "white", border: "none", borderRadius: "12px", fontWeight: "800", cursor: "pointer", fontSize: "16px", boxShadow: '0 10px 15px -3px rgba(79, 70, 229, 0.3)' }}
           >
-            {loading ? "Completing..." : "Confirm & Sign Final Agreement"}
+            {loading ? "Processing..." : "Complete & Sign Agreement"}
           </button>
         </div>
       );
@@ -196,13 +189,13 @@ const AgreementForm = () => {
       <div style={containerStyle}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: "60px" }}>⏳</div>
-          <h2 style={{ color: "#1e293b" }}>Processing Your Agreement</h2>
+          <h2 style={{ color: "#1e293b" }}>Awaiting Owner Signature</h2>
           <p style={{ color: "#64748b" }}>
-            Your details are submitted. Our admin is preparing the e-stamp paper. 
-            As soon as the owner signs, this page will update for your final signature.
+            Your details have been submitted. We are currently processing the document. 
+            Once the owner has signed, you will be able to provide your final signature here.
           </p>
           <button onClick={() => navigate("/my-bookings")} style={{ marginTop: "20px", color: "#4f46e5", background: "none", border: "none", cursor: "pointer", fontWeight: "600" }}>
-            ← Return to Dashboard
+            ← Back to My Bookings
           </button>
         </div>
       </div>
