@@ -27,7 +27,6 @@ const AgreementForm = () => {
   const [otp, setOtp] = useState("");
   const [isVerified, setIsVerified] = useState(false);
   const [otpTimer, setOtpTimer] = useState(0);
-  const [canResend, setCanResend] = useState(true);
 
   const [formData, setFormData] = useState({
     full_name: "", father_name: "", mobile: "", email: "",
@@ -62,27 +61,34 @@ const AgreementForm = () => {
     if (otpTimer > 0) {
       const timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
       return () => clearTimeout(timer);
-    } else {
-      setCanResend(true);
     }
   }, [otpTimer]);
 
+  // FIXED: Improved setup with cleanup to prevent "element removed" errors
   const setupRecaptcha = () => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-        size: "invisible",
-        callback: (response) => { console.log("Captcha Solved"); }
-      });
+    if (window.recaptchaVerifier) {
+      window.recaptchaVerifier.clear();
+      window.recaptchaVerifier = null;
     }
+    
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+      size: "invisible",
+      callback: () => { console.log("Captcha Solved"); },
+      'expired-callback': () => {
+        if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
+      }
+    });
   };
 
   /* ================= OTP FUNCTIONS ================= */
   const sendOtp = async () => {
     if (manualMobile.length !== 10) return setError("Please enter a valid 10-digit mobile number.");
     
+    setLoading(true);
+    setError(null);
+    
     try {
-      setLoading(true);
-      setError(null);
+      // Always initialize a fresh verifier before sending
       setupRecaptcha();
       
       const formatPh = `+91${manualMobile}`;
@@ -90,7 +96,6 @@ const AgreementForm = () => {
       
       setConfirmObj(confirmation);
       setOtpTimer(60);
-      setCanResend(false);
       setSuccess("OTP sent to " + manualMobile);
     } catch (err) {
       console.error("SMS Error:", err);
