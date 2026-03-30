@@ -13,6 +13,10 @@ const AgreementForm = () => {
   const [existingAgreement, setExistingAgreement] = useState(null);
   const [error, setError] = useState(null);
 
+  // ✅ NEW STATES
+  const [showSignaturePad, setShowSignaturePad] = useState(false);
+  const [pdfLoaded, setPdfLoaded] = useState(false);
+
   const [formData, setFormData] = useState({
     full_name: "",
     father_name: "",
@@ -39,13 +43,11 @@ const AgreementForm = () => {
       setError(null);
       try {
         const res = await api.get(`/agreements-form/status/${bookingId}`);
-        // If API returns success but no record, existingAgreement remains null
         if (res.data.exists) {
           setExistingAgreement(res.data.data);
         }
       } catch (err) {
-        console.error("Error checking agreement status", err);
-        setError("Failed to connect to server. Please refresh the page.");
+        setError("Failed to connect to server. Please refresh.");
       } finally {
         setFetching(false);
       }
@@ -62,8 +64,8 @@ const AgreementForm = () => {
     e.preventDefault();
     const userId = localStorage.getItem("user_id") || localStorage.getItem("userId");
 
-    if (!userId) return alert("Session expired. Please login again.");
-    if (!signatureFile) return alert("Initial Digital Signature is required");
+    if (!userId) return alert("Login again");
+    if (!signatureFile) return alert("Signature required");
 
     setLoading(true);
     const data = new FormData();
@@ -75,209 +77,149 @@ const AgreementForm = () => {
     try {
       const res = await api.post("/agreements-form/submit", data);
       if (res.data.success) {
-        alert("✅ Details Submitted Successfully!");
-        // Instead of reload, we fetch status again
+        alert("✅ Submitted!");
         const statusRes = await api.get(`/agreements-form/status/${bookingId}`);
         if (statusRes.data.exists) setExistingAgreement(statusRes.data.data);
       }
-    } catch (err) {
-      alert("Error saving agreement. Please check all fields.");
+    } catch {
+      alert("Error saving");
     } finally {
       setLoading(false);
     }
   };
 
   const handleFinalTenantSign = async () => {
-    if (sigCanvas.current.isEmpty()) return alert("Please provide a signature on the pad.");
+    if (sigCanvas.current.isEmpty()) return alert("Please sign");
 
     setLoading(true);
     try {
       const signatureDataURL = sigCanvas.current.getTrimmedCanvas().toDataURL("image/png");
+
       const res = await api.post("/tenant/sign", {
         booking_id: bookingId,
         tenant_signature: signatureDataURL,
       });
 
       if (res.data.success) {
-        alert("✅ Agreement Fully Signed & Completed!");
+        alert("✅ Completed!");
         navigate("/my-bookings");
       }
-    } catch (err) {
-      alert("Failed to complete signing.");
+    } catch {
+      alert("Failed");
     } finally {
       setLoading(false);
     }
   };
 
-  // Styles
-  const containerStyle = { maxWidth: "800px", margin: "30px auto", padding: "35px", backgroundColor: "#ffffff", borderRadius: "16px", boxShadow: "0 10px 30px rgba(0,0,0,0.08)", fontFamily: "'Inter', sans-serif" };
-  const inputStyle = { padding: "12px 16px", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "15px", width: "100%", backgroundColor: "#f8fafc", marginBottom: "10px" };
-  const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" };
-  const sectionTitle = { fontSize: "12px", textTransform: "uppercase", letterSpacing: "1.2px", color: "#4f46e5", fontWeight: "800", marginBottom: "15px", marginTop: "25px", borderBottom: "2px solid #f1f5f9", paddingBottom: "8px" };
+  const containerStyle = {
+    maxWidth: "800px",
+    margin: "30px auto",
+    padding: "35px",
+    backgroundColor: "#ffffff",
+    borderRadius: "16px",
+  };
 
-  if (fetching) return <div style={{ textAlign: "center", marginTop: "100px" }}>Loading details...</div>;
+  if (fetching) return <div style={{ textAlign: "center" }}>Loading...</div>;
 
-  if (error) return (
-    <div style={containerStyle}>
-        <div style={{ textAlign: "center", color: "#ef4444" }}>
-            <h2>⚠️ Error</h2>
-            <p>{error}</p>
-            <button onClick={() => window.location.reload()} style={{ padding: "10px 20px", borderRadius: "8px", cursor: "pointer" }}>Retry</button>
-        </div>
-    </div>
-  );
+  if (error) return <div>{error}</div>;
 
-  /* ================= CONDITIONAL RENDERING LOGIC ================= */
+  /* ================= STATUS FLOW ================= */
 
   if (existingAgreement) {
     const status = existingAgreement.agreement_status;
 
+    // ✅ COMPLETED
     if (status === "completed") {
       return (
         <div style={containerStyle}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "60px" }}>✅</div>
-            <h2 style={{ color: "#1e293b" }}>Agreement Completed</h2>
-            <p style={{ color: "#64748b" }}>Both you and the owner have signed the document.</p>
-            <button 
-               onClick={() => window.open(existingAgreement.signed_pdf, "_blank")}
-               style={{ padding: "12px 24px", backgroundColor: "#059669", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "600", marginTop: "20px" }}
-            >
-              Download Final Agreement
-            </button>
-          </div>
+          <h2>✅ Agreement Completed</h2>
+          <button onClick={() => window.open(existingAgreement.signed_pdf)}>
+            Download PDF
+          </button>
         </div>
       );
     }
 
+    // ✅ APPROVED (MAIN FIX HERE)
     if (status === "approved") {
       return (
         <div style={containerStyle}>
-          <h2 style={{ textAlign: 'center', color: '#1e293b' }}>Final Step: Provide Your Signature</h2>
-          <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '20px' }}>The owner has signed the agreement. Please review and provide your final digital signature below.</p>
-          
-          <div style={{ marginBottom: "20px", border: "1px solid #e2e8f0", borderRadius: "12px", overflow: "hidden" }}>
-              <p style={{ padding: "10px", background: "#f1f5f9", fontSize: "13px", margin: 0 }}>Agreement Preview (Signed by Owner)</p>
-              <iframe src={existingAgreement.signed_pdf} width="100%" height="450px" title="preview"></iframe>
+          <h2 style={{ textAlign: "center" }}>Final Step: Signature</h2>
+
+          {/* PDF */}
+          <div style={{ marginBottom: "20px" }}>
+            <iframe
+              src={existingAgreement.signed_pdf}
+              width="100%"
+              height="450px"
+              title="preview"
+              onLoad={() => {
+                setPdfLoaded(true);
+                setTimeout(() => setShowSignaturePad(true), 1000);
+              }}
+            ></iframe>
           </div>
 
-          <div style={{ backgroundColor: "#f8fafc", padding: "20px", borderRadius: "12px", border: "2px dashed #cbd5e1" }}>
-            <label style={{ display: "block", fontWeight: "700", marginBottom: "10px", textAlign: "center" }}>🖋️ Draw your signature below</label>
-            <div style={{ background: "#fff", border: "1px solid #ddd" }}>
-              <SignatureCanvas 
-                  ref={sigCanvas}
-                  penColor="black" 
-                  canvasProps={{ width: 730, height: 200, className: "sigCanvas" }} 
+          {/* Show loading until PDF loads */}
+          {!pdfLoaded && (
+            <p style={{ textAlign: "center" }}>📄 Loading agreement...</p>
+          )}
+
+          {/* ✅ SIGNATURE ONLY AFTER PDF LOAD */}
+          {showSignaturePad && (
+            <div style={{ padding: "20px", border: "2px dashed gray" }}>
+              <p style={{ textAlign: "center" }}>Draw Signature</p>
+
+              <SignatureCanvas
+                ref={sigCanvas}
+                penColor="black"
+                canvasProps={{ width: 700, height: 200 }}
               />
-            </div>
-            <button onClick={() => sigCanvas.current.clear()} style={{ marginTop: "10px", fontSize: "12px", color: "#ef4444", border: "none", background: "none", cursor: "pointer" }}>Clear Signature</button>
-          </div>
 
-          <button 
-            onClick={handleFinalTenantSign} 
-            disabled={loading}
-            style={{ width: "100%", marginTop: "30px", padding: "18px", background: "linear-gradient(135deg, #059669 0%, #10b981 100%)", color: "white", border: "none", borderRadius: "12px", fontWeight: "800", cursor: "pointer" }}
+              <button onClick={() => sigCanvas.current.clear()}>
+                Clear
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={handleFinalTenantSign}
+            disabled={!showSignaturePad || loading}
+            style={{
+              marginTop: "20px",
+              width: "100%",
+              padding: "15px",
+              background: showSignaturePad ? "green" : "gray",
+              color: "#fff",
+            }}
           >
-            {loading ? "Processing..." : "Finish & Sign Agreement"}
+            {loading ? "Processing..." : "Finish Signing"}
           </button>
         </div>
       );
     }
 
-    return (
-      <div style={containerStyle}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "60px" }}>⏳</div>
-          <h2 style={{ color: "#1e293b" }}>Awaiting Admin/Owner Processing</h2>
-          <p style={{ color: "#64748b" }}>
-            Your details are submitted. Our admin is currently preparing the stamp paper. 
-            Once the owner signs, you will be notified to provide your final signature here.
-          </p>
-          <button onClick={() => navigate("/my-bookings")} style={{ marginTop: "20px", color: "#4f46e5", background: "none", border: "none", cursor: "pointer", fontWeight: "600" }}>
-            ← Back to My Bookings
-          </button>
-        </div>
-      </div>
-    );
+    return <div>Waiting for owner...</div>;
   }
+
+  /* ================= FORM ================= */
 
   return (
     <div style={containerStyle}>
-      <h2 style={{ textAlign: 'center', fontWeight: '800', color: '#1e293b', marginBottom: '5px' }}>Rental Agreement Form</h2>
-      <p style={{ textAlign: 'center', color: '#64748b', fontSize: '14px', marginBottom: '30px' }}>Please fill all details as per your legal documents.</p>
-      
+      <h2>Agreement Form</h2>
+
       <form onSubmit={handleSubmit}>
-        <div style={sectionTitle}>Tenant Information</div>
-        <div style={gridStyle}>
-          <div>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>Full Name</label>
-            <input name="full_name" placeholder="As per Aadhaar" onChange={handleChange} required style={inputStyle} />
-          </div>
-          <div>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>Father's Name</label>
-            <input name="father_name" placeholder="Father's Full Name" onChange={handleChange} required style={inputStyle} />
-          </div>
-          <div>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>Mobile Number</label>
-            <input name="mobile" placeholder="10-digit mobile" onChange={handleChange} required style={inputStyle} />
-          </div>
-          <div>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>Email Address</label>
-            <input name="email" type="email" placeholder="example@mail.com" onChange={handleChange} required style={inputStyle} />
-          </div>
-        </div>
+        <input name="full_name" placeholder="Full Name" onChange={handleChange} required />
+        <input name="mobile" placeholder="Mobile" onChange={handleChange} required />
 
-        <div style={sectionTitle}>Permanent Address</div>
-        <textarea name="address" placeholder="Full Permanent Address" onChange={handleChange} required style={{ ...inputStyle, height: '80px', resize: 'none' }} />
-        <div style={gridStyle}>
-          <input name="city" placeholder="City" onChange={handleChange} required style={inputStyle} />
-          <input name="state" placeholder="State" onChange={handleChange} required style={inputStyle} />
-          <input name="pincode" placeholder="Pincode" onChange={handleChange} required style={inputStyle} />
-        </div>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setSignatureFile(e.target.files[0])}
+          required
+        />
 
-        <div style={sectionTitle}>Identity Verification</div>
-        <div style={gridStyle}>
-          <input name="aadhaar_last4" placeholder="Last 4 Digits of Aadhaar" maxLength="4" onChange={handleChange} required style={inputStyle} />
-          <input name="pan_number" placeholder="PAN Card Number" onChange={handleChange} required style={inputStyle} />
-        </div>
-
-        <div style={sectionTitle}>Agreement & Rental Terms</div>
-        <div style={gridStyle}>
-          <div>
-            <label style={{ fontSize: '13px', fontWeight: '600' }}>Check-in Date</label>
-            <input name="checkin_date" type="date" onChange={handleChange} required style={inputStyle} />
-          </div>
-          <div>
-            <label style={{ fontSize: '13px', fontWeight: '600' }}>Agreement Period (Months)</label>
-            <input name="agreement_months" type="number" defaultValue="11" onChange={handleChange} required style={inputStyle} />
-          </div>
-          <div>
-            <label style={{ fontSize: '13px', fontWeight: '600' }}>Monthly Rent (₹)</label>
-            <input name="rent" type="number" placeholder="0.00" onChange={handleChange} required style={inputStyle} />
-          </div>
-          <div>
-            <label style={{ fontSize: '13px', fontWeight: '600' }}>Security Deposit (₹)</label>
-            <input name="deposit" type="number" placeholder="0.00" onChange={handleChange} required style={inputStyle} />
-          </div>
-        </div>
-
-        <div style={{ marginTop: "40px", padding: "30px", border: "2px dashed #cbd5e1", borderRadius: "12px", textAlign: "center", backgroundColor: '#f8fafc' }}>
-          <label style={{ display: "block", fontWeight: "800", marginBottom: "12px", color: '#1e293b' }}>🖋️ Initial Signature Upload</label>
-          <input 
-            type="file" 
-            accept="image/*" 
-            onChange={(e) => setSignatureFile(e.target.files[0])} 
-            required 
-          />
-        </div>
-
-        <button 
-          type="submit" 
-          disabled={loading} 
-          style={{ width: "100%", marginTop: "30px", padding: "18px", background: loading ? "#94a3b8" : "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)", color: "white", border: "none", borderRadius: "12px", fontWeight: "800", cursor: loading ? "not-allowed" : "pointer" }}
-        >
-          {loading ? "Processing..." : "Confirm & Submit Agreement Details"}
-        </button>
+        <button type="submit">{loading ? "Saving..." : "Submit"}</button>
       </form>
     </div>
   );
