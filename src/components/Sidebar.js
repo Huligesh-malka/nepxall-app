@@ -6,16 +6,16 @@ import logo from "../assets/nepxall-logo.png";
 const BRAND_BLUE = "#0B5ED7";
 const BRAND_GREEN = "#4CAF50";
 
-const Sidebar = () => {
+const Sidebar = ({ role }) => {
 
   const location = useLocation();
-  const role = localStorage.getItem("role");
 
   const isActive = (path) =>
     location.pathname === path ||
     location.pathname.startsWith(path + "/");
 
-  const isLoggedIn = role && role !== "null" && role !== "undefined";
+  // ✅ Only backend role (via props)
+  const isLoggedIn = !!role;
 
   return (
 
@@ -178,11 +178,9 @@ const Sidebar = () => {
               📜 Settlement History
             </Link>
 
-            {/* ✅ NEW AGREEMENT MENU */}
             <Link style={linkStyle(isActive("/admin/agreements"))} to="/admin/agreements">
               📄 Agreements
             </Link>
-
           </>
         )}
 
@@ -224,19 +222,8 @@ const Sidebar = () => {
         <div style={userInfoStyle}>
           <hr style={divider} />
 
-          <p style={{ color: "#94a3b8", fontSize: 12, margin: 0 }}>
-            Logged in as
-            <span style={{
-              color: "#fff",
-              fontWeight: "bold",
-              textTransform: "capitalize",
-            }}>
-              {" "} {role}
-            </span>
-          </p>
-
-          <p style={{ color: "#4CAF50", fontSize: 11 }}>
-            {localStorage.getItem("email")?.split("@")[0] || "User"}
+          <p style={{ color: "#94a3b8", fontSize: 12 }}>
+            Logged in as <b style={{ color: "#fff" }}>{role}</b>
           </p>
         </div>
       )}
@@ -318,5 +305,4 @@ const linkStyle = (active) => ({
     ? "linear-gradient(90deg,#0B5ED7,#4CAF50)"
     : "transparent",
   fontWeight: active ? "600" : "normal",
-  transition: "0.3s",
 });
