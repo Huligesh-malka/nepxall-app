@@ -12,13 +12,12 @@ const MainLayout = () => {
 
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
-  const [authReady, setAuthReady] = useState(false);
-  const [loadingRole, setLoadingRole] = useState(true); // 🔥 NEW
+  const [loading, setLoading] = useState(true);
 
-  /* ================= FETCH ROLE ================= */
-  const fetchUserFromBackend = async (currentUser) => {
+  /* ================= FETCH ROLE ONLY ONCE ================= */
+  const fetchRoleOnce = async (currentUser) => {
     try {
-      const idToken = await currentUser.getIdToken(true);
+      const idToken = await currentUser.getIdToken();
 
       const res = await userAPI.post("/auth/firebase", { idToken });
 
@@ -27,14 +26,12 @@ const MainLayout = () => {
 
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("user_id", res.data.userId);
-
-        console.log("✅ Role:", res.data.role);
       }
     } catch (err) {
-      console.error("❌ Backend sync failed:", err);
+      console.error("❌ Error:", err);
       handleLogout();
     } finally {
-      setLoadingRole(false); // 🔥 IMPORTANT
+      setLoading(false);
     }
   };
 
@@ -44,13 +41,11 @@ const MainLayout = () => {
       setUser(currentUser);
 
       if (currentUser) {
-        await fetchUserFromBackend(currentUser);
+        await fetchRoleOnce(currentUser);
       } else {
         setRole(null);
-        setLoadingRole(false);
+        setLoading(false);
       }
-
-      setAuthReady(true);
     });
 
     return () => unsub();
@@ -58,19 +53,15 @@ const MainLayout = () => {
 
   /* ================= LOGOUT ================= */
   const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      localStorage.clear();
-      setUser(null);
-      setRole(null);
-      navigate("/login", { replace: true });
-    } catch (err) {
-      console.error("Logout failed:", err);
-    }
+    await signOut(auth);
+    localStorage.clear();
+    setUser(null);
+    setRole(null);
+    navigate("/login");
   };
 
-  /* ================= LOADING SCREEN ================= */
-  if (!authReady || loadingRole) {
+  /* ================= LOADING ================= */
+  if (loading) {
     return (
       <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
         <CircularProgress />
@@ -81,60 +72,24 @@ const MainLayout = () => {
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
 
-      {/* 🔥 ONLY SHOW SIDEBAR WHEN ROLE READY */}
-      {role && <Sidebar role={role} />}
+      {/* ✅ PASS BOTH USER + ROLE */}
+      <Sidebar role={role} user={user} />
 
-      <div
-        style={{
-          marginLeft: role ? 250 : 0,
-          padding: "24px",
-          width: "100%"
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            backgroundColor: "white",
-            padding: "14px 28px",
-            borderRadius: "16px",
-            mb: 4
-          }}
-        >
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>
+      <div style={{ marginLeft: 250, padding: 24, width: "100%" }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}>
+          <Typography variant="h6">
             {location.pathname === "/" ? "DASHBOARD" :
-              location.pathname.split("/").filter(x => x).pop()?.replace(/-/g, " ").toUpperCase()}
+              location.pathname.split("/").pop()?.toUpperCase()}
           </Typography>
 
-          <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
-            {user && (
-              <Box sx={{ textAlign: 'right' }}>
-                <Typography sx={{ fontSize: "14px", fontWeight: 700 }}>
-                  {user.phoneNumber || user.email?.split("@")[0]}
-                </Typography>
-                <Typography sx={{ fontSize: '11px', fontWeight: 800 }}>
-                  {role}
-                </Typography>
-              </Box>
-            )}
-
-            {!user ? (
-              <Box display="flex" gap={1}>
-                <Button onClick={() => navigate("/login")} variant="outlined">Login</Button>
-                <Button onClick={() => navigate("/register")} variant="contained">Join</Button>
-              </Box>
-            ) : (
-              <Button variant="outlined" color="error" onClick={handleLogout}>
-                Logout
-              </Button>
-            )}
-          </Box>
+          {user && (
+            <Button color="error" onClick={handleLogout}>
+              Logout
+            </Button>
+          )}
         </Box>
 
-        <Box component="main">
-          <Outlet context={{ user, role }} />
-        </Box>
+        <Outlet context={{ user, role }} />
       </div>
     </div>
   );
