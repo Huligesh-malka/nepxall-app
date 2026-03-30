@@ -28,13 +28,11 @@ const AgreementForm = () => {
   const [otpTimer, setOtpTimer] = useState(0);
 
   const [formData, setFormData] = useState({
-    full_name: "", father_name: "", mobile: "", email: "",
+    full_name: "", mobile: "", email: "",
     address: "", city: "", state: "", pincode: "",
     aadhaar_last4: "", pan_number: "", checkin_date: "",
     agreement_months: "11", rent: "", deposit: "", maintenance: "0",
   });
-
-  const [signatureFile, setSignatureFile] = useState(null);
 
   /* ================= FETCH STATUS ================= */
   useEffect(() => {
@@ -113,14 +111,12 @@ const AgreementForm = () => {
   const handleSubmitInitialForm = async (e) => {
     e.preventDefault();
     const userId = localStorage.getItem("user_id");
-    if (!signatureFile) return setError("Please upload your signature photo.");
 
     setLoading(true);
     const data = new FormData();
     Object.keys(formData).forEach((key) => data.append(key, formData[key]));
     data.append("user_id", userId);
     data.append("booking_id", bookingId);
-    data.append("signature", signatureFile);
 
     try {
       const res = await api.post("/agreements-form/submit", data);
@@ -262,7 +258,6 @@ const AgreementForm = () => {
               <form onSubmit={handleSubmitInitialForm}>
                 <Grid container spacing={2}>
                   <Grid item xs={12} md={6}><TextField fullWidth name="full_name" label="Full Name" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={6}><TextField fullWidth name="father_name" label="Father's Name" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={6}><TextField fullWidth name="mobile" label="Mobile" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={6}><TextField fullWidth name="email" label="Email" type="email" required onChange={handleChange} /></Grid>
                   <Grid item xs={12}><TextField fullWidth name="address" label="Permanent Address" multiline rows={2} required onChange={handleChange} /></Grid>
@@ -275,10 +270,7 @@ const AgreementForm = () => {
                   <Grid item xs={12} md={4}><TextField fullWidth name="rent" label="Monthly Rent" type="number" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="deposit" label="Security Deposit" type="number" required onChange={handleChange} /></Grid>
                 </Grid>
-                <Box mt={3} p={2} border="1px dashed #94a3b8" borderRadius={2} bgcolor="#f8fafc">
-                  <Typography variant="subtitle2" fontWeight="bold">Upload Signature Photo (For Draft):</Typography>
-                  <input type="file" accept="image/*" onChange={(e) => setSignatureFile(e.target.files[0])} style={{ marginTop: '10px' }} />
-                </Box>
+                
                 <Button type="submit" variant="contained" fullWidth sx={{ mt: 3, py: 1.5 }} disabled={loading}>
                   {loading ? <CircularProgress size={24} /> : "Submit Details for Review"}
                 </Button>
