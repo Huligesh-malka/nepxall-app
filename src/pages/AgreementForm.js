@@ -27,6 +27,7 @@ const AgreementForm = () => {
   const [otp, setOtp] = useState("");
   const [isVerified, setIsVerified] = useState(false);
   const [otpTimer, setOtpTimer] = useState(0);
+  const [canResend, setCanResend] = useState(true);
 
   const [formData, setFormData] = useState({
     full_name: "", father_name: "", mobile: "", email: "",
@@ -61,13 +62,16 @@ const AgreementForm = () => {
     if (otpTimer > 0) {
       const timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
       return () => clearTimeout(timer);
+    } else {
+      setCanResend(true);
     }
   }, [otpTimer]);
 
   const setupRecaptcha = () => {
     if (!window.recaptchaVerifier) {
       window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-        size: "invisible"
+        size: "invisible",
+        callback: (response) => { console.log("Captcha Solved"); }
       });
     }
   };
@@ -75,18 +79,26 @@ const AgreementForm = () => {
   /* ================= OTP FUNCTIONS ================= */
   const sendOtp = async () => {
     if (manualMobile.length !== 10) return setError("Please enter a valid 10-digit mobile number.");
+    
     try {
       setLoading(true);
       setError(null);
       setupRecaptcha();
+      
       const formatPh = `+91${manualMobile}`;
       const confirmation = await signInWithPhoneNumber(auth, formatPh, window.recaptchaVerifier);
+      
       setConfirmObj(confirmation);
       setOtpTimer(60);
+      setCanResend(false);
       setSuccess("OTP sent to " + manualMobile);
     } catch (err) {
-      setError("Failed to send OTP. Please try again.");
-      if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
+      console.error("SMS Error:", err);
+      setError("Failed to send OTP. Please refresh and try again.");
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = null;
+      }
     } finally {
       setLoading(false);
     }
@@ -100,7 +112,7 @@ const AgreementForm = () => {
       setIsVerified(true);
       setSuccess("Mobile Verified!");
     } catch (err) {
-      setError("Invalid OTP code.");
+      setError("Invalid OTP code or session expired.");
     } finally {
       setLoading(false);
     }
@@ -148,8 +160,8 @@ const AgreementForm = () => {
         tenant_mobile: manualMobile 
       });
       if (res.data.success) {
-        alert("✅ Agreement signed successfully!");
-        navigate("/my-bookings");
+        setSuccess("Agreement signed successfully!");
+        setTimeout(() => navigate("/my-bookings"), 1500);
       }
     } catch (err) {
       setError("❌ Signing failed: " + (err.response?.data?.message || "Server Error"));
@@ -185,72 +197,106 @@ const AgreementForm = () => {
             <Paper sx={{ p: 4, borderRadius: 3 }}>
               <Typography variant="h6" mb={2} fontWeight="bold">Final Step: Digital Signature</Typography>
               <iframe src={existingAgreement.signed_pdf} width="100%" height="500px" style={{ marginBottom: "20px", borderRadius: '8px', border: '1px solid #ddd' }} title="Agreement" />
+              
               {!isVerified ? (
                 <Box sx={{ bgcolor: '#f8fafc', p: 3, borderRadius: 2, border: '1px solid #e2e8f0' }}>
                   <Typography variant="subtitle1" mb={2} fontWeight="bold">Verify Mobile for Digital Stamp</Typography>
-                  <TextField fullWidth label="Enter Mobile Number" value={manualMobile} onChange={(e) => setManualMobile(e.target.value.replace(/\D/g, ""))} disabled={!!confirmObj} sx={{ mb: 2, bgcolor: 'white' }} inputProps={{ maxLength: 10 }} />
+                  
+                  <TextField 
+                    fullWidth 
+                    label="Mobile Number" 
+                    value={manualMobile} 
+                    onChange={(e) => setManualMobile(e.target.value.replace(/\D/g, ""))} 
+                    disabled={!!confirmObj} 
+                    sx={{ mb: 2, bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: 2 } }} 
+                    inputProps={{ maxLength: 10 }} 
+                    InputProps={{ startAdornment: <Typography mr={1} fontWeight="bold">+91</Typography> }}
+                  />
+
                   {!confirmObj ? (
-                    <Button variant="contained" fullWidth onClick={sendOtp} disabled={loading || manualMobile.length !== 10}>Send OTP</Button>
+                    <Button variant="contained" fullWidth onClick={sendOtp} disabled={loading || manualMobile.length !== 10} sx={{ py: 1.5, borderRadius: 2, fontWeight: 'bold' }}>
+                      {loading ? <CircularProgress size={24} color="inherit" /> : "Send OTP"}
+                    </Button>
                   ) : (
                     <Box>
-                      <TextField fullWidth label="Enter 6-Digit OTP" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} sx={{ mb: 2, bgcolor: 'white' }} inputProps={{ maxLength: 6 }} />
-                      <Button variant="contained" fullWidth onClick={verifyOtp} disabled={loading}>Verify & Unlock Signature</Button>
+                      <TextField 
+                        fullWidth 
+                        label="Enter 6-Digit OTP" 
+                        value={otp} 
+                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} 
+                        sx={{ mb: 2, bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: 2 } }} 
+                        inputProps={{ maxLength: 6, style: { textAlign: 'center', letterSpacing: '8px', fontSize: '20px' } }} 
+                      />
+                      <Button variant="contained" fullWidth onClick={verifyOtp} disabled={loading || otp.length < 6} sx={{ py: 1.5, borderRadius: 2, fontWeight: 'bold' }}>
+                        {loading ? <CircularProgress size={24} color="inherit" /> : "Verify & Unlock Signature"}
+                      </Button>
+                      <Box textAlign="center" mt={2}>
+                         {otpTimer > 0 ? (
+                           <Typography variant="body2" color="textSecondary">Resend in {otpTimer}s</Typography>
+                         ) : (
+                           <Button variant="text" onClick={sendOtp} sx={{ textTransform: 'none' }}>Didn't get code? Resend</Button>
+                         )}
+                      </Box>
                     </Box>
                   )}
                 </Box>
               ) : (
                 <Box mt={3}>
-                  <Alert severity="success" sx={{ mb: 2 }}>Verified: {manualMobile}. Draw your signature below.</Alert>
-                  <Box border="2px dashed #ccc" borderRadius={2} bgcolor="#fff"><SignatureCanvas ref={sigCanvas} penColor="black" canvasProps={{ width: 830, height: 200, className: "sigCanvas" }} /></Box>
+                  <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>Verified: {manualMobile}. Draw your signature below.</Alert>
+                  <Box border="2px dashed #cbd5e1" borderRadius={2} bgcolor="#fff">
+                    <SignatureCanvas 
+                       ref={sigCanvas} 
+                       penColor="black" 
+                       canvasProps={{ width: 830, height: 200, className: "sigCanvas" }} 
+                    />
+                  </Box>
                   <Box mt={2} display="flex" gap={2}>
-                    <Button variant="outlined" onClick={() => sigCanvas.current.clear()}>Clear</Button>
-                    <Button variant="contained" color="success" onClick={handleFinalTenantSign} disabled={loading}>Apply Signature & Finish</Button>
+                    <Button variant="outlined" onClick={() => sigCanvas.current.clear()} sx={{ borderRadius: 2 }}>Clear</Button>
+                    <Button variant="contained" color="success" onClick={handleFinalTenantSign} disabled={loading} sx={{ borderRadius: 2, flexGrow: 1, fontWeight: 'bold' }}>
+                      {loading ? <CircularProgress size={24} color="inherit" /> : "Apply Signature & Finish"}
+                    </Button>
                   </Box>
                 </Box>
               )}
             </Paper>
           )}
 
-          {/* 4. INITIAL FORM - FULL FIELDS */}
+          {/* 4. INITIAL FORM */}
           {!existingAgreement && (
-            <Paper sx={{ p: 4, borderRadius: 3, boxShadow: 3 }}>
-              <Typography variant="h5" mb={3} fontWeight="bold" color="primary">Agreement Details Form</Typography>
+            <Paper sx={{ p: 4, borderRadius: 3, boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+              <Typography variant="h5" mb={3} fontWeight="800" color="#1e293b">Agreement Details Form</Typography>
               <form onSubmit={handleSubmitInitialForm}>
                 <Grid container spacing={3}>
-                  {/* Section: Personal Info */}
-                  <Grid item xs={12}><Typography variant="button" color="textSecondary">1. Personal Information</Typography><Divider /></Grid>
+                  <Grid item xs={12}><Typography variant="button" color="textSecondary" fontWeight="bold">1. Personal Information</Typography><Divider sx={{ mt: 1 }} /></Grid>
                   <Grid item xs={12} md={6}><TextField fullWidth name="full_name" label="Full Name (As per Aadhaar)" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={6}><TextField fullWidth name="father_name" label="Father's Name" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={6}><TextField fullWidth name="mobile" label="Mobile Number" required onChange={handleChange} inputProps={{ maxLength: 10 }} /></Grid>
                   <Grid item xs={12} md={6}><TextField fullWidth name="email" label="Email Address" type="email" required onChange={handleChange} /></Grid>
                   
-                  {/* Section: Address Info */}
-                  <Grid item xs={12} mt={2}><Typography variant="button" color="textSecondary">2. Permanent Address</Typography><Divider /></Grid>
+                  <Grid item xs={12} mt={2}><Typography variant="button" color="textSecondary" fontWeight="bold">2. Permanent Address</Typography><Divider sx={{ mt: 1 }} /></Grid>
                   <Grid item xs={12}><TextField fullWidth name="address" label="Full House Address" multiline rows={2} required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="city" label="City" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="state" label="State" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="pincode" label="Pincode" required onChange={handleChange} /></Grid>
 
-                  {/* Section: Identity Info */}
-                  <Grid item xs={12} mt={2}><Typography variant="button" color="textSecondary">3. Identity Details</Typography><Divider /></Grid>
+                  <Grid item xs={12} mt={2}><Typography variant="button" color="textSecondary" fontWeight="bold">3. Identity Details</Typography><Divider sx={{ mt: 1 }} /></Grid>
                   <Grid item xs={12} md={6}><TextField fullWidth name="aadhaar_last4" label="Aadhaar Number (Last 4 digits)" required onChange={handleChange} inputProps={{ maxLength: 4 }} /></Grid>
                   <Grid item xs={12} md={6}><TextField fullWidth name="pan_number" label="PAN Card Number" required onChange={handleChange} /></Grid>
 
-                  {/* Section: Agreement Info */}
-                  <Grid item xs={12} mt={2}><Typography variant="button" color="textSecondary">4. Rental Details</Typography><Divider /></Grid>
+                  <Grid item xs={12} mt={2}><Typography variant="button" color="textSecondary" fontWeight="bold">4. Rental Details</Typography><Divider sx={{ mt: 1 }} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="checkin_date" label="Check-in Date" type="date" InputLabelProps={{ shrink: true }} required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="rent" label="Monthly Rent" type="number" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="deposit" label="Security Deposit" type="number" required onChange={handleChange} /></Grid>
                 </Grid>
 
-                <Box mt={4} sx={{ p: 3, border: '1px dashed #90caf9', borderRadius: 2, bgcolor: '#e3f2fd' }}>
+                <Box mt={4} sx={{ p: 3, border: '1px dashed #94a3b8', borderRadius: 2, bgcolor: '#f1f5f9' }}>
                   <Typography variant="subtitle2" mb={1} fontWeight="bold">Upload Draft Signature (Photo):</Typography>
                   <input type="file" accept="image/*" onChange={(e) => setSignatureFile(e.target.files[0])} required />
-                  <Typography variant="caption" display="block" mt={1}>Take a clear photo of your signature on white paper.</Typography>
+                  <Typography variant="caption" display="block" mt={1} color="textSecondary">Take a clear photo of your signature on white paper.</Typography>
                 </Box>
 
-                <Button type="submit" variant="contained" fullWidth sx={{ mt: 4, py: 1.5, fontSize: '1.1rem' }} disabled={loading}>
-                  {loading ? <CircularProgress size={24} /> : "SUBMIT FORM FOR REVIEW"}
+                <Button type="submit" variant="contained" fullWidth sx={{ mt: 4, py: 1.5, fontSize: '1.1rem', borderRadius: 2, fontWeight: 'bold' }} disabled={loading}>
+                  {loading ? <CircularProgress size={24} color="inherit" /> : "SUBMIT FORM FOR REVIEW"}
                 </Button>
               </form>
             </Paper>
@@ -258,8 +304,14 @@ const AgreementForm = () => {
         </>
       )}
       <div id="recaptcha-container"></div>
-      <Snackbar open={!!success} autoHideDuration={3000} onClose={() => setSuccess("")}><Alert severity="success">{success}</Alert></Snackbar>
-      <Snackbar open={!!error} autoHideDuration={3000} onClose={() => setError(null)}><Alert severity="error">{error}</Alert></Snackbar>
+      
+      <Snackbar open={!!success} autoHideDuration={3000} onClose={() => setSuccess("")} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert severity="success" variant="filled" sx={{ borderRadius: 2 }}>{success}</Alert>
+      </Snackbar>
+      
+      <Snackbar open={!!error} autoHideDuration={3000} onClose={() => setError(null)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert severity="error" variant="filled" sx={{ borderRadius: 2 }}>{error}</Alert>
+      </Snackbar>
     </Box>
   );
 };
