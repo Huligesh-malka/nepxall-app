@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/api";
 import SignatureCanvas from "react-signature-canvas";
 
-// 🔥 ADD OTP IMPORTS
+// 🔥 OTP IMPORTS
 import { auth } from "../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
@@ -62,17 +62,20 @@ const AgreementForm = () => {
     if (bookingId) checkStatus();
   }, [bookingId]);
 
-  /* ================= OTP SETUP ================= */
+  /* ================= OTP SETUP (FIXED) ================= */
   useEffect(() => {
     if (!window.recaptchaVerifier) {
       window.recaptchaVerifier = new RecaptchaVerifier(
-        auth,
-        "recaptcha-container",
-        { size: "invisible" }
+        "recaptcha-container", // ✅ FIXED ORDER
+        {
+          size: "invisible",
+        },
+        auth
       );
     }
   }, []);
 
+  /* ================= OTP SEND ================= */
   const sendOtp = async () => {
     if (phone.length !== 10) return alert("Enter valid number");
 
@@ -86,6 +89,7 @@ const AgreementForm = () => {
     alert("OTP sent");
   };
 
+  /* ================= OTP VERIFY ================= */
   const verifyOtp = async () => {
     if (otp.length !== 6) return alert("Invalid OTP");
 
@@ -95,53 +99,6 @@ const AgreementForm = () => {
       alert("OTP Verified ✅");
     } catch {
       alert("Invalid OTP");
-    }
-  };
-
-  /* ================= FORM ================= */
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    const userId =
-      localStorage.getItem("user_id") || localStorage.getItem("userId");
-
-    if (!userId) return alert("Session expired");
-    if (!signatureFile) return alert("Signature required");
-
-    setLoading(true);
-
-    const data = new FormData();
-    Object.keys(formData).forEach((key) =>
-      data.append(key, formData[key])
-    );
-
-    data.append("user_id", userId);
-    data.append("booking_id", bookingId);
-    data.append("signature", signatureFile);
-
-    try {
-      const res = await api.post("/agreements-form/submit", data);
-
-      if (res.data.success) {
-        alert("Submitted successfully!");
-
-        const statusRes = await api.get(
-          `/agreements-form/status/${bookingId}`
-        );
-
-        if (statusRes.data.exists) {
-          setExistingAgreement(statusRes.data.data);
-        }
-      }
-    } catch (err) {
-      alert("Error saving agreement");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -193,8 +150,6 @@ const AgreementForm = () => {
   if (fetching) return <div>Loading...</div>;
   if (error) return <div>{error}</div>;
 
-  /* ================= AGREEMENT FLOW ================= */
-
   if (existingAgreement) {
     const status = existingAgreement.agreement_status;
 
@@ -214,14 +169,12 @@ const AgreementForm = () => {
         <div style={containerStyle}>
           <h2>Final Step: Sign</h2>
 
-          {/* ✅ PDF SHOW */}
           <iframe
             src={existingAgreement.signed_pdf}
             width="100%"
             height="500px"
           />
 
-          {/* 🔥 OTP SECTION BELOW PDF */}
           <h3>Verify Mobile</h3>
 
           {!confirmObj && (
@@ -246,7 +199,6 @@ const AgreementForm = () => {
             </>
           )}
 
-          {/* 🔥 SIGNATURE */}
           {otpVerified && (
             <>
               <h3>Draw Signature</h3>
