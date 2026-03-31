@@ -4,9 +4,9 @@ import SignatureCanvas from "react-signature-canvas";
 import {
   Container, Typography, Paper, Table, TableHead, TableRow, TableCell,
   TableBody, Chip, Box, CircularProgress, Button,
-  Modal, Fade, Checkbox, TextField, Backdrop, IconButton
+  Modal, Fade, Checkbox, TextField, Backdrop, IconButton, Divider
 } from "@mui/material";
-import { Refresh, ArrowBack, Gavel } from "@mui/icons-material";
+import { Refresh, ArrowBack, Gavel, Security, VerifiedUser, InfoOutlined } from "@mui/icons-material";
 
 import { auth } from "../../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
@@ -90,7 +90,6 @@ export default function OwnerPayments() {
 
     try {
       setIsSubmitting(true);
-
       const verifyRes = await axios.post(`${API}/agreements/verify-owner`, {
         booking_id: selectedBooking.booking_id,
         mobile: mobile
@@ -101,26 +100,15 @@ export default function OwnerPayments() {
       }
 
       if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(
-          auth,
-          "recaptcha-container",
-          { size: "invisible" }
-        );
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", { size: "invisible" });
       }
 
-      const confirmation = await signInWithPhoneNumber(
-        auth,
-        `+91${mobile}`,
-        window.recaptchaVerifier
-      );
-
+      const confirmation = await signInWithPhoneNumber(auth, `+91${mobile}`, window.recaptchaVerifier);
       setConfirmObj(confirmation);
       alert("Verification successful. OTP Sent ✅");
     } catch (error) {
-      console.error("Verification/OTP Error:", error);
-      const errorMsg = error.response?.data?.message || "Access Denied: Mobile number mismatch.";
-      alert(errorMsg);
-      
+      console.error("OTP Error:", error);
+      alert(error.response?.data?.message || "OTP Service Error");
       if (window.recaptchaVerifier) {
         window.recaptchaVerifier.clear();
         window.recaptchaVerifier = null;
@@ -138,7 +126,7 @@ export default function OwnerPayments() {
       setOtpVerified(true);
       setStep(3); 
     } catch (error) {
-      alert("Invalid OTP code. Please try again ❌");
+      alert("Invalid OTP code. ❌");
     } finally {
       setIsSubmitting(false);
     }
@@ -154,7 +142,6 @@ export default function OwnerPayments() {
 
     try {
       setIsSubmitting(true);
-      
       const res = await axios.post(`${API}/agreements/sign`, {
         booking_id: selectedBooking.booking_id,
         owner_mobile: mobile,
@@ -168,9 +155,7 @@ export default function OwnerPayments() {
         fetchPayments(); 
       }
     } catch (err) {
-      console.error(err);
-      const msg = err.response?.data?.message || "Submission failed";
-      alert(`${msg} ❌`);
+      alert(err.response?.data?.message || "Submission failed");
     } finally {
       setIsSubmitting(false);
     }
@@ -238,7 +223,7 @@ export default function OwnerPayments() {
       >
         <Fade in={openSignModal}>
           <Box sx={{
-            width: { xs: '95%', sm: 580, md: 650 }, // Expanded for Big Screen focus
+            width: { xs: '95%', sm: 600, md: 750 },
             bgcolor: "background.paper",
             borderRadius: 4,
             p: { xs: 2, sm: 4 },
@@ -254,59 +239,87 @@ export default function OwnerPayments() {
                       <ArrowBack />
                     </IconButton>
                   )}
-                  <Typography variant="h6" fontWeight="bold">Owner Digital Authentication</Typography>
+                  <Typography variant="h6" fontWeight="bold" color="primary.main">Owner Digital Authentication</Typography>
                </Box>
-               <Chip icon={<Gavel />} label={`Step ${step} of 3`} color="primary" variant="outlined" size="small" />
+               <Chip icon={<Gavel />} label={`Step ${step} of 3`} color="primary" variant="outlined" />
             </Box>
 
-            {/* STEP 1: LEGAL CONSENT (BIG UPDATE) */}
+            {/* STEP 1: COMPREHENSIVE LEGAL DECLARATION */}
             {step === 1 && (
               <Box>
-                <Typography variant="subtitle2" gutterBottom color="textSecondary">
-                  Please review the legal declaration before proceeding to signature.
+                <Typography variant="subtitle2" gutterBottom color="textSecondary" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                  <InfoOutlined fontSize="small" sx={{ mr: 0.5 }} /> Please review all 25 legal clauses before proceeding.
                 </Typography>
                 
                 <Box sx={{ 
-                  bgcolor: '#ffffff', 
+                  bgcolor: '#fcfcfc', 
                   p: 3, 
                   borderRadius: 2, 
                   border: '1px solid #e0e0e0',
-                  mb: 3,
+                  mb: 2,
                   boxShadow: 'inset 0px 2px 4px rgba(0,0,0,0.05)'
                 }}>
-                  <Typography 
-                    variant="body1" 
-                    sx={{ 
-                      maxHeight: 320, 
-                      overflowY: "auto",
-                      whiteSpace: 'pre-line',
-                      lineHeight: 1.8,
-                      fontSize: '0.95rem',
-                      pr: 2,
-                      '&::-webkit-scrollbar': { width: '8px' },
-                      '&::-webkit-scrollbar-thumb': { backgroundColor: '#bdbdbd', borderRadius: '10px' }
-                    }}
-                  >
-                    <b style={{ color: '#1a1a1a', fontSize: '1.1rem' }}>Legal Declaration & Consent</b>{"\n\n"}
-                    1. <b>Agreement Understanding:</b> I have carefully read, reviewed, and understood all terms, conditions, and clauses of this rental agreement draft.{"\n\n"}
-                    2. <b>Factual Accuracy:</b> I hereby confirm that all information provided by me, including property details and ownership status, is true and correct.{"\n\n"}
-                    3. <b>E-Sign Validity:</b> I agree that this agreement is executed electronically under the <b>Information Technology Act, 2000</b> and shall be legally binding and enforceable.{"\n\n"}
-                    4. <b>Identity Authentication:</b> I understand that the OTP sent to my registered mobile number serves as my unique identity authentication for this transaction.{"\n\n"}
-                    5. <b>Digital Signature:</b> I provide my explicit consent to use my drawn signature as a valid legal signature on this digital document.{"\n\n"}
-                    6. <b>Non-Repudiation:</b> I agree that once the signature is applied and the document is generated, I shall not deny or repudiate the execution of this agreement.{"\n\n"}
-                    7. <b>Legal Jurisdiction:</b> I accept that this agreement is subject to the laws of India and any disputes shall be handled within the jurisdiction of the property's respective state.{"\n\n"}
-                    8. <b>Physical Equivalent:</b> I acknowledge that this digital document holds the same legal weight as a physically signed paper agreement.
-                  </Typography>
+                  <Box sx={{ 
+                    maxHeight: 380, 
+                    overflowY: "auto",
+                    pr: 2,
+                    '&::-webkit-scrollbar': { width: '8px' },
+                    '&::-webkit-scrollbar-thumb': { backgroundColor: '#ccc', borderRadius: '10px' }
+                  }}>
+                    {/* SECTION: GENERAL DECLARATION */}
+                    <Typography variant="subtitle1" fontWeight="bold" color="primary" sx={{ mb: 1 }}>GENERAL DECLARATION</Typography>
+                    <Typography variant="body2" sx={{ mb: 2, lineHeight: 1.8 }}>
+                        1. <b>Agreement Understanding:</b> I have carefully read and understood all clauses of this draft.<br/>
+                        2. <b>Factual Accuracy:</b> I confirm that all property and owner details provided are true.<br/>
+                        3. <b>E-Sign Validity:</b> I agree this is executed under the IT Act, 2000 and is legally binding.<br/>
+                        4. <b>Identity Authentication:</b> I acknowledge OTP acts as my unique digital identifier.<br/>
+                        5. <b>Digital Signature:</b> I consent to using my hand-drawn signature as a valid legal mark.<br/>
+                        6. <b>Non-Repudiation:</b> I shall not repudiate the execution once generated.<br/>
+                        7. <b>Legal Jurisdiction:</b> Subject to Indian laws and local property jurisdiction.<br/>
+                        8. <b>Physical Equivalent:</b> Holds the same legal weight as a physical paper document.
+                    </Typography>
+
+                    <Divider sx={{ my: 2 }} />
+
+                    {/* SECTION: ADVANCED RESPONSIBILITIES */}
+                    <Typography variant="subtitle1" fontWeight="bold" color="warning.dark" sx={{ mb: 1 }}>OWNER LEGAL RESPONSIBILITIES (ADVANCED)</Typography>
+                    <Typography variant="body2" sx={{ mb: 2, lineHeight: 1.8 }}>
+                        9. <b>Ownership Liability:</b> I confirm I am the lawful owner; disputes are my sole responsibility.<br/>
+                        10. <b>Title & Legal Clearance:</b> Property is free from encumbrances or government restrictions.<br/>
+                        11. <b>Rental Authority:</b> I hold full legal rights to lease/rent this premises.<br/>
+                        12. <b>Property Condition:</b> Premises provided is safe, habitable, and standard-compliant.<br/>
+                        13. <b>Maintenance Responsibility:</b> Responsible for structural, electrical, and plumbing repairs.<br/>
+                        14. <b>Deposit Handling:</b> I will refund security deposits without unlawful deductions.<br/>
+                        15. <b>False Information Liability:</b> Fully liable for legal consequences of false details.<br/>
+                        16. <b>Tax Responsibility:</b> Responsible for declaring rental income per Indian Tax Laws.<br/>
+                        17. <b>Indemnity Clause:</b> I hold the platform harmless from claims arising from my actions.<br/>
+                        18. <b>No Illegal Use Permission:</b> I shall not allow illegal activities on the property.
+                    </Typography>
+
+                    <Divider sx={{ my: 2 }} />
+
+                    {/* SECTION: DIGITAL & PLATFORM PROTECTION */}
+                    <Typography variant="subtitle1" fontWeight="bold" color="error" sx={{ mb: 1 }}>DIGITAL CONFIRMATION & PLATFORM PROTECTION</Typography>
+                    <Typography variant="body2" sx={{ mb: 2, lineHeight: 1.8 }}>
+                        19. <b>Electronic Execution:</b> Executed digitally under Information Technology Act, 2000.<br/>
+                        20. <b>Binding Nature:</b> Enforceable under the Indian Contract Act, 1872.<br/>
+                        21. <b>Audit Trail Acceptance:</b> OTP, IP, and timestamps will be recorded as legal proof.<br/>
+                        22. <b>Platform Role:</b> Platform is a facilitator only and not a party to this contract.<br/>
+                        23. <b>No Platform Liability:</b> Not responsible for property, rent, or legal conflicts.<br/>
+                        24. <b>Full Acceptance:</b> I confirm reading and accepting all terms fully.<br/>
+                        25. <b>Legal Responsibility:</b> I accept full legal responsibility for this entire agreement.
+                    </Typography>
+                  </Box>
                 </Box>
 
-                <Box display="flex" alignItems="flex-start" mb={4} sx={{ bgcolor: '#e3f2fd', p: 2, borderRadius: 2 }}>
+                <Box display="flex" alignItems="center" mb={3} sx={{ bgcolor: '#fff9c4', p: 1.5, borderRadius: 2 }}>
                   <Checkbox 
                     checked={agreed} 
                     onChange={(e) => setAgreed(e.target.checked)} 
-                    sx={{ p: 0, mr: 1.5, mt: 0.3 }} 
+                    sx={{ p: 0, mr: 1 }} 
                   />
-                  <Typography variant="body2" color="primary.dark" fontWeight={600}>
-                    I confirm that I have read the declaration above and I am authorized to sign this agreement digitally.
+                  <Typography variant="body2" fontWeight="bold">
+                    I confirm that I have read and accept all 25 clauses mentioned above.
                   </Typography>
                 </Box>
 
@@ -316,31 +329,31 @@ export default function OwnerPayments() {
                   size="large" 
                   disabled={!agreed} 
                   onClick={() => setStep(2)}
-                  sx={{ py: 1.5, textTransform: 'none', fontSize: '1.1rem', fontWeight: 'bold' }}
+                  sx={{ py: 1.5, fontSize: '1rem', fontWeight: 'bold' }}
                 >
                   I Accept, Proceed to Verify
                 </Button>
               </Box>
             )}
 
-            {/* STEP 2: PHONE OTP VERIFICATION */}
+            {/* STEP 2: PHONE OTP */}
             {step === 2 && (
-              <Box py={2}>
-                <Typography variant="body1" mb={3} textAlign="center">
-                  Verify your identity via the mobile number registered with this booking.
+              <Box py={2} textAlign="center">
+                <VerifiedUser color="primary" sx={{ fontSize: 50, mb: 2 }} />
+                <Typography variant="h6" mb={1}>Identity Verification</Typography>
+                <Typography variant="body2" color="textSecondary" mb={3}>
+                    OTP will be sent to the number registered with Booking ID #{selectedBooking.booking_id}
                 </Typography>
                 <TextField 
-                  fullWidth label="Registered Mobile Number" 
-                  placeholder="e.g. 9876543210"
+                  fullWidth label="Registered Mobile" 
                   variant="outlined" value={mobile} 
                   onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))} 
                   disabled={!!confirmObj || isSubmitting}
                   sx={{ mb: 3 }}
-                  inputProps={{ style: { fontSize: '1.2rem', textAlign: 'center', letterSpacing: '2px' } }}
                 />
                 {!confirmObj ? (
-                  <Button fullWidth variant="contained" size="large" onClick={sendOtp} disabled={isSubmitting || mobile.length < 10} sx={{ py: 1.5 }}>
-                    {isSubmitting ? <CircularProgress size={24} /> : "Send Verification Code"}
+                  <Button fullWidth variant="contained" size="large" onClick={sendOtp} disabled={isSubmitting || mobile.length < 10}>
+                    {isSubmitting ? <CircularProgress size={24} /> : "Send OTP Code"}
                   </Button>
                 ) : (
                   <>
@@ -348,14 +361,9 @@ export default function OwnerPayments() {
                       fullWidth label="6-Digit OTP" 
                       value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} 
                       sx={{ mb: 3 }}
-                      inputProps={{ style: { fontSize: '1.2rem', textAlign: 'center', letterSpacing: '5px' }, maxLength: 6 }}
                     />
-                    <Button 
-                      fullWidth variant="contained" size="large" color="primary"
-                      onClick={verifyOtp} disabled={isSubmitting || otp.length < 6}
-                      sx={{ py: 1.5 }}
-                    >
-                      {isSubmitting ? <CircularProgress size={24} color="inherit" /> : "Verify & Continue"}
+                    <Button fullWidth variant="contained" size="large" onClick={verifyOtp} disabled={isSubmitting || otp.length < 6}>
+                        Verify & Continue
                     </Button>
                   </>
                 )}
@@ -363,38 +371,26 @@ export default function OwnerPayments() {
               </Box>
             )}
 
-            {/* STEP 3: DIGITAL SIGNATURE PAD */}
+            {/* STEP 3: SIGNATURE */}
             {step === 3 && (
               <Box py={2}>
-                <Typography variant="h6" textAlign="center" mb={1}>Draw Your Signature</Typography>
-                <Typography variant="body2" color="textSecondary" textAlign="center" mb={3}>
-                  Please use your mouse or touch screen to sign within the box.
-                </Typography>
-                <Box sx={{ 
-                  border: "2px solid #1976d2", 
-                  borderRadius: 2, 
-                  bgcolor: '#ffffff', 
-                  overflow: 'hidden',
-                  display: 'flex',
-                  justifyContent: 'center'
-                }}>
+                <Box textAlign="center" mb={2}>
+                    <Security color="success" sx={{ fontSize: 40 }} />
+                    <Typography variant="h6">Apply Digital Signature</Typography>
+                </Box>
+                <Box sx={{ border: "2px dashed #1976d2", borderRadius: 2, bgcolor: '#fbfbfb' }}>
                   <SignatureCanvas
                     ref={sigCanvas}
                     penColor="black"
-                    canvasProps={{ 
-                      width: 500, 
-                      height: 220, 
-                      className: "sigCanvas",
-                      style: { cursor: 'crosshair' }
-                    }}
+                    canvasProps={{ width: 680, height: 250, className: "sigCanvas" }}
                   />
                 </Box>
-                <Box mt={4} display="flex" gap={2}>
+                <Box mt={3} display="flex" gap={2}>
                   <Button variant="outlined" size="large" fullWidth onClick={() => sigCanvas.current.clear()} disabled={isSubmitting}>
-                    Clear Pad
+                    Clear
                   </Button>
                   <Button variant="contained" size="large" fullWidth onClick={handleSubmit} disabled={isSubmitting}>
-                    {isSubmitting ? <CircularProgress size={24} color="inherit" /> : "Apply Signature"}
+                    {isSubmitting ? <CircularProgress size={24} color="inherit" /> : "Sign & Finalize"}
                   </Button>
                 </Box>
               </Box>
