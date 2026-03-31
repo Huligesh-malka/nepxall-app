@@ -7,9 +7,9 @@ import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { 
   Box, TextField, Button, Typography, CircularProgress, 
   Alert, Snackbar, Paper, Grid, Divider, IconButton, 
-  FormControlLabel, Checkbox, List, ListItem, ListItemText
+  FormControlLabel, Checkbox
 } from "@mui/material";
-import { ArrowBack, Gavel, AssignmentTurnedIn } from "@mui/icons-material";
+import { ArrowBack, Gavel, AssignmentTurnedIn, CloudDownload } from "@mui/icons-material";
 
 const AgreementForm = () => {
   const { bookingId } = useParams();
@@ -43,24 +43,25 @@ const AgreementForm = () => {
     return digits.length >= 10 ? digits.slice(-10) : digits;
   };
 
-  /* ================= FETCH STATUS ================= */
-  useEffect(() => {
-    const checkStatus = async () => {
-      setFetching(true);
-      try {
-        const res = await api.get(`/agreements-form/status/${bookingId}`);
-        if (res.data.exists) {
-          setExistingAgreement(res.data.data);
-          const rawPhone = res.data.data.registered_phone || res.data.data.mobile || "";
-          setManualMobile(cleanPhoneNumber(rawPhone));
-        }
-      } catch (err) {
-        setError("Server error. Please refresh the page.");
-      } finally {
-        setFetching(false);
+  /* ================= FETCH STATUS FUNCTION ================= */
+  const fetchAgreementStatus = async () => {
+    setFetching(true);
+    try {
+      const res = await api.get(`/agreements-form/status/${bookingId}`);
+      if (res.data.exists) {
+        setExistingAgreement(res.data.data);
+        const rawPhone = res.data.data.registered_phone || res.data.data.mobile || "";
+        setManualMobile(cleanPhoneNumber(rawPhone));
       }
-    };
-    if (bookingId) checkStatus();
+    } catch (err) {
+      setError("Server error. Please refresh the page.");
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  useEffect(() => {
+    if (bookingId) fetchAgreementStatus();
   }, [bookingId]);
 
   const setupRecaptcha = () => {
@@ -114,7 +115,7 @@ const AgreementForm = () => {
       const res = await api.post("/agreements-form/submit", data);
       if (res.data.success) {
         setSuccess("Details submitted!");
-        setTimeout(() => window.location.reload(), 1500);
+        fetchAgreementStatus(); // Refresh view
       }
     } catch (err) { setError("Submission failed."); }
     finally { setLoading(false); }
@@ -131,12 +132,13 @@ const AgreementForm = () => {
         booking_id: bookingId,
         tenant_signature: signatureDataURL,
         tenant_mobile: manualMobile,
-        accepted_terms: true // Log acceptance
+        accepted_terms: true 
       });
 
       if (res.data.success) {
         setSuccess("Agreement finalized! ✅");
-        setTimeout(() => navigate("/my-bookings"), 2000);
+        // Instead of navigating away, we refresh the local state to show the PDF
+        await fetchAgreementStatus(); 
       }
     } catch (err) {
       setError(err.response?.data?.message || "Final signing failed.");
@@ -145,44 +147,38 @@ const AgreementForm = () => {
 
   /* ================= LEGAL TEXT COMPONENT ================= */
   const LegalDeclaration = () => (
-    <Box sx={{ bgcolor: '#fdfdfd', p: 3, borderRadius: 2, border: '1px solid #ddd', mb: 3, maxHeight: '300px', overflowY: 'auto' }}>
+    <Box sx={{ bgcolor: '#fdfdfd', p: 3, borderRadius: 2, border: '1px solid #ddd', mb: 3, maxHeight: '250px', overflowY: 'auto' }}>
       <Typography variant="subtitle1" fontWeight="bold" gutterBottom color="primary">
         <Gavel sx={{ fontSize: 18, mr: 1, verticalAlign: 'middle' }} />
         TENANT LEGAL DECLARATION & TERMS
       </Typography>
       <Divider sx={{ mb: 2 }} />
-      
-      <Typography variant="body2" fontWeight="bold">General Declaration</Typography>
-      <Typography variant="caption" display="block" mb={1}>
-        1. Understanding: I have reviewed all clauses.<br/>
-        2. Accuracy: Personal details provided are true.<br/>
-        3. E-Sign Validity: Executed under IT Act, 2000.<br/>
-        4. Authentication: OTP serves as valid identity proof.<br/>
-        5. Consent: I consent to use my electronic signature.<br/>
-        6. Non-Repudiation: I will not deny this agreement once signed.<br/>
-        7. Jurisdiction: Governed by Indian Law.<br/>
-        8. Physical Equivalent: Digital agreement holds same value as physical.
-      </Typography>
-
-      <Typography variant="body2" fontWeight="bold" mt={2}>Tenant Responsibilities</Typography>
-      <Typography variant="caption" display="block" mb={1}>
-        9. Lawful Use: Residential purposes only.<br/>
-        10. Rent: Payment on time as per schedule.<br/>
-        11. Deposit: Comply with security deposit terms.<br/>
-        12. Maintenance: Maintain property in good condition.<br/>
-        13. Damages: Responsible for damages caused by self/guests.<br/>
-        14. No Illegal Activities: No unlawful behavior on premises.<br/>
-        15. Subletting: No transfer without owner's permission.<br/>
-        16. Compliance: Follow society/local building rules.<br/>
-        17. Utilities: Pay electricity/water/internet bills.
-      </Typography>
-
-      <Typography variant="body2" fontWeight="bold" mt={2}>Legal Obligations & Disclaimer</Typography>
-      <Typography variant="caption" display="block" mb={1}>
-        18-22. Identity/Verification: Aadhaar/PAN provided; will comply with police verification.<br/>
-        23-25. Binding Nature: Enforceable under Indian Contract Act, 1872.<br/>
-        26-28. Platform Role: Platform is an intermediary only; no liability for property/payment disputes.<br/>
-        29-30. Full Acceptance: I accept full legal responsibility.
+      <Typography variant="caption" display="block" sx={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
+        {`1. Agreement Understanding: I have carefully read and understood all terms.
+        2. Factual Accuracy: I confirm all personal details provided are true and correct.
+        3. E-Sign Validity: This agreement is executed electronically under the IT Act, 2000.
+        4. Identity Authentication: OTP verification serves as valid identity authentication.
+        5. Digital Signature Consent: I consent to using my drawn signature as legally valid.
+        6. Non-Repudiation: I shall not deny this agreement once digitally signed.
+        7. Legal Jurisdiction: Governed by the laws of India and respective state jurisdiction.
+        8. Physical Equivalent: This digital agreement holds the same value as a physical one.
+        9. Lawful Use: I shall use the property strictly for residential purposes.
+        10. Rent Payment: I agree to pay rent on time as per the agreed schedule.
+        11. Security Deposit: I understand and agree to security deposit terms.
+        12. Maintenance: I shall maintain the property in good condition.
+        13. Damage Liability: I am responsible for damages caused by me or my guests.
+        14. No Illegal Activities: I shall not engage in illegal activities on premises.
+        15. Subletting: I shall not sublet without owner's written permission.
+        16. Compliance: I shall follow all society rules and local laws.
+        17. Utility Payments: I am responsible for utility bills as agreed.
+        18. Identity Proof: I confirm I have provided valid Aadhaar/PAN.
+        19. Police Verification: I agree to comply with police verification if required.
+        20. Notice Period: I agree to provide prior notice before vacating.
+        21. Vacating Condition: I shall return the property in good condition.
+        22. Overstay: Staying beyond the period may result in penalties.
+        23-25. Execution: Enforceable under Indian Contract Act, 1872.
+        26-28. Platform Role: Platform is an intermediary only; no liability for disputes.
+        29-30. Acceptance: I accept full legal responsibility for complying with this agreement.`}
       </Typography>
     </Box>
   );
@@ -193,14 +189,31 @@ const AgreementForm = () => {
         <Box textAlign="center" mt={10}><CircularProgress /></Box>
       ) : (
         <>
-          {/* CASE 1: COMPLETED */}
+          {/* CASE 1: COMPLETED - NOW STAYS ON THIS PAGE */}
           {existingAgreement?.agreement_status === "completed" && (
-            <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px solid #e0e0e0' }}>
-              <AssignmentTurnedIn sx={{ fontSize: 60, color: 'success.main', mb: 2 }} />
-              <Typography variant="h5" color="success.main" fontWeight="bold">Agreement Finalized</Typography>
-              <Button sx={{ mt: 3 }} variant="contained" color="success" onClick={() => window.open(existingAgreement.signed_pdf, "_blank")}>
+            <Paper sx={{ p: 6, textAlign: 'center', borderRadius: 4, border: '2px solid #4caf50', bgcolor: '#f8fff8' }}>
+              <AssignmentTurnedIn sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
+              <Typography variant="h4" color="success.main" fontWeight="bold" gutterBottom>
+                Agreement Finalized!
+              </Typography>
+              <Typography variant="body1" color="text.secondary" mb={4}>
+                Your rental agreement has been digitally signed by both parties and is now legally binding.
+              </Typography>
+              <Button 
+                size="large"
+                variant="contained" 
+                color="success" 
+                startIcon={<CloudDownload />}
+                onClick={() => window.open(existingAgreement.signed_pdf, "_blank")}
+                sx={{ px: 4, py: 1.5, borderRadius: 2, fontWeight: 'bold' }}
+              >
                 Download Signed PDF
               </Button>
+              <Box mt={4}>
+                <Button variant="text" color="primary" onClick={() => navigate("/my-bookings")}>
+                  Go to My Bookings
+                </Button>
+              </Box>
             </Paper>
           )}
 
@@ -217,7 +230,7 @@ const AgreementForm = () => {
           {/* CASE 4: READY FOR TENANT SIGNATURE */}
           {existingAgreement?.agreement_status === "approved" && existingAgreement.signed_pdf && (
             <Paper sx={{ p: 4, borderRadius: 3, boxShadow: 3 }}>
-              <Typography variant="h6" fontWeight="bold">Review & Digital Signing</Typography>
+              <Typography variant="h6" fontWeight="bold">Step 2: Review & Finalize Signature</Typography>
               <Divider sx={{ my: 2 }} />
               
               <iframe 
@@ -236,7 +249,7 @@ const AgreementForm = () => {
                             <ArrowBack fontSize="small" />
                         </IconButton>
                     )}
-                    <Typography variant="subtitle1" fontWeight="bold">Step 1: Identity Verification</Typography>
+                    <Typography variant="subtitle1" fontWeight="bold">Identity Verification</Typography>
                   </Box>
                   
                   <TextField 
@@ -265,19 +278,18 @@ const AgreementForm = () => {
                 </Box>
               ) : (
                 <Box mt={2}>
-                  <Alert severity="success" sx={{ mb: 2 }}>Mobile Verified. Please read and sign.</Alert>
+                  <Alert severity="success" sx={{ mb: 2 }}>Verification Successful! Please sign below.</Alert>
                   
                   <LegalDeclaration />
 
                   <FormControlLabel
                     control={<Checkbox checked={hasAcceptedTerms} onChange={(e) => setHasAcceptedTerms(e.target.checked)} />}
-                    label="I hereby declare that I have read, understood, and agree to all the Terms & Conditions mentioned above."
+                    label="I agree to the terms and conditions mentioned above."
                     sx={{ mb: 3 }}
                   />
 
                   <Box sx={{ opacity: hasAcceptedTerms ? 1 : 0.5, pointerEvents: hasAcceptedTerms ? 'auto' : 'none' }}>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>Draw your signature below:</Typography>
-                    <Box border="2px dashed #999" borderRadius={2} bgcolor="#fff">
+                    <Box border="2px dashed #ccc" borderRadius={2} bgcolor="#fff">
                       <SignatureCanvas 
                         ref={sigCanvas} penColor="black" 
                         canvasProps={{ width: 830, height: 180, className: "sigCanvas", style: { width: '100%', height: '180px' } }} 
@@ -286,7 +298,7 @@ const AgreementForm = () => {
                     <Box mt={2} display="flex" gap={2}>
                       <Button variant="outlined" color="error" onClick={() => sigCanvas.current.clear()} sx={{ flex: 1 }}>Clear</Button>
                       <Button variant="contained" color="success" fullWidth onClick={handleFinalTenantSign} disabled={loading || !hasAcceptedTerms} sx={{ flex: 3 }}>
-                        {loading ? <CircularProgress size={24} /> : "Finalize & Sign Agreement"}
+                        {loading ? <CircularProgress size={24} /> : "Apply Signature & Finalize"}
                       </Button>
                     </Box>
                   </Box>
