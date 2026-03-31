@@ -37,7 +37,7 @@ export default function OwnerPayments() {
     fetchPayments();
   }, []);
 
-  // Clear canvas only when step 3 is reached
+  // Re-size/Clear canvas helper for Step 3
   useEffect(() => {
     if (step === 3 && openSignModal) {
       const timer = setTimeout(() => {
@@ -64,11 +64,12 @@ export default function OwnerPayments() {
 
   const handleViewPdf = async (bookingId, filePath) => {
     try {
+      // Mark as viewed in DB before opening
       await axios.post(`${API}/agreements/viewed`, { booking_id: bookingId }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       window.open(filePath, "_blank");
-      fetchPayments();
+      fetchPayments(); // Refresh to enable the 'SIGN' button
     } catch (err) {
       window.open(filePath, "_blank");
     }
@@ -86,7 +87,8 @@ export default function OwnerPayments() {
   };
 
   const sendOtp = async () => {
-    if (!/^[6-9]\d{9}$/.test(mobile)) return alert("Enter valid 10-digit mobile");
+    // Basic India mobile validation
+    if (!/^[6-9]\d{9}$/.test(mobile)) return alert("Enter a valid 10-digit mobile number");
 
     try {
       setIsSubmitting(true);
@@ -105,10 +107,10 @@ export default function OwnerPayments() {
       );
 
       setConfirmObj(confirmation);
-      alert("OTP Sent ✅");
+      alert("OTP Sent to +91 " + mobile + " ✅");
     } catch (error) {
       console.error("OTP Error:", error);
-      alert("OTP failed to send. Check connection.");
+      alert("OTP failed to send. Please try again.");
       if (window.recaptchaVerifier) {
         window.recaptchaVerifier.clear();
         window.recaptchaVerifier = null;
@@ -119,44 +121,48 @@ export default function OwnerPayments() {
   };
 
   const verifyOtp = async () => {
-    if (!otp) return alert("Please enter OTP");
+    if (!otp) return alert("Please enter the 6-digit OTP");
     try {
       setIsSubmitting(true);
       await confirmObj.confirm(otp);
       setOtpVerified(true);
-      setStep(3); // Move to Signature Step
+      setStep(3); // Navigate to Signature step
     } catch (error) {
-      alert("Invalid OTP ❌");
+      alert("Invalid OTP code. Please try again ❌");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleSubmit = async () => {
-    if (!otpVerified) return alert("Please verify OTP first");
+    if (!otpVerified) return alert("Phone verification required");
     if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
-      return alert("Please provide a signature");
+      return alert("Please draw your signature in the box");
     }
 
+    // Capture signature as Base64 string
     const signature = sigCanvas.current.getCanvas().toDataURL("image/png");
 
     try {
       setIsSubmitting(true);
       
-      // NOTICE: No Auth token sent here as requested, allowing direct update via booking_id
-      await axios.post(`${API}/agreements/sign`, {
+      // Public route call (Security check happens on backend via booking_id + mobile match)
+      const res = await axios.post(`${API}/agreements/sign`, {
         booking_id: selectedBooking.booking_id,
         owner_mobile: mobile,
         owner_signature: signature,
         accepted_terms: true
       });
 
-      alert("Agreement Signed Successfully ✅");
-      setOpenSignModal(false);
-      fetchPayments(); // Refresh list to show 'View Signed'
+      if (res.data.success) {
+        alert("Digital Signature Applied Successfully ✅");
+        setOpenSignModal(false);
+        fetchPayments(); // Refresh list to update UI to 'VIEW SIGNED'
+      }
     } catch (err) {
       console.error(err);
-      alert("Submission failed ❌");
+      const msg = err.response?.data?.message || "Submission failed";
+      alert(`${msg} ❌`);
     } finally {
       setIsSubmitting(false);
     }
@@ -166,41 +172,43 @@ export default function OwnerPayments() {
 
   return (
     <Container sx={{ py: 4 }}>
-      <Box display="flex" justifyContent="space-between" mb={3}>
+      <Box display="flex" justifyContent="space-between" mb={3} alignItems="center">
         <Typography variant="h5" fontWeight="bold">Owner Settlement Dashboard</Typography>
-        <Button onClick={fetchPayments} startIcon={<Refresh />} variant="outlined">Refresh</Button>
+        <Button onClick={fetchPayments} startIcon={<Refresh />} variant="outlined">Refresh Data</Button>
       </Box>
 
-      <Paper elevation={3}>
+      <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden' }}>
         <Table>
-          <TableHead>
+          <TableHead sx={{ bgcolor: '#f8f9fa' }}>
             <TableRow>
-              <TableCell>Booking</TableCell>
-              <TableCell>Tenant</TableCell>
-              <TableCell>Amount</TableCell>
-              <TableCell>Action</TableCell>
+              <TableCell><b>Booking ID</b></TableCell>
+              <TableCell><b>Tenant Name</b></TableCell>
+              <TableCell><b>Amount</b></TableCell>
+              <TableCell align="center"><b>Agreement Action</b></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {data.map(item => {
+            {data.length === 0 ? (
+              <TableRow><TableCell colSpan={4} align="center">No pending settlements found.</TableCell></TableRow>
+            ) : data.map(item => {
               const isSigned = !!item.signed_pdf;
               return (
-                <TableRow key={item.booking_id}>
+                <TableRow key={item.booking_id} hover>
                   <TableCell>#{item.booking_id}</TableCell>
                   <TableCell>{item.tenant_name}</TableCell>
                   <TableCell>₹{item.owner_amount}</TableCell>
-                  <TableCell>
+                  <TableCell align="center">
                     {!item.final_pdf ? (
-                      <Chip label="Processing" />
+                      <Chip label="Drafting..." variant="outlined" />
                     ) : isSigned ? (
-                      <Button color="success" variant="contained" onClick={() => handleViewPdf(item.booking_id, item.signed_pdf)}>
-                        VIEW SIGNED
+                      <Button color="success" variant="contained" size="small" onClick={() => handleViewPdf(item.booking_id, item.signed_pdf)}>
+                        VIEW SIGNED PDF
                       </Button>
                     ) : (
-                      <Box display="flex" gap={1}>
-                        <Button variant="outlined" onClick={() => handleViewPdf(item.booking_id, item.final_pdf)}>VIEW PDF</Button>
+                      <Box display="flex" gap={1} justifyContent="center">
+                        <Button variant="outlined" size="small" onClick={() => handleViewPdf(item.booking_id, item.final_pdf)}>VIEW DRAFT</Button>
                         {item.viewed_by_owner && (
-                          <Button variant="contained" color="warning" onClick={() => handleOpenSign(item)}>SIGN</Button>
+                          <Button variant="contained" color="warning" size="small" onClick={() => handleOpenSign(item)}>SIGN NOW</Button>
                         )}
                       </Box>
                     )}
@@ -212,7 +220,7 @@ export default function OwnerPayments() {
         </Table>
       </Paper>
 
-      {/* SIGNING MODAL */}
+      {/* MULTI-STEP SIGNING MODAL */}
       <Modal 
         open={openSignModal} 
         onClose={() => !isSubmitting && setOpenSignModal(false)}
@@ -222,63 +230,66 @@ export default function OwnerPayments() {
       >
         <Fade in={openSignModal}>
           <Box sx={{
-            width: { xs: '90%', sm: 420 },
+            width: { xs: '92%', sm: 420 },
             bgcolor: "background.paper",
-            borderRadius: 3,
+            borderRadius: 4,
             p: 4,
             position: 'absolute', top: '50%', left: '50%',
             transform: 'translate(-50%, -50%)',
             boxShadow: 24, outline: 'none'
           }}>
 
-            <Box display="flex" alignItems="center" mb={2}>
+            <Box display="flex" alignItems="center" mb={3}>
                {step > 1 && !otpVerified && (
                  <IconButton onClick={() => setStep(step - 1)} size="small" sx={{ mr: 1 }}>
                    <ArrowBack />
                  </IconButton>
                )}
-               <Typography variant="h6">Digital Signature</Typography>
+               <Typography variant="h6" fontWeight="bold">Owner Digital Sign</Typography>
             </Box>
 
-            {/* STEP 1: CONSENT */}
+            {/* STEP 1: LEGAL CONSENT */}
             {step === 1 && (
               <Box>
-                <Box display="flex" alignItems="flex-start" mb={3} sx={{ bgcolor: '#f5f5f5', p: 2, borderRadius: 2 }}>
-                  <Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} sx={{ p: 0, mr: 1 }} />
-                  <Typography variant="body2">
-                    I confirm that I have reviewed the settlement details and authorize the digital signature.
+                <Box display="flex" alignItems="flex-start" mb={4} sx={{ bgcolor: '#fff9c4', p: 2, borderRadius: 2, border: '1px solid #fbc02d' }}>
+                  <Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} sx={{ p: 0, mr: 1, mt: 0.5 }} />
+                  <Typography variant="body2" color="textSecondary">
+                    I have read the settlement agreement and I agree to use a digital signature to finalize this document.
                   </Typography>
                 </Box>
-                <Button fullWidth variant="contained" disabled={!agreed} onClick={() => setStep(2)}>
-                  Verify Mobile
+                <Button fullWidth variant="contained" size="large" disabled={!agreed} onClick={() => setStep(2)}>
+                  Accept & Continue
                 </Button>
               </Box>
             )}
 
-            {/* STEP 2: OTP */}
+            {/* STEP 2: PHONE OTP VERIFICATION */}
             {step === 2 && (
               <Box>
                 <TextField 
-                  fullWidth label="Mobile Number" 
+                  fullWidth label="Registered Mobile" 
+                  placeholder="Enter 10 digit number"
                   variant="outlined" value={mobile} 
-                  onChange={(e) => setMobile(e.target.value)} 
+                  onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))} 
                   disabled={!!confirmObj || isSubmitting}
+                  sx={{ mb: 2 }}
                 />
                 {!confirmObj ? (
-                  <Button fullWidth variant="contained" sx={{ mt: 2 }} onClick={sendOtp} disabled={isSubmitting}>
+                  <Button fullWidth variant="contained" size="large" onClick={sendOtp} disabled={isSubmitting || mobile.length < 10}>
                     {isSubmitting ? <CircularProgress size={24} /> : "Send OTP"}
                   </Button>
                 ) : (
                   <>
                     <TextField 
-                      fullWidth sx={{ mt: 2 }} label="Enter OTP" 
-                      value={otp} onChange={(e) => setOtp(e.target.value)} 
+                      fullWidth label="Enter 6-digit OTP" 
+                      value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} 
+                      sx={{ mb: 2 }}
                     />
                     <Button 
-                      fullWidth sx={{ mt: 2 }} variant="contained" 
-                      onClick={verifyOtp} disabled={isSubmitting}
+                      fullWidth variant="contained" size="large" color="primary"
+                      onClick={verifyOtp} disabled={isSubmitting || otp.length < 6}
                     >
-                      {isSubmitting ? <CircularProgress size={24} color="inherit" /> : "Verify & Continue"}
+                      {isSubmitting ? <CircularProgress size={24} color="inherit" /> : "Verify OTP"}
                     </Button>
                   </>
                 )}
@@ -286,15 +297,15 @@ export default function OwnerPayments() {
               </Box>
             )}
 
-            {/* STEP 3: SIGNATURE */}
+            {/* STEP 3: DIGITAL SIGNATURE PAD */}
             {step === 3 && (
               <Box>
-                <Typography variant="subtitle2" mb={1}>Draw Signature:</Typography>
-                <Box sx={{ border: "1px solid #ccc", borderRadius: 1, bgcolor: '#fff' }}>
+                <Typography variant="subtitle2" color="primary" mb={1} fontWeight="bold">Draw your signature below:</Typography>
+                <Box sx={{ border: "2px dashed #999", borderRadius: 2, bgcolor: '#fafafa', overflow: 'hidden' }}>
                   <SignatureCanvas
                     ref={sigCanvas}
                     penColor="black"
-                    canvasProps={{ width: 340, height: 180, className: "sigCanvas" }}
+                    canvasProps={{ width: 350, height: 180, className: "sigCanvas" }}
                   />
                 </Box>
                 <Box mt={3} display="flex" gap={2}>
@@ -302,7 +313,7 @@ export default function OwnerPayments() {
                     Clear
                   </Button>
                   <Button variant="contained" fullWidth onClick={handleSubmit} disabled={isSubmitting}>
-                    {isSubmitting ? <CircularProgress size={24} color="inherit" /> : "Complete Sign"}
+                    {isSubmitting ? <CircularProgress size={24} color="inherit" /> : "Finish & Sign"}
                   </Button>
                 </Box>
               </Box>
