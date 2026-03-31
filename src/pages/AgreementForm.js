@@ -6,8 +6,9 @@ import { auth } from "../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { 
   Box, TextField, Button, Typography, CircularProgress, 
-  Alert, Snackbar, Paper, Grid, Divider 
+  Alert, Snackbar, Paper, Grid, Divider, IconButton
 } from "@mui/material";
+import { ArrowBack } from "@mui/icons-material";
 
 const AgreementForm = () => {
   const { bookingId } = useParams();
@@ -25,7 +26,6 @@ const AgreementForm = () => {
   const [confirmObj, setConfirmObj] = useState(null);
   const [otp, setOtp] = useState("");
   const [isVerified, setIsVerified] = useState(false);
-  const [otpTimer, setOtpTimer] = useState(0);
 
   const [formData, setFormData] = useState({
     full_name: "", mobile: "", email: "",
@@ -42,6 +42,7 @@ const AgreementForm = () => {
         const res = await api.get(`/agreements-form/status/${bookingId}`);
         if (res.data.exists) {
           setExistingAgreement(res.data.data);
+          // Pre-fill the mobile number if they have already submitted the form
           setManualMobile(res.data.data.mobile || "");
         }
       } catch (err) {
@@ -53,14 +54,6 @@ const AgreementForm = () => {
     if (bookingId) checkStatus();
   }, [bookingId]);
 
-  /* ================= OTP TIMER ================= */
-  useEffect(() => {
-    if (otpTimer > 0) {
-      const timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [otpTimer]);
-
   const setupRecaptcha = () => {
     if (window.recaptchaVerifier) {
       window.recaptchaVerifier.clear();
@@ -70,19 +63,33 @@ const AgreementForm = () => {
     });
   };
 
-  /* ================= OTP FUNCTIONS ================= */
+  /* ================= UPDATED: OTP FUNCTIONS WITH PRE-VERIFICATION ================= */
   const sendOtp = async () => {
     if (manualMobile.length !== 10) return setError("Enter a valid 10-digit mobile number.");
+    
     setLoading(true);
     try {
+      // 1. Backend Pre-Verification: Check if this mobile is registered to this booking
+      const verifyRes = await api.post("/agreements-form/tenant/verify", {
+        booking_id: bookingId,
+        mobile: manualMobile
+      });
+
+      if (!verifyRes.data.success) {
+        throw new Error("Mobile number mismatch.");
+      }
+
+      // 2. Firebase OTP logic
       setupRecaptcha();
       const appVerifier = window.recaptchaVerifier;
       const confirmation = await signInWithPhoneNumber(auth, `+91${manualMobile}`, appVerifier);
+      
       setConfirmObj(confirmation);
-      setOtpTimer(60);
-      setSuccess("OTP sent successfully!");
+      setSuccess("Verification successful. OTP sent! ✅");
     } catch (err) {
-      setError("Failed to send OTP. Please try again.");
+      console.error("OTP Error:", err);
+      const msg = err.response?.data?.message || "Verification failed: Mobile number not registered for this agreement.";
+      setError(msg);
       if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
     } finally {
       setLoading(false);
@@ -95,9 +102,9 @@ const AgreementForm = () => {
     try {
       await confirmObj.confirm(otp);
       setIsVerified(true);
-      setSuccess("Mobile Verified! You can now sign.");
+      setSuccess("Identity Verified! Please sign below. ✅");
     } catch (err) {
-      setError("Invalid OTP. Please try again.");
+      setError("Invalid OTP code. Please try again ❌");
     } finally {
       setLoading(false);
     }
@@ -121,7 +128,7 @@ const AgreementForm = () => {
     try {
       const res = await api.post("/agreements-form/submit", data);
       if (res.data.success) {
-        setSuccess("Submitted! Please wait for Admin approval.");
+        setSuccess("Submitted! Please wait for Admin review.");
         setTimeout(() => window.location.reload(), 1500);
       }
     } catch (err) {
@@ -142,7 +149,7 @@ const AgreementForm = () => {
         tenant_mobile: manualMobile 
       });
       if (res.data.success) {
-        setSuccess("Agreement signed successfully!");
+        setSuccess("Agreement signed successfully! ✅");
         setTimeout(() => navigate("/my-bookings"), 2000);
       }
     } catch (err) {
@@ -160,10 +167,10 @@ const AgreementForm = () => {
         <>
           {/* CASE 1: COMPLETED */}
           {existingAgreement?.agreement_status === "completed" && (
-            <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
+            <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px solid #e0e0e0' }}>
               <Typography variant="h5" color="success.main" fontWeight="bold">✅ Agreement Finalized</Typography>
               <Typography mt={1} mb={3}>Both parties have digitally signed the document.</Typography>
-              <Button variant="contained" onClick={() => window.open(existingAgreement.signed_pdf, "_blank")}>
+              <Button variant="contained" color="success" onClick={() => window.open(existingAgreement.signed_pdf, "_blank")}>
                 View / Download Final PDF
               </Button>
             </Paper>
@@ -200,20 +207,36 @@ const AgreementForm = () => {
               />
 
               {!isVerified ? (
-                <Box sx={{ p: 3, bgcolor: '#f9f9f9', borderRadius: 2 }}>
-                  <Typography variant="subtitle1" fontWeight="bold" mb={2}>Verify Identity via OTP</Typography>
+                <Box sx={{ p: 3, bgcolor: '#f9f9f9', borderRadius: 2, border: '1px solid #eee' }}>
+                  <Box display="flex" alignItems="center" mb={2}>
+                    {confirmObj && (
+                        <IconButton size="small" onClick={() => setConfirmObj(null)} sx={{ mr: 1 }}>
+                            <ArrowBack fontSize="small" />
+                        </IconButton>
+                    )}
+                    <Typography variant="subtitle1" fontWeight="bold">Verify Identity via OTP</Typography>
+                  </Box>
+                  
                   <TextField 
                     fullWidth 
-                    label="Mobile Number" 
+                    label="Registered Mobile Number" 
                     value={manualMobile} 
                     onChange={(e) => setManualMobile(e.target.value.replace(/\D/g, ""))}
-                    disabled={!!confirmObj}
-                    InputProps={{ startAdornment: <Typography sx={{ mr: 1 }}>+91</Typography> }}
+                    disabled={!!confirmObj || loading}
+                    placeholder="Enter 10-digit number"
+                    InputProps={{ startAdornment: <Typography sx={{ mr: 1, color: 'text.secondary' }}>+91</Typography> }}
                     sx={{ mb: 2 }}
                   />
+
                   {!confirmObj ? (
-                    <Button variant="contained" fullWidth onClick={sendOtp} disabled={loading || manualMobile.length !== 10}>
-                      {loading ? <CircularProgress size={24} /> : "Send OTP"}
+                    <Button 
+                      variant="contained" 
+                      fullWidth 
+                      onClick={sendOtp} 
+                      disabled={loading || manualMobile.length !== 10}
+                      sx={{ py: 1.2 }}
+                    >
+                      {loading ? <CircularProgress size={24} color="inherit" /> : "Verify & Send OTP"}
                     </Button>
                   ) : (
                     <>
@@ -223,17 +246,25 @@ const AgreementForm = () => {
                         value={otp} 
                         onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                         sx={{ mb: 2 }}
+                        autoFocus
                       />
-                      <Button variant="contained" color="secondary" fullWidth onClick={verifyOtp} disabled={loading || otp.length < 6}>
-                        {loading ? <CircularProgress size={24} /> : "Verify OTP"}
+                      <Button 
+                        variant="contained" 
+                        color="primary" 
+                        fullWidth 
+                        onClick={verifyOtp} 
+                        disabled={loading || otp.length < 6}
+                        sx={{ py: 1.2 }}
+                      >
+                        {loading ? <CircularProgress size={24} color="inherit" /> : "Confirm OTP"}
                       </Button>
                     </>
                   )}
                 </Box>
               ) : (
                 <Box mt={2}>
-                  <Alert severity="success" sx={{ mb: 2 }}>Identity Verified. Please sign below.</Alert>
-                  <Box border="2px dashed #ccc" borderRadius={2} bgcolor="#fff">
+                  <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>Identity Verified. Please sign below to finish.</Alert>
+                  <Box border="2px dashed #999" borderRadius={2} bgcolor="#fff" overflow="hidden">
                     <SignatureCanvas 
                       ref={sigCanvas} 
                       penColor="black" 
@@ -241,9 +272,16 @@ const AgreementForm = () => {
                     />
                   </Box>
                   <Box mt={2} display="flex" gap={2}>
-                    <Button variant="outlined" color="error" onClick={() => sigCanvas.current.clear()}>Clear</Button>
-                    <Button variant="contained" color="success" fullWidth onClick={handleFinalTenantSign} disabled={loading}>
-                      {loading ? <CircularProgress size={24} /> : "Apply Digital Signature & Finish"}
+                    <Button variant="outlined" color="error" onClick={() => sigCanvas.current.clear()} sx={{ flex: 1 }}>Clear</Button>
+                    <Button 
+                      variant="contained" 
+                      color="success" 
+                      fullWidth 
+                      onClick={handleFinalTenantSign} 
+                      disabled={loading}
+                      sx={{ flex: 3, py: 1.2 }}
+                    >
+                      {loading ? <CircularProgress size={24} color="inherit" /> : "Apply Digital Signature & Finish"}
                     </Button>
                   </Box>
                 </Box>
@@ -271,8 +309,8 @@ const AgreementForm = () => {
                   <Grid item xs={12} md={4}><TextField fullWidth name="deposit" label="Security Deposit" type="number" required onChange={handleChange} /></Grid>
                 </Grid>
                 
-                <Button type="submit" variant="contained" fullWidth sx={{ mt: 3, py: 1.5 }} disabled={loading}>
-                  {loading ? <CircularProgress size={24} /> : "Submit Details for Review"}
+                <Button type="submit" variant="contained" fullWidth sx={{ mt: 3, py: 1.5, fontWeight: 'bold' }} disabled={loading}>
+                  {loading ? <CircularProgress size={24} color="inherit" /> : "Submit Details for Review"}
                 </Button>
               </form>
             </Paper>
@@ -280,8 +318,8 @@ const AgreementForm = () => {
         </>
       )}
       <div id="recaptcha-container"></div>
-      <Snackbar open={!!success} autoHideDuration={4000} onClose={() => setSuccess("")}><Alert severity="success">{success}</Alert></Snackbar>
-      <Snackbar open={!!error} autoHideDuration={4000} onClose={() => setError(null)}><Alert severity="error">{error}</Alert></Snackbar>
+      <Snackbar open={!!success} autoHideDuration={4000} onClose={() => setSuccess("")}><Alert severity="success" sx={{ width: '100%' }}>{success}</Alert></Snackbar>
+      <Snackbar open={!!error} autoHideDuration={4000} onClose={() => setError(null)}><Alert severity="error" sx={{ width: '100%' }}>{error}</Alert></Snackbar>
     </Box>
   );
 };
