@@ -86,53 +86,72 @@ export default function OwnerPayments() {
   };
 
   const sendOtp = async () => {
-    if (!/^[6-9]\d{9}$/.test(mobile)) return alert("Enter valid 10-digit mobile");
+  if (!/^[6-9]\d{9}$/.test(mobile)) return alert("Enter valid 10-digit mobile");
 
-    try {
-      setIsSubmitting(true);
-      if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(
-          auth,
-          "recaptcha-container",
-          { size: "invisible" }
-        );
-      }
+  try {
+    setIsSubmitting(true);
 
-      const confirmation = await signInWithPhoneNumber(
-        auth,
-        `+91${mobile}`,
-        window.recaptchaVerifier
-      );
-
-      setConfirmObj(confirmation);
-      alert("OTP Sent ✅");
-    } catch (error) {
-      console.error("OTP Error:", error);
-      alert("OTP failed to send. Check your connection or mobile number.");
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
-        window.recaptchaVerifier = null;
-      }
-    } finally {
-      setIsSubmitting(false);
+    // 🔥 CLEAR OLD RECAPTCHA
+    if (window.recaptchaVerifier) {
+      window.recaptchaVerifier.clear();
     }
-  };
+
+    window.recaptchaVerifier = new RecaptchaVerifier(
+      auth,
+      "recaptcha-container",
+      { size: "invisible" }
+    );
+
+    const confirmation = await signInWithPhoneNumber(
+      auth,
+      `+91${mobile}`,
+      window.recaptchaVerifier
+    );
+
+    setConfirmObj(confirmation);
+    alert("OTP Sent ✅");
+
+  } catch (error) {
+    console.error("OTP Error:", error);
+    alert("OTP failed ❌");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const verifyOtp = async () => {
-    if (!otp) return alert("Please enter OTP");
-    try {
-      setIsSubmitting(true);
-      await confirmObj.confirm(otp);
-      
-      setOtpVerified(true);
-      setStep(3); // Direct move to step 3 upon success
-    } catch (error) {
-      console.error("Verification Error:", error);
-      alert("Invalid OTP ❌");
-    } finally {
-      setIsSubmitting(false);
+  if (!otp) return alert("Please enter OTP");
+
+  try {
+    setIsSubmitting(true);
+
+    // 🔥 SAVE CURRENT OWNER USER
+    const currentUser = auth.currentUser;
+
+    // 🔥 VERIFY OTP (this changes session)
+    await confirmObj.confirm(otp);
+
+    // 🔥 RESTORE OWNER SESSION
+    if (currentUser) {
+      await auth.updateCurrentUser(currentUser);
     }
-  };
+
+    // 🔥 CLEAR FIREBASE PHONE SESSION
+    if (window.recaptchaVerifier) {
+      window.recaptchaVerifier.clear();
+      window.recaptchaVerifier = null;
+    }
+
+    setOtpVerified(true);
+    setStep(3);
+
+  } catch (error) {
+    console.error("Verification Error:", error);
+    alert("Invalid OTP ❌");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleSubmit = async () => {
     if (!otpVerified) return alert("Please verify OTP first");
