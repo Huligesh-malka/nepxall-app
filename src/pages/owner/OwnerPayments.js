@@ -84,14 +84,12 @@ export default function OwnerPayments() {
     setOpenSignModal(true);
   };
 
-  /* ================= UPDATED: SEND OTP WITH PRE-VERIFICATION ================= */
   const sendOtp = async () => {
     if (!/^[6-9]\d{9}$/.test(mobile)) return alert("Enter a valid 10-digit mobile number");
 
     try {
       setIsSubmitting(true);
 
-      // 1. Pre-verify: Check if this number belongs to the owner of this booking
       const verifyRes = await axios.post(`${API}/agreements/verify-owner`, {
         booking_id: selectedBooking.booking_id,
         mobile: mobile
@@ -101,7 +99,6 @@ export default function OwnerPayments() {
         return alert("Verification Failed: This number is not registered for this booking ❌");
       }
 
-      // 2. If verified, trigger Firebase OTP
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(
           auth,
@@ -240,7 +237,7 @@ export default function OwnerPayments() {
       >
         <Fade in={openSignModal}>
           <Box sx={{
-            width: { xs: '92%', sm: 420 },
+            width: { xs: '92%', sm: 480 }, // Increased width slightly for long text
             bgcolor: "background.paper",
             borderRadius: 4,
             p: 4,
@@ -258,15 +255,52 @@ export default function OwnerPayments() {
                <Typography variant="h6" fontWeight="bold">Owner Digital Sign</Typography>
             </Box>
 
-            {/* STEP 1: LEGAL CONSENT */}
+            {/* STEP 1: LEGAL CONSENT (UPDATED) */}
             {step === 1 && (
               <Box>
-                <Box display="flex" alignItems="flex-start" mb={4} sx={{ bgcolor: '#fff9c4', p: 2, borderRadius: 2, border: '1px solid #fbc02d' }}>
-                  <Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} sx={{ p: 0, mr: 1, mt: 0.5 }} />
-                  <Typography variant="body2" color="textSecondary">
-                    I have read the settlement agreement and I agree to use a digital signature to finalize this document.
+                <Box sx={{ 
+                  bgcolor: '#f5f5f5', 
+                  p: 2, 
+                  borderRadius: 2, 
+                  border: '1px solid #ddd',
+                  mb: 3
+                }}>
+                  <Typography 
+                    variant="body2" 
+                    color="textSecondary" 
+                    sx={{ 
+                      maxHeight: 250, 
+                      overflowY: "auto",
+                      whiteSpace: 'pre-line',
+                      pr: 1,
+                      '&::-webkit-scrollbar': { width: '6px' },
+                      '&::-webkit-scrollbar-thumb': { backgroundColor: '#ccc', borderRadius: '10px' }
+                    }}
+                  >
+                    <b>I hereby declare that:</b>{"\n\n"}
+                    1. I have carefully read and understood all the terms and conditions of this rental agreement.{"\n\n"}
+                    2. I confirm that all the details provided by me are true and correct to the best of my knowledge.{"\n\n"}
+                    3. I agree that this agreement is executed electronically under the provisions of the Information Technology Act, 2000 and shall be legally binding.{"\n\n"}
+                    4. I understand that my mobile number verification through OTP serves as my identity authentication.{"\n\n"}
+                    5. I consent to use my electronic signature (drawn signature) as a valid and legally enforceable signature.{"\n\n"}
+                    6. I agree that once signed, this agreement cannot be denied or repudiated by me.{"\n\n"}
+                    7. I accept that this agreement shall be governed by the laws of India and jurisdiction of the respective state.{"\n\n"}
+                    8. I understand that any violation of terms may lead to legal action as per applicable laws.{"\n\n"}
+                    9. I agree that this digital document is equivalent to a physical signed agreement.
                   </Typography>
                 </Box>
+
+                <Box display="flex" alignItems="center" mb={3}>
+                  <Checkbox 
+                    checked={agreed} 
+                    onChange={(e) => setAgreed(e.target.checked)} 
+                    sx={{ p: 0, mr: 1 }} 
+                  />
+                  <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                    I agree to the Terms & Conditions and consent to use electronic signature
+                  </Typography>
+                </Box>
+
                 <Button fullWidth variant="contained" size="large" disabled={!agreed} onClick={() => setStep(2)}>
                   Accept & Continue
                 </Button>
@@ -315,7 +349,7 @@ export default function OwnerPayments() {
                   <SignatureCanvas
                     ref={sigCanvas}
                     penColor="black"
-                    canvasProps={{ width: 350, height: 180, className: "sigCanvas" }}
+                    canvasProps={{ width: 400, height: 180, className: "sigCanvas" }}
                   />
                 </Box>
                 <Box mt={3} display="flex" gap={2}>
