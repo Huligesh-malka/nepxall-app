@@ -92,17 +92,15 @@ export default function OwnerPayments() {
 
     try {
       setIsSubmitting(true);
-      // Pre-Verification Check with Backend
       const verifyRes = await axios.post(`${API}/agreements/verify-owner`, {
         booking_id: selectedBooking.booking_id,
         mobile: mobile
       });
 
       if (!verifyRes.data.success) {
-        return alert("This mobile number is not registered for this booking. ❌");
+        return alert("Verification Failed: This number is not registered for this booking ❌");
       }
 
-      // Initialize Firebase Recaptcha
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", { size: "invisible" });
       }
@@ -112,13 +110,7 @@ export default function OwnerPayments() {
       alert("Verification successful. OTP Sent ✅");
     } catch (error) {
       console.error("OTP Error:", error);
-      // Specific error handling for unregistered numbers (403 from backend)
-      const errorMsg = error.response?.status === 403 
-        ? "This mobile number is not registered for this booking. ❌" 
-        : (error.response?.data?.message || "OTP Service Error");
-      
-      alert(errorMsg);
-      
+      alert(error.response?.data?.message || "OTP Service Error");
       if (window.recaptchaVerifier) {
         window.recaptchaVerifier.clear();
         window.recaptchaVerifier = null;
@@ -166,6 +158,7 @@ export default function OwnerPayments() {
         owner_mobile: mobile,
         owner_signature: signature,
         accepted_terms: true,
+        // The backend also captures IP via headers, but sending device string explicitly
         owner_device_info: JSON.stringify(deviceInfo) 
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -288,6 +281,7 @@ export default function OwnerPayments() {
                     '&::-webkit-scrollbar': { width: '8px' },
                     '&::-webkit-scrollbar-thumb': { backgroundColor: '#ccc', borderRadius: '10px' }
                   }}>
+                    {/* SECTION: GENERAL DECLARATION */}
                     <Typography variant="subtitle1" fontWeight="bold" color="primary" sx={{ mb: 1 }}>GENERAL DECLARATION</Typography>
                     <Typography variant="body2" sx={{ mb: 2, lineHeight: 1.8 }}>
                         1. <b>Agreement Understanding:</b> I have carefully read and understood all clauses of this draft.<br/>
@@ -302,6 +296,7 @@ export default function OwnerPayments() {
 
                     <Divider sx={{ my: 2 }} />
 
+                    {/* SECTION: ADVANCED RESPONSIBILITIES */}
                     <Typography variant="subtitle1" fontWeight="bold" color="warning.dark" sx={{ mb: 1 }}>OWNER LEGAL RESPONSIBILITIES (ADVANCED)</Typography>
                     <Typography variant="body2" sx={{ mb: 2, lineHeight: 1.8 }}>
                         9. <b>Ownership Liability:</b> I confirm I am the lawful owner; disputes are my sole responsibility.<br/>
@@ -318,6 +313,7 @@ export default function OwnerPayments() {
 
                     <Divider sx={{ my: 2 }} />
 
+                    {/* SECTION: DIGITAL & PLATFORM PROTECTION */}
                     <Typography variant="subtitle1" fontWeight="bold" color="error" sx={{ mb: 1 }}>DIGITAL CONFIRMATION & PLATFORM PROTECTION</Typography>
                     <Typography variant="body2" sx={{ mb: 2, lineHeight: 1.8 }}>
                         19. <b>Electronic Execution:</b> Executed digitally under Information Technology Act, 2000.<br/>
