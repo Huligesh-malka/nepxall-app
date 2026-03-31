@@ -66,7 +66,6 @@ export default function OwnerPayments() {
 
   const handleViewPdf = async (bookingId, filePath) => {
     try {
-      // Mark as viewed so the "Sign Now" button becomes active
       await axios.post(`${API}/agreements/viewed`, { booking_id: bookingId }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -143,17 +142,26 @@ export default function OwnerPayments() {
 
     const signature = sigCanvas.current.getCanvas().toDataURL("image/png");
 
+    // Capture precise device information for the audit trail
+    const deviceInfo = {
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      vendor: navigator.vendor,
+      screenWidth: window.screen.width,
+      screenHeight: window.screen.height
+    };
+
     try {
       setIsSubmitting(true);
-      
-      // Note: The 'User-Agent' is automatically sent by the browser. 
-      // Your updated backend will use 'owner_ip_address' and 'owner_device_info' 
-      // specifically for this request.
       const res = await axios.post(`${API}/agreements/sign`, {
         booking_id: selectedBooking.booking_id,
         owner_mobile: mobile,
         owner_signature: signature,
-        accepted_terms: true
+        accepted_terms: true,
+        // The backend also captures IP via headers, but sending device string explicitly
+        owner_device_info: JSON.stringify(deviceInfo) 
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (res.data.success) {
@@ -207,10 +215,8 @@ export default function OwnerPayments() {
                     ) : (
                       <Box display="flex" gap={1} justifyContent="center">
                         <Button variant="outlined" size="small" onClick={() => handleViewPdf(item.booking_id, item.final_pdf)}>VIEW DRAFT</Button>
-                        {item.viewed_by_owner ? (
+                        {item.viewed_by_owner && (
                           <Button variant="contained" color="warning" size="small" onClick={() => handleOpenSign(item)}>SIGN NOW</Button>
-                        ) : (
-                          <Chip label="View Draft First" variant="outlined" size="small" icon={<InfoOutlined />} />
                         )}
                       </Box>
                     )}
@@ -257,7 +263,7 @@ export default function OwnerPayments() {
             {step === 1 && (
               <Box>
                 <Typography variant="subtitle2" gutterBottom color="textSecondary" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-                  <InfoOutlined fontSize="small" sx={{ mr: 0.5 }} /> Please review the legal clauses before proceeding.
+                  <InfoOutlined fontSize="small" sx={{ mr: 0.5 }} /> Please review all 25 legal clauses before proceeding.
                 </Typography>
                 
                 <Box sx={{ 
@@ -269,27 +275,54 @@ export default function OwnerPayments() {
                   boxShadow: 'inset 0px 2px 4px rgba(0,0,0,0.05)'
                 }}>
                   <Box sx={{ 
-                    maxHeight: 320, 
+                    maxHeight: 380, 
                     overflowY: "auto",
                     pr: 2,
                     '&::-webkit-scrollbar': { width: '8px' },
                     '&::-webkit-scrollbar-thumb': { backgroundColor: '#ccc', borderRadius: '10px' }
                   }}>
+                    {/* SECTION: GENERAL DECLARATION */}
                     <Typography variant="subtitle1" fontWeight="bold" color="primary" sx={{ mb: 1 }}>GENERAL DECLARATION</Typography>
                     <Typography variant="body2" sx={{ mb: 2, lineHeight: 1.8 }}>
-                        1. <b>Agreement Understanding:</b> I have understood all clauses.<br/>
-                        2. <b>Factual Accuracy:</b> All property details provided are true.<br/>
-                        3. <b>E-Sign Validity:</b> Executed under the IT Act, 2000.<br/>
-                        4. <b>Audit Trail:</b> I acknowledge that my IP address and device details will be recorded for security.
+                        1. <b>Agreement Understanding:</b> I have carefully read and understood all clauses of this draft.<br/>
+                        2. <b>Factual Accuracy:</b> I confirm that all property and owner details provided are true.<br/>
+                        3. <b>E-Sign Validity:</b> I agree this is executed under the IT Act, 2000 and is legally binding.<br/>
+                        4. <b>Identity Authentication:</b> I acknowledge OTP acts as my unique digital identifier.<br/>
+                        5. <b>Digital Signature:</b> I consent to using my hand-drawn signature as a valid legal mark.<br/>
+                        6. <b>Non-Repudiation:</b> I shall not repudiate the execution once generated.<br/>
+                        7. <b>Legal Jurisdiction:</b> Subject to Indian laws and local property jurisdiction.<br/>
+                        8. <b>Physical Equivalent:</b> Holds the same legal weight as a physical paper document.
                     </Typography>
 
                     <Divider sx={{ my: 2 }} />
 
-                    <Typography variant="subtitle1" fontWeight="bold" color="warning.dark" sx={{ mb: 1 }}>OWNER RESPONSIBILITIES</Typography>
+                    {/* SECTION: ADVANCED RESPONSIBILITIES */}
+                    <Typography variant="subtitle1" fontWeight="bold" color="warning.dark" sx={{ mb: 1 }}>OWNER LEGAL RESPONSIBILITIES (ADVANCED)</Typography>
                     <Typography variant="body2" sx={{ mb: 2, lineHeight: 1.8 }}>
-                        5. <b>Ownership:</b> I am the lawful owner of this property.<br/>
-                        6. <b>Deposit:</b> I will refund security deposits as per agreement terms.<br/>
-                        7. <b>Taxes:</b> I am responsible for declaring rental income.
+                        9. <b>Ownership Liability:</b> I confirm I am the lawful owner; disputes are my sole responsibility.<br/>
+                        10. <b>Title & Legal Clearance:</b> Property is free from encumbrances or government restrictions.<br/>
+                        11. <b>Rental Authority:</b> I hold full legal rights to lease/rent this premises.<br/>
+                        12. <b>Property Condition:</b> Premises provided is safe, habitable, and standard-compliant.<br/>
+                        13. <b>Maintenance Responsibility:</b> Responsible for structural, electrical, and plumbing repairs.<br/>
+                        14. <b>Deposit Handling:</b> I will refund security deposits without unlawful deductions.<br/>
+                        15. <b>False Information Liability:</b> Fully liable for legal consequences of false details.<br/>
+                        16. <b>Tax Responsibility:</b> Responsible for declaring rental income per Indian Tax Laws.<br/>
+                        17. <b>Indemnity Clause:</b> I hold the platform harmless from claims arising from my actions.<br/>
+                        18. <b>No Illegal Use Permission:</b> I shall not allow illegal activities on the property.
+                    </Typography>
+
+                    <Divider sx={{ my: 2 }} />
+
+                    {/* SECTION: DIGITAL & PLATFORM PROTECTION */}
+                    <Typography variant="subtitle1" fontWeight="bold" color="error" sx={{ mb: 1 }}>DIGITAL CONFIRMATION & PLATFORM PROTECTION</Typography>
+                    <Typography variant="body2" sx={{ mb: 2, lineHeight: 1.8 }}>
+                        19. <b>Electronic Execution:</b> Executed digitally under Information Technology Act, 2000.<br/>
+                        20. <b>Binding Nature:</b> Enforceable under the Indian Contract Act, 1872.<br/>
+                        21. <b>Audit Trail Acceptance:</b> OTP, IP, and timestamps will be recorded as legal proof.<br/>
+                        22. <b>Platform Role:</b> Platform is a facilitator only and not a party to this contract.<br/>
+                        23. <b>No Platform Liability:</b> Not responsible for property, rent, or legal conflicts.<br/>
+                        24. <b>Full Acceptance:</b> I confirm reading and accepting all terms fully.<br/>
+                        25. <b>Legal Responsibility:</b> I accept full legal responsibility for this entire agreement.
                     </Typography>
                   </Box>
                 </Box>
@@ -301,7 +334,7 @@ export default function OwnerPayments() {
                     sx={{ p: 0, mr: 1 }} 
                   />
                   <Typography variant="body2" fontWeight="bold">
-                    I confirm that I have read and accept all legal clauses.
+                    I confirm that I have read and accept all 25 clauses mentioned above.
                   </Typography>
                 </Box>
 
@@ -324,7 +357,7 @@ export default function OwnerPayments() {
                 <VerifiedUser color="primary" sx={{ fontSize: 50, mb: 2 }} />
                 <Typography variant="h6" mb={1}>Identity Verification</Typography>
                 <Typography variant="body2" color="textSecondary" mb={3}>
-                    OTP will be sent to the number registered for Booking #{selectedBooking?.booking_id}
+                    OTP will be sent to the number registered with Booking ID #{selectedBooking?.booking_id}
                 </Typography>
                 <TextField 
                   fullWidth label="Registered Mobile" 
@@ -359,7 +392,6 @@ export default function OwnerPayments() {
                 <Box textAlign="center" mb={2}>
                     <Security color="success" sx={{ fontSize: 40 }} />
                     <Typography variant="h6">Apply Digital Signature</Typography>
-                    <Typography variant="caption" color="textSecondary">Draw inside the blue box</Typography>
                 </Box>
                 <Box sx={{ border: "2px dashed #1976d2", borderRadius: 2, bgcolor: '#fbfbfb', overflow: 'hidden' }}>
                   <SignatureCanvas
@@ -367,9 +399,9 @@ export default function OwnerPayments() {
                     penColor="black"
                     canvasProps={{ 
                       width: 680, 
-                      height: 200, 
+                      height: 250, 
                       className: "sigCanvas",
-                      style: { width: '100%' } 
+                      style: { width: '100%', height: '250px' } 
                     }}
                   />
                 </Box>
