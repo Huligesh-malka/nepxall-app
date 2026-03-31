@@ -42,8 +42,10 @@ const AgreementForm = () => {
         const res = await api.get(`/agreements-form/status/${bookingId}`);
         if (res.data.exists) {
           setExistingAgreement(res.data.data);
-          // Pre-fill the mobile number if they have already submitted the form
-          setManualMobile(res.data.data.mobile || "");
+          // Set the registered mobile number as the default for OTP verification
+          if (res.data.data.mobile) {
+            setManualMobile(res.data.data.mobile);
+          }
         }
       } catch (err) {
         setError("Server error. Please refresh the page.");
@@ -63,32 +65,33 @@ const AgreementForm = () => {
     });
   };
 
-  /* ================= UPDATED: OTP FUNCTIONS WITH PRE-VERIFICATION ================= */
+  /* ================= OTP FUNCTIONS WITH BACKEND VERIFICATION ================= */
   const sendOtp = async () => {
-    if (manualMobile.length !== 10) return setError("Enter a valid 10-digit mobile number.");
+    if (manualMobile.length < 10) return setError("Enter a valid 10-digit mobile number.");
     
     setLoading(true);
     try {
-      // 1. Backend Pre-Verification: Check if this mobile is registered to this booking
+      // 1. Backend Pre-Verification
+      // This checks if the entered mobile matches the one stored in the DB for this booking
       const verifyRes = await api.post("/agreements-form/tenant/verify", {
         booking_id: bookingId,
         mobile: manualMobile
       });
 
       if (!verifyRes.data.success) {
-        throw new Error("Mobile number mismatch.");
+        throw new Error("This mobile number is not registered for this agreement.");
       }
 
-      // 2. Firebase OTP logic
+      // 2. If backend allows, proceed to Firebase OTP
       setupRecaptcha();
       const appVerifier = window.recaptchaVerifier;
       const confirmation = await signInWithPhoneNumber(auth, `+91${manualMobile}`, appVerifier);
       
       setConfirmObj(confirmation);
-      setSuccess("Verification successful. OTP sent! ✅");
+      setSuccess("Mobile verified. OTP sent! ✅");
     } catch (err) {
       console.error("OTP Error:", err);
-      const msg = err.response?.data?.message || "Verification failed: Mobile number not registered for this agreement.";
+      const msg = err.response?.data?.message || err.message || "Verification failed.";
       setError(msg);
       if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
     } finally {
@@ -128,7 +131,7 @@ const AgreementForm = () => {
     try {
       const res = await api.post("/agreements-form/submit", data);
       if (res.data.success) {
-        setSuccess("Submitted! Please wait for Admin review.");
+        setSuccess("Details submitted! Please wait for Admin review.");
         setTimeout(() => window.location.reload(), 1500);
       }
     } catch (err) {
@@ -143,17 +146,20 @@ const AgreementForm = () => {
     setLoading(true);
     try {
       const signatureDataURL = sigCanvas.current.toDataURL("image/png");
+      
+      // Sending the mobile number again for a final backend check before PDF generation
       const res = await api.post("/agreements-form/tenant/sign", {
         booking_id: bookingId,
         tenant_signature: signatureDataURL,
         tenant_mobile: manualMobile 
       });
+
       if (res.data.success) {
         setSuccess("Agreement signed successfully! ✅");
         setTimeout(() => navigate("/my-bookings"), 2000);
       }
     } catch (err) {
-      setError("Failed to save digital signature.");
+      setError(err.response?.data?.message || "Failed to save digital signature.");
     } finally {
       setLoading(false);
     }
@@ -176,7 +182,7 @@ const AgreementForm = () => {
             </Paper>
           )}
 
-          {/* CASE 2: PENDING ADMIN UPLOAD */}
+          {/* CASE 2: PENDING ADMIN REVIEW */}
           {existingAgreement?.agreement_status === "pending" && (
             <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
               <Typography variant="h5" color="info.main" fontWeight="bold">⏳ Review in Progress</Typography>
@@ -184,7 +190,7 @@ const AgreementForm = () => {
             </Paper>
           )}
 
-          {/* CASE 3: ADMIN UPLOADED BUT OWNER HASN'T SIGNED YET */}
+          {/* CASE 3: ADMIN UPLOADED - OWNER SIGNATURE PENDING */}
           {existingAgreement?.agreement_status === "approved" && !existingAgreement.signed_pdf && (
             <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
               <Typography variant="h5" color="warning.main" fontWeight="bold">⏳ Waiting for Owner's Signature</Typography>
@@ -192,7 +198,7 @@ const AgreementForm = () => {
             </Paper>
           )}
 
-          {/* CASE 4: OWNER SIGNED - TENANT'S TURN */}
+          {/* CASE 4: READY FOR TENANT SIGNATURE */}
           {existingAgreement?.agreement_status === "approved" && existingAgreement.signed_pdf && (
             <Paper sx={{ p: 4, borderRadius: 3, boxShadow: 3 }}>
               <Typography variant="h6" fontWeight="bold">Final Step: Sign Your Agreement</Typography>
@@ -203,7 +209,7 @@ const AgreementForm = () => {
                 width="100%" 
                 height="500px" 
                 style={{ border: '1px solid #ddd', borderRadius: '8px', marginBottom: '20px' }} 
-                title="Preview" 
+                title="Agreement Preview" 
               />
 
               {!isVerified ? (
@@ -214,7 +220,7 @@ const AgreementForm = () => {
                             <ArrowBack fontSize="small" />
                         </IconButton>
                     )}
-                    <Typography variant="subtitle1" fontWeight="bold">Verify Identity via OTP</Typography>
+                    <Typography variant="subtitle1" fontWeight="bold">Identity Verification</Typography>
                   </Box>
                   
                   <TextField 
@@ -226,6 +232,7 @@ const AgreementForm = () => {
                     placeholder="Enter 10-digit number"
                     InputProps={{ startAdornment: <Typography sx={{ mr: 1, color: 'text.secondary' }}>+91</Typography> }}
                     sx={{ mb: 2 }}
+                    helperText="OTP will only be sent if this matches your registered number."
                   />
 
                   {!confirmObj ? (
@@ -233,7 +240,7 @@ const AgreementForm = () => {
                       variant="contained" 
                       fullWidth 
                       onClick={sendOtp} 
-                      disabled={loading || manualMobile.length !== 10}
+                      disabled={loading || manualMobile.length < 10}
                       sx={{ py: 1.2 }}
                     >
                       {loading ? <CircularProgress size={24} color="inherit" /> : "Verify & Send OTP"}
@@ -263,16 +270,25 @@ const AgreementForm = () => {
                 </Box>
               ) : (
                 <Box mt={2}>
-                  <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>Identity Verified. Please sign below to finish.</Alert>
+                  <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
+                    Identity Verified. Please sign below to finish.
+                  </Alert>
                   <Box border="2px dashed #999" borderRadius={2} bgcolor="#fff" overflow="hidden">
                     <SignatureCanvas 
                       ref={sigCanvas} 
                       penColor="black" 
-                      canvasProps={{ width: 830, height: 200, className: "sigCanvas" }} 
+                      canvasProps={{ 
+                        width: 830, 
+                        height: 200, 
+                        className: "sigCanvas",
+                        style: { width: '100%', height: '200px' }
+                      }} 
                     />
                   </Box>
                   <Box mt={2} display="flex" gap={2}>
-                    <Button variant="outlined" color="error" onClick={() => sigCanvas.current.clear()} sx={{ flex: 1 }}>Clear</Button>
+                    <Button variant="outlined" color="error" onClick={() => sigCanvas.current.clear()} sx={{ flex: 1 }}>
+                      Clear
+                    </Button>
                     <Button 
                       variant="contained" 
                       color="success" 
@@ -289,15 +305,15 @@ const AgreementForm = () => {
             </Paper>
           )}
 
-          {/* CASE 5: NEW FORM */}
+          {/* CASE 5: INITIAL FORM SUBMISSION */}
           {!existingAgreement && (
             <Paper sx={{ p: 4, borderRadius: 3 }}>
               <Typography variant="h5" fontWeight="bold" mb={3}>Agreement Details Form</Typography>
               <form onSubmit={handleSubmitInitialForm}>
                 <Grid container spacing={2}>
                   <Grid item xs={12} md={6}><TextField fullWidth name="full_name" label="Full Name" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={6}><TextField fullWidth name="mobile" label="Mobile" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={6}><TextField fullWidth name="email" label="Email" type="email" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="mobile" label="Mobile Number" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="email" label="Email Address" type="email" required onChange={handleChange} /></Grid>
                   <Grid item xs={12}><TextField fullWidth name="address" label="Permanent Address" multiline rows={2} required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="city" label="City" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="state" label="State" required onChange={handleChange} /></Grid>
@@ -309,8 +325,8 @@ const AgreementForm = () => {
                   <Grid item xs={12} md={4}><TextField fullWidth name="deposit" label="Security Deposit" type="number" required onChange={handleChange} /></Grid>
                 </Grid>
                 
-                <Button type="submit" variant="contained" fullWidth sx={{ mt: 3, py: 1.5, fontWeight: 'bold' }} disabled={loading}>
-                  {loading ? <CircularProgress size={24} color="inherit" /> : "Submit Details for Review"}
+                <Button type="submit" variant="contained" fullWidth sx={{ mt: 4, py: 1.5, fontWeight: 'bold' }} disabled={loading}>
+                  {loading ? <CircularProgress size={24} color="inherit" /> : "Submit Details for Admin Review"}
                 </Button>
               </form>
             </Paper>
@@ -318,8 +334,14 @@ const AgreementForm = () => {
         </>
       )}
       <div id="recaptcha-container"></div>
-      <Snackbar open={!!success} autoHideDuration={4000} onClose={() => setSuccess("")}><Alert severity="success" sx={{ width: '100%' }}>{success}</Alert></Snackbar>
-      <Snackbar open={!!error} autoHideDuration={4000} onClose={() => setError(null)}><Alert severity="error" sx={{ width: '100%' }}>{error}</Alert></Snackbar>
+      
+      {/* Feedbacks */}
+      <Snackbar open={!!success} autoHideDuration={4000} onClose={() => setSuccess("")}>
+        <Alert severity="success" sx={{ width: '100%' }}>{success}</Alert>
+      </Snackbar>
+      <Snackbar open={!!error} autoHideDuration={4000} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{ width: '100%' }}>{error}</Alert>
+      </Snackbar>
     </Box>
   );
 };
