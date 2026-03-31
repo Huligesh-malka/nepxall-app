@@ -34,6 +34,14 @@ const AgreementForm = () => {
     agreement_months: "11", rent: "", deposit: "", maintenance: "0",
   });
 
+  /* ================= HELPER: PHONE CLEANER ================= */
+  const cleanPhoneNumber = (phone) => {
+    if (!phone) return "";
+    // Removes all non-digits and takes the last 10 numbers
+    const digits = phone.replace(/\D/g, "");
+    return digits.length >= 10 ? digits.slice(-10) : digits;
+  };
+
   /* ================= FETCH STATUS & REGISTRATION DATA ================= */
   useEffect(() => {
     const checkStatus = async () => {
@@ -43,13 +51,9 @@ const AgreementForm = () => {
         if (res.data.exists) {
           setExistingAgreement(res.data.data);
           
-          // CRITICAL: Default to the phone number found in the USERS table
-          // This is 'registered_phone' returned from our updated backend JOIN query
-          if (res.data.data.registered_phone) {
-            setManualMobile(res.data.data.registered_phone);
-          } else if (res.data.data.mobile) {
-            setManualMobile(res.data.data.mobile);
-          }
+          // Clean the incoming phone number to remove redundant +91+91
+          const rawPhone = res.data.data.registered_phone || res.data.data.mobile || "";
+          setManualMobile(cleanPhoneNumber(rawPhone));
         }
       } catch (err) {
         setError("Server error. Please refresh the page.");
@@ -69,26 +73,25 @@ const AgreementForm = () => {
     });
   };
 
-  /* ================= OTP FUNCTIONS WITH BACKEND USER-TABLE VERIFICATION ================= */
+  /* ================= OTP FUNCTIONS ================= */
   const sendOtp = async () => {
     if (manualMobile.length < 10) return setError("Enter a valid 10-digit mobile number.");
     
     setLoading(true);
     try {
-      // 1. Backend Pre-Verification:
-      // Our backend now checks the 'users' table JOINED with the agreement
+      // Backend check against user table
       const verifyRes = await api.post("/agreements-form/tenant/verify", {
         booking_id: bookingId,
         mobile: manualMobile
       });
 
       if (!verifyRes.data.success) {
-        throw new Error("Mismatch: This is not the phone number registered to your account.");
+        throw new Error("This number does not match your registered account.");
       }
 
-      // 2. If backend confirms this is the user's official phone, proceed to Firebase OTP
       setupRecaptcha();
       const appVerifier = window.recaptchaVerifier;
+      // We add the prefix back just for the Firebase call
       const confirmation = await signInWithPhoneNumber(auth, `+91${manualMobile}`, appVerifier);
       
       setConfirmObj(confirmation);
@@ -109,9 +112,9 @@ const AgreementForm = () => {
     try {
       await confirmObj.confirm(otp);
       setIsVerified(true);
-      setSuccess("Identity Confirmed via Registered Account! ✅");
+      setSuccess("Identity Confirmed! ✅");
     } catch (err) {
-      setError("Invalid OTP code. Please try again ❌");
+      setError("Invalid OTP code.");
     } finally {
       setLoading(false);
     }
@@ -135,11 +138,11 @@ const AgreementForm = () => {
     try {
       const res = await api.post("/agreements-form/submit", data);
       if (res.data.success) {
-        setSuccess("Details submitted! Please wait for Admin review.");
+        setSuccess("Details submitted!");
         setTimeout(() => window.location.reload(), 1500);
       }
     } catch (err) {
-      setError("Submission failed. Check your connection.");
+      setError("Submission failed.");
     } finally {
       setLoading(false);
     }
@@ -150,8 +153,6 @@ const AgreementForm = () => {
     setLoading(true);
     try {
       const signatureDataURL = sigCanvas.current.toDataURL("image/png");
-      
-      // Backend will check 'tenant_mobile' against 'users.phone' again here for security
       const res = await api.post("/agreements-form/tenant/sign", {
         booking_id: bookingId,
         tenant_signature: signatureDataURL,
@@ -159,7 +160,7 @@ const AgreementForm = () => {
       });
 
       if (res.data.success) {
-        setSuccess("Agreement digitally signed and finalized! ✅");
+        setSuccess("Agreement finalized! ✅");
         setTimeout(() => navigate("/my-bookings"), 2000);
       }
     } catch (err) {
@@ -179,37 +180,26 @@ const AgreementForm = () => {
           {existingAgreement?.agreement_status === "completed" && (
             <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px solid #e0e0e0' }}>
               <Typography variant="h5" color="success.main" fontWeight="bold">✅ Agreement Finalized</Typography>
-              <Typography mt={1} mb={3}>Digitally signed by both Owner and Tenant.</Typography>
-              <Button variant="contained" color="success" onClick={() => window.open(existingAgreement.signed_pdf, "_blank")}>
-                View / Download Final PDF
+              <Button sx={{ mt: 3 }} variant="contained" color="success" onClick={() => window.open(existingAgreement.signed_pdf, "_blank")}>
+                Download PDF
               </Button>
             </Paper>
           )}
 
-          {/* CASE 2: PENDING ADMIN REVIEW */}
-          {existingAgreement?.agreement_status === "pending" && (
+          {/* CASE 2 & 3: PROGRESS STATES */}
+          {(existingAgreement?.agreement_status === "pending" || 
+            (existingAgreement?.agreement_status === "approved" && !existingAgreement.signed_pdf)) && (
             <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
-              <Typography variant="h5" color="info.main" fontWeight="bold">⏳ Document Preparation</Typography>
-              <Typography mt={2}>Admin is creating your agreement draft. You will receive an update shortly.</Typography>
-            </Paper>
-          )}
-
-          {/* CASE 3: WAITING FOR OWNER */}
-          {existingAgreement?.agreement_status === "approved" && !existingAgreement.signed_pdf && (
-            <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
-              <Typography variant="h5" color="warning.main" fontWeight="bold">⏳ Waiting for Owner Signature</Typography>
-              <Typography mt={2}>The draft is approved. The owner is currently reviewing and signing the document.</Typography>
+              <Typography variant="h5" color="info.main" fontWeight="bold">⏳ Processing</Typography>
+              <Typography mt={2}>We are preparing your document or waiting for the owner's signature.</Typography>
             </Paper>
           )}
 
           {/* CASE 4: READY FOR TENANT SIGNATURE */}
           {existingAgreement?.agreement_status === "approved" && existingAgreement.signed_pdf && (
             <Paper sx={{ p: 4, borderRadius: 3, boxShadow: 3 }}>
-              <Typography variant="h6" fontWeight="bold">Digital Signing: Tenant</Typography>
-              <Typography variant="body2" color="text.secondary" mb={2}>
-                Review the document below. You must verify your identity via your registered account mobile number to sign.
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
+              <Typography variant="h6" fontWeight="bold">Digital Signing</Typography>
+              <Divider sx={{ my: 2 }} />
               
               <iframe 
                 src={`${existingAgreement.signed_pdf}#toolbar=0`} 
@@ -227,18 +217,18 @@ const AgreementForm = () => {
                             <ArrowBack fontSize="small" />
                         </IconButton>
                     )}
-                    <Typography variant="subtitle1" fontWeight="bold">Account Phone Verification</Typography>
+                    <Typography variant="subtitle1" fontWeight="bold">Verify Account Mobile</Typography>
                   </Box>
                   
                   <TextField 
                     fullWidth 
-                    label="Account Registered Mobile" 
+                    label="Registered Mobile Number" 
                     value={manualMobile} 
-                    onChange={(e) => setManualMobile(e.target.value.replace(/\D/g, ""))}
+                    onChange={(e) => setManualMobile(cleanPhoneNumber(e.target.value))}
                     disabled={!!confirmObj || loading}
                     InputProps={{ startAdornment: <Typography sx={{ mr: 1, color: 'text.secondary' }}>+91</Typography> }}
                     sx={{ mb: 2 }}
-                    helperText="Enter the phone number you used during registration."
+                    helperText="OTP will be sent to your registered 10-digit number."
                   />
 
                   {!confirmObj ? (
@@ -249,7 +239,7 @@ const AgreementForm = () => {
                       disabled={loading || manualMobile.length < 10}
                       sx={{ py: 1.2 }}
                     >
-                      {loading ? <CircularProgress size={24} color="inherit" /> : "Verify Identity"}
+                      {loading ? <CircularProgress size={24} color="inherit" /> : "Send OTP"}
                     </Button>
                   ) : (
                     <>
@@ -269,17 +259,15 @@ const AgreementForm = () => {
                         disabled={loading || otp.length < 6}
                         sx={{ py: 1.2 }}
                       >
-                        {loading ? <CircularProgress size={24} color="inherit" /> : "Confirm & Sign"}
+                        {loading ? <CircularProgress size={24} color="inherit" /> : "Confirm OTP"}
                       </Button>
                     </>
                   )}
                 </Box>
               ) : (
                 <Box mt={2}>
-                  <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
-                    Verified! Use the canvas below to sign exactly as per your legal ID.
-                  </Alert>
-                  <Box border="2px dashed #999" borderRadius={2} bgcolor="#fff" overflow="hidden">
+                  <Alert severity="success" sx={{ mb: 2 }}>Verified! Please sign below.</Alert>
+                  <Box border="2px dashed #999" borderRadius={2} bgcolor="#fff">
                     <SignatureCanvas 
                       ref={sigCanvas} 
                       penColor="black" 
@@ -292,18 +280,9 @@ const AgreementForm = () => {
                     />
                   </Box>
                   <Box mt={2} display="flex" gap={2}>
-                    <Button variant="outlined" color="error" onClick={() => sigCanvas.current.clear()} sx={{ flex: 1 }}>
-                      Clear Canvas
-                    </Button>
-                    <Button 
-                      variant="contained" 
-                      color="success" 
-                      fullWidth 
-                      onClick={handleFinalTenantSign} 
-                      disabled={loading}
-                      sx={{ flex: 3, py: 1.2 }}
-                    >
-                      {loading ? <CircularProgress size={24} color="inherit" /> : "Finish Digital Signing"}
+                    <Button variant="outlined" color="error" onClick={() => sigCanvas.current.clear()} sx={{ flex: 1 }}>Clear</Button>
+                    <Button variant="contained" color="success" fullWidth onClick={handleFinalTenantSign} disabled={loading} sx={{ flex: 3 }}>
+                      {loading ? <CircularProgress size={24} /> : "Apply Signature & Finish"}
                     </Button>
                   </Box>
                 </Box>
@@ -311,28 +290,27 @@ const AgreementForm = () => {
             </Paper>
           )}
 
-          {/* CASE 5: INITIAL FORM SUBMISSION */}
+          {/* CASE 5: INITIAL FORM */}
           {!existingAgreement && (
             <Paper sx={{ p: 4, borderRadius: 3 }}>
-              <Typography variant="h5" fontWeight="bold" mb={3}>Agreement Information Form</Typography>
+              <Typography variant="h5" fontWeight="bold" mb={3}>Agreement Details</Typography>
               <form onSubmit={handleSubmitInitialForm}>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}><TextField fullWidth name="full_name" label="Legal Full Name" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={6}><TextField fullWidth name="mobile" label="Contact Number (For Document)" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={6}><TextField fullWidth name="email" label="Email Address" type="email" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12}><TextField fullWidth name="address" label="Permanent Address" multiline rows={2} required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="full_name" label="Full Name" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="mobile" label="Mobile" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="email" label="Email" type="email" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12}><TextField fullWidth name="address" label="Address" multiline rows={2} required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="city" label="City" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="state" label="State" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="pincode" label="Pincode" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={6}><TextField fullWidth name="aadhaar_last4" label="Aadhaar (Last 4 digits)" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={6}><TextField fullWidth name="pan_number" label="PAN Number" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={4}><TextField fullWidth name="checkin_date" label="Check-in Date" type="date" InputLabelProps={{ shrink: true }} required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={4}><TextField fullWidth name="rent" label="Rent Amount" type="number" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={4}><TextField fullWidth name="deposit" label="Security Deposit" type="number" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="aadhaar_last4" label="Aadhaar (Last 4)" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="pan_number" label="PAN" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={4}><TextField fullWidth name="checkin_date" label="Check-in" type="date" InputLabelProps={{ shrink: true }} required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={4}><TextField fullWidth name="rent" label="Rent" type="number" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={4}><TextField fullWidth name="deposit" label="Deposit" type="number" required onChange={handleChange} /></Grid>
                 </Grid>
-                
-                <Button type="submit" variant="contained" fullWidth sx={{ mt: 4, py: 1.5, fontWeight: 'bold' }} disabled={loading}>
-                  {loading ? <CircularProgress size={24} color="inherit" /> : "Submit for Draft Preparation"}
+                <Button type="submit" variant="contained" fullWidth sx={{ mt: 4, py: 1.5 }} disabled={loading}>
+                  {loading ? <CircularProgress size={24} /> : "Submit Details"}
                 </Button>
               </form>
             </Paper>
@@ -341,12 +319,11 @@ const AgreementForm = () => {
       )}
       <div id="recaptcha-container"></div>
       
-      {/* Notifications */}
       <Snackbar open={!!success} autoHideDuration={4000} onClose={() => setSuccess("")}>
-        <Alert severity="success" sx={{ width: '100%' }}>{success}</Alert>
+        <Alert severity="success">{success}</Alert>
       </Snackbar>
       <Snackbar open={!!error} autoHideDuration={4000} onClose={() => setError(null)}>
-        <Alert severity="error" sx={{ width: '100%' }}>{error}</Alert>
+        <Alert severity="error">{error}</Alert>
       </Snackbar>
     </Box>
   );
