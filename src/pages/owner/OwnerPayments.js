@@ -37,7 +37,6 @@ export default function OwnerPayments() {
     fetchPayments();
   }, []);
 
-  // Re-size/Clear canvas helper for Step 3
   useEffect(() => {
     if (step === 3 && openSignModal) {
       const timer = setTimeout(() => {
@@ -64,12 +63,11 @@ export default function OwnerPayments() {
 
   const handleViewPdf = async (bookingId, filePath) => {
     try {
-      // Mark as viewed in DB before opening
       await axios.post(`${API}/agreements/viewed`, { booking_id: bookingId }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       window.open(filePath, "_blank");
-      fetchPayments(); // Refresh to enable the 'SIGN' button
+      fetchPayments();
     } catch (err) {
       window.open(filePath, "_blank");
     }
@@ -86,12 +84,24 @@ export default function OwnerPayments() {
     setOpenSignModal(true);
   };
 
+  /* ================= UPDATED: SEND OTP WITH PRE-VERIFICATION ================= */
   const sendOtp = async () => {
-    // Basic India mobile validation
     if (!/^[6-9]\d{9}$/.test(mobile)) return alert("Enter a valid 10-digit mobile number");
 
     try {
       setIsSubmitting(true);
+
+      // 1. Pre-verify: Check if this number belongs to the owner of this booking
+      const verifyRes = await axios.post(`${API}/agreements/verify-owner`, {
+        booking_id: selectedBooking.booking_id,
+        mobile: mobile
+      });
+
+      if (!verifyRes.data.success) {
+        return alert("Verification Failed: This number is not registered for this booking ❌");
+      }
+
+      // 2. If verified, trigger Firebase OTP
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(
           auth,
@@ -107,10 +117,12 @@ export default function OwnerPayments() {
       );
 
       setConfirmObj(confirmation);
-      alert("OTP Sent to +91 " + mobile + " ✅");
+      alert("Verification successful. OTP Sent ✅");
     } catch (error) {
-      console.error("OTP Error:", error);
-      alert("OTP failed to send. Please try again.");
+      console.error("Verification/OTP Error:", error);
+      const errorMsg = error.response?.data?.message || "Access Denied: Mobile number mismatch.";
+      alert(errorMsg);
+      
       if (window.recaptchaVerifier) {
         window.recaptchaVerifier.clear();
         window.recaptchaVerifier = null;
@@ -126,7 +138,7 @@ export default function OwnerPayments() {
       setIsSubmitting(true);
       await confirmObj.confirm(otp);
       setOtpVerified(true);
-      setStep(3); // Navigate to Signature step
+      setStep(3); 
     } catch (error) {
       alert("Invalid OTP code. Please try again ❌");
     } finally {
@@ -140,13 +152,11 @@ export default function OwnerPayments() {
       return alert("Please draw your signature in the box");
     }
 
-    // Capture signature as Base64 string
     const signature = sigCanvas.current.getCanvas().toDataURL("image/png");
 
     try {
       setIsSubmitting(true);
       
-      // Public route call (Security check happens on backend via booking_id + mobile match)
       const res = await axios.post(`${API}/agreements/sign`, {
         booking_id: selectedBooking.booking_id,
         owner_mobile: mobile,
@@ -157,7 +167,7 @@ export default function OwnerPayments() {
       if (res.data.success) {
         alert("Digital Signature Applied Successfully ✅");
         setOpenSignModal(false);
-        fetchPayments(); // Refresh list to update UI to 'VIEW SIGNED'
+        fetchPayments(); 
       }
     } catch (err) {
       console.error(err);
@@ -276,7 +286,7 @@ export default function OwnerPayments() {
                 />
                 {!confirmObj ? (
                   <Button fullWidth variant="contained" size="large" onClick={sendOtp} disabled={isSubmitting || mobile.length < 10}>
-                    {isSubmitting ? <CircularProgress size={24} /> : "Send OTP"}
+                    {isSubmitting ? <CircularProgress size={24} /> : "Verify & Send OTP"}
                   </Button>
                 ) : (
                   <>
