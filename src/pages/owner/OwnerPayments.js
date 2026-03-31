@@ -107,7 +107,7 @@ export default function OwnerPayments() {
       setConfirmObj(confirmation);
       alert("Verification successful. OTP Sent ✅");
     } catch (error) {
-      console.error("OTP Error:", error);
+      console.error("OTP Error:", error);x
       alert(error.response?.data?.message || "OTP Service Error");
       if (window.recaptchaVerifier) {
         window.recaptchaVerifier.clear();
