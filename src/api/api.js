@@ -76,7 +76,8 @@ const createApi = (baseURL) => {
       const user = auth.currentUser;
 
       if (user) {
-        const token = await user.getIdToken();
+        // 🔥 IMPORTANT FIX → ALWAYS FRESH TOKEN
+        const token = await user.getIdToken(true);
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (err) {
@@ -93,7 +94,7 @@ const createApi = (baseURL) => {
     async (error) => {
       if (!error.response) {
         console.error("🌐 Backend unreachable:", baseURL);
-        backendReady = false; // force re-wake
+        backendReady = false;
         return Promise.reject(error);
       }
 
@@ -115,6 +116,10 @@ const createApi = (baseURL) => {
           await auth.signOut();
           window.location.href = "/login";
         }
+      }
+
+      if (error.response.status === 403) {
+        console.error("⛔ Access denied:", error.response.data);
       }
 
       if (error.response.status >= 500) {
@@ -156,6 +161,7 @@ export const pgAPI = {
   updateProperty: (id, data) => userAPI.put(`/pg/${id}`, data),
   deleteProperty: (id) => userAPI.delete(`/pg/${id}`),
 
+  // 🔥 OWNER BOOKINGS (NOW WILL WORK)
   getOwnerBookings: () => userAPI.get("/owner/bookings"),
 
   updateBookingStatus: (bookingId, status) =>
