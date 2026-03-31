@@ -93,11 +93,11 @@ export default function OwnerChatList() {
       socket.on("message_sent_confirmation", loadChats);
       socket.on("chat_list_update", loadChats);
 
-      socket.on("user_online", (firebaseUid) => {
+      socket.on("user_online", (firebase_uid) => {
 
         setUsers(prev =>
           prev.map(u =>
-            u.firebase_uid === firebaseUid
+            u.firebase_uid === firebase_uid
               ? { ...u, online: true }
               : u
           )
@@ -105,11 +105,11 @@ export default function OwnerChatList() {
 
       });
 
-      socket.on("user_offline", (firebaseUid) => {
+      socket.on("user_offline", (firebase_uid) => {
 
         setUsers(prev =>
           prev.map(u =>
-            u.firebase_uid === firebaseUid
+            u.firebase_uid === firebase_uid
               ? { ...u, online: false }
               : u
           )
