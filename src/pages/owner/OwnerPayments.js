@@ -6,12 +6,174 @@ import {
   TableBody, Chip, Box, CircularProgress, Button,
   Modal, Fade, Checkbox, TextField, Backdrop, IconButton
 } from "@mui/material";
-import { Refresh, ArrowBack } from "@mui/icons-material";
+import { Refresh, ArrowBack, Gavel } from "@mui/icons-material";
 
 import { auth } from "../../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
 const API = "https://nepxall-backend.onrender.com/api/owner";
+
+export default function OwnerPayments() {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Modal & Flow State
+  const [openSignModal, setOpenSignModal] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [step, setStep] = useState(1);
+  
+  // Form State
+  const [agreed, setAgreed] = useState(false);
+  const [mobile, setMobile] = useState("");
+  const [otp, setOtp] = useState("");
+  const [confirmObj, setConfirmObj] = useState(null);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const sigCanvas = useRef(null);
+  const token = localStorage.getItem("token");
+
+  useEffect(() => {
+    fetchPayments();
+  }, []);
+
+  useEffect(() => {
+    if (step === 3 && openSignModal) {
+      const timer = setTimeout(() => {
+        sigCanvas.current?.clear();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [step, openSignModal]);
+
+  const fetchPayments = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`${API}/payments`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setData(res.data.data || []);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to fetch payments ❌");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewPdf = async (bookingId, filePath) => {
+    try {
+      await axios.post(`${API}/agreements/viewed`, { booking_id: bookingId }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      window.open(filePath, "_blank");
+      fetchPayments();
+    } catch (err) {
+      window.open(filePath, "_blank");
+    }
+  };
+
+  const handleOpenSign = (item) => {
+    setSelectedBooking(item);
+    setStep(1);
+    setAgreed(false);
+    setMobile("");
+    setOtp("");
+    setConfirmObj(null);
+    setOtpVerified(false);
+    setOpenSignModal(true);
+  };
+
+  const sendOtp = async () => {
+    if (!/^[6-9]\d{9}$/.test(mobile)) return alert("Enter a valid 10-digit mobile number");
+
+    try {
+      setIsSubmitting(true);
+
+      const verifyRes = await axios.post(`${API}/agreements/verify-owner`, {
+        booking_id: selectedBooking.booking_id,
+        mobile: mobile
+      });
+
+      if (!verifyRes.data.success) {
+        return alert("Verification Failed: This number is not registered for this booking ❌");
+      }
+
+      if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(
+          auth,
+          "recaptcha-container",
+          { size: "invisible" }
+        );
+      }
+
+      const confirmation = await signInWithPhoneNumber(
+        auth,
+        `+91${mobile}`,
+        window.recaptchaVerifier
+      );
+
+      setConfirmObj(confirmation);
+      alert("Verification successful. OTP Sent ✅");
+    } catch (error) {
+      console.error("Verification/OTP Error:", error);
+      const errorMsg = error.response?.data?.message || "Access Denied: Mobile number mismatch.";
+      alert(errorMsg);
+      
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = null;
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const verifyOtp = async () => {
+    if (!otp) return alert("Please enter the 6-digit OTP");
+    try {
+      setIsSubmitting(true);
+      await confirmObj.confirm(otp);
+      setOtpVerified(true);
+      setStep(3); 
+    } catch (error) {
+      alert("Invalid OTP code. Please try again ❌");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!otpVerified) return alert("Phone verification required");
+    if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
+      return alert("Please draw your signature in the box");
+    }
+
+    const signature = sigCanvas.current.getCanvas().toDataURL("image/png");
+
+    try {
+      setIsSubmitting(true);
+      
+      const res = await axios.post(`${API}/agreements/sign`, {
+        booking_id: selectedBooking.booking_id,
+        owner_mobile: mobile,
+        owner_signature: signature,Here is the updated code for your `OwnerPayments` component. It includes the expanded legal declaration in Step 1 with a scrollable box and the improved checkbox label as requested.
+
+```javascript
+import React, { useEffect, useState, useRef } from "react";
+import axios from "axios";
+import SignatureCanvas from "react-signature-canvas";
+import {
+  Container, Typography, Paper, Table, TableHead, TableRow, TableCell,
+  TableBody, Chip, Box, CircularProgress, Button,
+  Modal, Fade, Checkbox, TextField, Backdrop, IconButton
+} from "@mui/material";
+import { Refresh, ArrowBack } from "@mui/icons-material";
+
+import { auth } from "../../firebase";
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+
+const API = "[https://nepxall-backend.onrender.com/api/owner](https://nepxall-backend.onrender.com/api/owner)";
 
 export default function OwnerPayments() {
   const [data, setData] = useState([]);
@@ -237,7 +399,7 @@ export default function OwnerPayments() {
       >
         <Fade in={openSignModal}>
           <Box sx={{
-            width: { xs: '92%', sm: 480 }, // Increased width slightly for long text
+            width: { xs: '92%', sm: 550 }, // Increased width for better readability of legal text
             bgcolor: "background.paper",
             borderRadius: 4,
             p: 4,
@@ -259,49 +421,67 @@ export default function OwnerPayments() {
             {step === 1 && (
               <Box>
                 <Box sx={{ 
-                  bgcolor: '#f5f5f5', 
+                  bgcolor: '#f9f9f9', 
                   p: 2, 
                   borderRadius: 2, 
-                  border: '1px solid #ddd',
+                  border: '1px solid #e0e0e0',
                   mb: 3
                 }}>
                   <Typography 
                     variant="body2" 
                     color="textSecondary" 
                     sx={{ 
-                      maxHeight: 250, 
+                      maxHeight: 280, 
                       overflowY: "auto",
                       whiteSpace: 'pre-line',
+                      lineHeight: 1.6,
                       pr: 1,
                       '&::-webkit-scrollbar': { width: '6px' },
-                      '&::-webkit-scrollbar-thumb': { backgroundColor: '#ccc', borderRadius: '10px' }
+                      '&::-webkit-scrollbar-thumb': { backgroundColor: '#bdbdbd', borderRadius: '10px' }
                     }}
                   >
-                    <b>I hereby declare that:</b>{"\n\n"}
-                    1. I have carefully read and understood all the terms and conditions of this rental agreement.{"\n\n"}
-                    2. I confirm that all the details provided by me are true and correct to the best of my knowledge.{"\n\n"}
-                    3. I agree that this agreement is executed electronically under the provisions of the Information Technology Act, 2000 and shall be legally binding.{"\n\n"}
-                    4. I understand that my mobile number verification through OTP serves as my identity authentication.{"\n\n"}
-                    5. I consent to use my electronic signature (drawn signature) as a valid and legally enforceable signature.{"\n\n"}
-                    6. I agree that once signed, this agreement cannot be denied or repudiated by me.{"\n\n"}
-                    7. I accept that this agreement shall be governed by the laws of India and jurisdiction of the respective state.{"\n\n"}
-                    8. I understand that any violation of terms may lead to legal action as per applicable laws.{"\n\n"}
+                    <Typography variant="subtitle2" component="span" sx={{ display: 'block', mb: 1, fontWeight: 'bold' }}>
+                        I hereby declare that:
+                    </Typography>
+                    1. I have carefully read and understood all the terms and conditions of this rental agreement.
+
+                    2. I confirm that all the details provided by me are true and correct to the best of my knowledge.
+
+                    3. I agree that this agreement is executed electronically under the provisions of the Information Technology Act, 2000 and shall be legally binding.
+
+                    4. I understand that my mobile number verification through OTP serves as my identity authentication.
+
+                    5. I consent to use my electronic signature (drawn signature) as a valid and legally enforceable signature.
+
+                    6. I agree that once signed, this agreement cannot be denied or repudiated by me.
+
+                    7. I accept that this agreement shall be governed by the laws of India and jurisdiction of the respective state.
+
+                    8. I understand that any violation of terms may lead to legal action as per applicable laws.
+
                     9. I agree that this digital document is equivalent to a physical signed agreement.
                   </Typography>
                 </Box>
 
-                <Box display="flex" alignItems="center" mb={3}>
+                <Box display="flex" alignItems="center" mb={4}>
                   <Checkbox 
                     checked={agreed} 
                     onChange={(e) => setAgreed(e.target.checked)} 
                     sx={{ p: 0, mr: 1 }} 
                   />
-                  <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary' }}>
                     I agree to the Terms & Conditions and consent to use electronic signature
                   </Typography>
                 </Box>
 
-                <Button fullWidth variant="contained" size="large" disabled={!agreed} onClick={() => setStep(2)}>
+                <Button 
+                    fullWidth 
+                    variant="contained" 
+                    size="large" 
+                    disabled={!agreed} 
+                    onClick={() => setStep(2)}
+                    sx={{ py: 1.5, borderRadius: 2, fontWeight: 'bold' }}
+                >
                   Accept & Continue
                 </Button>
               </Box>
@@ -349,7 +529,7 @@ export default function OwnerPayments() {
                   <SignatureCanvas
                     ref={sigCanvas}
                     penColor="black"
-                    canvasProps={{ width: 400, height: 180, className: "sigCanvas" }}
+                    canvasProps={{ width: 450, height: 200, className: "sigCanvas" }}
                   />
                 </Box>
                 <Box mt={3} display="flex" gap={2}>
