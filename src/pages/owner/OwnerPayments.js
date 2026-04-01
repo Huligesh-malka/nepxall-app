@@ -6,12 +6,11 @@ import {
   TableBody, Chip, Box, CircularProgress, Button,
   Modal, Fade, Checkbox, TextField, Backdrop, IconButton, Divider, Alert
 } from "@mui/material";
-import { Refresh, ArrowBack, Gavel, Security, VerifiedUser, InfoOutlined, BorderColor } from "@mui/icons-material";
+import { Refresh, ArrowBack, Gavel, VerifiedUser, InfoOutlined, BorderColor } from "@mui/icons-material";
 
 import { auth } from "../../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
-// Ensure this matches your deployment URL
 const API = "https://nepxall-backend.onrender.com/api/owner";
 
 export default function OwnerPayments() {
@@ -30,21 +29,39 @@ export default function OwnerPayments() {
   const [confirmObj, setConfirmObj] = useState(null);
   const [otpVerified, setOtpVerified] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [locationStr, setLocationStr] = useState("Unknown Location");
 
   const sigCanvas = useRef(null);
   const token = localStorage.getItem("token");
 
   useEffect(() => {
     fetchPayments();
+    captureLocation(); // Get location on mount
   }, []);
 
-  // Sync canvas size when step 3 opens
+  // Capture Location for PDF Audit Trail
+  const captureLocation = () => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          // Reverse Geocoding (Optional: Use an API like OpenStreetMap)
+          const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          const geoData = await geoRes.json();
+          const city = geoData.address.city || geoData.address.town || "Bangalore";
+          const state = geoData.address.state || "Karnataka";
+          setLocationStr(`${city}, ${state}`);
+        } catch (err) {
+          setLocationStr("Bangalore, Karnataka"); // Fallback
+        }
+      }, () => setLocationStr("Bangalore, Karnataka"));
+    }
+  };
+
   useEffect(() => {
     if (step === 3 && openSignModal) {
       const timer = setTimeout(() => {
-        if (sigCanvas.current) {
-          sigCanvas.current.clear();
-        }
+        if (sigCanvas.current) sigCanvas.current.clear();
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -59,7 +76,6 @@ export default function OwnerPayments() {
       setData(res.data.data || []);
     } catch (err) {
       console.error(err);
-      alert("Failed to fetch payments ❌");
     } finally {
       setLoading(false);
     }
@@ -90,21 +106,15 @@ export default function OwnerPayments() {
 
   const sendOtp = async () => {
     if (!/^[6-9]\d{9}$/.test(mobile)) return alert("Enter a valid 10-digit mobile number");
-
     try {
       setIsSubmitting(true);
-      
-      // 1. Backend Pre-Verification (Check if mobile belongs to booking)
       const verifyRes = await axios.post(`${API}/agreements/verify-owner`, {
         booking_id: selectedBooking.booking_id,
         mobile: mobile
       });
 
-      if (!verifyRes.data.success) {
-        return alert("Verification Failed: Mobile number mismatch ❌");
-      }
+      if (!verifyRes.data.success) return alert("Mobile number mismatch ❌");
 
-      // 2. Firebase OTP Flow
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", { size: "invisible" });
       }
@@ -113,8 +123,7 @@ export default function OwnerPayments() {
       setConfirmObj(confirmation);
       alert("OTP Sent Successfully ✅");
     } catch (error) {
-      console.error("OTP Error:", error);
-      alert(error.response?.data?.message || "OTP Service Error");
+      alert("OTP Service Error");
       if (window.recaptchaVerifier) {
         window.recaptchaVerifier.clear();
         window.recaptchaVerifier = null;
@@ -125,7 +134,6 @@ export default function OwnerPayments() {
   };
 
   const verifyOtp = async () => {
-    if (!otp) return alert("Please enter the 6-digit OTP");
     try {
       setIsSubmitting(true);
       await confirmObj.confirm(otp);
@@ -140,20 +148,14 @@ export default function OwnerPayments() {
 
   const handleSubmit = async () => {
     if (!otpVerified) return alert("Phone verification required");
-    if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
-      return alert("Please draw your signature in the box");
-    }
+    if (!sigCanvas.current || sigCanvas.current.isEmpty()) return alert("Please sign first");
 
     const signatureBase64 = sigCanvas.current.getCanvas().toDataURL("image/png");
 
-    // Comprehensive device fingerprint for Audit Trail
     const deviceInfo = {
-      userAgent: navigator.userAgent,
+      browser: navigator.userAgent.split(' ').pop(),
       platform: navigator.platform,
-      vendor: navigator.vendor,
-      resolution: `${window.screen.width}x${window.screen.height}`,
-      language: navigator.language,
-      timestamp: new Date().toISOString()
+      screen: `${window.screen.width}x${window.screen.height}`
     };
 
     try {
@@ -163,16 +165,17 @@ export default function OwnerPayments() {
         owner_mobile: mobile,
         owner_signature: signatureBase64,
         accepted_terms: true,
-        owner_device_info: JSON.stringify(deviceInfo) 
+        owner_device_info: JSON.stringify(deviceInfo),
+        owner_location: locationStr // Pass captured location to backend
       });
 
       if (res.data.success) {
-        alert("Agreement Signed & Finalized ✅");
+        alert("Agreement Signed Successfully ✅");
         setOpenSignModal(false);
         fetchPayments(); 
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Signing process failed");
+      alert(err.response?.data?.message || "Signing failed");
     } finally {
       setIsSubmitting(false);
     }
@@ -183,210 +186,93 @@ export default function OwnerPayments() {
   return (
     <Container sx={{ py: 4 }}>
       <Box display="flex" justifyContent="space-between" mb={3} alignItems="center">
-        <Typography variant="h5" fontWeight="bold">Owner Settlement Dashboard</Typography>
-        <Button onClick={fetchPayments} startIcon={<Refresh />} variant="outlined">Refresh Data</Button>
+        <Typography variant="h5" fontWeight="bold">Settlement Dashboard</Typography>
+        <Button onClick={fetchPayments} startIcon={<Refresh />} variant="outlined">Refresh</Button>
       </Box>
 
-      <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden' }}>
+      <Paper elevation={3} sx={{ borderRadius: 2 }}>
         <Table>
           <TableHead sx={{ bgcolor: '#f8f9fa' }}>
             <TableRow>
-              <TableCell><b>Booking ID</b></TableCell>
-              <TableCell><b>Tenant Name</b></TableCell>
+              <TableCell><b>ID</b></TableCell>
+              <TableCell><b>Tenant</b></TableCell>
               <TableCell><b>Amount</b></TableCell>
-              <TableCell align="center"><b>Agreement Status</b></TableCell>
+              <TableCell align="center"><b>Status</b></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {data.length === 0 ? (
-              <TableRow><TableCell colSpan={4} align="center">No active settlements found.</TableCell></TableRow>
-            ) : data.map(item => {
-              const isSigned = !!item.signed_pdf;
-              return (
-                <TableRow key={item.booking_id} hover>
-                  <TableCell>#{item.booking_id}</TableCell>
-                  <TableCell>{item.tenant_name}</TableCell>
-                  <TableCell fontWeight="bold">₹{item.owner_amount}</TableCell>
-                  <TableCell align="center">
-                    {!item.final_pdf ? (
-                      <Chip label="Processing PDF..." variant="outlined" />
-                    ) : isSigned ? (
-                      <Button color="success" variant="contained" size="small" onClick={() => handleViewPdf(item.booking_id, item.signed_pdf)}>
-                        VIEW SIGNED PDF
-                      </Button>
-                    ) : (
-                      <Box display="flex" gap={1} justifyContent="center">
-                        <Button variant="outlined" size="small" onClick={() => handleViewPdf(item.booking_id, item.final_pdf)}>VIEW DRAFT</Button>
-                        {item.viewed_by_owner && (
-                          <Button variant="contained" color="warning" size="small" onClick={() => handleOpenSign(item)}>SIGN NOW</Button>
-                        )}
-                      </Box>
-                    )}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {data.map(item => (
+              <TableRow key={item.booking_id} hover>
+                <TableCell>#{item.booking_id}</TableCell>
+                <TableCell>{item.tenant_name}</TableCell>
+                <TableCell>₹{item.owner_amount}</TableCell>
+                <TableCell align="center">
+                  {item.signed_pdf ? (
+                    <Button color="success" size="small" onClick={() => handleViewPdf(item.booking_id, item.signed_pdf)}>VIEW SIGNED</Button>
+                  ) : (
+                    <Box display="flex" gap={1} justifyContent="center">
+                      <Button variant="outlined" size="small" onClick={() => handleViewPdf(item.booking_id, item.final_pdf)}>DRAFT</Button>
+                      {item.viewed_by_owner && <Button variant="contained" color="warning" size="small" onClick={() => handleOpenSign(item)}>SIGN NOW</Button>}
+                    </Box>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </Paper>
 
-      {/* MULTI-STEP SIGNING MODAL */}
-      <Modal 
-        open={openSignModal} 
-        onClose={() => !isSubmitting && setOpenSignModal(false)}
-        closeAfterTransition
-        slots={{ backdrop: Backdrop }}
-        slotProps={{ backdrop: { timeout: 500 } }}
-      >
+      {/* MODAL */}
+      <Modal open={openSignModal} onClose={() => !isSubmitting && setOpenSignModal(false)}>
         <Fade in={openSignModal}>
           <Box sx={{
-            width: { xs: '95%', sm: 600, md: 750 },
-            bgcolor: "background.paper",
-            borderRadius: 4,
-            p: { xs: 2, sm: 4 },
-            position: 'absolute', top: '50%', left: '50%',
-            transform: 'translate(-50%, -50%)',
-            boxShadow: 24, outline: 'none'
+            width: { xs: '95%', sm: 600 }, bgcolor: "white", borderRadius: 4, p: 4,
+            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
           }}>
-
-            <Box display="flex" alignItems="center" mb={2} justifyContent="space-between">
-                <Box display="flex" alignItems="center">
-                  {step > 1 && !otpVerified && (
-                    <IconButton onClick={() => setStep(step - 1)} size="small" sx={{ mr: 1 }}>
-                      <ArrowBack />
-                    </IconButton>
-                  )}
-                  <Typography variant="h6" fontWeight="bold" color="primary.main">Digital Signature Portal</Typography>
-                </Box>
-                <Chip icon={<Gavel />} label={`Step ${step} / 3`} color="primary" variant="outlined" />
+            <Box display="flex" justifyContent="space-between" mb={2}>
+              <Typography variant="h6" fontWeight="bold">Step {step} of 3</Typography>
+              {step > 1 && !otpVerified && <IconButton onClick={() => setStep(step - 1)}><ArrowBack /></IconButton>}
             </Box>
 
-            {/* STEP 1: TERMS & CLAUSES */}
             {step === 1 && (
               <Box>
-                <Alert icon={<InfoOutlined fontSize="inherit" />} severity="info" sx={{ mb: 2 }}>
-                  Please scroll and read all 25 legal clauses before accepting.
-                </Alert>
-                
-                <Box sx={{ 
-                  bgcolor: '#fcfcfc', p: 2.5, borderRadius: 2, border: '1px solid #e0e0e0', mb: 2,
-                }}>
-                  <Box sx={{ 
-                    maxHeight: 350, overflowY: "auto", pr: 1,
-                    '&::-webkit-scrollbar': { width: '6px' },
-                    '&::-webkit-scrollbar-thumb': { backgroundColor: '#ccc', borderRadius: '10px' }
-                  }}>
-                    <Typography variant="subtitle2" fontWeight="bold" color="primary" gutterBottom>1. LEGAL DECLARATION</Typography>
-                    <Typography variant="caption" display="block" sx={{ mb: 2, lineHeight: 1.6 }}>
-                        • I confirm that I am the legal owner of the property.<br/>
-                        • I accept the terms of the IT Act 2000 regarding e-signatures.<br/>
-                        • This digital mark holds the same weight as a physical signature.<br/>
-                        • I have reviewed the draft and found all details accurate.<br/>
-                        • I consent to the capture of my IP and device data for audit purposes.
-                    </Typography>
-                    <Divider sx={{ my: 1 }} />
-                    <Typography variant="subtitle2" fontWeight="bold" color="warning.dark" gutterBottom>2. OWNER RESPONSIBILITIES</Typography>
-                    <Typography variant="caption" display="block" sx={{ mb: 2, lineHeight: 1.6 }}>
-                        • I am responsible for maintaining the property in habitable condition.<br/>
-                        • I will process security deposits as per the agreement timelines.<br/>
-                        • I am liable for any false information provided during onboarding.<br/>
-                        • I will declare rental income as per Indian Tax laws.
-                    </Typography>
-                    {/* Additional clauses can be mapped here */}
-                  </Box>
+                <Alert severity="info" sx={{ mb: 2 }}>Read legal clauses to proceed.</Alert>
+                <Box sx={{ maxHeight: 200, overflowY: 'auto', border: '1px solid #ddd', p: 2, mb: 2 }}>
+                  <Typography variant="caption">1. I confirm property ownership. 2. Digital signature is legally binding under IT Act 2000. 3. I consent to IP/Location logging.</Typography>
                 </Box>
-
-                <Box display="flex" alignItems="center" mb={3} sx={{ bgcolor: '#fffde7', p: 1.5, borderRadius: 2 }}>
-                  <Checkbox 
-                    checked={agreed} 
-                    onChange={(e) => setAgreed(e.target.checked)} 
-                    sx={{ p: 0, mr: 1 }} 
-                  />
-                  <Typography variant="body2" fontWeight="600">
-                    I have read and I accept all 25 legal clauses.
-                  </Typography>
-                </Box>
-
-                <Button 
-                  fullWidth variant="contained" size="large" disabled={!agreed} 
-                  onClick={() => setStep(2)}
-                  sx={{ py: 1.5, fontWeight: 'bold' }}
-                >
-                  I Accept, Proceed to OTP
-                </Button>
+                <Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} /> Accept Terms
+                <Button fullWidth variant="contained" disabled={!agreed} onClick={() => setStep(2)} sx={{ mt: 2 }}>Continue</Button>
               </Box>
             )}
 
-            {/* STEP 2: PHONE OTP */}
             {step === 2 && (
-              <Box py={2} textAlign="center">
-                <VerifiedUser color="primary" sx={{ fontSize: 60, mb: 1 }} />
-                <Typography variant="h6">Phone Authentication</Typography>
-                <Typography variant="body2" color="textSecondary" mb={3}>
-                    Verify the mobile number registered with Booking #{selectedBooking?.booking_id}
-                </Typography>
-                
-                <TextField 
-                  fullWidth label="Mobile Number" variant="outlined" value={mobile} 
-                  onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))} 
-                  disabled={!!confirmObj || isSubmitting}
-                  sx={{ mb: 3 }}
-                  placeholder="Enter 10 digit mobile"
-                />
-
+              <Box textAlign="center">
+                <VerifiedUser color="primary" sx={{ fontSize: 50, mb: 2 }} />
+                <TextField fullWidth label="Mobile" value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))} sx={{ mb: 2 }} />
                 {!confirmObj ? (
-                  <Button fullWidth variant="contained" size="large" onClick={sendOtp} disabled={isSubmitting || mobile.length < 10}>
-                    {isSubmitting ? <CircularProgress size={24} /> : "Request OTP"}
-                  </Button>
+                  <Button fullWidth variant="contained" onClick={sendOtp}>Get OTP</Button>
                 ) : (
                   <>
-                    <TextField 
-                      fullWidth label="Verification Code" 
-                      value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} 
-                      sx={{ mb: 3 }}
-                    />
-                    <Button fullWidth variant="contained" size="large" onClick={verifyOtp} disabled={isSubmitting || otp.length < 6}>
-                        {isSubmitting ? <CircularProgress size={24} /> : "Verify & Continue"}
-                    </Button>
+                    <TextField fullWidth label="OTP" value={otp} onChange={(e) => setOtp(e.target.value)} sx={{ mb: 2 }} />
+                    <Button fullWidth variant="contained" onClick={verifyOtp}>Verify</Button>
                   </>
                 )}
                 <div id="recaptcha-container"></div>
               </Box>
             )}
 
-            {/* STEP 3: DIGITAL SIGNATURE */}
             {step === 3 && (
-              <Box py={1}>
-                <Box textAlign="center" mb={2}>
-                    <BorderColor color="primary" sx={{ fontSize: 40, mb: 1 }} />
-                    <Typography variant="h6">Draw Your Signature</Typography>
-                    <Typography variant="caption" color="textSecondary">
-                      Please use your mouse or touch screen to sign inside the box below.
-                    </Typography>
+              <Box>
+                <Typography textAlign="center" mb={1}>Draw Signature Below</Typography>
+                <Box sx={{ border: "2px dashed #1976d2", borderRadius: 2 }}>
+                  <SignatureCanvas ref={sigCanvas} canvasProps={{ width: 530, height: 200, className: "sigCanvas" }} />
                 </Box>
-                
-                <Box sx={{ border: "2px dashed #1976d2", borderRadius: 2, bgcolor: '#fdfdfd', overflow: 'hidden' }}>
-                  <SignatureCanvas
-                    ref={sigCanvas}
-                    penColor="black"
-                    canvasProps={{ 
-                      width: 680, height: 250, className: "sigCanvas",
-                      style: { width: '100%', height: '250px' } 
-                    }}
-                  />
-                </Box>
-
-                <Box mt={3} display="flex" gap={2}>
-                  <Button variant="outlined" fullWidth onClick={() => sigCanvas.current.clear()} disabled={isSubmitting}>
-                    Clear
-                  </Button>
-                  <Button variant="contained" color="success" fullWidth onClick={handleSubmit} disabled={isSubmitting}>
-                    {isSubmitting ? <CircularProgress size={24} color="inherit" /> : "Finalize Signature"}
+                <Box mt={2} display="flex" gap={1}>
+                  <Button fullWidth variant="outlined" onClick={() => sigCanvas.current.clear()}>Clear</Button>
+                  <Button fullWidth variant="contained" color="success" onClick={handleSubmit} disabled={isSubmitting}>
+                    {isSubmitting ? <CircularProgress size={24} /> : "Finalize & Sign"}
                   </Button>
                 </Box>
-                <Typography variant="caption" display="block" textAlign="center" mt={2} color="textSecondary">
-                  By clicking Finalize, you are creating a legally binding digital document.
-                </Typography>
               </Box>
             )}
           </Box>
