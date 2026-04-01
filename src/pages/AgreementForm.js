@@ -115,7 +115,7 @@ const AgreementForm = () => {
       const res = await api.post("/agreements-form/submit", data);
       if (res.data.success) {
         setSuccess("Details submitted!");
-        fetchAgreementStatus(); // Refresh view
+        fetchAgreementStatus(); 
       }
     } catch (err) { setError("Submission failed."); }
     finally { setLoading(false); }
@@ -128,6 +128,8 @@ const AgreementForm = () => {
     setLoading(true);
     try {
       const signatureDataURL = sigCanvas.current.toDataURL("image/png");
+      
+      // The Backend will automatically extract IP and Device Info from the request headers
       const res = await api.post("/agreements-form/tenant/sign", {
         booking_id: bookingId,
         tenant_signature: signatureDataURL,
@@ -137,7 +139,7 @@ const AgreementForm = () => {
 
       if (res.data.success) {
         setSuccess("Agreement finalized! ✅");
-        // Instead of navigating away, we refresh the local state to show the PDF
+        // Refresh local state to show the 'Download Signed PDF' view
         await fetchAgreementStatus(); 
       }
     } catch (err) {
@@ -159,26 +161,27 @@ const AgreementForm = () => {
         3. E-Sign Validity: This agreement is executed electronically under the IT Act, 2000.
         4. Identity Authentication: OTP verification serves as valid identity authentication.
         5. Digital Signature Consent: I consent to using my drawn signature as legally valid.
-        6. Non-Repudiation: I shall not deny this agreement once digitally signed.
-        7. Legal Jurisdiction: Governed by the laws of India and respective state jurisdiction.
-        8. Physical Equivalent: This digital agreement holds the same value as a physical one.
-        9. Lawful Use: I shall use the property strictly for residential purposes.
-        10. Rent Payment: I agree to pay rent on time as per the agreed schedule.
-        11. Security Deposit: I understand and agree to security deposit terms.
-        12. Maintenance: I shall maintain the property in good condition.
-        13. Damage Liability: I am responsible for damages caused by me or my guests.
-        14. No Illegal Activities: I shall not engage in illegal activities on premises.
-        15. Subletting: I shall not sublet without owner's written permission.
-        16. Compliance: I shall follow all society rules and local laws.
-        17. Utility Payments: I am responsible for utility bills as agreed.
-        18. Identity Proof: I confirm I have provided valid Aadhaar/PAN.
-        19. Police Verification: I agree to comply with police verification if required.
-        20. Notice Period: I agree to provide prior notice before vacating.
-        21. Vacating Condition: I shall return the property in good condition.
-        22. Overstay: Staying beyond the period may result in penalties.
-        23-25. Execution: Enforceable under Indian Contract Act, 1872.
-        26-28. Platform Role: Platform is an intermediary only; no liability for disputes.
-        29-30. Acceptance: I accept full legal responsibility for complying with this agreement.`}
+        6. IP & Device Logging: I consent to the logging of my IP address and device information for legal audit trails.
+        7. Non-Repudiation: I shall not deny this agreement once digitally signed.
+        8. Legal Jurisdiction: Governed by the laws of India and respective state jurisdiction.
+        9. Physical Equivalent: This digital agreement holds the same value as a physical one.
+        10. Lawful Use: I shall use the property strictly for residential purposes.
+        11. Rent Payment: I agree to pay rent on time as per the agreed schedule.
+        12. Security Deposit: I understand and agree to security deposit terms.
+        13. Maintenance: I shall maintain the property in good condition.
+        14. Damage Liability: I am responsible for damages caused by me or my guests.
+        15. No Illegal Activities: I shall not engage in illegal activities on premises.
+        16. Subletting: I shall not sublet without owner's written permission.
+        17. Compliance: I shall follow all society rules and local laws.
+        18. Utility Payments: I am responsible for utility bills as agreed.
+        19. Identity Proof: I confirm I have provided valid Aadhaar/PAN.
+        20. Police Verification: I agree to comply with police verification if required.
+        21. Notice Period: I agree to provide prior notice before vacating.
+        22. Vacating Condition: I shall return the property in good condition.
+        23. Overstay: Staying beyond the period may result in penalties.
+        24. Execution: Enforceable under Indian Contract Act, 1872.
+        25. Platform Role: Platform is an intermediary only; no liability for disputes.
+        26. Acceptance: I accept full legal responsibility for complying with this agreement.`}
       </Typography>
     </Box>
   );
@@ -189,7 +192,7 @@ const AgreementForm = () => {
         <Box textAlign="center" mt={10}><CircularProgress /></Box>
       ) : (
         <>
-          {/* CASE 1: COMPLETED - NOW STAYS ON THIS PAGE */}
+          {/* CASE 1: COMPLETED */}
           {existingAgreement?.agreement_status === "completed" && (
             <Paper sx={{ p: 6, textAlign: 'center', borderRadius: 4, border: '2px solid #4caf50', bgcolor: '#f8fff8' }}>
               <AssignmentTurnedIn sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
@@ -197,7 +200,7 @@ const AgreementForm = () => {
                 Agreement Finalized!
               </Typography>
               <Typography variant="body1" color="text.secondary" mb={4}>
-                Your rental agreement has been digitally signed by both parties and is now legally binding.
+                Your rental agreement has been digitally signed and stored with your IP/Device audit trail.
               </Typography>
               <Button 
                 size="large"
@@ -231,6 +234,7 @@ const AgreementForm = () => {
           {existingAgreement?.agreement_status === "approved" && existingAgreement.signed_pdf && (
             <Paper sx={{ p: 4, borderRadius: 3, boxShadow: 3 }}>
               <Typography variant="h6" fontWeight="bold">Step 2: Review & Finalize Signature</Typography>
+              <Typography variant="caption" color="text.secondary">Your IP address and device info will be logged for legal validity.</Typography>
               <Divider sx={{ my: 2 }} />
               
               <iframe 
@@ -284,7 +288,7 @@ const AgreementForm = () => {
 
                   <FormControlLabel
                     control={<Checkbox checked={hasAcceptedTerms} onChange={(e) => setHasAcceptedTerms(e.target.checked)} />}
-                    label="I agree to the terms and conditions mentioned above."
+                    label="I agree to the terms and conditions and consent to electronic logging of my signature details."
                     sx={{ mb: 3 }}
                   />
 
