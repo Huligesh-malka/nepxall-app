@@ -94,6 +94,7 @@ export default function OwnerPayments() {
     try {
       setIsSubmitting(true);
       
+      // 1. Backend Pre-Verification (Check if mobile belongs to booking)
       const verifyRes = await axios.post(`${API}/agreements/verify-owner`, {
         booking_id: selectedBooking.booking_id,
         mobile: mobile
@@ -103,6 +104,7 @@ export default function OwnerPayments() {
         return alert("Verification Failed: Mobile number mismatch ❌");
       }
 
+      // 2. Firebase OTP Flow
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", { size: "invisible" });
       }
@@ -144,37 +146,24 @@ export default function OwnerPayments() {
 
     const signatureBase64 = sigCanvas.current.getCanvas().toDataURL("image/png");
 
+    // Comprehensive device fingerprint for Audit Trail
+    const deviceInfo = {
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      vendor: navigator.vendor,
+      resolution: `${window.screen.width}x${window.screen.height}`,
+      language: navigator.language,
+      timestamp: new Date().toISOString()
+    };
+
     try {
       setIsSubmitting(true);
-
-      // --- NEW: Fetch Location Data ---
-      let location_data = { city: "Unknown", region: "Unknown" };
-      try {
-        const locRes = await axios.get('https://ipapi.co/json/');
-        location_data = { 
-          city: locRes.data.city, 
-          region: locRes.data.region 
-        };
-      } catch (locErr) {
-        console.warn("Location fetch failed, using defaults.");
-      }
-
-      // Comprehensive device fingerprint
-      const deviceInfo = {
-        userAgent: navigator.userAgent,
-        platform: navigator.platform,
-        resolution: `${window.screen.width}x${window.screen.height}`,
-        language: navigator.language,
-        timestamp: new Date().toISOString()
-      };
-
       const res = await axios.post(`${API}/agreements/sign`, {
         booking_id: selectedBooking.booking_id,
         owner_mobile: mobile,
         owner_signature: signatureBase64,
         accepted_terms: true,
-        owner_device_info: JSON.stringify(deviceInfo),
-        location_data: location_data // Sent to updated backend
+        owner_device_info: JSON.stringify(deviceInfo) 
       });
 
       if (res.data.success) {
@@ -272,29 +261,38 @@ export default function OwnerPayments() {
                 <Chip icon={<Gavel />} label={`Step ${step} / 3`} color="primary" variant="outlined" />
             </Box>
 
-            {/* STEP 1: TERMS */}
+            {/* STEP 1: TERMS & CLAUSES */}
             {step === 1 && (
               <Box>
                 <Alert icon={<InfoOutlined fontSize="inherit" />} severity="info" sx={{ mb: 2 }}>
                   Please scroll and read all 25 legal clauses before accepting.
                 </Alert>
                 
-                <Box sx={{ bgcolor: '#fcfcfc', p: 2.5, borderRadius: 2, border: '1px solid #e0e0e0', mb: 2 }}>
-                  <Box sx={{ maxHeight: 350, overflowY: "auto", pr: 1 }}>
+                <Box sx={{ 
+                  bgcolor: '#fcfcfc', p: 2.5, borderRadius: 2, border: '1px solid #e0e0e0', mb: 2,
+                }}>
+                  <Box sx={{ 
+                    maxHeight: 350, overflowY: "auto", pr: 1,
+                    '&::-webkit-scrollbar': { width: '6px' },
+                    '&::-webkit-scrollbar-thumb': { backgroundColor: '#ccc', borderRadius: '10px' }
+                  }}>
                     <Typography variant="subtitle2" fontWeight="bold" color="primary" gutterBottom>1. LEGAL DECLARATION</Typography>
                     <Typography variant="caption" display="block" sx={{ mb: 2, lineHeight: 1.6 }}>
                         • I confirm that I am the legal owner of the property.<br/>
                         • I accept the terms of the IT Act 2000 regarding e-signatures.<br/>
                         • This digital mark holds the same weight as a physical signature.<br/>
-                        • I consent to the capture of my IP, Location, and Device data for audit purposes.
+                        • I have reviewed the draft and found all details accurate.<br/>
+                        • I consent to the capture of my IP and device data for audit purposes.
                     </Typography>
                     <Divider sx={{ my: 1 }} />
                     <Typography variant="subtitle2" fontWeight="bold" color="warning.dark" gutterBottom>2. OWNER RESPONSIBILITIES</Typography>
                     <Typography variant="caption" display="block" sx={{ mb: 2, lineHeight: 1.6 }}>
-                        • I am responsible for maintaining the property.<br/>
-                        • I will process security deposits as per timelines.<br/>
-                        • I declare rental income as per Indian Tax laws.
+                        • I am responsible for maintaining the property in habitable condition.<br/>
+                        • I will process security deposits as per the agreement timelines.<br/>
+                        • I am liable for any false information provided during onboarding.<br/>
+                        • I will declare rental income as per Indian Tax laws.
                     </Typography>
+                    {/* Additional clauses can be mapped here */}
                   </Box>
                 </Box>
 
@@ -362,6 +360,9 @@ export default function OwnerPayments() {
                 <Box textAlign="center" mb={2}>
                     <BorderColor color="primary" sx={{ fontSize: 40, mb: 1 }} />
                     <Typography variant="h6">Draw Your Signature</Typography>
+                    <Typography variant="caption" color="textSecondary">
+                      Please use your mouse or touch screen to sign inside the box below.
+                    </Typography>
                 </Box>
                 
                 <Box sx={{ border: "2px dashed #1976d2", borderRadius: 2, bgcolor: '#fdfdfd', overflow: 'hidden' }}>
@@ -384,7 +385,7 @@ export default function OwnerPayments() {
                   </Button>
                 </Box>
                 <Typography variant="caption" display="block" textAlign="center" mt={2} color="textSecondary">
-                  By clicking Finalize, you are creating a legally binding digital document with IP tracking.
+                  By clicking Finalize, you are creating a legally binding digital document.
                 </Typography>
               </Box>
             )}
