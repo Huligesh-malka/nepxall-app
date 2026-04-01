@@ -94,7 +94,6 @@ export default function OwnerPayments() {
     try {
       setIsSubmitting(true);
       
-      // 1. Backend Pre-Verification (Check if mobile belongs to booking)
       const verifyRes = await axios.post(`${API}/agreements/verify-owner`, {
         booking_id: selectedBooking.booking_id,
         mobile: mobile
@@ -104,7 +103,6 @@ export default function OwnerPayments() {
         return alert("Verification Failed: Mobile number mismatch ❌");
       }
 
-      // 2. Firebase OTP Flow
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", { size: "invisible" });
       }
@@ -146,7 +144,6 @@ export default function OwnerPayments() {
 
     const signatureBase64 = sigCanvas.current.getCanvas().toDataURL("image/png");
 
-    // Comprehensive device fingerprint for Audit Trail
     const deviceInfo = {
       userAgent: navigator.userAgent,
       platform: navigator.platform,
@@ -240,7 +237,7 @@ export default function OwnerPayments() {
       >
         <Fade in={openSignModal}>
           <Box sx={{
-            width: { xs: '95%', sm: 600, md: 750 },
+            width: { xs: '95%', sm: 650, md: 800 },
             bgcolor: "background.paper",
             borderRadius: 4,
             p: { xs: 2, sm: 4 },
@@ -258,61 +255,87 @@ export default function OwnerPayments() {
                   )}
                   <Typography variant="h6" fontWeight="bold" color="primary.main">Digital Signature Portal</Typography>
                 </Box>
-                <Chip icon={<Gavel />} label={`Step ${step} / 3`} color="primary" variant="outlined" />
+                <Chip icon={<Security />} label={`Step ${step} / 3`} color="primary" variant="outlined" />
             </Box>
 
-            {/* STEP 1: TERMS & CLAUSES */}
+            {/* STEP 1: COMPREHENSIVE LEGAL TERMS */}
             {step === 1 && (
               <Box>
                 <Alert icon={<InfoOutlined fontSize="inherit" />} severity="info" sx={{ mb: 2 }}>
-                  Please scroll and read all 25 legal clauses before accepting.
+                  I hereby declare and accept the following 25 legal clauses to proceed.
                 </Alert>
                 
                 <Box sx={{ 
                   bgcolor: '#fcfcfc', p: 2.5, borderRadius: 2, border: '1px solid #e0e0e0', mb: 2,
                 }}>
                   <Box sx={{ 
-                    maxHeight: 350, overflowY: "auto", pr: 1,
+                    maxHeight: 380, overflowY: "auto", pr: 1,
                     '&::-webkit-scrollbar': { width: '6px' },
                     '&::-webkit-scrollbar-thumb': { backgroundColor: '#ccc', borderRadius: '10px' }
                   }}>
-                    <Typography variant="subtitle2" fontWeight="bold" color="primary" gutterBottom>1. LEGAL DECLARATION</Typography>
-                    <Typography variant="caption" display="block" sx={{ mb: 2, lineHeight: 1.6 }}>
-                        • I confirm that I am the legal owner of the property.<br/>
-                        • I accept the terms of the IT Act 2000 regarding e-signatures.<br/>
-                        • This digital mark holds the same weight as a physical signature.<br/>
-                        • I have reviewed the draft and found all details accurate.<br/>
-                        • I consent to the capture of my IP and device data for audit purposes.
+                    {/* 1-9: General Declarations */}
+                    <Typography variant="subtitle2" fontWeight="bold" color="primary" gutterBottom>PART A: GENERAL DECLARATIONS</Typography>
+                    <Typography variant="caption" component="div" sx={{ mb: 2, lineHeight: 1.6, color: 'text.secondary' }}>
+                        1. I have carefully read and understood all the terms and conditions of this rental agreement.<br/>
+                        2. I confirm that all the details provided by me are true and correct to the best of my knowledge.<br/>
+                        3. I agree that this agreement is executed electronically under the provisions of the Information Technology Act, 2000 and shall be legally binding.<br/>
+                        4. I understand that my mobile number verification through OTP serves as my identity authentication.<br/>
+                        5. I consent to use my electronic signature (drawn signature) as a valid and legally enforceable signature.<br/>
+                        6. I agree that once signed, this agreement cannot be denied or repudiated by me.<br/>
+                        7. I accept that this agreement shall be governed by the laws of India and jurisdiction of the respective state.<br/>
+                        8. I understand that any violation of terms may lead to legal action as per applicable laws.<br/>
+                        9. I agree that this digital document is equivalent to a physical signed agreement.
                     </Typography>
-                    <Divider sx={{ my: 1 }} />
-                    <Typography variant="subtitle2" fontWeight="bold" color="warning.dark" gutterBottom>2. OWNER RESPONSIBILITIES</Typography>
-                    <Typography variant="caption" display="block" sx={{ mb: 2, lineHeight: 1.6 }}>
-                        • I am responsible for maintaining the property in habitable condition.<br/>
-                        • I will process security deposits as per the agreement timelines.<br/>
-                        • I am liable for any false information provided during onboarding.<br/>
-                        • I will declare rental income as per Indian Tax laws.
+
+                    <Divider sx={{ my: 2 }} />
+
+                    {/* 10-18: Owner Responsibilities */}
+                    <Typography variant="subtitle2" fontWeight="bold" color="warning.dark" gutterBottom>PART B: OWNER LEGAL RESPONSIBILITIES</Typography>
+                    <Typography variant="caption" component="div" sx={{ mb: 2, lineHeight: 1.6, color: 'text.secondary' }}>
+                        10. <b>Ownership Liability:</b> I confirm that I am the lawful owner or legally authorized person to rent this property. Any ownership disputes are solely my responsibility.<br/>
+                        11. <b>Title & Legal Clearance:</b> I guarantee that the property is free from legal disputes, encumbrances, or government restrictions.<br/>
+                        12. <b>Rental Authority:</b> I confirm I have full legal rights to lease/rent this property and enter into this agreement.<br/>
+                        13. <b>Property Condition:</b> I agree that the property provided is safe, habitable, and complies with basic living standards.<br/>
+                        14. <b>Maintenance:</b> I am responsible for major repairs including structural, electrical, and plumbing issues unless otherwise agreed.<br/>
+                        15. <b>Deposit Handling:</b> I agree to refund the tenant’s security deposit as per agreed terms and conditions without unlawful deductions.<br/>
+                        16. <b>False Information:</b> If any information provided by me is false, I shall be fully liable for legal consequences.<br/>
+                        17. <b>Tax Responsibility:</b> I am responsible for declaring rental income and complying with applicable tax laws in India.<br/>
+                        18. <b>Indemnity:</b> I agree to indemnify and hold harmless the platform from any claims or disputes arising due to my property.
                     </Typography>
-                    {/* Additional clauses can be mapped here */}
+
+                    <Divider sx={{ my: 2 }} />
+
+                    {/* 19-25: Final Consent & Platform Role */}
+                    <Typography variant="subtitle2" fontWeight="bold" color="error.main" gutterBottom>PART C: BINDING CONSENT & PLATFORM ROLE</Typography>
+                    <Typography variant="caption" component="div" sx={{ mb: 2, lineHeight: 1.6, color: 'text.secondary' }}>
+                        19. <b>No Illegal Use:</b> I shall not knowingly allow the property to be used for illegal activities.<br/>
+                        20. <b>Electronic Execution:</b> Re-confirming execution under IT Act, 2000.<br/>
+                        21. <b>Binding Nature:</b> Legally enforceable under Indian Contract Act, 1872.<br/>
+                        22. <b>Audit Trail:</b> Acceptance that OTP, IP, and Timestamp are recorded as legal proof.<br/>
+                        23. <b>Platform Role:</b> The platform is only a facilitator and not a party to this agreement.<br/>
+                        24. <b>No Platform Liability:</b> Platform is not responsible for rent or property disputes.<br/>
+                        25. <b>Full Acceptance:</b> I accept full legal responsibility for this agreement and the property.
+                    </Typography>
                   </Box>
                 </Box>
 
-                <Box display="flex" alignItems="center" mb={3} sx={{ bgcolor: '#fffde7', p: 1.5, borderRadius: 2 }}>
+                <Box display="flex" alignItems="center" mb={3} sx={{ bgcolor: '#fffde7', p: 1.5, borderRadius: 2, border: '1px solid #ffe082' }}>
                   <Checkbox 
                     checked={agreed} 
                     onChange={(e) => setAgreed(e.target.checked)} 
                     sx={{ p: 0, mr: 1 }} 
                   />
                   <Typography variant="body2" fontWeight="600">
-                    I have read and I accept all 25 legal clauses.
+                    I have read, understood, and I accept all 25 legal clauses mentioned above.
                   </Typography>
                 </Box>
 
                 <Button 
                   fullWidth variant="contained" size="large" disabled={!agreed} 
                   onClick={() => setStep(2)}
-                  sx={{ py: 1.5, fontWeight: 'bold' }}
+                  sx={{ py: 1.5, fontWeight: 'bold', borderRadius: 2 }}
                 >
-                  I Accept, Proceed to OTP
+                  I Agree, Proceed to Verification
                 </Button>
               </Box>
             )}
@@ -341,9 +364,10 @@ export default function OwnerPayments() {
                 ) : (
                   <>
                     <TextField 
-                      fullWidth label="Verification Code" 
+                      fullWidth label="6-Digit Verification Code" 
                       value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} 
                       sx={{ mb: 3 }}
+                      inputProps={{ maxLength: 6 }}
                     />
                     <Button fullWidth variant="contained" size="large" onClick={verifyOtp} disabled={isSubmitting || otp.length < 6}>
                         {isSubmitting ? <CircularProgress size={24} /> : "Verify & Continue"}
@@ -381,11 +405,11 @@ export default function OwnerPayments() {
                     Clear
                   </Button>
                   <Button variant="contained" color="success" fullWidth onClick={handleSubmit} disabled={isSubmitting}>
-                    {isSubmitting ? <CircularProgress size={24} color="inherit" /> : "Finalize Signature"}
+                    {isSubmitting ? <CircularProgress size={24} color="inherit" /> : "Finalize & Sign Agreement"}
                   </Button>
                 </Box>
                 <Typography variant="caption" display="block" textAlign="center" mt={2} color="textSecondary">
-                  By clicking Finalize, you are creating a legally binding digital document.
+                  By clicking Finalize, you are creating a legally binding digital document under the IT Act 2000.
                 </Typography>
               </Box>
             )}
