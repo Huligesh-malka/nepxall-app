@@ -7,12 +7,9 @@ import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { 
   Box, TextField, Button, Typography, CircularProgress, 
   Alert, Snackbar, Paper, Grid, Divider, IconButton, 
-  FormControlLabel, Checkbox, Container, Stack, Card, CardContent
+  FormControlLabel, Checkbox
 } from "@mui/material";
-import { 
-  ArrowBack, Gavel, AssignmentTurnedIn, CloudDownload, 
-  VerifiedUser, EditNote, Description, Security 
-} from "@mui/icons-material";
+import { ArrowBack, Gavel, AssignmentTurnedIn, CloudDownload } from "@mui/icons-material";
 
 const AgreementForm = () => {
   const { bookingId } = useParams();
@@ -32,11 +29,18 @@ const AgreementForm = () => {
   const [isVerified, setIsVerified] = useState(false);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
 
+  // UPDATED: Removed PAN, Check-in, Rent, and Deposit from initial formData
   const [formData, setFormData] = useState({
-    full_name: "", mobile: "", email: "",
-    address: "", city: "", state: "", pincode: "",
-    aadhaar_last4: "", checkin_date: "",
-    agreement_months: "11", rent: "", deposit: "", maintenance: "0",
+    full_name: "", 
+    mobile: "", 
+    email: "",
+    address: "", 
+    city: "", 
+    state: "", 
+    pincode: "",
+    aadhaar_last4: "",
+    agreement_months: "11",
+    maintenance: "0",
   });
 
   /* ================= HELPER: PHONE CLEANER ================= */
@@ -150,12 +154,13 @@ const AgreementForm = () => {
 
   /* ================= LEGAL TEXT COMPONENT ================= */
   const LegalDeclaration = () => (
-    <Box sx={{ bgcolor: '#f8f9fa', p: 3, borderRadius: 2, border: '1px solid #e0e0e0', mb: 3, maxHeight: '200px', overflowY: 'auto' }}>
-      <Typography variant="subtitle2" fontWeight="800" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Gavel fontSize="small" /> LEGAL DECLARATION
+    <Box sx={{ bgcolor: '#fdfdfd', p: 3, borderRadius: 2, border: '1px solid #ddd', mb: 3, maxHeight: '250px', overflowY: 'auto' }}>
+      <Typography variant="subtitle1" fontWeight="bold" gutterBottom color="primary">
+        <Gavel sx={{ fontSize: 18, mr: 1, verticalAlign: 'middle' }} />
+        TENANT LEGAL DECLARATION & TERMS
       </Typography>
-      <Divider sx={{ mb: 1 }} />
-      <Typography variant="caption" display="block" sx={{ whiteSpace: 'pre-line', color: '#555', lineHeight: 1.5 }}>
+      <Divider sx={{ mb: 2 }} />
+      <Typography variant="caption" display="block" sx={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
         {`1. Agreement Understanding: I have carefully read and understood all terms.
         2. Factual Accuracy: I confirm all personal details provided are true and correct.
         3. E-Sign Validity: This agreement is executed electronically under the IT Act, 2000.
@@ -174,7 +179,7 @@ const AgreementForm = () => {
         16. Subletting: I shall not sublet without owner's written permission.
         17. Compliance: I shall follow all society rules and local laws.
         18. Utility Payments: I am responsible for utility bills as agreed.
-        19. Identity Proof: I confirm I have provided valid Aadhaar details.
+        19. Identity Proof: I confirm I have provided valid Aadhaar.
         20. Police Verification: I agree to comply with police verification if required.
         21. Notice Period: I agree to provide prior notice before vacating.
         22. Vacating Condition: I shall return the property in good condition.
@@ -187,210 +192,162 @@ const AgreementForm = () => {
   );
 
   return (
-    <Container maxWidth="md" sx={{ py: 5 }}>
+    <Box sx={{ maxWidth: "900px", margin: "30px auto", p: 2 }}>
       {fetching ? (
-        <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight="50vh">
-          <CircularProgress thickness={5} size={50} sx={{ mb: 2 }} />
-          <Typography color="text.secondary" variant="body2">Loading Secure Document...</Typography>
-        </Box>
+        <Box textAlign="center" mt={10}><CircularProgress /></Box>
       ) : (
-        <Stack spacing={4}>
-          
+        <>
           {/* CASE 1: COMPLETED */}
           {existingAgreement?.agreement_status === "completed" && (
-            <Card sx={{ borderRadius: 4, boxShadow: '0 10px 40px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
-              <Box sx={{ bgcolor: 'success.main', py: 4, textAlign: 'center', color: 'white' }}>
-                <AssignmentTurnedIn sx={{ fontSize: 60, mb: 1 }} />
-                <Typography variant="h4" fontWeight="800">Finalized!</Typography>
+            <Paper sx={{ p: 6, textAlign: 'center', borderRadius: 4, border: '2px solid #4caf50', bgcolor: '#f8fff8' }}>
+              <AssignmentTurnedIn sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
+              <Typography variant="h4" color="success.main" fontWeight="bold" gutterBottom>
+                Agreement Finalized!
+              </Typography>
+              <Typography variant="body1" color="text.secondary" mb={4}>
+                Your rental agreement has been digitally signed and stored with your IP/Device audit trail.
+              </Typography>
+              <Button 
+                size="large"
+                variant="contained" 
+                color="success" 
+                startIcon={<CloudDownload />}
+                onClick={() => window.open(existingAgreement.signed_pdf, "_blank")}
+                sx={{ px: 4, py: 1.5, borderRadius: 2, fontWeight: 'bold' }}
+              >
+                Download Signed PDF
+              </Button>
+              <Box mt={4}>
+                <Button variant="text" color="primary" onClick={() => navigate("/my-bookings")}>
+                  Go to My Bookings
+                </Button>
               </Box>
-              <CardContent sx={{ p: 4, textAlign: 'center' }}>
-                <Typography variant="body1" color="text.secondary" mb={4}>
-                  Your rental agreement is legally active. A secure digital audit trail (IP: {existingAgreement.ip_address || 'Logged'}) has been attached.
-                </Typography>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
-                  <Button 
-                    size="large" variant="contained" color="success" 
-                    startIcon={<CloudDownload />}
-                    onClick={() => window.open(existingAgreement.signed_pdf, "_blank")}
-                    sx={{ borderRadius: 3, px: 4, fontWeight: 'bold', textTransform: 'none' }}
-                  >
-                    Download Agreement
-                  </Button>
-                  <Button variant="outlined" sx={{ borderRadius: 3, textTransform: 'none' }} onClick={() => navigate("/my-bookings")}>
-                    Back to Bookings
-                  </Button>
-                </Stack>
-              </CardContent>
-            </Card>
+            </Paper>
           )}
 
           {/* CASE 2 & 3: PROGRESS */}
           {(existingAgreement?.agreement_status === "pending" || 
             (existingAgreement?.agreement_status === "approved" && !existingAgreement.signed_pdf)) && (
-            <Paper sx={{ p: 6, textAlign: 'center', borderRadius: 4, boxShadow: 'none', border: '1px solid #eee' }}>
-              <CircularProgress size={60} thickness={2} sx={{ mb: 3 }} />
-              <Typography variant="h5" fontWeight="800" gutterBottom>Review in Progress</Typography>
-              <Typography color="text.secondary">
-                The landlord is reviewing your details. You will be notified once the document is ready for your digital signature.
-              </Typography>
+            <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
+              <CircularProgress size={40} sx={{ mb: 2 }} />
+              <Typography variant="h5" color="info.main" fontWeight="bold">Processing Document</Typography>
+              <Typography mt={2}>We are generating your legal document or waiting for the landlord to approve.</Typography>
             </Paper>
           )}
 
           {/* CASE 4: READY FOR TENANT SIGNATURE */}
           {existingAgreement?.agreement_status === "approved" && existingAgreement.signed_pdf && (
-            <Box>
-              <Box mb={3} display="flex" alignItems="center" gap={1.5}>
-                <VerifiedUser color="primary" />
-                <Typography variant="h5" fontWeight="800">Review & Sign Agreement</Typography>
-              </Box>
+            <Paper sx={{ p: 4, borderRadius: 3, boxShadow: 3 }}>
+              <Typography variant="h6" fontWeight="bold">Step 2: Review & Finalize Signature</Typography>
+              <Typography variant="caption" color="text.secondary">Your IP address and device info will be logged for legal validity.</Typography>
+              <Divider sx={{ my: 2 }} />
+              
+              <iframe 
+                src={`${existingAgreement.signed_pdf}#toolbar=0`} 
+                width="100%" 
+                height="450px" 
+                style={{ border: '1px solid #ddd', borderRadius: '8px', marginBottom: '20px' }} 
+                title="Agreement Preview" 
+              />
 
-              <Card sx={{ borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.05)', mb: 3 }}>
-                <iframe 
-                  src={`${existingAgreement.signed_pdf}#toolbar=0`} 
-                  width="100%" 
-                  height="500px" 
-                  style={{ border: 'none' }} 
-                  title="Agreement Preview" 
-                />
-              </Card>
-
-              <Card sx={{ borderRadius: 3, border: '1px solid #e0e0e0', boxShadow: 'none' }}>
-                <CardContent sx={{ p: 4 }}>
-                  {!isVerified ? (
-                    <Box>
-                       <Stack direction="row" alignItems="center" spacing={1} mb={3}>
-                        {confirmObj && (
-                            <IconButton onClick={() => setConfirmObj(null)} size="small" sx={{ border: '1px solid #eee' }}>
-                                <ArrowBack fontSize="small" />
-                            </IconButton>
-                        )}
-                        <Typography variant="h6" fontWeight="700">Step 1: Identity Verification</Typography>
-                      </Stack>
-                      
-                      <TextField 
-                        fullWidth label="Mobile Number" value={manualMobile} 
-                        onChange={(e) => setManualMobile(cleanPhoneNumber(e.target.value))}
-                        disabled={!!confirmObj || loading}
-                        InputProps={{ startAdornment: <Typography sx={{ mr: 1, color: 'text.secondary', fontWeight: 'bold' }}>+91</Typography> }}
-                        sx={{ mb: 2 }}
-                      />
-
-                      {!confirmObj ? (
-                        <Button 
-                          variant="contained" fullWidth size="large" onClick={sendOtp} 
-                          disabled={loading || manualMobile.length < 10}
-                          sx={{ borderRadius: 2, py: 1.5, fontWeight: 'bold', textTransform: 'none' }}
-                        >
-                          {loading ? <CircularProgress size={24} color="inherit" /> : "Verify via OTP"}
-                        </Button>
-                      ) : (
-                        <Stack spacing={2}>
-                          <TextField 
-                            fullWidth label="Enter 6-Digit OTP" value={otp} 
-                            onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                            autoFocus
-                          />
-                          <Button 
-                            variant="contained" color="primary" fullWidth size="large" onClick={verifyOtp} 
-                            disabled={loading || otp.length < 6}
-                            sx={{ borderRadius: 2, py: 1.5, fontWeight: 'bold', textTransform: 'none' }}
-                          >
-                            {loading ? <CircularProgress size={24} color="inherit" /> : "Confirm & Unlock Signature"}
-                          </Button>
-                        </Stack>
-                      )}
-                    </Box>
-                  ) : (
-                    <Box>
-                      <Alert icon={<Security fontSize="inherit" />} severity="success" sx={{ mb: 3, borderRadius: 2 }}>
-                        Identity verified. Please provide your digital signature to finalize.
-                      </Alert>
-                      
-                      <LegalDeclaration />
-
-                      <FormControlLabel
-                        control={<Checkbox checked={hasAcceptedTerms} onChange={(e) => setHasAcceptedTerms(e.target.checked)} />}
-                        label={<Typography variant="body2">I accept the terms and consent to the digital audit trail.</Typography>}
-                        sx={{ mb: 3 }}
-                      />
-
-                      <Box sx={{ opacity: hasAcceptedTerms ? 1 : 0.4, transition: '0.3s' }}>
-                        <Typography variant="subtitle2" gutterBottom fontWeight="700">DRAW YOUR SIGNATURE</Typography>
-                        <Box border="2px dashed #ddd" borderRadius={3} bgcolor="#fff" sx={{ overflow: 'hidden' }}>
-                          <SignatureCanvas 
-                            ref={sigCanvas} penColor="black" 
-                            canvasProps={{ width: 800, height: 180, className: "sigCanvas", style: { width: '100%', height: '180px' } }} 
-                          />
-                        </Box>
-                        <Stack direction="row" spacing={2} mt={3}>
-                          <Button variant="text" color="error" onClick={() => sigCanvas.current.clear()} sx={{ fontWeight: 'bold' }}>Clear</Button>
-                          <Button 
-                            variant="contained" color="success" fullWidth onClick={handleFinalTenantSign} 
-                            disabled={loading || !hasAcceptedTerms}
-                            sx={{ borderRadius: 2, py: 1.5, fontWeight: 'bold', textTransform: 'none' }}
-                          >
-                            {loading ? <CircularProgress size={24} color="inherit" /> : "Sign & Finalize Agreement"}
-                          </Button>
-                        </Stack>
-                      </Box>
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-            </Box>
-          )}
-
-          {/* CASE 5: INITIAL FORM */}
-          {!existingAgreement && (
-            <Card sx={{ borderRadius: 4, boxShadow: '0 8px 30px rgba(0,0,0,0.05)', border: '1px solid #f0f0f0' }}>
-              <CardContent sx={{ p: 4 }}>
-                <Stack direction="row" alignItems="center" spacing={1} mb={3}>
-                  <Description color="primary" />
-                  <Typography variant="h5" fontWeight="800">Agreement Details</Typography>
-                </Stack>
-                
-                <form onSubmit={handleSubmitInitialForm}>
-                  <Grid container spacing={2.5}>
-                    <Grid item xs={12} md={6}><TextField fullWidth variant="outlined" name="full_name" label="Legal Full Name" required onChange={handleChange} /></Grid>
-                    <Grid item xs={12} md={6}><TextField fullWidth variant="outlined" name="mobile" label="Mobile Number" required onChange={handleChange} /></Grid>
-                    <Grid item xs={12} md={8}><TextField fullWidth variant="outlined" name="email" label="Email Address" type="email" required onChange={handleChange} /></Grid>
-                    <Grid item xs={12} md={4}><TextField fullWidth variant="outlined" name="aadhaar_last4" label="Aadhaar (Last 4 Digits)" required onChange={handleChange} /></Grid>
-                    <Grid item xs={12}><TextField fullWidth variant="outlined" name="address" label="Permanent Address" multiline rows={2} required onChange={handleChange} /></Grid>
-                    <Grid item xs={12} md={4}><TextField fullWidth variant="outlined" name="city" label="City" required onChange={handleChange} /></Grid>
-                    <Grid item xs={12} md={4}><TextField fullWidth variant="outlined" name="state" label="State" required onChange={handleChange} /></Grid>
-                    <Grid item xs={12} md={4}><TextField fullWidth variant="outlined" name="pincode" label="Pincode" required onChange={handleChange} /></Grid>
-                    
-                    <Grid item xs={12}><Divider sx={{ my: 1 }}><Typography variant="caption" color="text.secondary" fontWeight="bold">RENTAL TERMS</Typography></Divider></Grid>
-                    
-                    <Grid item xs={12} md={4}><TextField fullWidth variant="outlined" name="checkin_date" label="Check-in Date" type="date" InputLabelProps={{ shrink: true }} required onChange={handleChange} /></Grid>
-                    <Grid item xs={12} md={4}><TextField fullWidth variant="outlined" name="rent" label="Monthly Rent (₹)" type="number" required onChange={handleChange} /></Grid>
-                    <Grid item xs={12} md={4}><TextField fullWidth variant="outlined" name="deposit" label="Security Deposit (₹)" type="number" required onChange={handleChange} /></Grid>
-                  </Grid>
+              {!isVerified ? (
+                <Box sx={{ p: 3, bgcolor: '#f9f9f9', borderRadius: 2, border: '1px solid #eee' }}>
+                   <Box display="flex" alignItems="center" mb={2}>
+                    {confirmObj && (
+                        <IconButton size="small" onClick={() => setConfirmObj(null)} sx={{ mr: 1 }}>
+                            <ArrowBack fontSize="small" />
+                        </IconButton>
+                    )}
+                    <Typography variant="subtitle1" fontWeight="bold">Identity Verification</Typography>
+                  </Box>
                   
-                  <Button 
-                    type="submit" variant="contained" fullWidth 
-                    sx={{ mt: 5, py: 2, borderRadius: 3, fontWeight: 'bold', fontSize: '1rem', textTransform: 'none', boxShadow: '0 4px 14px rgba(25, 118, 210, 0.39)' }} 
-                    disabled={loading}
-                    startIcon={<EditNote />}
-                  >
-                    {loading ? <CircularProgress size={24} color="inherit" /> : "Generate Draft Agreement"}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-        </Stack>
-      )}
+                  <TextField 
+                    fullWidth label="Registered Mobile" value={manualMobile} 
+                    onChange={(e) => setManualMobile(cleanPhoneNumber(e.target.value))}
+                    disabled={!!confirmObj || loading}
+                    InputProps={{ startAdornment: <Typography sx={{ mr: 1, color: 'text.secondary' }}>+91</Typography> }}
+                    sx={{ mb: 2 }}
+                  />
 
+                  {!confirmObj ? (
+                    <Button variant="contained" fullWidth onClick={sendOtp} disabled={loading || manualMobile.length < 10}>
+                      {loading ? <CircularProgress size={24} color="inherit" /> : "Send OTP"}
+                    </Button>
+                  ) : (
+                    <>
+                      <TextField fullWidth label="6-Digit OTP" value={otp} 
+                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                        sx={{ mb: 2 }} autoFocus
+                      />
+                      <Button variant="contained" color="primary" fullWidth onClick={verifyOtp} disabled={loading || otp.length < 6}>
+                        {loading ? <CircularProgress size={24} color="inherit" /> : "Confirm OTP"}
+                      </Button>
+                    </>
+                  )}
+                </Box>
+              ) : (
+                <Box mt={2}>
+                  <Alert severity="success" sx={{ mb: 2 }}>Verification Successful! Please sign below.</Alert>
+                  
+                  <LegalDeclaration />
+
+                  <FormControlLabel
+                    control={<Checkbox checked={hasAcceptedTerms} onChange={(e) => setHasAcceptedTerms(e.target.checked)} />}
+                    label="I agree to the terms and conditions and consent to electronic logging of my signature details."
+                    sx={{ mb: 3 }}
+                  />
+
+                  <Box sx={{ opacity: hasAcceptedTerms ? 1 : 0.5, pointerEvents: hasAcceptedTerms ? 'auto' : 'none' }}>
+                    <Box border="2px dashed #ccc" borderRadius={2} bgcolor="#fff">
+                      <SignatureCanvas 
+                        ref={sigCanvas} penColor="black" 
+                        canvasProps={{ width: 830, height: 180, className: "sigCanvas", style: { width: '100%', height: '180px' } }} 
+                      />
+                    </Box>
+                    <Box mt={2} display="flex" gap={2}>
+                      <Button variant="outlined" color="error" onClick={() => sigCanvas.current.clear()} sx={{ flex: 1 }}>Clear</Button>
+                      <Button variant="contained" color="success" fullWidth onClick={handleFinalTenantSign} disabled={loading || !hasAcceptedTerms} sx={{ flex: 3 }}>
+                        {loading ? <CircularProgress size={24} /> : "Apply Signature & Finalize"}
+                      </Button>
+                    </Box>
+                  </Box>
+                </Box>
+              )}
+            </Paper>
+          )}
+
+          {/* CASE 5: INITIAL FORM (UPDATED) */}
+          {!existingAgreement && (
+            <Paper sx={{ p: 4, borderRadius: 3 }}>
+              <Typography variant="h5" fontWeight="bold" mb={3}>Draft Rental Agreement</Typography>
+              <form onSubmit={handleSubmitInitialForm}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="full_name" label="Full Name" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="mobile" label="Mobile" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="email" label="Email" type="email" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12}><TextField fullWidth name="address" label="Current Address" multiline rows={2} required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={4}><TextField fullWidth name="city" label="City" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={4}><TextField fullWidth name="state" label="State" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={4}><TextField fullWidth name="pincode" label="Pincode" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={12}><TextField fullWidth name="aadhaar_last4" label="Aadhaar (Last 4)" required onChange={handleChange} /></Grid>
+                </Grid>
+                <Button type="submit" variant="contained" fullWidth sx={{ mt: 4, py: 1.5 }} disabled={loading}>
+                  {loading ? <CircularProgress size={24} /> : "Submit Details for Review"}
+                </Button>
+              </form>
+            </Paper>
+          )}
+        </>
+      )}
       <div id="recaptcha-container"></div>
       
       <Snackbar open={!!success} autoHideDuration={4000} onClose={() => setSuccess("")}>
-        <Alert severity="success" variant="filled" sx={{ width: '100%', borderRadius: 2 }}>{success}</Alert>
+        <Alert severity="success">{success}</Alert>
       </Snackbar>
       <Snackbar open={!!error} autoHideDuration={4000} onClose={() => setError(null)}>
-        <Alert severity="error" variant="filled" sx={{ width: '100%', borderRadius: 2 }}>{error}</Alert>
+        <Alert severity="error">{error}</Alert>
       </Snackbar>
-    </Container>
+    </Box>
   );
 };
 
