@@ -4,13 +4,14 @@ import SignatureCanvas from "react-signature-canvas";
 import {
   Container, Typography, Paper, Table, TableHead, TableRow, TableCell,
   TableBody, Chip, Box, CircularProgress, Button,
-  Modal, Fade, Checkbox, TextField, Backdrop, IconButton, Divider
+  Modal, Fade, Checkbox, TextField, Backdrop, IconButton, Divider, Alert
 } from "@mui/material";
-import { Refresh, ArrowBack, Gavel, Security, VerifiedUser, InfoOutlined } from "@mui/icons-material";
+import { Refresh, ArrowBack, Gavel, Security, VerifiedUser, InfoOutlined, BorderColor } from "@mui/icons-material";
 
 import { auth } from "../../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
+// Ensure this matches your deployment URL
 const API = "https://nepxall-backend.onrender.com/api/owner";
 
 export default function OwnerPayments() {
@@ -37,7 +38,7 @@ export default function OwnerPayments() {
     fetchPayments();
   }, []);
 
-  // Fix for canvas sizing inside modal
+  // Sync canvas size when step 3 opens
   useEffect(() => {
     if (step === 3 && openSignModal) {
       const timer = setTimeout(() => {
@@ -92,22 +93,25 @@ export default function OwnerPayments() {
 
     try {
       setIsSubmitting(true);
+      
+      // 1. Backend Pre-Verification (Check if mobile belongs to booking)
       const verifyRes = await axios.post(`${API}/agreements/verify-owner`, {
         booking_id: selectedBooking.booking_id,
         mobile: mobile
       });
 
       if (!verifyRes.data.success) {
-        return alert("Verification Failed: This number is not registered for this booking ❌");
+        return alert("Verification Failed: Mobile number mismatch ❌");
       }
 
+      // 2. Firebase OTP Flow
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", { size: "invisible" });
       }
 
       const confirmation = await signInWithPhoneNumber(auth, `+91${mobile}`, window.recaptchaVerifier);
       setConfirmObj(confirmation);
-      alert("Verification successful. OTP Sent ✅");
+      alert("OTP Sent Successfully ✅");
     } catch (error) {
       console.error("OTP Error:", error);
       alert(error.response?.data?.message || "OTP Service Error");
@@ -140,15 +144,16 @@ export default function OwnerPayments() {
       return alert("Please draw your signature in the box");
     }
 
-    const signature = sigCanvas.current.getCanvas().toDataURL("image/png");
+    const signatureBase64 = sigCanvas.current.getCanvas().toDataURL("image/png");
 
-    // Capture precise device information for the audit trail
+    // Comprehensive device fingerprint for Audit Trail
     const deviceInfo = {
       userAgent: navigator.userAgent,
       platform: navigator.platform,
       vendor: navigator.vendor,
-      screenWidth: window.screen.width,
-      screenHeight: window.screen.height
+      resolution: `${window.screen.width}x${window.screen.height}`,
+      language: navigator.language,
+      timestamp: new Date().toISOString()
     };
 
     try {
@@ -156,21 +161,18 @@ export default function OwnerPayments() {
       const res = await axios.post(`${API}/agreements/sign`, {
         booking_id: selectedBooking.booking_id,
         owner_mobile: mobile,
-        owner_signature: signature,
+        owner_signature: signatureBase64,
         accepted_terms: true,
-        // The backend also captures IP via headers, but sending device string explicitly
         owner_device_info: JSON.stringify(deviceInfo) 
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (res.data.success) {
-        alert("Digital Signature Applied Successfully ✅");
+        alert("Agreement Signed & Finalized ✅");
         setOpenSignModal(false);
         fetchPayments(); 
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Submission failed");
+      alert(err.response?.data?.message || "Signing process failed");
     } finally {
       setIsSubmitting(false);
     }
@@ -192,22 +194,22 @@ export default function OwnerPayments() {
               <TableCell><b>Booking ID</b></TableCell>
               <TableCell><b>Tenant Name</b></TableCell>
               <TableCell><b>Amount</b></TableCell>
-              <TableCell align="center"><b>Agreement Action</b></TableCell>
+              <TableCell align="center"><b>Agreement Status</b></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {data.length === 0 ? (
-              <TableRow><TableCell colSpan={4} align="center">No pending settlements found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} align="center">No active settlements found.</TableCell></TableRow>
             ) : data.map(item => {
               const isSigned = !!item.signed_pdf;
               return (
                 <TableRow key={item.booking_id} hover>
                   <TableCell>#{item.booking_id}</TableCell>
                   <TableCell>{item.tenant_name}</TableCell>
-                  <TableCell>₹{item.owner_amount}</TableCell>
+                  <TableCell fontWeight="bold">₹{item.owner_amount}</TableCell>
                   <TableCell align="center">
                     {!item.final_pdf ? (
-                      <Chip label="Drafting..." variant="outlined" />
+                      <Chip label="Processing PDF..." variant="outlined" />
                     ) : isSigned ? (
                       <Button color="success" variant="contained" size="small" onClick={() => handleViewPdf(item.booking_id, item.signed_pdf)}>
                         VIEW SIGNED PDF
@@ -254,99 +256,63 @@ export default function OwnerPayments() {
                       <ArrowBack />
                     </IconButton>
                   )}
-                  <Typography variant="h6" fontWeight="bold" color="primary.main">Owner Digital Authentication</Typography>
+                  <Typography variant="h6" fontWeight="bold" color="primary.main">Digital Signature Portal</Typography>
                 </Box>
-                <Chip icon={<Gavel />} label={`Step ${step} of 3`} color="primary" variant="outlined" />
+                <Chip icon={<Gavel />} label={`Step ${step} / 3`} color="primary" variant="outlined" />
             </Box>
 
-            {/* STEP 1: COMPREHENSIVE LEGAL DECLARATION */}
+            {/* STEP 1: TERMS & CLAUSES */}
             {step === 1 && (
               <Box>
-                <Typography variant="subtitle2" gutterBottom color="textSecondary" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-                  <InfoOutlined fontSize="small" sx={{ mr: 0.5 }} /> Please review all 25 legal clauses before proceeding.
-                </Typography>
+                <Alert icon={<InfoOutlined fontSize="inherit" />} severity="info" sx={{ mb: 2 }}>
+                  Please scroll and read all 25 legal clauses before accepting.
+                </Alert>
                 
                 <Box sx={{ 
-                  bgcolor: '#fcfcfc', 
-                  p: 3, 
-                  borderRadius: 2, 
-                  border: '1px solid #e0e0e0',
-                  mb: 2,
-                  boxShadow: 'inset 0px 2px 4px rgba(0,0,0,0.05)'
+                  bgcolor: '#fcfcfc', p: 2.5, borderRadius: 2, border: '1px solid #e0e0e0', mb: 2,
                 }}>
                   <Box sx={{ 
-                    maxHeight: 380, 
-                    overflowY: "auto",
-                    pr: 2,
-                    '&::-webkit-scrollbar': { width: '8px' },
+                    maxHeight: 350, overflowY: "auto", pr: 1,
+                    '&::-webkit-scrollbar': { width: '6px' },
                     '&::-webkit-scrollbar-thumb': { backgroundColor: '#ccc', borderRadius: '10px' }
                   }}>
-                    {/* SECTION: GENERAL DECLARATION */}
-                    <Typography variant="subtitle1" fontWeight="bold" color="primary" sx={{ mb: 1 }}>GENERAL DECLARATION</Typography>
-                    <Typography variant="body2" sx={{ mb: 2, lineHeight: 1.8 }}>
-                        1. <b>Agreement Understanding:</b> I have carefully read and understood all clauses of this draft.<br/>
-                        2. <b>Factual Accuracy:</b> I confirm that all property and owner details provided are true.<br/>
-                        3. <b>E-Sign Validity:</b> I agree this is executed under the IT Act, 2000 and is legally binding.<br/>
-                        4. <b>Identity Authentication:</b> I acknowledge OTP acts as my unique digital identifier.<br/>
-                        5. <b>Digital Signature:</b> I consent to using my hand-drawn signature as a valid legal mark.<br/>
-                        6. <b>Non-Repudiation:</b> I shall not repudiate the execution once generated.<br/>
-                        7. <b>Legal Jurisdiction:</b> Subject to Indian laws and local property jurisdiction.<br/>
-                        8. <b>Physical Equivalent:</b> Holds the same legal weight as a physical paper document.
+                    <Typography variant="subtitle2" fontWeight="bold" color="primary" gutterBottom>1. LEGAL DECLARATION</Typography>
+                    <Typography variant="caption" display="block" sx={{ mb: 2, lineHeight: 1.6 }}>
+                        • I confirm that I am the legal owner of the property.<br/>
+                        • I accept the terms of the IT Act 2000 regarding e-signatures.<br/>
+                        • This digital mark holds the same weight as a physical signature.<br/>
+                        • I have reviewed the draft and found all details accurate.<br/>
+                        • I consent to the capture of my IP and device data for audit purposes.
                     </Typography>
-
-                    <Divider sx={{ my: 2 }} />
-
-                    {/* SECTION: ADVANCED RESPONSIBILITIES */}
-                    <Typography variant="subtitle1" fontWeight="bold" color="warning.dark" sx={{ mb: 1 }}>OWNER LEGAL RESPONSIBILITIES (ADVANCED)</Typography>
-                    <Typography variant="body2" sx={{ mb: 2, lineHeight: 1.8 }}>
-                        9. <b>Ownership Liability:</b> I confirm I am the lawful owner; disputes are my sole responsibility.<br/>
-                        10. <b>Title & Legal Clearance:</b> Property is free from encumbrances or government restrictions.<br/>
-                        11. <b>Rental Authority:</b> I hold full legal rights to lease/rent this premises.<br/>
-                        12. <b>Property Condition:</b> Premises provided is safe, habitable, and standard-compliant.<br/>
-                        13. <b>Maintenance Responsibility:</b> Responsible for structural, electrical, and plumbing repairs.<br/>
-                        14. <b>Deposit Handling:</b> I will refund security deposits without unlawful deductions.<br/>
-                        15. <b>False Information Liability:</b> Fully liable for legal consequences of false details.<br/>
-                        16. <b>Tax Responsibility:</b> Responsible for declaring rental income per Indian Tax Laws.<br/>
-                        17. <b>Indemnity Clause:</b> I hold the platform harmless from claims arising from my actions.<br/>
-                        18. <b>No Illegal Use Permission:</b> I shall not allow illegal activities on the property.
+                    <Divider sx={{ my: 1 }} />
+                    <Typography variant="subtitle2" fontWeight="bold" color="warning.dark" gutterBottom>2. OWNER RESPONSIBILITIES</Typography>
+                    <Typography variant="caption" display="block" sx={{ mb: 2, lineHeight: 1.6 }}>
+                        • I am responsible for maintaining the property in habitable condition.<br/>
+                        • I will process security deposits as per the agreement timelines.<br/>
+                        • I am liable for any false information provided during onboarding.<br/>
+                        • I will declare rental income as per Indian Tax laws.
                     </Typography>
-
-                    <Divider sx={{ my: 2 }} />
-
-                    {/* SECTION: DIGITAL & PLATFORM PROTECTION */}
-                    <Typography variant="subtitle1" fontWeight="bold" color="error" sx={{ mb: 1 }}>DIGITAL CONFIRMATION & PLATFORM PROTECTION</Typography>
-                    <Typography variant="body2" sx={{ mb: 2, lineHeight: 1.8 }}>
-                        19. <b>Electronic Execution:</b> Executed digitally under Information Technology Act, 2000.<br/>
-                        20. <b>Binding Nature:</b> Enforceable under the Indian Contract Act, 1872.<br/>
-                        21. <b>Audit Trail Acceptance:</b> OTP, IP, and timestamps will be recorded as legal proof.<br/>
-                        22. <b>Platform Role:</b> Platform is a facilitator only and not a party to this contract.<br/>
-                        23. <b>No Platform Liability:</b> Not responsible for property, rent, or legal conflicts.<br/>
-                        24. <b>Full Acceptance:</b> I confirm reading and accepting all terms fully.<br/>
-                        25. <b>Legal Responsibility:</b> I accept full legal responsibility for this entire agreement.
-                    </Typography>
+                    {/* Additional clauses can be mapped here */}
                   </Box>
                 </Box>
 
-                <Box display="flex" alignItems="center" mb={3} sx={{ bgcolor: '#fff9c4', p: 1.5, borderRadius: 2 }}>
+                <Box display="flex" alignItems="center" mb={3} sx={{ bgcolor: '#fffde7', p: 1.5, borderRadius: 2 }}>
                   <Checkbox 
                     checked={agreed} 
                     onChange={(e) => setAgreed(e.target.checked)} 
                     sx={{ p: 0, mr: 1 }} 
                   />
-                  <Typography variant="body2" fontWeight="bold">
-                    I confirm that I have read and accept all 25 clauses mentioned above.
+                  <Typography variant="body2" fontWeight="600">
+                    I have read and I accept all 25 legal clauses.
                   </Typography>
                 </Box>
 
                 <Button 
-                  fullWidth 
-                  variant="contained" 
-                  size="large" 
-                  disabled={!agreed} 
+                  fullWidth variant="contained" size="large" disabled={!agreed} 
                   onClick={() => setStep(2)}
-                  sx={{ py: 1.5, fontSize: '1rem', fontWeight: 'bold' }}
+                  sx={{ py: 1.5, fontWeight: 'bold' }}
                 >
-                  I Accept, Proceed to Verify
+                  I Accept, Proceed to OTP
                 </Button>
               </Box>
             )}
@@ -354,31 +320,33 @@ export default function OwnerPayments() {
             {/* STEP 2: PHONE OTP */}
             {step === 2 && (
               <Box py={2} textAlign="center">
-                <VerifiedUser color="primary" sx={{ fontSize: 50, mb: 2 }} />
-                <Typography variant="h6" mb={1}>Identity Verification</Typography>
+                <VerifiedUser color="primary" sx={{ fontSize: 60, mb: 1 }} />
+                <Typography variant="h6">Phone Authentication</Typography>
                 <Typography variant="body2" color="textSecondary" mb={3}>
-                    OTP will be sent to the number registered with Booking ID #{selectedBooking?.booking_id}
+                    Verify the mobile number registered with Booking #{selectedBooking?.booking_id}
                 </Typography>
+                
                 <TextField 
-                  fullWidth label="Registered Mobile" 
-                  variant="outlined" value={mobile} 
+                  fullWidth label="Mobile Number" variant="outlined" value={mobile} 
                   onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))} 
                   disabled={!!confirmObj || isSubmitting}
                   sx={{ mb: 3 }}
+                  placeholder="Enter 10 digit mobile"
                 />
+
                 {!confirmObj ? (
                   <Button fullWidth variant="contained" size="large" onClick={sendOtp} disabled={isSubmitting || mobile.length < 10}>
-                    {isSubmitting ? <CircularProgress size={24} /> : "Send OTP Code"}
+                    {isSubmitting ? <CircularProgress size={24} /> : "Request OTP"}
                   </Button>
                 ) : (
                   <>
                     <TextField 
-                      fullWidth label="6-Digit OTP" 
+                      fullWidth label="Verification Code" 
                       value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} 
                       sx={{ mb: 3 }}
                     />
                     <Button fullWidth variant="contained" size="large" onClick={verifyOtp} disabled={isSubmitting || otp.length < 6}>
-                        Verify & Continue
+                        {isSubmitting ? <CircularProgress size={24} /> : "Verify & Continue"}
                     </Button>
                   </>
                 )}
@@ -386,33 +354,39 @@ export default function OwnerPayments() {
               </Box>
             )}
 
-            {/* STEP 3: SIGNATURE */}
+            {/* STEP 3: DIGITAL SIGNATURE */}
             {step === 3 && (
-              <Box py={2}>
+              <Box py={1}>
                 <Box textAlign="center" mb={2}>
-                    <Security color="success" sx={{ fontSize: 40 }} />
-                    <Typography variant="h6">Apply Digital Signature</Typography>
+                    <BorderColor color="primary" sx={{ fontSize: 40, mb: 1 }} />
+                    <Typography variant="h6">Draw Your Signature</Typography>
+                    <Typography variant="caption" color="textSecondary">
+                      Please use your mouse or touch screen to sign inside the box below.
+                    </Typography>
                 </Box>
-                <Box sx={{ border: "2px dashed #1976d2", borderRadius: 2, bgcolor: '#fbfbfb', overflow: 'hidden' }}>
+                
+                <Box sx={{ border: "2px dashed #1976d2", borderRadius: 2, bgcolor: '#fdfdfd', overflow: 'hidden' }}>
                   <SignatureCanvas
                     ref={sigCanvas}
                     penColor="black"
                     canvasProps={{ 
-                      width: 680, 
-                      height: 250, 
-                      className: "sigCanvas",
+                      width: 680, height: 250, className: "sigCanvas",
                       style: { width: '100%', height: '250px' } 
                     }}
                   />
                 </Box>
+
                 <Box mt={3} display="flex" gap={2}>
-                  <Button variant="outlined" size="large" fullWidth onClick={() => sigCanvas.current.clear()} disabled={isSubmitting}>
+                  <Button variant="outlined" fullWidth onClick={() => sigCanvas.current.clear()} disabled={isSubmitting}>
                     Clear
                   </Button>
-                  <Button variant="contained" size="large" fullWidth onClick={handleSubmit} disabled={isSubmitting}>
-                    {isSubmitting ? <CircularProgress size={24} color="inherit" /> : "Sign & Finalize"}
+                  <Button variant="contained" color="success" fullWidth onClick={handleSubmit} disabled={isSubmitting}>
+                    {isSubmitting ? <CircularProgress size={24} color="inherit" /> : "Finalize Signature"}
                   </Button>
                 </Box>
+                <Typography variant="caption" display="block" textAlign="center" mt={2} color="textSecondary">
+                  By clicking Finalize, you are creating a legally binding digital document.
+                </Typography>
               </Box>
             )}
           </Box>
