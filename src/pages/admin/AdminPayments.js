@@ -22,7 +22,7 @@ import {
 } from "@mui/material";
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import WhatsAppIcon from '@mui/icons-material/WhatsApp'; // Added WhatsApp Icon
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 
 /* ================= BRAND COLORS ================= */
 const BRAND_BLUE = "#0B5ED7";
@@ -95,15 +95,9 @@ const AdminPayments = () => {
     }
   };
 
-  // WhatsApp Share Logic
   const handleWhatsAppShare = (p) => {
-    // Remove any non-numeric characters from the phone number
     const cleanPhone = p.phone ? p.phone.replace(/\D/g, "") : "";
-    
-    // Create a professional message
     const message = `*Payment Receipt - Nepxall*%0A%0AHello *${p.tenant_name}*,%0AYour payment for *${p.pg_name}* has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.paid_date)}%0A%0A_Thank you for choosing Nepxall!_`;
-    
-    // Open WhatsApp Web/App
     const whatsappUrl = `https://wa.me/${cleanPhone}?text=${message}`;
     window.open(whatsappUrl, "_blank");
   };
@@ -213,7 +207,6 @@ const AdminPayments = () => {
                   </TableCell>
                   <TableCell align="center">
                     <Stack direction="row" spacing={0.5} justifyContent="center">
-                      {/* PDF Action */}
                       <Tooltip title={p.status === "paid" ? "Download Receipt" : "Payment not verified"}>
                         <span>
                           <IconButton 
@@ -225,8 +218,6 @@ const AdminPayments = () => {
                           </IconButton>
                         </span>
                       </Tooltip>
-
-                      {/* WHATSAPP ACTION */}
                       <Tooltip title={p.status === "paid" ? "Share on WhatsApp" : "Payment not verified"}>
                         <span>
                           <IconButton 
@@ -247,22 +238,22 @@ const AdminPayments = () => {
         </Table>
       </Paper>
 
-      {/* HIDDEN RECEIPT DESIGN */}
+      {/* HIDDEN RECEIPT DESIGN - MIRRORED FROM USER VIEW */}
       {selectedPayment && (
         <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
           <div ref={receiptRef} style={modernReceiptContainer}>
             <div style={{ ...receiptHeader, borderBottom: `4px solid ${BRAND_BLUE}` }}>
               <div>
                 <h1 style={logoText}>
-                  <span style={{ color: BRAND_BLUE }}>NEP</span>
-                  <span style={{ color: BRAND_GREEN }}>XALL</span>
+                    <span style={{ color: BRAND_BLUE }}>NEP</span>
+                    <span style={{ color: BRAND_GREEN }}>XALL</span>
                 </h1>
                 <p style={tagline}>Next Places for Living</p>
               </div>
               <div style={{ textAlign: "right" }}>
                 <h2 style={receiptTitle}>RENT RECEIPT</h2>
                 <p style={{ ...orderIdText, color: BRAND_BLUE }}>
-                  Order ID: {selectedPayment.order_id || "N/A"}
+                    Order ID: {selectedPayment.order_id || "N/A"}
                 </p>
                 <p style={dateText}>Date: {formatDate(selectedPayment.paid_date || new Date())}</p>
               </div>
@@ -299,7 +290,7 @@ const AdminPayments = () => {
                 <span>Amount</span>
               </div>
               <div style={tableRow}>
-                <span>Monthly Rental Payment</span>
+                <span>Monthly Rent Payment</span>
                 <span>₹{selectedPayment.amount}</span>
               </div>
               <div style={{ ...tableRow, borderBottom: `2px solid ${BRAND_BLUE}`, fontWeight: "bold", background: "#f8fafc" }}>
@@ -319,10 +310,10 @@ const AdminPayments = () => {
             <div style={footerNote}>
               <div style={{textAlign: 'left', marginBottom: '20px', color: '#4b5563'}}>
                 <p>✔ Verified Transaction: <strong>{selectedPayment.order_id || 'N/A'}</strong></p>
-                <p>✔ This is a digital proof of payment generated via Nepxall Admin Panel.</p>
+                <p>✔ This is a digital proof of stay generated via Nepxall Admin Panel.</p>
               </div>
-              <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>* System-generated receipt. Verified by Admin.</p>
-              <p style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}>THANK YOU FOR CHOOSING NEPXALL</p>
+              <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>* System-generated receipt. No signature required.</p>
+              <p style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}>THANK YOU FOR CHOOSING NEPXALL!</p>
             </div>
           </div>
         </div>
@@ -337,7 +328,7 @@ const AdminPayments = () => {
   );
 };
 
-/* --- SHARED RECEIPT PDF STYLES --- */
+/* --- SHARED CSS OBJECTS (MATCHING USER SIDE) --- */
 const modernReceiptContainer = { width: "210mm", minHeight: "297mm", padding: "60px", background: "#ffffff", color: "#111827", fontFamily: "Helvetica, Arial, sans-serif" };
 const receiptHeader = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "20px", marginBottom: "30px" };
 const logoText = { margin: 0, fontSize: "36px", fontWeight: "900", letterSpacing: "-1px" };
