@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { auth } from "../firebase";
 import api from "../api/api";
 import { useNavigate } from "react-router-dom";
-import jsPDF from "jspdf"; // Fixed import case
+import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
 /* ================= BRAND COLORS ================= */
@@ -44,9 +44,17 @@ const UserActiveStay = () => {
   }, [loadStay, navigate]);
 
   const formatDate = (dateString) => {
-    if (!dateString) return "Processing...";
+    if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString('en-GB', {
       day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  const getPaymentMonth = (dateString) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString('en-GB', {
       month: 'long',
       year: 'numeric'
     });
@@ -80,15 +88,6 @@ const UserActiveStay = () => {
 
   if (loading) return <div style={container}><p style={{textAlign:"center", padding: 50}}>⏳ Syncing stays...</p></div>;
 
-  if (stays.length === 0) return (
-    <div style={container}>
-      <div style={emptyBox}>
-        <h3>No Active Stay</h3>
-        <button style={btn} onClick={() => navigate("/")}>Browse PGs</button>
-      </div>
-    </div>
-  );
-
   return (
     <div style={container}>
       <h2 style={{ marginBottom: 20 }}>🏠 My Current Stays</h2>
@@ -112,8 +111,6 @@ const UserActiveStay = () => {
               💰 Paid On: <span>{formatDate(stay.paid_date)}</span>
             </p>
             <p style={priceRow}>Monthly Rent: <span>₹{stay.rent_amount}</span></p>
-            <p style={priceRow}>Maintenance: <span>₹{stay.maintenance_amount || 0}</span></p>
-            <p style={priceRow}>Security Deposit (Paid): <span>₹{stay.deposit_amount}</span></p>
             <p style={priceRow}>Room Sharing: <span style={{ fontWeight: "700", color: BRAND_BLUE }}>{stay.room_type}</span></p>
             
             <div style={totalBox}>
@@ -130,73 +127,96 @@ const UserActiveStay = () => {
         </div>
       ))}
 
-      {/* MODERN RECEIPT DESIGN (HIDDEN FROM UI, VISIBLE IN PDF) */}
+      {/* ================= MODERN PDF RECEIPT (HIDDEN FROM UI) ================= */}
       {selectedStay && (
         <div style={{ position: "absolute", left: "-9999px" }}>
           <div ref={receiptRef} style={modernReceiptContainer}>
+            
             {/* Header */}
             <div style={{ ...receiptHeader, borderBottom: `4px solid ${BRAND_BLUE}` }}>
               <div>
                 <h1 style={logoText}>
-                    <span style={{ color: BRAND_BLUE }}>NEP</span>
-                    <span style={{ color: BRAND_GREEN }}>XALL</span>
+                  <span style={{ color: BRAND_BLUE }}>NEP</span>
+                  <span style={{ color: BRAND_GREEN }}>XALL</span>
                 </h1>
                 <p style={tagline}>Next Places for Living</p>
               </div>
               <div style={{ textAlign: "right" }}>
                 <h2 style={receiptTitle}>RENT RECEIPT</h2>
-                <p style={{ ...orderIdText, color: BRAND_BLUE }}>#{selectedStay.order_id || "NXP-001"}</p>
+                <p style={{ ...orderIdText, color: BRAND_BLUE }}>Receipt No: {selectedStay.id?.slice(-8).toUpperCase()}</p>
+                <p style={{ fontSize: "12px", color: "#6b7280" }}>Order ID: {selectedStay.order_id || "N/A"}</p>
               </div>
             </div>
 
             <div style={mainReceiptBody}>
-              <div style={{ flex: 1 }}>
+              {/* Left Column */}
+              <div style={{ flex: 1.2 }}>
                 <div style={sectionBlock}>
-                  <label style={receiptLabel}>ISSUED TO</label>
+                  <label style={receiptLabel}>👤 TENANT NAME</label>
                   <p style={receiptValue}>{auth.currentUser?.displayName || "Valued Tenant"}</p>
                   <p style={receiptSubValue}>{auth.currentUser?.email}</p>
-                  <p style={receiptSubValue}>{auth.currentUser?.phoneNumber || "Registered User"}</p>
                 </div>
 
                 <div style={sectionBlock}>
-                  <label style={receiptLabel}>PROPERTY DETAILS</label>
+                  <label style={receiptLabel}>🏠 PROPERTY & ROOM DETAILS</label>
                   <p style={receiptValue}>{selectedStay.pg_name}</p>
-                  <p style={receiptSubValue}>Room: {selectedStay.room_no || "Allotted"}</p>
-                  <p style={receiptSubValue}>{selectedStay.room_type} Sharing</p>
-                  <p style={receiptSubValue}>Bangalore, India</p>
+                  <p style={receiptSubValue}>Room No: {selectedStay.room_no || "Allocated"}</p>
+                  <p style={receiptSubValue}>Sharing Type: {selectedStay.room_type}</p>
+                </div>
+
+                <div style={sectionBlock}>
+                  <label style={receiptLabel}>📞 SUPPORT INFO</label>
+                  <p style={receiptSubValue}>Email: support@nepxall.com</p>
+                  <p style={receiptSubValue}>Website: www.nepxall.com</p>
                 </div>
               </div>
 
+              {/* Right Column: Payment Box */}
               <div style={paymentStatusBox}>
                 <div style={statusCircle}>✅</div>
-                <h3 style={{ ...statusText, color: BRAND_GREEN }}>PAID</h3>
-                <p style={dateText}>{formatDate(selectedStay.paid_date)}</p>
-                <div style={amountDisplay}>₹{selectedStay.monthly_total}</div>
+                <h3 style={{ ...statusText, color: BRAND_GREEN }}>VERIFIED</h3>
+                <div style={separator}></div>
+                <p style={dateLabel}>Payment Date</p>
+                <p style={dateValue}>{formatDate(selectedStay.paid_date)}</p>
+                <p style={dateLabel}>Payment Month</p>
+                <p style={dateValue}>{getPaymentMonth(selectedStay.paid_date)}</p>
+                <p style={dateLabel}>Method</p>
+                <p style={dateValue}>UPI / Digital Payment</p>
               </div>
             </div>
 
+            {/* Amount Table */}
             <div style={tableContainer}>
               <div style={{ ...tableHeader, background: BRAND_BLUE }}>
                 <span>Description</span>
                 <span>Amount</span>
               </div>
               <div style={tableRow}>
-                <span>Monthly Room Rent</span>
+                <span>Monthly Rent - {getPaymentMonth(selectedStay.paid_date)}</span>
                 <span>₹{selectedStay.rent_amount}</span>
               </div>
               <div style={tableRow}>
-                <span>Maintenance Charges</span>
+                <span>Maintenance & Service Charges</span>
                 <span>₹{selectedStay.maintenance_amount || 0}</span>
               </div>
-              <div style={{ ...tableRow, borderBottom: `2px solid ${BRAND_BLUE}`, fontWeight: "bold" }}>
+              <div style={{ ...tableRow, borderBottom: `2px solid ${BRAND_BLUE}`, fontWeight: "bold", fontSize: "18px" }}>
                 <span>Total Amount Received</span>
                 <span>₹{selectedStay.monthly_total}</span>
               </div>
             </div>
 
+            {/* Declaration */}
+            <div style={declarationSection}>
+                <label style={receiptLabel}>📝 DECLARATION</label>
+                <p style={declarationText}>
+                    This is a computer-generated receipt issued by Nepxall on behalf of the property owner. 
+                    This confirms the successful receipt of rent for the specified month. 
+                    No physical signature is required for this digital document.
+                </p>
+            </div>
+
             <div style={footerNote}>
-              <p>This is a digitally verified receipt. No physical signature is required.</p>
-              <p style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}>Thank you for choosing Nexpall!</p>
+              <p style={{ fontWeight: "bold", color: BRAND_BLUE }}>Thank you for staying with Nepxall!</p>
             </div>
           </div>
         </div>
@@ -223,26 +243,30 @@ const receiptBtn = { ...btn, background: "#4b5563" };
 const infoItem = { display: "flex", flexDirection: "column" };
 const emptyBox = { textAlign: "center", padding: 50, background: "#fff", borderRadius: 16 };
 
-/* MODERN RECEIPT PDF STYLES */
-const modernReceiptContainer = { width: "210mm", height: "297mm", padding: "80px", background: "#ffffff", color: "#111827", fontFamily: "Helvetica, Arial, sans-serif" };
-const receiptHeader = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "30px", marginBottom: "40px" };
+/* PDF SPECIFIC STYLES */
+const modernReceiptContainer = { width: "210mm", minHeight: "290mm", padding: "60px", background: "#ffffff", color: "#111827", fontFamily: "Helvetica, Arial, sans-serif" };
+const receiptHeader = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "25px", marginBottom: "35px" };
 const logoText = { margin: 0, fontSize: "42px", fontWeight: "900", letterSpacing: "-1px" };
 const tagline = { margin: 0, fontSize: "14px", color: "#6b7280" };
-const receiptTitle = { margin: 0, fontSize: "24px", color: "#111827" };
-const orderIdText = { margin: 0, fontSize: "16px", fontWeight: "bold" };
-const mainReceiptBody = { display: "flex", gap: "40px", marginBottom: "50px" };
-const sectionBlock = { marginBottom: "30px" };
-const receiptLabel = { fontSize: "12px", color: "#9ca3af", fontWeight: "bold", letterSpacing: "1px", display: "block", marginBottom: "8px" };
+const receiptTitle = { margin: 0, fontSize: "22px", color: "#111827" };
+const orderIdText = { margin: 0, fontSize: "15px", fontWeight: "bold" };
+const mainReceiptBody = { display: "flex", gap: "30px", marginBottom: "40px" };
+const sectionBlock = { marginBottom: "20px" };
+const receiptLabel = { fontSize: "11px", color: "#9ca3af", fontWeight: "bold", letterSpacing: "1px", display: "block", marginBottom: "6px" };
 const receiptValue = { fontSize: "18px", fontWeight: "bold", margin: 0, color: "#111827" };
 const receiptSubValue = { fontSize: "14px", color: "#4b5563", margin: "2px 0" };
-const paymentStatusBox = { width: "220px", background: "#f8fafc", borderRadius: "20px", border: "1px solid #e2e8f0", padding: "30px", textAlign: "center" };
-const statusCircle = { fontSize: "40px", marginBottom: "10px" };
+const paymentStatusBox = { width: "240px", background: "#f8fafc", borderRadius: "16px", border: "1px solid #e2e8f0", padding: "20px", textAlign: "center" };
+const statusCircle = { fontSize: "32px", marginBottom: "8px" };
 const statusText = { margin: 0, fontSize: "20px", fontWeight: "bold" };
-const dateText = { fontSize: "13px", color: "#6b7280", margin: "5px 0" };
+const separator = { height: "1px", background: "#e2e8f0", margin: "15px 0" };
+const dateLabel = { fontSize: "10px", color: "#9ca3af", textTransform: "uppercase", margin: "5px 0 2px 0" };
+const dateValue = { fontSize: "13px", fontWeight: "bold", color: "#111827", margin: 0 };
 const amountDisplay = { fontSize: "28px", fontWeight: "900", color: "#111827", marginTop: "15px" };
-const tableContainer = { marginTop: "20px" };
+const tableContainer = { marginTop: "10px" };
 const tableHeader = { display: "flex", justifyContent: "space-between", padding: "15px", color: "#fff", borderRadius: "8px 8px 0 0", fontWeight: "bold" };
-const tableRow = { display: "flex", justifyContent: "space-between", padding: "20px 15px", borderBottom: "1px solid #e5e7eb" };
-const footerNote = { marginTop: "100px", textAlign: "center", borderTop: "1px solid #e5e7eb", paddingTop: "30px", color: "#9ca3af", fontSize: "12px" };
+const tableRow = { display: "flex", justifyContent: "space-between", padding: "18px 15px", borderBottom: "1px solid #e5e7eb" };
+const declarationSection = { marginTop: "30px", padding: "20px", background: "#f9fafb", borderRadius: "8px" };
+const declarationText = { fontSize: "12px", color: "#6b7280", lineHeight: "1.5", margin: 0 };
+const footerNote = { marginTop: "50px", textAlign: "center", borderTop: "1px solid #e5e7eb", paddingTop: "20px", color: "#9ca3af", fontSize: "12px" };
 
 export default UserActiveStay;
