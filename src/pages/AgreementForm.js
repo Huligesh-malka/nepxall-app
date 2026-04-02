@@ -29,11 +29,17 @@ const AgreementForm = () => {
   const [isVerified, setIsVerified] = useState(false);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
 
+  // Updated formData: Removed email, pan, checkin_date, agreement_months, and deposit
   const [formData, setFormData] = useState({
-    full_name: "", mobile: "", email: "",
-    address: "", city: "", state: "", pincode: "",
-    aadhaar_last4: "", pan_number: "", checkin_date: "",
-    agreement_months: "11", rent: "", deposit: "", maintenance: "0",
+    full_name: "", 
+    mobile: "", 
+    address: "", 
+    city: "", 
+    state: "", 
+    pincode: "",
+    aadhaar_last4: "", 
+    rent: "", 
+    maintenance: "0",
   });
 
   /* ================= HELPER: PHONE CLEANER ================= */
@@ -129,7 +135,6 @@ const AgreementForm = () => {
     try {
       const signatureDataURL = sigCanvas.current.toDataURL("image/png");
       
-      // The Backend will automatically extract IP and Device Info from the request headers
       const res = await api.post("/agreements-form/tenant/sign", {
         booking_id: bookingId,
         tenant_signature: signatureDataURL,
@@ -139,7 +144,6 @@ const AgreementForm = () => {
 
       if (res.data.success) {
         setSuccess("Agreement finalized! ✅");
-        // Refresh local state to show the 'Download Signed PDF' view
         await fetchAgreementStatus(); 
       }
     } catch (err) {
@@ -181,8 +185,7 @@ const AgreementForm = () => {
         23. Overstay: Staying beyond the period may result in penalties.
         24. Execution: Enforceable under Indian Contract Act, 1872.
         25. Platform Role: Platform is an intermediary only; no liability for disputes.
-        26. Agreement Duration:
-This agreement is valid for 11 (Eleven) months from the date of execution.
+        26. Agreement Duration: This agreement is valid for 11 (Eleven) months from the date of execution.
         27. Acceptance: I accept full legal responsibility for complying with this agreement.`}
       </Typography>
     </Box>
@@ -313,7 +316,7 @@ This agreement is valid for 11 (Eleven) months from the date of execution.
             </Paper>
           )}
 
-          {/* CASE 5: INITIAL FORM */}
+          {/* CASE 5: INITIAL FORM (Simplified) */}
           {!existingAgreement && (
             <Paper sx={{ p: 4, borderRadius: 3 }}>
               <Typography variant="h5" fontWeight="bold" mb={3}>Draft Rental Agreement</Typography>
@@ -321,17 +324,17 @@ This agreement is valid for 11 (Eleven) months from the date of execution.
                 <Grid container spacing={2}>
                   <Grid item xs={12} md={6}><TextField fullWidth name="full_name" label="Full Name" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={6}><TextField fullWidth name="mobile" label="Mobile" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={6}><TextField fullWidth name="email" label="Email" type="email" required onChange={handleChange} /></Grid>
+                  
                   <Grid item xs={12}><TextField fullWidth name="address" label="Current Address" multiline rows={2} required onChange={handleChange} /></Grid>
+                  
                   <Grid item xs={12} md={4}><TextField fullWidth name="city" label="City" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="state" label="State" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="pincode" label="Pincode" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={6}><TextField fullWidth name="aadhaar_last4" label="Aadhaar (Last 4)" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={6}><TextField fullWidth name="pan_number" label="PAN" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={4}><TextField fullWidth name="checkin_date" label="Check-in Date" type="date" InputLabelProps={{ shrink: true }} required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={4}><TextField fullWidth name="rent" label="Monthly Rent" type="number" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={4}><TextField fullWidth name="deposit" label="Security Deposit" type="number" required onChange={handleChange} /></Grid>
+                  
+                  <Grid item xs={12} md={6}><TextField fullWidth name="aadhaar_last4" label="Aadhaar (Last 4 digits)" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="rent" label="Monthly Rent" type="number" required onChange={handleChange} /></Grid>
                 </Grid>
+                
                 <Button type="submit" variant="contained" fullWidth sx={{ mt: 4, py: 1.5 }} disabled={loading}>
                   {loading ? <CircularProgress size={24} /> : "Submit Details for Review"}
                 </Button>
