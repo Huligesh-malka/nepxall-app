@@ -70,7 +70,7 @@ const UserActiveStay = () => {
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
         
         pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`Receipt_${stay.order_id || 'ORD-NXP'}.pdf`);
+        pdf.save(`Receipt_${stay.order_id || 'NXP_RECEIPT'}.pdf`);
         setSelectedStay(null); 
       } catch (error) {
         console.error("Receipt Generation Failed:", error);
@@ -102,12 +102,12 @@ const UserActiveStay = () => {
 
           <div style={infoGrid}>
             <div style={infoItem}>
-              <label style={labelStyle}>Order ID</label>
-              <p style={valStyle}>{stay.order_id || "ORD-98237465"}</p>
-            </div>
-            <div style={infoItem}>
               <label style={labelStyle}>🚪 Allotted Room</label>
               <p style={valStyle}>{stay.room_no || "Allocating..."}</p>
+            </div>
+            <div style={infoItem}>
+              <label style={labelStyle}>👥 Sharing Type</label>
+              <p style={valStyle}>{stay.room_type} Sharing</p>
             </div>
           </div>
 
@@ -117,7 +117,10 @@ const UserActiveStay = () => {
             </p>
             <p style={priceRow}>Monthly Rent: <span>₹{stay.rent_amount}</span></p>
             <p style={priceRow}>Maintenance: <span>₹{stay.maintenance_amount || 0}</span></p>
-            <p style={priceRow}>Room Sharing: <span>{stay.room_type}</span></p>
+            {/* Added Deposit to the UI section */}
+            <p style={{ ...priceRow, borderTop: "1px dashed #eee", paddingTop: "10px", marginTop: "10px" }}>
+              Security Deposit (Paid): <span style={{fontWeight: "bold"}}>₹{stay.deposit_amount || 0}</span>
+            </p>
             
             <div style={totalBox}>
               <span>Total Monthly Paid</span>
@@ -133,11 +136,10 @@ const UserActiveStay = () => {
         </div>
       ))}
 
-      {/* HIDDEN RECEIPT FOR PDF GENERATION */}
+      {/* HIDDEN RECEIPT DESIGN FOR PDF */}
       {selectedStay && (
         <div style={{ position: "absolute", left: "-9999px" }}>
           <div ref={receiptRef} style={modernReceiptContainer}>
-            {/* Header */}
             <div style={{ ...receiptHeader, borderBottom: `4px solid ${BRAND_BLUE}` }}>
               <div>
                 <h1 style={logoText}>
@@ -148,7 +150,7 @@ const UserActiveStay = () => {
               </div>
               <div style={{ textAlign: "right" }}>
                 <h2 style={receiptTitle}>RENT RECEIPT</h2>
-                <p style={{ ...orderIdText, color: BRAND_BLUE }}>ID: {selectedStay.order_id || "ORD-98237465"}</p>
+                <p style={{ ...orderIdText, color: BRAND_BLUE }}>Order ID: {selectedStay.order_id || "order_74_1775122620786"}</p>
                 <p style={dateText}>Date: {formatDate(new Date())}</p>
               </div>
             </div>
@@ -172,7 +174,7 @@ const UserActiveStay = () => {
               <div style={paymentStatusBox}>
                 <div style={statusCircle}>✅</div>
                 <h3 style={{ ...statusText, color: BRAND_GREEN }}>VERIFIED</h3>
-                <p style={dateText}>Paid via UPI (QR Scan)</p>
+                <p style={dateText}>Payment Mode: UPI</p>
                 <div style={amountDisplay}>₹{selectedStay.monthly_total}</div>
               </div>
             </div>
@@ -183,7 +185,7 @@ const UserActiveStay = () => {
                 <span>Amount</span>
               </div>
               <div style={tableRow}>
-                <span>Monthly Rent</span>
+                <span>Monthly Room Rent</span>
                 <span>₹{selectedStay.rent_amount}</span>
               </div>
               <div style={tableRow}>
@@ -191,7 +193,7 @@ const UserActiveStay = () => {
                 <span>₹{selectedStay.maintenance_amount || 0}</span>
               </div>
               <div style={{ ...tableRow, borderBottom: `2px solid ${BRAND_BLUE}`, fontWeight: "bold", background: "#f8fafc" }}>
-                <span>Total Amount Paid</span>
+                <span>Total Amount Received</span>
                 <span>₹{selectedStay.monthly_total}</span>
               </div>
             </div>
@@ -199,7 +201,7 @@ const UserActiveStay = () => {
             <div style={{...sectionBlock, marginTop: '30px', padding: '20px', background: '#f0f4f8', borderRadius: '10px'}}>
                 <label style={receiptLabel}>💳 SECURITY DEPOSIT (ONE-TIME)</label>
                 <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                    <span style={receiptValue}>₹{selectedStay.deposit_amount || "2000.00"}</span>
+                    <span style={receiptValue}>₹{selectedStay.deposit_amount || "0.00"}</span>
                     <span style={{color: BRAND_GREEN, fontWeight: 'bold'}}>Paid (Refundable)</span>
                 </div>
             </div>
@@ -211,7 +213,6 @@ const UserActiveStay = () => {
               </div>
               <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>* This is a system-generated receipt and does not require signature.</p>
               <p style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}>THANK YOU FOR USING NEXPALL 🙏</p>
-              <p style={{ fontSize: '10px' }}>www.nexpall.com | support@nexpall.com</p>
             </div>
           </div>
         </div>
