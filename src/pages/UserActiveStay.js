@@ -55,6 +55,7 @@ const UserActiveStay = () => {
   const handleDownloadReceipt = async (stay) => {
     setSelectedStay(stay);
     
+    // Allow React to render the hidden receipt with the new state
     setTimeout(async () => {
       try {
         const element = receiptRef.current;
@@ -70,12 +71,12 @@ const UserActiveStay = () => {
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
         
         pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`Receipt_${stay.order_id || 'NXP_RECEIPT'}.pdf`);
+        pdf.save(`Receipt_${stay.order_id || 'Booking'}.pdf`);
         setSelectedStay(null); 
       } catch (error) {
         console.error("Receipt Generation Failed:", error);
       }
-    }, 300);
+    }, 500);
   };
 
   if (loading) return <div style={container}><p style={{textAlign:"center", padding: 50}}>⏳ Syncing stays...</p></div>;
@@ -106,8 +107,10 @@ const UserActiveStay = () => {
               <p style={valStyle}>{stay.room_no || "Allocating..."}</p>
             </div>
             <div style={infoItem}>
-              <label style={labelStyle}>👥 Sharing Type</label>
-              <p style={valStyle}>{stay.room_type} Sharing</p>
+              <label style={labelStyle}>🆔 Order ID</label>
+              <p style={{...valStyle, fontSize: '13px', color: BRAND_BLUE}}>
+                {stay.order_id || "N/A"}
+              </p>
             </div>
           </div>
 
@@ -117,7 +120,7 @@ const UserActiveStay = () => {
             </p>
             <p style={priceRow}>Monthly Rent: <span>₹{stay.rent_amount}</span></p>
             <p style={priceRow}>Maintenance: <span>₹{stay.maintenance_amount || 0}</span></p>
-            {/* Added Deposit to the UI section */}
+            
             <p style={{ ...priceRow, borderTop: "1px dashed #eee", paddingTop: "10px", marginTop: "10px" }}>
               Security Deposit (Paid): <span style={{fontWeight: "bold"}}>₹{stay.deposit_amount || 0}</span>
             </p>
@@ -138,7 +141,7 @@ const UserActiveStay = () => {
 
       {/* HIDDEN RECEIPT DESIGN FOR PDF */}
       {selectedStay && (
-        <div style={{ position: "absolute", left: "-9999px" }}>
+        <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
           <div ref={receiptRef} style={modernReceiptContainer}>
             <div style={{ ...receiptHeader, borderBottom: `4px solid ${BRAND_BLUE}` }}>
               <div>
@@ -150,8 +153,11 @@ const UserActiveStay = () => {
               </div>
               <div style={{ textAlign: "right" }}>
                 <h2 style={receiptTitle}>RENT RECEIPT</h2>
-                <p style={{ ...orderIdText, color: BRAND_BLUE }}>Order ID: {selectedStay.order_id || "order_74_1775122620786"}</p>
-                <p style={dateText}>Date: {formatDate(new Date())}</p>
+                {/* 🎯 SHOWING EXACT ORDER ID HERE */}
+                <p style={{ ...orderIdText, color: BRAND_BLUE }}>
+                    Order ID: {selectedStay.order_id || "N/A"}
+                </p>
+                <p style={dateText}>Date: {formatDate(selectedStay.paid_date || new Date())}</p>
               </div>
             </div>
 
@@ -160,21 +166,21 @@ const UserActiveStay = () => {
                 <div style={sectionBlock}>
                   <label style={receiptLabel}>👤 ISSUED TO</label>
                   <p style={receiptValue}>{auth.currentUser?.displayName || "Valued Tenant"}</p>
-                  <p style={receiptSubValue}>Mob: {auth.currentUser?.phoneNumber || "+91-XXXXXXXXXX"}</p>
+                  <p style={receiptSubValue}>Mob: {auth.currentUser?.phoneNumber || "Contact info hidden"}</p>
                 </div>
 
                 <div style={sectionBlock}>
                   <label style={receiptLabel}>🏠 PROPERTY DETAILS</label>
                   <p style={receiptValue}>{selectedStay.pg_name}</p>
-                  <p style={receiptSubValue}>{selectedStay.room_type} Sharing</p>
-                  <p style={receiptSubValue}>Bangalore, Karnataka</p>
+                  <p style={receiptSubValue}>{selectedStay.room_type} Sharing | Room: {selectedStay.room_no || 'TBA'}</p>
+                  <p style={receiptSubValue}>Verified Property</p>
                 </div>
               </div>
 
               <div style={paymentStatusBox}>
                 <div style={statusCircle}>✅</div>
                 <h3 style={{ ...statusText, color: BRAND_GREEN }}>VERIFIED</h3>
-                <p style={dateText}>Payment Mode: UPI</p>
+                <p style={dateText}>Payment Mode: Online</p>
                 <div style={amountDisplay}>₹{selectedStay.monthly_total}</div>
               </div>
             </div>
@@ -208,11 +214,11 @@ const UserActiveStay = () => {
 
             <div style={footerNote}>
               <div style={{textAlign: 'left', marginBottom: '20px', color: '#4b5563'}}>
-                <p>✔ This payment has been manually verified by the PG owner/admin.</p>
-                <p>✔ The above amount has been received successfully.</p>
+                <p>✔ This payment has been verified with Transaction ID: <strong>{selectedStay.order_id || 'N/A'}</strong></p>
+                <p>✔ This is a digital proof of stay for the current month.</p>
               </div>
               <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>* This is a system-generated receipt and does not require signature.</p>
-              <p style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}>THANK YOU FOR USING NEXPALL 🙏</p>
+              <p style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}>THANK YOU FOR USING NEPXALL 🙏</p>
             </div>
           </div>
         </div>
