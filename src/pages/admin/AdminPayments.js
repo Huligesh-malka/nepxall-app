@@ -94,9 +94,17 @@ const AdminPayments = () => {
     }
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return new Date().toLocaleDateString('en-GB');
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
   const handleDownloadReceipt = async (payment) => {
     setSelectedPayment(payment);
-    // Allow state to update and hidden DOM to render
     setTimeout(async () => {
       try {
         const element = receiptRef.current;
@@ -209,60 +217,83 @@ const AdminPayments = () => {
         </Table>
       </Paper>
 
-      {/* HIDDEN RECEIPT DESIGN */}
+      {/* HIDDEN RECEIPT DESIGN - MATCHES USER STYLE */}
       {selectedPayment && (
         <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
-          <div ref={receiptRef} style={receiptStyles.container}>
-            <div style={receiptStyles.header}>
+          <div ref={receiptRef} style={modernReceiptContainer}>
+            <div style={{ ...receiptHeader, borderBottom: `4px solid ${BRAND_BLUE}` }}>
               <div>
-                <h1 style={receiptStyles.logo}>NEPXALL</h1>
-                <p style={receiptStyles.tagline}>Next Places for Living</p>
+                <h1 style={logoText}>
+                  <span style={{ color: BRAND_BLUE }}>NEP</span>
+                  <span style={{ color: BRAND_GREEN }}>XALL</span>
+                </h1>
+                <p style={tagline}>Next Places for Living</p>
               </div>
               <div style={{ textAlign: "right" }}>
-                <h2 style={{ margin: 0, color: '#111827' }}>PAYMENT RECEIPT</h2>
-                <p style={{ margin: 0, fontSize: '14px', color: BRAND_BLUE, fontWeight: 'bold' }}>
-                  ID: {selectedPayment.order_id}
+                <h2 style={receiptTitle}>RENT RECEIPT</h2>
+                <p style={{ ...orderIdText, color: BRAND_BLUE }}>
+                  Order ID: {selectedPayment.order_id || "N/A"}
                 </p>
+                <p style={dateText}>Date: {formatDate(selectedPayment.paid_date || new Date())}</p>
               </div>
             </div>
 
-            <div style={receiptStyles.body}>
+            <div style={mainReceiptBody}>
               <div style={{ flex: 1 }}>
-                <div style={receiptStyles.section}>
-                  <label style={receiptStyles.label}>TENANT NAME</label>
-                  <p style={receiptStyles.value}>{selectedPayment.tenant_name}</p>
-                  <p style={receiptStyles.subValue}>Phone: {selectedPayment.phone}</p>
+                <div style={sectionBlock}>
+                  <label style={receiptLabel}>👤 ISSUED TO</label>
+                  <p style={receiptValue}>{selectedPayment.tenant_name || "Valued Tenant"}</p>
+                  <p style={receiptSubValue}>Mob: {selectedPayment.phone || "N/A"}</p>
                 </div>
-                <div style={receiptStyles.section}>
-                  <label style={receiptStyles.label}>PROPERTY</label>
-                  <p style={receiptStyles.value}>{selectedPayment.pg_name}</p>
+
+                <div style={sectionBlock}>
+                  <label style={receiptLabel}>🏠 PROPERTY DETAILS</label>
+                  <p style={receiptValue}>{selectedPayment.pg_name}</p>
+                  <p style={receiptSubValue}>
+                    {selectedPayment.room_type || "N/A"} Sharing {selectedPayment.room_no ? `| Room: ${selectedPayment.room_no}` : ""}
+                  </p>
                 </div>
               </div>
-              <div style={receiptStyles.statusBox}>
-                <div style={{ fontSize: '24px' }}>✅</div>
-                <div style={{ fontWeight: 'bold', color: BRAND_GREEN }}>VERIFIED</div>
-                <div style={{ fontSize: '20px', fontWeight: '900', marginTop: '5px' }}>₹{selectedPayment.amount}</div>
+
+              <div style={paymentStatusBox}>
+                <div style={statusCircle}>✅</div>
+                <h3 style={{ ...statusText, color: BRAND_GREEN }}>VERIFIED</h3>
+                <p style={dateText}>Payment Mode: Online</p>
+                <div style={amountDisplay}>₹{selectedPayment.amount}</div>
               </div>
             </div>
 
-            <div style={receiptStyles.table}>
-              <div style={{ ...receiptStyles.tableHeader, backgroundColor: BRAND_BLUE }}>
-                <span>Transaction Details</span>
+            <div style={tableContainer}>
+              <div style={{ ...tableHeader, background: BRAND_BLUE }}>
+                <span>📊 PAYMENT BREAKDOWN</span>
                 <span>Amount</span>
               </div>
-              <div style={receiptStyles.tableRow}>
+              <div style={tableRow}>
                 <span>Monthly Rental Payment</span>
                 <span>₹{selectedPayment.amount}</span>
               </div>
-              <div style={{ ...receiptStyles.tableRow, fontWeight: 'bold', borderTop: '2px solid #eee' }}>
-                <span>Total Received</span>
+              <div style={{ ...tableRow, borderBottom: `2px solid ${BRAND_BLUE}`, fontWeight: "bold", background: "#f8fafc" }}>
+                <span>Total Amount Received</span>
                 <span>₹{selectedPayment.amount}</span>
               </div>
             </div>
 
-            <div style={receiptStyles.footer}>
-              <p>This is an automated receipt generated by the Nepxall Admin Panel.</p>
-              <p style={{ color: BRAND_BLUE, fontWeight: 'bold', marginTop: '10px' }}>THANK YOU FOR CHOOSING NEPXALL</p>
+            {/* SECURITY DEPOSIT BLOCK */}
+            <div style={{...sectionBlock, marginTop: '30px', padding: '20px', background: '#f0f4f8', borderRadius: '10px'}}>
+                <label style={receiptLabel}>💳 SECURITY DEPOSIT (RECORDED)</label>
+                <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                    <span style={receiptValue}>₹{selectedPayment.deposit_amount || "0.00"}</span>
+                    <span style={{color: BRAND_GREEN, fontWeight: 'bold'}}>Paid (Refundable)</span>
+                </div>
+            </div>
+
+            <div style={footerNote}>
+              <div style={{textAlign: 'left', marginBottom: '20px', color: '#4b5563'}}>
+                <p>✔ Verified Transaction: <strong>{selectedPayment.order_id || 'N/A'}</strong></p>
+                <p>✔ This is a digital proof of payment generated via Nepxall Admin Panel.</p>
+              </div>
+              <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>* System-generated receipt. Verified by Admin.</p>
+              <p style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}>THANK YOU FOR CHOOSING NEPXALL</p>
             </div>
           </div>
         </div>
@@ -277,22 +308,26 @@ const AdminPayments = () => {
   );
 };
 
-/* --- RECEIPT PDF STYLES --- */
-const receiptStyles = {
-  container: { width: "210mm", padding: "60px", background: "#ffffff", fontFamily: "Arial, sans-serif" },
-  header: { display: "flex", justifyContent: "space-between", borderBottom: `4px solid ${BRAND_BLUE}`, paddingBottom: "20px", marginBottom: "30px" },
-  logo: { margin: 0, fontSize: "32px", fontWeight: "900", color: "#111827" },
-  tagline: { margin: 0, fontSize: "12px", color: "#6b7280" },
-  body: { display: "flex", justifyContent: "space-between", marginBottom: "40px" },
-  section: { marginBottom: "20px" },
-  label: { fontSize: "11px", color: "#9ca3af", fontWeight: "bold", letterSpacing: "1px" },
-  value: { fontSize: "18px", fontWeight: "bold", margin: "5px 0 0 0" },
-  subValue: { fontSize: "13px", color: "#4b5563", margin: "2px 0" },
-  statusBox: { padding: "20px", background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0", textAlign: "center", minWidth: "150px" },
-  table: { marginTop: "20px" },
-  tableHeader: { display: "flex", justifyContent: "space-between", padding: "12px", color: "#fff", borderRadius: "8px 8px 0 0" },
-  tableRow: { display: "flex", justifyContent: "space-between", padding: "15px 12px", borderBottom: "1px solid #eee" },
-  footer: { marginTop: "60px", textAlign: "center", fontSize: "12px", color: "#9ca3af", borderTop: "1px solid #eee", paddingTop: "20px" }
-};
+/* --- SHARED RECEIPT PDF STYLES --- */
+const modernReceiptContainer = { width: "210mm", minHeight: "297mm", padding: "60px", background: "#ffffff", color: "#111827", fontFamily: "Helvetica, Arial, sans-serif" };
+const receiptHeader = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "20px", marginBottom: "30px" };
+const logoText = { margin: 0, fontSize: "36px", fontWeight: "900", letterSpacing: "-1px" };
+const tagline = { margin: 0, fontSize: "12px", color: "#6b7280" };
+const receiptTitle = { margin: 0, fontSize: "22px", color: "#111827" };
+const orderIdText = { margin: 0, fontSize: "14px", fontWeight: "bold" };
+const mainReceiptBody = { display: "flex", gap: "30px", marginBottom: "40px" };
+const sectionBlock = { marginBottom: "20px" };
+const receiptLabel = { fontSize: "11px", color: "#9ca3af", fontWeight: "bold", letterSpacing: "1px", display: "block", marginBottom: "5px" };
+const receiptValue = { fontSize: "16px", fontWeight: "bold", margin: 0, color: "#111827" };
+const receiptSubValue = { fontSize: "13px", color: "#4b5563", margin: "2px 0" };
+const paymentStatusBox = { width: "200px", background: "#f8fafc", borderRadius: "15px", border: "1px solid #e2e8f0", padding: "20px", textAlign: "center" };
+const statusCircle = { fontSize: "30px", marginBottom: "5px" };
+const statusText = { margin: 0, fontSize: "18px", fontWeight: "bold" };
+const dateText = { fontSize: "12px", color: "#6b7280", margin: "5px 0" };
+const amountDisplay = { fontSize: "24px", fontWeight: "900", color: "#111827", marginTop: "10px" };
+const tableContainer = { marginTop: "10px" };
+const tableHeader = { display: "flex", justifyContent: "space-between", padding: "12px", color: "#fff", borderRadius: "8px 8px 0 0", fontWeight: "bold" };
+const tableRow = { display: "flex", justifyContent: "space-between", padding: "15px 12px", borderBottom: "1px solid #e5e7eb" };
+const footerNote = { marginTop: "50px", textAlign: "center", color: "#9ca3af", fontSize: "12px" };
 
 export default AdminPayments;
