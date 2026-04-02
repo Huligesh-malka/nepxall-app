@@ -15,6 +15,7 @@ const AgreementForm = () => {
   const { bookingId } = useParams();
   const navigate = useNavigate();
   const sigCanvas = useRef(null);
+  const recaptchaRef = useRef(null);
 
   /* ================= STATES ================= */
   const [loading, setLoading] = useState(false);
@@ -66,19 +67,35 @@ const AgreementForm = () => {
 
   useEffect(() => {
     if (bookingId) fetchAgreementStatus();
+
+    // Cleanup reCAPTCHA on unmount
+    return () => {
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = null;
+      }
+    };
   }, [bookingId]);
 
   const setupRecaptcha = () => {
-    if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-      size: "invisible",
-    });
+    try {
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+      }
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+        size: "invisible",
+        callback: () => { console.log("reCAPTCHA solved"); }
+      });
+    } catch (err) {
+      console.error("Recaptcha Setup Error", err);
+    }
   };
 
   /* ================= OTP FUNCTIONS ================= */
   const sendOtp = async () => {
     if (manualMobile.length < 10) return setError("Enter a valid 10-digit mobile number.");
     setLoading(true);
+    setError(null);
     try {
       const verifyRes = await api.post("/agreements-form/tenant/verify", {
         booking_id: bookingId,
@@ -91,7 +108,8 @@ const AgreementForm = () => {
       setConfirmObj(confirmation);
       setSuccess("OTP sent! ✅");
     } catch (err) {
-      setError(err.message || "Verification failed.");
+      setError(err.message || "Verification failed. Please try again.");
+      if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
     } finally { setLoading(false); }
   };
 
@@ -102,14 +120,14 @@ const AgreementForm = () => {
       await confirmObj.confirm(otp);
       setIsVerified(true);
       setSuccess("Identity Confirmed! ✅");
-    } catch (err) { setError("Invalid OTP code."); }
-    finally { setLoading(false); }
+    } catch (err) { 
+      setError("Invalid OTP code. Please check and try again."); 
+    } finally { setLoading(false); }
   };
 
   /* ================= FORM ACTIONS ================= */
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
     if (name === "aadhaar_last4") {
       const onlyNums = value.replace(/\D/g, "");
       if (onlyNums.length <= 4) {
@@ -128,9 +146,6 @@ const AgreementForm = () => {
     setLoading(true);
     
     const userId = localStorage.getItem("user_id");
-
-    // UPDATED: Only sending user-provided form data and core identifiers.
-    // Removed fallback logic for checkin_date, rent, deposit, etc. 
     const data = { 
       ...formData, 
       user_id: userId, 
@@ -140,14 +155,12 @@ const AgreementForm = () => {
     try {
       const res = await api.post("/agreements-form/submit", data);
       if (res.data.success) {
-        setSuccess("Details submitted!");
+        setSuccess("Details submitted! Waiting for approval.");
         fetchAgreementStatus(); 
       }
     } catch (err) { 
-      const msg = err.response?.data?.message || "Submission failed.";
-      setError(msg); 
-    }
-    finally { setLoading(false); }
+      setError(err.response?.data?.message || "Submission failed."); 
+    } finally { setLoading(false); }
   };
 
   const handleFinalTenantSign = async () => {
@@ -157,7 +170,6 @@ const AgreementForm = () => {
     setLoading(true);
     try {
       const signatureDataURL = sigCanvas.current.toDataURL("image/png");
-      
       const res = await api.post("/agreements-form/tenant/sign", {
         booking_id: bookingId,
         tenant_signature: signatureDataURL,
@@ -167,7 +179,7 @@ const AgreementForm = () => {
 
       if (res.data.success) {
         setSuccess("Agreement finalized! ✅");
-        await fetchAgreementStatus(); 
+        fetchAgreementStatus(); 
       }
     } catch (err) {
       setError(err.response?.data?.message || "Final signing failed.");
@@ -231,10 +243,7 @@ const AgreementForm = () => {
                 Your rental agreement has been digitally signed and stored with your IP/Device audit trail.
               </Typography>
               <Button 
-                size="large"
-                variant="contained" 
-                color="success" 
-                startIcon={<CloudDownload />}
+                size="large" variant="contained" color="success" startIcon={<CloudDownload />}
                 onClick={() => window.open(existingAgreement.signed_pdf, "_blank")}
                 sx={{ px: 4, py: 1.5, borderRadius: 2, fontWeight: 'bold' }}
               >
@@ -248,17 +257,16 @@ const AgreementForm = () => {
             </Paper>
           )}
 
-          {/* CASE 2 & 3: PROGRESS */}
-          {(existingAgreement?.agreement_status === "pending" || 
-            (existingAgreement?.agreement_status === "approved" && !existingAgreement.signed_pdf)) && (
+          {/* CASE 2: PROGRESS (Pending Approval) */}
+          {existingAgreement?.agreement_status === "pending" && (
             <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
               <CircularProgress size={40} sx={{ mb: 2 }} />
-              <Typography variant="h5" color="info.main" fontWeight="bold">Processing Document</Typography>
-              <Typography mt={2}>We are generating your legal document or waiting for the landlord to approve.</Typography>
+              <Typography variant="h5" color="info.main" fontWeight="bold">Review in Progress</Typography>
+              <Typography mt={2}>We are waiting for the landlord to approve and sign the document.</Typography>
             </Paper>
           )}
 
-          {/* CASE 4: READY FOR TENANT SIGNATURE */}
+          {/* CASE 3: READY FOR TENANT SIGNATURE */}
           {existingAgreement?.agreement_status === "approved" && existingAgreement.signed_pdf && (
             <Paper sx={{ p: 4, borderRadius: 3, boxShadow: 3 }}>
               <Typography variant="h6" fontWeight="bold">Step 2: Review & Finalize Signature</Typography>
@@ -267,8 +275,7 @@ const AgreementForm = () => {
               
               <iframe 
                 src={`${existingAgreement.signed_pdf}#toolbar=0`} 
-                width="100%" 
-                height="450px" 
+                width="100%" height="450px" 
                 style={{ border: '1px solid #ddd', borderRadius: '8px', marginBottom: '20px' }} 
                 title="Agreement Preview" 
               />
@@ -311,15 +318,12 @@ const AgreementForm = () => {
               ) : (
                 <Box mt={2}>
                   <Alert severity="success" sx={{ mb: 2 }}>Verification Successful! Please sign below.</Alert>
-                  
                   <LegalDeclaration />
-
                   <FormControlLabel
                     control={<Checkbox checked={hasAcceptedTerms} onChange={(e) => setHasAcceptedTerms(e.target.checked)} />}
                     label="I agree to the terms and conditions and consent to electronic logging of my signature details."
                     sx={{ mb: 3 }}
                   />
-
                   <Box sx={{ opacity: hasAcceptedTerms ? 1 : 0.5, pointerEvents: hasAcceptedTerms ? 'auto' : 'none' }}>
                     <Box border="2px dashed #ccc" borderRadius={2} bgcolor="#fff">
                       <SignatureCanvas 
@@ -339,7 +343,7 @@ const AgreementForm = () => {
             </Paper>
           )}
 
-          {/* CASE 5: INITIAL FORM */}
+          {/* CASE 4: INITIAL FORM (No existing agreement or status is null) */}
           {(!existingAgreement || existingAgreement?.agreement_status === null) && (
             <Paper sx={{ p: 4, borderRadius: 3 }}>
               <Typography variant="h5" fontWeight="bold" mb={3}>Draft Rental Agreement</Typography>
@@ -352,12 +356,8 @@ const AgreementForm = () => {
                   <TextField fullWidth name="state" label="State" required onChange={handleChange} value={formData.state} />
                   <TextField fullWidth name="pincode" label="Pincode" required onChange={handleChange} value={formData.pincode} />
                   <TextField 
-                    fullWidth 
-                    name="aadhaar_last4" 
-                    label="Aadhaar (Last 4 Digits Only)" 
-                    required 
-                    onChange={handleChange} 
-                    value={formData.aadhaar_last4}
+                    fullWidth name="aadhaar_last4" label="Aadhaar (Last 4 Digits Only)" 
+                    required onChange={handleChange} value={formData.aadhaar_last4}
                     helperText={`${formData.aadhaar_last4.length}/4 digits`}
                   />
                   <Button type="submit" variant="contained" fullWidth sx={{ mt: 2, py: 1.5 }} disabled={loading}>
