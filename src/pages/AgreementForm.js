@@ -44,11 +44,18 @@ const AgreementForm = () => {
     maintenance: "0",
   });
 
-  /* ================= HELPER: PHONE CLEANER ================= */
+  /* ================= HELPERS ================= */
   const cleanPhoneNumber = (phone) => {
     if (!phone) return "";
     const digits = phone.replace(/\D/g, "");
     return digits.length >= 10 ? digits.slice(-10) : digits;
+  };
+
+  const handleAadhaarChange = (e) => {
+    const val = e.target.value.replace(/\D/g, ""); // Remove non-digits
+    if (val.length <= 4) {
+      setFormData({ ...formData, aadhaar_last4: val });
+    }
   };
 
   /* ================= FETCH STATUS FUNCTION ================= */
@@ -115,6 +122,9 @@ const AgreementForm = () => {
 
   const handleSubmitInitialForm = async (e) => {
     e.preventDefault();
+    if (formData.aadhaar_last4.length !== 4) {
+      return setError("Aadhaar must be exactly 4 digits.");
+    }
     setLoading(true);
     const userId = localStorage.getItem("user_id");
     const data = { ...formData, user_id: userId, booking_id: bookingId };
@@ -326,7 +336,18 @@ const AgreementForm = () => {
                 <Grid container spacing={2}>
                   <Grid item xs={12} md={6}><TextField fullWidth name="full_name" label="Full Name" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={6}><TextField fullWidth name="mobile" label="Mobile" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={6}><TextField fullWidth name="aadhaar_last4" label="Aadhaar (Last 4 Digits)" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField 
+                      fullWidth 
+                      name="aadhaar_last4" 
+                      label="Aadhaar (Last 4 Digits)" 
+                      value={formData.aadhaar_last4}
+                      placeholder="e.g. 1234"
+                      required 
+                      onChange={handleAadhaarChange} 
+                      inputProps={{ maxLength: 4 }}
+                    />
+                  </Grid>
                   <Grid item xs={12} md={6}><TextField fullWidth name="checkin_date" label="Check-in Date" type="date" InputLabelProps={{ shrink: true }} required onChange={handleChange} /></Grid>
                   <Grid item xs={12}><TextField fullWidth name="address" label="Current Address" multiline rows={2} required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="city" label="City" required onChange={handleChange} /></Grid>
