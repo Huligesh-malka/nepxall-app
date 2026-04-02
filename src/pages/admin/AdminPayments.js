@@ -109,11 +109,16 @@ const AdminPayments = () => {
   };
 
   const handleWhatsAppShare = (p) => {
-    // Falls back to tenant_phone if reg_phone is missing during transition
-    const contactNumber = p.reg_phone || p.tenant_phone || "";
+    // Priority given to tenant_phone as it comes from the verified users table
+    const contactNumber = p.tenant_phone || p.reg_phone || "";
     const cleanPhone = contactNumber.replace(/\D/g, "");
     
-    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${p.reg_name || p.tenant_name || "User"}*,%0AYour payment for *${p.pg_name}* has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
+    if (!cleanPhone) {
+        setSnackbar({ open: true, message: "No phone number available for this user", severity: "warning" });
+        return;
+    }
+
+    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${p.tenant_name || p.reg_name || "User"}*,%0AYour payment for *${p.pg_name}* has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
     const whatsappUrl = `https://wa.me/${cleanPhone.startsWith('91') ? cleanPhone : '91' + cleanPhone}?text=${message}`;
     window.open(whatsappUrl, "_blank");
   };
@@ -198,10 +203,12 @@ const AdminPayments = () => {
               payments.map((p) => (
                 <TableRow key={p.order_id} hover>
                   <TableCell>
-                    {/* Updated to use reg_name or fallback tenant_name */}
-                    <Typography variant="body2" fontWeight="700" color="#1B2559">{p.reg_name || p.tenant_name || "Guest User"}</Typography>
+                    {/* Updated logic: Prioritize tenant_name/phone from the DB Join */}
+                    <Typography variant="body2" fontWeight="700" color="#1B2559">
+                        {p.tenant_name || p.reg_name || "Guest User"}
+                    </Typography>
                     <Typography variant="caption" sx={{ color: BRAND_BLUE, fontWeight: '600' }}>
-                        {p.reg_phone || p.tenant_phone || "N/A"}
+                        {p.tenant_phone || p.reg_phone || "N/A"}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -301,8 +308,8 @@ const AdminPayments = () => {
               <div style={{ flex: 1 }}>
                 <div style={sectionBlock}>
                   <label style={receiptLabel}>👤 CUSTOMER DETAILS</label>
-                  <p style={receiptValue}>{selectedPayment.reg_name || selectedPayment.tenant_name || "Valued Customer"}</p>
-                  <p style={receiptSubValue}>Phone: {selectedPayment.reg_phone || selectedPayment.tenant_phone || "N/A"}</p>
+                  <p style={receiptValue}>{selectedPayment.tenant_name || selectedPayment.reg_name || "Valued Customer"}</p>
+                  <p style={receiptSubValue}>Phone: {selectedPayment.tenant_phone || selectedPayment.reg_phone || "N/A"}</p>
                 </div>
 
                 <div style={sectionBlock}>
