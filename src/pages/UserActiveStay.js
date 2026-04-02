@@ -24,7 +24,6 @@ const UserActiveStay = () => {
       if (!user) return; 
 
       const token = await user.getIdToken();
-      // Fetches all matching bookings from the updated backend (No Limit)
       const res = await api.get("/bookings/user/active-stay", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -54,10 +53,8 @@ const UserActiveStay = () => {
   };
 
   const handleDownloadReceipt = async (stay) => {
-    // 1. Set the specific stay to be used in the hidden receipt DOM
     setSelectedStay(stay);
     
-    // 2. Wait for React to render the hidden receipt with the new data
     setTimeout(async () => {
       try {
         const element = receiptRef.current;
@@ -75,7 +72,6 @@ const UserActiveStay = () => {
         pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
         pdf.save(`Receipt_${stay.order_id || 'Booking'}.pdf`);
         
-        // 3. Clear selection after download
         setSelectedStay(null); 
       } catch (error) {
         console.error("Receipt Generation Failed:", error);
@@ -99,7 +95,6 @@ const UserActiveStay = () => {
     <div style={container}>
       <h2 style={{ marginBottom: 25, color: "#111827" }}>🏠 My Current Stays</h2>
       
-      {/* MAP through all stays returned from backend */}
       {stays.map((stay) => (
         <div key={stay.id} style={card}>
           <div style={headerSection}>
@@ -113,6 +108,10 @@ const UserActiveStay = () => {
               <p style={valStyle}>{stay.room_no || "Allocating..."}</p>
             </div>
             <div style={infoItem}>
+              <label style={labelStyle}>👥 Sharing Type</label>
+              <p style={valStyle}>{stay.room_type || "N/A"}</p>
+            </div>
+            <div style={{...infoItem, gridColumn: "span 2", marginTop: "10px"}}>
               <label style={labelStyle}>🆔 Order ID</label>
               <p style={{...valStyle, fontSize: '12px', color: BRAND_BLUE, wordBreak: 'break-all'}}>
                 {stay.order_id || "N/A"}
@@ -145,7 +144,7 @@ const UserActiveStay = () => {
         </div>
       ))}
 
-      {/* HIDDEN RECEIPT DESIGN FOR PDF (Only renders when a receipt is being generated) */}
+      {/* HIDDEN RECEIPT DESIGN FOR PDF */}
       {selectedStay && (
         <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
           <div ref={receiptRef} style={modernReceiptContainer}>
@@ -177,7 +176,9 @@ const UserActiveStay = () => {
                 <div style={sectionBlock}>
                   <label style={receiptLabel}>🏠 PROPERTY DETAILS</label>
                   <p style={receiptValue}>{selectedStay.pg_name}</p>
-                  <p style={receiptSubValue}>{selectedStay.room_type} Sharing | Room: {selectedStay.room_no || 'TBA'}</p>
+                  <p style={receiptSubValue}>
+                    {selectedStay.room_type} | Room: {selectedStay.room_no || 'Allocating...'}
+                  </p>
                 </div>
               </div>
 
@@ -195,7 +196,7 @@ const UserActiveStay = () => {
                 <span>Amount</span>
               </div>
               <div style={tableRow}>
-                <span>Monthly Room Rent</span>
+                <span>Monthly Room Rent ({selectedStay.room_type})</span>
                 <span>₹{selectedStay.rent_amount}</span>
               </div>
               <div style={tableRow}>
@@ -235,9 +236,9 @@ const UserActiveStay = () => {
 const container = { maxWidth: 600, margin: "40px auto", padding: "0 20px", fontFamily: "Inter, sans-serif" };
 const card = { background: "#fff", padding: 30, borderRadius: 16, boxShadow: "0 10px 25px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0", marginBottom: "25px" };
 const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 };
-const infoGrid = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: 20 }; 
+const infoGrid = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: 20 }; 
 const labelStyle = { fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: "600" };
-const valStyle = { margin: "5px 0 0 0", fontWeight: "700", fontSize: "16px", color: "#111827" };
+const valStyle = { margin: "2px 0 0 0", fontWeight: "700", fontSize: "15px", color: "#111827" };
 const priceList = { marginBottom: 20, background: "#f9fafb", padding: "15px", borderRadius: "12px" };
 const priceRow = { display: "flex", justifyContent: "space-between", color: "#4b5563", margin: "10px 0", fontSize: "14px" };
 const totalBox = { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 15, padding: "15px", background: "#f0fdf4", borderRadius: "8px", color: "#166534" };
