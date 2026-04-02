@@ -25,6 +25,7 @@ const UserActiveStay = () => {
         },
       });
 
+      // Ensure data is handled as an array for multiple stays
       setStays(Array.isArray(res.data) ? res.data : res.data ? [res.data] : []);
     } catch (err) {
       console.error("STAY LOAD ERROR:", err);
@@ -46,6 +47,7 @@ const UserActiveStay = () => {
       }
     });
 
+    // Auto-refresh every 10 seconds to catch status updates
     const interval = setInterval(() => {
       loadStay(false);
     }, 10000);
@@ -103,17 +105,19 @@ const UserActiveStay = () => {
             <span style={statusBadge(stay.status)}>{stay.status}</span>
           </div>
 
+          {/* ROOM & SHARING INFO SECTION */}
           <div style={infoGrid}>
             <div style={infoItem}>
               <label style={labelStyle}>🚪 Room & Sharing</label>
               <p style={valStyle}>
-                {stay.room_no || "Allocating..."} — {stay.room_type}
+                {stay.room_no || "Allocating..."} — <span style={{ color: "#2563eb" }}>{stay.room_type || "N/A"}</span>
               </p>
             </div>
           </div>
 
           <hr style={divider} />
 
+          {/* PRICE DETAILS SECTION */}
           <div style={priceList}>
             <p style={priceRow}>Monthly Rent: <span>₹{stay.rent_amount}</span></p>
             <p style={priceRow}>Maintenance: <span>₹{stay.maintenance_amount || 0}</span></p>
@@ -125,6 +129,7 @@ const UserActiveStay = () => {
             </div>
           </div>
 
+          {/* ACTION BUTTONS */}
           <div style={btnRow}>
             <button style={btn} onClick={() => navigate("/user/bookings")}>📜 History</button>
             <button style={payBtn} onClick={() => navigate("/payment")}>💳 Pay Rent</button>
