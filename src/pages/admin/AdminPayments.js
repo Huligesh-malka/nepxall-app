@@ -103,8 +103,9 @@ const AdminPayments = () => {
   };
 
   const handleWhatsAppShare = (p) => {
-    const cleanPhone = p.phone ? p.phone.replace(/\D/g, "") : "";
-    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${p.tenant_name}*,%0AYour payment for *${p.pg_name}* has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
+    // Logic updated to use Registration Phone (reg_phone)
+    const cleanPhone = p.reg_phone ? p.reg_phone.replace(/\D/g, "") : "";
+    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${p.reg_name || "User"}*,%0AYour payment for *${p.pg_name}* has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
     const whatsappUrl = `https://wa.me/${cleanPhone}?text=${message}`;
     window.open(whatsappUrl, "_blank");
   };
@@ -112,7 +113,6 @@ const AdminPayments = () => {
   const handleDownloadReceipt = async (payment) => {
     setSelectedPayment(payment);
     
-    // Timeout ensures React renders the hidden receipt before we capture it
     setTimeout(async () => {
       try {
         const element = receiptRef.current;
@@ -156,7 +156,7 @@ const AdminPayments = () => {
         <Table>
           <TableHead>
             <TableRow sx={{ background: "#f8fafc" }}>
-              <TableCell><strong>Tenant / Reg. Phone</strong></TableCell>
+              <TableCell><strong>Registration Details</strong></TableCell>
               <TableCell><strong>PG Name</strong></TableCell>
               <TableCell><strong>Sharing</strong></TableCell>
               <TableCell><strong>Amount</strong></TableCell>
@@ -173,9 +173,9 @@ const AdminPayments = () => {
               payments.map((p) => (
                 <TableRow key={p.order_id} hover>
                   <TableCell>
-                    <Typography variant="body2" fontWeight="bold">{p.tenant_name || "N/A"}</Typography>
+                    <Typography variant="body2" fontWeight="bold">{p.reg_name || "N/A"}</Typography>
                     <Typography variant="caption" color="primary" sx={{ fontWeight: 'bold' }}>
-                        {p.phone || "No Phone"}
+                        {p.reg_phone || "No Phone"}
                     </Typography>
                   </TableCell>
                   <TableCell>{p.pg_name}</TableCell>
@@ -247,7 +247,7 @@ const AdminPayments = () => {
         </Table>
       </Paper>
 
-      {/* HIDDEN RECEIPT DESIGN (RENDERED FOR CAPTURE) */}
+      {/* HIDDEN RECEIPT DESIGN */}
       {selectedPayment && (
         <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
           <div ref={receiptRef} style={modernReceiptContainer}>
@@ -271,9 +271,9 @@ const AdminPayments = () => {
             <div style={mainReceiptBody}>
               <div style={{ flex: 1 }}>
                 <div style={sectionBlock}>
-                  <label style={receiptLabel}>👤 ISSUED TO</label>
-                  <p style={receiptValue}>{selectedPayment.tenant_name || "Valued Tenant"}</p>
-                  <p style={receiptSubValue}>Mob: {selectedPayment.phone || "Registered User"}</p>
+                  <label style={receiptLabel}>👤 ISSUED TO (REGISTERED USER)</label>
+                  <p style={receiptValue}>{selectedPayment.reg_name || "Valued User"}</p>
+                  <p style={receiptSubValue}>Mob: {selectedPayment.reg_phone || "N/A"}</p>
                 </div>
 
                 <div style={sectionBlock}>
@@ -314,10 +314,10 @@ const AdminPayments = () => {
 
             <div style={footerNote}>
               <div style={{textAlign: 'left', marginBottom: '20px', color: '#4b5563'}}>
-                <p>✔ Verified Transaction: <strong>{selectedPayment.order_id || 'N/A'}</strong></p>
-                <p>✔ This is a digital proof generated for the user with phone: {selectedPayment.phone}</p>
+                <p>✔ Transaction ID: <strong>{selectedPayment.order_id || 'N/A'}</strong></p>
+                <p>✔ This receipt is generated for the registered user with phone: <strong>{selectedPayment.reg_phone}</strong></p>
               </div>
-              <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>* System-generated receipt. No signature required.</p>
+              <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>* System-generated receipt. No physical signature required.</p>
               <p style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}>THANK YOU FOR CHOOSING NEPXALL!</p>
             </div>
           </div>
