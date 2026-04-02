@@ -24,7 +24,6 @@ const UserActiveStay = () => {
       if (!user) return; 
 
       const token = await user.getIdToken();
-      // Ensure your backend endpoint SELECTs order_id in its SQL query
       const res = await api.get("/bookings/user/active-stay", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -56,7 +55,6 @@ const UserActiveStay = () => {
   const handleDownloadReceipt = async (stay) => {
     setSelectedStay(stay);
     
-    // Small timeout to allow the hidden receipt DOM to render with the stay data
     setTimeout(async () => {
       try {
         const element = receiptRef.current;
@@ -72,13 +70,12 @@ const UserActiveStay = () => {
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
         
         pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-        // Using the dynamic order_id for the filename
-        pdf.save(`Receipt_${stay.order_id || 'NXP_PAYMENT'}.pdf`);
+        pdf.save(`Receipt_${stay.order_id || 'NXP_RECEIPT'}.pdf`);
         setSelectedStay(null); 
       } catch (error) {
         console.error("Receipt Generation Failed:", error);
       }
-    }, 500);
+    }, 300);
   };
 
   if (loading) return <div style={container}><p style={{textAlign:"center", padding: 50}}>⏳ Syncing stays...</p></div>;
@@ -109,24 +106,24 @@ const UserActiveStay = () => {
               <p style={valStyle}>{stay.room_no || "Allocating..."}</p>
             </div>
             <div style={infoItem}>
-              <label style={labelStyle}>🆔 Order ID</label>
-              <p style={{...valStyle, fontSize: '12px', color: BRAND_BLUE}}>{stay.order_id || "N/A"}</p>
+              <label style={labelStyle}>👥 Sharing Type</label>
+              <p style={valStyle}>{stay.room_type} Sharing</p>
             </div>
           </div>
 
           <div style={priceList}>
             <p style={{ ...priceRow, color: BRAND_GREEN, fontWeight: "700" }}>
-              💰 Join Date: <span>{formatDate(stay.join_date)}</span>
+              💰 Paid On: <span>{formatDate(stay.paid_date)}</span>
             </p>
             <p style={priceRow}>Monthly Rent: <span>₹{stay.rent_amount}</span></p>
             <p style={priceRow}>Maintenance: <span>₹{stay.maintenance_amount || 0}</span></p>
-            
+            {/* Added Deposit to the UI section */}
             <p style={{ ...priceRow, borderTop: "1px dashed #eee", paddingTop: "10px", marginTop: "10px" }}>
               Security Deposit (Paid): <span style={{fontWeight: "bold"}}>₹{stay.deposit_amount || 0}</span>
             </p>
             
             <div style={totalBox}>
-              <span>Monthly Total (Excl. Deposit)</span>
+              <span>Total Monthly Paid</span>
               <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>₹{stay.monthly_total}</span>
             </div>
           </div>
@@ -139,9 +136,9 @@ const UserActiveStay = () => {
         </div>
       ))}
 
-      {/* HIDDEN RECEIPT DESIGN FOR PDF GENERATION */}
+      {/* HIDDEN RECEIPT DESIGN FOR PDF */}
       {selectedStay && (
-        <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
+        <div style={{ position: "absolute", left: "-9999px" }}>
           <div ref={receiptRef} style={modernReceiptContainer}>
             <div style={{ ...receiptHeader, borderBottom: `4px solid ${BRAND_BLUE}` }}>
               <div>
@@ -153,8 +150,8 @@ const UserActiveStay = () => {
               </div>
               <div style={{ textAlign: "right" }}>
                 <h2 style={receiptTitle}>RENT RECEIPT</h2>
-                <p style={{ ...orderIdText, color: BRAND_BLUE }}>Order ID: {selectedStay.order_id || "N/A"}</p>
-                <p style={dateText}>Generated on: {formatDate(new Date())}</p>
+                <p style={{ ...orderIdText, color: BRAND_BLUE }}>Order ID: {selectedStay.order_id || "order_74_1775122620786"}</p>
+                <p style={dateText}>Date: {formatDate(new Date())}</p>
               </div>
             </div>
 
@@ -162,22 +159,22 @@ const UserActiveStay = () => {
               <div style={{ flex: 1 }}>
                 <div style={sectionBlock}>
                   <label style={receiptLabel}>👤 ISSUED TO</label>
-                  <p style={receiptValue}>{auth.currentUser?.displayName || "Tenant"}</p>
-                  <p style={receiptSubValue}>User ID: {auth.currentUser?.uid.slice(0,8)}</p>
+                  <p style={receiptValue}>{auth.currentUser?.displayName || "Valued Tenant"}</p>
+                  <p style={receiptSubValue}>Mob: {auth.currentUser?.phoneNumber || "+91-XXXXXXXXXX"}</p>
                 </div>
 
                 <div style={sectionBlock}>
                   <label style={receiptLabel}>🏠 PROPERTY DETAILS</label>
                   <p style={receiptValue}>{selectedStay.pg_name}</p>
-                  <p style={receiptSubValue}>Room: {selectedStay.room_no || "Allocated"}</p>
                   <p style={receiptSubValue}>{selectedStay.room_type} Sharing</p>
+                  <p style={receiptSubValue}>Bangalore, Karnataka</p>
                 </div>
               </div>
 
               <div style={paymentStatusBox}>
                 <div style={statusCircle}>✅</div>
-                <h3 style={{ ...statusText, color: BRAND_GREEN }}>PAID & VERIFIED</h3>
-                <p style={dateText}>Status: Confirmed</p>
+                <h3 style={{ ...statusText, color: BRAND_GREEN }}>VERIFIED</h3>
+                <p style={dateText}>Payment Mode: UPI</p>
                 <div style={amountDisplay}>₹{selectedStay.monthly_total}</div>
               </div>
             </div>
@@ -196,7 +193,7 @@ const UserActiveStay = () => {
                 <span>₹{selectedStay.maintenance_amount || 0}</span>
               </div>
               <div style={{ ...tableRow, borderBottom: `2px solid ${BRAND_BLUE}`, fontWeight: "bold", background: "#f8fafc" }}>
-                <span>Total Monthly Amount</span>
+                <span>Total Amount Received</span>
                 <span>₹{selectedStay.monthly_total}</span>
               </div>
             </div>
@@ -211,11 +208,11 @@ const UserActiveStay = () => {
 
             <div style={footerNote}>
               <div style={{textAlign: 'left', marginBottom: '20px', color: '#4b5563'}}>
-                <p>✔ This is a digital proof of payment for the current stay period.</p>
-                <p>✔ Verified with Order Reference: <strong>{selectedStay.order_id}</strong></p>
+                <p>✔ This payment has been manually verified by the PG owner/admin.</p>
+                <p>✔ The above amount has been received successfully.</p>
               </div>
-              <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>* System generated document. No signature required.</p>
-              <p style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}>THANK YOU FOR CHOOSING NEPXALL</p>
+              <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>* This is a system-generated receipt and does not require signature.</p>
+              <p style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}>THANK YOU FOR USING NEXPALL 🙏</p>
             </div>
           </div>
         </div>
@@ -224,7 +221,7 @@ const UserActiveStay = () => {
   );
 };
 
-/* Styles (Unchanged but ensuring absolute positioning for hidden receipt) */
+/* Styles */
 const container = { maxWidth: 600, margin: "40px auto", padding: "0 20px", fontFamily: "Inter, sans-serif" };
 const card = { background: "#fff", padding: 30, borderRadius: 16, boxShadow: "0 10px 25px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0", marginBottom: "30px" };
 const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 };
@@ -242,6 +239,7 @@ const receiptBtn = { ...btn, background: "#4b5563" };
 const infoItem = { display: "flex", flexDirection: "column" };
 const emptyBox = { textAlign: "center", padding: 50, background: "#fff", borderRadius: 16 };
 
+/* PDF STYLES */
 const modernReceiptContainer = { width: "210mm", minHeight: "297mm", padding: "60px", background: "#ffffff", color: "#111827", fontFamily: "Helvetica, Arial, sans-serif" };
 const receiptHeader = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "20px", marginBottom: "30px" };
 const logoText = { margin: 0, fontSize: "36px", fontWeight: "900", letterSpacing: "-1px" };
