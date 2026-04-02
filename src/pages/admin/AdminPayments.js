@@ -113,18 +113,18 @@ const AdminPayments = () => {
   };
 
   const handleWhatsAppShare = (p) => {
-    // Prioritize reg_phone from the users table join
-    const contactNumber = p.reg_phone || p.tenant_phone || "";
+    // Logic: Use reg_phone (from COALESCE query) first, fallback to original tenant fields
+    const contactNumber = p.reg_phone || p.phone || p.tenant_phone || "";
     const cleanPhone = contactNumber.replace(/\D/g, "");
     
-    if (!cleanPhone) {
-        setSnackbar({ open: true, message: "No phone number available for this user", severity: "warning" });
+    if (!cleanPhone || cleanPhone === "N/A" || cleanPhone === "NoPhone") {
+        setSnackbar({ open: true, message: "No valid phone number available", severity: "warning" });
         return;
     }
 
-    const userName = p.reg_name || p.tenant_name || "User";
+    const userName = p.reg_name || p.name || p.tenant_name || "User";
     const message = `*Payment Receipt - Nepxall*%0A%0AHello *${userName}*,%0AYour payment for *${p.pg_name}* has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
-    const whatsappUrl = `https://wa.me/${cleanPhone.startsWith('91') ? cleanPhone : '91' + cleanPhone}?text=${message}`;
+    const whatsappUrl = `https://wa.me/${cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone}?text=${message}`;
     window.open(whatsappUrl, "_blank");
   };
 
@@ -209,8 +209,9 @@ const AdminPayments = () => {
               <TableRow><TableCell colSpan={7} align="center" sx={{ py: 10 }}>No payment records found.</TableCell></TableRow>
             ) : (
               payments.map((p) => {
-                const displayName = p.reg_name || p.tenant_name || "Guest User";
-                const displayPhone = p.reg_phone || p.tenant_phone || "N/A";
+                // FIXED DATA MAPPING: Pull from COALESCE fields first
+                const displayName = p.reg_name || p.name || p.tenant_name || "Guest User";
+                const displayPhone = p.reg_phone || p.phone || p.tenant_phone || "N/A";
 
                 return (
                   <TableRow key={p.order_id} hover>
@@ -243,7 +244,7 @@ const AdminPayments = () => {
                         label={p.status.toUpperCase()} 
                         size="small" 
                         sx={{ fontWeight: '800', borderRadius: '6px' }}
-                        color={p.status === "paid" ? "success" : p.status === "submitted" ? "warning" : "error"} 
+                        color={p.status === "paid" || p.status === "confirmed" ? "success" : p.status === "submitted" || p.status === "approved" ? "warning" : "error"} 
                       />
                     </TableCell>
                     <TableCell align="center">
@@ -267,7 +268,7 @@ const AdminPayments = () => {
                           size="small"
                           disableElevation
                           startIcon={<CheckCircleIcon />}
-                          disabled={processing === p.order_id || p.status === "paid"}
+                          disabled={processing === p.order_id || p.status === "paid" || p.status === "confirmed"}
                           onClick={() => approvePayment(p.order_id)}
                           sx={{ textTransform: 'none', borderRadius: '8px', fontWeight: '700' }}
                         >
@@ -288,22 +289,22 @@ const AdminPayments = () => {
                     </TableCell>
                     <TableCell align="center">
                       <Stack direction="row" spacing={0.5} justifyContent="center">
-                        <Tooltip title={p.status === "paid" ? "Download PDF" : "Wait for approval"}>
+                        <Tooltip title={(p.status === "paid" || p.status === "confirmed") ? "Download PDF" : "Wait for approval"}>
                           <span>
                             <IconButton 
                               color="primary" 
-                              disabled={p.status !== "paid" || isGenerating} 
+                              disabled={(p.status !== "paid" && p.status !== "confirmed") || isGenerating} 
                               onClick={() => handleDownloadReceipt(p)}
                             >
                               <ReceiptLongIcon />
                             </IconButton>
                           </span>
                         </Tooltip>
-                        <Tooltip title={p.status === "paid" ? "WhatsApp Notify" : "Wait for approval"}>
+                        <Tooltip title={(p.status === "paid" || p.status === "confirmed") ? "WhatsApp Notify" : "Wait for approval"}>
                           <span>
                             <IconButton 
                               sx={{ color: "#25D366" }} 
-                              disabled={p.status !== "paid"} 
+                              disabled={(p.status !== "paid" && p.status !== "confirmed")} 
                               onClick={() => handleWhatsAppShare(p)}
                             >
                               <WhatsAppIcon />
@@ -343,8 +344,8 @@ const AdminPayments = () => {
               <div style={{ flex: 1 }}>
                 <div style={sectionBlock}>
                   <label style={receiptLabel}>👤 CUSTOMER DETAILS</label>
-                  <p style={receiptValue}>{selectedPayment.reg_name || selectedPayment.tenant_name || "Valued Customer"}</p>
-                  <p style={receiptSubValue}>Phone: {selectedPayment.reg_phone || selectedPayment.tenant_phone || "N/A"}</p>
+                  <p style={receiptValue}>{selectedPayment.reg_name || selectedPayment.name || selectedPayment.tenant_name || "Valued Customer"}</p>
+                  <p style={receiptSubValue}>Phone: {selectedPayment.reg_phone || selectedPayment.phone || selectedPayment.tenant_phone || "N/A"}</p>
                 </div>
 
                 <div style={sectionBlock}>
