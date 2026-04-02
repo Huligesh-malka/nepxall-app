@@ -25,7 +25,6 @@ const UserActiveStay = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // The backend should now return paid_date and next_due_date
       setStays(Array.isArray(res.data) ? res.data : res.data ? [res.data] : []);
     } catch (err) {
       console.error("Error loading stays:", err);
@@ -54,7 +53,6 @@ const UserActiveStay = () => {
   const handleDownloadReceipt = async (stay) => {
     setSelectedStay(stay);
     
-    // Timeout ensures the hidden DOM element is rendered before capture
     setTimeout(async () => {
       try {
         const element = receiptRef.current;
@@ -75,7 +73,7 @@ const UserActiveStay = () => {
     }, 200);
   };
 
-  if (loading) return <div style={container}><p style={{textAlign:"center", padding: 50}}>⏳ Syncing payments...</p></div>;
+  if (loading) return <div style={container}><p style={{textAlign:"center", padding: 50}}>⏳ Syncing stays...</p></div>;
 
   if (stays.length === 0) return (
     <div style={container}>
@@ -104,28 +102,18 @@ const UserActiveStay = () => {
             </div>
           </div>
 
-          <hr style={divider} />
-
           <div style={priceList}>
-            {/* ✅ PAID DATE SECTION */}
+            {/* ✅ PAID ON STATUS */}
             <p style={{ ...priceRow, color: "#16a34a", fontWeight: "700" }}>
               💰 Paid On: <span>{formatDate(stay.paid_date)}</span>
             </p>
 
-            <p style={priceRow}>Joined On: <span>{formatDate(stay.join_date)}</span></p>
             <p style={priceRow}>Monthly Rent: <span>₹{stay.rent_amount}</span></p>
             <p style={priceRow}>Maintenance: <span>₹{stay.maintenance_amount || 0}</span></p>
-            <p style={priceRow}>Security Deposit: <span>₹{stay.deposit_amount}</span></p>
+            <p style={priceRow}>Security Deposit (Paid): <span>₹{stay.deposit_amount}</span></p>
             
             <p style={priceRow}>
               Room Sharing: <span style={{ fontWeight: "700", color: "#2563eb" }}>{stay.room_type}</span>
-            </p>
-
-            <hr style={divider} />
-
-            {/* ✅ NEXT DUE DATE SECTION */}
-            <p style={{ ...priceRow, color: "#b91c1c", fontWeight: "700" }}>
-              📅 Next Rent Due: <span>{formatDate(stay.next_due_date)}</span>
             </p>
             
             <div style={totalBox}>
@@ -155,7 +143,7 @@ const UserActiveStay = () => {
             
             <div style={receiptSection}>
               <p><strong>Order ID:</strong> {selectedStay.order_id || "N/A"}</p>
-              <p><strong>Receipt Date:</strong> {formatDate(selectedStay.paid_date)}</p>
+              <p><strong>Payment Date:</strong> {formatDate(selectedStay.paid_date)}</p>
             </div>
 
             <h4 style={receiptSubHeader}>👤 TENANT DETAILS</h4>
@@ -175,7 +163,6 @@ const UserActiveStay = () => {
             <div style={receiptSection}>
               <p><strong>Amount Paid:</strong> ₹{selectedStay.monthly_total}</p>
               <p><strong>Status:</strong> SUCCESSFUL ✅</p>
-              <p><strong>Next Due:</strong> {formatDate(selectedStay.next_due_date)}</p>
             </div>
 
             <div style={{ marginTop: "40px", borderTop: "1px dashed #000", paddingTop: "20px", textAlign: "center" }}>
@@ -196,7 +183,6 @@ const headerSection = { display: "flex", justifyContent: "space-between", alignI
 const infoGrid = { display: "grid", gridTemplateColumns: "1fr", gap: "20px", marginBottom: 20 }; 
 const labelStyle = { fontSize: "12px", color: "#6b7280", textTransform: "uppercase" };
 const valStyle = { margin: "5px 0 0 0", fontWeight: "700", fontSize: "18px" };
-const divider = { border: "none", borderTop: "1px solid #eee", margin: "15px 0" };
 const priceList = { marginBottom: 20 };
 const priceRow = { display: "flex", justifyContent: "space-between", color: "#4b5563", margin: "10px 0", fontSize: "14px" };
 const totalBox = { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 15, padding: "15px", background: "#f0fdf4", borderRadius: "8px", color: "#166534" };
