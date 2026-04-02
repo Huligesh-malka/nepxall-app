@@ -1,6 +1,3 @@
-
-
-
 import React, { useEffect, useState } from "react";
 import { auth } from "../firebase";
 import api from "../api/api";
@@ -19,19 +16,25 @@ const UserActiveStay = () => {
   const loadStay = async () => {
     try {
       setError("");
+      setLoading(true);
 
       const user = auth.currentUser;
       if (!user) return navigate("/login");
 
       const token = await user.getIdToken();
 
-      const res = await api.get("/bookings/user/active-stay");
+      // ✅ FIX: Send token to backend
+      const res = await api.get("/bookings/user/active-stay", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      setStay(res.data);
+      setStay(res.data || null);
 
     } catch (err) {
       console.error(err);
-      setError("Failed to load stay details");
+      setError(err.response?.data?.message || "Failed to load stay details");
     } finally {
       setLoading(false);
     }
@@ -39,13 +42,22 @@ const UserActiveStay = () => {
 
   /* 🧠 NEXT RENT DUE DATE */
   const getNextDueDate = () => {
-    if (!stay?.join_date) return null;
+    if (!stay?.join_date) return "N/A";
     const date = new Date(stay.join_date);
     date.setMonth(date.getMonth() + 1);
     return date.toDateString();
   };
 
-  if (loading) return <p style={{ padding: 30 }}>Loading stay...</p>;
+  /* 🧠 SAFE DATE FORMAT */
+  const formatDate = (date) => {
+    if (!date) return "N/A";
+    return new Date(date).toDateString();
+  };
+
+  /* ================= UI ================= */
+
+  if (loading)
+    return <p style={{ padding: 30 }}>⏳ Loading stay...</p>;
 
   if (error)
     return (
@@ -68,20 +80,20 @@ const UserActiveStay = () => {
       <h2>🏠 My Current Stay</h2>
 
       <div style={card}>
-        <h3>{stay.pg_name}</h3>
+        <h3>{stay.pg_name || "PG Name"}</h3>
 
         <p>🚪 Room No: <b>{stay.room_no || "Not Assigned"}</b></p>
 
-        <p>📅 Join Date: {new Date(stay.join_date).toDateString()}</p>
+        <p>📅 Join Date: {formatDate(stay.join_date)}</p>
 
         <hr />
 
-        <p>💰 Rent: ₹{stay.rent_amount}</p>
-        <p>🛠 Maintenance: ₹{stay.maintenance_amount}</p>
-        <p>📦 Deposit Paid: ₹{stay.deposit_amount}</p>
+        <p>💰 Rent: ₹{stay.rent_amount || 0}</p>
+        <p>🛠 Maintenance: ₹{stay.maintenance_amount || 0}</p>
+        <p>📦 Deposit Paid: ₹{stay.deposit_amount || 0}</p>
 
         <h3 style={{ color: "#16a34a" }}>
-          🧾 Monthly Total: ₹{stay.monthly_total}
+          🧾 Monthly Total: ₹{stay.monthly_total || 0}
         </h3>
 
         <p>📆 Next Rent Due: {getNextDueDate()}</p>
@@ -89,7 +101,7 @@ const UserActiveStay = () => {
         <p>
           📌 Status:
           <span style={statusBadge(stay.status)}>
-            {stay.status}
+            {stay.status || "UNKNOWN"}
           </span>
         </p>
 
