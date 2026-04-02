@@ -18,11 +18,14 @@ import {
   Stack,
   Snackbar,
   IconButton,
-  Tooltip
+  Tooltip,
+  Divider
 } from "@mui/material";
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
 
 /* ================= BRAND COLORS ================= */
 const BRAND_BLUE = "#0B5ED7";
@@ -36,6 +39,7 @@ const AdminPayments = () => {
   
   const receiptRef = useRef();
   const [selectedPayment, setSelectedPayment] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -66,6 +70,7 @@ const AdminPayments = () => {
   };
 
   const approvePayment = async (orderId) => {
+    if (!window.confirm("Are you sure you want to approve this payment?")) return;
     try {
       setProcessing(orderId);
       const res = await api.put(`/payments/admin/payments/${orderId}/verify`);
@@ -81,11 +86,12 @@ const AdminPayments = () => {
   };
 
   const rejectPayment = async (orderId) => {
+    if (!window.confirm("Are you sure you want to reject this payment? This action cannot be undone.")) return;
     try {
       setProcessing(orderId);
       const res = await api.put(`/payments/admin/payments/${orderId}/reject`);
       if (res.data.success) {
-        setSnackbar({ open: true, message: "Payment rejected successfully", severity: "success" });
+        setSnackbar({ open: true, message: "Payment rejected successfully", severity: "info" });
         fetchPayments();
       }
     } catch (err) {
@@ -103,92 +109,109 @@ const AdminPayments = () => {
   };
 
   const handleWhatsAppShare = (p) => {
-    // Logic updated to use Registration Phone (reg_phone)
     const cleanPhone = p.reg_phone ? p.reg_phone.replace(/\D/g, "") : "";
     const message = `*Payment Receipt - Nepxall*%0A%0AHello *${p.reg_name || "User"}*,%0AYour payment for *${p.pg_name}* has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
-    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${message}`;
+    const whatsappUrl = `https://wa.me/${cleanPhone.startsWith('91') ? cleanPhone : '91' + cleanPhone}?text=${message}`;
     window.open(whatsappUrl, "_blank");
   };
 
   const handleDownloadReceipt = async (payment) => {
     setSelectedPayment(payment);
+    setIsGenerating(true);
     
+    // Allow React to render the hidden receipt div before capturing
     setTimeout(async () => {
       try {
         const element = receiptRef.current;
+        if (!element) throw new Error("Receipt element not found");
+
         const canvas = await html2canvas(element, { 
-          scale: 3, 
+          scale: 2, 
           useCORS: true,
           backgroundColor: "#ffffff",
-          logging: false
+          logging: false,
+          windowWidth: element.scrollWidth,
+          windowHeight: element.scrollHeight
         });
+
         const imgData = canvas.toDataURL("image/png");
-        
         const pdf = new jsPDF("p", "mm", "a4");
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
         
         pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`Receipt_${payment.order_id || 'Admin'}.pdf`);
+        pdf.save(`Nepxall_Receipt_${payment.order_id}.pdf`);
         
-        setSelectedPayment(null); 
+        setSnackbar({ open: true, message: "Receipt downloaded successfully", severity: "success" });
       } catch (error) {
         console.error("Receipt Generation Failed:", error);
         setSnackbar({ open: true, message: "Failed to generate receipt", severity: "error" });
+      } finally {
+        setSelectedPayment(null);
+        setIsGenerating(false);
       }
-    }, 600);
+    }, 800);
   };
 
   const handleCloseSnackbar = () => setSnackbar({ ...snackbar, open: false });
 
-  if (loading) return <Box display="flex" justifyContent="center" mt={10}><CircularProgress /></Box>;
+  if (loading) return <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" height="60vh"><CircularProgress /><Typography mt={2}>Loading payments...</Typography></Box>;
 
   return (
-    <Box p={3}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h5" fontWeight="bold">💳 Payment Verification</Typography>
-        <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchPayments}>Refresh</Button>
+    <Box p={4} sx={{ backgroundColor: "#f4f7fe", minHeight: "100vh" }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
+        <Box>
+            <Typography variant="h4" fontWeight="800" color="#1B2559">Payment Verification</Typography>
+            <Typography variant="body2" color="textSecondary">Manage and verify incoming rental payments for Nepxall properties.</Typography>
+        </Box>
+        <Button 
+            variant="contained" 
+            startIcon={<RefreshIcon />} 
+            onClick={fetchPayments}
+            sx={{ borderRadius: "10px", textTransform: 'none', px: 3, backgroundColor: BRAND_BLUE }}
+        >
+            Refresh Data
+        </Button>
       </Stack>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && <Alert severity="error" variant="filled" sx={{ mb: 3, borderRadius: "12px" }}>{error}</Alert>}
 
-      <Paper sx={{ width: '100%', overflowX: 'auto', borderRadius: 2 }}>
+      <Paper elevation={0} sx={{ width: '100%', overflowX: 'auto', borderRadius: "16px", border: "1px solid #E0E5F2" }}>
         <Table>
           <TableHead>
-            <TableRow sx={{ background: "#f8fafc" }}>
-              <TableCell><strong>Registration Details</strong></TableCell>
-              <TableCell><strong>PG Name</strong></TableCell>
-              <TableCell><strong>Sharing</strong></TableCell>
-              <TableCell><strong>Amount</strong></TableCell>
-              <TableCell><strong>Order ID</strong></TableCell>
-              <TableCell><strong>Status</strong></TableCell>
-              <TableCell align="center"><strong>Verification</strong></TableCell>
-              <TableCell align="center"><strong>Actions</strong></TableCell>
+            <TableRow sx={{ background: "#F4F7FE" }}>
+              <TableCell sx={{ color: "#A3AED0", fontWeight: "bold" }}>USER DETAILS</TableCell>
+              <TableCell sx={{ color: "#A3AED0", fontWeight: "bold" }}>PROPERTY</TableCell>
+              <TableCell sx={{ color: "#A3AED0", fontWeight: "bold" }}>AMOUNT</TableCell>
+              <TableCell sx={{ color: "#A3AED0", fontWeight: "bold" }}>ORDER ID</TableCell>
+              <TableCell sx={{ color: "#A3AED0", fontWeight: "bold" }}>STATUS</TableCell>
+              <TableCell align="center" sx={{ color: "#A3AED0", fontWeight: "bold" }}>VERIFICATION</TableCell>
+              <TableCell align="center" sx={{ color: "#A3AED0", fontWeight: "bold" }}>RECEIPT</TableCell>
             </TableRow>
           </TableHead>
-          <TableBody>
+          <TableBody sx={{ backgroundColor: "#fff" }}>
             {payments.length === 0 ? (
-              <TableRow><TableCell colSpan={8} align="center">No records found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} align="center" sx={{ py: 10 }}>No payment records found.</TableCell></TableRow>
             ) : (
               payments.map((p) => (
                 <TableRow key={p.order_id} hover>
                   <TableCell>
-                    <Typography variant="body2" fontWeight="bold">{p.reg_name || "N/A"}</Typography>
-                    <Typography variant="caption" color="primary" sx={{ fontWeight: 'bold' }}>
-                        {p.reg_phone || "No Phone"}
+                    <Typography variant="body2" fontWeight="700" color="#1B2559">{p.reg_name || "Guest User"}</Typography>
+                    <Typography variant="caption" sx={{ color: BRAND_BLUE, fontWeight: '600' }}>
+                        {p.reg_phone || "N/A"}
                     </Typography>
                   </TableCell>
-                  <TableCell>{p.pg_name}</TableCell>
                   <TableCell>
-                    <Chip label={p.sharing || "N/A"} size="small" variant="outlined" />
+                    <Typography variant="body2" fontWeight="600">{p.pg_name}</Typography>
+                    <Chip label={`${p.sharing} Sharing`} size="small" sx={{ height: '20px', fontSize: '10px', mt: 0.5 }} />
                   </TableCell>
-                  <TableCell><Typography fontWeight="bold">₹{p.amount}</Typography></TableCell>
-                  <TableCell sx={{ fontFamily: "monospace", fontSize: '11px' }}>{p.order_id}</TableCell>
+                  <TableCell><Typography fontWeight="800" color="#1B2559">₹{p.amount}</Typography></TableCell>
+                  <TableCell sx={{ fontFamily: "monospace", color: "#707EAE" }}>{p.order_id}</TableCell>
                   <TableCell>
                     <Chip 
                       label={p.status.toUpperCase()} 
                       size="small" 
-                      sx={{ fontWeight: 'bold' }}
+                      sx={{ fontWeight: '800', borderRadius: '6px' }}
                       color={p.status === "paid" ? "success" : p.status === "submitted" ? "warning" : "error"} 
                     />
                   </TableCell>
@@ -198,8 +221,11 @@ const AdminPayments = () => {
                         variant="contained"
                         color="success"
                         size="small"
+                        disableElevation
+                        startIcon={<CheckCircleIcon />}
                         disabled={processing === p.order_id || p.status === "paid"}
                         onClick={() => approvePayment(p.order_id)}
+                        sx={{ textTransform: 'none', borderRadius: '8px' }}
                       >
                         {processing === p.order_id ? <CircularProgress size={16} color="inherit" /> : "Approve"}
                       </Button>
@@ -207,8 +233,10 @@ const AdminPayments = () => {
                         variant="outlined"
                         color="error"
                         size="small"
+                        startIcon={<CancelIcon />}
                         disabled={processing === p.order_id || p.status === "rejected"}
                         onClick={() => rejectPayment(p.order_id)}
+                        sx={{ textTransform: 'none', borderRadius: '8px' }}
                       >
                         Reject
                       </Button>
@@ -216,18 +244,18 @@ const AdminPayments = () => {
                   </TableCell>
                   <TableCell align="center">
                     <Stack direction="row" spacing={0.5} justifyContent="center">
-                      <Tooltip title={p.status === "paid" ? "Download Receipt" : "Payment not verified"}>
+                      <Tooltip title={p.status === "paid" ? "Download PDF" : "Wait for approval"}>
                         <span>
                           <IconButton 
                             color="primary" 
-                            disabled={p.status !== "paid"} 
+                            disabled={p.status !== "paid" || isGenerating} 
                             onClick={() => handleDownloadReceipt(p)}
                           >
                             <ReceiptLongIcon />
                           </IconButton>
                         </span>
                       </Tooltip>
-                      <Tooltip title={p.status === "paid" ? "Share on WhatsApp" : "Payment not verified"}>
+                      <Tooltip title={p.status === "paid" ? "WhatsApp Notify" : "Wait for approval"}>
                         <span>
                           <IconButton 
                             sx={{ color: "#25D366" }} 
@@ -247,7 +275,7 @@ const AdminPayments = () => {
         </Table>
       </Paper>
 
-      {/* HIDDEN RECEIPT DESIGN */}
+      {/* HIDDEN RECEIPT COMPONENT FOR PDF GENERATION */}
       {selectedPayment && (
         <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
           <div ref={receiptRef} style={modernReceiptContainer}>
@@ -261,71 +289,68 @@ const AdminPayments = () => {
               </div>
               <div style={{ textAlign: "right" }}>
                 <h2 style={receiptTitle}>RENT RECEIPT</h2>
-                <p style={{ ...orderIdText, color: BRAND_BLUE }}>
-                    Order ID: {selectedPayment.order_id || "N/A"}
-                </p>
-                <p style={dateText}>Date: {formatDate(selectedPayment.submitted_at || selectedPayment.created_at)}</p>
+                <p style={{ ...orderIdText, color: BRAND_BLUE }}>ID: {selectedPayment.order_id}</p>
+                <p style={dateText}>Generated: {formatDate(new Date())}</p>
               </div>
             </div>
 
             <div style={mainReceiptBody}>
               <div style={{ flex: 1 }}>
                 <div style={sectionBlock}>
-                  <label style={receiptLabel}>👤 ISSUED TO (REGISTERED USER)</label>
-                  <p style={receiptValue}>{selectedPayment.reg_name || "Valued User"}</p>
-                  <p style={receiptSubValue}>Mob: {selectedPayment.reg_phone || "N/A"}</p>
+                  <label style={receiptLabel}>👤 CUSTOMER DETAILS</label>
+                  <p style={receiptValue}>{selectedPayment.reg_name || "Valued Customer"}</p>
+                  <p style={receiptSubValue}>Phone: {selectedPayment.reg_phone || "N/A"}</p>
                 </div>
 
                 <div style={sectionBlock}>
-                  <label style={receiptLabel}>🏠 PROPERTY DETAILS</label>
+                  <label style={receiptLabel}>🏠 PROPERTY DESCRIPTION</label>
                   <p style={receiptValue}>{selectedPayment.pg_name}</p>
-                  <p style={receiptSubValue}>
-                    {selectedPayment.sharing || "N/A"} Sharing
-                  </p>
+                  <p style={receiptSubValue}>Category: {selectedPayment.sharing} Sharing Accommodation</p>
                 </div>
               </div>
 
               <div style={paymentStatusBox}>
                 <div style={statusCircle}>✅</div>
-                <h3 style={{ ...statusText, color: BRAND_GREEN }}>VERIFIED</h3>
-                <p style={dateText}>Payment Mode: Online</p>
+                <h3 style={{ ...statusText, color: BRAND_GREEN }}>PAID & VERIFIED</h3>
+                <p style={dateText}>Method: Digital Payment</p>
+                <Divider sx={{ my: 1 }} />
                 <div style={amountDisplay}>₹{selectedPayment.amount}</div>
               </div>
             </div>
 
             <div style={tableContainer}>
               <div style={{ ...tableHeader, background: BRAND_BLUE }}>
-                <span>📊 PAYMENT BREAKDOWN</span>
-                <span>Amount</span>
+                <span>DESCRIPTION</span>
+                <span>TOTAL</span>
               </div>
               <div style={tableRow}>
-                <span>Monthly Room Rent ({selectedPayment.sharing || "Standard"})</span>
+                <span>Monthly Rental Charges</span>
                 <span>₹{selectedPayment.amount}</span>
               </div>
               <div style={tableRow}>
-                <span>Maintenance / Platform Fee</span>
-                <span>₹0</span>
+                <span>Security Deposit / Amenities</span>
+                <span>₹0.00</span>
               </div>
               <div style={{ ...tableRow, borderBottom: `2px solid ${BRAND_BLUE}`, fontWeight: "bold", background: "#f8fafc" }}>
-                <span>Total Amount Received</span>
+                <span>NET AMOUNT RECEIVED</span>
                 <span>₹{selectedPayment.amount}</span>
               </div>
             </div>
 
             <div style={footerNote}>
-              <div style={{textAlign: 'left', marginBottom: '20px', color: '#4b5563'}}>
-                <p>✔ Transaction ID: <strong>{selectedPayment.order_id || 'N/A'}</strong></p>
-                <p>✔ This receipt is generated for the registered user with phone: <strong>{selectedPayment.reg_phone}</strong></p>
+              <div style={{textAlign: 'left', marginBottom: '30px', color: '#4b5563', fontSize: '14px'}}>
+                <p>• Verified Transaction ID: <strong>{selectedPayment.order_id}</strong></p>
+                <p>• Payment timestamp: {formatDate(selectedPayment.submitted_at || selectedPayment.created_at)}</p>
               </div>
-              <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>* System-generated receipt. No physical signature required.</p>
-              <p style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}>THANK YOU FOR CHOOSING NEPXALL!</p>
+              <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>This is a computer-generated document. It does not require a physical signature.</p>
+              <p style={{ fontWeight: "bold", marginTop: 10, color: BRAND_BLUE, fontSize: '16px' }}>NEPXALL - MAKING LIVING EASIER</p>
             </div>
           </div>
         </div>
       )}
 
-      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={handleCloseSnackbar}>
-        <Alert severity={snackbar.severity} variant="filled" onClose={handleCloseSnackbar}>
+      <Snackbar open={snackbar.open} autoHideDuration={5000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
+        <Alert severity={snackbar.severity} variant="filled" onClose={handleCloseSnackbar} sx={{ width: '100%', borderRadius: '10px' }}>
           {snackbar.message}
         </Alert>
       </Snackbar>
@@ -333,26 +358,26 @@ const AdminPayments = () => {
   );
 };
 
-/* --- RECEIPT STYLES --- */
-const modernReceiptContainer = { width: "210mm", minHeight: "280mm", padding: "60px", background: "#ffffff", color: "#111827", fontFamily: "Arial, sans-serif" };
-const receiptHeader = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "20px", marginBottom: "30px", borderBottom: `4px solid ${BRAND_BLUE}` };
-const logoText = { margin: 0, fontSize: "36px", fontWeight: "900", letterSpacing: "-1px" };
-const tagline = { margin: 0, fontSize: "12px", color: "#6b7280" };
-const receiptTitle = { margin: 0, fontSize: "22px", color: "#111827" };
-const orderIdText = { margin: 0, fontSize: "14px", fontWeight: "bold" };
-const mainReceiptBody = { display: "flex", gap: "30px", marginBottom: "40px" };
-const sectionBlock = { marginBottom: "20px" };
-const receiptLabel = { fontSize: "11px", color: "#9ca3af", fontWeight: "bold", letterSpacing: "1px", display: "block", marginBottom: "5px" };
-const receiptValue = { fontSize: "16px", fontWeight: "bold", margin: 0, color: "#111827" };
-const receiptSubValue = { fontSize: "13px", color: "#4b5563", margin: "2px 0" };
-const paymentStatusBox = { width: "200px", background: "#f8fafc", borderRadius: "15px", border: "1px solid #e2e8f0", padding: "20px", textAlign: "center" };
-const statusCircle = { fontSize: "30px", marginBottom: "5px" };
-const statusText = { margin: 0, fontSize: "18px", fontWeight: "bold" };
-const dateText = { fontSize: "12px", color: "#6b7280", margin: "5px 0" };
-const amountDisplay = { fontSize: "24px", fontWeight: "900", color: "#111827", marginTop: "10px" };
-const tableContainer = { marginTop: "10px" };
-const tableHeader = { display: "flex", justifyContent: "space-between", padding: "12px", color: "#fff", borderRadius: "8px 8px 0 0", fontWeight: "bold" };
-const tableRow = { display: "flex", justifyContent: "space-between", padding: "15px 12px", borderBottom: "1px solid #e5e7eb" };
-const footerNote = { marginTop: "50px", textAlign: "center", color: "#9ca3af", fontSize: "12px" };
+/* --- ENHANCED RECEIPT STYLES --- */
+const modernReceiptContainer = { width: "210mm", minHeight: "290mm", padding: "80px", background: "#ffffff", color: "#111827", fontFamily: "Helvetica, Arial, sans-serif" };
+const receiptHeader = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "30px", marginBottom: "40px", borderBottom: `5px solid ${BRAND_BLUE}` };
+const logoText = { margin: 0, fontSize: "42px", fontWeight: "900", letterSpacing: "-1.5px" };
+const tagline = { margin: 0, fontSize: "14px", color: "#6b7280", fontWeight: "500" };
+const receiptTitle = { margin: 0, fontSize: "28px", color: "#111827", fontWeight: "800" };
+const orderIdText = { margin: "5px 0 0 0", fontSize: "14px", fontWeight: "bold" };
+const mainReceiptBody = { display: "flex", gap: "40px", marginBottom: "50px" };
+const sectionBlock = { marginBottom: "25px" };
+const receiptLabel = { fontSize: "12px", color: "#9ca3af", fontWeight: "bold", letterSpacing: "1.2px", display: "block", marginBottom: "8px" };
+const receiptValue = { fontSize: "18px", fontWeight: "bold", margin: 0, color: "#111827" };
+const receiptSubValue = { fontSize: "14px", color: "#4b5563", margin: "4px 0" };
+const paymentStatusBox = { width: "240px", background: "#f0fdf4", borderRadius: "20px", border: "2px solid #bbf7d0", padding: "25px", textAlign: "center" };
+const statusCircle = { fontSize: "36px", marginBottom: "5px" };
+const statusText = { margin: 0, fontSize: "20px", fontWeight: "bold" };
+const dateText = { fontSize: "13px", color: "#6b7280", margin: "5px 0" };
+const amountDisplay = { fontSize: "32px", fontWeight: "900", color: "#111827", marginTop: "10px" };
+const tableContainer = { marginTop: "20px" };
+const tableHeader = { display: "flex", justifyContent: "space-between", padding: "16px", color: "#fff", borderRadius: "10px 10px 0 0", fontWeight: "bold", fontSize: "14px" };
+const tableRow = { display: "flex", justifyContent: "space-between", padding: "18px 16px", borderBottom: "1px solid #e5e7eb", fontSize: "15px" };
+const footerNote = { marginTop: "80px", textAlign: "center", color: "#9ca3af", fontSize: "13px" };
 
 export default AdminPayments;
