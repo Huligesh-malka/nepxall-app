@@ -29,9 +29,9 @@ const AgreementForm = () => {
   const [isVerified, setIsVerified] = useState(false);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
 
-  // Updated formData: Removed email, pan, checkin_date, agreement_months, and deposit
   const [formData, setFormData] = useState({
     full_name: "", 
+    father_name: "", // Added for legal completeness
     mobile: "", 
     address: "", 
     city: "", 
@@ -71,7 +71,9 @@ const AgreementForm = () => {
   }, [bookingId]);
 
   const setupRecaptcha = () => {
-    if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
+    if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+    }
     window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
       size: "invisible",
     });
@@ -81,19 +83,22 @@ const AgreementForm = () => {
   const sendOtp = async () => {
     if (manualMobile.length < 10) return setError("Enter a valid 10-digit mobile number.");
     setLoading(true);
+    setError(null);
     try {
       const verifyRes = await api.post("/agreements-form/tenant/verify", {
         booking_id: bookingId,
         mobile: manualMobile
       });
-      if (!verifyRes.data.success) throw new Error("Number mismatch.");
+      if (!verifyRes.data.success) throw new Error("Number mismatch with booking records.");
 
       setupRecaptcha();
-      const confirmation = await signInWithPhoneNumber(auth, `+91${manualMobile}`, window.recaptchaVerifier);
+      const appVerifier = window.recaptchaVerifier;
+      const confirmation = await signInWithPhoneNumber(auth, `+91${manualMobile}`, appVerifier);
       setConfirmObj(confirmation);
-      setSuccess("OTP sent! ✅");
+      setSuccess("OTP sent successfully! ✅");
     } catch (err) {
-      setError(err.message || "Verification failed.");
+      setError(err.response?.data?.message || err.message || "Verification failed.");
+      if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
     } finally { setLoading(false); }
   };
 
@@ -104,8 +109,9 @@ const AgreementForm = () => {
       await confirmObj.confirm(otp);
       setIsVerified(true);
       setSuccess("Identity Confirmed! ✅");
-    } catch (err) { setError("Invalid OTP code."); }
-    finally { setLoading(false); }
+    } catch (err) { 
+        setError("Invalid OTP code. Please try again."); 
+    } finally { setLoading(false); }
   };
 
   /* ================= FORM ACTIONS ================= */
@@ -120,11 +126,12 @@ const AgreementForm = () => {
     try {
       const res = await api.post("/agreements-form/submit", data);
       if (res.data.success) {
-        setSuccess("Details submitted!");
+        setSuccess("Details submitted successfully!");
         fetchAgreementStatus(); 
       }
-    } catch (err) { setError("Submission failed."); }
-    finally { setLoading(false); }
+    } catch (err) { 
+        setError(err.response?.data?.message || "Submission failed. Please check your data."); 
+    } finally { setLoading(false); }
   };
 
   const handleFinalTenantSign = async () => {
@@ -323,16 +330,18 @@ const AgreementForm = () => {
               <form onSubmit={handleSubmitInitialForm}>
                 <Grid container spacing={2}>
                   <Grid item xs={12} md={6}><TextField fullWidth name="full_name" label="Full Name" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="father_name" label="Father Name" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={6}><TextField fullWidth name="mobile" label="Mobile" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="aadhaar_last4" label="Aadhaar (Last 4 digits)" required onChange={handleChange} /></Grid>
                   
-                  <Grid item xs={12}><TextField fullWidth name="address" label="Current Address" multiline rows={2} required onChange={handleChange} /></Grid>
+                  <Grid item xs={12}><TextField fullWidth name="address" label="Permanent Address" multiline rows={2} required onChange={handleChange} /></Grid>
                   
                   <Grid item xs={12} md={4}><TextField fullWidth name="city" label="City" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="state" label="State" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="pincode" label="Pincode" required onChange={handleChange} /></Grid>
                   
-                  <Grid item xs={12} md={6}><TextField fullWidth name="aadhaar_last4" label="Aadhaar (Last 4 digits)" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={6}><TextField fullWidth name="rent" label="Monthly Rent" type="number" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="rent" label="Monthly Rent (₹)" type="number" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="maintenance" label="Maintenance (₹)" type="number" onChange={handleChange} defaultValue="0" /></Grid>
                 </Grid>
                 
                 <Button type="submit" variant="contained" fullWidth sx={{ mt: 4, py: 1.5 }} disabled={loading}>
@@ -346,10 +355,10 @@ const AgreementForm = () => {
       <div id="recaptcha-container"></div>
       
       <Snackbar open={!!success} autoHideDuration={4000} onClose={() => setSuccess("")}>
-        <Alert severity="success">{success}</Alert>
+        <Alert severity="success" sx={{ width: '100%' }}>{success}</Alert>
       </Snackbar>
-      <Snackbar open={!!error} autoHideDuration={4000} onClose={() => setError(null)}>
-        <Alert severity="error">{error}</Alert>
+      <Snackbar open={!!error} autoHideDuration={6000} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{ width: '100%' }}>{error}</Alert>
       </Snackbar>
     </Box>
   );
