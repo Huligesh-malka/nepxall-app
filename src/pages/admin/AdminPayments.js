@@ -19,13 +19,15 @@ import {
   Snackbar,
   IconButton,
   Tooltip,
-  Divider
+  Divider,
+  Avatar
 } from "@mui/material";
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import ImageIcon from '@mui/icons-material/Image';
 
 /* ================= BRAND COLORS ================= */
 const BRAND_BLUE = "#0B5ED7";
@@ -109,8 +111,8 @@ const AdminPayments = () => {
   };
 
   const handleWhatsAppShare = (p) => {
-    // Priority given to tenant_phone as it comes from the verified users table
-    const contactNumber = p.tenant_phone || p.reg_phone || "";
+    // Priority given to reg_phone (from users table join)
+    const contactNumber = p.reg_phone || p.tenant_phone || "";
     const cleanPhone = contactNumber.replace(/\D/g, "");
     
     if (!cleanPhone) {
@@ -118,7 +120,7 @@ const AdminPayments = () => {
         return;
     }
 
-    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${p.tenant_name || p.reg_name || "User"}*,%0AYour payment for *${p.pg_name}* has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
+    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${p.reg_name || p.tenant_name || "User"}*,%0AYour payment for *${p.pg_name}* has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
     const whatsappUrl = `https://wa.me/${cleanPhone.startsWith('91') ? cleanPhone : '91' + cleanPhone}?text=${message}`;
     window.open(whatsappUrl, "_blank");
   };
@@ -190,7 +192,7 @@ const AdminPayments = () => {
               <TableCell sx={{ color: "#A3AED0", fontWeight: "bold" }}>USER DETAILS</TableCell>
               <TableCell sx={{ color: "#A3AED0", fontWeight: "bold" }}>PROPERTY</TableCell>
               <TableCell sx={{ color: "#A3AED0", fontWeight: "bold" }}>AMOUNT</TableCell>
-              <TableCell sx={{ color: "#A3AED0", fontWeight: "bold" }}>ORDER ID</TableCell>
+              <TableCell sx={{ color: "#A3AED0", fontWeight: "bold" }}>ORDER ID / UTR</TableCell>
               <TableCell sx={{ color: "#A3AED0", fontWeight: "bold" }}>STATUS</TableCell>
               <TableCell align="center" sx={{ color: "#A3AED0", fontWeight: "bold" }}>VERIFICATION</TableCell>
               <TableCell align="center" sx={{ color: "#A3AED0", fontWeight: "bold" }}>RECEIPT</TableCell>
@@ -203,20 +205,29 @@ const AdminPayments = () => {
               payments.map((p) => (
                 <TableRow key={p.order_id} hover>
                   <TableCell>
-                    {/* Updated logic: Prioritize tenant_name/phone from the DB Join */}
-                    <Typography variant="body2" fontWeight="700" color="#1B2559">
-                        {p.tenant_name || p.reg_name || "Guest User"}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: BRAND_BLUE, fontWeight: '600' }}>
-                        {p.tenant_phone || p.reg_phone || "N/A"}
-                    </Typography>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                        <Avatar sx={{ bgcolor: BRAND_BLUE, fontWeight: 'bold' }}>
+                            {(p.reg_name || p.tenant_name || "G")[0].toUpperCase()}
+                        </Avatar>
+                        <Box>
+                            <Typography variant="body2" fontWeight="700" color="#1B2559">
+                                {p.reg_name || p.tenant_name || "Guest User"}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: BRAND_BLUE, fontWeight: '600' }}>
+                                {p.reg_phone || p.tenant_phone || "N/A"}
+                            </Typography>
+                        </Box>
+                    </Stack>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" fontWeight="600">{p.pg_name}</Typography>
                     <Chip label={`${p.sharing || 'N/A'} Sharing`} size="small" sx={{ height: '20px', fontSize: '10px', mt: 0.5 }} />
                   </TableCell>
                   <TableCell><Typography fontWeight="800" color="#1B2559">₹{p.amount}</Typography></TableCell>
-                  <TableCell sx={{ fontFamily: "monospace", color: "#707EAE" }}>{p.order_id}</TableCell>
+                  <TableCell>
+                    <Typography variant="caption" display="block" sx={{ fontFamily: "monospace", color: "#707EAE" }}>{p.order_id}</Typography>
+                    {p.utr && <Typography variant="caption" sx={{ color: BRAND_GREEN, fontWeight: 'bold' }}>UTR: {p.utr}</Typography>}
+                  </TableCell>
                   <TableCell>
                     <Chip 
                       label={p.status.toUpperCase()} 
@@ -227,6 +238,20 @@ const AdminPayments = () => {
                   </TableCell>
                   <TableCell align="center">
                     <Stack direction="row" spacing={1} justifyContent="center">
+                      {/* NEW: View Screenshot Button */}
+                      {p.screenshot && (
+                        <Tooltip title="View Proof">
+                           <IconButton 
+                             size="small" 
+                             color="primary" 
+                             onClick={() => window.open(p.screenshot, "_blank")}
+                             sx={{ border: '1px solid #E0E5F2' }}
+                           >
+                             <ImageIcon fontSize="small" />
+                           </IconButton>
+                        </Tooltip>
+                      )}
+
                       <Button
                         variant="contained"
                         color="success"
@@ -308,8 +333,8 @@ const AdminPayments = () => {
               <div style={{ flex: 1 }}>
                 <div style={sectionBlock}>
                   <label style={receiptLabel}>👤 CUSTOMER DETAILS</label>
-                  <p style={receiptValue}>{selectedPayment.tenant_name || selectedPayment.reg_name || "Valued Customer"}</p>
-                  <p style={receiptSubValue}>Phone: {selectedPayment.tenant_phone || selectedPayment.reg_phone || "N/A"}</p>
+                  <p style={receiptValue}>{selectedPayment.reg_name || selectedPayment.tenant_name || "Valued Customer"}</p>
+                  <p style={receiptSubValue}>Phone: {selectedPayment.reg_phone || selectedPayment.tenant_phone || "N/A"}</p>
                 </div>
 
                 <div style={sectionBlock}>
@@ -350,6 +375,7 @@ const AdminPayments = () => {
             <div style={footerNote}>
               <div style={{textAlign: 'left', marginBottom: '30px', color: '#4b5563', fontSize: '14px'}}>
                 <p>• Verified Transaction ID: <strong>{selectedPayment.order_id}</strong></p>
+                {selectedPayment.utr && <p>• Bank UTR: <strong>{selectedPayment.utr}</strong></p>}
                 <p>• Payment timestamp: {formatDate(selectedPayment.submitted_at || selectedPayment.created_at)}</p>
               </div>
               <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>This is a computer-generated document. It does not require a physical signature.</p>
@@ -368,7 +394,7 @@ const AdminPayments = () => {
   );
 };
 
-/* --- ENHANCED RECEIPT STYLES --- */
+/* --- STYLES --- */
 const modernReceiptContainer = { width: "210mm", minHeight: "290mm", padding: "80px", background: "#ffffff", color: "#111827", fontFamily: "Helvetica, Arial, sans-serif" };
 const receiptHeader = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "30px", marginBottom: "40px", borderBottom: `5px solid ${BRAND_BLUE}` };
 const logoText = { margin: 0, fontSize: "42px", fontWeight: "900", letterSpacing: "-1.5px" };
