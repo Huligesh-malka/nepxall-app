@@ -24,12 +24,11 @@ const UserActiveStay = () => {
       if (!user) return; 
 
       const token = await user.getIdToken();
-      // Fetches all confirmed/paid stays from the updated backend
+      // This calls the updated backend controller that JOINs the payments table
       const res = await api.get("/bookings/user/active-stay", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // res.data is now an array of all active bookings
       setStays(Array.isArray(res.data) ? res.data : res.data ? [res.data] : []);
     } catch (err) {
       console.error("Error loading stays:", err);
@@ -57,7 +56,6 @@ const UserActiveStay = () => {
   const handleDownloadReceipt = async (stay) => {
     setSelectedStay(stay);
     
-    // Timeout ensures the hidden receipt DOM is rendered with the specific stay data
     setTimeout(async () => {
       try {
         const element = receiptRef.current;
@@ -81,13 +79,12 @@ const UserActiveStay = () => {
     }, 500);
   };
 
-  if (loading) return <div style={container}><p style={{textAlign:"center", padding: 50}}>⏳ Syncing your stays...</p></div>;
+  if (loading) return <div style={container}><p style={{textAlign:"center", padding: 50}}>⏳ Syncing stays...</p></div>;
 
   if (stays.length === 0) return (
     <div style={container}>
       <div style={emptyBox}>
-        <h3 style={{color: '#374151'}}>No Active Stay Found</h3>
-        <p style={{color: '#6b7280', marginBottom: 20}}>You don't have any confirmed bookings at the moment.</p>
+        <h3>No Active Stay</h3>
         <button style={btn} onClick={() => navigate("/")}>Browse PGs</button>
       </div>
     </div>
@@ -95,12 +92,8 @@ const UserActiveStay = () => {
 
   return (
     <div style={container}>
-      <header style={{ marginBottom: 30 }}>
-        <h2 style={{ margin: 0, color: '#111827' }}>🏠 My Current Stays</h2>
-        <p style={{ color: '#6b7280', fontSize: '14px' }}>Manage your active PG accommodations and receipts.</p>
-      </header>
+      <h2 style={{ marginBottom: 20 }}>🏠 My Current Stays</h2>
 
-      {/* Renders a card for EVERY active stay returned by the backend */}
       {stays.map((stay) => (
         <div key={stay.id} style={card}>
           <div style={headerSection}>
@@ -116,6 +109,7 @@ const UserActiveStay = () => {
             <div style={infoItem}>
               <label style={labelStyle}>🆔 Order ID</label>
               <p style={{...valStyle, fontSize: '12px', color: BRAND_BLUE, wordBreak: 'break-all'}}>
+                {/* Now matches the aliased column from SQL */}
                 {stay.order_id || "N/A"}
               </p>
             </div>
@@ -123,7 +117,7 @@ const UserActiveStay = () => {
 
           <div style={priceList}>
             <p style={{ ...priceRow, color: BRAND_GREEN, fontWeight: "700" }}>
-              💰 Last Payment: <span>{formatDate(stay.paid_date)}</span>
+              💰 Paid On: <span>{formatDate(stay.paid_date)}</span>
             </p>
             <p style={priceRow}>Monthly Rent: <span>₹{stay.rent_amount}</span></p>
             <p style={priceRow}>Maintenance: <span>₹{stay.maintenance_amount || 0}</span></p>
@@ -146,7 +140,7 @@ const UserActiveStay = () => {
         </div>
       ))}
 
-      {/* HIDDEN RECEIPT TEMPLATE - Only exists when a user clicks 'Receipt' */}
+      {/* HIDDEN RECEIPT DESIGN FOR PDF */}
       {selectedStay && (
         <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
           <div ref={receiptRef} style={modernReceiptContainer}>
@@ -163,16 +157,16 @@ const UserActiveStay = () => {
                 <p style={{ ...orderIdText, color: BRAND_BLUE }}>
                     Order ID: {selectedStay.order_id || "N/A"}
                 </p>
-                <p style={dateText}>Generated: {new Date().toLocaleDateString('en-GB')}</p>
+                <p style={dateText}>Date: {formatDate(selectedStay.paid_date || new Date())}</p>
               </div>
             </div>
 
             <div style={mainReceiptBody}>
               <div style={{ flex: 1 }}>
                 <div style={sectionBlock}>
-                  <label style={receiptLabel}>👤 TENANT</label>
-                  <p style={receiptValue}>{auth.currentUser?.displayName || "Valued Resident"}</p>
-                  <p style={receiptSubValue}>Mob: {auth.currentUser?.phoneNumber || "Registered Mobile"}</p>
+                  <label style={receiptLabel}>👤 ISSUED TO</label>
+                  <p style={receiptValue}>{auth.currentUser?.displayName || "Valued Tenant"}</p>
+                  <p style={receiptSubValue}>Mob: {auth.currentUser?.phoneNumber || "Contact info hidden"}</p>
                 </div>
 
                 <div style={sectionBlock}>
@@ -184,19 +178,19 @@ const UserActiveStay = () => {
 
               <div style={paymentStatusBox}>
                 <div style={statusCircle}>✅</div>
-                <h3 style={{ ...statusText, color: BRAND_GREEN }}>PAID</h3>
-                <p style={dateText}>Mode: Online Transfer</p>
+                <h3 style={{ ...statusText, color: BRAND_GREEN }}>VERIFIED</h3>
+                <p style={dateText}>Payment Mode: Online</p>
                 <div style={amountDisplay}>₹{selectedStay.monthly_total}</div>
               </div>
             </div>
 
             <div style={tableContainer}>
               <div style={{ ...tableHeader, background: BRAND_BLUE }}>
-                <span>📊 BREAKDOWN</span>
+                <span>📊 PAYMENT BREAKDOWN</span>
                 <span>Amount</span>
               </div>
               <div style={tableRow}>
-                <span>Monthly Rent</span>
+                <span>Monthly Room Rent</span>
                 <span>₹{selectedStay.rent_amount}</span>
               </div>
               <div style={tableRow}>
@@ -204,13 +198,13 @@ const UserActiveStay = () => {
                 <span>₹{selectedStay.maintenance_amount || 0}</span>
               </div>
               <div style={{ ...tableRow, borderBottom: `2px solid ${BRAND_BLUE}`, fontWeight: "bold", background: "#f8fafc" }}>
-                <span>Total Received</span>
+                <span>Total Amount Received</span>
                 <span>₹{selectedStay.monthly_total}</span>
               </div>
             </div>
 
             <div style={{...sectionBlock, marginTop: '30px', padding: '20px', background: '#f0f4f8', borderRadius: '10px'}}>
-                <label style={receiptLabel}>💳 SECURITY DEPOSIT</label>
+                <label style={receiptLabel}>💳 SECURITY DEPOSIT (ONE-TIME)</label>
                 <div style={{display: 'flex', justifyContent: 'space-between'}}>
                     <span style={receiptValue}>₹{selectedStay.deposit_amount || "0.00"}</span>
                     <span style={{color: BRAND_GREEN, fontWeight: 'bold'}}>Paid (Refundable)</span>
@@ -219,11 +213,11 @@ const UserActiveStay = () => {
 
             <div style={footerNote}>
               <div style={{textAlign: 'left', marginBottom: '20px', color: '#4b5563'}}>
-                <p>✔ Verified Date: <strong>{formatDate(selectedStay.paid_date)}</strong></p>
-                <p>✔ Transaction Reference: <strong>{selectedStay.order_id || 'N/A'}</strong></p>
+                <p>✔ Verified Transaction: <strong>{selectedStay.order_id || 'N/A'}</strong></p>
+                <p>✔ This is a digital proof of stay generated by Nepxall.</p>
               </div>
-              <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>This is a system-generated document. Digital confirmation of stay at Nepxall properties.</p>
-              <p style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}>THANK YOU FOR CHOOSING NEPXALL!</p>
+              <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>* System-generated receipt. No signature required.</p>
+              <p style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}>THANK YOU FOR STAYING WITH US!</p>
             </div>
           </div>
         </div>
@@ -233,43 +227,43 @@ const UserActiveStay = () => {
 };
 
 /* --- STYLES --- */
-const container = { maxWidth: 600, margin: "40px auto", padding: "0 20px", fontFamily: "'Inter', sans-serif" };
-const card = { background: "#fff", padding: "25px", borderRadius: 16, boxShadow: "0 4px 20px rgba(0,0,0,0.08)", border: "1px solid #f0f0f0", marginBottom: "25px" };
+const container = { maxWidth: 600, margin: "40px auto", padding: "0 20px", fontFamily: "Inter, sans-serif" };
+const card = { background: "#fff", padding: 30, borderRadius: 16, boxShadow: "0 10px 25px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0", marginBottom: "30px" };
 const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 };
-const infoGrid = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: 20 }; 
-const labelStyle = { fontSize: "10px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "600" };
-const valStyle = { margin: "4px 0 0 0", fontWeight: "700", fontSize: "15px", color: "#111827" };
-const priceList = { marginBottom: 20, background: '#fafafa', padding: '15px', borderRadius: '12px' };
-const priceRow = { display: "flex", justifyContent: "space-between", color: "#4b5563", margin: "8px 0", fontSize: "14px" };
-const totalBox = { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, padding: "12px", background: "#f0fdf4", borderRadius: "8px", color: "#166534" };
-const statusBadge = { padding: "5px 10px", borderRadius: "20px", fontSize: "10px", fontWeight: "bold", background: "#dcfce7", color: "#166534" };
+const infoGrid = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: 20 }; 
+const labelStyle = { fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px" };
+const valStyle = { margin: "5px 0 0 0", fontWeight: "700", fontSize: "16px", color: "#111827" };
+const priceList = { marginBottom: 20 };
+const priceRow = { display: "flex", justifyContent: "space-between", color: "#4b5563", margin: "10px 0", fontSize: "14px" };
+const totalBox = { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 15, padding: "15px", background: "#f0fdf4", borderRadius: "8px", color: "#166534" };
+const statusBadge = { padding: "6px 12px", borderRadius: "20px", fontSize: "11px", fontWeight: "bold", background: "#dcfce7", color: "#166534" };
 const btnRow = { display: "flex", gap: 10 };
-const btn = { flex: 1, padding: "12px", background: BRAND_BLUE, color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "600", fontSize: "13px", transition: '0.2s' };
+const btn = { flex: 1, padding: "12px", background: BRAND_BLUE, color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "600", fontSize: "13px" };
 const payBtn = { ...btn, background: BRAND_GREEN };
 const receiptBtn = { ...btn, background: "#4b5563" };
 const infoItem = { display: "flex", flexDirection: "column" };
-const emptyBox = { textAlign: "center", padding: 60, background: "#fff", borderRadius: 20, boxShadow: "0 4px 15px rgba(0,0,0,0.05)" };
+const emptyBox = { textAlign: "center", padding: 50, background: "#fff", borderRadius: 16 };
 
-/* --- PDF DESIGN STYLES --- */
+/* --- PDF SPECIFIC STYLES --- */
 const modernReceiptContainer = { width: "210mm", minHeight: "297mm", padding: "60px", background: "#ffffff", color: "#111827", fontFamily: "Helvetica, Arial, sans-serif" };
 const receiptHeader = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "20px", marginBottom: "30px" };
 const logoText = { margin: 0, fontSize: "36px", fontWeight: "900", letterSpacing: "-1px" };
 const tagline = { margin: 0, fontSize: "12px", color: "#6b7280" };
-const receiptTitle = { margin: 0, fontSize: "22px", color: "#111827", letterSpacing: '1px' };
-const orderIdText = { margin: "5px 0", fontSize: "13px", fontWeight: "bold" };
+const receiptTitle = { margin: 0, fontSize: "22px", color: "#111827" };
+const orderIdText = { margin: 0, fontSize: "14px", fontWeight: "bold" };
 const mainReceiptBody = { display: "flex", gap: "30px", marginBottom: "40px" };
 const sectionBlock = { marginBottom: "20px" };
 const receiptLabel = { fontSize: "11px", color: "#9ca3af", fontWeight: "bold", letterSpacing: "1px", display: "block", marginBottom: "5px" };
-const receiptValue = { fontSize: "17px", fontWeight: "bold", margin: 0, color: "#111827" };
+const receiptValue = { fontSize: "16px", fontWeight: "bold", margin: 0, color: "#111827" };
 const receiptSubValue = { fontSize: "13px", color: "#4b5563", margin: "2px 0" };
-const paymentStatusBox = { width: "220px", background: "#f8fafc", borderRadius: "15px", border: "1px solid #e2e8f0", padding: "20px", textAlign: "center" };
+const paymentStatusBox = { width: "200px", background: "#f8fafc", borderRadius: "15px", border: "1px solid #e2e8f0", padding: "20px", textAlign: "center" };
 const statusCircle = { fontSize: "30px", marginBottom: "5px" };
 const statusText = { margin: 0, fontSize: "18px", fontWeight: "bold" };
 const dateText = { fontSize: "12px", color: "#6b7280", margin: "5px 0" };
-const amountDisplay = { fontSize: "28px", fontWeight: "900", color: "#111827", marginTop: "10px" };
+const amountDisplay = { fontSize: "24px", fontWeight: "900", color: "#111827", marginTop: "10px" };
 const tableContainer = { marginTop: "10px" };
 const tableHeader = { display: "flex", justifyContent: "space-between", padding: "12px", color: "#fff", borderRadius: "8px 8px 0 0", fontWeight: "bold" };
 const tableRow = { display: "flex", justifyContent: "space-between", padding: "15px 12px", borderBottom: "1px solid #e5e7eb" };
-const footerNote = { marginTop: "50px", textAlign: "center", color: "#9ca3af", fontSize: "12px", lineHeight: '1.6' };
+const footerNote = { marginTop: "50px", textAlign: "center", color: "#9ca3af", fontSize: "12px" };
 
 export default UserActiveStay;
