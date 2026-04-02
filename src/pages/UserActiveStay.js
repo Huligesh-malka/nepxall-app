@@ -12,25 +12,17 @@ const UserActiveStay = () => {
   const loadStay = useCallback(async (showLoader = true) => {
     try {
       if (showLoader) setLoading(true);
-      setError("");
-
       const user = auth.currentUser;
       if (!user) return; 
 
       const token = await user.getIdToken();
-
       const res = await api.get("/bookings/user/active-stay", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       setStays(Array.isArray(res.data) ? res.data : res.data ? [res.data] : []);
     } catch (err) {
-      console.error("STAY LOAD ERROR:", err);
-      if (showLoader) {
-        setError(err.response?.data?.message || "Failed to load stay details");
-      }
+      if (showLoader) setError("Failed to load stay details");
     } finally {
       if (showLoader) setLoading(false);
     }
@@ -38,59 +30,21 @@ const UserActiveStay = () => {
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        loadStay(true);
-      } else {
-        setLoading(false);
-        navigate("/login");
-      }
+      user ? loadStay(true) : navigate("/login");
     });
-
-    const interval = setInterval(() => {
-      loadStay(false);
-    }, 10000);
-
-    return () => {
-      unsubscribe();
-      clearInterval(interval);
-    };
+    return () => unsubscribe();
   }, [loadStay, navigate]);
 
-  if (loading) {
-    return (
-      <div style={container}>
-        <p style={{ textAlign: "center", padding: 50 }}>⏳ Syncing your stays...</p>
-      </div>
-    );
-  }
+  if (loading) return <div style={container}><p style={{textAlign:"center", padding: 50}}>⏳ Syncing stays...</p></div>;
 
-  if (error) {
-    return (
-      <div style={container}>
-        <div style={emptyBox}>
-          <p style={{ color: "#dc2626" }}>❌ {error}</p>
-          <button style={btn} onClick={() => loadStay(true)}>🔄 Retry Now</button>
-        </div>
+  if (stays.length === 0) return (
+    <div style={container}>
+      <div style={emptyBox}>
+        <h3>No Active Stay</h3>
+        <button style={btn} onClick={() => navigate("/")}>Browse PGs</button>
       </div>
-    );
-  }
-
-  if (stays.length === 0) {
-    return (
-      <div style={container}>
-        <div style={emptyBox}>
-          <div style={{ fontSize: "50px" }}>🏠</div>
-          <h3>No Active Stay Found</h3>
-          <p style={{ color: "#666", marginBottom: 20 }}>
-            Once the Admin verifies your payment, your stay details will appear here.
-          </p>
-          <div style={btnRow}>
-            <button style={btn} onClick={() => navigate("/")}>🔍 Browse PGs</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div style={container}>
@@ -100,10 +54,10 @@ const UserActiveStay = () => {
         <div key={stay.id} style={card}>
           <div style={headerSection}>
             <h3 style={{ margin: 0, color: "#1e40af" }}>{stay.pg_name}</h3>
-            <span style={statusBadge(stay.status)}>{stay.status}</span>
+            <span style={statusBadge}>{stay.status}</span>
           </div>
 
-          {/* ROOM INFO AT THE TOP */}
+          {/* ROOM NO AT TOP */}
           <div style={infoGrid}>
             <div style={infoItem}>
               <label style={labelStyle}>🚪 Allotted Room</label>
@@ -113,15 +67,14 @@ const UserActiveStay = () => {
 
           <hr style={divider} />
 
-          {/* PRICE DETAILS WITH SHARING INCLUDED */}
           <div style={priceList}>
             <p style={priceRow}>Monthly Rent: <span>₹{stay.rent_amount}</span></p>
             <p style={priceRow}>Maintenance: <span>₹{stay.maintenance_amount || 0}</span></p>
             <p style={priceRow}>Security Deposit (Paid): <span>₹{stay.deposit_amount}</span></p>
             
-            {/* SHARING TYPE SHOWING AFTER SECURITY DEPOSIT */}
+            {/* ROOM SHARING SHOWN HERE */}
             <p style={priceRow}>
-              Room Sharing: <span style={{ fontWeight: "600", color: "#2563eb" }}>{stay.room_type}</span>
+              Room Sharing: <span style={{ fontWeight: "700", color: "#2563eb" }}>{stay.room_type}</span>
             </p>
             
             <div style={totalBox}>
@@ -140,23 +93,22 @@ const UserActiveStay = () => {
   );
 };
 
-/* ================= STYLES ================= */
-
+/* Styles */
 const container = { maxWidth: 600, margin: "40px auto", padding: "0 20px", fontFamily: "sans-serif" };
 const card = { background: "#fff", padding: 30, borderRadius: 16, boxShadow: "0 10px 25px rgba(0,0,0,0.1)", border: "1px solid #f0f0f0", marginBottom: "30px" };
 const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 };
 const infoGrid = { display: "grid", gridTemplateColumns: "1fr", gap: "20px", marginBottom: 20 }; 
 const labelStyle = { fontSize: "12px", color: "#6b7280", textTransform: "uppercase" };
-const valStyle = { margin: "5px 0 0 0", fontWeight: "600", fontSize: "18px" };
+const valStyle = { margin: "5px 0 0 0", fontWeight: "700", fontSize: "18px" };
 const divider = { border: "none", borderTop: "1px solid #eee", margin: "20px 0" };
 const priceList = { marginBottom: 20 };
 const priceRow = { display: "flex", justifyContent: "space-between", color: "#4b5563", margin: "10px 0" };
 const totalBox = { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 15, padding: "15px", background: "#f0fdf4", borderRadius: "8px", color: "#166534" };
-const emptyBox = { padding: 50, textAlign: "center", background: "#fff", borderRadius: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" };
-const statusBadge = (status) => ({ padding: "5px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: "bold", background: status === "ACTIVE" ? "#dcfce7" : "#fee2e2", color: status === "ACTIVE" ? "#166534" : "#991b1b" });
-const btnRow = { display: "flex", gap: 12, justifyContent: "center" };
+const statusBadge = { padding: "4px 12px", borderRadius: "20px", fontSize: "11px", fontWeight: "bold", background: "#dcfce7", color: "#166534" };
+const btnRow = { display: "flex", gap: 12 };
 const btn = { flex: 1, padding: "12px", background: "#2563eb", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "600" };
 const payBtn = { ...btn, background: "#16a34a" };
 const infoItem = { display: "flex", flexDirection: "column" };
+const emptyBox = { textAlign: "center", padding: 50, background: "#fff", borderRadius: 16 };
 
 export default UserActiveStay;
