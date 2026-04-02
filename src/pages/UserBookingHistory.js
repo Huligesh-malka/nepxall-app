@@ -134,9 +134,8 @@ const UserBookingHistory = () => {
       }
 
       const res = await api.post("/payments/create-payment", {
-        bookingId: booking.id,
-        amount: total,
-      });
+  bookingId: booking.id
+});
 
       if (!res.data.success) {
         throw new Error(res.data.message || "Payment initialization failed");
@@ -146,7 +145,7 @@ const UserBookingHistory = () => {
         qr: res.data.qr,
         upiLink: res.data.upiLink,
         orderId: res.data.orderId,
-        amount: total,
+        amount: res.data.amount,
         bookingId: booking.id
       });
 
@@ -248,9 +247,8 @@ const UserBookingHistory = () => {
       setError("");
       
       const res = await api.post("/payments/create-payment", {
-        bookingId: paymentData.bookingId,
-        amount: paymentData.amount,
-      });
+  bookingId: paymentData.bookingId
+});
 
       if (!res.data.success) {
         throw new Error(res.data.message || "Failed to refresh QR");
