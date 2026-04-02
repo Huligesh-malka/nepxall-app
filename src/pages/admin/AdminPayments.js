@@ -22,6 +22,7 @@ import {
 } from "@mui/material";
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp'; // Added WhatsApp Icon
 
 /* ================= BRAND COLORS ================= */
 const BRAND_BLUE = "#0B5ED7";
@@ -94,6 +95,19 @@ const AdminPayments = () => {
     }
   };
 
+  // WhatsApp Share Logic
+  const handleWhatsAppShare = (p) => {
+    // Remove any non-numeric characters from the phone number
+    const cleanPhone = p.phone ? p.phone.replace(/\D/g, "") : "";
+    
+    // Create a professional message
+    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${p.tenant_name}*,%0AYour payment for *${p.pg_name}* has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.paid_date)}%0A%0A_Thank you for choosing Nepxall!_`;
+    
+    // Open WhatsApp Web/App
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${message}`;
+    window.open(whatsappUrl, "_blank");
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return new Date().toLocaleDateString('en-GB');
     return new Date(dateString).toLocaleDateString('en-GB', {
@@ -151,7 +165,7 @@ const AdminPayments = () => {
               <TableCell><strong>Order ID</strong></TableCell>
               <TableCell><strong>Status</strong></TableCell>
               <TableCell align="center"><strong>Verification</strong></TableCell>
-              <TableCell align="center"><strong>Receipt</strong></TableCell>
+              <TableCell align="center"><strong>Actions</strong></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -198,17 +212,33 @@ const AdminPayments = () => {
                     </Stack>
                   </TableCell>
                   <TableCell align="center">
-                    <Tooltip title={p.status === "paid" ? "Download Receipt" : "Payment not verified"}>
-                      <span>
-                        <IconButton 
-                          color="primary" 
-                          disabled={p.status !== "paid"} 
-                          onClick={() => handleDownloadReceipt(p)}
-                        >
-                          <ReceiptLongIcon />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
+                    <Stack direction="row" spacing={0.5} justifyContent="center">
+                      {/* PDF Action */}
+                      <Tooltip title={p.status === "paid" ? "Download Receipt" : "Payment not verified"}>
+                        <span>
+                          <IconButton 
+                            color="primary" 
+                            disabled={p.status !== "paid"} 
+                            onClick={() => handleDownloadReceipt(p)}
+                          >
+                            <ReceiptLongIcon />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+
+                      {/* WHATSAPP ACTION */}
+                      <Tooltip title={p.status === "paid" ? "Share on WhatsApp" : "Payment not verified"}>
+                        <span>
+                          <IconButton 
+                            sx={{ color: "#25D366" }} 
+                            disabled={p.status !== "paid"} 
+                            onClick={() => handleWhatsAppShare(p)}
+                          >
+                            <WhatsAppIcon />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </Stack>
                   </TableCell>
                 </TableRow>
               ))
@@ -217,7 +247,7 @@ const AdminPayments = () => {
         </Table>
       </Paper>
 
-      {/* HIDDEN RECEIPT DESIGN - MATCHES USER STYLE */}
+      {/* HIDDEN RECEIPT DESIGN */}
       {selectedPayment && (
         <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
           <div ref={receiptRef} style={modernReceiptContainer}>
@@ -278,7 +308,6 @@ const AdminPayments = () => {
               </div>
             </div>
 
-            {/* SECURITY DEPOSIT BLOCK */}
             <div style={{...sectionBlock, marginTop: '30px', padding: '20px', background: '#f0f4f8', borderRadius: '10px'}}>
                 <label style={receiptLabel}>💳 SECURITY DEPOSIT (RECORDED)</label>
                 <div style={{display: 'flex', justifyContent: 'space-between'}}>
