@@ -105,10 +105,11 @@ const UserActiveStay = () => {
 
           <div style={infoGrid}>
             <div style={infoItem}>
-              <label style={labelStyle}>🚪 Room No</label>
-              <p style={valStyle}>{stay.room_no || "Allocating..."}</p>
+              <label style={labelStyle}>🚪 Room & Sharing</label>
+              <p style={valStyle}>
+                {stay.room_no || "Allocating..."} — {stay.room_type}
+              </p>
             </div>
-            {/* Join Date column has been removed from here */}
           </div>
 
           <hr style={divider} />
@@ -123,8 +124,6 @@ const UserActiveStay = () => {
               <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>₹{stay.monthly_total}</span>
             </div>
           </div>
-
-          {/* Next Month Rent Due alert has been removed from here */}
 
           <div style={btnRow}>
             <button style={btn} onClick={() => navigate("/user/bookings")}>📜 History</button>
@@ -141,7 +140,7 @@ const UserActiveStay = () => {
 const container = { maxWidth: 600, margin: "40px auto", padding: "0 20px", fontFamily: "sans-serif" };
 const card = { background: "#fff", padding: 30, borderRadius: 16, boxShadow: "0 10px 25px rgba(0,0,0,0.1)", border: "1px solid #f0f0f0", marginBottom: "30px" };
 const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 };
-const infoGrid = { display: "grid", gridTemplateColumns: "1fr", gap: "20px", marginBottom: 20 }; // Changed to 1 column
+const infoGrid = { display: "grid", gridTemplateColumns: "1fr", gap: "20px", marginBottom: 20 }; 
 const labelStyle = { fontSize: "12px", color: "#6b7280", textTransform: "uppercase" };
 const valStyle = { margin: "5px 0 0 0", fontWeight: "600", fontSize: "16px" };
 const divider = { border: "none", borderTop: "1px solid #eee", margin: "20px 0" };
