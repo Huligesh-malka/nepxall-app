@@ -109,8 +109,11 @@ const AdminPayments = () => {
   };
 
   const handleWhatsAppShare = (p) => {
-    const cleanPhone = p.reg_phone ? p.reg_phone.replace(/\D/g, "") : "";
-    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${p.reg_name || "User"}*,%0AYour payment for *${p.pg_name}* has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
+    // Falls back to tenant_phone if reg_phone is missing during transition
+    const contactNumber = p.reg_phone || p.tenant_phone || "";
+    const cleanPhone = contactNumber.replace(/\D/g, "");
+    
+    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${p.reg_name || p.tenant_name || "User"}*,%0AYour payment for *${p.pg_name}* has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
     const whatsappUrl = `https://wa.me/${cleanPhone.startsWith('91') ? cleanPhone : '91' + cleanPhone}?text=${message}`;
     window.open(whatsappUrl, "_blank");
   };
@@ -119,7 +122,6 @@ const AdminPayments = () => {
     setSelectedPayment(payment);
     setIsGenerating(true);
     
-    // Allow React to render the hidden receipt div before capturing
     setTimeout(async () => {
       try {
         const element = receiptRef.current;
@@ -196,14 +198,15 @@ const AdminPayments = () => {
               payments.map((p) => (
                 <TableRow key={p.order_id} hover>
                   <TableCell>
-                    <Typography variant="body2" fontWeight="700" color="#1B2559">{p.reg_name || "Guest User"}</Typography>
+                    {/* Updated to use reg_name or fallback tenant_name */}
+                    <Typography variant="body2" fontWeight="700" color="#1B2559">{p.reg_name || p.tenant_name || "Guest User"}</Typography>
                     <Typography variant="caption" sx={{ color: BRAND_BLUE, fontWeight: '600' }}>
-                        {p.reg_phone || "N/A"}
+                        {p.reg_phone || p.tenant_phone || "N/A"}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" fontWeight="600">{p.pg_name}</Typography>
-                    <Chip label={`${p.sharing} Sharing`} size="small" sx={{ height: '20px', fontSize: '10px', mt: 0.5 }} />
+                    <Chip label={`${p.sharing || 'N/A'} Sharing`} size="small" sx={{ height: '20px', fontSize: '10px', mt: 0.5 }} />
                   </TableCell>
                   <TableCell><Typography fontWeight="800" color="#1B2559">₹{p.amount}</Typography></TableCell>
                   <TableCell sx={{ fontFamily: "monospace", color: "#707EAE" }}>{p.order_id}</TableCell>
@@ -298,14 +301,14 @@ const AdminPayments = () => {
               <div style={{ flex: 1 }}>
                 <div style={sectionBlock}>
                   <label style={receiptLabel}>👤 CUSTOMER DETAILS</label>
-                  <p style={receiptValue}>{selectedPayment.reg_name || "Valued Customer"}</p>
-                  <p style={receiptSubValue}>Phone: {selectedPayment.reg_phone || "N/A"}</p>
+                  <p style={receiptValue}>{selectedPayment.reg_name || selectedPayment.tenant_name || "Valued Customer"}</p>
+                  <p style={receiptSubValue}>Phone: {selectedPayment.reg_phone || selectedPayment.tenant_phone || "N/A"}</p>
                 </div>
 
                 <div style={sectionBlock}>
                   <label style={receiptLabel}>🏠 PROPERTY DESCRIPTION</label>
                   <p style={receiptValue}>{selectedPayment.pg_name}</p>
-                  <p style={receiptSubValue}>Category: {selectedPayment.sharing} Sharing Accommodation</p>
+                  <p style={receiptSubValue}>Category: {selectedPayment.sharing || 'N/A'} Sharing Accommodation</p>
                 </div>
               </div>
 
