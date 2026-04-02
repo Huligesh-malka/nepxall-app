@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
+/* ================= BRAND COLORS ================= */
 const BRAND_BLUE = "#0B5ED7";
 const BRAND_GREEN = "#4CAF50";
 
@@ -12,6 +13,7 @@ const UserActiveStay = () => {
   const [stays, setStays] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  
   const receiptRef = useRef();
   const [selectedStay, setSelectedStay] = useState(null);
 
@@ -22,6 +24,7 @@ const UserActiveStay = () => {
       if (!user) return; 
 
       const token = await user.getIdToken();
+      // Ensure your backend endpoint SELECTs order_id in its SQL query
       const res = await api.get("/bookings/user/active-stay", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -41,26 +44,22 @@ const UserActiveStay = () => {
     return () => unsubscribe();
   }, [loadStay, navigate]);
 
-  // Updated format function to handle raw DB timestamps correctly
   const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', {
+    if (!dateString) return "Processing...";
+    return new Date(dateString).toLocaleDateString('en-GB', {
       day: '2-digit',
       month: 'long',
       year: 'numeric'
-    }) + " " + date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    });
   };
 
-  const handleDownloadReceipt = (stay) => {
+  const handleDownloadReceipt = async (stay) => {
     setSelectedStay(stay);
     
-    // Slight delay to ensure the hidden DOM element updates with the new selectedStay
+    // Small timeout to allow the hidden receipt DOM to render with the stay data
     setTimeout(async () => {
       try {
         const element = receiptRef.current;
-        if (!element) return;
-
         const canvas = await html2canvas(element, { 
           scale: 3, 
           useCORS: true,
@@ -73,13 +72,11 @@ const UserActiveStay = () => {
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
         
         pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-        // Filename uses the exact order_id from your log
-        pdf.save(`Receipt_${stay.order_id || 'NXP'}.pdf`);
-        
+        // Using the dynamic order_id for the filename
+        pdf.save(`Receipt_${stay.order_id || 'NXP_PAYMENT'}.pdf`);
         setSelectedStay(null); 
       } catch (error) {
         console.error("Receipt Generation Failed:", error);
-        setSelectedStay(null);
       }
     }, 500);
   };
@@ -103,39 +100,46 @@ const UserActiveStay = () => {
         <div key={stay.id} style={card}>
           <div style={headerSection}>
             <h3 style={{ margin: 0, color: BRAND_BLUE }}>{stay.pg_name}</h3>
-            <span style={statusBadge}>{stay.payment_status?.toUpperCase() || 'PAID'} ✅</span>
+            <span style={statusBadge}>VERIFIED ✅</span>
           </div>
 
           <div style={infoGrid}>
             <div style={infoItem}>
-              <label style={labelStyle}>🚪 Room No</label>
+              <label style={labelStyle}>🚪 Allotted Room</label>
               <p style={valStyle}>{stay.room_no || "Allocating..."}</p>
             </div>
             <div style={infoItem}>
-              <label style={labelStyle}>🆔 Transaction ID</label>
-              <p style={{...valStyle, fontSize: '12px'}}>{stay.order_id}</p>
+              <label style={labelStyle}>🆔 Order ID</label>
+              <p style={{...valStyle, fontSize: '12px', color: BRAND_BLUE}}>{stay.order_id || "N/A"}</p>
             </div>
           </div>
 
           <div style={priceList}>
             <p style={{ ...priceRow, color: BRAND_GREEN, fontWeight: "700" }}>
-              💰 Paid On: <span>{formatDate(stay.paid_date || stay.updated_at)}</span>
+              💰 Join Date: <span>{formatDate(stay.join_date)}</span>
             </p>
             <p style={priceRow}>Monthly Rent: <span>₹{stay.rent_amount}</span></p>
+            <p style={priceRow}>Maintenance: <span>₹{stay.maintenance_amount || 0}</span></p>
+            
+            <p style={{ ...priceRow, borderTop: "1px dashed #eee", paddingTop: "10px", marginTop: "10px" }}>
+              Security Deposit (Paid): <span style={{fontWeight: "bold"}}>₹{stay.deposit_amount || 0}</span>
+            </p>
+            
             <div style={totalBox}>
-              <span>Total Amount Paid</span>
+              <span>Monthly Total (Excl. Deposit)</span>
               <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>₹{stay.monthly_total}</span>
             </div>
           </div>
 
           <div style={btnRow}>
             <button style={btn} onClick={() => navigate("/user/bookings")}>📜 History</button>
-            <button style={receiptBtn} onClick={() => handleDownloadReceipt(stay)}>📥 Download Receipt</button>
+            <button style={payBtn} onClick={() => navigate("/payment")}>💳 Pay Rent</button>
+            <button style={receiptBtn} onClick={() => handleDownloadReceipt(stay)}>📥 Receipt</button>
           </div>
         </div>
       ))}
 
-      {/* HIDDEN RECEIPT TEMPLATE - MATCHES YOUR LOG DATA */}
+      {/* HIDDEN RECEIPT DESIGN FOR PDF GENERATION */}
       {selectedStay && (
         <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
           <div ref={receiptRef} style={modernReceiptContainer}>
@@ -149,10 +153,7 @@ const UserActiveStay = () => {
               </div>
               <div style={{ textAlign: "right" }}>
                 <h2 style={receiptTitle}>RENT RECEIPT</h2>
-                {/* EXACT ORDER ID FROM YOUR LOGS */}
-                <p style={{ ...orderIdText, color: BRAND_BLUE }}>
-                    {selectedStay.order_id}
-                </p>
+                <p style={{ ...orderIdText, color: BRAND_BLUE }}>Order ID: {selectedStay.order_id || "N/A"}</p>
                 <p style={dateText}>Generated on: {formatDate(new Date())}</p>
               </div>
             </div>
@@ -160,56 +161,61 @@ const UserActiveStay = () => {
             <div style={mainReceiptBody}>
               <div style={{ flex: 1 }}>
                 <div style={sectionBlock}>
-                  <label style={receiptLabel}>👤 TENANT</label>
-                  <p style={receiptValue}>{auth.currentUser?.displayName || "User"}</p>
-                  <p style={receiptSubValue}>{auth.currentUser?.email}</p>
+                  <label style={receiptLabel}>👤 ISSUED TO</label>
+                  <p style={receiptValue}>{auth.currentUser?.displayName || "Tenant"}</p>
+                  <p style={receiptSubValue}>User ID: {auth.currentUser?.uid.slice(0,8)}</p>
                 </div>
 
                 <div style={sectionBlock}>
-                  <label style={receiptLabel}>🏠 PROPERTY</label>
+                  <label style={receiptLabel}>🏠 PROPERTY DETAILS</label>
                   <p style={receiptValue}>{selectedStay.pg_name}</p>
-                  <p style={receiptSubValue}>Room: {selectedStay.room_no || "N/A"} ({selectedStay.room_type} Sharing)</p>
+                  <p style={receiptSubValue}>Room: {selectedStay.room_no || "Allocated"}</p>
+                  <p style={receiptSubValue}>{selectedStay.room_type} Sharing</p>
                 </div>
               </div>
 
               <div style={paymentStatusBox}>
                 <div style={statusCircle}>✅</div>
-                <h3 style={{ ...statusText, color: BRAND_GREEN }}>PAID</h3>
-                <p style={dateText}>Status: Verified</p>
+                <h3 style={{ ...statusText, color: BRAND_GREEN }}>PAID & VERIFIED</h3>
+                <p style={dateText}>Status: Confirmed</p>
                 <div style={amountDisplay}>₹{selectedStay.monthly_total}</div>
               </div>
             </div>
 
             <div style={tableContainer}>
               <div style={{ ...tableHeader, background: BRAND_BLUE }}>
-                <span>DESCRIPTION</span>
-                <span>AMOUNT</span>
+                <span>📊 PAYMENT BREAKDOWN</span>
+                <span>Amount</span>
               </div>
               <div style={tableRow}>
-                <span>Monthly Rent</span>
+                <span>Monthly Room Rent</span>
                 <span>₹{selectedStay.rent_amount}</span>
               </div>
               <div style={tableRow}>
-                <span>Maintenance</span>
+                <span>Maintenance Charges</span>
                 <span>₹{selectedStay.maintenance_amount || 0}</span>
               </div>
-              <div style={tableRow}>
-                <span>Security Deposit</span>
-                <span>₹{selectedStay.deposit_amount || 0}</span>
-              </div>
               <div style={{ ...tableRow, borderBottom: `2px solid ${BRAND_BLUE}`, fontWeight: "bold", background: "#f8fafc" }}>
-                <span>TOTAL PAID</span>
+                <span>Total Monthly Amount</span>
                 <span>₹{selectedStay.monthly_total}</span>
               </div>
             </div>
 
+            <div style={{...sectionBlock, marginTop: '30px', padding: '20px', background: '#f0f4f8', borderRadius: '10px'}}>
+                <label style={receiptLabel}>💳 SECURITY DEPOSIT (ONE-TIME)</label>
+                <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                    <span style={receiptValue}>₹{selectedStay.deposit_amount || "0.00"}</span>
+                    <span style={{color: BRAND_GREEN, fontWeight: 'bold'}}>Paid (Refundable)</span>
+                </div>
+            </div>
+
             <div style={footerNote}>
               <div style={{textAlign: 'left', marginBottom: '20px', color: '#4b5563'}}>
-                <p><strong>Payment Date:</strong> {formatDate(selectedStay.paid_date || selectedStay.updated_at)}</p>
-                <p><strong>Transaction Ref:</strong> {selectedStay.order_id}</p>
+                <p>✔ This is a digital proof of payment for the current stay period.</p>
+                <p>✔ Verified with Order Reference: <strong>{selectedStay.order_id}</strong></p>
               </div>
-              <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>This is an electronically generated document. No signature required.</p>
-              <p style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}>NEPXALL - THE PG EXPERTS</p>
+              <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>* System generated document. No signature required.</p>
+              <p style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}>THANK YOU FOR CHOOSING NEPXALL</p>
             </div>
           </div>
         </div>
@@ -218,19 +224,20 @@ const UserActiveStay = () => {
   );
 };
 
-/* Styles */
+/* Styles (Unchanged but ensuring absolute positioning for hidden receipt) */
 const container = { maxWidth: 600, margin: "40px auto", padding: "0 20px", fontFamily: "Inter, sans-serif" };
 const card = { background: "#fff", padding: 30, borderRadius: 16, boxShadow: "0 10px 25px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0", marginBottom: "30px" };
 const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 };
 const infoGrid = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: 20 }; 
 const labelStyle = { fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px" };
-const valStyle = { margin: "5px 0 0 0", fontWeight: "700", fontSize: "15px", color: "#111827", wordBreak: "break-all" };
+const valStyle = { margin: "5px 0 0 0", fontWeight: "700", fontSize: "16px", color: "#111827" };
 const priceList = { marginBottom: 20 };
 const priceRow = { display: "flex", justifyContent: "space-between", color: "#4b5563", margin: "10px 0", fontSize: "14px" };
 const totalBox = { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 15, padding: "15px", background: "#f0fdf4", borderRadius: "8px", color: "#166534" };
 const statusBadge = { padding: "6px 12px", borderRadius: "20px", fontSize: "11px", fontWeight: "bold", background: "#dcfce7", color: "#166534" };
 const btnRow = { display: "flex", gap: 10 };
 const btn = { flex: 1, padding: "12px", background: BRAND_BLUE, color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "600", fontSize: "13px" };
+const payBtn = { ...btn, background: BRAND_GREEN };
 const receiptBtn = { ...btn, background: "#4b5563" };
 const infoItem = { display: "flex", flexDirection: "column" };
 const emptyBox = { textAlign: "center", padding: 50, background: "#fff", borderRadius: 16 };
@@ -240,7 +247,7 @@ const receiptHeader = { display: "flex", justifyContent: "space-between", alignI
 const logoText = { margin: 0, fontSize: "36px", fontWeight: "900", letterSpacing: "-1px" };
 const tagline = { margin: 0, fontSize: "12px", color: "#6b7280" };
 const receiptTitle = { margin: 0, fontSize: "22px", color: "#111827" };
-const orderIdText = { margin: 0, fontSize: "14px", fontWeight: "bold", wordBreak: "break-all", maxWidth: '250px' };
+const orderIdText = { margin: 0, fontSize: "14px", fontWeight: "bold" };
 const mainReceiptBody = { display: "flex", gap: "30px", marginBottom: "40px" };
 const sectionBlock = { marginBottom: "20px" };
 const receiptLabel = { fontSize: "11px", color: "#9ca3af", fontWeight: "bold", letterSpacing: "1px", display: "block", marginBottom: "5px" };
