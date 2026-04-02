@@ -30,10 +30,19 @@ const AgreementForm = () => {
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
 
   const [formData, setFormData] = useState({
-    full_name: "", mobile: "", email: "",
-    address: "", city: "", state: "", pincode: "",
-    aadhaar_last4: "", pan_number: "", checkin_date: "",
-    agreement_months: "11", rent: "", deposit: "", maintenance: "0",
+    full_name: "", 
+    mobile: "", 
+    email: "",
+    address: "", 
+    city: "", 
+    state: "", 
+    pincode: "",
+    aadhaar_last4: "", 
+    checkin_date: "",
+    agreement_months: "11", 
+    rent: "", 
+    deposit: "", 
+    maintenance: "0",
   });
 
   /* ================= HELPER: PHONE CLEANER ================= */
@@ -129,7 +138,6 @@ const AgreementForm = () => {
     try {
       const signatureDataURL = sigCanvas.current.toDataURL("image/png");
       
-      // The Backend will automatically extract IP and Device Info from the request headers
       const res = await api.post("/agreements-form/tenant/sign", {
         booking_id: bookingId,
         tenant_signature: signatureDataURL,
@@ -139,7 +147,6 @@ const AgreementForm = () => {
 
       if (res.data.success) {
         setSuccess("Agreement finalized! ✅");
-        // Refresh local state to show the 'Download Signed PDF' view
         await fetchAgreementStatus(); 
       }
     } catch (err) {
@@ -174,15 +181,14 @@ const AgreementForm = () => {
         16. Subletting: I shall not sublet without owner's written permission.
         17. Compliance: I shall follow all society rules and local laws.
         18. Utility Payments: I am responsible for utility bills as agreed.
-        19. Identity Proof: I confirm I have provided valid Aadhaar/PAN.
+        19. Identity Proof: I confirm I have provided valid identification (Aadhaar).
         20. Police Verification: I agree to comply with police verification if required.
         21. Notice Period: I agree to provide prior notice before vacating.
         22. Vacating Condition: I shall return the property in good condition.
         23. Overstay: Staying beyond the period may result in penalties.
         24. Execution: Enforceable under Indian Contract Act, 1872.
         25. Platform Role: Platform is an intermediary only; no liability for disputes.
-        26. Agreement Duration:
-This agreement is valid for 11 (Eleven) months from the date of execution.
+        26. Agreement Duration: This agreement is valid for 11 (Eleven) months from the date of execution.
         27. Acceptance: I accept full legal responsibility for complying with this agreement.`}
       </Typography>
     </Box>
@@ -322,12 +328,11 @@ This agreement is valid for 11 (Eleven) months from the date of execution.
                   <Grid item xs={12} md={6}><TextField fullWidth name="full_name" label="Full Name" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={6}><TextField fullWidth name="mobile" label="Mobile" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={6}><TextField fullWidth name="email" label="Email" type="email" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="aadhaar_last4" label="Aadhaar (Last 4 Digits)" required onChange={handleChange} /></Grid>
                   <Grid item xs={12}><TextField fullWidth name="address" label="Current Address" multiline rows={2} required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="city" label="City" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="state" label="State" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="pincode" label="Pincode" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={6}><TextField fullWidth name="aadhaar_last4" label="Aadhaar (Last 4)" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={6}><TextField fullWidth name="pan_number" label="PAN" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="checkin_date" label="Check-in Date" type="date" InputLabelProps={{ shrink: true }} required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="rent" label="Monthly Rent" type="number" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={4}><TextField fullWidth name="deposit" label="Security Deposit" type="number" required onChange={handleChange} /></Grid>
