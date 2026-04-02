@@ -32,7 +32,7 @@ const AgreementForm = () => {
   const [formData, setFormData] = useState({
     full_name: "", 
     mobile: "", 
-    email: "",
+    
     address: "", 
     city: "", 
     state: "", 
