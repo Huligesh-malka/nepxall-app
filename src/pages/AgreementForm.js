@@ -6,7 +6,7 @@ import { auth } from "../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { 
   Box, TextField, Button, Typography, CircularProgress, 
-  Alert, Snackbar, Paper, Grid, Divider, IconButton, 
+  Alert, Snackbar, Paper, Divider, IconButton, 
   FormControlLabel, Checkbox
 } from "@mui/material";
 import { ArrowBack, Gavel, AssignmentTurnedIn, CloudDownload } from "@mui/icons-material";
@@ -51,7 +51,6 @@ const AgreementForm = () => {
     setFetching(true);
     try {
       const res = await api.get(`/agreements-form/status/${bookingId}`);
-      // Even if res.data.exists is false, the backend might send partial booking info
       setExistingAgreement(res.data.data || null);
       
       if (res.data.exists) {
@@ -130,17 +129,12 @@ const AgreementForm = () => {
     
     const userId = localStorage.getItem("user_id");
 
-    // FIX: Include missing database fields from existingAgreement
+    // UPDATED: Only sending user-provided form data and core identifiers.
+    // Removed fallback logic for checkin_date, rent, deposit, etc. 
     const data = { 
       ...formData, 
       user_id: userId, 
-      booking_id: bookingId,
-      // Fallback values from the booking if the user didn't enter them
-      checkin_date: existingAgreement?.checkin_date || null,
-      rent: existingAgreement?.rent || 0,
-      deposit: existingAgreement?.deposit || 0,
-      agreement_months: existingAgreement?.agreement_months || 11,
-      maintenance: existingAgreement?.maintenance || 0
+      booking_id: bookingId
     };
 
     try {
