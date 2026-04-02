@@ -29,7 +29,6 @@ const AgreementForm = () => {
   const [isVerified, setIsVerified] = useState(false);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
 
-  // REMOVED: email, pan_number, checkin_date, agreement_months, rent, deposit, maintenance
   const [formData, setFormData] = useState({
     full_name: "", 
     mobile: "", 
@@ -107,10 +106,26 @@ const AgreementForm = () => {
   };
 
   /* ================= FORM ACTIONS ================= */
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Strict Lock for Aadhaar Last 4 digits
+    if (name === "aadhaar_last4") {
+      const onlyNums = value.replace(/\D/g, "");
+      if (onlyNums.length <= 4) {
+        setFormData({ ...formData, [name]: onlyNums });
+      }
+      return;
+    }
+
+    setFormData({ ...formData, [name]: value });
+  };
 
   const handleSubmitInitialForm = async (e) => {
     e.preventDefault();
+    if (formData.aadhaar_last4.length !== 4) {
+        return setError("Aadhaar must be exactly 4 digits.");
+    }
     setLoading(true);
     const userId = localStorage.getItem("user_id");
     const data = { ...formData, user_id: userId, booking_id: bookingId };
@@ -190,7 +205,7 @@ const AgreementForm = () => {
   );
 
   return (
-    <Box sx={{ maxWidth: "900px", margin: "30px auto", p: 2 }}>
+    <Box sx={{ maxWidth: "700px", margin: "30px auto", p: 2 }}>
       {fetching ? (
         <Box textAlign="center" mt={10}><CircularProgress /></Box>
       ) : (
@@ -314,23 +329,39 @@ const AgreementForm = () => {
             </Paper>
           )}
 
-          {/* CASE 5: INITIAL FORM - UPDATED FIELDS */}
+          {/* CASE 5: INITIAL FORM - VERTICAL LAYOUT & AADHAAR LOCK */}
           {!existingAgreement && (
             <Paper sx={{ p: 4, borderRadius: 3 }}>
               <Typography variant="h5" fontWeight="bold" mb={3}>Draft Rental Agreement</Typography>
               <form onSubmit={handleSubmitInitialForm}>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}><TextField fullWidth name="full_name" label="Full Name" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={6}><TextField fullWidth name="mobile" label="Mobile" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12}><TextField fullWidth name="address" label="Current Address" multiline rows={2} required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={4}><TextField fullWidth name="city" label="City" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={4}><TextField fullWidth name="state" label="State" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={4}><TextField fullWidth name="pincode" label="Pincode" required onChange={handleChange} /></Grid>
-                  <Grid item xs={12} md={12}><TextField fullWidth name="aadhaar_last4" label="Aadhaar (Last 4 Digits)" required onChange={handleChange} /></Grid>
-                </Grid>
-                <Button type="submit" variant="contained" fullWidth sx={{ mt: 4, py: 1.5 }} disabled={loading}>
-                  {loading ? <CircularProgress size={24} /> : "Submit Details for Review"}
-                </Button>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <TextField fullWidth name="full_name" label="Full Name" required onChange={handleChange} value={formData.full_name} />
+                  
+                  <TextField fullWidth name="mobile" label="Mobile" required onChange={handleChange} value={formData.mobile} />
+                  
+                  <TextField fullWidth name="address" label="Current Address" multiline rows={2} required onChange={handleChange} value={formData.address} />
+                  
+                  <TextField fullWidth name="city" label="City" required onChange={handleChange} value={formData.city} />
+                  
+                  <TextField fullWidth name="state" label="State" required onChange={handleChange} value={formData.state} />
+                  
+                  <TextField fullWidth name="pincode" label="Pincode" required onChange={handleChange} value={formData.pincode} />
+                  
+                  <TextField 
+                    fullWidth 
+                    name="aadhaar_last4" 
+                    label="Aadhaar (Last 4 Digits Only)" 
+                    placeholder="Enter last 4 digits"
+                    required 
+                    onChange={handleChange} 
+                    value={formData.aadhaar_last4}
+                    helperText={`${formData.aadhaar_last4.length}/4 digits`}
+                  />
+                  
+                  <Button type="submit" variant="contained" fullWidth sx={{ mt: 2, py: 1.5 }} disabled={loading}>
+                    {loading ? <CircularProgress size={24} /> : "Submit Details for Review"}
+                  </Button>
+                </Box>
               </form>
             </Paper>
           )}
