@@ -25,7 +25,6 @@ const UserActiveStay = () => {
         },
       });
 
-      // Ensure data is handled as an array for multiple stays
       setStays(Array.isArray(res.data) ? res.data : res.data ? [res.data] : []);
     } catch (err) {
       console.error("STAY LOAD ERROR:", err);
@@ -47,7 +46,6 @@ const UserActiveStay = () => {
       }
     });
 
-    // Auto-refresh every 10 seconds to catch status updates
     const interval = setInterval(() => {
       loadStay(false);
     }, 10000);
@@ -105,23 +103,26 @@ const UserActiveStay = () => {
             <span style={statusBadge(stay.status)}>{stay.status}</span>
           </div>
 
-          {/* ROOM & SHARING INFO SECTION */}
+          {/* ROOM INFO AT THE TOP */}
           <div style={infoGrid}>
             <div style={infoItem}>
-              <label style={labelStyle}>🚪 Room & Sharing</label>
-              <p style={valStyle}>
-                {stay.room_no || "Allocating..."} — <span style={{ color: "#2563eb" }}>{stay.room_type || "N/A"}</span>
-              </p>
+              <label style={labelStyle}>🚪 Allotted Room</label>
+              <p style={valStyle}>{stay.room_no || "Allocating..."}</p>
             </div>
           </div>
 
           <hr style={divider} />
 
-          {/* PRICE DETAILS SECTION */}
+          {/* PRICE DETAILS WITH SHARING INCLUDED */}
           <div style={priceList}>
             <p style={priceRow}>Monthly Rent: <span>₹{stay.rent_amount}</span></p>
             <p style={priceRow}>Maintenance: <span>₹{stay.maintenance_amount || 0}</span></p>
             <p style={priceRow}>Security Deposit (Paid): <span>₹{stay.deposit_amount}</span></p>
+            
+            {/* SHARING TYPE SHOWING AFTER SECURITY DEPOSIT */}
+            <p style={priceRow}>
+              Room Sharing: <span style={{ fontWeight: "600", color: "#2563eb" }}>{stay.room_type}</span>
+            </p>
             
             <div style={totalBox}>
               <span>Total Monthly Payment</span>
@@ -129,7 +130,6 @@ const UserActiveStay = () => {
             </div>
           </div>
 
-          {/* ACTION BUTTONS */}
           <div style={btnRow}>
             <button style={btn} onClick={() => navigate("/user/bookings")}>📜 History</button>
             <button style={payBtn} onClick={() => navigate("/payment")}>💳 Pay Rent</button>
@@ -147,10 +147,10 @@ const card = { background: "#fff", padding: 30, borderRadius: 16, boxShadow: "0 
 const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 };
 const infoGrid = { display: "grid", gridTemplateColumns: "1fr", gap: "20px", marginBottom: 20 }; 
 const labelStyle = { fontSize: "12px", color: "#6b7280", textTransform: "uppercase" };
-const valStyle = { margin: "5px 0 0 0", fontWeight: "600", fontSize: "16px" };
+const valStyle = { margin: "5px 0 0 0", fontWeight: "600", fontSize: "18px" };
 const divider = { border: "none", borderTop: "1px solid #eee", margin: "20px 0" };
 const priceList = { marginBottom: 20 };
-const priceRow = { display: "flex", justifyContent: "space-between", color: "#4b5563", margin: "8px 0" };
+const priceRow = { display: "flex", justifyContent: "space-between", color: "#4b5563", margin: "10px 0" };
 const totalBox = { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 15, padding: "15px", background: "#f0fdf4", borderRadius: "8px", color: "#166534" };
 const emptyBox = { padding: 50, textAlign: "center", background: "#fff", borderRadius: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" };
 const statusBadge = (status) => ({ padding: "5px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: "bold", background: status === "ACTIVE" ? "#dcfce7" : "#fee2e2", color: status === "ACTIVE" ? "#166534" : "#991b1b" });
