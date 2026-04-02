@@ -558,22 +558,62 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
 };
 
 /* ================= BOOKING MODAL COMPONENT ================= */
+/* ================= BOOKING MODAL COMPONENT (SIMPLIFIED) ================= */
 const BookingModal = ({ pg, onClose, onBook }) => {
   const [bookingData, setBookingData] = useState({
-    name: "",
-    phone: "",
     checkInDate: "",
-    roomType: pg.single_sharing ? "Single Sharing" : "Single Room"
+    roomType: ""
   });
+  
+  const [loading, setLoading] = useState(false);
+
+  // Set default room type when modal opens
+  useEffect(() => {
+    const defaultRoomType = getDefaultRoomType();
+    setBookingData(prev => ({ ...prev, roomType: defaultRoomType }));
+  }, [pg]);
+
+  const getDefaultRoomType = () => {
+    if (pg.pg_category === "pg") {
+      if (pg.single_sharing) return "Single Sharing";
+      if (pg.double_sharing) return "Double Sharing";
+      if (pg.triple_sharing) return "Triple Sharing";
+      if (pg.four_sharing) return "Four Sharing";
+      if (pg.single_room) return "Single Room";
+      if (pg.double_room) return "Double Room";
+    } else if (pg.pg_category === "coliving") {
+      if (pg.co_living_single_room) return "Single Room";
+      if (pg.co_living_double_room) return "Double Room";
+    } else if (pg.pg_category === "to_let") {
+      if (pg.price_1bhk) return "1BHK";
+      if (pg.price_2bhk) return "2BHK";
+      if (pg.price_3bhk) return "3BHK";
+      if (pg.price_4bhk) return "4BHK";
+    }
+    return "";
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setBookingData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onBook(bookingData);
+    
+    if (!bookingData.checkInDate) {
+      alert("Please select check-in date");
+      return;
+    }
+    
+    if (!bookingData.roomType) {
+      alert("Please select room type");
+      return;
+    }
+    
+    setLoading(true);
+    await onBook(bookingData);
+    setLoading(false);
   };
 
   const getRoomTypes = () => {
@@ -606,33 +646,52 @@ const BookingModal = ({ pg, onClose, onBook }) => {
       });
     } else if (pg.pg_category === "coliving") {
       if (pg.co_living_single_room) types.push({ 
-        value: "Co-Living Single Room", 
+        value: "Single Room", 
         label: `Co-Living Single Room - ₹${formatPrice(pg.co_living_single_room)}` 
       });
       if (pg.co_living_double_room) types.push({ 
-        value: "Co-Living Double Room", 
+        value: "Double Room", 
         label: `Co-Living Double Room - ₹${formatPrice(pg.co_living_double_room)}` 
       });
     } else if (pg.pg_category === "to_let") {
       if (pg.price_1bhk) types.push({ 
-        value: "1 BHK", 
+        value: "1BHK", 
         label: `1 BHK - ₹${formatPrice(pg.price_1bhk)}` 
       });
       if (pg.price_2bhk) types.push({ 
-        value: "2 BHK", 
+        value: "2BHK", 
         label: `2 BHK - ₹${formatPrice(pg.price_2bhk)}` 
       });
       if (pg.price_3bhk) types.push({ 
-        value: "3 BHK", 
+        value: "3BHK", 
         label: `3 BHK - ₹${formatPrice(pg.price_3bhk)}` 
       });
       if (pg.price_4bhk) types.push({ 
-        value: "4 BHK", 
+        value: "4BHK", 
         label: `4 BHK - ₹${formatPrice(pg.price_4bhk)}` 
       });
     }
     
     return types;
+  };
+
+  // Get today's date for min date attribute
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Get max date (6 months from now)
+  const getMaxDate = () => {
+    const max = new Date();
+    max.setMonth(max.getMonth() + 6);
+    const year = max.getFullYear();
+    const month = String(max.getMonth() + 1).padStart(2, '0');
+    const day = String(max.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   return (
@@ -662,6 +721,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
       }}>
         <button
           onClick={onClose}
+          disabled={loading}
           style={{
             position: "absolute",
             top: 16,
@@ -674,7 +734,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            cursor: "pointer",
+            cursor: loading ? "not-allowed" : "pointer",
             zIndex: 100,
             boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
           }}
@@ -696,70 +756,12 @@ const BookingModal = ({ pg, onClose, onBook }) => {
             color: "#6b7280",
             marginBottom: 24 
           }}>
-            Fill in your details to book this property
+            Your details will be auto-filled from your profile
           </p>
 
           <form onSubmit={handleSubmit}>
-            {/* Full Name */}
-            <div style={{ marginBottom: 20 }}>
-              <label style={{
-                display: "block",
-                marginBottom: 8,
-                fontSize: 14,
-                fontWeight: 500,
-                color: "#374151"
-              }}>
-                Full Name *
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={bookingData.name}
-                onChange={handleInputChange}
-                required
-                style={{
-                  width: "100%",
-                  padding: "12px 16px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 10,
-                  fontSize: 14,
-                  background: "#f9fafb"
-                }}
-                placeholder="Enter your full name"
-              />
-            </div>
-
-            {/* Phone Number */}
-            <div style={{ marginBottom: 20 }}>
-              <label style={{
-                display: "block",
-                marginBottom: 8,
-                fontSize: 14,
-                fontWeight: 500,
-                color: "#374151"
-              }}>
-                Phone Number *
-              </label>
-              <input
-                type="tel"
-                name="phone"
-                value={bookingData.phone}
-                onChange={handleInputChange}
-                required
-                style={{
-                  width: "100%",
-                  padding: "12px 16px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 10,
-                  fontSize: 14,
-                  background: "#f9fafb"
-                }}
-                placeholder="Enter your phone number"
-              />
-            </div>
-
             {/* Check-in Date */}
-            <div style={{ marginBottom: 20 }}>
+            <div style={{ marginBottom: 24 }}>
               <label style={{
                 display: "block",
                 marginBottom: 8,
@@ -775,6 +777,8 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                 value={bookingData.checkInDate}
                 onChange={handleInputChange}
                 required
+                min={getTodayDate()}
+                max={getMaxDate()}
                 style={{
                   width: "100%",
                   padding: "12px 16px",
@@ -784,6 +788,13 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                   background: "#f9fafb"
                 }}
               />
+              <p style={{
+                fontSize: 12,
+                color: "#6b7280",
+                marginTop: 4
+              }}>
+                You can book up to 6 months in advance
+              </p>
             </div>
 
             {/* Room Type */}
@@ -811,10 +822,33 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                   background: "#f9fafb"
                 }}
               >
+                <option value="">Select {pg.pg_category === "to_let" ? "BHK Type" : "Room Type"}</option>
                 {getRoomTypes().map((type, index) => (
                   <option key={index} value={type.value}>{type.label}</option>
                 ))}
               </select>
+            </div>
+
+            {/* Info Box */}
+            <div style={{
+              background: "#f0fdf4",
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 24,
+              border: "1px solid #bbf7d0"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <Info size={16} color="#10b981" />
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#065f46" }}>
+                  Booking Information
+                </span>
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 20, color: "#065f46", fontSize: 13 }}>
+                <li>Your name and contact info will be auto-filled from your profile</li>
+                <li>Register number will be automatically generated</li>
+                <li>You'll receive confirmation via email/SMS</li>
+                <li>Owner will contact you within 24 hours</li>
+              </ul>
             </div>
 
             {/* Action Buttons */}
@@ -822,6 +856,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
               <button
                 type="button"
                 onClick={onClose}
+                disabled={loading}
                 style={{
                   flex: 1,
                   padding: "14px",
@@ -831,31 +866,48 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                   borderRadius: 10,
                   fontSize: 14,
                   fontWeight: 600,
-                  cursor: "pointer"
+                  cursor: loading ? "not-allowed" : "pointer"
                 }}
               >
                 Cancel
               </button>
               <button
                 type="submit"
+                disabled={loading}
                 style={{
                   flex: 2,
                   padding: "14px",
-                  background: "#10b981",
+                  background: loading ? "#9ca3af" : "#10b981",
                   color: "white",
                   border: "none",
                   borderRadius: 10,
                   fontSize: 14,
                   fontWeight: 600,
-                  cursor: "pointer",
+                  cursor: loading ? "not-allowed" : "pointer",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 8
                 }}
               >
-                <BookOpen size={18} />
-                Submit Booking
+                {loading ? (
+                  <>
+                    <div style={{
+                      width: 18,
+                      height: 18,
+                      border: "2px solid white",
+                      borderTop: "2px solid transparent",
+                      borderRadius: "50%",
+                      animation: "spin 0.8s linear infinite"
+                    }} />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <BookOpen size={18} />
+                    Confirm Booking
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -2411,9 +2463,8 @@ function UserPGSearch() {
 
     const token = await user.getIdToken(true);
 
+    // Simplified payload - only check_in_date and room_type
     const payload = {
-      name: bookingData.name,
-      phone: bookingData.phone,
       check_in_date: bookingData.checkInDate,
       room_type: bookingData.roomType
     };
@@ -2426,21 +2477,21 @@ function UserPGSearch() {
       }
     );
 
-    // ✅ HANDLE ALREADY BOOKED
+    // HANDLE ALREADY BOOKED
     if (res.data?.alreadyBooked) {
       showNotification(res.data.message);
       setBookingPG(null);
       return;
     }
 
-    // ✅ SUCCESS
+    // SUCCESS
     showNotification(res.data.message || "✅ Booking request sent to owner");
     setBookingPG(null);
 
   } catch (error) {
     console.log("BOOKING ERROR:", error.response?.data);
 
-    // ✅ SHOW BACKEND MESSAGE
+    // SHOW BACKEND MESSAGE
     if (error.response?.data?.message) {
       showNotification(error.response.data.message);
     } else {
