@@ -177,7 +177,7 @@ const UserActiveStay = () => {
                   <label style={receiptLabel}>🏠 PROPERTY DETAILS</label>
                   <p style={receiptValue}>{selectedStay.pg_name}</p>
                   <p style={receiptSubValue}>
-                    {selectedStay.room_type} | Room: {selectedStay.room_no || 'Allocating...'}
+                    {selectedStay.room_type} Sharing {selectedStay.room_no ? `| Room: ${selectedStay.room_no}` : ""}
                   </p>
                 </div>
               </div>
