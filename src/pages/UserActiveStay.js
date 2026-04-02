@@ -11,19 +11,25 @@ const UserActiveStay = () => {
 
   useEffect(() => {
     loadStay();
+
+    // 🔥 AUTO REFRESH EVERY 10 SEC (important for payment confirmation)
+    const interval = setInterval(() => {
+      loadStay(false);
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, []);
 
-  const loadStay = async () => {
+  const loadStay = async (showLoader = true) => {
     try {
+      if (showLoader) setLoading(true);
       setError("");
-      setLoading(true);
 
       const user = auth.currentUser;
       if (!user) return navigate("/login");
 
       const token = await user.getIdToken();
 
-      // ✅ FIX: Send token to backend
       const res = await api.get("/bookings/user/active-stay", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -33,10 +39,10 @@ const UserActiveStay = () => {
       setStay(res.data || null);
 
     } catch (err) {
-      console.error(err);
+      console.error("STAY LOAD ERROR:", err);
       setError(err.response?.data?.message || "Failed to load stay details");
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
@@ -48,7 +54,7 @@ const UserActiveStay = () => {
     return date.toDateString();
   };
 
-  /* 🧠 SAFE DATE FORMAT */
+  /* 🧠 SAFE DATE */
   const formatDate = (date) => {
     if (!date) return "N/A";
     return new Date(date).toDateString();
@@ -64,14 +70,24 @@ const UserActiveStay = () => {
       <div style={emptyBox}>
         ❌ {error}
         <br />
-        <button style={btn} onClick={loadStay}>Retry</button>
+        <button style={btn} onClick={() => loadStay()}>
+          Retry
+        </button>
       </div>
     );
 
   if (!stay)
     return (
       <div style={emptyBox}>
-        ❌ You are not staying in any PG
+        <h3>🏠 No Active Stay</h3>
+        <p>You have not completed any booking yet.</p>
+
+        <button
+          style={btn}
+          onClick={() => navigate("/")}
+        >
+          🔍 Browse PG
+        </button>
       </div>
     );
 
@@ -82,7 +98,10 @@ const UserActiveStay = () => {
       <div style={card}>
         <h3>{stay.pg_name || "PG Name"}</h3>
 
-        <p>🚪 Room No: <b>{stay.room_no || "Not Assigned"}</b></p>
+        <p>
+          🚪 Room No:{" "}
+          <b>{stay.room_no || "Will be assigned soon"}</b>
+        </p>
 
         <p>📅 Join Date: {formatDate(stay.join_date)}</p>
 
@@ -101,7 +120,7 @@ const UserActiveStay = () => {
         <p>
           📌 Status:
           <span style={statusBadge(stay.status)}>
-            {stay.status || "UNKNOWN"}
+            {stay.status || "ACTIVE"}
           </span>
         </p>
 
