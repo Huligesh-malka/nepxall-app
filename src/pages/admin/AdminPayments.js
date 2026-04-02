@@ -95,13 +95,6 @@ const AdminPayments = () => {
     }
   };
 
-  const handleWhatsAppShare = (p) => {
-    const cleanPhone = p.phone ? p.phone.replace(/\D/g, "") : "";
-    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${p.tenant_name}*,%0AYour payment for *${p.pg_name}* has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.paid_date)}%0A%0A_Thank you for choosing Nepxall!_`;
-    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${message}`;
-    window.open(whatsappUrl, "_blank");
-  };
-
   const formatDate = (dateString) => {
     if (!dateString) return new Date().toLocaleDateString('en-GB');
     return new Date(dateString).toLocaleDateString('en-GB', {
@@ -111,7 +104,14 @@ const AdminPayments = () => {
     });
   };
 
-  /* --- UPDATED: EXACT MATCH TO USER DOWNLOAD LOGIC --- */
+  const handleWhatsAppShare = (p) => {
+    // Uses p.phone (which we updated to come from users table)
+    const cleanPhone = p.phone ? p.phone.replace(/\D/g, "") : "";
+    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${p.tenant_name}*,%0AYour payment for *${p.pg_name}* has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${message}`;
+    window.open(whatsappUrl, "_blank");
+  };
+
   const handleDownloadReceipt = async (payment) => {
     setSelectedPayment(payment);
     
@@ -157,8 +157,9 @@ const AdminPayments = () => {
         <Table>
           <TableHead>
             <TableRow sx={{ background: "#f8fafc" }}>
-              <TableCell><strong>Tenant / Phone</strong></TableCell>
+              <TableCell><strong>Tenant / Reg. Phone</strong></TableCell>
               <TableCell><strong>PG Name</strong></TableCell>
+              <TableCell><strong>Sharing</strong></TableCell>
               <TableCell><strong>Amount</strong></TableCell>
               <TableCell><strong>Order ID</strong></TableCell>
               <TableCell><strong>Status</strong></TableCell>
@@ -168,15 +169,20 @@ const AdminPayments = () => {
           </TableHead>
           <TableBody>
             {payments.length === 0 ? (
-              <TableRow><TableCell colSpan={7} align="center">No records found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} align="center">No records found</TableCell></TableRow>
             ) : (
               payments.map((p) => (
                 <TableRow key={p.order_id} hover>
                   <TableCell>
                     <Typography variant="body2" fontWeight="bold">{p.tenant_name || "N/A"}</Typography>
-                    <Typography variant="caption" color="textSecondary">{p.phone || "-"}</Typography>
+                    <Typography variant="caption" color="primary" sx={{ fontWeight: 'bold' }}>
+                        {p.phone || "No Phone"}
+                    </Typography>
                   </TableCell>
                   <TableCell>{p.pg_name}</TableCell>
+                  <TableCell>
+                    <Chip label={p.sharing || "N/A"} size="small" variant="outlined" />
+                  </TableCell>
                   <TableCell><Typography fontWeight="bold">₹{p.amount}</Typography></TableCell>
                   <TableCell sx={{ fontFamily: "monospace", fontSize: '11px' }}>{p.order_id}</TableCell>
                   <TableCell>
@@ -243,7 +249,7 @@ const AdminPayments = () => {
       </Paper>
 
       {/* ============================================================
-          HIDDEN RECEIPT DESIGN - EXACT MATCH TO USER SIDE
+          HIDDEN RECEIPT DESIGN
           ============================================================ */}
       {selectedPayment && (
         <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
@@ -261,7 +267,7 @@ const AdminPayments = () => {
                 <p style={{ ...orderIdText, color: BRAND_BLUE }}>
                     Order ID: {selectedPayment.order_id || "N/A"}
                 </p>
-                <p style={dateText}>Date: {formatDate(selectedPayment.paid_date)}</p>
+                <p style={dateText}>Date: {formatDate(selectedPayment.created_at)}</p>
               </div>
             </div>
 
@@ -277,7 +283,7 @@ const AdminPayments = () => {
                   <label style={receiptLabel}>🏠 PROPERTY DETAILS</label>
                   <p style={receiptValue}>{selectedPayment.pg_name}</p>
                   <p style={receiptSubValue}>
-                    {selectedPayment.room_type || "N/A"} Sharing {selectedPayment.room_no ? `| Room: ${selectedPayment.room_no}` : ""}
+                    {selectedPayment.sharing || "N/A"} Sharing
                   </p>
                 </div>
               </div>
@@ -296,7 +302,7 @@ const AdminPayments = () => {
                 <span>Amount</span>
               </div>
               <div style={tableRow}>
-                <span>Monthly Room Rent ({selectedPayment.room_type || "Standard"})</span>
+                <span>Monthly Room Rent ({selectedPayment.sharing || "Standard"})</span>
                 <span>₹{selectedPayment.amount}</span>
               </div>
               <div style={tableRow}>
@@ -309,18 +315,10 @@ const AdminPayments = () => {
               </div>
             </div>
 
-            <div style={{...sectionBlock, marginTop: '30px', padding: '20px', background: '#f0f4f8', borderRadius: '10px'}}>
-                <label style={receiptLabel}>💳 SECURITY DEPOSIT (RECORDED)</label>
-                <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                    <span style={receiptValue}>₹{selectedPayment.deposit_amount || "0.00"}</span>
-                    <span style={{color: BRAND_GREEN, fontWeight: 'bold'}}>Paid (Refundable)</span>
-                </div>
-            </div>
-
             <div style={footerNote}>
               <div style={{textAlign: 'left', marginBottom: '20px', color: '#4b5563'}}>
                 <p>✔ Verified Transaction: <strong>{selectedPayment.order_id || 'N/A'}</strong></p>
-                <p>✔ This is a digital proof of stay generated by Nepxall Admin.</p>
+                <p>✔ This is a digital proof generated by Nepxall Admin for the registered user.</p>
               </div>
               <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>* System-generated receipt. No signature required.</p>
               <p style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}>THANK YOU FOR CHOOSING NEPXALL!</p>
@@ -338,7 +336,7 @@ const AdminPayments = () => {
   );
 };
 
-/* --- EXACT RECEIPT STYLES COPIED FROM USER SIDE --- */
+/* --- RECEIPT STYLES --- */
 const modernReceiptContainer = { width: "210mm", minHeight: "297mm", padding: "60px", background: "#ffffff", color: "#111827", fontFamily: "Helvetica, Arial, sans-serif" };
 const receiptHeader = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "20px", marginBottom: "30px" };
 const logoText = { margin: 0, fontSize: "36px", fontWeight: "900", letterSpacing: "-1px" };
