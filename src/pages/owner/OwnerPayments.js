@@ -338,43 +338,128 @@ export default function OwnerPayments() {
               <Divider sx={{ mb: 2 }} />
 
               <Grid container spacing={2} sx={{ mb: 2 }}>
-                <Grid item xs={6}>
-                  <Typography variant="subtitle2" color="primary" fontWeight="bold">👤 Tenant Details</Typography>
-                  <Typography variant="body2"><b>Name:</b> {receiptData?.tenant_name}</Typography>
-                  <Typography variant="body2"><b>Mobile:</b> {receiptData?.tenant_phone}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="subtitle2" color="primary" fontWeight="bold">🏠 Property Details</Typography>
-                  <Typography variant="body2"><b>PG:</b> {receiptData?.pg_name}</Typography>
-                  <Typography variant="body2"><b>Room:</b> {receiptData?.room_no} ({receiptData?.room_type})</Typography>
-                </Grid>
-              </Grid>
 
-              <Box sx={{ bgcolor: '#f5f5f5', p: 2, borderRadius: 2 }}>
-                <Typography variant="subtitle2" color="primary" fontWeight="bold" gutterBottom>💰 Payment Breakdown</Typography>
-                <Box display="flex" justifyContent="space-between" mb={0.5}>
-                  <Typography variant="body2">Rent Amount</Typography>
-                  <Typography variant="body2">₹{receiptData?.rent_amount}</Typography>
-                </Box>
-                <Box display="flex" justifyContent="space-between" mb={0.5}>
-                  <Typography variant="body2">Security Deposit</Typography>
-                  <Typography variant="body2">₹{receiptData?.security_deposit}</Typography>
-                </Box>
-                <Box display="flex" justifyContent="space-between" mb={1}>
-                  <Typography variant="body2">Maintenance</Typography>
-                  <Typography variant="body2">₹{receiptData?.maintenance_amount}</Typography>
-                </Box>
-                <Divider sx={{ my: 1 }} />
-                <Box display="flex" justifyContent="space-between">
-                  <Typography variant="subtitle1" fontWeight="bold">Total Paid</Typography>
-                  <Typography variant="subtitle1" fontWeight="bold" color="primary">₹{receiptData?.total_amount}</Typography>
-                </Box>
-              </Box>
+  {/* 👤 TENANT */}
+  <Grid item xs={6}>
+    <Typography variant="subtitle2" color="primary" fontWeight="bold">
+      👤 Tenant Details
+    </Typography>
+    <Typography variant="body2">
+      <b>Name:</b> {receiptData?.tenant_name}
+    </Typography>
+    <Typography variant="body2">
+      <b>Mobile:</b> {receiptData?.tenant_phone}
+    </Typography>
+  </Grid>
 
-              <Box mt={3} textAlign="center">
-                <Typography variant="caption" color="textSecondary" display="block">✔ Verified by Admin</Typography>
-                <Typography variant="caption" color="textSecondary">✔ Digitally generated receipt</Typography>
-              </Box>
+  {/* 🏠 PROPERTY */}
+  <Grid item xs={6}>
+    <Typography variant="subtitle2" color="primary" fontWeight="bold">
+      🏠 Property Details
+    </Typography>
+    <Typography variant="body2">
+      <b>PG:</b> {receiptData?.pg_name}
+    </Typography>
+    <Typography variant="body2">
+      <b>Room:</b> {receiptData?.room_no} ({receiptData?.room_type})
+    </Typography>
+    <Typography variant="body2">
+      <b>Location:</b> {receiptData?.location}
+    </Typography>
+  </Grid>
+
+  {/* 👨‍💼 OWNER */}
+  <Grid item xs={6}>
+    <Typography variant="subtitle2" color="success.main" fontWeight="bold">
+      👨‍💼 Owner Details
+    </Typography>
+    <Typography variant="body2">
+      <b>Name:</b> {receiptData?.owner_name}
+    </Typography>
+    <Typography variant="body2">
+      <b>Owner ID:</b> #{receiptData?.owner_id}
+    </Typography>
+    <Typography variant="body2">
+      <b>Mobile:</b> {receiptData?.owner_phone}
+    </Typography>
+  </Grid>
+
+  {/* 💳 BANK */}
+  <Grid item xs={6}>
+    <Typography variant="subtitle2" color="success.main" fontWeight="bold">
+      💳 Bank Details
+    </Typography>
+    <Typography variant="body2">
+      <b>Holder:</b> {receiptData?.account_holder_name}
+    </Typography>
+    <Typography variant="body2">
+      <b>Bank:</b> {receiptData?.bank_name}
+    </Typography>
+    <Typography variant="body2">
+      <b>A/C:</b> {receiptData?.account_number}
+    </Typography>
+    <Typography variant="body2">
+      <b>IFSC:</b> {receiptData?.ifsc}
+    </Typography>
+  </Grid>
+
+</Grid>
+
+{/* 💰 PAYMENT */}
+<Box sx={{ bgcolor: '#f5f5f5', p: 2, borderRadius: 2 }}>
+  <Typography variant="subtitle2" color="primary" fontWeight="bold" gutterBottom>
+    💰 Payment Breakdown
+  </Typography>
+
+  <Box display="flex" justifyContent="space-between" mb={0.5}>
+    <Typography variant="body2">Rent Amount</Typography>
+    <Typography variant="body2">₹{receiptData?.rent_amount}</Typography>
+  </Box>
+
+  <Box display="flex" justifyContent="space-between" mb={0.5}>
+    <Typography variant="body2">Security Deposit</Typography>
+    <Typography variant="body2">₹{receiptData?.security_deposit}</Typography>
+  </Box>
+
+  <Box display="flex" justifyContent="space-between" mb={1}>
+    <Typography variant="body2">Maintenance</Typography>
+    <Typography variant="body2">₹{receiptData?.maintenance_amount}</Typography>
+  </Box>
+
+  <Divider sx={{ my: 1 }} />
+
+  <Box display="flex" justifyContent="space-between">
+    <Typography variant="subtitle1" fontWeight="bold">
+      Total Paid
+    </Typography>
+    <Typography variant="subtitle1" fontWeight="bold" color="primary">
+      ₹{receiptData?.total_amount}
+    </Typography>
+  </Box>
+</Box>
+
+{/* ✅ SETTLEMENT INFO */}
+<Box mt={3} textAlign="center">
+
+  <Typography variant="body2" color="success.main" fontWeight="bold">
+    💰 Settlement Completed
+  </Typography>
+
+  <Typography variant="caption" display="block">
+    Settlement Date: {receiptData?.settlement_date 
+      ? new Date(receiptData.settlement_date).toLocaleDateString()
+      : "N/A"}
+  </Typography>
+
+  <Typography variant="caption" display="block">
+    ✔ Paid to Owner by Admin
+  </Typography>
+
+  <Typography variant="caption" display="block">
+    ✔ Digitally generated receipt
+  </Typography>
+
+</Box>
               
               <Button 
                 fullWidth 
