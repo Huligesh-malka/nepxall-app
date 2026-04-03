@@ -4,7 +4,7 @@ import SignatureCanvas from "react-signature-canvas";
 import {
   Container, Typography, Paper, Table, TableHead, TableRow, TableCell,
   TableBody, Chip, Box, CircularProgress, Button,
-  Modal, Fade, Checkbox, TextField, Backdrop, IconButton, Divider, Alert, Stack
+  Modal, Fade, Checkbox, TextField, Backdrop, IconButton, Divider, Alert, Stack, Grid
 } from "@mui/material";
 import { 
   Refresh, ArrowBack, Gavel, Security, VerifiedUser, 
@@ -23,9 +23,9 @@ export default function OwnerPayments() {
 
   // Modal & Flow State
   const [openSignModal, setOpenSignModal] = useState(false);
-  const [openReceiptModal, setOpenReceiptModal] = useState(false); // NEW
+  const [openReceiptModal, setOpenReceiptModal] = useState(false); 
   const [selectedBooking, setSelectedBooking] = useState(null);
-  const [receiptData, setReceiptData] = useState(null); // NEW
+  const [receiptData, setReceiptData] = useState(null); 
   const [step, setStep] = useState(1);
   
   // Form State
@@ -70,7 +70,6 @@ export default function OwnerPayments() {
     }
   };
 
-  // NEW: Fetch Receipt Details
   const handleViewReceipt = async (bookingId) => {
     try {
       setIsSubmitting(true);
@@ -313,7 +312,6 @@ export default function OwnerPayments() {
             position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
             width: { xs: '95%', sm: 450 }, bgcolor: 'background.paper', borderRadius: 3, boxShadow: 24, p: 0, overflow: 'hidden'
           }}>
-            {/* Receipt Header */}
             <Box sx={{ bgcolor: '#1976d2', p: 2, color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="h6" fontWeight="bold">NEPXALL - RENT RECEIPT</Typography>
               <IconButton onClick={() => setOpenReceiptModal(false)} size="small" sx={{ color: 'white' }}>
@@ -339,7 +337,6 @@ export default function OwnerPayments() {
 
               <Divider sx={{ mb: 2 }} />
 
-              {/* Tenant & Property */}
               <Grid container spacing={2} sx={{ mb: 2 }}>
                 <Grid item xs={6}>
                   <Typography variant="subtitle2" color="primary" fontWeight="bold">👤 Tenant Details</Typography>
