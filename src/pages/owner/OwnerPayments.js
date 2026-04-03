@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import SignatureCanvas from "react-signature-canvas";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import {
   Container, Typography, Paper, Table, TableHead, TableRow, TableCell,
   TableBody, Chip, Box, CircularProgress, Button,
@@ -37,6 +39,7 @@ export default function OwnerPayments() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const sigCanvas = useRef(null);
+  const receiptRef = useRef();
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -210,7 +213,24 @@ export default function OwnerPayments() {
     if (t.includes("bhk")) return "secondary";
     return "default";
   };
+  const downloadPDF = async () => {
+  try {
+    const element = receiptRef.current;
 
+    const canvas = await html2canvas(element);
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF("p", "mm", "a4");
+    const imgWidth = 190;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight);
+    pdf.save("receipt.pdf");
+  } catch (err) {
+    console.error("PDF Error:", err);
+    alert("Failed to generate PDF ❌");
+  }
+};
   if (loading) return <Box p={5} textAlign="center"><CircularProgress /></Box>;
 
   return (
@@ -324,7 +344,7 @@ export default function OwnerPayments() {
               </IconButton>
             </Box>
 
-            <Box sx={{ p: 3 }}>
+            <Box sx={{ p: 3 }} ref={receiptRef}>
               <Box display="flex" justifyContent="space-between" mb={2}>
                 <Box>
                   <Typography variant="caption" color="textSecondary">Order ID</Typography>
@@ -349,9 +369,7 @@ export default function OwnerPayments() {
     <Typography variant="subtitle2" color="primary" fontWeight="bold">
       👤 Tenant Details
     </Typography>
-    <Typography variant="body2">
-      <b>Name:</b> {receiptData?.tenant_name}
-    </Typography>
+    
     <Typography variant="body2">
       <b>Mobile:</b> {receiptData?.tenant_phone}
     </Typography>
@@ -368,9 +386,7 @@ export default function OwnerPayments() {
     <Typography variant="body2">
       <b>Room:</b> {receiptData?.room_no} ({receiptData?.room_type})
     </Typography>
-    <Typography variant="body2">
-      <b>Location:</b> {receiptData?.location}
-    </Typography>
+    
   </Grid>
 
   {/* 👨‍💼 OWNER */}
@@ -378,9 +394,7 @@ export default function OwnerPayments() {
     <Typography variant="subtitle2" color="success.main" fontWeight="bold">
       👨‍💼 Owner Details
     </Typography>
-    <Typography variant="body2">
-      <b>Name:</b> {receiptData?.owner_name}
-    </Typography>
+    
     <Typography variant="body2">
       <b>Owner ID:</b> #{receiptData?.owner_id}
     </Typography>
@@ -450,11 +464,7 @@ export default function OwnerPayments() {
     💰 Settlement Completed
   </Typography>
 
-  <Typography variant="caption" display="block">
-    Settlement Date: {receiptData?.settlement_date 
-      ? new Date(receiptData.settlement_date).toLocaleDateString()
-      : "N/A"}
-  </Typography>
+  
 
   <Typography variant="caption" display="block">
     ✔ Paid to Owner by Admin
@@ -470,7 +480,7 @@ export default function OwnerPayments() {
                 fullWidth 
                 variant="outlined" 
                 sx={{ mt: 2 }} 
-                onClick={() => window.print()}
+                onClick={downloadPDF}
                 startIcon={<ReceiptLong />}
               >
                 Print Receipt
