@@ -502,31 +502,35 @@ const UserBookingHistory = () => {
                   </div>
 
                   {/* Price Breakdown */}
-                  {rent > 0 && (
-  <div style={styles.priceRow}>
-    <span>Rent</span>
-    <span>₹{rent.toLocaleString()}</span>
-  </div>
-)}
+<div style={styles.priceSection}>
 
-{deposit > 0 && (
-  <div style={styles.priceRow}>
-    <span>Security Deposit</span>
-    <span>₹{deposit.toLocaleString()}</span>
-  </div>
-)}
+  {rent > 0 && (
+    <div style={styles.priceRow}>
+      <span>Rent</span>
+      <span>₹{rent.toLocaleString()}</span>
+    </div>
+  )}
 
-{maintenance > 0 && (
-  <div style={styles.priceRow}>
-    <span>Maintenance</span>
-    <span>₹{maintenance.toLocaleString()}</span>
+  {deposit > 0 && (
+    <div style={styles.priceRow}>
+      <span>Security Deposit</span>
+      <span>₹{deposit.toLocaleString()}</span>
+    </div>
+  )}
+
+  {maintenance > 0 && (
+    <div style={styles.priceRow}>
+      <span>Maintenance</span>
+      <span>₹{maintenance.toLocaleString()}</span>
+    </div>
+  )}
+
+  <div style={styles.totalPrice}>
+    <span>Total Amount</span>
+    <span>₹{total.toLocaleString()}</span>
   </div>
-)}
-                    <div style={styles.totalPrice}>
-                      <span>Total Amount</span>
-                      <span>₹{total.toLocaleString()}</span>
-                    </div>
-                  </div>
+
+</div>
 
                   {/* Message if any */}
                   {paymentDisplay.message && (
