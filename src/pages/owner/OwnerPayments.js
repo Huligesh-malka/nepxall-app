@@ -16,6 +16,13 @@ import {
 import { auth } from "../../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
+// Brand Colors
+const BRAND_BLUE = "#2563eb";
+const BRAND_GREEN = "#10b981";
+const BRAND_DARK = "#1e293b";
+const BRAND_GRAY = "#64748b";
+const BRAND_LIGHT_BG = "#f8fafc";
+
 // Ensure this matches your deployment URL
 const API = "https://nepxall-backend.onrender.com/api/owner";
 
@@ -112,7 +119,7 @@ export default function OwnerPayments() {
     }
   };
 
-  // Generate PDF from receipt data - IMPROVED with better dimensions and styling
+  // Generate PDF from receipt data - MODERN DESIGN WITH BRAND COLORS
   const generateAndDownloadPDF = async (receiptInfo) => {
     // Create a temporary div to render receipt for PDF capture
     const tempDiv = document.createElement('div');
@@ -120,7 +127,7 @@ export default function OwnerPayments() {
     tempDiv.style.top = '-9999px';
     tempDiv.style.left = '-9999px';
     tempDiv.style.width = '700px';
-    tempDiv.style.backgroundColor = 'white';
+    tempDiv.style.backgroundColor = '#ffffff';
     tempDiv.style.padding = '32px';
     tempDiv.style.fontFamily = "'Inter', 'Segoe UI', Arial, sans-serif";
     tempDiv.style.borderRadius = '0px';
@@ -132,126 +139,134 @@ export default function OwnerPayments() {
       ? new Date(receiptInfo.verified_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
       : new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
 
-    // Render receipt content with modern design
+    // Render receipt content with modern design and brand colors
     tempDiv.innerHTML = `
       <div style="max-width: 700px; margin: 0 auto;">
-        <!-- Header -->
-        <div style="text-align: center; margin-bottom: 28px;">
-          <div style="font-size: 36px; font-weight: 800; letter-spacing: 3px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">NEXPALL</div>
-          <p style="margin: 8px 0 0; color: #666; font-size: 13px;">Next Places for Living</p>
+        <!-- Header with Brand Colors -->
+        <div style="text-align: center; margin-bottom: 32px;">
+          <div style="font-size: 42px; font-weight: 800; letter-spacing: 2px; margin-bottom: 8px;">
+            <span style="color: ${BRAND_BLUE};">Nep</span><span style="color: ${BRAND_GREEN};">xall</span>
+          </div>
+          <p style="margin: 0; color: ${BRAND_GRAY}; font-size: 13px; letter-spacing: 1px;">Next Places for Living</p>
         </div>
 
         <!-- Status Badge -->
-        <div style="background: #e8f5e9; border-radius: 12px; padding: 14px; text-align: center; margin-bottom: 28px; border: 1px solid #c8e6c9;">
-          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
-            <span style="color: #2e7d32;">✓</span>
-            <span style="font-weight: 700; color: #2e7d32; font-size: 16px;">PAYMENT SUCCESSFUL</span>
+        <div style="background: linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(16,185,129,0.05) 100%); border-radius: 100px; padding: 12px 24px; text-align: center; margin-bottom: 32px; border: 1px solid rgba(16,185,129,0.2);">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <span style="color: ${BRAND_GREEN}; font-size: 20px;">✓</span>
+            <span style="font-weight: 700; color: ${BRAND_GREEN}; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Payment Successful</span>
           </div>
-          <p style="margin: 6px 0 0; font-size: 12px; color: #666;">${formattedDate}</p>
+          <p style="margin: 6px 0 0; font-size: 11px; color: ${BRAND_GRAY};">${formattedDate}</p>
         </div>
 
-        <!-- Two Column Grid for Info -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+        <!-- Info Cards Grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
           <!-- Tenant Card -->
-          <div style="background: #fafafa; border-radius: 12px; padding: 14px; border: 1px solid #e8e8e8;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-              <span style="font-size: 18px;">👤</span>
-              <span style="font-size: 12px; color: #666;">Tenant</span>
+          <div style="background: ${BRAND_LIGHT_BG}; border-radius: 16px; padding: 16px; border: 1px solid #e2e8f0;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+              <span style="font-size: 20px;">👤</span>
+              <span style="font-size: 11px; color: ${BRAND_GRAY}; text-transform: uppercase; letter-spacing: 0.5px;">Tenant</span>
             </div>
-            <p style="margin: 0; font-weight: 500; font-size: 14px;">${receiptInfo?.tenant_phone || '+91 XXXXX XXXXX'}</p>
+            <p style="margin: 0; font-weight: 600; font-size: 14px; color: ${BRAND_DARK};">${receiptInfo?.tenant_phone || '+91 XXXXX XXXXX'}</p>
           </div>
 
           <!-- Property Card -->
-          <div style="background: #fafafa; border-radius: 12px; padding: 14px; border: 1px solid #e8e8e8;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-              <span style="font-size: 18px;">🏠</span>
-              <span style="font-size: 12px; color: #666;">Property</span>
+          <div style="background: ${BRAND_LIGHT_BG}; border-radius: 16px; padding: 16px; border: 1px solid #e2e8f0;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+              <span style="font-size: 20px;">🏠</span>
+              <span style="font-size: 11px; color: ${BRAND_GRAY}; text-transform: uppercase; letter-spacing: 0.5px;">Property</span>
             </div>
-            <p style="margin: 0; font-weight: 500; font-size: 14px;">${receiptInfo?.pg_name || 'Lakshmi PG'}</p>
-            <p style="margin: 4px 0 0; font-size: 12px; color: #888;">${receiptInfo?.room_type || 'Double Sharing'}</p>
+            <p style="margin: 0; font-weight: 600; font-size: 14px; color: ${BRAND_DARK};">${receiptInfo?.pg_name || 'Lakshmi PG'}</p>
+            <p style="margin: 4px 0 0; font-size: 12px; color: ${BRAND_GRAY};">${receiptInfo?.room_type || 'Double Sharing'}</p>
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
           <!-- Owner Card -->
-          <div style="background: #fafafa; border-radius: 12px; padding: 14px; border: 1px solid #e8e8e8;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-              <span style="font-size: 18px;">👨‍💼</span>
-              <span style="font-size: 12px; color: #666;">Owner</span>
+          <div style="background: ${BRAND_LIGHT_BG}; border-radius: 16px; padding: 16px; border: 1px solid #e2e8f0;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+              <span style="font-size: 20px;">👨‍💼</span>
+              <span style="font-size: 11px; color: ${BRAND_GRAY}; text-transform: uppercase; letter-spacing: 0.5px;">Owner</span>
             </div>
-            <p style="margin: 0; font-weight: 500; font-size: 14px;">Owner ID: #${receiptInfo?.owner_id || '7'}</p>
+            <p style="margin: 0; font-weight: 600; font-size: 14px; color: ${BRAND_DARK};">Owner ID: #${receiptInfo?.owner_id || '7'}</p>
           </div>
 
           <!-- Bank Card -->
-          <div style="background: #fafafa; border-radius: 12px; padding: 14px; border: 1px solid #e8e8e8;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-              <span style="font-size: 18px;">💳</span>
-              <span style="font-size: 12px; color: #666;">Bank</span>
+          <div style="background: ${BRAND_LIGHT_BG}; border-radius: 16px; padding: 16px; border: 1px solid #e2e8f0;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+              <span style="font-size: 20px;">💳</span>
+              <span style="font-size: 11px; color: ${BRAND_GRAY}; text-transform: uppercase; letter-spacing: 0.5px;">Bank</span>
             </div>
             <p style="margin: 0; font-weight: 500; font-size: 13px;">Holder: ${receiptInfo?.account_holder_name || 'basava'}</p>
             <p style="margin: 4px 0; font-size: 13px;">Bank: ${receiptInfo?.bank_name || 'karnata'}</p>
             <p style="margin: 4px 0; font-size: 13px;">A/C: ${receiptInfo?.account_number ? 'XXXX' + receiptInfo.account_number.slice(-4) : 'XXXX6739'}</p>
-            <p style="margin: 4px 0 0; font-size: 12px; color: #888;">IFSC: ${receiptInfo?.ifsc || 'SBIN0040410'}</p>
+            <p style="margin: 4px 0 0; font-size: 11px; color: ${BRAND_GRAY};">IFSC: ${receiptInfo?.ifsc || 'SBIN0040410'}</p>
           </div>
         </div>
 
         <!-- Divider -->
-        <hr style="margin: 16px 0; border: none; border-top: 1px solid #e8e8e8;" />
+        <hr style="margin: 8px 0 20px; border: none; border-top: 1px solid #e2e8f0;" />
 
         <!-- Payment Summary Section -->
         <div style="margin-bottom: 24px;">
-          <p style="font-weight: 700; margin: 0 0 16px 0; font-size: 16px;">💰 Payment Summary</p>
+          <p style="font-weight: 700; margin: 0 0 16px 0; font-size: 16px; color: ${BRAND_DARK};">💰 Payment Summary</p>
           
-          <div style="background: #fafafa; border-radius: 12px; padding: 16px; border: 1px solid #e8e8e8;">
+          <div style="background: ${BRAND_LIGHT_BG}; border-radius: 16px; padding: 20px; border: 1px solid #e2e8f0;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-              <span style="color: #555;">Rent</span>
-              <span style="font-weight: 500;">₹${receiptInfo?.rent_amount || '2999.00'}</span>
+              <span style="color: ${BRAND_GRAY};">Rent</span>
+              <span style="font-weight: 600; color: ${BRAND_DARK};">₹${receiptInfo?.rent_amount || '2999.00'}</span>
             </div>
             ${(receiptInfo?.security_deposit > 0 || !receiptInfo) ? `
             <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-              <span style="color: #555;">Security Deposit</span>
-              <span style="font-weight: 500;">₹${receiptInfo?.security_deposit || '2000.00'}</span>
+              <span style="color: ${BRAND_GRAY};">Security Deposit</span>
+              <span style="font-weight: 600; color: ${BRAND_DARK};">₹${receiptInfo?.security_deposit || '2000.00'}</span>
             </div>
             ` : ''}
             ${(receiptInfo?.maintenance_amount > 0 || !receiptInfo) ? `
             <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-              <span style="color: #555;">Maintenance</span>
-              <span style="font-weight: 500;">₹${receiptInfo?.maintenance_amount || '250.00'}</span>
+              <span style="color: ${BRAND_GRAY};">Maintenance</span>
+              <span style="font-weight: 600; color: ${BRAND_DARK};">₹${receiptInfo?.maintenance_amount || '250.00'}</span>
             </div>
             ` : ''}
             
-            <hr style="margin: 12px 0; border: none; border-top: 1px dashed #ccc;" />
+            <div style="margin: 16px 0; border-top: 1px dashed #cbd5e1;"></div>
             
-            <div style="display: flex; justify-content: space-between; margin-top: 8px;">
-              <span style="font-weight: 700; font-size: 15px;">TOTAL PAID</span>
-              <span style="font-weight: 800; font-size: 16px; color: #667eea;">₹${receiptInfo?.total_amount || '5249.00'}</span>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="font-weight: 700; font-size: 16px; color: ${BRAND_DARK};">TOTAL PAID</span>
+              <span style="font-weight: 800; font-size: 18px; color: ${BRAND_BLUE};">₹${receiptInfo?.total_amount || '5249.00'}</span>
             </div>
           </div>
         </div>
 
         <!-- Divider -->
-        <hr style="margin: 16px 0; border: none; border-top: 1px solid #e8e8e8;" />
+        <hr style="margin: 8px 0 20px; border: none; border-top: 1px solid #e2e8f0;" />
 
         <!-- Settlement Status -->
-        <div style="background: #f5f5f5; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-            <span style="color: #2e7d32;">✓</span>
-            <span>Settlement Completed</span>
+        <div style="background: linear-gradient(135deg, ${BRAND_LIGHT_BG} 0%, #ffffff 100%); border-radius: 16px; padding: 20px; margin-bottom: 24px; border: 1px solid #e2e8f0;">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+            <div style="width: 24px; height: 24px; background: ${BRAND_GREEN}; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+              <span style="color: white; font-size: 14px;">✓</span>
+            </div>
+            <span style="font-weight: 500; color: ${BRAND_DARK};">Settlement Completed</span>
           </div>
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-            <span style="color: #2e7d32;">✓</span>
-            <span>Paid to Owner</span>
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+            <div style="width: 24px; height: 24px; background: ${BRAND_GREEN}; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+              <span style="color: white; font-size: 14px;">✓</span>
+            </div>
+            <span style="font-weight: 500; color: ${BRAND_DARK};">Paid to Owner</span>
           </div>
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <span style="color: #2e7d32;">✓</span>
-            <span>Digital Receipt</span>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 24px; height: 24px; background: ${BRAND_GREEN}; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+              <span style="color: white; font-size: 14px;">✓</span>
+            </div>
+            <span style="font-weight: 500; color: ${BRAND_DARK};">Digital Receipt</span>
           </div>
         </div>
 
         <!-- Footer -->
-        <div style="text-align: center; margin-top: 20px;">
-          <p style="margin: 0; color: #666;">Thank you for using NEXPALL 🙏</p>
-          
+        <div style="text-align: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+          <p style="margin: 0; color: ${BRAND_GRAY}; font-size: 13px;">Thank you for choosing <span style="color: ${BRAND_BLUE};">Nep</span><span style="color: ${BRAND_GREEN};">xall</span> 🙏</p>
+          <p style="margin: 8px 0 0; font-size: 10px; color: ${BRAND_GRAY};">support@nexpall.com</p>
         </div>
       </div>
     `;
@@ -272,20 +287,10 @@ export default function OwnerPayments() {
         format: "a4"
       });
       const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
       const imgWidth = pageWidth - 20;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      let yPosition = 10;
-      pdf.addImage(imgData, "PNG", 10, yPosition, imgWidth, imgHeight, undefined, "FAST");
-      
-      // If content is taller than one page, add second page
-      if (imgHeight + yPosition > pageHeight) {
-        pdf.addPage();
-        const remainingHeight = imgHeight - (pageHeight - yPosition);
-        const secondImgHeight = remainingHeight;
-        pdf.addImage(imgData, "PNG", 10, - (pageHeight - yPosition) + 10, imgWidth, imgHeight, undefined, "FAST");
-      }
+      pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight, undefined, "FAST");
       
       pdf.save(`receipt-${receiptInfo?.order_id || "nexpall"}.pdf`);
     } catch (err) {
@@ -444,8 +449,10 @@ export default function OwnerPayments() {
   return (
     <Container sx={{ py: 4, maxWidth: '1400px' }}>
       <Box display="flex" justifyContent="space-between" mb={3} alignItems="center" flexWrap="wrap" gap={2}>
-        <Typography variant="h4" fontWeight="bold" sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          Owner Settlement Dashboard
+        <Typography variant="h4" fontWeight="bold">
+          <span style={{ color: BRAND_BLUE }}>Nep</span>
+          <span style={{ color: BRAND_GREEN }}>xall</span>
+          <span style={{ color: BRAND_DARK, fontSize: '1.25rem', marginLeft: '8px' }}>Owner Settlement</span>
         </Typography>
         <Button onClick={fetchPayments} startIcon={<Refresh />} variant="outlined" sx={{ borderRadius: 2, px: 3 }}>
           Refresh Data
@@ -562,7 +569,7 @@ export default function OwnerPayments() {
         </Table>
       </Paper>
 
-      {/* MODERN RECEIPT MODAL - Clean & Professional Design with Full Content */}
+      {/* MODERN RECEIPT MODAL - Brand Colors Design */}
       <Modal
         open={openReceiptModal}
         onClose={() => setOpenReceiptModal(false)}
@@ -581,31 +588,27 @@ export default function OwnerPayments() {
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
             outline: 'none'
           }}>
-            {/* Receipt Content - Modern Card Style */}
+            {/* Receipt Content - Modern Card Style with Brand Colors */}
             <Box ref={receiptRef} sx={{ p: 4, bgcolor: '#ffffff' }}>
-              {/* Header with gradient accent */}
+              {/* Header with Brand Colors */}
               <Box sx={{ textAlign: 'center', mb: 4 }}>
-                <Typography variant="h3" fontWeight="800" sx={{ 
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  letterSpacing: 2
-                }}>
-                  NEXPALL
+                <Typography variant="h2" fontWeight="800" sx={{ letterSpacing: 2 }}>
+                  <span style={{ color: BRAND_BLUE }}>Nep</span>
+                  <span style={{ color: BRAND_GREEN }}>xall</span>
                 </Typography>
                 <Typography variant="body2" color="textSecondary">Next Places for Living</Typography>
               </Box>
 
               {/* Status Badge */}
               <Box sx={{ 
-                bgcolor: '#e8f5e9', 
-                borderRadius: 3, 
-                p: 2, 
+                background: `linear-gradient(135deg, ${BRAND_GREEN}10 0%, ${BRAND_GREEN}08 100%)`,
+                borderRadius: 100,
+                p: 1.5,
                 textAlign: 'center',
                 mb: 4,
-                border: '1px solid #c8e6c9'
+                border: `1px solid ${BRAND_GREEN}30`
               }}>
-                <Typography variant="subtitle1" fontWeight="bold" color="success.main" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                <Typography variant="subtitle1" fontWeight="bold" sx={{ color: BRAND_GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                   <CheckCircle fontSize="small" /> PAYMENT SUCCESSFUL
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
@@ -614,53 +617,53 @@ export default function OwnerPayments() {
               </Box>
 
               {/* Info Cards Grid */}
-              <Grid container spacing={2.5} sx={{ mb: 4 }}>
+              <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={6}>
-                  <Card variant="outlined" sx={{ borderRadius: 3, bgcolor: '#fafafa', borderColor: '#e8e8e8' }}>
+                  <Card variant="outlined" sx={{ borderRadius: 3, bgcolor: BRAND_LIGHT_BG, borderColor: '#e2e8f0' }}>
                     <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                       <Box display="flex" alignItems="center" gap={1} mb={1}>
-                        <Person fontSize="small" color="primary" />
-                        <Typography variant="caption" color="textSecondary">Tenant</Typography>
+                        <Person fontSize="small" sx={{ color: BRAND_BLUE }} />
+                        <Typography variant="caption" sx={{ color: BRAND_GRAY }}>Tenant</Typography>
                       </Box>
-                      <Typography variant="body2" fontWeight="500">{receiptData?.tenant_phone || '+91 XXXXX XXXXX'}</Typography>
+                      <Typography variant="body2" fontWeight="600" sx={{ color: BRAND_DARK }}>{receiptData?.tenant_phone || '+91 XXXXX XXXXX'}</Typography>
                     </CardContent>
                   </Card>
                 </Grid>
                 <Grid item xs={6}>
-                  <Card variant="outlined" sx={{ borderRadius: 3, bgcolor: '#fafafa', borderColor: '#e8e8e8' }}>
+                  <Card variant="outlined" sx={{ borderRadius: 3, bgcolor: BRAND_LIGHT_BG, borderColor: '#e2e8f0' }}>
                     <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                       <Box display="flex" alignItems="center" gap={1} mb={1}>
-                        <Home fontSize="small" color="primary" />
-                        <Typography variant="caption" color="textSecondary">Property</Typography>
+                        <Home fontSize="small" sx={{ color: BRAND_BLUE }} />
+                        <Typography variant="caption" sx={{ color: BRAND_GRAY }}>Property</Typography>
                       </Box>
-                      <Typography variant="body2" fontWeight="500">{receiptData?.pg_name || 'Lakshmi PG'}</Typography>
-                      <Typography variant="caption" color="textSecondary">{receiptData?.room_type || 'Double Sharing'}</Typography>
+                      <Typography variant="body2" fontWeight="600" sx={{ color: BRAND_DARK }}>{receiptData?.pg_name || 'Lakshmi PG'}</Typography>
+                      <Typography variant="caption" sx={{ color: BRAND_GRAY }}>{receiptData?.room_type || 'Double Sharing'}</Typography>
                     </CardContent>
                   </Card>
                 </Grid>
               </Grid>
 
-              <Grid container spacing={2.5} sx={{ mb: 4 }}>
+              <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={6}>
-                  <Card variant="outlined" sx={{ borderRadius: 3, bgcolor: '#fafafa', borderColor: '#e8e8e8' }}>
+                  <Card variant="outlined" sx={{ borderRadius: 3, bgcolor: BRAND_LIGHT_BG, borderColor: '#e2e8f0' }}>
                     <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                       <Box display="flex" alignItems="center" gap={1} mb={1}>
-                        <AccountBalance fontSize="small" color="primary" />
-                        <Typography variant="caption" color="textSecondary">Bank</Typography>
+                        <AccountBalance fontSize="small" sx={{ color: BRAND_BLUE }} />
+                        <Typography variant="caption" sx={{ color: BRAND_GRAY }}>Bank</Typography>
                       </Box>
-                      <Typography variant="body2" fontWeight="500">{receiptData?.account_holder_name || 'basava'}</Typography>
-                      <Typography variant="caption" color="textSecondary">{receiptData?.bank_name || 'karnata'}</Typography>
-                      <Typography variant="caption" display="block" color="textSecondary">A/C: {receiptData?.account_number ? 'XXXX' + receiptData.account_number.slice(-4) : 'XXXX6739'}</Typography>
-                      <Typography variant="caption" display="block" color="textSecondary">IFSC: {receiptData?.ifsc || 'SBIN0040410'}</Typography>
+                      <Typography variant="body2" fontWeight="500">Holder: {receiptData?.account_holder_name || 'basava'}</Typography>
+                      <Typography variant="caption" display="block">Bank: {receiptData?.bank_name || 'karnata'}</Typography>
+                      <Typography variant="caption" display="block">A/C: {receiptData?.account_number ? 'XXXX' + receiptData.account_number.slice(-4) : 'XXXX6739'}</Typography>
+                      <Typography variant="caption" display="block" sx={{ color: BRAND_GRAY }}>IFSC: {receiptData?.ifsc || 'SBIN0040410'}</Typography>
                     </CardContent>
                   </Card>
                 </Grid>
                 <Grid item xs={6}>
-                  <Card variant="outlined" sx={{ borderRadius: 3, bgcolor: '#fafafa', borderColor: '#e8e8e8' }}>
+                  <Card variant="outlined" sx={{ borderRadius: 3, bgcolor: BRAND_LIGHT_BG, borderColor: '#e2e8f0' }}>
                     <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                       <Box display="flex" alignItems="center" gap={1} mb={1.5}>
-                        <Payment fontSize="small" color="primary" />
-                        <Typography variant="caption" color="textSecondary">Payment Summary</Typography>
+                        <Payment fontSize="small" sx={{ color: BRAND_BLUE }} />
+                        <Typography variant="caption" sx={{ color: BRAND_GRAY }}>Payment Summary</Typography>
                       </Box>
                       <Box display="flex" justifyContent="space-between" mb={1}>
                         <Typography variant="caption">Rent</Typography>
@@ -681,7 +684,7 @@ export default function OwnerPayments() {
                       <Divider sx={{ my: 1.5 }} />
                       <Box display="flex" justifyContent="space-between">
                         <Typography variant="subtitle2" fontWeight="bold">TOTAL PAID</Typography>
-                        <Typography variant="subtitle2" fontWeight="bold" color="primary.main">₹{receiptData?.total_amount || '5249.00'}</Typography>
+                        <Typography variant="subtitle2" fontWeight="bold" sx={{ color: BRAND_BLUE }}>₹{receiptData?.total_amount || '5249.00'}</Typography>
                       </Box>
                     </CardContent>
                   </Card>
@@ -689,27 +692,35 @@ export default function OwnerPayments() {
               </Grid>
 
               {/* Settlement Status */}
-              <Box sx={{ bgcolor: '#f5f5f5', borderRadius: 3, p: 2.5, mb: 4 }}>
+              <Box sx={{ bgcolor: BRAND_LIGHT_BG, borderRadius: 3, p: 2.5, mb: 4 }}>
                 <Stack spacing={1.5}>
                   <Box display="flex" alignItems="center" gap={1.5}>
-                    <CheckCircle fontSize="small" color="success" />
-                    <Typography variant="body2">Settlement Completed</Typography>
+                    <Box sx={{ width: 22, height: 22, bgcolor: BRAND_GREEN, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <CheckCircle fontSize="small" sx={{ color: 'white', fontSize: 14 }} />
+                    </Box>
+                    <Typography variant="body2" sx={{ color: BRAND_DARK }}>Settlement Completed</Typography>
                   </Box>
                   <Box display="flex" alignItems="center" gap={1.5}>
-                    <CheckCircle fontSize="small" color="success" />
-                    <Typography variant="body2">Paid to Owner</Typography>
+                    <Box sx={{ width: 22, height: 22, bgcolor: BRAND_GREEN, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <CheckCircle fontSize="small" sx={{ color: 'white', fontSize: 14 }} />
+                    </Box>
+                    <Typography variant="body2" sx={{ color: BRAND_DARK }}>Paid to Owner</Typography>
                   </Box>
                   <Box display="flex" alignItems="center" gap={1.5}>
-                    <CheckCircle fontSize="small" color="success" />
-                    <Typography variant="body2">Digital Receipt</Typography>
+                    <Box sx={{ width: 22, height: 22, bgcolor: BRAND_GREEN, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <CheckCircle fontSize="small" sx={{ color: 'white', fontSize: 14 }} />
+                    </Box>
+                    <Typography variant="body2" sx={{ color: BRAND_DARK }}>Digital Receipt</Typography>
                   </Box>
                 </Stack>
               </Box>
 
               {/* Footer */}
               <Box textAlign="center">
-                <Typography variant="body2" color="textSecondary">Thank you for using NEXPALL 🙏</Typography>
-                <Typography variant="caption" color="textSecondary">support@nexpall.com</Typography>
+                <Typography variant="body2" sx={{ color: BRAND_GRAY }}>
+                  Thank you for choosing <span style={{ color: BRAND_BLUE, fontWeight: 600 }}>Nep</span><span style={{ color: BRAND_GREEN, fontWeight: 600 }}>xall</span> 🙏
+                </Typography>
+                <Typography variant="caption" sx={{ color: BRAND_GRAY }}>support@nexpall.com</Typography>
               </Box>
             </Box>
 
@@ -728,7 +739,7 @@ export default function OwnerPayments() {
                 variant="contained" 
                 onClick={downloadPDF}
                 startIcon={<Download />}
-                sx={{ borderRadius: 2, py: 1 }}
+                sx={{ borderRadius: 2, py: 1, bgcolor: BRAND_BLUE, '&:hover': { bgcolor: '#1d4ed8' } }}
               >
                 Download PDF
               </Button>
@@ -765,8 +776,9 @@ export default function OwnerPayments() {
                       <ArrowBack />
                     </IconButton>
                   )}
-                  <Typography variant="h6" fontWeight="bold" sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                    Digital Signature Portal
+                  <Typography variant="h6" fontWeight="bold">
+                    <span style={{ color: BRAND_BLUE }}>Digital</span>
+                    <span style={{ color: BRAND_GREEN }}> Signature Portal</span>
                   </Typography>
                 </Box>
                 <Chip icon={<Security />} label={`Step ${step} / 3`} color="primary" variant="outlined" />
@@ -793,7 +805,7 @@ export default function OwnerPayments() {
                     '&::-webkit-scrollbar': { width: '6px' },
                     '&::-webkit-scrollbar-thumb': { backgroundColor: '#ccc', borderRadius: '10px' }
                   }}>
-                    <Typography variant="subtitle2" fontWeight="bold" color="primary" gutterBottom>PART A: GENERAL DECLARATIONS</Typography>
+                    <Typography variant="subtitle2" fontWeight="bold" sx={{ color: BRAND_BLUE }} gutterBottom>PART A: GENERAL DECLARATIONS</Typography>
                     <Typography variant="caption" component="div" sx={{ mb: 2, lineHeight: 1.6, color: 'text.secondary' }}>
                         1. I have understood all terms and conditions.<br/>
                         2. I confirm details are true and correct.<br/>
@@ -808,7 +820,7 @@ export default function OwnerPayments() {
 
                     <Divider sx={{ my: 2 }} />
 
-                    <Typography variant="subtitle2" fontWeight="bold" color="warning.dark" gutterBottom>PART B: OWNER LEGAL RESPONSIBILITIES</Typography>
+                    <Typography variant="subtitle2" fontWeight="bold" sx={{ color: BRAND_GREEN }} gutterBottom>PART B: OWNER LEGAL RESPONSIBILITIES</Typography>
                     <Typography variant="caption" component="div" sx={{ mb: 2, lineHeight: 1.6, color: 'text.secondary' }}>
                         10. I am the lawful owner or authorized person.<br/>
                         11. Property is free from disputes.<br/>
@@ -847,7 +859,7 @@ export default function OwnerPayments() {
                 <Button 
                   fullWidth variant="contained" size="large" disabled={!agreed} 
                   onClick={() => setStep(2)}
-                  sx={{ py: 1.5, fontWeight: 'bold', borderRadius: 2 }}
+                  sx={{ py: 1.5, fontWeight: 'bold', borderRadius: 2, bgcolor: BRAND_BLUE, '&:hover': { bgcolor: '#1d4ed8' } }}
                 >
                   I Agree, Proceed to Verification
                 </Button>
@@ -857,7 +869,7 @@ export default function OwnerPayments() {
             {/* STEP 2: PHONE OTP */}
             {step === 2 && (
               <Box py={2} textAlign="center">
-                <VerifiedUser color="primary" sx={{ fontSize: 60, mb: 1 }} />
+                <VerifiedUser sx={{ fontSize: 60, color: BRAND_BLUE, mb: 1 }} />
                 <Typography variant="h6">Phone Authentication</Typography>
                 <Typography variant="body2" color="textSecondary" mb={3}>
                     Verify the mobile number for Booking #{selectedBooking?.booking_id}
@@ -872,7 +884,7 @@ export default function OwnerPayments() {
                 />
 
                 {!confirmObj ? (
-                  <Button fullWidth variant="contained" size="large" onClick={sendOtp} disabled={isSubmitting || mobile.length < 10} sx={{ borderRadius: 2 }}>
+                  <Button fullWidth variant="contained" size="large" onClick={sendOtp} disabled={isSubmitting || mobile.length < 10} sx={{ borderRadius: 2, bgcolor: BRAND_BLUE, '&:hover': { bgcolor: '#1d4ed8' } }}>
                     {isSubmitting ? <CircularProgress size={24} /> : "Request OTP"}
                   </Button>
                 ) : (
@@ -883,7 +895,7 @@ export default function OwnerPayments() {
                       sx={{ mb: 3 }}
                       inputProps={{ maxLength: 6 }}
                     />
-                    <Button fullWidth variant="contained" size="large" onClick={verifyOtp} disabled={isSubmitting || otp.length < 6} sx={{ borderRadius: 2 }}>
+                    <Button fullWidth variant="contained" size="large" onClick={verifyOtp} disabled={isSubmitting || otp.length < 6} sx={{ borderRadius: 2, bgcolor: BRAND_GREEN, '&:hover': { bgcolor: '#0d9488' } }}>
                         {isSubmitting ? <CircularProgress size={24} /> : "Verify & Continue"}
                     </Button>
                   </>
@@ -896,14 +908,14 @@ export default function OwnerPayments() {
             {step === 3 && (
               <Box py={1}>
                 <Box textAlign="center" mb={2}>
-                    <BorderColor color="primary" sx={{ fontSize: 40, mb: 1 }} />
+                    <BorderColor sx={{ fontSize: 40, color: BRAND_BLUE, mb: 1 }} />
                     <Typography variant="h6">Draw Your Signature</Typography>
                     <Typography variant="caption" color="textSecondary">
                       Please sign inside the box below.
                     </Typography>
                 </Box>
                 
-                <Box sx={{ border: "2px dashed #1976d2", borderRadius: 2, bgcolor: '#fdfdfd', overflow: 'hidden' }}>
+                <Box sx={{ border: `2px dashed ${BRAND_BLUE}`, borderRadius: 2, bgcolor: '#fdfdfd', overflow: 'hidden' }}>
                   <SignatureCanvas
                     ref={sigCanvas}
                     penColor="black"
@@ -918,7 +930,7 @@ export default function OwnerPayments() {
                   <Button variant="outlined" fullWidth onClick={() => sigCanvas.current.clear()} disabled={isSubmitting} sx={{ borderRadius: 2 }}>
                     Clear
                   </Button>
-                  <Button variant="contained" color="success" fullWidth onClick={handleSubmit} disabled={isSubmitting} sx={{ borderRadius: 2 }}>
+                  <Button variant="contained" color="success" fullWidth onClick={handleSubmit} disabled={isSubmitting} sx={{ borderRadius: 2, bgcolor: BRAND_GREEN, '&:hover': { bgcolor: '#0d9488' } }}>
                     {isSubmitting ? <CircularProgress size={24} color="inherit" /> : "Finalize & Sign Agreement"}
                   </Button>
                 </Box>
