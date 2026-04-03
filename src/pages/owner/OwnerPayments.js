@@ -76,7 +76,7 @@ export default function OwnerPayments() {
       const res = await axios.get(`${API}/receipt-details/${bookingId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setReceiptData(res.data);
+      setReceiptData(res.data.data);
       setOpenReceiptModal(true);
     } catch (err) {
       console.error(err);
