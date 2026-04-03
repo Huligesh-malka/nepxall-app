@@ -4,9 +4,12 @@ import SignatureCanvas from "react-signature-canvas";
 import {
   Container, Typography, Paper, Table, TableHead, TableRow, TableCell,
   TableBody, Chip, Box, CircularProgress, Button,
-  Modal, Fade, Checkbox, TextField, Backdrop, IconButton, Divider, Alert
+  Modal, Fade, Checkbox, TextField, Backdrop, IconButton, Divider, Alert, Stack
 } from "@mui/material";
-import { Refresh, ArrowBack, Gavel, Security, VerifiedUser, InfoOutlined, BorderColor } from "@mui/icons-material";
+import { 
+  Refresh, ArrowBack, Gavel, Security, VerifiedUser, 
+  InfoOutlined, BorderColor, ReceiptLong, Close, CheckCircle 
+} from "@mui/icons-material";
 
 import { auth } from "../../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
@@ -20,7 +23,9 @@ export default function OwnerPayments() {
 
   // Modal & Flow State
   const [openSignModal, setOpenSignModal] = useState(false);
+  const [openReceiptModal, setOpenReceiptModal] = useState(false); // NEW
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [receiptData, setReceiptData] = useState(null); // NEW
   const [step, setStep] = useState(1);
   
   // Form State
@@ -62,6 +67,23 @@ export default function OwnerPayments() {
       alert("Failed to fetch payments ❌");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // NEW: Fetch Receipt Details
+  const handleViewReceipt = async (bookingId) => {
+    try {
+      setIsSubmitting(true);
+      const res = await axios.get(`${API}/receipt-details/${bookingId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setReceiptData(res.data);
+      setOpenReceiptModal(true);
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Error fetching receipt ❌");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -175,7 +197,6 @@ export default function OwnerPayments() {
     }
   };
 
-  // Helper to color-code room/sharing types
   const getSharingColor = (type) => {
     if (!type) return "default";
     const t = type.toLowerCase();
@@ -202,7 +223,6 @@ export default function OwnerPayments() {
               <TableCell><b>Booking ID</b></TableCell>
               <TableCell><b>Tenant Name</b></TableCell>
               <TableCell><b>Amount</b></TableCell>
-              {/* NEW: Sharing Column Header */}
               <TableCell align="center"><b>Sharing</b></TableCell>
               <TableCell align="center"><b>Agreement Status</b></TableCell>
               <TableCell align="center"><b>Payment Status</b></TableCell>
@@ -221,7 +241,6 @@ export default function OwnerPayments() {
                     <Typography fontWeight="bold">₹{item.owner_amount}</Typography>
                   </TableCell>
 
-                  {/* NEW: Sharing Column Body */}
                   <TableCell align="center">
                     <Chip 
                       label={item.room_type || "N/A"} 
@@ -250,41 +269,129 @@ export default function OwnerPayments() {
                   </TableCell>
 
                   <TableCell align="center">
-  {item.owner_settlement === "DONE" ? (
-    <>
-      <Chip
-        label="✅ Paid"
-        color="success"
-        sx={{ fontWeight: "bold", mb: 1 }}
-      />
-
-      <br />
-
-      {/* 🔥 ADD THIS BUTTON */}
-      <Button
-        size="small"
-        variant="outlined"
-        onClick={() =>
-          window.open(`${API}/receipt/${item.booking_id}`, "_blank")
-        }
-      >
-        📄 Receipt
-      </Button>
-    </>
-  ) : (
-    <Chip
-      label="⏳ Pending"
-      color="warning"
-      sx={{ fontWeight: "bold" }}
-    />
-  )}
-</TableCell>
+                    {item.owner_settlement === "DONE" ? (
+                      <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                        <Chip
+                          label="✅ Paid"
+                          color="success"
+                          sx={{ fontWeight: "bold" }}
+                        />
+                        <IconButton 
+                          color="primary" 
+                          size="small" 
+                          onClick={() => handleViewReceipt(item.booking_id)}
+                          title="View Receipt"
+                        >
+                          <ReceiptLong />
+                        </IconButton>
+                      </Stack>
+                    ) : (
+                      <Chip
+                        label="⏳ Pending"
+                        color="warning"
+                        sx={{ fontWeight: "bold" }}
+                      />
+                    )}
+                  </TableCell>
                 </TableRow>
               );
             })}
           </TableBody>
         </Table>
       </Paper>
+
+      {/* --- RENT RECEIPT MODAL --- */}
+      <Modal
+        open={openReceiptModal}
+        onClose={() => setOpenReceiptModal(false)}
+        closeAfterTransition
+        slots={{ backdrop: Backdrop }}
+        slotProps={{ backdrop: { timeout: 500 } }}
+      >
+        <Fade in={openReceiptModal}>
+          <Box sx={{
+            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            width: { xs: '95%', sm: 450 }, bgcolor: 'background.paper', borderRadius: 3, boxShadow: 24, p: 0, overflow: 'hidden'
+          }}>
+            {/* Receipt Header */}
+            <Box sx={{ bgcolor: '#1976d2', p: 2, color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="h6" fontWeight="bold">NEPXALL - RENT RECEIPT</Typography>
+              <IconButton onClick={() => setOpenReceiptModal(false)} size="small" sx={{ color: 'white' }}>
+                <Close />
+              </IconButton>
+            </Box>
+
+            <Box sx={{ p: 3 }}>
+              <Box display="flex" justifyContent="space-between" mb={2}>
+                <Box>
+                  <Typography variant="caption" color="textSecondary">Order ID</Typography>
+                  <Typography variant="body2" fontWeight="bold">#{receiptData?.order_id}</Typography>
+                </Box>
+                <Box textAlign="right">
+                  <Typography variant="caption" color="textSecondary">Date</Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    {receiptData?.verified_date ? new Date(receiptData.verified_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : 'N/A'}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Chip icon={<CheckCircle sx={{ color: 'white !important' }} />} label="Status: Paid ✅" color="success" sx={{ mb: 3, width: '100%', fontWeight: 'bold' }} />
+
+              <Divider sx={{ mb: 2 }} />
+
+              {/* Tenant & Property */}
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid item xs={6}>
+                  <Typography variant="subtitle2" color="primary" fontWeight="bold">👤 Tenant Details</Typography>
+                  <Typography variant="body2"><b>Name:</b> {receiptData?.tenant_name}</Typography>
+                  <Typography variant="body2"><b>Mobile:</b> {receiptData?.tenant_phone}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="subtitle2" color="primary" fontWeight="bold">🏠 Property Details</Typography>
+                  <Typography variant="body2"><b>PG:</b> {receiptData?.pg_name}</Typography>
+                  <Typography variant="body2"><b>Room:</b> {receiptData?.room_no} ({receiptData?.room_type})</Typography>
+                </Grid>
+              </Grid>
+
+              <Box sx={{ bgcolor: '#f5f5f5', p: 2, borderRadius: 2 }}>
+                <Typography variant="subtitle2" color="primary" fontWeight="bold" gutterBottom>💰 Payment Breakdown</Typography>
+                <Box display="flex" justifyContent="space-between" mb={0.5}>
+                  <Typography variant="body2">Rent Amount</Typography>
+                  <Typography variant="body2">₹{receiptData?.rent_amount}</Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between" mb={0.5}>
+                  <Typography variant="body2">Security Deposit</Typography>
+                  <Typography variant="body2">₹{receiptData?.security_deposit}</Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between" mb={1}>
+                  <Typography variant="body2">Maintenance</Typography>
+                  <Typography variant="body2">₹{receiptData?.maintenance_amount}</Typography>
+                </Box>
+                <Divider sx={{ my: 1 }} />
+                <Box display="flex" justifyContent="space-between">
+                  <Typography variant="subtitle1" fontWeight="bold">Total Paid</Typography>
+                  <Typography variant="subtitle1" fontWeight="bold" color="primary">₹{receiptData?.total_amount}</Typography>
+                </Box>
+              </Box>
+
+              <Box mt={3} textAlign="center">
+                <Typography variant="caption" color="textSecondary" display="block">✔ Verified by Admin</Typography>
+                <Typography variant="caption" color="textSecondary">✔ Digitally generated receipt</Typography>
+              </Box>
+              
+              <Button 
+                fullWidth 
+                variant="outlined" 
+                sx={{ mt: 2 }} 
+                onClick={() => window.print()}
+                startIcon={<ReceiptLong />}
+              >
+                Print Receipt
+              </Button>
+            </Box>
+          </Box>
+        </Fade>
+      </Modal>
 
       {/* MULTI-STEP SIGNING MODAL */}
       <Modal 
