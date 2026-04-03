@@ -217,15 +217,25 @@ export default function OwnerPayments() {
   try {
     const element = receiptRef.current;
 
-    const canvas = await html2canvas(element);
+    const canvas = await html2canvas(element, {
+      scale: 3,              // 🔥 VERY IMPORTANT (HD QUALITY)
+      useCORS: true,
+      logging: false,
+      scrollY: -window.scrollY
+    });
+
     const imgData = canvas.toDataURL("image/png");
 
     const pdf = new jsPDF("p", "mm", "a4");
-    const imgWidth = 190;
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const imgWidth = pageWidth - 20;
+
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight);
-    pdf.save("receipt.pdf");
+    pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight, undefined, "FAST");
+
+    pdf.save(`receipt-${receiptData?.order_id || "nexpall"}.pdf`);
   } catch (err) {
     console.error("PDF Error:", err);
     alert("Failed to generate PDF ❌");
@@ -347,8 +357,6 @@ export default function OwnerPayments() {
             <Box sx={{ p: 3 }} ref={receiptRef}>
               <Box display="flex" justifyContent="space-between" mb={2}>
                 <Box>
-                  <Typography variant="caption" color="textSecondary">Order ID</Typography>
-                  <Typography variant="body2" fontWeight="bold">#{receiptData?.order_id}</Typography>
                 </Box>
                 <Box textAlign="right">
                   <Typography variant="caption" color="textSecondary">Date</Typography>
