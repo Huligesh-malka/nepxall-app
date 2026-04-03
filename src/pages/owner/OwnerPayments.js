@@ -192,18 +192,22 @@ export default function OwnerPayments() {
               <TableCell><b>Tenant Name</b></TableCell>
               <TableCell><b>Amount</b></TableCell>
               <TableCell align="center"><b>Agreement Status</b></TableCell>
+              {/* STEP 1: New Column Header */}
+              <TableCell align="center"><b>Payment Status</b></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {data.length === 0 ? (
-              <TableRow><TableCell colSpan={4} align="center">No active settlements found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} align="center">No active settlements found.</TableCell></TableRow>
             ) : data.map(item => {
               const isSigned = !!item.signed_pdf;
               return (
                 <TableRow key={item.booking_id} hover>
                   <TableCell>#{item.booking_id}</TableCell>
                   <TableCell>{item.tenant_name}</TableCell>
-                  <TableCell fontWeight="bold">₹{item.owner_amount}</TableCell>
+                  <TableCell>
+                    <Typography fontWeight="bold">₹{item.owner_amount}</Typography>
+                  </TableCell>
                   <TableCell align="center">
                     {!item.final_pdf ? (
                       <Chip label="Processing PDF..." variant="outlined" />
@@ -218,6 +222,23 @@ export default function OwnerPayments() {
                           <Button variant="contained" color="warning" size="small" onClick={() => handleOpenSign(item)}>SIGN NOW</Button>
                         )}
                       </Box>
+                    )}
+                  </TableCell>
+
+                  {/* STEP 2: New Payment Status Column */}
+                  <TableCell align="center">
+                    {item.owner_settlement === "DONE" ? (
+                      <Chip
+                        label="✅ Paid"
+                        color="success"
+                        sx={{ fontWeight: "bold" }}
+                      />
+                    ) : (
+                      <Chip
+                        label="⏳ Pending"
+                        color="warning"
+                        sx={{ fontWeight: "bold" }}
+                      />
                     )}
                   </TableCell>
                 </TableRow>
@@ -273,7 +294,6 @@ export default function OwnerPayments() {
                     '&::-webkit-scrollbar': { width: '6px' },
                     '&::-webkit-scrollbar-thumb': { backgroundColor: '#ccc', borderRadius: '10px' }
                   }}>
-                    {/* 1-9: General Declarations */}
                     <Typography variant="subtitle2" fontWeight="bold" color="primary" gutterBottom>PART A: GENERAL DECLARATIONS</Typography>
                     <Typography variant="caption" component="div" sx={{ mb: 2, lineHeight: 1.6, color: 'text.secondary' }}>
                         1. I have carefully read and understood all the terms and conditions of this rental agreement.<br/>
@@ -289,7 +309,6 @@ export default function OwnerPayments() {
 
                     <Divider sx={{ my: 2 }} />
 
-                    {/* 10-18: Owner Responsibilities */}
                     <Typography variant="subtitle2" fontWeight="bold" color="warning.dark" gutterBottom>PART B: OWNER LEGAL RESPONSIBILITIES</Typography>
                     <Typography variant="caption" component="div" sx={{ mb: 2, lineHeight: 1.6, color: 'text.secondary' }}>
                         10. <b>Ownership Liability:</b> I confirm that I am the lawful owner or legally authorized person to rent this property. Any ownership disputes are solely my responsibility.<br/>
@@ -305,7 +324,6 @@ export default function OwnerPayments() {
 
                     <Divider sx={{ my: 2 }} />
 
-                    {/* 19-25: Final Consent & Platform Role */}
                     <Typography variant="subtitle2" fontWeight="bold" color="error.main" gutterBottom>PART C: BINDING CONSENT & PLATFORM ROLE</Typography>
                     <Typography variant="caption" component="div" sx={{ mb: 2, lineHeight: 1.6, color: 'text.secondary' }}>
                         19. <b>No Illegal Use:</b> I shall not knowingly allow the property to be used for illegal activities.<br/>
