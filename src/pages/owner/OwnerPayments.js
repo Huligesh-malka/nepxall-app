@@ -66,23 +66,10 @@ export default function OwnerPayments() {
     }
   };
 
-  // ─── Direct PDF Download & Update Payment Status ───────────────────────────────────────
+  // ─── Direct PDF Download (no modal) ───────────────────────────────────────
   const handleViewReceipt = async (bookingId) => {
     try {
       setDownloadingId(bookingId);
-      
-      // First, update payment status on the server
-      const updateRes = await axios.post(`${API}/update-payment-status`, 
-        { booking_id: bookingId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      if (!updateRes.data.success) {
-        alert("Failed to update payment status");
-        return;
-      }
-      
-      // Then fetch receipt details
       const res = await axios.get(`${API}/receipt-details/${bookingId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -94,13 +81,8 @@ export default function OwnerPayments() {
 
       const d = res.data.data;
       generateReceiptPDF(d);
-      
-      // Refresh the payment list to show updated status
-      await fetchPayments();
-      
     } catch (err) {
-      console.error("Receipt error:", err);
-      alert(err.response?.data?.message || "Receipt data not found on server.");
+      alert("Receipt data not found on server.");
     } finally {
       setDownloadingId(null);
     }
@@ -257,7 +239,7 @@ export default function OwnerPayments() {
       text(`Order ID: ${d.order_id}`, pageW / 2, 285, { align: "center" });
     }
 
-    pdf.save(`receipt-${d.order_id || d.booking_id || "nexpall"}.pdf`);
+    pdf.save(`receipt-${d.order_id || bookingId || "nexpall"}.pdf`);
   };
   // ──────────────────────────────────────────────────────────────────────────
 
