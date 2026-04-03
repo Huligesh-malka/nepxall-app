@@ -49,13 +49,18 @@ const AdminRefunds = () => {
 
       {refunds.length === 0 && <p>No refund requests</p>}
 
-      {/* HORIZONTAL WRAPPER */}
+      {/* ✅ HORIZONTAL WRAPPER APPLIED HERE */}
       <div style={horizontalWrapper}>
         {refunds.map((r) => (
           <div key={r.id} style={card}>
             <p><b>👤 User:</b> {r.name}</p>
             <p><b>📞 Phone:</b> {r.phone}</p>
             <p><b>🏠 PG:</b> {r.pg_name}</p>
+
+            {/* ✅ NEW IDs ADDED HERE */}
+            <p><b>🆔 Booking ID:</b> {r.booking_id}</p>
+            <p><b>📦 Order ID:</b> {r.order_id || "N/A"}</p>
+
             <p><b>💰 Amount:</b> ₹{r.amount}</p>
             <p><b>🏦 UPI ID:</b> {r.upi_id}</p>
             <p><b>📝 Reason:</b> {r.reason}</p>
@@ -95,15 +100,16 @@ export default AdminRefunds;
 /* ===== STYLES ===== */
 
 const horizontalWrapper = {
-  display: "flex",          // Aligns children in a row
-  flexDirection: "row",     // Ensures straight line
-  overflowX: "auto",        // Allows scrolling if cards exceed screen width
-  gap: "20px",              // Space between cards
-  paddingBottom: "15px",    // Space for scrollbar
+  display: "flex",          
+  flexDirection: "row",     
+  overflowX: "auto",        
+  gap: "20px",              
+  paddingBottom: "15px",    
+  alignItems: "flex-start", // Keeps cards aligned at the top
 };
 
 const card = {
-  flex: "0 0 300px",        // Prevents cards from shrinking; sets fixed width of 300px
+  flex: "0 0 320px",        // Slightly wider to accommodate IDs
   border: "1px solid #e5e7eb",
   padding: 15,
   borderRadius: 10,
@@ -145,6 +151,7 @@ const statusStyle = (status) => ({
   padding: "4px 8px",
   borderRadius: 6,
   fontWeight: "bold",
+  textTransform: "capitalize",
   background:
     status === "pending"
       ? "#facc15"
