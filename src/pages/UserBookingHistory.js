@@ -502,19 +502,26 @@ const UserBookingHistory = () => {
                   </div>
 
                   {/* Price Breakdown */}
-                  <div style={styles.priceSection}>
-                    <div style={styles.priceRow}>
-                      <span>Rent</span>
-                      <span>₹{rent.toLocaleString()}</span>
-                    </div>
-                    <div style={styles.priceRow}>
-                      <span>Security Deposit</span>
-                      <span>₹{deposit.toLocaleString()}</span>
-                    </div>
-                    <div style={styles.priceRow}>
-                      <span>Maintenance</span>
-                      <span>₹{maintenance.toLocaleString()}</span>
-                    </div>
+                  {rent > 0 && (
+  <div style={styles.priceRow}>
+    <span>Rent</span>
+    <span>₹{rent.toLocaleString()}</span>
+  </div>
+)}
+
+{deposit > 0 && (
+  <div style={styles.priceRow}>
+    <span>Security Deposit</span>
+    <span>₹{deposit.toLocaleString()}</span>
+  </div>
+)}
+
+{maintenance > 0 && (
+  <div style={styles.priceRow}>
+    <span>Maintenance</span>
+    <span>₹{maintenance.toLocaleString()}</span>
+  </div>
+)}
                     <div style={styles.totalPrice}>
                       <span>Total Amount</span>
                       <span>₹{total.toLocaleString()}</span>
