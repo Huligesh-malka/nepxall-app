@@ -435,15 +435,21 @@ export default function OwnerPayments() {
     <Typography variant="body2">₹{receiptData?.rent_amount}</Typography>
   </Box>
 
+  {/* ✅ Show only if deposit exists */}
+{receiptData?.security_deposit > 0 && (
   <Box display="flex" justifyContent="space-between" mb={0.5}>
     <Typography variant="body2">Security Deposit</Typography>
-    <Typography variant="body2">₹{receiptData?.security_deposit}</Typography>
+    <Typography variant="body2">₹{receiptData.security_deposit}</Typography>
   </Box>
+)}
 
+{/* ✅ Show only if maintenance exists */}
+{receiptData?.maintenance_amount > 0 && (
   <Box display="flex" justifyContent="space-between" mb={1}>
     <Typography variant="body2">Maintenance</Typography>
-    <Typography variant="body2">₹{receiptData?.maintenance_amount}</Typography>
+    <Typography variant="body2">₹{receiptData.maintenance_amount}</Typography>
   </Box>
+)}
 
   <Divider sx={{ my: 1 }} />
 
