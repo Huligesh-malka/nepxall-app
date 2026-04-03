@@ -74,26 +74,24 @@ export default function OwnerPayments() {
   };
 
   const handleViewReceipt = async (bookingId) => {
-  try {
-    setIsSubmitting(true);
-
-    const res = await axios.get(`${API}/receipt-details/${bookingId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (res.data.success && res.data.data) {
-      setReceiptData(res.data.data);   // ✅ FIXED
-      setOpenReceiptModal(true);
-    } else {
-      alert("No receipt data found");
+    try {
+      setIsSubmitting(true);
+      const res = await axios.get(`${API}/receipt-details/${bookingId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success && res.data.data) {
+        setReceiptData(res.data.data);
+        setOpenReceiptModal(true);
+      } else {
+        alert("No receipt data found");
+      }
+    } catch (err) {
+      alert("Receipt data not found on server.");
+    } finally {
+      setIsSubmitting(false);
     }
+  };
 
-  } catch (err) {
-    alert("Receipt data not found on server.");
-  } finally {
-    setIsSubmitting(false);
-  }
-};
   const handleViewPdf = async (bookingId, filePath) => {
     try {
       await axios.post(`${API}/agreements/viewed`, { booking_id: bookingId }, {
@@ -213,34 +211,29 @@ export default function OwnerPayments() {
     if (t.includes("bhk")) return "secondary";
     return "default";
   };
+
   const downloadPDF = async () => {
-  try {
-    const element = receiptRef.current;
+    try {
+      const element = receiptRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 3,
+        useCORS: true,
+        logging: false,
+        scrollY: -window.scrollY
+      });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const imgWidth = pageWidth - 20;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight, undefined, "FAST");
+      pdf.save(`receipt-${receiptData?.order_id || "nexpall"}.pdf`);
+    } catch (err) {
+      console.error("PDF Error:", err);
+      alert("Failed to generate PDF ❌");
+    }
+  };
 
-    const canvas = await html2canvas(element, {
-      scale: 3,              // 🔥 VERY IMPORTANT (HD QUALITY)
-      useCORS: true,
-      logging: false,
-      scrollY: -window.scrollY
-    });
-
-    const imgData = canvas.toDataURL("image/png");
-
-    const pdf = new jsPDF("p", "mm", "a4");
-
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const imgWidth = pageWidth - 20;
-
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight, undefined, "FAST");
-
-    pdf.save(`receipt-${receiptData?.order_id || "nexpall"}.pdf`);
-  } catch (err) {
-    console.error("PDF Error:", err);
-    alert("Failed to generate PDF ❌");
-  }
-};
   if (loading) return <Box p={5} textAlign="center"><CircularProgress /></Box>;
 
   return (
@@ -334,7 +327,7 @@ export default function OwnerPayments() {
         </Table>
       </Paper>
 
-      {/* --- RENT RECEIPT MODAL --- */}
+      {/* MODERN RENT RECEIPT MODAL - MATCHING YOUR DESIGN */}
       <Modal
         open={openReceiptModal}
         onClose={() => setOpenReceiptModal(false)}
@@ -345,88 +338,69 @@ export default function OwnerPayments() {
         <Fade in={openReceiptModal}>
           <Box sx={{
             position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-            width: { xs: '95%', sm: 500 }, bgcolor: 'background.paper', borderRadius: 2, boxShadow: 24, p: 0, overflow: 'hidden'
+            width: { xs: '95%', sm: 500, md: 520 }, bgcolor: 'background.paper', borderRadius: 3, boxShadow: 24, p: 0, overflow: 'hidden'
           }}>
             <Box sx={{ p: 3, backgroundColor: 'white' }} ref={receiptRef}>
-              {/* Header Section */}
+              {/* Header Section with ASCII style border effect */}
               <Box textAlign="center" mb={2}>
-                <Typography variant="h5" fontWeight="bold" letterSpacing={2}>NEXPALL</Typography>
-                <Typography variant="caption" color="textSecondary">Next Places for Living</Typography>
+                <Typography variant="h4" fontWeight="bold" letterSpacing={2} sx={{ fontFamily: 'monospace' }}>NEXPALL</Typography>
+                <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: -0.5 }}>Next Places for Living</Typography>
               </Box>
 
-              <Divider sx={{ my: 1 }} />
-
-              <Box textAlign="center" my={1}>
-                <Typography variant="h6" fontWeight="bold" letterSpacing={1}>RENT RECEIPT</Typography>
-                <Typography variant="caption" color="textSecondary">Receipt No: {receiptData?.receipt_no || 'NXP-2026-000145'}</Typography>
+              <Box sx={{ borderTop: '2px solid #e0e0e0', borderBottom: '2px solid #e0e0e0', py: 1, mb: 2, textAlign: 'center' }}>
+                <Typography variant="body2" fontWeight="bold" color="success.main">✅ PAYMENT SUCCESSFUL</Typography>
+                <Typography variant="caption" color="textSecondary">
+                  {receiptData?.verified_date ? new Date(receiptData.verified_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : '03 April 2026'}
+                </Typography>
               </Box>
 
-              <Divider sx={{ my: 1 }} />
+              {/* Tenant Section */}
+              <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 0.5 }}>👤 Tenant</Typography>
+              <Typography variant="body2" sx={{ ml: 1, mb: 1 }}>Mobile: {receiptData?.tenant_phone || '+91 XXXXX XXXXX'}</Typography>
 
-              {/* Order Info */}
-              <Box display="flex" justifyContent="space-between" mt={1}>
-                <Typography variant="body2"><b>Order ID</b> : {receiptData?.order_id || 'ORD-98237465'}</Typography>
-                <Typography variant="body2"><b>Date</b> : {receiptData?.verified_date ? new Date(receiptData.verified_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : '03 April 2026'}</Typography>
-              </Box>
-              <Box display="flex" justifyContent="space-between" mt={0.5}>
-                <Typography variant="body2"><b>Payment Status</b> : <b style={{ color: 'green' }}>SUCCESSFUL ✅</b></Typography>
-              </Box>
+              {/* Property Section */}
+              <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 0.5 }}>🏠 Property</Typography>
+              <Typography variant="body2" sx={{ ml: 1 }}>PG: {receiptData?.pg_name || 'Lakshmi PG'}</Typography>
+              <Typography variant="body2" sx={{ ml: 1, mb: 1 }}>Room: {receiptData?.room_type || 'Double Sharing'}</Typography>
 
-              <Divider sx={{ my: 1.5 }} />
+              {/* Owner Section */}
+              <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 0.5 }}>👨‍💼 Owner</Typography>
+              <Typography variant="body2" sx={{ ml: 1, mb: 1 }}>Owner ID: #{receiptData?.owner_id || '2'}</Typography>
 
-              {/* Tenant Details */}
-              <Typography variant="subtitle2" fontWeight="bold">👤 TENANT DETAILS</Typography>
-              <Typography variant="body2" ml={1}>Mobile Number : {receiptData?.tenant_phone || '+91 XXXXX XXXXX'}</Typography>
-
-              <Divider sx={{ my: 1.5 }} />
-
-              {/* Property Details */}
-              <Typography variant="subtitle2" fontWeight="bold">🏠 PROPERTY DETAILS</Typography>
-              <Typography variant="body2" ml={1}>PG Name : {receiptData?.pg_name || 'Lakshmi PG'}</Typography>
-              <Typography variant="body2" ml={1}>Room Type : {receiptData?.room_type || 'Double Sharing'}</Typography>
-              <Typography variant="body2" ml={1}>Room No : {receiptData?.room_no || '102'}</Typography>
+              {/* Bank Section */}
+              <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 0.5 }}>💳 Bank</Typography>
+              <Typography variant="body2" sx={{ ml: 1 }}>Holder: {receiptData?.account_holder_name || 'Balaraja'}</Typography>
+              <Typography variant="body2" sx={{ ml: 1 }}>Bank: {receiptData?.bank_name || 'SBI Bank'}</Typography>
+              <Typography variant="body2" sx={{ ml: 1 }}>A/C: {receiptData?.account_number || 'XXXX1285'}</Typography>
+              <Typography variant="body2" sx={{ ml: 1, mb: 1 }}>IFSC: {receiptData?.ifsc || 'SBIN0040410'}</Typography>
 
               <Divider sx={{ my: 1.5 }} />
 
-              {/* Owner Details */}
-              <Typography variant="subtitle2" fontWeight="bold">👨‍💼 OWNER DETAILS</Typography>
-              <Typography variant="body2" ml={1}>Owner ID : #{receiptData?.owner_id || '2'}</Typography>
-
-              <Divider sx={{ my: 1.5 }} />
-
-              {/* Bank Details */}
-              <Typography variant="subtitle2" fontWeight="bold">💳 BANK DETAILS</Typography>
-              <Typography variant="body2" ml={1}>Account Holder : {receiptData?.account_holder_name || 'Balaraja'}</Typography>
-              <Typography variant="body2" ml={1}>Bank Name : {receiptData?.bank_name || 'SBI Bank'}</Typography>
-              <Typography variant="body2" ml={1}>Account Number : {receiptData?.account_number || 'XXXX1285'}</Typography>
-              <Typography variant="body2" ml={1}>IFSC Code : {receiptData?.ifsc || 'SBIN0040410'}</Typography>
-
-              <Divider sx={{ my: 1.5 }} />
-
-              {/* Payment Breakdown */}
-              <Typography variant="subtitle2" fontWeight="bold">💰 PAYMENT BREAKDOWN</Typography>
-              <Box display="flex" justifyContent="space-between" ml={1}>
-                <Typography variant="body2">Rent Amount</Typography>
+              {/* Payment Summary */}
+              <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>💰 Payment Summary</Typography>
+              
+              <Box display="flex" justifyContent="space-between" sx={{ ml: 1 }}>
+                <Typography variant="body2">Rent</Typography>
                 <Typography variant="body2">₹{receiptData?.rent_amount || '3000.00'}</Typography>
               </Box>
               
-              {receiptData?.security_deposit > 0 && (
-                <Box display="flex" justifyContent="space-between" ml={1}>
+              {(receiptData?.security_deposit > 0 || (!receiptData && true)) && (
+                <Box display="flex" justifyContent="space-between" sx={{ ml: 1 }}>
                   <Typography variant="body2">Security Deposit</Typography>
-                  <Typography variant="body2">₹{receiptData.security_deposit}</Typography>
+                  <Typography variant="body2">₹{receiptData?.security_deposit || '2000.00'}</Typography>
                 </Box>
               )}
               
-              {receiptData?.maintenance_amount > 0 && (
-                <Box display="flex" justifyContent="space-between" ml={1}>
+              {(receiptData?.maintenance_amount > 0 || (!receiptData && true)) && (
+                <Box display="flex" justifyContent="space-between" sx={{ ml: 1 }}>
                   <Typography variant="body2">Maintenance</Typography>
-                  <Typography variant="body2">₹{receiptData.maintenance_amount}</Typography>
+                  <Typography variant="body2">₹{receiptData?.maintenance_amount || '100.00'}</Typography>
                 </Box>
               )}
 
-              <Divider sx={{ my: 1 }} />
+              <Box sx={{ borderTop: '1px dashed #ccc', my: 1 }} />
 
-              <Box display="flex" justifyContent="space-between" ml={1}>
+              <Box display="flex" justifyContent="space-between" sx={{ ml: 1 }}>
                 <Typography variant="subtitle1" fontWeight="bold">TOTAL PAID</Typography>
                 <Typography variant="subtitle1" fontWeight="bold">₹{receiptData?.total_amount || '3000.00'}</Typography>
               </Box>
@@ -434,28 +408,35 @@ export default function OwnerPayments() {
               <Divider sx={{ my: 1.5 }} />
 
               {/* Settlement Status */}
-              <Typography variant="subtitle2" fontWeight="bold">✅ SETTLEMENT STATUS</Typography>
-              <Typography variant="body2" ml={1}>✔ Settlement Completed</Typography>
-              <Typography variant="body2" ml={1}>✔ Paid to Owner by Admin</Typography>
-              <Typography variant="body2" ml={1}>✔ Digitally Generated Receipt</Typography>
+              <Typography variant="body2" sx={{ color: 'green', display: 'flex', alignItems: 'center', gap: 1 }}>
+                ✔ Settlement Completed
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'green', display: 'flex', alignItems: 'center', gap: 1 }}>
+                ✔ Paid to Owner
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'green', display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                ✔ Digital Receipt
+              </Typography>
 
               <Divider sx={{ my: 1.5 }} />
 
               {/* Footer */}
-              <Box textAlign="center" mt={1}>
-                <Typography variant="body2">🙏 Thank you for choosing NEXPALL</Typography>
-                <Typography variant="caption" color="textSecondary">This is a system-generated receipt. No physical signature required.</Typography>
-                <Typography variant="caption" display="block" color="textSecondary">Support: support@nexpall.com | Website: www.nexpall.com</Typography>
+              <Box textAlign="center">
+                <Typography variant="body2">Thank you for using NEXPALL 🙏</Typography>
+                <Typography variant="caption" color="textSecondary">support@nexpall.com</Typography>
               </Box>
+            </Box>
 
+            {/* Print Button outside receipt capture area for better UX */}
+            <Box sx={{ p: 2, bgcolor: '#f5f5f5', borderTop: '1px solid #e0e0e0' }}>
               <Button 
                 fullWidth 
-                variant="outlined" 
-                sx={{ mt: 2 }} 
+                variant="contained" 
                 onClick={downloadPDF}
                 startIcon={<ReceiptLong />}
+                sx={{ borderRadius: 2 }}
               >
-                Print Receipt
+                Download PDF Receipt
               </Button>
             </Box>
           </Box>
