@@ -11,7 +11,7 @@ import {
 import {
   Refresh, ArrowBack, Gavel, Security, VerifiedUser,
   InfoOutlined, BorderColor, ReceiptLong, Close, CheckCircle,
-  OpenInFull, PictureAsPdf, Download, Visibility
+  OpenInFull, PictureAsPdf
 } from "@mui/icons-material";
 
 import { auth } from "../../firebase";
@@ -27,7 +27,7 @@ export default function OwnerPayments() {
   // Modal & Flow State
   const [openSignModal, setOpenSignModal] = useState(false);
   const [openReceiptModal, setOpenReceiptModal] = useState(false);
-  const [openFullReceiptModal, setOpenFullReceiptModal] = useState(false);
+  const [openFullReceiptModal, setOpenFullReceiptModal] = useState(false); // NEW: full screen receipt view
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [receiptData, setReceiptData] = useState(null);
   const [step, setStep] = useState(1);
@@ -42,13 +42,14 @@ export default function OwnerPayments() {
 
   const sigCanvas = useRef(null);
   const receiptRef = useRef();
-  const fullReceiptRef = useRef();
+  const fullReceiptRef = useRef(); // NEW: ref for full screen receipt
   const token = localStorage.getItem("token");
 
   useEffect(() => {
     fetchPayments();
   }, []);
 
+  // Sync canvas size when step 3 opens
   useEffect(() => {
     if (step === 3 && openSignModal) {
       const timer = setTimeout(() => {
@@ -78,15 +79,18 @@ export default function OwnerPayments() {
   const handleViewReceipt = async (bookingId) => {
     try {
       setIsSubmitting(true);
+
       const res = await axios.get(`${API}/receipt-details/${bookingId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
       if (res.data.success && res.data.data) {
         setReceiptData(res.data.data);
         setOpenReceiptModal(true);
       } else {
         alert("No receipt data found");
       }
+
     } catch (err) {
       alert("Receipt data not found on server.");
     } finally {
@@ -119,18 +123,23 @@ export default function OwnerPayments() {
 
   const sendOtp = async () => {
     if (!/^[6-9]\d{9}$/.test(mobile)) return alert("Enter a valid 10-digit mobile number");
+
     try {
       setIsSubmitting(true);
+
       const verifyRes = await axios.post(`${API}/agreements/verify-owner`, {
         booking_id: selectedBooking.booking_id,
         mobile: mobile
       });
+
       if (!verifyRes.data.success) {
         return alert("Verification Failed: Mobile number mismatch ❌");
       }
+
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", { size: "invisible" });
       }
+
       const confirmation = await signInWithPhoneNumber(auth, `+91${mobile}`, window.recaptchaVerifier);
       setConfirmObj(confirmation);
       alert("OTP Sent Successfully ✅");
@@ -165,7 +174,9 @@ export default function OwnerPayments() {
     if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
       return alert("Please draw your signature in the box");
     }
+
     const signatureBase64 = sigCanvas.current.getCanvas().toDataURL("image/png");
+
     const deviceInfo = {
       userAgent: navigator.userAgent,
       platform: navigator.platform,
@@ -174,6 +185,7 @@ export default function OwnerPayments() {
       language: navigator.language,
       timestamp: new Date().toISOString()
     };
+
     try {
       setIsSubmitting(true);
       const res = await axios.post(`${API}/agreements/sign`, {
@@ -183,6 +195,7 @@ export default function OwnerPayments() {
         accepted_terms: true,
         owner_device_info: JSON.stringify(deviceInfo)
       });
+
       if (res.data.success) {
         alert("Agreement Signed & Finalized ✅");
         setOpenSignModal(false);
@@ -205,6 +218,7 @@ export default function OwnerPayments() {
     return "default";
   };
 
+  // NEW: Download PDF from any receipt element (normal or full screen)
   const downloadPDF = async (elementRef, filename = `receipt-${receiptData?.order_id || "nexpall"}.pdf`) => {
     try {
       const element = elementRef.current;
@@ -212,6 +226,8 @@ export default function OwnerPayments() {
         alert("Receipt element not found");
         return;
       }
+
+      // Show loading indicator
       const loadingOverlay = document.createElement('div');
       loadingOverlay.style.position = 'fixed';
       loadingOverlay.style.top = '0';
@@ -225,19 +241,24 @@ export default function OwnerPayments() {
       loadingOverlay.style.zIndex = '9999';
       loadingOverlay.innerHTML = '<div style="background:white; padding:20px; border-radius:8px;">Generating PDF... Please wait</div>';
       document.body.appendChild(loadingOverlay);
+
       const canvas = await html2canvas(element, {
-        scale: 3,
+        scale: 3,              // HD quality
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff'
       });
+
       const imgData = canvas.toDataURL("image/png");
+
       const pdf = new jsPDF("p", "mm", "a4");
       const pageWidth = pdf.internal.pageSize.getWidth();
       const imgWidth = pageWidth - 20;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
       pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight, undefined, "FAST");
       pdf.save(filename);
+
       document.body.removeChild(loadingOverlay);
     } catch (err) {
       console.error("PDF Error:", err);
@@ -247,270 +268,150 @@ export default function OwnerPayments() {
     }
   };
 
+  // NEW: Open full screen receipt modal
   const handleOpenFullReceipt = () => {
     setOpenFullReceiptModal(true);
   };
 
-  // Modern Receipt Content Component
+  // Receipt content component (reusable for both normal and full screen)
   const ReceiptContent = React.forwardRef(({ data, isFullScreen = false }, ref) => (
     <Box ref={ref} sx={{
-      bgcolor: '#ffffff',
-      p: isFullScreen ? 5 : 4,
-      borderRadius: isFullScreen ? 0 : 3,
+      bgcolor: 'white',
+      p: isFullScreen ? 4 : 3,
+      borderRadius: isFullScreen ? 0 : 2,
       maxWidth: '100%',
-      fontFamily: "'Inter', 'Segoe UI', 'Poppins', sans-serif"
+      fontFamily: 'Arial, sans-serif'
     }}>
-      {/* Premium Header with Gradient */}
-      <Box sx={{
-        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-        borderRadius: 3,
-        p: 3.5,
-        mb: 4,
-        color: 'white',
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
-        {/* Decorative elements */}
-        <Box sx={{
-          position: 'absolute',
-          top: -30,
-          right: -30,
-          width: 150,
-          height: 150,
-          background: 'rgba(255,255,255,0.05)',
-          borderRadius: '50%'
-        }} />
-        <Box sx={{
-          position: 'absolute',
-          bottom: -50,
-          left: -50,
-          width: 200,
-          height: 200,
-          background: 'rgba(255,255,255,0.03)',
-          borderRadius: '50%'
-        }} />
-        
-        <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2} sx={{ position: 'relative', zIndex: 1 }}>
-          <Box>
-            <Typography variant="h3" fontWeight="800" sx={{ 
-              letterSpacing: '-1px',
-              background: 'linear-gradient(135deg, #fff 0%, #a8c8ff 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              color: 'transparent'
-            }}>
-              NEPXALL
-            </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.8, mt: 0.5 }}>
-              Digital Rent Receipt • Authorized Document
-            </Typography>
-          </Box>
-          <Box textAlign="right">
-            <Typography variant="caption" sx={{ opacity: 0.7 }}>Issue Date</Typography>
-            <Typography variant="h6" fontWeight="bold">
-              {data?.verified_date ? new Date(data.verified_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : 'N/A'}
-            </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.7, display: 'block', mt: 0.5 }}>
-              Receipt ID: #{data?.order_id || 'N/A'}
-            </Typography>
-          </Box>
+      {/* Header with Logo placeholder */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Box>
+          <Typography variant={isFullScreen ? "h5" : "h6"} fontWeight="bold" color="#1976d2">
+            NEPXALL
+          </Typography>
+          <Typography variant="caption" color="textSecondary">
+            Digital Rent Receipt
+          </Typography>
         </Box>
-      </Box>
-
-      {/* Premium Status Badge */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-        <Box sx={{
-          background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-          borderRadius: 50,
-          px: 4,
-          py: 1.2,
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 1.5,
-          boxShadow: '0 8px 25px rgba(56,239,125,0.25)'
-        }}>
-          <CheckCircle sx={{ color: 'white', fontSize: 22 }} />
-          <Typography variant="body1" fontWeight="bold" sx={{ color: 'white', letterSpacing: '0.5px' }}>
-            PAYMENT VERIFIED & SETTLED
+        <Box textAlign="right">
+          <Typography variant="caption" color="textSecondary">Issue Date</Typography>
+          <Typography variant="body2" fontWeight="bold">
+            {data?.verified_date ? new Date(data.verified_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : 'N/A'}
           </Typography>
         </Box>
       </Box>
 
-      {/* Info Cards Grid */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {/* Tenant Card */}
+      {/* Status Chip */}
+      <Chip
+        icon={<CheckCircle sx={{ color: 'white !important' }} />}
+        label="Payment Verified & Settled ✅"
+        color="success"
+        sx={{ mb: 3, width: '100%', fontWeight: 'bold', py: 1 }}
+      />
+
+      <Divider sx={{ mb: 3 }} />
+
+      {/* Two Column Layout */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        {/* Tenant Details */}
         <Grid item xs={12} md={6}>
-          <Box sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            borderRadius: 3,
-            p: 3,
-            color: 'white',
-            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-            '&:hover': {
-              transform: 'translateY(-5px)',
-              boxShadow: '0 10px 30px rgba(102,126,234,0.3)'
-            }
-          }}>
-            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box sx={{ fontSize: 28 }}>👤</Box> Tenant Details
+          <Paper variant="outlined" sx={{ p: 2, bgcolor: '#f8f9fa' }}>
+            <Typography variant="subtitle2" color="primary" fontWeight="bold" gutterBottom>
+              👤 Tenant Details
             </Typography>
-            <Box sx={{ opacity: 0.95 }}>
-              <Typography variant="body1" sx={{ mb: 1.5 }}><strong>Name:</strong> {data?.tenant_name || 'N/A'}</Typography>
-              <Typography variant="body1" sx={{ mb: 1.5 }}><strong>Mobile:</strong> {data?.tenant_phone || 'N/A'}</Typography>
-              {data?.tenant_email && <Typography variant="body1"><strong>Email:</strong> {data.tenant_email}</Typography>}
-            </Box>
-          </Box>
+            <Typography variant="body2"><b>Name:</b> {data?.tenant_name || 'N/A'}</Typography>
+            <Typography variant="body2"><b>Mobile:</b> {data?.tenant_phone || 'N/A'}</Typography>
+            {data?.tenant_email && <Typography variant="body2"><b>Email:</b> {data.tenant_email}</Typography>}
+          </Paper>
         </Grid>
 
-        {/* Property Card */}
+        {/* Property Details */}
         <Grid item xs={12} md={6}>
-          <Box sx={{
-            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-            borderRadius: 3,
-            p: 3,
-            color: 'white',
-            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-            '&:hover': {
-              transform: 'translateY(-5px)',
-              boxShadow: '0 10px 30px rgba(240,147,251,0.3)'
-            }
-          }}>
-            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box sx={{ fontSize: 28 }}>🏠</Box> Property Details
+          <Paper variant="outlined" sx={{ p: 2, bgcolor: '#f8f9fa' }}>
+            <Typography variant="subtitle2" color="primary" fontWeight="bold" gutterBottom>
+              🏠 Property Details
             </Typography>
-            <Box sx={{ opacity: 0.95 }}>
-              <Typography variant="body1" sx={{ mb: 1.5 }}><strong>PG/Hostel:</strong> {data?.pg_name || 'N/A'}</Typography>
-              <Typography variant="body1" sx={{ mb: 1.5 }}><strong>Room Type:</strong> {data?.room_type || 'N/A'}</Typography>
-              {data?.address && <Typography variant="body1"><strong>Address:</strong> {data.address}</Typography>}
-            </Box>
-          </Box>
+            <Typography variant="body2"><b>PG/Hostel:</b> {data?.pg_name || 'N/A'}</Typography>
+            <Typography variant="body2"><b>Room No:</b> {data?.room_no || 'N/A'}</Typography>
+            <Typography variant="body2"><b>Room Type:</b> {data?.room_type || 'N/A'}</Typography>
+            {data?.address && <Typography variant="body2"><b>Address:</b> {data.address}</Typography>}
+          </Paper>
         </Grid>
 
-        {/* Owner Card */}
+        {/* Owner Details */}
         <Grid item xs={12} md={6}>
-          <Box sx={{
-            background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-            borderRadius: 3,
-            p: 3,
-            color: 'white',
-            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-            '&:hover': {
-              transform: 'translateY(-5px)',
-              boxShadow: '0 10px 30px rgba(79,172,254,0.3)'
-            }
-          }}>
-            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box sx={{ fontSize: 28 }}>👨‍💼</Box> Owner Details
+          <Paper variant="outlined" sx={{ p: 2, bgcolor: '#e8f5e9' }}>
+            <Typography variant="subtitle2" color="success.main" fontWeight="bold" gutterBottom>
+              👨‍💼 Owner Details
             </Typography>
-            <Box sx={{ opacity: 0.95 }}>
-              <Typography variant="body1" sx={{ mb: 1.5 }}><strong>Name:</strong> {data?.owner_name || 'N/A'}</Typography>
-              <Typography variant="body1" sx={{ mb: 1.5 }}><strong>Owner ID:</strong> #{data?.owner_id || 'N/A'}</Typography>
-              <Typography variant="body1"><strong>Mobile:</strong> {data?.owner_phone || 'N/A'}</Typography>
-            </Box>
-          </Box>
+            <Typography variant="body2"><b>Name:</b> {data?.owner_name || 'N/A'}</Typography>
+            <Typography variant="body2"><b>Owner ID:</b> #{data?.owner_id || 'N/A'}</Typography>
+            <Typography variant="body2"><b>Mobile:</b> {data?.owner_phone || 'N/A'}</Typography>
+          </Paper>
         </Grid>
 
-        {/* Bank Details Card */}
+        {/* Bank Details */}
         <Grid item xs={12} md={6}>
-          <Box sx={{
-            background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-            borderRadius: 3,
-            p: 3,
-            color: '#333',
-            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-            '&:hover': {
-              transform: 'translateY(-5px)',
-              boxShadow: '0 10px 30px rgba(250,112,154,0.3)'
-            }
-          }}>
-            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box sx={{ fontSize: 28 }}>💳</Box> Settlement Account
+          <Paper variant="outlined" sx={{ p: 2, bgcolor: '#e8f5e9' }}>
+            <Typography variant="subtitle2" color="success.main" fontWeight="bold" gutterBottom>
+              💳 Bank Details (Settlement Account)
             </Typography>
-            <Box>
-              <Typography variant="body1" sx={{ mb: 1.5 }}><strong>Holder:</strong> {data?.account_holder_name || 'N/A'}</Typography>
-              <Typography variant="body1" sx={{ mb: 1.5 }}><strong>Bank:</strong> {data?.bank_name || 'N/A'}</Typography>
-              <Typography variant="body1" sx={{ mb: 1.5 }}><strong>A/C No:</strong> {data?.account_number || 'N/A'}</Typography>
-              <Typography variant="body1"><strong>IFSC:</strong> {data?.ifsc || 'N/A'}</Typography>
-            </Box>
-          </Box>
+            <Typography variant="body2"><b>Holder:</b> {data?.account_holder_name || 'N/A'}</Typography>
+            <Typography variant="body2"><b>Bank:</b> {data?.bank_name || 'N/A'}</Typography>
+            <Typography variant="body2"><b>A/C No:</b> {data?.account_number || 'N/A'}</Typography>
+            <Typography variant="body2"><b>IFSC:</b> {data?.ifsc || 'N/A'}</Typography>
+          </Paper>
         </Grid>
       </Grid>
 
-      {/* Premium Payment Breakdown */}
-      <Box sx={{
-        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-        borderRadius: 3,
-        p: 3.5,
-        mb: 4,
-        color: 'white'
-      }}>
-        <Typography variant="h6" fontWeight="bold" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box sx={{ fontSize: 28 }}>💰</Box> Payment Breakdown
+      {/* Payment Breakdown */}
+      <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: '#fafafa' }}>
+        <Typography variant="subtitle2" fontWeight="bold" color="primary" gutterBottom>
+          💰 Payment Breakdown
         </Typography>
-        
-        <Box sx={{ bgcolor: 'rgba(255,255,255,0.08)', borderRadius: 2, p: 2.5 }}>
-          <Box display="flex" justifyContent="space-between" mb={2}>
-            <Typography variant="body1">Rent Amount (Monthly)</Typography>
-            <Typography variant="body1" fontWeight="bold">₹{data?.rent_amount?.toLocaleString() || 0}</Typography>
-          </Box>
-          {data?.security_deposit > 0 && (
-            <Box display="flex" justifyContent="space-between" mb={2}>
-              <Typography variant="body1">Security Deposit</Typography>
-              <Typography variant="body1">₹{data.security_deposit?.toLocaleString()}</Typography>
-            </Box>
-          )}
-          {data?.maintenance_amount > 0 && (
-            <Box display="flex" justifyContent="space-between" mb={2}>
-              <Typography variant="body1">Maintenance Charges</Typography>
-              <Typography variant="body1">₹{data.maintenance_amount?.toLocaleString()}</Typography>
-            </Box>
-          )}
-          {data?.other_charges > 0 && (
-            <Box display="flex" justifyContent="space-between" mb={2}>
-              <Typography variant="body1">Other Charges</Typography>
-              <Typography variant="body1">₹{data.other_charges?.toLocaleString()}</Typography>
-            </Box>
-          )}
-          
-          <Box sx={{ borderTop: '2px solid rgba(255,255,255,0.2)', mt: 2.5, pt: 2.5 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center">
-              <Typography variant="h5" fontWeight="bold">Total Amount Paid</Typography>
-              <Typography variant="h4" fontWeight="bold" sx={{
-                background: 'linear-gradient(135deg, #38ef7d 0%, #11998e 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                color: 'transparent'
-              }}>
-                ₹{data?.total_amount?.toLocaleString() || 0}
-              </Typography>
-            </Box>
-          </Box>
+        <Box display="flex" justifyContent="space-between" mb={1}>
+          <Typography variant="body2">Rent Amount (Monthly)</Typography>
+          <Typography variant="body2" fontWeight="bold">₹{data?.rent_amount?.toLocaleString() || 0}</Typography>
         </Box>
-      </Box>
+        {data?.security_deposit > 0 && (
+          <Box display="flex" justifyContent="space-between" mb={1}>
+            <Typography variant="body2">Security Deposit</Typography>
+            <Typography variant="body2">₹{data.security_deposit?.toLocaleString()}</Typography>
+          </Box>
+        )}
+        {data?.maintenance_amount > 0 && (
+          <Box display="flex" justifyContent="space-between" mb={1}>
+            <Typography variant="body2">Maintenance Charges</Typography>
+            <Typography variant="body2">₹{data.maintenance_amount?.toLocaleString()}</Typography>
+          </Box>
+        )}
+        {data?.other_charges > 0 && (
+          <Box display="flex" justifyContent="space-between" mb={1}>
+            <Typography variant="body2">Other Charges</Typography>
+            <Typography variant="body2">₹{data.other_charges?.toLocaleString()}</Typography>
+          </Box>
+        )}
+        <Divider sx={{ my: 1.5 }} />
+        <Box display="flex" justifyContent="space-between">
+          <Typography variant="subtitle1" fontWeight="bold">Total Amount Paid to Owner</Typography>
+          <Typography variant="subtitle1" fontWeight="bold" color="primary">₹{data?.total_amount?.toLocaleString() || 0}</Typography>
+        </Box>
+      </Paper>
 
-      {/* Settlement Confirmation - Premium */}
-      <Box sx={{
-        background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-        borderRadius: 3,
-        p: 3,
-        textAlign: 'center',
-        mb: 3
-      }}>
-        <Typography variant="h6" fontWeight="bold" sx={{ mb: 1.5, color: 'white' }}>
-          ✅ Amount Successfully Credited to Owner's Bank Account
+      {/* Settlement Confirmation */}
+      <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#e3f2fd', borderRadius: 2 }}>
+        <Typography variant="body2" color="primary" fontWeight="bold">
+          ✅ This amount has been successfully credited to the owner's bank account
         </Typography>
-        <Typography variant="body2" sx={{ opacity: 0.95, color: 'white' }}>
-          Transaction Reference: <strong>NEPXALL-{data?.order_id || 'NA'}</strong> • Digitally Generated Receipt
+        <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
+          Transaction Reference: NEPXALL-{data?.order_id || 'NA'} • Digitally generated receipt
         </Typography>
       </Box>
 
       {/* Footer */}
-      <Box sx={{ textAlign: 'center', borderTop: '2px solid #f0f0f0', pt: 3, mt: 2 }}>
-        <Typography variant="body2" color="textSecondary">
+      <Box sx={{ mt: 3, textAlign: 'center', borderTop: '1px dashed #ccc', pt: 2 }}>
+        <Typography variant="caption" color="textSecondary">
           This is a system-generated rent receipt and does not require a physical signature.
-        </Typography>
-        <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 1 }}>
-          For any disputes, please contact NEPXALL Support at <strong>support@nepxall.com</strong>
+          For any disputes, please contact NEPXALL Support.
         </Typography>
       </Box>
     </Box>
@@ -549,6 +450,7 @@ export default function OwnerPayments() {
                   <TableCell>
                     <Typography fontWeight="bold">₹{item.owner_amount}</Typography>
                   </TableCell>
+
                   <TableCell align="center">
                     <Chip
                       label={item.room_type || "N/A"}
@@ -558,6 +460,7 @@ export default function OwnerPayments() {
                       sx={{ fontWeight: '600', textTransform: 'capitalize' }}
                     />
                   </TableCell>
+
                   <TableCell align="center">
                     {!item.final_pdf ? (
                       <Chip label="Processing PDF..." variant="outlined" />
@@ -574,6 +477,7 @@ export default function OwnerPayments() {
                       </Box>
                     )}
                   </TableCell>
+
                   <TableCell align="center">
                     {item.owner_settlement === "DONE" ? (
                       <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
@@ -606,7 +510,7 @@ export default function OwnerPayments() {
         </Table>
       </Paper>
 
-      {/* Premium RENT RECEIPT MODAL */}
+      {/* --- RENT RECEIPT MODAL (Normal Size) --- */}
       <Modal
         open={openReceiptModal}
         onClose={() => setOpenReceiptModal(false)}
@@ -617,27 +521,18 @@ export default function OwnerPayments() {
         <Fade in={openReceiptModal}>
           <Box sx={{
             position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-            width: { xs: '95%', sm: 650, md: 850 },
+            width: { xs: '95%', sm: 550, md: 700 },
             maxHeight: '90vh',
             bgcolor: 'background.paper',
-            borderRadius: 4,
+            borderRadius: 3,
             boxShadow: 24,
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column'
           }}>
-            {/* Premium Header */}
-            <Box sx={{
-              background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-              p: 2.5,
-              color: 'white',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <ReceiptLong /> RENT RECEIPT
-              </Typography>
+            {/* Header */}
+            <Box sx={{ bgcolor: '#1976d2', p: 2, color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="h6" fontWeight="bold">RENT RECEIPT</Typography>
               <Box>
                 <IconButton onClick={handleOpenFullReceipt} size="small" sx={{ color: 'white', mr: 1 }} title="Full Screen View">
                   <OpenInFull />
@@ -659,7 +554,7 @@ export default function OwnerPayments() {
         </Fade>
       </Modal>
 
-      {/* FULL SCREEN RECEIPT MODAL */}
+      {/* --- FULL SCREEN RECEIPT MODAL (NEW) --- */}
       <Modal
         open={openFullReceiptModal}
         onClose={() => setOpenFullReceiptModal(false)}
@@ -680,14 +575,7 @@ export default function OwnerPayments() {
             flexDirection: 'column'
           }}>
             {/* Full Screen Header */}
-            <Box sx={{
-              background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-              p: 2.5,
-              color: 'white',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
+            <Box sx={{ bgcolor: '#1976d2', p: 2, color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="h6" fontWeight="bold">NEPXALL - Rent Receipt (Full Screen)</Typography>
               <Box>
                 <IconButton onClick={() => downloadPDF(fullReceiptRef, `receipt-full-${receiptData?.order_id || "nexpall"}.pdf`)} size="small" sx={{ color: 'white', mr: 1 }} title="Download PDF">
@@ -725,6 +613,7 @@ export default function OwnerPayments() {
             transform: 'translate(-50%, -50%)',
             boxShadow: 24, outline: 'none'
           }}>
+
             <Box display="flex" alignItems="center" mb={2} justifyContent="space-between">
               <Box display="flex" alignItems="center">
                 {step > 1 && !otpVerified && (
@@ -743,6 +632,7 @@ export default function OwnerPayments() {
                 <Alert icon={<InfoOutlined fontSize="inherit" />} severity="info" sx={{ mb: 2 }}>
                   I hereby declare and accept the following 25 legal clauses to proceed.
                 </Alert>
+
                 <Box sx={{
                   bgcolor: '#fcfcfc', p: 2.5, borderRadius: 2, border: '1px solid #e0e0e0', mb: 2,
                 }}>
@@ -763,7 +653,9 @@ export default function OwnerPayments() {
                       8. Violations lead to legal action.<br />
                       9. Digital doc is equivalent to physical.
                     </Typography>
+
                     <Divider sx={{ my: 2 }} />
+
                     <Typography variant="subtitle2" fontWeight="bold" color="warning.dark" gutterBottom>PART B: OWNER LEGAL RESPONSIBILITIES</Typography>
                     <Typography variant="caption" component="div" sx={{ mb: 2, lineHeight: 1.6, color: 'text.secondary' }}>
                       10. I am the lawful owner or authorized person.<br />
@@ -776,7 +668,9 @@ export default function OwnerPayments() {
                       17. Responsible for rental income taxes.<br />
                       18. Indemnify platform from disputes.
                     </Typography>
+
                     <Divider sx={{ my: 2 }} />
+
                     <Typography variant="subtitle2" fontWeight="bold" color="error.main" gutterBottom>PART C: CONSENT & ROLE</Typography>
                     <Typography variant="caption" component="div" sx={{ mb: 2, lineHeight: 1.6, color: 'text.secondary' }}>
                       19. No illegal activities allowed.<br />
@@ -786,6 +680,7 @@ export default function OwnerPayments() {
                     </Typography>
                   </Box>
                 </Box>
+
                 <Box display="flex" alignItems="center" mb={3} sx={{ bgcolor: '#fffde7', p: 1.5, borderRadius: 2, border: '1px solid #ffe082' }}>
                   <Checkbox
                     checked={agreed}
@@ -796,6 +691,7 @@ export default function OwnerPayments() {
                     I have read and accept all legal clauses.
                   </Typography>
                 </Box>
+
                 <Button
                   fullWidth variant="contained" size="large" disabled={!agreed}
                   onClick={() => setStep(2)}
@@ -814,6 +710,7 @@ export default function OwnerPayments() {
                 <Typography variant="body2" color="textSecondary" mb={3}>
                   Verify the mobile number for Booking #{selectedBooking?.booking_id}
                 </Typography>
+
                 <TextField
                   fullWidth label="Mobile Number" variant="outlined" value={mobile}
                   onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
@@ -821,6 +718,7 @@ export default function OwnerPayments() {
                   sx={{ mb: 3 }}
                   placeholder="Enter 10 digit mobile"
                 />
+
                 {!confirmObj ? (
                   <Button fullWidth variant="contained" size="large" onClick={sendOtp} disabled={isSubmitting || mobile.length < 10}>
                     {isSubmitting ? <CircularProgress size={24} /> : "Request OTP"}
@@ -852,6 +750,7 @@ export default function OwnerPayments() {
                     Please sign inside the box below.
                   </Typography>
                 </Box>
+
                 <Box sx={{ border: "2px dashed #1976d2", borderRadius: 2, bgcolor: '#fdfdfd', overflow: 'hidden' }}>
                   <SignatureCanvas
                     ref={sigCanvas}
@@ -862,6 +761,7 @@ export default function OwnerPayments() {
                     }}
                   />
                 </Box>
+
                 <Box mt={3} display="flex" gap={2}>
                   <Button variant="outlined" fullWidth onClick={() => sigCanvas.current.clear()} disabled={isSubmitting}>
                     Clear
