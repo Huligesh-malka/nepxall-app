@@ -175,6 +175,17 @@ export default function OwnerPayments() {
     }
   };
 
+  // Helper to color-code room/sharing types
+  const getSharingColor = (type) => {
+    if (!type) return "default";
+    const t = type.toLowerCase();
+    if (t.includes("single")) return "success";
+    if (t.includes("double")) return "primary";
+    if (t.includes("triple")) return "warning";
+    if (t.includes("bhk")) return "secondary";
+    return "default";
+  };
+
   if (loading) return <Box p={5} textAlign="center"><CircularProgress /></Box>;
 
   return (
@@ -191,14 +202,15 @@ export default function OwnerPayments() {
               <TableCell><b>Booking ID</b></TableCell>
               <TableCell><b>Tenant Name</b></TableCell>
               <TableCell><b>Amount</b></TableCell>
+              {/* NEW: Sharing Column Header */}
+              <TableCell align="center"><b>Sharing</b></TableCell>
               <TableCell align="center"><b>Agreement Status</b></TableCell>
-              {/* STEP 1: New Column Header */}
               <TableCell align="center"><b>Payment Status</b></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {data.length === 0 ? (
-              <TableRow><TableCell colSpan={5} align="center">No active settlements found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} align="center">No active settlements found.</TableCell></TableRow>
             ) : data.map(item => {
               const isSigned = !!item.signed_pdf;
               return (
@@ -208,6 +220,18 @@ export default function OwnerPayments() {
                   <TableCell>
                     <Typography fontWeight="bold">₹{item.owner_amount}</Typography>
                   </TableCell>
+
+                  {/* NEW: Sharing Column Body */}
+                  <TableCell align="center">
+                    <Chip 
+                      label={item.room_type || "N/A"} 
+                      size="small" 
+                      color={getSharingColor(item.room_type)} 
+                      variant="outlined" 
+                      sx={{ fontWeight: '600', textTransform: 'capitalize' }}
+                    />
+                  </TableCell>
+
                   <TableCell align="center">
                     {!item.final_pdf ? (
                       <Chip label="Processing PDF..." variant="outlined" />
@@ -225,7 +249,6 @@ export default function OwnerPayments() {
                     )}
                   </TableCell>
 
-                  {/* STEP 2: New Payment Status Column */}
                   <TableCell align="center">
                     {item.owner_settlement === "DONE" ? (
                       <Chip
@@ -279,7 +302,7 @@ export default function OwnerPayments() {
                 <Chip icon={<Security />} label={`Step ${step} / 3`} color="primary" variant="outlined" />
             </Box>
 
-            {/* STEP 1: COMPREHENSIVE LEGAL TERMS */}
+            {/* STEP 1: LEGAL TERMS */}
             {step === 1 && (
               <Box>
                 <Alert icon={<InfoOutlined fontSize="inherit" />} severity="info" sx={{ mb: 2 }}>
@@ -296,43 +319,40 @@ export default function OwnerPayments() {
                   }}>
                     <Typography variant="subtitle2" fontWeight="bold" color="primary" gutterBottom>PART A: GENERAL DECLARATIONS</Typography>
                     <Typography variant="caption" component="div" sx={{ mb: 2, lineHeight: 1.6, color: 'text.secondary' }}>
-                        1. I have carefully read and understood all the terms and conditions of this rental agreement.<br/>
-                        2. I confirm that all the details provided by me are true and correct to the best of my knowledge.<br/>
-                        3. I agree that this agreement is executed electronically under the provisions of the Information Technology Act, 2000 and shall be legally binding.<br/>
-                        4. I understand that my mobile number verification through OTP serves as my identity authentication.<br/>
-                        5. I consent to use my electronic signature (drawn signature) as a valid and legally enforceable signature.<br/>
-                        6. I agree that once signed, this agreement cannot be denied or repudiated by me.<br/>
-                        7. I accept that this agreement shall be governed by the laws of India and jurisdiction of the respective state.<br/>
-                        8. I understand that any violation of terms may lead to legal action as per applicable laws.<br/>
-                        9. I agree that this digital document is equivalent to a physical signed agreement.
+                        1. I have understood all terms and conditions.<br/>
+                        2. I confirm details are true and correct.<br/>
+                        3. Agreement is executed under IT Act, 2000.<br/>
+                        4. OTP serves as identity authentication.<br/>
+                        5. Electronic signature is valid.<br/>
+                        6. Agreement cannot be denied once signed.<br/>
+                        7. Governed by Indian laws.<br/>
+                        8. Violations lead to legal action.<br/>
+                        9. Digital doc is equivalent to physical.
                     </Typography>
 
                     <Divider sx={{ my: 2 }} />
 
                     <Typography variant="subtitle2" fontWeight="bold" color="warning.dark" gutterBottom>PART B: OWNER LEGAL RESPONSIBILITIES</Typography>
                     <Typography variant="caption" component="div" sx={{ mb: 2, lineHeight: 1.6, color: 'text.secondary' }}>
-                        10. <b>Ownership Liability:</b> I confirm that I am the lawful owner or legally authorized person to rent this property. Any ownership disputes are solely my responsibility.<br/>
-                        11. <b>Title & Legal Clearance:</b> I guarantee that the property is free from legal disputes, encumbrances, or government restrictions.<br/>
-                        12. <b>Rental Authority:</b> I confirm I have full legal rights to lease/rent this property and enter into this agreement.<br/>
-                        13. <b>Property Condition:</b> I agree that the property provided is safe, habitable, and complies with basic living standards.<br/>
-                        14. <b>Maintenance:</b> I am responsible for major repairs including structural, electrical, and plumbing issues unless otherwise agreed.<br/>
-                        15. <b>Deposit Handling:</b> I agree to refund the tenant’s security deposit as per agreed terms and conditions without unlawful deductions.<br/>
-                        16. <b>False Information:</b> If any information provided by me is false, I shall be fully liable for legal consequences.<br/>
-                        17. <b>Tax Responsibility:</b> I am responsible for declaring rental income and complying with applicable tax laws in India.<br/>
-                        18. <b>Indemnity:</b> I agree to indemnify and hold harmless the platform from any claims or disputes arising due to my property.
+                        10. I am the lawful owner or authorized person.<br/>
+                        11. Property is free from disputes.<br/>
+                        12. I have full rights to lease this property.<br/>
+                        13. Property is safe and habitable.<br/>
+                        14. Responsible for major repairs.<br/>
+                        15. Refund security deposit as per terms.<br/>
+                        16. Liable for false information.<br/>
+                        17. Responsible for rental income taxes.<br/>
+                        18. Indemnify platform from disputes.
                     </Typography>
 
                     <Divider sx={{ my: 2 }} />
 
-                    <Typography variant="subtitle2" fontWeight="bold" color="error.main" gutterBottom>PART C: BINDING CONSENT & PLATFORM ROLE</Typography>
+                    <Typography variant="subtitle2" fontWeight="bold" color="error.main" gutterBottom>PART C: CONSENT & ROLE</Typography>
                     <Typography variant="caption" component="div" sx={{ mb: 2, lineHeight: 1.6, color: 'text.secondary' }}>
-                        19. <b>No Illegal Use:</b> I shall not knowingly allow the property to be used for illegal activities.<br/>
-                        20. <b>Electronic Execution:</b> Re-confirming execution under IT Act, 2000.<br/>
-                        21. <b>Binding Nature:</b> Legally enforceable under Indian Contract Act, 1872.<br/>
-                        22. <b>Audit Trail:</b> Acceptance that OTP, IP, and Timestamp are recorded as legal proof.<br/>
-                        23. <b>Platform Role:</b> The platform is only a facilitator and not a party to this agreement.<br/>
-                        24. <b>No Platform Liability:</b> Platform is not responsible for rent or property disputes.<br/>
-                        25. <b>Full Acceptance:</b> I accept full legal responsibility for this agreement and the property.
+                        19. No illegal activities allowed.<br/>
+                        22. Audit trail (OTP, IP) is legal proof.<br/>
+                        23. Platform is only a facilitator.<br/>
+                        25. Full legal responsibility accepted.
                     </Typography>
                   </Box>
                 </Box>
@@ -344,7 +364,7 @@ export default function OwnerPayments() {
                     sx={{ p: 0, mr: 1 }} 
                   />
                   <Typography variant="body2" fontWeight="600">
-                    I have read, understood, and I accept all 25 legal clauses mentioned above.
+                    I have read and accept all legal clauses.
                   </Typography>
                 </Box>
 
@@ -364,7 +384,7 @@ export default function OwnerPayments() {
                 <VerifiedUser color="primary" sx={{ fontSize: 60, mb: 1 }} />
                 <Typography variant="h6">Phone Authentication</Typography>
                 <Typography variant="body2" color="textSecondary" mb={3}>
-                    Verify the mobile number registered with Booking #{selectedBooking?.booking_id}
+                    Verify the mobile number for Booking #{selectedBooking?.booking_id}
                 </Typography>
                 
                 <TextField 
@@ -382,7 +402,7 @@ export default function OwnerPayments() {
                 ) : (
                   <>
                     <TextField 
-                      fullWidth label="6-Digit Verification Code" 
+                      fullWidth label="6-Digit OTP" 
                       value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} 
                       sx={{ mb: 3 }}
                       inputProps={{ maxLength: 6 }}
@@ -403,7 +423,7 @@ export default function OwnerPayments() {
                     <BorderColor color="primary" sx={{ fontSize: 40, mb: 1 }} />
                     <Typography variant="h6">Draw Your Signature</Typography>
                     <Typography variant="caption" color="textSecondary">
-                      Please use your mouse or touch screen to sign inside the box below.
+                      Please sign inside the box below.
                     </Typography>
                 </Box>
                 
@@ -426,9 +446,6 @@ export default function OwnerPayments() {
                     {isSubmitting ? <CircularProgress size={24} color="inherit" /> : "Finalize & Sign Agreement"}
                   </Button>
                 </Box>
-                <Typography variant="caption" display="block" textAlign="center" mt={2} color="textSecondary">
-                  By clicking Finalize, you are creating a legally binding digital document under the IT Act 2000.
-                </Typography>
               </Box>
             )}
           </Box>
