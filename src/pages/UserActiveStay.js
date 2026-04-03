@@ -8,6 +8,7 @@ import html2canvas from "html2canvas";
 /* ================= BRAND COLORS ================= */
 const BRAND_BLUE = "#0B5ED7";
 const BRAND_GREEN = "#4CAF50";
+const BRAND_RED = "#ef4444"; // Added for Refund
 
 const UserActiveStay = () => {
   const [stays, setStays] = useState([]);
@@ -42,6 +43,42 @@ const UserActiveStay = () => {
     });
     return () => unsubscribe();
   }, [loadStay, navigate]);
+
+  /* 🔥 NEW REFUND FUNCTION */
+  const handleRefund = async (stay) => {
+    try {
+      const reason = prompt("Enter refund reason:");
+      const upi = prompt("Enter your UPI ID (for refund transfer):");
+
+      if (!reason || !upi) {
+        alert("Refund reason and UPI ID are required.");
+        return;
+      }
+
+      const user = auth.currentUser;
+      const token = await user.getIdToken();
+
+      const res = await api.post(
+        "/refunds/request",
+        {
+          bookingId: stay.id,
+          reason,
+          upi_id: upi
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (res.data.success) {
+        alert("✅ Refund request submitted successfully.");
+      }
+
+    } catch (err) {
+      console.error("Refund Error:", err);
+      alert(err.response?.data?.message || "Refund request failed. Please try again.");
+    }
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return "Processing...";
@@ -134,21 +171,18 @@ const UserActiveStay = () => {
               💰 Paid On: <span>{formatDate(stay.paid_date)}</span>
             </p>
 
-            {/* UPDATED: USER CARD CONDITIONAL RENT */}
             {stay.rent_amount > 0 && (
               <p style={priceRow}>
                 Monthly Rent: <span>₹{stay.rent_amount}</span>
               </p>
             )}
 
-            {/* UPDATED: USER CARD CONDITIONAL MAINTENANCE */}
             {stay.maintenance_amount > 0 && (
               <p style={priceRow}>
                 Maintenance: <span>₹{stay.maintenance_amount}</span>
               </p>
             )}
 
-            {/* UPDATED: USER CARD CONDITIONAL DEPOSIT */}
             {stay.deposit_amount > 0 && (
               <p style={{ ...priceRow, borderTop: "1px dashed #eee", paddingTop: "10px", marginTop: "10px" }}>
                 Security Deposit (Paid): <span style={{ fontWeight: "bold" }}>₹{stay.deposit_amount}</span>
@@ -161,6 +195,7 @@ const UserActiveStay = () => {
             </div>
           </div>
 
+          {/* UPDATED BUTTON ROW WITH REFUND LOGIC */}
           <div style={btnRow}>
             <button style={btn} onClick={() => navigate("/user/bookings")}>
               📜 History
@@ -171,6 +206,16 @@ const UserActiveStay = () => {
             <button style={receiptBtn} onClick={() => handleDownloadReceipt(stay)}>
               📥 Receipt
             </button>
+            
+            {/* 🔥 NEW REFUND BUTTON - SHOWS ONLY IF PAID (ORDER ID EXISTS) */}
+            {stay.order_id && (
+              <button
+                style={{ ...btn, background: BRAND_RED }}
+                onClick={() => handleRefund(stay)}
+              >
+                🔁 Refund
+              </button>
+            )}
           </div>
         </div>
       ))}
@@ -230,7 +275,6 @@ const UserActiveStay = () => {
                 <span>Amount</span>
               </div>
 
-              {/* UPDATED: RECEIPT TABLE CONDITIONAL RENT */}
               {selectedStay.rent_amount > 0 && (
                 <div style={tableRow}>
                   <span>Monthly Room Rent ({selectedStay.room_type})</span>
@@ -238,7 +282,6 @@ const UserActiveStay = () => {
                 </div>
               )}
 
-              {/* UPDATED: RECEIPT TABLE CONDITIONAL MAINTENANCE */}
               {selectedStay.maintenance_amount > 0 && (
                 <div style={tableRow}>
                   <span>Maintenance Charges</span>
@@ -259,7 +302,6 @@ const UserActiveStay = () => {
               </div>
             </div>
 
-            {/* UPDATED: RECEIPT SECURITY DEPOSIT BLOCK (CONDITIONAL) */}
             {selectedStay.deposit_amount > 0 && (
               <div
                 style={{
@@ -312,8 +354,8 @@ const priceList = { marginBottom: 20, background: "#f9fafb", padding: "15px", bo
 const priceRow = { display: "flex", justifyContent: "space-between", color: "#4b5563", margin: "10px 0", fontSize: "14px" };
 const totalBox = { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 15, padding: "15px", background: "#f0fdf4", borderRadius: "8px", color: "#166534" };
 const statusBadge = { padding: "6px 12px", borderRadius: "20px", fontSize: "11px", fontWeight: "bold", background: "#dcfce7", color: "#166534" };
-const btnRow = { display: "flex", gap: 10 };
-const btn = { flex: 1, padding: "12px", background: BRAND_BLUE, color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "600", fontSize: "13px" };
+const btnRow = { display: "flex", gap: 8, flexWrap: "wrap" }; // Added wrap for smaller screens
+const btn = { flex: 1, minWidth: "100px", padding: "12px", background: BRAND_BLUE, color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "600", fontSize: "13px" };
 const payBtn = { ...btn, background: BRAND_GREEN };
 const receiptBtn = { ...btn, background: "#4b5563" };
 const infoItem = { display: "flex", flexDirection: "column" };
