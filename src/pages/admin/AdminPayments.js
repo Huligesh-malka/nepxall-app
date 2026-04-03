@@ -122,7 +122,8 @@ const AdminPayments = () => {
     }
 
     const userName = p.reg_name || "User";
-    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${userName}*,%0AYour payment for *${p.pg_name}* (${p.sharing || 'N/A'} Sharing) has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
+    // 🔥 STEP 5: Updated WhatsApp Message to use total_amount
+    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${userName}*,%0AYour payment for *${p.pg_name}* (${p.sharing || 'N/A'} Sharing) has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.total_amount || p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
     const whatsappUrl = `https://wa.me/${cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone}?text=${message}`;
     window.open(whatsappUrl, "_blank");
   };
@@ -208,7 +209,6 @@ const AdminPayments = () => {
               <TableRow><TableCell colSpan={7} align="center" sx={{ py: 10 }}>No payment records found.</TableCell></TableRow>
             ) : (
               payments.map((p) => {
-                // FIXED: Use the reg_name and reg_phone fields from your updated SQL query
                 const displayName = p.reg_name || "Guest User";
                 const displayPhone = p.reg_phone || "N/A";
 
@@ -231,14 +231,13 @@ const AdminPayments = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight="600">{p.pg_name}</Typography>
-                      {/* FIXED: Now showing the sharing/room_type correctly */}
                       <Chip 
                         label={p.sharing ? `${p.sharing}` : 'N/A Sharing'} 
                         size="small" 
                         sx={{ height: '20px', fontSize: '10px', mt: 0.5, fontWeight: 'bold' }} 
                       />
                     </TableCell>
-                    <TableCell><Typography fontWeight="800" color={DARK_TEXT}>₹{p.amount}</Typography></TableCell>
+                    <TableCell><Typography fontWeight="800" color={DARK_TEXT}>₹{p.total_amount || p.amount}</Typography></TableCell>
                     <TableCell>
                       <Typography variant="caption" display="block" sx={{ fontFamily: "monospace", color: "#707EAE" }}>{p.order_id}</Typography>
                       {p.utr && <Typography variant="caption" sx={{ color: BRAND_GREEN, fontWeight: 'bold' }}>UTR: {p.utr}</Typography>}
@@ -355,7 +354,6 @@ const AdminPayments = () => {
                 <div style={sectionBlock}>
                   <label style={receiptLabel}>🏠 PROPERTY DESCRIPTION</label>
                   <p style={receiptValue}>{selectedPayment.pg_name}</p>
-                  {/* Receipt updated with sharing type */}
                   <p style={receiptSubValue}>Category: {selectedPayment.sharing || 'N/A'} Sharing Accommodation</p>
                 </div>
               </div>
@@ -365,7 +363,8 @@ const AdminPayments = () => {
                 <h3 style={{ ...statusText, color: BRAND_GREEN }}>PAID & VERIFIED</h3>
                 <p style={dateText}>Method: Digital Payment</p>
                 <Divider sx={{ my: 1 }} />
-                <div style={amountDisplay}>₹{selectedPayment.amount}</div>
+                {/* 🔥 STEP 4: Updated Top Amount Box */}
+                <div style={amountDisplay}>₹{selectedPayment.total_amount || selectedPayment.amount}</div>
               </div>
             </div>
 
@@ -374,17 +373,33 @@ const AdminPayments = () => {
                 <span>DESCRIPTION</span>
                 <span>TOTAL</span>
               </div>
-              <div style={tableRow}>
-                <span>Monthly Rental Charges ({selectedPayment.sharing || 'N/A'})</span>
-                <span>₹{selectedPayment.amount}</span>
-              </div>
-              <div style={tableRow}>
-                <span>Security Deposit / Amenities</span>
-                <span>₹0.00</span>
-              </div>
+
+              {/* 🔥 STEP 2: REPLACE FULL BLOCK WITH DYNAMIC BREAKDOWN */}
+              {selectedPayment.rent_amount > 0 && (
+                <div style={tableRow}>
+                  <span>Room Rent ({selectedPayment.sharing})</span>
+                  <span>₹{selectedPayment.rent_amount}</span>
+                </div>
+              )}
+
+              {selectedPayment.maintenance_amount > 0 && (
+                <div style={tableRow}>
+                  <span>Maintenance Charges</span>
+                  <span>₹{selectedPayment.maintenance_amount}</span>
+                </div>
+              )}
+
+              {selectedPayment.security_deposit > 0 && (
+                <div style={tableRow}>
+                  <span>Security Deposit</span>
+                  <span>₹{selectedPayment.security_deposit}</span>
+                </div>
+              )}
+
+              {/* 🔥 STEP 3: UPDATE TOTAL ROW */}
               <div style={{ ...tableRow, borderBottom: `2px solid ${BRAND_BLUE}`, fontWeight: "bold", background: "#f8fafc" }}>
                 <span>NET AMOUNT RECEIVED</span>
-                <span>₹{selectedPayment.amount}</span>
+                <span>₹{selectedPayment.total_amount || selectedPayment.amount}</span>
               </div>
             </div>
 
