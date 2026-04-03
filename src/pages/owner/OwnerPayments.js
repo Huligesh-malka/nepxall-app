@@ -73,13 +73,18 @@ export default function OwnerPayments() {
   const handleViewReceipt = async (bookingId) => {
   try {
     setIsSubmitting(true);
+
     const res = await axios.get(`${API}/receipt-details/${bookingId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if(res.data) {
-       setReceiptData(res.data);
-       setOpenReceiptModal(true); // Only open if data exists
+
+    if (res.data.success && res.data.data) {
+      setReceiptData(res.data.data);   // ✅ FIXED
+      setOpenReceiptModal(true);
+    } else {
+      alert("No receipt data found");
     }
+
   } catch (err) {
     alert("Receipt data not found on server.");
   } finally {
