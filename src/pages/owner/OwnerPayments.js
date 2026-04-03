@@ -71,21 +71,21 @@ export default function OwnerPayments() {
   };
 
   const handleViewReceipt = async (bookingId) => {
-    try {
-      setIsSubmitting(true);
-      const res = await axios.get(`${API}/receipt-details/${bookingId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setReceiptData(res.data);
-      setOpenReceiptModal(true);
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || "Error fetching receipt ❌");
-    } finally {
-      setIsSubmitting(false);
+  try {
+    setIsSubmitting(true);
+    const res = await axios.get(`${API}/receipt-details/${bookingId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if(res.data) {
+       setReceiptData(res.data);
+       setOpenReceiptModal(true); // Only open if data exists
     }
-  };
-
+  } catch (err) {
+    alert("Receipt data not found on server.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
   const handleViewPdf = async (bookingId, filePath) => {
     try {
       await axios.post(`${API}/agreements/viewed`, { booking_id: bookingId }, {
