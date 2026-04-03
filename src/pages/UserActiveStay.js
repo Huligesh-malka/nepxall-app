@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { auth } from "../firebase";
 import api from "../api/api";
 import { useNavigate } from "react-router-dom";
-import jsPDF from "jspdf";
+import jsPDF from "jsPDF";
 import html2canvas from "html2canvas";
 
 /* ================= BRAND COLORS ================= */
@@ -18,10 +18,11 @@ const UserActiveStay = () => {
   const receiptRef = useRef();
   const [selectedStay, setSelectedStay] = useState(null);
 
-  /* --- NEW STATES FOR REFUND FORM --- */
+  /* --- UPDATED STATES FOR REFUND FORM --- */
   const [showRefundFormFor, setShowRefundFormFor] = useState(null); 
   const [refundReason, setRefundReason] = useState("");
   const [refundUpi, setRefundUpi] = useState("");
+  const [confirmUpi, setConfirmUpi] = useState(""); // New State
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadStay = useCallback(async (showLoader = true) => {
@@ -56,6 +57,11 @@ const UserActiveStay = () => {
       return;
     }
 
+    if (refundUpi !== confirmUpi) {
+      alert("UPI IDs do not match!");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       const user = auth.currentUser;
@@ -79,6 +85,7 @@ const UserActiveStay = () => {
         setShowRefundFormFor(null);
         setRefundReason("");
         setRefundUpi("");
+        setConfirmUpi("");
       }
     } catch (err) {
       console.error("Refund Error:", err);
@@ -120,6 +127,9 @@ const UserActiveStay = () => {
     }, 500);
   };
 
+  // Logic to check if button should be disabled
+  const isRefundDisabled = isSubmitting || !refundReason || !refundUpi || refundUpi !== confirmUpi;
+
   if (loading)
     return (
       <div style={container}>
@@ -151,7 +161,6 @@ const UserActiveStay = () => {
           
           {showRefundFormFor === stay.id ? (
             <div style={refundFormContainer}>
-              {/* 🔥 LOGIC: STATUS SHOWS INSIDE ONLY */}
               {stay.refund_status ? (
                 <div style={{ textAlign: "center", padding: "20px 0" }}>
                   <div style={{ fontWeight: "700", fontSize: "16px", marginBottom: "10px" }}>
@@ -195,17 +204,43 @@ const UserActiveStay = () => {
                     />
                   </div>
 
+                  <div style={inputGroup}>
+                    <label style={labelStyle}>Confirm UPI ID</label>
+                    <input
+                      style={{ 
+                        ...inputField, 
+                        borderColor: confirmUpi && refundUpi !== confirmUpi ? BRAND_RED : "#ddd",
+                        backgroundColor: confirmUpi && refundUpi === confirmUpi ? "#f0fdf4" : "#fff"
+                      }}
+                      type="text"
+                      placeholder="Re-enter UPI ID"
+                      value={confirmUpi}
+                      onChange={(e) => setConfirmUpi(e.target.value)}
+                    />
+                    {confirmUpi && refundUpi !== confirmUpi && (
+                       <span style={{ fontSize: '10px', color: BRAND_RED }}>UPI IDs do not match</span>
+                    )}
+                  </div>
+
                   <div style={btnRow}>
                     <button
                       style={{ ...btn, background: "#6b7280" }}
-                      onClick={() => setShowRefundFormFor(null)}
+                      onClick={() => {
+                        setShowRefundFormFor(null);
+                        setConfirmUpi("");
+                        setRefundUpi("");
+                      }}
                     >
                       Cancel
                     </button>
 
                     <button
-                      style={{ ...btn, background: BRAND_RED }}
-                      disabled={isSubmitting}
+                      style={{ 
+                        ...btn, 
+                        background: isRefundDisabled ? "#cca7a7" : BRAND_RED,
+                        cursor: isRefundDisabled ? "not-allowed" : "pointer" 
+                      }}
+                      disabled={isRefundDisabled}
                       onClick={() => submitRefundRequest(stay.id)}
                     >
                       {isSubmitting ? "Submitting..." : "Submit Request"}
@@ -215,7 +250,6 @@ const UserActiveStay = () => {
               )}
             </div>
           ) : (
-            /* ORIGINAL STAY DETAILS */
             <>
               <div style={headerSection}>
                 <h3 style={{ margin: 0, color: BRAND_BLUE }}>{stay.pg_name}</h3>
@@ -265,7 +299,6 @@ const UserActiveStay = () => {
                 <button style={payBtn} onClick={() => navigate("/payment")}>💳 Pay Rent</button>
                 <button style={receiptBtn} onClick={() => handleDownloadReceipt(stay)}>📥 Receipt</button>
                 
-                {/* 🔥 CLEAN REFUND BUTTON - NO EXTERNAL STATUS LOGIC */}
                 {stay.order_id && (
                   <button
                     style={{ ...btn, background: BRAND_RED }}
@@ -280,7 +313,7 @@ const UserActiveStay = () => {
         </div>
       ))}
 
-      {/* HIDDEN RECEIPT DESIGN FOR PDF (Remains Unchanged) */}
+      {/* HIDDEN RECEIPT DESIGN FOR PDF */}
       {selectedStay && (
         <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
           <div ref={receiptRef} style={modernReceiptContainer}>
@@ -368,7 +401,7 @@ const UserActiveStay = () => {
   );
 };
 
-/* --- STYLES --- */
+/* --- STYLES (UNCHANGED EXCEPT NEW INPUTS) --- */
 const container = { maxWidth: 600, margin: "40px auto", padding: "0 20px", fontFamily: "Inter, sans-serif" };
 const card = { background: "#fff", padding: 30, borderRadius: 16, boxShadow: "0 10px 25px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0", marginBottom: "25px" };
 const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 };
@@ -396,7 +429,8 @@ const inputField = {
   marginTop: "5px",
   fontFamily: "inherit",
   fontSize: "14px",
-  outline: "none"
+  outline: "none",
+  boxSizing: "border-box"
 };
 
 const modernReceiptContainer = { width: "210mm", minHeight: "297mm", padding: "60px", background: "#ffffff", color: "#111827", fontFamily: "Helvetica, Arial, sans-serif" };
