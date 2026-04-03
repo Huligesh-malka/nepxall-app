@@ -247,12 +247,32 @@ const UserActiveStay = () => {
                 <button style={payBtn} onClick={() => navigate("/payment")}>💳 Pay Rent</button>
                 <button style={receiptBtn} onClick={() => handleDownloadReceipt(stay)}>📥 Receipt</button>
                 {stay.order_id && (
-                  <button
-                    style={{ ...btn, background: BRAND_RED }}
-                    onClick={() => setShowRefundFormFor(stay.id)}
-                  >
-                    🔁 Refund
-                  </button>
+  <div style={{ width: "100%" }}>
+    
+    <button
+      style={{
+        ...btn,
+        background: stay.refund_status ? "#9ca3af" : BRAND_RED,
+        cursor: stay.refund_status ? "not-allowed" : "pointer"
+      }}
+      disabled={stay.refund_status && stay.refund_status !== "rejected"}
+      onClick={() => setShowRefundFormFor(stay.id)}
+    >
+      🔁 {stay.refund_status ? "Refund Requested" : "Refund"}
+    </button>
+
+    {/* 🔥 SHOW STATUS */}
+    {stay.refund_status && (
+      <div style={{ marginTop: 8, fontWeight: "600", fontSize: "13px" }}>
+        {stay.refund_status === "pending" && "⏳ Waiting for Admin Approval"}
+        {stay.refund_status === "approved" && "✅ Approved - Processing"}
+        {stay.refund_status === "paid" && "💸 Refunded Successfully"}
+        {stay.refund_status === "rejected" && "❌ Rejected (You can reapply)"}
+      </div>
+    )}
+
+  </div>
+)}
                 )}
               </div>
             </>
