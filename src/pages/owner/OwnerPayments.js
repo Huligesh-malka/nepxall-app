@@ -250,20 +250,35 @@ export default function OwnerPayments() {
                   </TableCell>
 
                   <TableCell align="center">
-                    {item.owner_settlement === "DONE" ? (
-                      <Chip
-                        label="✅ Paid"
-                        color="success"
-                        sx={{ fontWeight: "bold" }}
-                      />
-                    ) : (
-                      <Chip
-                        label="⏳ Pending"
-                        color="warning"
-                        sx={{ fontWeight: "bold" }}
-                      />
-                    )}
-                  </TableCell>
+  {item.owner_settlement === "DONE" ? (
+    <>
+      <Chip
+        label="✅ Paid"
+        color="success"
+        sx={{ fontWeight: "bold", mb: 1 }}
+      />
+
+      <br />
+
+      {/* 🔥 ADD THIS BUTTON */}
+      <Button
+        size="small"
+        variant="outlined"
+        onClick={() =>
+          window.open(`${API}/receipt/${item.booking_id}`, "_blank")
+        }
+      >
+        📄 Receipt
+      </Button>
+    </>
+  ) : (
+    <Chip
+      label="⏳ Pending"
+      color="warning"
+      sx={{ fontWeight: "bold" }}
+    />
+  )}
+</TableCell>
                 </TableRow>
               );
             })}
