@@ -251,7 +251,7 @@ export default function OwnerPayments() {
         <!-- Footer -->
         <div style="text-align: center; margin-top: 20px;">
           <p style="margin: 0; color: #666;">Thank you for using NEXPALL 🙏</p>
-          <p style="margin: 8px 0 0; font-size: 11px; color: #999;">support@nexpall.com</p>
+          
         </div>
       </div>
     `;
