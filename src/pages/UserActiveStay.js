@@ -19,7 +19,7 @@ const UserActiveStay = () => {
   const [selectedStay, setSelectedStay] = useState(null);
 
   /* --- NEW STATES FOR REFUND FORM --- */
-  const [showRefundFormFor, setShowRefundFormFor] = useState(null); // Stores the stay.id currently being refunded
+  const [showRefundFormFor, setShowRefundFormFor] = useState(null); 
   const [refundReason, setRefundReason] = useState("");
   const [refundUpi, setRefundUpi] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,7 +50,6 @@ const UserActiveStay = () => {
     return () => unsubscribe();
   }, [loadStay, navigate]);
 
-  /* 🔥 UPDATED REFUND SUBMIT FUNCTION */
   const submitRefundRequest = async (stayId) => {
     if (!refundReason || !refundUpi) {
       alert("Please provide both a reason and a UPI ID.");
@@ -74,16 +73,13 @@ const UserActiveStay = () => {
         }
       );
 
-     if (res.data.success) {
-  alert("✅ Refund request submitted successfully.");
-
-  // 🔥 VERY IMPORTANT → reload data
-  await loadStay(false);
-
-  setShowRefundFormFor(null);
-  setRefundReason("");
-  setRefundUpi("");
-}
+      if (res.data.success) {
+        alert("✅ Refund request submitted successfully.");
+        await loadStay(false);
+        setShowRefundFormFor(null);
+        setRefundReason("");
+        setRefundUpi("");
+      }
     } catch (err) {
       console.error("Refund Error:", err);
       alert(err.response?.data?.message || "Refund request failed.");
@@ -153,67 +149,72 @@ const UserActiveStay = () => {
       {stays.map((stay) => (
         <div key={stay.id} style={card}>
           
-          {/* --- CONDITIONALLY RENDER FORM OR DETAILS --- */}
           {showRefundFormFor === stay.id ? (
-  <div style={refundFormContainer}>
+            <div style={refundFormContainer}>
+              {/* 🔥 LOGIC: STATUS SHOWS INSIDE ONLY */}
+              {stay.refund_status ? (
+                <div style={{ textAlign: "center", padding: "20px 0" }}>
+                  <div style={{ fontWeight: "700", fontSize: "16px", marginBottom: "10px" }}>
+                    {stay.refund_status === "pending" && "⏳ Waiting for Admin Approval"}
+                    {stay.refund_status === "approved" && "✅ Approved - Processing"}
+                    {stay.refund_status === "paid" && "💸 Refunded Successfully"}
+                    {stay.refund_status === "rejected" && "❌ Rejected (You can retry)"}
+                  </div>
+                  <button 
+                    style={{ ...btn, background: "#6b7280", flex: "none", width: "120px" }}
+                    onClick={() => setShowRefundFormFor(null)}
+                  >
+                    Close
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <h3 style={{ color: BRAND_RED, marginBottom: "15px" }}>Request Refund</h3>
+                  <p style={{ fontSize: "12px", color: "#666", marginBottom: "20px" }}>
+                    Order ID: {stay.order_id}
+                  </p>
 
-    {/* 🔥 SHOW STATUS INSIDE */}
-    {stay.refund_status ? (
-      <div style={{ textAlign: "center", fontWeight: "600", fontSize: "14px" }}>
-        {stay.refund_status === "pending" && "⏳ Waiting for Admin Approval"}
-        {stay.refund_status === "approved" && "✅ Approved - Processing"}
-        {stay.refund_status === "paid" && "💸 Refunded Successfully"}
-        {stay.refund_status === "rejected" && "❌ Rejected (You can retry)"}
-      </div>
-    ) : (
-      <>
-        <h3 style={{ color: BRAND_RED, marginBottom: "15px" }}>Request Refund</h3>
+                  <div style={inputGroup}>
+                    <label style={labelStyle}>Refund Reason</label>
+                    <textarea
+                      style={inputField}
+                      placeholder="Tell us why you want a refund..."
+                      value={refundReason}
+                      onChange={(e) => setRefundReason(e.target.value)}
+                    />
+                  </div>
 
-        <p style={{ fontSize: "12px", color: "#666", marginBottom: "20px" }}>
-          Order ID: {stay.order_id}
-        </p>
+                  <div style={inputGroup}>
+                    <label style={labelStyle}>UPI ID for Transfer</label>
+                    <input
+                      style={inputField}
+                      type="text"
+                      placeholder="e.g. name@bank"
+                      value={refundUpi}
+                      onChange={(e) => setRefundUpi(e.target.value)}
+                    />
+                  </div>
 
-        <div style={inputGroup}>
-          <label style={labelStyle}>Refund Reason</label>
-          <textarea
-            style={inputField}
-            placeholder="Tell us why you want a refund..."
-            value={refundReason}
-            onChange={(e) => setRefundReason(e.target.value)}
-          />
-        </div>
+                  <div style={btnRow}>
+                    <button
+                      style={{ ...btn, background: "#6b7280" }}
+                      onClick={() => setShowRefundFormFor(null)}
+                    >
+                      Cancel
+                    </button>
 
-        <div style={inputGroup}>
-          <label style={labelStyle}>UPI ID for Transfer</label>
-          <input
-            style={inputField}
-            type="text"
-            placeholder="e.g. name@bank"
-            value={refundUpi}
-            onChange={(e) => setRefundUpi(e.target.value)}
-          />
-        </div>
-
-        <div style={btnRow}>
-          <button
-            style={{ ...btn, background: "#6b7280" }}
-            onClick={() => setShowRefundFormFor(null)}
-          >
-            Cancel
-          </button>
-
-          <button
-            style={{ ...btn, background: BRAND_RED }}
-            onClick={() => submitRefundRequest(stay.id)}
-          >
-            Submit Request
-          </button>
-        </div>
-      </>
-    )}
-
-  </div>
-) : (
+                    <button
+                      style={{ ...btn, background: BRAND_RED }}
+                      disabled={isSubmitting}
+                      onClick={() => submitRefundRequest(stay.id)}
+                    >
+                      {isSubmitting ? "Submitting..." : "Submit Request"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
             /* ORIGINAL STAY DETAILS */
             <>
               <div style={headerSection}>
@@ -263,34 +264,16 @@ const UserActiveStay = () => {
                 <button style={btn} onClick={() => navigate("/user/bookings")}>📜 History</button>
                 <button style={payBtn} onClick={() => navigate("/payment")}>💳 Pay Rent</button>
                 <button style={receiptBtn} onClick={() => handleDownloadReceipt(stay)}>📥 Receipt</button>
-                {stay.order_id && (
-  <div style={{ width: "100%" }}>
-    
-    <button
-      style={{
-        ...btn,
-        background: stay.refund_status ? "#9ca3af" : BRAND_RED,
-        cursor: stay.refund_status ? "not-allowed" : "pointer"
-      }}
-      disabled={stay.refund_status && stay.refund_status !== "rejected"}
-      onClick={() => setShowRefundFormFor(stay.id)}
-    >
-      🔁 {stay.refund_status ? "Refund Requested" : "Refund"}
-    </button>
-
-    {/* 🔥 SHOW STATUS */}
-    {stay.refund_status && (
-      <div style={{ marginTop: 8, fontWeight: "600", fontSize: "13px" }}>
-        {stay.refund_status === "pending" && "⏳ Waiting for Admin Approval"}
-        {stay.refund_status === "approved" && "✅ Approved - Processing"}
-        {stay.refund_status === "paid" && "💸 Refunded Successfully"}
-        {stay.refund_status === "rejected" && "❌ Rejected (You can reapply)"}
-      </div>
-    )}
-
-  </div>
-)}
                 
+                {/* 🔥 CLEAN REFUND BUTTON - NO EXTERNAL STATUS LOGIC */}
+                {stay.order_id && (
+                  <button
+                    style={{ ...btn, background: BRAND_RED }}
+                    onClick={() => setShowRefundFormFor(stay.id)}
+                  >
+                    🔁 Refund
+                  </button>
+                )}
               </div>
             </>
           )}
@@ -385,7 +368,7 @@ const UserActiveStay = () => {
   );
 };
 
-/* --- EXISTING STYLES --- */
+/* --- STYLES --- */
 const container = { maxWidth: 600, margin: "40px auto", padding: "0 20px", fontFamily: "Inter, sans-serif" };
 const card = { background: "#fff", padding: 30, borderRadius: 16, boxShadow: "0 10px 25px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0", marginBottom: "25px" };
 const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 };
@@ -403,7 +386,6 @@ const receiptBtn = { ...btn, background: "#4b5563" };
 const infoItem = { display: "flex", flexDirection: "column" };
 const emptyBox = { textAlign: "center", padding: 60, background: "#fff", borderRadius: 16, border: "2px dashed #e5e7eb" };
 
-/* --- 🔥 NEW REFUND FORM STYLES --- */
 const refundFormContainer = { animation: "fadeIn 0.3s ease" };
 const inputGroup = { marginBottom: "15px" };
 const inputField = {
@@ -417,7 +399,6 @@ const inputField = {
   outline: "none"
 };
 
-/* --- PDF SPECIFIC STYLES --- */
 const modernReceiptContainer = { width: "210mm", minHeight: "297mm", padding: "60px", background: "#ffffff", color: "#111827", fontFamily: "Helvetica, Arial, sans-serif" };
 const receiptHeader = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "20px", marginBottom: "30px" };
 const logoText = { margin: 0, fontSize: "36px", fontWeight: "900", letterSpacing: "-1px" };
