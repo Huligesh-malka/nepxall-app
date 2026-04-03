@@ -10,11 +10,9 @@ const AdminRefunds = () => {
     try {
       const user = auth.currentUser;
       const token = await user.getIdToken();
-
       const res = await api.get("/payments/admin/refunds", {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       setRefunds(res.data);
     } catch (err) {
       console.error("❌ Error loading refunds:", err);
@@ -31,16 +29,12 @@ const AdminRefunds = () => {
     try {
       const user = auth.currentUser;
       const token = await user.getIdToken();
-
       await api.put(
         `/payments/admin/refunds/${id}`,
         { status },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      loadRefunds(); // refresh
+      loadRefunds();
     } catch (err) {
       console.error("❌ Update failed:", err);
       alert("Failed to update status");
@@ -55,51 +49,43 @@ const AdminRefunds = () => {
 
       {refunds.length === 0 && <p>No refund requests</p>}
 
-      {refunds.map((r) => (
-        <div key={r.id} style={card}>
-          <p><b>👤 User:</b> {r.name}</p>
-          <p><b>📞 Phone:</b> {r.phone}</p>
-          <p><b>🏠 PG:</b> {r.pg_name}</p>
-          <p><b>💰 Amount:</b> ₹{r.amount}</p>
-          <p><b>🏦 UPI ID:</b> {r.upi_id}</p>
-          <p><b>📝 Reason:</b> {r.reason}</p>
+      {/* HORIZONTAL WRAPPER */}
+      <div style={horizontalWrapper}>
+        {refunds.map((r) => (
+          <div key={r.id} style={card}>
+            <p><b>👤 User:</b> {r.name}</p>
+            <p><b>📞 Phone:</b> {r.phone}</p>
+            <p><b>🏠 PG:</b> {r.pg_name}</p>
+            <p><b>💰 Amount:</b> ₹{r.amount}</p>
+            <p><b>🏦 UPI ID:</b> {r.upi_id}</p>
+            <p><b>📝 Reason:</b> {r.reason}</p>
 
-          <p>
-            <b>Status:</b>
-            <span style={statusStyle(r.status)}> {r.status}</span>
-          </p>
+            <p>
+              <b>Status:</b>
+              <span style={statusStyle(r.status)}> {r.status}</span>
+            </p>
 
-          {/* ACTION BUTTONS */}
-          <div style={{ marginTop: 10 }}>
-            {r.status === "pending" && (
-              <>
-                <button
-                  style={approveBtn}
-                  onClick={() => updateStatus(r.id, "approved")}
-                >
-                  ✅ Approve
+            <div style={{ marginTop: 10 }}>
+              {r.status === "pending" && (
+                <>
+                  <button style={approveBtn} onClick={() => updateStatus(r.id, "approved")}>
+                    ✅ Approve
+                  </button>
+                  <button style={rejectBtn} onClick={() => updateStatus(r.id, "rejected")}>
+                    ❌ Reject
+                  </button>
+                </>
+              )}
+
+              {r.status === "approved" && (
+                <button style={paidBtn} onClick={() => updateStatus(r.id, "paid")}>
+                  💸 Mark Paid
                 </button>
-
-                <button
-                  style={rejectBtn}
-                  onClick={() => updateStatus(r.id, "rejected")}
-                >
-                  ❌ Reject
-                </button>
-              </>
-            )}
-
-            {r.status === "approved" && (
-              <button
-                style={paidBtn}
-                onClick={() => updateStatus(r.id, "paid")}
-              >
-                💸 Mark Paid
-              </button>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 };
@@ -108,10 +94,18 @@ export default AdminRefunds;
 
 /* ===== STYLES ===== */
 
+const horizontalWrapper = {
+  display: "flex",          // Aligns children in a row
+  flexDirection: "row",     // Ensures straight line
+  overflowX: "auto",        // Allows scrolling if cards exceed screen width
+  gap: "20px",              // Space between cards
+  paddingBottom: "15px",    // Space for scrollbar
+};
+
 const card = {
+  flex: "0 0 300px",        // Prevents cards from shrinking; sets fixed width of 300px
   border: "1px solid #e5e7eb",
   padding: 15,
-  marginBottom: 15,
   borderRadius: 10,
   background: "#ffffff",
   boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
