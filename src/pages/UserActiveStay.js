@@ -74,12 +74,16 @@ const UserActiveStay = () => {
         }
       );
 
-      if (res.data.success) {
-        alert("✅ Refund request submitted successfully.");
-        setShowRefundFormFor(null); // Hide form
-        setRefundReason(""); // Reset
-        setRefundUpi("");
-      }
+     if (res.data.success) {
+  alert("✅ Refund request submitted successfully.");
+
+  // 🔥 VERY IMPORTANT → reload data
+  await loadStay(false);
+
+  setShowRefundFormFor(null);
+  setRefundReason("");
+  setRefundUpi("");
+}
     } catch (err) {
       console.error("Refund Error:", err);
       alert(err.response?.data?.message || "Refund request failed.");
@@ -151,52 +155,65 @@ const UserActiveStay = () => {
           
           {/* --- CONDITIONALLY RENDER FORM OR DETAILS --- */}
           {showRefundFormFor === stay.id ? (
-            /* 🔥 NEW REFUND FORM UI */
-            <div style={refundFormContainer}>
-              <h3 style={{ color: BRAND_RED, marginBottom: "15px" }}>Request Refund</h3>
-              <p style={{ fontSize: "12px", color: "#666", marginBottom: "20px" }}>
-                Order ID: {stay.order_id}
-              </p>
+  <div style={refundFormContainer}>
 
-              <div style={inputGroup}>
-                <label style={labelStyle}>Refund Reason</label>
-                <textarea
-                  style={inputField}
-                  placeholder="Tell us why you want a refund..."
-                  value={refundReason}
-                  onChange={(e) => setRefundReason(e.target.value)}
-                />
-              </div>
+    {/* 🔥 SHOW STATUS INSIDE */}
+    {stay.refund_status ? (
+      <div style={{ textAlign: "center", fontWeight: "600", fontSize: "14px" }}>
+        {stay.refund_status === "pending" && "⏳ Waiting for Admin Approval"}
+        {stay.refund_status === "approved" && "✅ Approved - Processing"}
+        {stay.refund_status === "paid" && "💸 Refunded Successfully"}
+        {stay.refund_status === "rejected" && "❌ Rejected (You can retry)"}
+      </div>
+    ) : (
+      <>
+        <h3 style={{ color: BRAND_RED, marginBottom: "15px" }}>Request Refund</h3>
 
-              <div style={inputGroup}>
-                <label style={labelStyle}>UPI ID for Transfer</label>
-                <input
-                  style={inputField}
-                  type="text"
-                  placeholder="e.g. name@bank"
-                  value={refundUpi}
-                  onChange={(e) => setRefundUpi(e.target.value)}
-                />
-              </div>
+        <p style={{ fontSize: "12px", color: "#666", marginBottom: "20px" }}>
+          Order ID: {stay.order_id}
+        </p>
 
-              <div style={btnRow}>
-                <button 
-                  style={{ ...btn, background: "#6b7280" }} 
-                  onClick={() => setShowRefundFormFor(null)}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </button>
-                <button 
-                  style={{ ...btn, background: BRAND_RED }} 
-                  onClick={() => submitRefundRequest(stay.id)}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Processing..." : "Submit Request"}
-                </button>
-              </div>
-            </div>
-          ) : (
+        <div style={inputGroup}>
+          <label style={labelStyle}>Refund Reason</label>
+          <textarea
+            style={inputField}
+            placeholder="Tell us why you want a refund..."
+            value={refundReason}
+            onChange={(e) => setRefundReason(e.target.value)}
+          />
+        </div>
+
+        <div style={inputGroup}>
+          <label style={labelStyle}>UPI ID for Transfer</label>
+          <input
+            style={inputField}
+            type="text"
+            placeholder="e.g. name@bank"
+            value={refundUpi}
+            onChange={(e) => setRefundUpi(e.target.value)}
+          />
+        </div>
+
+        <div style={btnRow}>
+          <button
+            style={{ ...btn, background: "#6b7280" }}
+            onClick={() => setShowRefundFormFor(null)}
+          >
+            Cancel
+          </button>
+
+          <button
+            style={{ ...btn, background: BRAND_RED }}
+            onClick={() => submitRefundRequest(stay.id)}
+          >
+            Submit Request
+          </button>
+        </div>
+      </>
+    )}
+
+  </div>
+) : (
             /* ORIGINAL STAY DETAILS */
             <>
               <div style={headerSection}>
