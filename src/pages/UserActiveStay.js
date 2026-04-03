@@ -59,7 +59,7 @@ const UserActiveStay = () => {
       const token = await user.getIdToken();
 
       const res = await api.post(
-        "/refunds/request",
+  "/bookings/refunds/request",
         {
           bookingId: stay.id,
           reason,
