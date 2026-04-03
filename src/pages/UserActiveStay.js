@@ -9,6 +9,7 @@ import html2canvas from "html2canvas";
 const BRAND_BLUE = "#0B5ED7";
 const BRAND_GREEN = "#4CAF50";
 const BRAND_RED = "#ef4444"; 
+const BRAND_ORANGE = "#f59e0b"; // For Pending status
 
 const UserActiveStay = () => {
   const [stays, setStays] = useState([]);
@@ -18,8 +19,8 @@ const UserActiveStay = () => {
   const receiptRef = useRef();
   const [selectedStay, setSelectedStay] = useState(null);
 
-  /* --- NEW STATES FOR REFUND FORM --- */
-  const [showRefundFormFor, setShowRefundFormFor] = useState(null); // Stores the stay.id currently being refunded
+  /* --- STATES FOR REFUND FORM --- */
+  const [showRefundFormFor, setShowRefundFormFor] = useState(null); 
   const [refundReason, setRefundReason] = useState("");
   const [refundUpi, setRefundUpi] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,7 +51,7 @@ const UserActiveStay = () => {
     return () => unsubscribe();
   }, [loadStay, navigate]);
 
-  /* 🔥 UPDATED REFUND SUBMIT FUNCTION */
+  /* 🔥 SUBMIT REFUND REQUEST */
   const submitRefundRequest = async (stayId) => {
     if (!refundReason || !refundUpi) {
       alert("Please provide both a reason and a UPI ID.");
@@ -76,9 +77,11 @@ const UserActiveStay = () => {
 
       if (res.data.success) {
         alert("✅ Refund request submitted successfully.");
-        setShowRefundFormFor(null); // Hide form
-        setRefundReason(""); // Reset
+        setShowRefundFormFor(null);
+        setRefundReason("");
         setRefundUpi("");
+        // Reload data to reflect the new status immediately
+        loadStay(false);
       }
     } catch (err) {
       console.error("Refund Error:", err);
@@ -95,6 +98,17 @@ const UserActiveStay = () => {
       month: "long",
       year: "numeric",
     });
+  };
+
+  /* Helper to style refund status */
+  const getRefundStatusStyle = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'pending': return { background: "#fff7ed", color: BRAND_ORANGE };
+      case 'approved': return { background: "#eff6ff", color: BRAND_BLUE };
+      case 'paid': return { background: "#f0fdf4", color: BRAND_GREEN };
+      case 'rejected': return { background: "#fef2f2", color: BRAND_RED };
+      default: return { background: "#f3f4f6", color: "#6b7280" };
+    }
   };
 
   const handleDownloadReceipt = async (stay) => {
@@ -149,9 +163,7 @@ const UserActiveStay = () => {
       {stays.map((stay) => (
         <div key={stay.id} style={card}>
           
-          {/* --- CONDITIONALLY RENDER FORM OR DETAILS --- */}
           {showRefundFormFor === stay.id ? (
-            /* 🔥 NEW REFUND FORM UI */
             <div style={refundFormContainer}>
               <h3 style={{ color: BRAND_RED, marginBottom: "15px" }}>Request Refund</h3>
               <p style={{ fontSize: "12px", color: "#666", marginBottom: "20px" }}>
@@ -197,11 +209,22 @@ const UserActiveStay = () => {
               </div>
             </div>
           ) : (
-            /* ORIGINAL STAY DETAILS */
             <>
               <div style={headerSection}>
                 <h3 style={{ margin: 0, color: BRAND_BLUE }}>{stay.pg_name}</h3>
-                <span style={statusBadge}>VERIFIED ✅</span>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  {/* 🔥 REFUND STATUS BADGE */}
+                  {stay.refund_status && (
+                    <span style={{ 
+                      ...statusBadge, 
+                      ...getRefundStatusStyle(stay.refund_status),
+                      border: `1px solid ${getRefundStatusStyle(stay.refund_status).color}`
+                    }}>
+                      REFUND: {stay.refund_status.toUpperCase()}
+                    </span>
+                  )}
+                  <span style={statusBadge}>VERIFIED ✅</span>
+                </div>
               </div>
 
               <div style={infoGrid}>
@@ -225,17 +248,6 @@ const UserActiveStay = () => {
                 <p style={{ ...priceRow, color: BRAND_GREEN, fontWeight: "700" }}>
                   💰 Paid On: <span>{formatDate(stay.paid_date)}</span>
                 </p>
-                {stay.rent_amount > 0 && (
-                  <p style={priceRow}>Monthly Rent: <span>₹{stay.rent_amount}</span></p>
-                )}
-                {stay.maintenance_amount > 0 && (
-                  <p style={priceRow}>Maintenance: <span>₹{stay.maintenance_amount}</span></p>
-                )}
-                {stay.deposit_amount > 0 && (
-                  <p style={{ ...priceRow, borderTop: "1px dashed #eee", paddingTop: "10px", marginTop: "10px" }}>
-                    Security Deposit (Paid): <span style={{ fontWeight: "bold" }}>₹{stay.deposit_amount}</span>
-                  </p>
-                )}
                 <div style={totalBox}>
                   <span>Total Monthly Paid</span>
                   <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>₹{stay.monthly_total}</span>
@@ -246,7 +258,9 @@ const UserActiveStay = () => {
                 <button style={btn} onClick={() => navigate("/user/bookings")}>📜 History</button>
                 <button style={payBtn} onClick={() => navigate("/payment")}>💳 Pay Rent</button>
                 <button style={receiptBtn} onClick={() => handleDownloadReceipt(stay)}>📥 Receipt</button>
-                {stay.order_id && (
+                
+                {/* 🔥 HIDE REFUND BUTTON IF ALREADY FILED OR PAID */}
+                {stay.order_id && !stay.refund_status && (
                   <button
                     style={{ ...btn, background: BRAND_RED }}
                     onClick={() => setShowRefundFormFor(stay.id)}
@@ -260,7 +274,7 @@ const UserActiveStay = () => {
         </div>
       ))}
 
-      {/* HIDDEN RECEIPT DESIGN FOR PDF (Remains Unchanged) */}
+      {/* HIDDEN RECEIPT DESIGN FOR PDF */}
       {selectedStay && (
         <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
           <div ref={receiptRef} style={modernReceiptContainer}>
@@ -284,18 +298,15 @@ const UserActiveStay = () => {
                 <div style={sectionBlock}>
                   <label style={receiptLabel}>👤 ISSUED TO</label>
                   <p style={receiptValue}>{auth.currentUser?.displayName || "Valued Tenant"}</p>
-                  <p style={receiptSubValue}>Mob: {auth.currentUser?.phoneNumber || "Registered User"}</p>
                 </div>
                 <div style={sectionBlock}>
                   <label style={receiptLabel}>🏠 PROPERTY DETAILS</label>
                   <p style={receiptValue}>{selectedStay.pg_name}</p>
-                  <p style={receiptSubValue}>{selectedStay.room_type} Sharing {selectedStay.room_no ? `| Room: ${selectedStay.room_no}` : ""}</p>
                 </div>
               </div>
               <div style={paymentStatusBox}>
                 <div style={statusCircle}>✅</div>
                 <h3 style={{ ...statusText, color: BRAND_GREEN }}>VERIFIED</h3>
-                <p style={dateText}>Payment Mode: Online</p>
                 <div style={amountDisplay}>₹{selectedStay.monthly_total}</div>
               </div>
             </div>
@@ -305,40 +316,14 @@ const UserActiveStay = () => {
                 <span>📊 PAYMENT BREAKDOWN</span>
                 <span>Amount</span>
               </div>
-              {selectedStay.rent_amount > 0 && (
-                <div style={tableRow}>
-                  <span>Monthly Room Rent ({selectedStay.room_type})</span>
-                  <span>₹{selectedStay.rent_amount}</span>
-                </div>
-              )}
-              {selectedStay.maintenance_amount > 0 && (
-                <div style={tableRow}>
-                  <span>Maintenance Charges</span>
-                  <span>₹{selectedStay.maintenance_amount}</span>
-                </div>
-              )}
-              <div style={{ ...tableRow, borderBottom: `2px solid ${BRAND_BLUE}`, fontWeight: "bold", background: "#f8fafc" }}>
-                <span>Total Amount Received</span>
+              <div style={tableRow}>
+                <span>Monthly Total Received</span>
                 <span>₹{selectedStay.monthly_total}</span>
               </div>
             </div>
 
-            {selectedStay.deposit_amount > 0 && (
-              <div style={{ ...sectionBlock, marginTop: "30px", padding: "20px", background: "#f0f4f8", borderRadius: "10px" }}>
-                <label style={receiptLabel}>💳 SECURITY DEPOSIT (ONE-TIME)</label>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={receiptValue}>₹{selectedStay.deposit_amount}</span>
-                  <span style={{ color: BRAND_GREEN, fontWeight: "bold" }}>Paid (Refundable)</span>
-                </div>
-              </div>
-            )}
-
             <div style={footerNote}>
-              <div style={{ textAlign: "left", marginBottom: "20px", color: "#4b5563" }}>
-                <p>✔ Verified Transaction: <strong>{selectedStay.order_id || "N/A"}</strong></p>
-                <p>✔ This is a digital proof of stay generated by Nepxall.</p>
-              </div>
-              <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>* System-generated receipt. No signature required.</p>
+              <p>* System-generated receipt. No signature required.</p>
               <p style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}>THANK YOU FOR STAYING WITH US!</p>
             </div>
           </div>
@@ -348,7 +333,7 @@ const UserActiveStay = () => {
   );
 };
 
-/* --- EXISTING STYLES --- */
+/* --- STYLES --- */
 const container = { maxWidth: 600, margin: "40px auto", padding: "0 20px", fontFamily: "Inter, sans-serif" };
 const card = { background: "#fff", padding: 30, borderRadius: 16, boxShadow: "0 10px 25px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0", marginBottom: "25px" };
 const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 };
@@ -365,33 +350,21 @@ const payBtn = { ...btn, background: BRAND_GREEN };
 const receiptBtn = { ...btn, background: "#4b5563" };
 const infoItem = { display: "flex", flexDirection: "column" };
 const emptyBox = { textAlign: "center", padding: 60, background: "#fff", borderRadius: 16, border: "2px dashed #e5e7eb" };
-
-/* --- 🔥 NEW REFUND FORM STYLES --- */
 const refundFormContainer = { animation: "fadeIn 0.3s ease" };
 const inputGroup = { marginBottom: "15px" };
-const inputField = {
-  width: "100%",
-  padding: "10px",
-  borderRadius: "8px",
-  border: "1px solid #ddd",
-  marginTop: "5px",
-  fontFamily: "inherit",
-  fontSize: "14px",
-  outline: "none"
-};
+const inputField = { width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #ddd", marginTop: "5px", fontSize: "14px", outline: "none" };
 
 /* --- PDF SPECIFIC STYLES --- */
-const modernReceiptContainer = { width: "210mm", minHeight: "297mm", padding: "60px", background: "#ffffff", color: "#111827", fontFamily: "Helvetica, Arial, sans-serif" };
+const modernReceiptContainer = { width: "210mm", minHeight: "297mm", padding: "60px", background: "#ffffff", color: "#111827" };
 const receiptHeader = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "20px", marginBottom: "30px" };
-const logoText = { margin: 0, fontSize: "36px", fontWeight: "900", letterSpacing: "-1px" };
+const logoText = { margin: 0, fontSize: "36px", fontWeight: "900" };
 const tagline = { margin: 0, fontSize: "12px", color: "#6b7280" };
-const receiptTitle = { margin: 0, fontSize: "22px", color: "#111827" };
+const receiptTitle = { margin: 0, fontSize: "22px" };
 const orderIdText = { margin: 0, fontSize: "14px", fontWeight: "bold" };
 const mainReceiptBody = { display: "flex", gap: "30px", marginBottom: "40px" };
 const sectionBlock = { marginBottom: "20px" };
-const receiptLabel = { fontSize: "11px", color: "#9ca3af", fontWeight: "bold", letterSpacing: "1px", display: "block", marginBottom: "5px" };
-const receiptValue = { fontSize: "16px", fontWeight: "bold", margin: 0, color: "#111827" };
-const receiptSubValue = { fontSize: "13px", color: "#4b5563", margin: "2px 0" };
+const receiptLabel = { fontSize: "11px", color: "#9ca3af", fontWeight: "bold", display: "block", marginBottom: "5px" };
+const receiptValue = { fontSize: "16px", fontWeight: "bold", margin: 0 };
 const paymentStatusBox = { width: "200px", background: "#f8fafc", borderRadius: "15px", border: "1px solid #e2e8f0", padding: "20px", textAlign: "center" };
 const statusCircle = { fontSize: "30px", marginBottom: "5px" };
 const statusText = { margin: 0, fontSize: "18px", fontWeight: "bold" };
