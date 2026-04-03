@@ -25,7 +25,9 @@ export default function OwnerPayments() {
 
   // Modal & Flow State
   const [openSignModal, setOpenSignModal] = useState(false);
+  const [openReceiptModal, setOpenReceiptModal] = useState(false); 
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [receiptData, setReceiptData] = useState(null); 
   const [step, setStep] = useState(1);
   
   // Form State
@@ -37,6 +39,7 @@ export default function OwnerPayments() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const sigCanvas = useRef(null);
+  const receiptRef = useRef();
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -70,164 +73,27 @@ export default function OwnerPayments() {
     }
   };
 
-  const downloadReceiptAsPDF = async (bookingId) => {
-    try {
-      setIsSubmitting(true);
+  const handleViewReceipt = async (bookingId) => {
+  try {
+    setIsSubmitting(true);
 
-      const res = await axios.get(`${API}/receipt-details/${bookingId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+    const res = await axios.get(`${API}/receipt-details/${bookingId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
 
-      if (res.data.success && res.data.data) {
-        const receiptData = res.data.data;
-        
-        // Create a temporary div for rendering receipt
-        const tempDiv = document.createElement('div');
-        tempDiv.style.position = 'absolute';
-        tempDiv.style.top = '-9999px';
-        tempDiv.style.left = '-9999px';
-        tempDiv.style.backgroundColor = 'white';
-        tempDiv.style.padding = '20px';
-        tempDiv.style.width = '500px';
-        tempDiv.style.fontFamily = 'Arial, sans-serif';
-        document.body.appendChild(tempDiv);
-
-        // Render receipt HTML
-        tempDiv.innerHTML = `
-          <div style="padding: 20px; background-color: white; font-family: Arial, sans-serif;">
-            <!-- Header Section -->
-            <div style="text-align: center; margin-bottom: 16px;">
-              <h2 style="margin: 0; letter-spacing: 2px;">NEXPALL</h2>
-              <div style="font-size: 12px; color: #666;">Next Places for Living</div>
-            </div>
-
-            <hr style="margin: 8px 0;" />
-
-            <div style="text-align: center; margin: 8px 0;">
-              <h3 style="margin: 0; letter-spacing: 1px;">RENT RECEIPT</h3>
-              <div style="font-size: 12px; color: #666;">Receipt No: ${receiptData?.receipt_no || 'NXP-2026-000145'}</div>
-            </div>
-
-            <hr style="margin: 8px 0;" />
-
-            <!-- Order Info -->
-            <div style="display: flex; justify-content: space-between; margin-top: 8px;">
-              <div><strong>Order ID</strong> : ${receiptData?.order_id || 'ORD-98237465'}</div>
-              <div><strong>Date</strong> : ${receiptData?.verified_date ? new Date(receiptData.verified_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : '03 April 2026'}</div>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-top: 4px;">
-              <div><strong>Payment Status</strong> : <strong style="color: green;">SUCCESSFUL ✅</strong></div>
-            </div>
-
-            <hr style="margin: 12px 0;" />
-
-            <!-- Tenant Details -->
-            <div><strong>👤 TENANT DETAILS</strong></div>
-            <div style="margin-left: 8px;">Mobile Number : ${receiptData?.tenant_phone || '+91 XXXXX XXXXX'}</div>
-
-            <hr style="margin: 12px 0;" />
-
-            <!-- Property Details -->
-            <div><strong>🏠 PROPERTY DETAILS</strong></div>
-            <div style="margin-left: 8px;">PG Name : ${receiptData?.pg_name || 'Lakshmi PG'}</div>
-            <div style="margin-left: 8px;">Room Type : ${receiptData?.room_type || 'Double Sharing'}</div>
-
-            <hr style="margin: 12px 0;" />
-
-            <!-- Owner Details -->
-            <div><strong>👨‍💼 OWNER DETAILS</strong></div>
-            <div style="margin-left: 8px;">Owner ID : #${receiptData?.owner_id || '2'}</div>
-            <div style="margin-left: 8px;">Mobile Number : ${receiptData?.owner_phone || '+91 XXXXX XXXXX'}</div>
-
-            <hr style="margin: 12px 0;" />
-
-            <!-- Bank Details -->
-            <div><strong>💳 BANK DETAILS</strong></div>
-            <div style="margin-left: 8px;">Account Holder : ${receiptData?.account_holder_name || 'Balaraja'}</div>
-            <div style="margin-left: 8px;">Bank Name : ${receiptData?.bank_name || 'SBI Bank'}</div>
-            <div style="margin-left: 8px;">Account Number : ${receiptData?.account_number || 'XXXX1285'}</div>
-            <div style="margin-left: 8px;">IFSC Code : ${receiptData?.ifsc || 'SBIN0040410'}</div>
-
-            <hr style="margin: 12px 0;" />
-
-            <!-- Payment Breakdown -->
-            <div><strong>💰 PAYMENT BREAKDOWN</strong></div>
-            <div style="display: flex; justify-content: space-between; margin-left: 8px;">
-              <div>Rent Amount</div>
-              <div>₹${receiptData?.rent_amount || '3000.00'}</div>
-            </div>
-            
-            ${receiptData?.security_deposit > 0 ? `
-              <div style="display: flex; justify-content: space-between; margin-left: 8px;">
-                <div>Security Deposit</div>
-                <div>₹${receiptData.security_deposit}</div>
-              </div>
-            ` : ''}
-            
-            ${receiptData?.maintenance_amount > 0 ? `
-              <div style="display: flex; justify-content: space-between; margin-left: 8px;">
-                <div>Maintenance</div>
-                <div>₹${receiptData.maintenance_amount}</div>
-              </div>
-            ` : ''}
-
-            <hr style="margin: 8px 0;" />
-
-            <div style="display: flex; justify-content: space-between; margin-left: 8px;">
-              <div><strong>TOTAL PAID</strong></div>
-              <div><strong>₹${receiptData?.total_amount || '3000.00'}</strong></div>
-            </div>
-
-            <hr style="margin: 12px 0;" />
-
-            <!-- Settlement Status -->
-            <div><strong>✅ SETTLEMENT STATUS</strong></div>
-            <div style="margin-left: 8px;">✔ Settlement Completed</div>
-            <div style="margin-left: 8px;">✔ Paid to Owner by Admin</div>
-            <div style="margin-left: 8px;">✔ Digitally Generated Receipt</div>
-
-            <hr style="margin: 12px 0;" />
-
-            <!-- Footer -->
-            <div style="text-align: center; margin-top: 8px;">
-              <div>🙏 Thank you for choosing NEXPALL</div>
-              <div style="font-size: 11px; color: #666;">This is a system-generated receipt. No physical signature required.</div>
-              <div style="font-size: 11px; color: #666;">Support: support@nexpall.com | Website: www.nexpall.com</div>
-            </div>
-          </div>
-        `;
-
-        // Convert to PDF
-        const canvas = await html2canvas(tempDiv, {
-          scale: 3,
-          useCORS: true,
-          logging: false,
-          backgroundColor: 'white'
-        });
-
-        const imgData = canvas.toDataURL("image/png");
-        const pdf = new jsPDF("p", "mm", "a4");
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const imgWidth = pageWidth - 20;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight, undefined, "FAST");
-        pdf.save(`receipt-${receiptData?.order_id || "nexpall"}.pdf`);
-
-        // Clean up
-        document.body.removeChild(tempDiv);
-        alert("Receipt downloaded successfully ✅");
-      } else {
-        alert("No receipt data found");
-      }
-
-    } catch (err) {
-      console.error("Error:", err);
-      alert("Failed to generate receipt ❌");
-    } finally {
-      setIsSubmitting(false);
+    if (res.data.success && res.data.data) {
+      setReceiptData(res.data.data);   // ✅ FIXED
+      setOpenReceiptModal(true);
+    } else {
+      alert("No receipt data found");
     }
-  };
 
+  } catch (err) {
+    alert("Receipt data not found on server.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
   const handleViewPdf = async (bookingId, filePath) => {
     try {
       await axios.post(`${API}/agreements/viewed`, { booking_id: bookingId }, {
@@ -347,7 +213,34 @@ export default function OwnerPayments() {
     if (t.includes("bhk")) return "secondary";
     return "default";
   };
+  const downloadPDF = async () => {
+  try {
+    const element = receiptRef.current;
 
+    const canvas = await html2canvas(element, {
+      scale: 3,              // 🔥 VERY IMPORTANT (HD QUALITY)
+      useCORS: true,
+      logging: false,
+      scrollY: -window.scrollY
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF("p", "mm", "a4");
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const imgWidth = pageWidth - 20;
+
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight, undefined, "FAST");
+
+    pdf.save(`receipt-${receiptData?.order_id || "nexpall"}.pdf`);
+  } catch (err) {
+    console.error("PDF Error:", err);
+    alert("Failed to generate PDF ❌");
+  }
+};
   if (loading) return <Box p={5} textAlign="center"><CircularProgress /></Box>;
 
   return (
@@ -417,16 +310,14 @@ export default function OwnerPayments() {
                           color="success"
                           sx={{ fontWeight: "bold" }}
                         />
-                        <Button
-                          variant="contained"
-                          size="small"
-                          startIcon={<ReceiptLong />}
-                          onClick={() => downloadReceiptAsPDF(item.booking_id)}
-                          disabled={isSubmitting}
-                          sx={{ ml: 1 }}
+                        <IconButton 
+                          color="primary" 
+                          size="small" 
+                          onClick={() => handleViewReceipt(item.booking_id)}
+                          title="View Receipt"
                         >
-                          Download Receipt
-                        </Button>
+                          <ReceiptLong />
+                        </IconButton>
                       </Stack>
                     ) : (
                       <Chip
@@ -442,6 +333,134 @@ export default function OwnerPayments() {
           </TableBody>
         </Table>
       </Paper>
+
+      {/* --- RENT RECEIPT MODAL --- */}
+      <Modal
+        open={openReceiptModal}
+        onClose={() => setOpenReceiptModal(false)}
+        closeAfterTransition
+        slots={{ backdrop: Backdrop }}
+        slotProps={{ backdrop: { timeout: 500 } }}
+      >
+        <Fade in={openReceiptModal}>
+          <Box sx={{
+            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            width: { xs: '95%', sm: 500 }, bgcolor: 'background.paper', borderRadius: 2, boxShadow: 24, p: 0, overflow: 'hidden'
+          }}>
+            <Box sx={{ p: 3, backgroundColor: 'white' }} ref={receiptRef}>
+              {/* Header Section */}
+              <Box textAlign="center" mb={2}>
+                <Typography variant="h5" fontWeight="bold" letterSpacing={2}>NEXPALL</Typography>
+                <Typography variant="caption" color="textSecondary">Next Places for Living</Typography>
+              </Box>
+
+              <Divider sx={{ my: 1 }} />
+
+              <Box textAlign="center" my={1}>
+                <Typography variant="h6" fontWeight="bold" letterSpacing={1}>RENT RECEIPT</Typography>
+                <Typography variant="caption" color="textSecondary">Receipt No: {receiptData?.receipt_no || 'NXP-2026-000145'}</Typography>
+              </Box>
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Order Info */}
+              <Box display="flex" justifyContent="space-between" mt={1}>
+                <Typography variant="body2"><b>Order ID</b> : {receiptData?.order_id || 'ORD-98237465'}</Typography>
+                <Typography variant="body2"><b>Date</b> : {receiptData?.verified_date ? new Date(receiptData.verified_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : '03 April 2026'}</Typography>
+              </Box>
+              <Box display="flex" justifyContent="space-between" mt={0.5}>
+                <Typography variant="body2"><b>Payment Status</b> : <b style={{ color: 'green' }}>SUCCESSFUL ✅</b></Typography>
+              </Box>
+
+              <Divider sx={{ my: 1.5 }} />
+
+              {/* Tenant Details */}
+              <Typography variant="subtitle2" fontWeight="bold">👤 TENANT DETAILS</Typography>
+              <Typography variant="body2" ml={1}>Mobile Number : {receiptData?.tenant_phone || '+91 XXXXX XXXXX'}</Typography>
+
+              <Divider sx={{ my: 1.5 }} />
+
+              {/* Property Details */}
+              <Typography variant="subtitle2" fontWeight="bold">🏠 PROPERTY DETAILS</Typography>
+              <Typography variant="body2" ml={1}>PG Name : {receiptData?.pg_name || 'Lakshmi PG'}</Typography>
+              <Typography variant="body2" ml={1}>Room Type : {receiptData?.room_type || 'Double Sharing'}</Typography>
+              <Typography variant="body2" ml={1}>Room No : {receiptData?.room_no || '102'}</Typography>
+
+              <Divider sx={{ my: 1.5 }} />
+
+              {/* Owner Details */}
+              <Typography variant="subtitle2" fontWeight="bold">👨‍💼 OWNER DETAILS</Typography>
+              <Typography variant="body2" ml={1}>Owner ID : #{receiptData?.owner_id || '2'}</Typography>
+
+              <Divider sx={{ my: 1.5 }} />
+
+              {/* Bank Details */}
+              <Typography variant="subtitle2" fontWeight="bold">💳 BANK DETAILS</Typography>
+              <Typography variant="body2" ml={1}>Account Holder : {receiptData?.account_holder_name || 'Balaraja'}</Typography>
+              <Typography variant="body2" ml={1}>Bank Name : {receiptData?.bank_name || 'SBI Bank'}</Typography>
+              <Typography variant="body2" ml={1}>Account Number : {receiptData?.account_number || 'XXXX1285'}</Typography>
+              <Typography variant="body2" ml={1}>IFSC Code : {receiptData?.ifsc || 'SBIN0040410'}</Typography>
+
+              <Divider sx={{ my: 1.5 }} />
+
+              {/* Payment Breakdown */}
+              <Typography variant="subtitle2" fontWeight="bold">💰 PAYMENT BREAKDOWN</Typography>
+              <Box display="flex" justifyContent="space-between" ml={1}>
+                <Typography variant="body2">Rent Amount</Typography>
+                <Typography variant="body2">₹{receiptData?.rent_amount || '3000.00'}</Typography>
+              </Box>
+              
+              {receiptData?.security_deposit > 0 && (
+                <Box display="flex" justifyContent="space-between" ml={1}>
+                  <Typography variant="body2">Security Deposit</Typography>
+                  <Typography variant="body2">₹{receiptData.security_deposit}</Typography>
+                </Box>
+              )}
+              
+              {receiptData?.maintenance_amount > 0 && (
+                <Box display="flex" justifyContent="space-between" ml={1}>
+                  <Typography variant="body2">Maintenance</Typography>
+                  <Typography variant="body2">₹{receiptData.maintenance_amount}</Typography>
+                </Box>
+              )}
+
+              <Divider sx={{ my: 1 }} />
+
+              <Box display="flex" justifyContent="space-between" ml={1}>
+                <Typography variant="subtitle1" fontWeight="bold">TOTAL PAID</Typography>
+                <Typography variant="subtitle1" fontWeight="bold">₹{receiptData?.total_amount || '3000.00'}</Typography>
+              </Box>
+
+              <Divider sx={{ my: 1.5 }} />
+
+              {/* Settlement Status */}
+              <Typography variant="subtitle2" fontWeight="bold">✅ SETTLEMENT STATUS</Typography>
+              <Typography variant="body2" ml={1}>✔ Settlement Completed</Typography>
+              <Typography variant="body2" ml={1}>✔ Paid to Owner by Admin</Typography>
+              <Typography variant="body2" ml={1}>✔ Digitally Generated Receipt</Typography>
+
+              <Divider sx={{ my: 1.5 }} />
+
+              {/* Footer */}
+              <Box textAlign="center" mt={1}>
+                <Typography variant="body2">🙏 Thank you for choosing NEXPALL</Typography>
+                <Typography variant="caption" color="textSecondary">This is a system-generated receipt. No physical signature required.</Typography>
+                <Typography variant="caption" display="block" color="textSecondary">Support: support@nexpall.com | Website: www.nexpall.com</Typography>
+              </Box>
+
+              <Button 
+                fullWidth 
+                variant="outlined" 
+                sx={{ mt: 2 }} 
+                onClick={downloadPDF}
+                startIcon={<ReceiptLong />}
+              >
+                Print Receipt
+              </Button>
+            </Box>
+          </Box>
+        </Fade>
+      </Modal>
 
       {/* MULTI-STEP SIGNING MODAL */}
       <Modal 
@@ -524,7 +543,7 @@ export default function OwnerPayments() {
                         19. No illegal activities allowed.<br/>
                         22. Audit trail (OTP, IP) is legal proof.<br/>
                         23. Platform is only a facilitator.<br/>
-                        25. Full legal responsibility accepted.
+                        24. Full legal responsibility accepted.
                     </Typography>
                   </Box>
                 </Box>
