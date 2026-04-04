@@ -22,7 +22,7 @@ const UserActiveStay = () => {
   const [showRefundFormFor, setShowRefundFormFor] = useState(null); 
   const [refundReason, setRefundReason] = useState("");
   const [refundUpi, setRefundUpi] = useState("");
-  const [confirmUpi, setConfirmUpi] = useState(""); // New State
+  const [confirmUpi, setConfirmUpi] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   /* --- VACATE STATES --- */
@@ -32,7 +32,6 @@ const UserActiveStay = () => {
   const [accountNumber, setAccountNumber] = useState("");
   const [ifscCode, setIfscCode] = useState("");
   const [upiId, setUpiId] = useState("");
-  const [vacateStatus, setVacateStatus] = useState(null); // New state for vacate status
 
   const loadStay = useCallback(async (showLoader = true) => {
     try {
@@ -45,14 +44,8 @@ const UserActiveStay = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setStays(Array.isArray(res.data) ? res.data : res.data ? [res.data] : []);
-      
-      // Check vacate status for each stay
-      res.data.forEach(stay => {
-        if (stay.vacate_status === "pending" || stay.vacate_status === "approved" || stay.vacate_status === "completed") {
-          setVacateStatus(stay.vacate_status);
-        }
-      });
+      const staysData = Array.isArray(res.data) ? res.data : res.data ? [res.data] : [];
+      setStays(staysData);
       
     } catch (err) {
       console.error("Error loading stays:", err);
@@ -139,14 +132,14 @@ const UserActiveStay = () => {
 
       if (res.data.success) {
         alert("✅ Vacate request submitted");
-        setVacateStatus("pending"); // Set status to pending
         setShowVacateFormFor(null);
         setVacateReason("");
         setVacateDate("");
         setAccountNumber("");
         setIfscCode("");
         setUpiId("");
-        loadStay(false);
+        // Reload to get updated vacate_status from server
+        await loadStay(false);
       }
 
     } catch (err) {
@@ -259,10 +252,11 @@ const UserActiveStay = () => {
       {stays.map((stay) => (
         <div key={stay.id} style={card}>
           
-          {/* SHOW VACATE STATUS ONLY (NO FORM) */}
+          {/* SHOW VACATE STATUS ONLY - This shows when vacate_status exists (after submission) */}
           {(stay.vacate_status === "pending" || stay.vacate_status === "approved" || stay.vacate_status === "completed") && (
             <div style={{ 
-              background: stay.vacate_status === "pending" ? "#fef3c7" : stay.vacate_status === "approved" ? "#dcfce7" : "#e0e7ff",
+              background: stay.vacate_status === "pending" ? "#fef3c7" : 
+                          stay.vacate_status === "approved" ? "#dcfce7" : "#e0e7ff",
               padding: "15px", 
               borderRadius: "8px", 
               marginBottom: "15px",
@@ -279,15 +273,52 @@ const UserActiveStay = () => {
                   Vacate Date: {formatDate(stay.vacate_date)}
                 </p>
               )}
+              
+              {/* Show refund status inside vacate status box */}
+              {stay.refund_status && (
+                <div style={{ 
+                  marginTop: "10px",
+                  paddingTop: "10px",
+                  borderTop: "1px solid rgba(0,0,0,0.1)"
+                }}>
+                  <p style={{ fontWeight: "bold", fontSize: "13px" }}>
+                    Refund Status:
+                    {stay.refund_status === "pending" && " ⏳ Pending"}
+                    {stay.refund_status === "approved" && " ✅ Approved"}
+                    {stay.refund_status === "paid" && " 💸 Paid"}
+                    {stay.refund_status === "rejected" && " ❌ Rejected"}
+                  </p>
+                  {stay.refund_amount > 0 && (
+                    <p>💰 Refund Amount: ₹{stay.refund_amount}</p>
+                  )}
+                  {/* ACCEPT / REJECT buttons for approved refund */}
+                  {stay.refund_status === "approved" && stay.user_approval === "pending" && (
+                    <div style={{ display: "flex", gap: 8, marginTop: 10, justifyContent: "center" }}>
+                      <button
+                        style={{ ...btn, background: "#4CAF50", flex: "none", width: "100px" }}
+                        onClick={() => acceptRefund(stay.id)}
+                      >
+                        ✅ Accept
+                      </button>
+                      <button
+                        style={{ ...btn, background: "#ef4444", flex: "none", width: "100px" }}
+                        onClick={() => rejectRefund(stay.id)}
+                      >
+                        ❌ Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
-          {/* VACATE FORM - Only show if no vacate request submitted */}
-          {!stay.vacate_status && showVacateFormFor === stay.id ? (
+          {/* VACATE FORM - Only show if NO vacate_status exists AND form is opened */}
+          {!stay.vacate_status && showVacateFormFor === stay.id && (
             <div style={refundFormContainer}>
               <h3 style={{ color: "#f59e0b" }}>Vacate Request</h3>
 
-              {/* 🔥 SHOW REFUND STATUS INSIDE VACATE */}
+              {/* Show refund status if exists (but form is still shown) */}
               {stay.refund_status && (
                 <div style={{ 
                   background: "#f9fafb", 
@@ -296,19 +327,15 @@ const UserActiveStay = () => {
                   marginBottom: "10px",
                   textAlign: "center"
                 }}>
-                  
                   <p style={{ fontWeight: "bold" }}>
                     Refund Status:
                     {stay.refund_status === "pending" && " ⏳ Pending"}
                     {stay.refund_status === "approved" && " ✅ Approved"}
                     {stay.refund_status === "paid" && " 💸 Paid"}
                   </p>
-
                   {stay.refund_amount > 0 && (
                     <p>💰 Refund Amount: ₹{stay.refund_amount}</p>
                   )}
-
-                  {/* ACCEPT / REJECT */}
                   {stay.refund_status === "approved" && stay.user_approval === "pending" && (
                     <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                       <button
@@ -317,7 +344,6 @@ const UserActiveStay = () => {
                       >
                         ✅ Accept
                       </button>
-
                       <button
                         style={{ ...btn, background: "#ef4444" }}
                         onClick={() => rejectRefund(stay.id)}
@@ -326,47 +352,51 @@ const UserActiveStay = () => {
                       </button>
                     </div>
                   )}
-
                 </div>
               )}
 
               <div style={inputGroup}>
-                <label style={labelStyle}>Vacate Date</label>
+                <label style={labelStyle}>Vacate Date *</label>
                 <input
                   type="date"
                   style={inputField}
                   value={vacateDate}
                   onChange={(e) => setVacateDate(e.target.value)}
+                  required
                 />
               </div>
 
               <div style={inputGroup}>
-                <label style={labelStyle}>Reason</label>
+                <label style={labelStyle}>Reason *</label>
                 <textarea
                   style={inputField}
                   placeholder="Why are you vacating?"
                   value={vacateReason}
                   onChange={(e) => setVacateReason(e.target.value)}
+                  rows="3"
+                  required
                 />
               </div>
 
               <div style={inputGroup}>
-                <label style={labelStyle}>Account Number</label>
+                <label style={labelStyle}>Account Number *</label>
                 <input
                   style={inputField}
                   placeholder="Enter account number"
                   value={accountNumber}
                   onChange={(e) => setAccountNumber(e.target.value)}
+                  required
                 />
               </div>
 
               <div style={inputGroup}>
-                <label style={labelStyle}>IFSC Code</label>
+                <label style={labelStyle}>IFSC Code *</label>
                 <input
                   style={inputField}
                   placeholder="Enter IFSC code"
                   value={ifscCode}
                   onChange={(e) => setIfscCode(e.target.value)}
+                  required
                 />
               </div>
 
@@ -434,6 +464,7 @@ const UserActiveStay = () => {
                       placeholder="Tell us why you want a refund..."
                       value={refundReason}
                       onChange={(e) => setRefundReason(e.target.value)}
+                      rows="3"
                     />
                   </div>
 
@@ -473,6 +504,7 @@ const UserActiveStay = () => {
                         setShowRefundFormFor(null);
                         setConfirmUpi("");
                         setRefundUpi("");
+                        setRefundReason("");
                       }}
                     >
                       Cancel
@@ -552,7 +584,7 @@ const UserActiveStay = () => {
                   </button>
                 )}
                 
-                {/* VACATE BUTTON - Only show if no vacate request submitted */}
+                {/* VACATE BUTTON - Only show if NO vacate_status exists */}
                 {!stay.vacate_status && (
                   <button
                     style={{ ...btn, background: "#f59e0b" }}
@@ -655,7 +687,7 @@ const UserActiveStay = () => {
   );
 };
 
-/* --- STYLES (UNCHANGED EXCEPT NEW INPUTS) --- */
+/* --- STYLES --- */
 const container = { maxWidth: 600, margin: "40px auto", padding: "0 20px", fontFamily: "Inter, sans-serif" };
 const card = { background: "#fff", padding: 30, borderRadius: 16, boxShadow: "0 10px 25px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0", marginBottom: "25px" };
 const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 };
