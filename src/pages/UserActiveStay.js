@@ -256,30 +256,43 @@ const UserActiveStay = () => {
         <div key={stay.id} style={card}>
           
           {/* SHOW VACATE STATUS ONLY (NO FORM) */}
-          (stay.vacate_status === "vacate_requested" || 
- stay.vacate_status === "pending" || 
- stay.vacate_status === "approved" || 
- stay.vacate_status === "completed") && (
-            <div style={{ 
-              background: stay.vacate_status === "pending" ? "#fef3c7" : stay.vacate_status === "approved" ? "#dcfce7" : "#e0e7ff",
-              padding: "15px", 
-              borderRadius: "8px", 
-              marginBottom: "15px",
-              textAlign: "center"
-            }}>
-              <p style={{ fontWeight: "bold", marginBottom: "5px" }}>
-                🚪 Vacate Request Status:
-                {stay.vacate_status === "pending" && " ⏳ Pending Approval"}
-                {stay.vacate_status === "approved" && " ✅ Approved"}
-                {stay.vacate_status === "completed" && " ✓ Completed"}
-              </p>
-              {stay.vacate_date && (
-                <p style={{ fontSize: "12px", color: "#666" }}>
-                  Vacate Date: {formatDate(stay.vacate_date)}
-                </p>
-              )}
-            </div>
-          )}
+          {/* SHOW VACATE STATUS ONLY (NO FORM) */}
+{(stay.vacate_status === "vacate_requested" ||
+  stay.vacate_status === "pending" || 
+  stay.vacate_status === "approved" || 
+  stay.vacate_status === "completed") && (
+  
+  <div style={{ 
+    background: stay.vacate_status === "vacate_requested"
+      ? "#fef3c7"
+      : stay.vacate_status === "pending"
+      ? "#fef3c7"
+      : stay.vacate_status === "approved"
+      ? "#dcfce7"
+      : "#e0e7ff",
+    padding: "15px", 
+    borderRadius: "8px", 
+    marginBottom: "15px",
+    textAlign: "center"
+  }}>
+
+    <p style={{ fontWeight: "bold", marginBottom: "5px" }}>
+      🚪 Vacate Request Status:
+
+      {stay.vacate_status === "vacate_requested" && " ⏳ Requested"}
+      {stay.vacate_status === "pending" && " ⏳ Pending Approval"}
+      {stay.vacate_status === "approved" && " ✅ Approved"}
+      {stay.vacate_status === "completed" && " ✓ Completed"}
+    </p>
+
+    {stay.vacate_date && (
+      <p style={{ fontSize: "12px", color: "#666" }}>
+        Vacate Date: {formatDate(stay.vacate_date)}
+      </p>
+    )}
+
+  </div>
+)}
 
           {/* VACATE FORM - Only show if no vacate request submitted */}
           {stay.vacate_status !== "vacate_requested" && showVacateFormFor === stay.id ? (
