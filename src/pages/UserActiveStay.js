@@ -49,7 +49,7 @@ const UserActiveStay = () => {
       
       // Check vacate status for each stay
       res.data.forEach(stay => {
-        if (stay.vacate_status === "pending" || stay.vacate_status === "approved" || stay.vacate_status === "completed") {
+        if (stay.vacate_status === "requested" || stay.vacate_status === "approved" || stay.vacate_status === "completed") {
           setVacateStatus(stay.vacate_status);
         }
       });
@@ -260,9 +260,9 @@ const UserActiveStay = () => {
         <div key={stay.id} style={card}>
           
           {/* SHOW VACATE STATUS ONLY (NO FORM) */}
-          {(stay.vacate_status === "pending" || stay.vacate_status === "approved" || stay.vacate_status === "completed") && (
+          {(stay.vacate_status === "requested" || stay.vacate_status === "approved" || stay.vacate_status === "completed") && (
             <div style={{ 
-              background: stay.vacate_status === "pending" ? "#fef3c7" : stay.vacate_status === "approved" ? "#dcfce7" : "#e0e7ff",
+              background: stay.vacate_status === "requested" ? "#fef3c7" : stay.vacate_status === "approved" ? "#dcfce7" : "#e0e7ff",
               padding: "15px", 
               borderRadius: "8px", 
               marginBottom: "15px",
@@ -270,7 +270,7 @@ const UserActiveStay = () => {
             }}>
               <p style={{ fontWeight: "bold", marginBottom: "5px" }}>
                 🚪 Vacate Request Status:
-                {stay.vacate_status === "pending" && " ⏳ Pending Approval"}
+                {stay.vacate_status === "requested" && " ⏳ Pending Approval"}
                 {stay.vacate_status === "approved" && " ✅ Approved"}
                 {stay.vacate_status === "completed" && " ✓ Completed"}
               </p>
