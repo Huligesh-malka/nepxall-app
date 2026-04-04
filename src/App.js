@@ -172,7 +172,9 @@ function App() {
       }>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<OwnerDashboard />} />
+
         <Route path="payments" element={<OwnerPayments />} />
+        <Route path="vacate" element={<OwnerVacateRequests />} />
         <Route path="premium" element={<OwnerPremiumPlans />} />
         <Route path="bookings" element={<OwnerBookings />} />
         <Route path="verification" element={<OwnerVerificationPage />} />
