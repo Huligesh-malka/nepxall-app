@@ -145,10 +145,10 @@ const OwnerVacateRequests = () => {
             )}
           </div>
 
-          {/* ✅ APPROVE / RE-APPROVE (FIXED) */}
-          {(item.user_approval === "pending" ||
-            item.user_approval === "rejected") &&
-            item.refund_status !== "paid" && (
+          {item.refund_status !== "approved" &&
+ (item.user_approval === "pending" ||
+  item.user_approval === "rejected") &&
+ item.refund_status !== "paid" && (
               <>
                 <input
                   type="number"
