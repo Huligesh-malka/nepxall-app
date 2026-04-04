@@ -6,11 +6,11 @@ const OwnerVacateRequests = () => {
   const [requests, setRequests] = useState([]);
   const [damage, setDamage] = useState({});
   const [dues, setDues] = useState({});
+  const [loadingId, setLoadingId] = useState(null);
 
   const loadRequests = async () => {
     try {
-      const user = auth.currentUser;
-      const token = await user.getIdToken();
+      const token = await auth.currentUser.getIdToken();
 
       const res = await api.get("/owner/vacate/requests", {
         headers: { Authorization: `Bearer ${token}` }
@@ -26,10 +26,12 @@ const OwnerVacateRequests = () => {
     loadRequests();
   }, []);
 
+  // ✅ APPROVE VACATE
   const handleApprove = async (bookingId) => {
     try {
-      const user = auth.currentUser;
-      const token = await user.getIdToken();
+      setLoadingId(bookingId);
+
+      const token = await auth.currentUser.getIdToken();
 
       const res = await api.post(
         `/owner/vacate/approve/${bookingId}`,
@@ -44,10 +46,34 @@ const OwnerVacateRequests = () => {
 
       alert(`✅ Approved! Refund: ₹${res.data.refundAmount}`);
       loadRequests();
-
     } catch (err) {
-      console.error(err);
       alert("Approval failed");
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  // ✅ MARK AS PAID
+  const handleMarkPaid = async (bookingId) => {
+    try {
+      setLoadingId(bookingId);
+
+      const token = await auth.currentUser.getIdToken();
+
+      await api.post(
+        `/owner/refund/mark-paid/${bookingId}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      alert("💸 Payment Completed");
+      loadRequests();
+    } catch (err) {
+      alert("Payment failed");
+    } finally {
+      setLoadingId(null);
     }
   };
 
@@ -59,57 +85,101 @@ const OwnerVacateRequests = () => {
 
       {requests.map((item) => (
         <div key={item.booking_id} style={card}>
-
           <h3>{item.pg_name}</h3>
           <p>👤 Tenant: {item.user_name}</p>
-          <p>📅 Move Out: {item.move_out_date}</p>
+          <p>📅 Move Out: {item.move_out_date || "Not provided"}</p>
 
-          {/* 💰 REFUND STATUS */}
           <div style={refundBox}>
             <p><b>💳 Deposit:</b> ₹{item.security_deposit}</p>
-            <p><b>💰 Refund Amount:</b> ₹{item.refund_amount || 0}</p>
+            <p><b>💰 Refund:</b> ₹{item.refund_amount || 0}</p>
 
             <p>
               <b>Status:</b>{" "}
-              {item.refund_status === "pending" && "⏳ Pending"}
-              {item.refund_status === "approved" && "✅ Approved"}
-              {item.refund_status === "paid" && "💸 Paid"}
-              {!item.refund_status && "Not Created"}
+              {(!item.refund_status || item.refund_status === "pending") &&
+                !item.user_approval &&
+                "📝 Awaiting Owner Approval"}
+
+              {item.refund_status === "approved" &&
+                "⏳ Waiting for User"}
+
+              {item.refund_status === "pending" &&
+                item.user_approval === "accepted" &&
+                "💰 Ready to Pay"}
+
+              {item.refund_status === "paid" &&
+                "💸 Paid"}
             </p>
+
+            {item.user_approval === "accepted" && (
+              <p style={{ color: "green" }}>🙋 User Accepted</p>
+            )}
+            {item.user_approval === "rejected" && (
+              <p style={{ color: "red" }}>❌ User Rejected</p>
+            )}
           </div>
 
-          {/* INPUT ONLY IF NOT APPROVED */}
-          {item.refund_status !== "approved" && (
-            <>
-              <input
-                type="number"
-                placeholder="Damage ₹"
-                value={damage[item.booking_id] || ""}
-                onChange={(e) =>
-                  setDamage({ ...damage, [item.booking_id]: e.target.value })
-                }
-                style={input}
-              />
+          {/* ✅ STEP 1: APPROVE */}
+          {(!item.refund_status || item.refund_status === "pending") &&
+            !item.user_approval && (
+              <>
+                <input
+                  type="number"
+                  placeholder="Damage ₹"
+                  value={damage[item.booking_id] || ""}
+                  onChange={(e) =>
+                    setDamage({
+                      ...damage,
+                      [item.booking_id]: e.target.value
+                    })
+                  }
+                  style={input}
+                />
 
-              <input
-                type="number"
-                placeholder="Pending Dues ₹"
-                value={dues[item.booking_id] || ""}
-                onChange={(e) =>
-                  setDues({ ...dues, [item.booking_id]: e.target.value })
-                }
-                style={input}
-              />
+                <input
+                  type="number"
+                  placeholder="Pending Dues ₹"
+                  value={dues[item.booking_id] || ""}
+                  onChange={(e) =>
+                    setDues({
+                      ...dues,
+                      [item.booking_id]: e.target.value
+                    })
+                  }
+                  style={input}
+                />
 
-              <button
-                style={approveBtn}
-                onClick={() => handleApprove(item.booking_id)}
-              >
-                ✅ Approve Vacate
-              </button>
-            </>
+                <button
+                  style={approveBtn}
+                  onClick={() => handleApprove(item.booking_id)}
+                  disabled={loadingId === item.booking_id}
+                >
+                  {loadingId === item.booking_id
+                    ? "Processing..."
+                    : "✅ Approve Vacate"}
+                </button>
+              </>
           )}
 
+          {/* 💰 STEP 2: MARK PAID */}
+          {item.refund_status === "pending" &&
+            item.user_approval === "accepted" && (
+              <button
+                style={paidBtn}
+                onClick={() => handleMarkPaid(item.booking_id)}
+                disabled={loadingId === item.booking_id}
+              >
+                {loadingId === item.booking_id
+                  ? "Processing..."
+                  : "💸 Mark as Paid"}
+              </button>
+          )}
+
+          {/* ✅ FINAL */}
+          {item.refund_status === "paid" && (
+            <p style={{ color: "green", fontWeight: "bold" }}>
+              ✅ Payment Completed
+            </p>
+          )}
         </div>
       ))}
     </div>
@@ -148,6 +218,18 @@ const approveBtn = {
   padding: 12,
   width: "100%",
   background: "#4CAF50",
+  color: "#fff",
+  border: "none",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontWeight: "bold"
+};
+
+const paidBtn = {
+  marginTop: 15,
+  padding: 12,
+  width: "100%",
+  background: "#ff9800",
   color: "#fff",
   border: "none",
   borderRadius: 8,
