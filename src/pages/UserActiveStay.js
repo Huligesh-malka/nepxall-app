@@ -25,6 +25,14 @@ const UserActiveStay = () => {
   const [confirmUpi, setConfirmUpi] = useState(""); // New State
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  /* --- VACATE STATES --- */
+  const [showVacateFormFor, setShowVacateFormFor] = useState(null);
+  const [vacateReason, setVacateReason] = useState("");
+  const [vacateDate, setVacateDate] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [ifscCode, setIfscCode] = useState("");
+  const [upiId, setUpiId] = useState("");
+
   const loadStay = useCallback(async (showLoader = true) => {
     try {
       if (showLoader) setLoading(true);
@@ -95,6 +103,48 @@ const UserActiveStay = () => {
     }
   };
 
+  const submitVacateRequest = async (stayId) => {
+    if (!vacateReason || !vacateDate) {
+      alert("Please fill all required fields");
+      return;
+    }
+
+    try {
+      const user = auth.currentUser;
+      const token = await user.getIdToken();
+
+      const res = await api.post(
+        "/bookings/vacate/request",
+        {
+          bookingId: stayId,
+          vacate_date: vacateDate,
+          reason: vacateReason,
+          account_number: accountNumber,
+          ifsc_code: ifscCode,
+          upi_id: upiId
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (res.data.success) {
+        alert("✅ Vacate request submitted");
+        setShowVacateFormFor(null);
+        setVacateReason("");
+        setVacateDate("");
+        setAccountNumber("");
+        setIfscCode("");
+        setUpiId("");
+        loadStay(false);
+      }
+
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Vacate failed");
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return "Processing...";
     return new Date(dateString).toLocaleDateString("en-GB", {
@@ -159,7 +209,85 @@ const UserActiveStay = () => {
       {stays.map((stay) => (
         <div key={stay.id} style={card}>
           
-          {showRefundFormFor === stay.id ? (
+          {/* VACATE FORM */}
+          {showVacateFormFor === stay.id ? (
+            <div style={refundFormContainer}>
+              <h3 style={{ color: "#f59e0b" }}>Vacate Request</h3>
+
+              <div style={inputGroup}>
+                <label style={labelStyle}>Vacate Date</label>
+                <input
+                  type="date"
+                  style={inputField}
+                  value={vacateDate}
+                  onChange={(e) => setVacateDate(e.target.value)}
+                />
+              </div>
+
+              <div style={inputGroup}>
+                <label style={labelStyle}>Reason</label>
+                <textarea
+                  style={inputField}
+                  placeholder="Why are you vacating?"
+                  value={vacateReason}
+                  onChange={(e) => setVacateReason(e.target.value)}
+                />
+              </div>
+
+              <div style={inputGroup}>
+                <label style={labelStyle}>Account Number</label>
+                <input
+                  style={inputField}
+                  placeholder="Enter account number"
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value)}
+                />
+              </div>
+
+              <div style={inputGroup}>
+                <label style={labelStyle}>IFSC Code</label>
+                <input
+                  style={inputField}
+                  placeholder="Enter IFSC code"
+                  value={ifscCode}
+                  onChange={(e) => setIfscCode(e.target.value)}
+                />
+              </div>
+
+              <div style={inputGroup}>
+                <label style={labelStyle}>UPI ID (Optional)</label>
+                <input
+                  style={inputField}
+                  placeholder="name@bank"
+                  value={upiId}
+                  onChange={(e) => setUpiId(e.target.value)}
+                />
+              </div>
+
+              <div style={btnRow}>
+                <button
+                  style={{ ...btn, background: "#6b7280" }}
+                  onClick={() => {
+                    setShowVacateFormFor(null);
+                    setVacateReason("");
+                    setVacateDate("");
+                    setAccountNumber("");
+                    setIfscCode("");
+                    setUpiId("");
+                  }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  style={{ ...btn, background: "#f59e0b" }}
+                  onClick={() => submitVacateRequest(stay.id)}
+                >
+                  Submit Vacate
+                </button>
+              </div>
+            </div>
+          ) : showRefundFormFor === stay.id ? (
             <div style={refundFormContainer}>
               {stay.refund_status ? (
                 <div style={{ textAlign: "center", padding: "20px 0" }}>
@@ -307,6 +435,14 @@ const UserActiveStay = () => {
                     🔁 Refund
                   </button>
                 )}
+                
+                {/* VACATE BUTTON */}
+                <button
+                  style={{ ...btn, background: "#f59e0b" }}
+                  onClick={() => setShowVacateFormFor(stay.id)}
+                >
+                  🚪 Vacate
+                </button>
               </div>
             </>
           )}
