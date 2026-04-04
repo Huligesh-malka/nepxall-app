@@ -309,8 +309,9 @@ const UserActiveStay = () => {
                   )}
 
                   {/* ACCEPT / REJECT */}
-                  {stay.refund_status === "approved" && stay.user_approval === "pending" && (
-                    <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                  {stay.refund_status === "approved" &&
+ (stay.user_approval === "pending" || stay.user_approval === "rejected") && (
+  <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                       <button
                         style={{ ...btn, background: "#4CAF50" }}
                         onClick={() => acceptRefund(stay.id)}
