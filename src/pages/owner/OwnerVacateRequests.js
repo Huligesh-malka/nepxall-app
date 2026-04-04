@@ -113,6 +113,7 @@ const OwnerVacateRequests = () => {
             <p><b>💳 Deposit:</b> ₹{item.security_deposit}</p>
             <p><b>💰 Refund:</b> ₹{item.refund_amount || 0}</p>
 
+            {/* ✅ STATUS */}
             <p>
               <b>Status:</b>{" "}
               {item.refund_status === "pending" &&
@@ -126,9 +127,8 @@ const OwnerVacateRequests = () => {
                 item.user_approval === "accepted" &&
                 "💰 Ready to Pay"}
 
-              {item.refund_status === "pending" &&
-                item.user_approval === "rejected" &&
-                "❌ User Rejected (Re-review needed)"}
+              {item.user_approval === "rejected" &&
+                "❌ User Rejected (Re-Approve needed)"}
 
               {item.refund_status === "rejected" &&
                 "❌ Rejected by Owner"}
@@ -145,10 +145,10 @@ const OwnerVacateRequests = () => {
             )}
           </div>
 
-          {/* ✅ APPROVE / RE-APPROVE */}
-          {item.refund_status === "pending" &&
-            (item.user_approval === "pending" ||
-              item.user_approval === "rejected") && (
+          {/* ✅ APPROVE / RE-APPROVE (FIXED) */}
+          {(item.user_approval === "pending" ||
+            item.user_approval === "rejected") &&
+            item.refund_status !== "paid" && (
               <>
                 <input
                   type="number"
@@ -179,8 +179,13 @@ const OwnerVacateRequests = () => {
                 <button
                   style={approveBtn}
                   onClick={() => handleApprove(item.booking_id)}
+                  disabled={loadingId === item.booking_id}
                 >
-                  🔄 Approve / Update Refund
+                  {loadingId === item.booking_id
+                    ? "Processing..."
+                    : item.user_approval === "rejected"
+                    ? "🔄 Re-Approve Refund"
+                    : "✅ Approve Vacate"}
                 </button>
 
                 {/* ❌ OWNER REJECT */}
