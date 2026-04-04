@@ -44,6 +44,7 @@ const OwnerVacateRequests = () => {
 
       alert(`✅ Approved! Refund: ₹${res.data.refundAmount}`);
       loadRequests();
+
     } catch (err) {
       console.error(err);
       alert("Approval failed");
@@ -61,9 +62,9 @@ const OwnerVacateRequests = () => {
 
           <h3>{item.pg_name}</h3>
           <p>👤 Tenant: {item.user_name}</p>
-          <p>📅 Move Out: {item.move_out_date || "Not given"}</p>
+          <p>📅 Move Out: {item.move_out_date}</p>
 
-          {/* 💰 REFUND BOX */}
+          {/* 💰 REFUND STATUS */}
           <div style={refundBox}>
             <p><b>💳 Deposit:</b> ₹{item.security_deposit}</p>
             <p><b>💰 Refund Amount:</b> ₹{item.refund_amount || 0}</p>
@@ -73,21 +74,12 @@ const OwnerVacateRequests = () => {
               {item.refund_status === "pending" && "⏳ Pending"}
               {item.refund_status === "approved" && "✅ Approved"}
               {item.refund_status === "paid" && "💸 Paid"}
-              {item.refund_status === "rejected" && "❌ Rejected"}
+              {!item.refund_status && "Not Created"}
             </p>
-
-            {/* 👤 USER ACTION */}
-            {item.user_approval === "accepted" && (
-              <p style={{ color: "green" }}>✅ User Accepted</p>
-            )}
-
-            {item.user_approval === "rejected" && (
-              <p style={{ color: "red" }}>❌ User Rejected</p>
-            )}
           </div>
 
-          {/* 🔥 SHOW INPUT ONLY IF PENDING */}
-          {item.refund_status === "pending" && (
+          {/* INPUT ONLY IF NOT APPROVED */}
+          {item.refund_status !== "approved" && (
             <>
               <input
                 type="number"
@@ -116,20 +108,6 @@ const OwnerVacateRequests = () => {
                 ✅ Approve Vacate
               </button>
             </>
-          )}
-
-          {/* 🔥 AFTER APPROVED */}
-          {item.refund_status === "approved" && (
-            <div style={approvedBox}>
-              <p>✅ Waiting for user confirmation...</p>
-            </div>
-          )}
-
-          {/* 🔥 FINAL PAID */}
-          {item.refund_status === "paid" && (
-            <div style={paidBox}>
-              <p>💸 Refund Completed</p>
-            </div>
           )}
 
         </div>
@@ -183,20 +161,4 @@ const refundBox = {
   borderRadius: 8,
   marginTop: 10,
   marginBottom: 10
-};
-
-const approvedBox = {
-  background: "#e6f7ff",
-  padding: 10,
-  borderRadius: 6,
-  marginTop: 10
-};
-
-const paidBox = {
-  background: "#e8f5e9",
-  padding: 10,
-  borderRadius: 6,
-  marginTop: 10,
-  color: "green",
-  fontWeight: "bold"
 };
