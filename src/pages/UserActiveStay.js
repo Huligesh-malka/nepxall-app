@@ -145,6 +145,46 @@ const UserActiveStay = () => {
     }
   };
 
+  const acceptRefund = async (bookingId) => {
+    try {
+      const user = auth.currentUser;
+      const token = await user.getIdToken();
+
+      const res = await api.post(
+        "/bookings/refunds/accept",
+        { bookingId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      alert("✅ Refund accepted");
+      loadStay(false);
+
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Accept failed");
+    }
+  };
+
+  const rejectRefund = async (bookingId) => {
+    try {
+      const user = auth.currentUser;
+      const token = await user.getIdToken();
+
+      const res = await api.post(
+        "/bookings/refunds/reject",
+        { bookingId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      alert("❌ Refund rejected");
+      loadStay(false);
+
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Reject failed");
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return "Processing...";
     return new Date(dateString).toLocaleDateString("en-GB", {
@@ -422,6 +462,13 @@ const UserActiveStay = () => {
                 </div>
               </div>
 
+              {/* REFUND AMOUNT DISPLAY */}
+              {stay.refund_status === "approved" && stay.refund_amount > 0 && (
+                <p style={{ fontSize: "13px", marginTop: 5, textAlign: "center", background: "#fef3c7", padding: "8px", borderRadius: "8px" }}>
+                  💰 Refund Amount: ₹{stay.refund_amount}
+                </p>
+              )}
+
               <div style={btnRow}>
                 <button style={btn} onClick={() => navigate("/user/bookings")}>📜 History</button>
                 <button style={payBtn} onClick={() => navigate("/payment")}>💳 Pay Rent</button>
@@ -444,6 +491,33 @@ const UserActiveStay = () => {
                   🚪 Vacate
                 </button>
               </div>
+
+              {/* ACCEPT/REJECT REFUND SECTION */}
+              {stay.refund_status === "approved" && stay.user_approval === "pending" && (
+                <div style={{ width: "100%", marginTop: 15 }}>
+                  
+                  <p style={{ color: "#f59e0b", fontWeight: "bold", fontSize: "13px", textAlign: "center", marginBottom: 10 }}>
+                    ⚠ Owner deducted amount. Please confirm refund.
+                  </p>
+
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      style={{ ...btn, background: "#4CAF50" }}
+                      onClick={() => acceptRefund(stay.id)}
+                    >
+                      ✅ Accept
+                    </button>
+
+                    <button
+                      style={{ ...btn, background: "#ef4444" }}
+                      onClick={() => rejectRefund(stay.id)}
+                    >
+                      ❌ Reject
+                    </button>
+                  </div>
+
+                </div>
+              )}
             </>
           )}
         </div>
