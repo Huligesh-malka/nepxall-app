@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../../api/api";
-import { auth } from "../firebase";
+import { auth } from "../../firebase";
 
 const OwnerVacateRequests = () => {
   const [requests, setRequests] = useState([]);
