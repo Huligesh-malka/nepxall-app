@@ -26,6 +26,7 @@ const OwnerVacateRequests = () => {
     loadRequests();
   }, []);
 
+  // ✅ APPROVE VACATE
   const handleApprove = async (bookingId) => {
     try {
       const user = auth.currentUser;
@@ -48,6 +49,29 @@ const OwnerVacateRequests = () => {
     } catch (err) {
       console.error(err);
       alert("Approval failed");
+    }
+  };
+
+  // ✅ 💰 MARK AS PAID
+  const handleMarkPaid = async (bookingId) => {
+    try {
+      const user = auth.currentUser;
+      const token = await user.getIdToken();
+
+      await api.post(
+        `/owner/refund/mark-paid/${bookingId}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      alert("💸 Refund marked as PAID");
+      loadRequests();
+
+    } catch (err) {
+      console.error(err);
+      alert("Payment update failed");
     }
   };
 
@@ -76,10 +100,20 @@ const OwnerVacateRequests = () => {
               {item.refund_status === "paid" && "💸 Paid"}
               {!item.refund_status && "Not Created"}
             </p>
+
+            {/* ✅ SHOW USER ACTION */}
+            {item.user_approval === "accepted" && (
+              <p>🙋 User Accepted</p>
+            )}
+            {item.user_approval === "rejected" && (
+              <p>❌ User Rejected</p>
+            )}
           </div>
 
-          {/* INPUT ONLY IF NOT APPROVED */}
-          {item.refund_status !== "approved" && (
+          {/* =========================
+              ✅ APPROVE SECTION
+          ========================== */}
+          {item.refund_status === "pending" && !item.refund_amount && (
             <>
               <input
                 type="number"
@@ -108,6 +142,28 @@ const OwnerVacateRequests = () => {
                 ✅ Approve Vacate
               </button>
             </>
+          )}
+
+          {/* =========================
+              💰 MARK AS PAID BUTTON
+          ========================== */}
+          {item.refund_status === "pending" &&
+            item.user_approval === "accepted" && (
+              <button
+                style={paidBtn}
+                onClick={() => handleMarkPaid(item.booking_id)}
+              >
+                💸 Mark as Paid
+              </button>
+          )}
+
+          {/* =========================
+              ✅ FINAL STATUS
+          ========================== */}
+          {item.refund_status === "paid" && (
+            <p style={{ color: "green", fontWeight: "bold" }}>
+              ✅ Payment Completed
+            </p>
           )}
 
         </div>
@@ -148,6 +204,18 @@ const approveBtn = {
   padding: 12,
   width: "100%",
   background: "#4CAF50",
+  color: "#fff",
+  border: "none",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontWeight: "bold"
+};
+
+const paidBtn = {
+  marginTop: 15,
+  padding: 12,
+  width: "100%",
+  background: "#ff9800",
   color: "#fff",
   border: "none",
   borderRadius: 8,
