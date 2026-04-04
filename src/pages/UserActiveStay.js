@@ -295,7 +295,7 @@ const UserActiveStay = () => {
 )}
 
           {/* VACATE FORM - Only show if no vacate request submitted */}
-          {stay.vacate_status !== "vacate_requested" && showVacateFormFor === stay.id ? (
+          {stay.vacate_status !== "requested" && showVacateFormFor === stay.id ? (
             <div style={refundFormContainer}>
               <h3 style={{ color: "#f59e0b" }}>Vacate Request</h3>
 
