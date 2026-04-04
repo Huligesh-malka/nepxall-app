@@ -27,6 +27,7 @@ const UserActiveStay = () => {
 
   /* --- VACATE STATES --- */
   const [showVacateFormFor, setShowVacateFormFor] = useState(null);
+  const [vacateSubmittedFor, setVacateSubmittedFor] = useState(null); // tracks submitted stay id
   const [vacateReason, setVacateReason] = useState("");
   const [vacateDate, setVacateDate] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
@@ -115,13 +116,13 @@ const UserActiveStay = () => {
       );
       if (res.data.success) {
         alert("✅ Vacate request submitted");
-        setShowVacateFormFor(null);
+        setVacateSubmittedFor(stayId); // immediately show status view
         setVacateReason("");
         setVacateDate("");
         setAccountNumber("");
         setIfscCode("");
         setUpiId("");
-        loadStay(false); // Reload so stay.vacate_status updates from API
+        loadStay(false); // refresh in background
       }
     } catch (err) {
       console.error(err);
@@ -231,13 +232,20 @@ const UserActiveStay = () => {
           {showVacateFormFor === stay.id ? (
             <div style={refundFormContainer}>
 
-              {/* If vacate already submitted (status exists), show status only */}
-              {stay.vacate_status ? (
+              {/* Show status if already submitted (from API) OR just submitted now (local) */}
+              {stay.vacate_status || vacateSubmittedFor === stay.id ? (
                 <div style={{ textAlign: "center", padding: "20px 0" }}>
-                  <div style={{ fontWeight: "700", fontSize: "16px", marginBottom: "10px" }}>
-                    {stay.vacate_status === "pending" && "⏳ Vacate Request Pending Approval"}
-                    {stay.vacate_status === "approved" && "✅ Vacate Request Approved"}
-                    {stay.vacate_status === "completed" && "✓ Vacate Completed"}
+                  <div style={{
+                    fontSize: "40px",
+                    marginBottom: "10px"
+                  }}>
+                    {(stay.vacate_status === "approved") ? "✅" :
+                     (stay.vacate_status === "completed") ? "✓" : "⏳"}
+                  </div>
+                  <div style={{ fontWeight: "700", fontSize: "16px", marginBottom: "8px" }}>
+                    {(!stay.vacate_status || stay.vacate_status === "pending") && "Vacate Request Pending Approval"}
+                    {stay.vacate_status === "approved" && "Vacate Request Approved"}
+                    {stay.vacate_status === "completed" && "Vacate Completed"}
                   </div>
                   {stay.vacate_date && (
                     <p style={{ fontSize: "13px", color: "#666", marginBottom: "15px" }}>
@@ -246,7 +254,10 @@ const UserActiveStay = () => {
                   )}
                   <button
                     style={{ ...btn, background: "#6b7280", flex: "none", width: "120px" }}
-                    onClick={() => setShowVacateFormFor(null)}
+                    onClick={() => {
+                      setShowVacateFormFor(null);
+                      setVacateSubmittedFor(null);
+                    }}
                   >
                     Close
                   </button>
@@ -456,16 +467,16 @@ const UserActiveStay = () => {
                 <span style={statusBadge}>VERIFIED ✅</span>
               </div>
 
-              {/* Vacate Status Banner - shown on main card when status exists */}
-              {stay.vacate_status && (
+              {/* Vacate Status Banner - shown on main card when status exists or just submitted */}
+              {(stay.vacate_status || vacateSubmittedFor === stay.id) && (
                 <div
                   style={{
                     background:
-                      stay.vacate_status === "pending"
-                        ? "#fef3c7"
-                        : stay.vacate_status === "approved"
+                      stay.vacate_status === "approved"
                         ? "#dcfce7"
-                        : "#e0e7ff",
+                        : stay.vacate_status === "completed"
+                        ? "#e0e7ff"
+                        : "#fef3c7",
                     padding: "12px 15px",
                     borderRadius: "8px",
                     marginBottom: "15px",
@@ -474,7 +485,7 @@ const UserActiveStay = () => {
                 >
                   <p style={{ fontWeight: "bold", margin: 0, marginBottom: "4px" }}>
                     🚪 Vacate Request:
-                    {stay.vacate_status === "pending" && " ⏳ Pending Approval"}
+                    {(!stay.vacate_status || stay.vacate_status === "pending") && " ⏳ Pending Approval"}
                     {stay.vacate_status === "approved" && " ✅ Approved"}
                     {stay.vacate_status === "completed" && " ✓ Completed"}
                   </p>
@@ -565,8 +576,8 @@ const UserActiveStay = () => {
                   </button>
                 )}
 
-                {/* VACATE BUTTON — hidden once any vacate_status exists */}
-                {!stay.vacate_status && (
+                {/* VACATE BUTTON — hidden once any vacate_status exists or just submitted */}
+                {!stay.vacate_status && vacateSubmittedFor !== stay.id && (
                   <button
                     style={{ ...btn, background: "#f59e0b" }}
                     onClick={() => setShowVacateFormFor(stay.id)}
