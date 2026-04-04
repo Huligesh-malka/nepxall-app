@@ -60,6 +60,7 @@ import OwnerVerificationPage from "./pages/owner/OwnerVerification";
 import OwnerChatList from "./pages/OwnerChatList";
 import CreatePlan from "./pages/CreatePlan";
 import OwnerPayments from "./pages/owner/OwnerPayments";
+import OwnerVacateRequests from "./pages/owner/OwnerVacateRequests";
 
 /* ⭐ OWNER PREMIUM */
 import OwnerPremiumPlans from "./pages/owner/OwnerPremiumPlans";
