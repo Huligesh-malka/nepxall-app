@@ -254,6 +254,49 @@ const UserActiveStay = () => {
             <div style={refundFormContainer}>
               <h3 style={{ color: "#f59e0b" }}>Vacate Request</h3>
 
+              {/* 🔥 SHOW REFUND STATUS INSIDE VACATE */}
+              {stay.refund_status && (
+                <div style={{ 
+                  background: "#f9fafb", 
+                  padding: "10px", 
+                  borderRadius: "8px", 
+                  marginBottom: "10px",
+                  textAlign: "center"
+                }}>
+                  
+                  <p style={{ fontWeight: "bold" }}>
+                    Refund Status:
+                    {stay.refund_status === "pending" && " ⏳ Pending"}
+                    {stay.refund_status === "approved" && " ✅ Approved"}
+                    {stay.refund_status === "paid" && " 💸 Paid"}
+                  </p>
+
+                  {stay.refund_amount > 0 && (
+                    <p>💰 Refund Amount: ₹{stay.refund_amount}</p>
+                  )}
+
+                  {/* ACCEPT / REJECT */}
+                  {stay.refund_status === "approved" && stay.user_approval === "pending" && (
+                    <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                      <button
+                        style={{ ...btn, background: "#4CAF50" }}
+                        onClick={() => acceptRefund(stay.id)}
+                      >
+                        ✅ Accept
+                      </button>
+
+                      <button
+                        style={{ ...btn, background: "#ef4444" }}
+                        onClick={() => rejectRefund(stay.id)}
+                      >
+                        ❌ Reject
+                      </button>
+                    </div>
+                  )}
+
+                </div>
+              )}
+
               <div style={inputGroup}>
                 <label style={labelStyle}>Vacate Date</label>
                 <input
@@ -462,13 +505,6 @@ const UserActiveStay = () => {
                 </div>
               </div>
 
-              {/* REFUND AMOUNT DISPLAY */}
-              {stay.refund_status === "approved" && stay.refund_amount > 0 && (
-                <p style={{ fontSize: "13px", marginTop: 5, textAlign: "center", background: "#fef3c7", padding: "8px", borderRadius: "8px" }}>
-                  💰 Refund Amount: ₹{stay.refund_amount}
-                </p>
-              )}
-
               <div style={btnRow}>
                 <button style={btn} onClick={() => navigate("/user/bookings")}>📜 History</button>
                 <button style={payBtn} onClick={() => navigate("/payment")}>💳 Pay Rent</button>
@@ -491,33 +527,6 @@ const UserActiveStay = () => {
                   🚪 Vacate
                 </button>
               </div>
-
-              {/* ACCEPT/REJECT REFUND SECTION */}
-              {stay.refund_status === "approved" && stay.user_approval === "pending" && (
-                <div style={{ width: "100%", marginTop: 15 }}>
-                  
-                  <p style={{ color: "#f59e0b", fontWeight: "bold", fontSize: "13px", textAlign: "center", marginBottom: 10 }}>
-                    ⚠ Owner deducted amount. Please confirm refund.
-                  </p>
-
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button
-                      style={{ ...btn, background: "#4CAF50" }}
-                      onClick={() => acceptRefund(stay.id)}
-                    >
-                      ✅ Accept
-                    </button>
-
-                    <button
-                      style={{ ...btn, background: "#ef4444" }}
-                      onClick={() => rejectRefund(stay.id)}
-                    >
-                      ❌ Reject
-                    </button>
-                  </div>
-
-                </div>
-              )}
             </>
           )}
         </div>
