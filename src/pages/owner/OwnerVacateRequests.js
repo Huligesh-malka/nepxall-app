@@ -26,7 +26,6 @@ const OwnerVacateRequests = () => {
     loadRequests();
   }, []);
 
-  // ✅ APPROVE / RE-APPROVE
   const handleApprove = async (bookingId) => {
     try {
       setLoadingId(bookingId);
@@ -53,18 +52,13 @@ const OwnerVacateRequests = () => {
     }
   };
 
-  // ❌ OWNER REJECT
   const handleReject = async (bookingId) => {
     try {
       const token = await auth.currentUser.getIdToken();
 
-      await api.post(
-        `/owner/refund/reject/${bookingId}`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
+      await api.post(`/owner/refund/reject/${bookingId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
       alert("❌ Refund Rejected");
       loadRequests();
@@ -73,20 +67,15 @@ const OwnerVacateRequests = () => {
     }
   };
 
-  // 💰 MARK PAID
   const handleMarkPaid = async (bookingId) => {
     try {
       setLoadingId(bookingId);
 
       const token = await auth.currentUser.getIdToken();
 
-      await api.post(
-        `/owner/refund/mark-paid/${bookingId}`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
+      await api.post(`/owner/refund/mark-paid/${bookingId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
       alert("💸 Payment Completed");
       loadRequests();
@@ -109,11 +98,11 @@ const OwnerVacateRequests = () => {
           <p>👤 Tenant: {item.user_name}</p>
           <p>📅 Move Out: {item.move_out_date || "Not provided"}</p>
 
+          {/* 💰 REFUND BOX */}
           <div style={refundBox}>
             <p><b>💳 Deposit:</b> ₹{item.security_deposit}</p>
             <p><b>💰 Refund:</b> ₹{item.refund_amount || 0}</p>
 
-            {/* ✅ STATUS */}
             <p>
               <b>Status:</b>{" "}
               {item.refund_status === "pending" &&
@@ -136,19 +125,20 @@ const OwnerVacateRequests = () => {
               {item.refund_status === "paid" &&
                 "💸 Paid"}
             </p>
-
-            {item.user_approval === "accepted" && (
-              <p style={{ color: "green" }}>🙋 User Accepted</p>
-            )}
-            {item.user_approval === "rejected" && (
-              <p style={{ color: "red" }}>❌ User Rejected</p>
-            )}
           </div>
 
+          {/* 🏦 BANK DETAILS */}
+          <div style={detailsBox}>
+            <p><b>🏦 Account:</b> {item.account_number || "N/A"}</p>
+            <p><b>🔢 IFSC:</b> {item.ifsc_code || "N/A"}</p>
+            <p><b>💸 UPI:</b> {item.upi_id || "N/A"}</p>
+            <p><b>📝 Reason:</b> {item.reason}</p>
+            <p><b>⚒ Damage:</b> ₹{item.damage_amount || 0}</p>
+          </div>
+
+          {/* APPROVE / RE-APPROVE */}
           {item.refund_status !== "approved" &&
- (item.user_approval === "pending" ||
-  item.user_approval === "rejected") &&
- item.refund_status !== "paid" && (
+            item.refund_status !== "paid" && (
               <>
                 <input
                   type="number"
@@ -188,7 +178,6 @@ const OwnerVacateRequests = () => {
                     : "✅ Approve Vacate"}
                 </button>
 
-                {/* ❌ OWNER REJECT */}
                 <button
                   style={rejectBtn}
                   onClick={() => handleReject(item.booking_id)}
@@ -198,7 +187,7 @@ const OwnerVacateRequests = () => {
               </>
           )}
 
-          {/* 💰 MARK PAID */}
+          {/* MARK PAID */}
           {item.refund_status === "pending" &&
             item.user_approval === "accepted" && (
               <button
@@ -209,7 +198,6 @@ const OwnerVacateRequests = () => {
               </button>
           )}
 
-          {/* ✅ FINAL */}
           {item.refund_status === "paid" && (
             <p style={{ color: "green", fontWeight: "bold" }}>
               ✅ Payment Completed
@@ -284,4 +272,11 @@ const refundBox = {
   borderRadius: 8,
   marginTop: 10,
   marginBottom: 10
+};
+
+const detailsBox = {
+  background: "#eef6ff",
+  padding: 12,
+  borderRadius: 8,
+  marginTop: 10
 };
