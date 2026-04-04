@@ -96,12 +96,24 @@ const OwnerVacateRequests = () => {
             {/* ✅ STATUS */}
             <p>
               <b>Status:</b>{" "}
-              {item.refund_amount === 0 && "📝 Awaiting Approval"}
-              {item.refund_status === "approved" && "⏳ Waiting for User"}
+
+              {item.refund_status === "pending" &&
+                item.user_approval === "pending" &&
+                "📝 Awaiting Owner Approval"}
+
+              {item.refund_status === "approved" &&
+                "⏳ Waiting for User"}
+
               {item.refund_status === "pending" &&
                 item.user_approval === "accepted" &&
                 "💰 Ready to Pay"}
-              {item.refund_status === "paid" && "💸 Paid"}
+
+              {item.refund_status === "pending" &&
+                item.user_approval === "rejected" &&
+                "❌ User Rejected"}
+
+              {item.refund_status === "paid" &&
+                "💸 Paid"}
             </p>
 
             {item.user_approval === "accepted" && (
@@ -112,48 +124,49 @@ const OwnerVacateRequests = () => {
             )}
           </div>
 
-          {/* ✅ STEP 1: APPROVE (ONLY NEW REQUEST) */}
-          {item.refund_amount === 0 && (
-            <>
-              <input
-                type="number"
-                placeholder="Damage ₹"
-                value={damage[item.booking_id] || ""}
-                onChange={(e) =>
-                  setDamage({
-                    ...damage,
-                    [item.booking_id]: e.target.value
-                  })
-                }
-                style={input}
-              />
+          {/* ✅ APPROVE BUTTON */}
+          {item.refund_status === "pending" &&
+            item.user_approval === "pending" && (
+              <>
+                <input
+                  type="number"
+                  placeholder="Damage ₹"
+                  value={damage[item.booking_id] || ""}
+                  onChange={(e) =>
+                    setDamage({
+                      ...damage,
+                      [item.booking_id]: e.target.value
+                    })
+                  }
+                  style={input}
+                />
 
-              <input
-                type="number"
-                placeholder="Pending Dues ₹"
-                value={dues[item.booking_id] || ""}
-                onChange={(e) =>
-                  setDues({
-                    ...dues,
-                    [item.booking_id]: e.target.value
-                  })
-                }
-                style={input}
-              />
+                <input
+                  type="number"
+                  placeholder="Pending Dues ₹"
+                  value={dues[item.booking_id] || ""}
+                  onChange={(e) =>
+                    setDues({
+                      ...dues,
+                      [item.booking_id]: e.target.value
+                    })
+                  }
+                  style={input}
+                />
 
-              <button
-                style={approveBtn}
-                onClick={() => handleApprove(item.booking_id)}
-                disabled={loadingId === item.booking_id}
-              >
-                {loadingId === item.booking_id
-                  ? "Processing..."
-                  : "✅ Approve Vacate"}
-              </button>
-            </>
+                <button
+                  style={approveBtn}
+                  onClick={() => handleApprove(item.booking_id)}
+                  disabled={loadingId === item.booking_id}
+                >
+                  {loadingId === item.booking_id
+                    ? "Processing..."
+                    : "✅ Approve Vacate"}
+                </button>
+              </>
           )}
 
-          {/* 💰 STEP 2: MARK PAID */}
+          {/* 💰 MARK PAID */}
           {item.refund_status === "pending" &&
             item.user_approval === "accepted" && (
               <button
