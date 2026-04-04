@@ -26,7 +26,7 @@ const OwnerVacateRequests = () => {
     loadRequests();
   }, []);
 
-  // ✅ APPROVE
+  // ✅ APPROVE / RE-APPROVE
   const handleApprove = async (bookingId) => {
     try {
       setLoadingId(bookingId);
@@ -53,7 +53,27 @@ const OwnerVacateRequests = () => {
     }
   };
 
-  // ✅ MARK PAID
+  // ❌ OWNER REJECT
+  const handleReject = async (bookingId) => {
+    try {
+      const token = await auth.currentUser.getIdToken();
+
+      await api.post(
+        `/owner/refund/reject/${bookingId}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      alert("❌ Refund Rejected");
+      loadRequests();
+    } catch (err) {
+      alert("Reject failed");
+    }
+  };
+
+  // 💰 MARK PAID
   const handleMarkPaid = async (bookingId) => {
     try {
       setLoadingId(bookingId);
@@ -93,10 +113,8 @@ const OwnerVacateRequests = () => {
             <p><b>💳 Deposit:</b> ₹{item.security_deposit}</p>
             <p><b>💰 Refund:</b> ₹{item.refund_amount || 0}</p>
 
-            {/* ✅ STATUS */}
             <p>
               <b>Status:</b>{" "}
-
               {item.refund_status === "pending" &&
                 item.user_approval === "pending" &&
                 "📝 Awaiting Owner Approval"}
@@ -110,7 +128,10 @@ const OwnerVacateRequests = () => {
 
               {item.refund_status === "pending" &&
                 item.user_approval === "rejected" &&
-                "❌ User Rejected"}
+                "❌ User Rejected (Re-review needed)"}
+
+              {item.refund_status === "rejected" &&
+                "❌ Rejected by Owner"}
 
               {item.refund_status === "paid" &&
                 "💸 Paid"}
@@ -124,9 +145,10 @@ const OwnerVacateRequests = () => {
             )}
           </div>
 
-          {/* ✅ APPROVE BUTTON */}
+          {/* ✅ APPROVE / RE-APPROVE */}
           {item.refund_status === "pending" &&
-            item.user_approval === "pending" && (
+            (item.user_approval === "pending" ||
+              item.user_approval === "rejected") && (
               <>
                 <input
                   type="number"
@@ -157,11 +179,16 @@ const OwnerVacateRequests = () => {
                 <button
                   style={approveBtn}
                   onClick={() => handleApprove(item.booking_id)}
-                  disabled={loadingId === item.booking_id}
                 >
-                  {loadingId === item.booking_id
-                    ? "Processing..."
-                    : "✅ Approve Vacate"}
+                  🔄 Approve / Update Refund
+                </button>
+
+                {/* ❌ OWNER REJECT */}
+                <button
+                  style={rejectBtn}
+                  onClick={() => handleReject(item.booking_id)}
+                >
+                  ❌ Reject Refund
                 </button>
               </>
           )}
@@ -172,11 +199,8 @@ const OwnerVacateRequests = () => {
               <button
                 style={paidBtn}
                 onClick={() => handleMarkPaid(item.booking_id)}
-                disabled={loadingId === item.booking_id}
               >
-                {loadingId === item.booking_id
-                  ? "Processing..."
-                  : "💸 Mark as Paid"}
+                💸 Mark as Paid
               </button>
           )}
 
@@ -226,9 +250,17 @@ const approveBtn = {
   background: "#4CAF50",
   color: "#fff",
   border: "none",
-  borderRadius: 8,
-  cursor: "pointer",
-  fontWeight: "bold"
+  borderRadius: 8
+};
+
+const rejectBtn = {
+  marginTop: 10,
+  padding: 12,
+  width: "100%",
+  background: "#f44336",
+  color: "#fff",
+  border: "none",
+  borderRadius: 8
 };
 
 const paidBtn = {
@@ -238,9 +270,7 @@ const paidBtn = {
   background: "#ff9800",
   color: "#fff",
   border: "none",
-  borderRadius: 8,
-  cursor: "pointer",
-  fontWeight: "bold"
+  borderRadius: 8
 };
 
 const refundBox = {
