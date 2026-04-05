@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from "react";
 import {
   Box, TextField, Button, Typography, Paper,
-  CircularProgress, Alert, MenuItem, Snackbar
+  CircularProgress, Alert, MenuItem
 } from "@mui/material";
 import { auth } from "../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { userAPI } from "../api/api";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const PhoneLogin = () => {
+  const { user, role: authRole, loading: authLoading } = useAuth();
+
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [confirmObj, setConfirmObj] = useState(null);
@@ -22,21 +25,17 @@ const PhoneLogin = () => {
   const [isNewUser, setIsNewUser] = useState(false);
 
   const [otpTimer, setOtpTimer] = useState(0);
-  const [canResend, setCanResend] = useState(true);
 
   const navigate = useNavigate();
 
-  /* ================= SESSION RESTORE ================= */
+  /* ================= AUTO REDIRECT ================= */
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const savedRole = localStorage.getItem("role");
-
-    if (token && savedRole) {
-      redirect(savedRole);
+    if (!authLoading && user && authRole) {
+      redirect(authRole);
     }
-  }, []);
+  }, [user, authRole, authLoading]);
 
-  /* ================= LANGUAGE FIX ================= */
+  /* ================= LANGUAGE ================= */
   useEffect(() => {
     auth.useDeviceLanguage();
   }, []);
@@ -46,50 +45,26 @@ const PhoneLogin = () => {
     if (otpTimer > 0) {
       const timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
       return () => clearTimeout(timer);
-    } else {
-      setCanResend(true);
     }
   }, [otpTimer]);
 
   /* ================= RECAPTCHA FIX ================= */
-  useEffect(() => {
-    setupRecaptcha();
-  }, []);
-
   const setupRecaptcha = () => {
     try {
-      if (window.recaptchaVerifier) return;
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+      }
 
       window.recaptchaVerifier = new RecaptchaVerifier(
+        auth, // ✅ correct order
         "recaptcha-container",
         {
           size: "invisible",
-          callback: () => {
-            console.log("reCAPTCHA solved");
-          },
-          "expired-callback": () => {
-            console.log("reCAPTCHA expired");
-            resetRecaptcha();
-          }
-        },
-        auth
+        }
       );
-
-      window.recaptchaVerifier.render().catch(console.error);
-
     } catch (err) {
-      console.error("Recaptcha init error:", err);
+      console.error("Recaptcha error:", err);
     }
-  };
-
-  const resetRecaptcha = () => {
-    if (window.recaptchaVerifier) {
-      try {
-        window.recaptchaVerifier.clear();
-      } catch (e) {}
-      window.recaptchaVerifier = null;
-    }
-    setupRecaptcha();
   };
 
   /* ================= REDIRECT ================= */
@@ -100,7 +75,7 @@ const PhoneLogin = () => {
     else navigate("/");
   };
 
-  /* ================= BACKEND LOGIN ================= */
+  /* ================= BACKEND SYNC ================= */
   const syncUser = async (user, selectedRole = null) => {
     try {
       setLoading(true);
@@ -110,28 +85,16 @@ const PhoneLogin = () => {
 
       const res = await userAPI.post("/auth/firebase", {
         idToken,
-        role: selectedRole || null
+        role: selectedRole
       });
 
       if (res.data.success) {
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("role", res.data.role);
-        localStorage.setItem("name", res.data.name);
-
-        const userId = res.data.user?.id || res.data.userId;
-        localStorage.setItem("user_id", userId);
-
-        window.dispatchEvent(new Event("storage"));
-        window.dispatchEvent(new Event("role-updated"));
-
         setSuccess(`Welcome ${res.data.name}`);
-
-        setTimeout(() => redirect(res.data.role), 1000);
+        setTimeout(() => redirect(res.data.role), 800);
       }
 
     } catch (err) {
-      console.error("Sync Error:", err);
-      setError(err?.response?.data?.message || "Server sync failed");
+      setError(err?.response?.data?.message || "Server error");
       await auth.signOut();
     } finally {
       setLoading(false);
@@ -141,38 +104,27 @@ const PhoneLogin = () => {
   /* ================= SEND OTP ================= */
   const sendOtp = async () => {
     if (phone.length !== 10) {
-      return setError("Enter valid 10 digit number");
+      return setError("Enter valid number");
     }
 
     try {
       setLoading(true);
       setError("");
 
-      if (!window.recaptchaVerifier) {
-        setupRecaptcha();
-      }
-
-      const appVerifier = window.recaptchaVerifier;
+      setupRecaptcha();
 
       const confirmation = await signInWithPhoneNumber(
         auth,
         `+91${phone}`,
-        appVerifier
+        window.recaptchaVerifier
       );
 
       setConfirmObj(confirmation);
       setOtpTimer(60);
-      setCanResend(false);
-      setSuccess("OTP sent successfully");
+      setSuccess("OTP sent");
 
     } catch (err) {
-      console.error("Firebase SMS Error:", err);
-
-      resetRecaptcha(); // 🔥 important fix
-
-      setError(
-        "Failed to send OTP. Check internet / disable VPN / allow cookies."
-      );
+      setError("OTP failed. Check internet / disable VPN");
     } finally {
       setLoading(false);
     }
@@ -180,7 +132,7 @@ const PhoneLogin = () => {
 
   /* ================= VERIFY OTP ================= */
   const verifyOtp = async () => {
-    if (otp.length !== 6) return setError("Enter valid 6 digit OTP");
+    if (otp.length !== 6) return setError("Invalid OTP");
 
     try {
       setLoading(true);
@@ -191,11 +143,11 @@ const PhoneLogin = () => {
       if (res._tokenResponse?.isNewUser) {
         setIsNewUser(true);
       } else {
-        await syncUser(res.user, null);
+        await syncUser(res.user);
       }
 
-    } catch (err) {
-      setError("Invalid OTP or expired");
+    } catch {
+      setError("Invalid OTP");
     } finally {
       setLoading(false);
     }
@@ -211,9 +163,9 @@ const PhoneLogin = () => {
   return (
     <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" bgcolor="#f8fafc">
       <Paper sx={{ p: 4, width: 380, borderRadius: 4 }}>
-        
+
         <Typography variant="h5" align="center" fontWeight="bold">
-          {isNewUser ? "Select Role" : "Nepxall Login"}
+          {isNewUser ? "Select Role" : "Login"}
         </Typography>
 
         {error && <Alert severity="error">{error}</Alert>}
@@ -248,7 +200,7 @@ const PhoneLogin = () => {
             />
 
             <Button fullWidth onClick={verifyOtp} disabled={loading}>
-              {loading ? <CircularProgress size={20} /> : "Verify"}
+              {loading ? <CircularProgress size={20} /> : "Verify OTP"}
             </Button>
           </>
         )}
