@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { Box, CircularProgress } from "@mui/material";
 import api from "../../api/api";
 
 export default function OwnerBankDetails() {
+  const navigate = useNavigate();
+  const { user, role, loading: authLoading } = useAuth();
+
   const [form, setForm] = useState({
     account_holder_name: "",
     account_number: "",
@@ -10,12 +16,12 @@ export default function OwnerBankDetails() {
     branch: ""
   });
 
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
   const fetchBank = async () => {
-    setLoading(true);
+    setPageLoading(true);
     setMessage("");
 
     try {
@@ -36,13 +42,20 @@ export default function OwnerBankDetails() {
       }
       console.log("GET BANK ERROR:", err.response?.data || err.message);
     } finally {
-      setLoading(false);
+      setPageLoading(false);
     }
   };
 
+  /* ================= AUTH + LOAD ================= */
   useEffect(() => {
-    fetchBank();
-  }, []);
+    if (!authLoading && !user) {
+      navigate("/login");
+    }
+
+    if (user && role === "owner") {
+      fetchBank();
+    }
+  }, [user, role, authLoading, navigate]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -67,20 +80,17 @@ export default function OwnerBankDetails() {
     }
   };
 
-  if (loading) {
+  /* ================= PROTECTION ================= */
+  if (authLoading || pageLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-2xl shadow-lg">
-          <div className="flex items-center space-x-3">
-            <div className="w-5 h-5 bg-blue-600 rounded-full animate-pulse"></div>
-            <div className="w-5 h-5 bg-blue-600 rounded-full animate-pulse delay-150"></div>
-            <div className="w-5 h-5 bg-blue-600 rounded-full animate-pulse delay-300"></div>
-            <span className="text-gray-600 font-medium">Loading bank details...</span>
-          </div>
-        </div>
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
     );
   }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (role !== "owner") return <Navigate to="/" replace />;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">

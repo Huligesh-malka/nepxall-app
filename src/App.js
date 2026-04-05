@@ -95,7 +95,7 @@ function App() {
     testBackendConnection();
   }, []);
 
-  /* 🔥 LOADING */
+  /* 🔄 LOADING STATE */
   if (loading) return null;
 
   /* 🔐 PRIVATE ROUTE */
@@ -108,6 +108,7 @@ function App() {
 
   return (
     <Routes>
+
       {/* PUBLIC */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<UserPGSearch />} />
@@ -159,11 +160,6 @@ function App() {
         <Route path="vacate" element={<OwnerVacateRequests />} />
         <Route path="premium" element={<OwnerPremiumPlans />} />
         <Route path="bookings" element={<OwnerBookings />} />
-        <Route path="verification" element={<OwnerVerificationPage />} />
-        <Route path="bank" element={<OwnerBankDetails />} />
-        <Route path="hotels" element={<OwnerHotels />} />
-        <Route path="add-hotel" element={<AddHotel />} />
-        <Route path="add" element={<OwnerAddPG />} />
       </Route>
 
       {/* ADMIN */}
@@ -192,6 +188,7 @@ function App() {
 
       {/* FALLBACK */}
       <Route path="*" element={<Navigate to="/" />} />
+
     </Routes>
   );
 }

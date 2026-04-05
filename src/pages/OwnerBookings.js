@@ -1,30 +1,26 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { auth } from "../firebase";
+import { useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { Box, CircularProgress } from "@mui/material";
 import api from "../api/api";
 
 const OwnerBookings = () => {
   const navigate = useNavigate();
+  const { user, role, loading } = useAuth();
 
   const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   /* ================= LOAD BOOKINGS ================= */
-
   const loadOwnerBookings = useCallback(async () => {
     try {
-      setLoading(true);
+      setPageLoading(true);
       setError("");
 
-      const user = auth.currentUser;
-
-      if (!user) {
-        navigate("/login");
-        return;
-      }
+      if (!user) return;
 
       const token = await user.getIdToken(true);
 
@@ -42,29 +38,28 @@ const OwnerBookings = () => {
         setError("Failed to load booking history");
       }
     } finally {
-      setLoading(false);
+      setPageLoading(false);
     }
-  }, [navigate]);
+  }, [user]);
 
-  /* ================= AUTH ================= */
-
+  /* ================= AUTH + LOAD ================= */
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged((user) => {
-      if (user) loadOwnerBookings();
-      else navigate("/login");
-    });
+    if (!loading && !user) {
+      navigate("/login");
+    }
 
-    return () => unsub();
-  }, [loadOwnerBookings, navigate]);
+    if (user && role === "owner") {
+      loadOwnerBookings();
+    }
+  }, [user, role, loading, navigate, loadOwnerBookings]);
 
   /* ================= UPDATE STATUS ================= */
-
   const updateStatus = async (bookingId, status) => {
     try {
       setActionLoading(bookingId);
       setSuccess("");
 
-      const token = await auth.currentUser.getIdToken(true);
+      const token = await user.getIdToken(true);
 
       await api.put(
         `/owner/bookings/${bookingId}`,
@@ -91,16 +86,25 @@ const OwnerBookings = () => {
     }
   };
 
+  /* ================= PROTECTION ================= */
+  if (loading || pageLoading) {
+    return (
+      <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (role !== "owner") return <Navigate to="/" replace />;
+
   /* ================= UI ================= */
-
-  if (loading) return <p style={{ padding: 20 }}>Loading bookings...</p>;
-  if (error) return <div style={errorBox}>{error}</div>;
-
   return (
     <div style={container}>
       <h2>🏠 Owner Booking Requests</h2>
 
       {success && <div style={successBox}>{success}</div>}
+      {error && <div style={errorBox}>{error}</div>}
 
       {bookings.length === 0 ? (
         <div style={emptyBox}>
@@ -114,9 +118,7 @@ const OwnerBookings = () => {
         bookings.map((b) => (
           <div key={b.id} style={card}>
             <p><b>PG:</b> {b.pg_name}</p>
-
             <p><b>Tenant:</b> {b.tenant_name}</p>
-
             <p>
               <b>Phone:</b>{" "}
               {b.tenant_phone ? (
@@ -127,16 +129,13 @@ const OwnerBookings = () => {
                 </span>
               )}
             </p>
-
             <p>
               <b>Check-in:</b>{" "}
               {b.check_in_date
                 ? new Date(b.check_in_date).toDateString()
                 : "N/A"}
             </p>
-
             <p><b>Room Type:</b> {b.room_type}</p>
-
             <p>
               <b>Status:</b>{" "}
               <span style={statusBadge(b.status)}>
@@ -153,7 +152,6 @@ const OwnerBookings = () => {
                 >
                   {actionLoading === b.id ? "Processing..." : "✅ Approve"}
                 </button>
-
                 <button
                   style={rejectBtn}
                   disabled={actionLoading === b.id}
@@ -173,7 +171,6 @@ const OwnerBookings = () => {
 export default OwnerBookings;
 
 /* ================= STYLES ================= */
-
 const container = { maxWidth: 900, margin: "auto", padding: 20 };
 
 const card = {

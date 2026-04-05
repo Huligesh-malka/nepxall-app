@@ -1,19 +1,22 @@
 import React, { useEffect, useState, useRef } from "react";
+import { useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { Box, CircularProgress } from "@mui/material";
 import axios from "axios";
 import SignatureCanvas from "react-signature-canvas";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import {
   Container, Typography, Paper, Table, TableHead, TableRow, TableCell,
-  TableBody, Chip, Box, CircularProgress, Button,
+  TableBody, Chip, Button,
   Modal, Fade, Checkbox, TextField, Backdrop, IconButton, Divider, Alert, Stack, Grid, Card, CardContent
 } from "@mui/material";
 import { 
-  Refresh, ArrowBack, Gavel, Security, VerifiedUser, 
-  InfoOutlined, BorderColor, ReceiptLong, Close, CheckCircle, Download, Payment, Home, Person, AccountBalance, CalendarToday
+  Refresh, ArrowBack, Security, 
+  InfoOutlined, BorderColor, Close, CheckCircle, Download, 
+  Person, Home, AccountBalance, Payment
 } from "@mui/icons-material";
 
-import { auth } from "../../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
 // Brand Colors
@@ -27,8 +30,11 @@ const BRAND_LIGHT_BG = "#f8fafc";
 const API = "https://nepxall-backend.onrender.com/api/owner";
 
 export default function OwnerPayments() {
+  const navigate = useNavigate();
+  const { user, role, loading: authLoading } = useAuth();
+  
   const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
 
   // Modal & Flow State
   const [openSignModal, setOpenSignModal] = useState(false);
@@ -47,11 +53,35 @@ export default function OwnerPayments() {
 
   const sigCanvas = useRef(null);
   const receiptRef = useRef();
-  const token = localStorage.getItem("token");
 
+  const fetchPayments = async () => {
+    if (!user) return;
+    
+    try {
+      setPageLoading(true);
+      const token = await user.getIdToken();
+      const res = await axios.get(`${API}/payments`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setData(res.data.data || []);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to fetch payments ❌");
+    } finally {
+      setPageLoading(false);
+    }
+  };
+
+  /* ================= AUTH + LOAD ================= */
   useEffect(() => {
-    fetchPayments();
-  }, []);
+    if (!authLoading && !user) {
+      navigate("/login");
+    }
+
+    if (user && role === "owner") {
+      fetchPayments();
+    }
+  }, [user, role, authLoading, navigate]);
 
   // Sync canvas size when step 3 opens
   useEffect(() => {
@@ -65,24 +95,10 @@ export default function OwnerPayments() {
     }
   }, [step, openSignModal]);
 
-  const fetchPayments = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get(`${API}/payments`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setData(res.data.data || []);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to fetch payments ❌");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleViewReceipt = async (bookingId) => {
     try {
       setIsSubmitting(true);
+      const token = await user.getIdToken();
       const res = await axios.get(`${API}/receipt-details/${bookingId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -103,6 +119,7 @@ export default function OwnerPayments() {
   const handleDirectDownload = async (bookingId) => {
     try {
       setIsSubmitting(true);
+      const token = await user.getIdToken();
       const res = await axios.get(`${API}/receipt-details/${bookingId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -303,6 +320,7 @@ export default function OwnerPayments() {
 
   const handleViewPdf = async (bookingId, filePath) => {
     try {
+      const token = await user.getIdToken();
       await axios.post(`${API}/agreements/viewed`, { booking_id: bookingId }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -330,9 +348,12 @@ export default function OwnerPayments() {
     try {
       setIsSubmitting(true);
       
+      const token = await user.getIdToken();
       const verifyRes = await axios.post(`${API}/agreements/verify-owner`, {
         booking_id: selectedBooking.booking_id,
         mobile: mobile
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (!verifyRes.data.success) {
@@ -340,10 +361,10 @@ export default function OwnerPayments() {
       }
 
       if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", { size: "invisible" });
+        window.recaptchaVerifier = new RecaptchaVerifier(window.authInstance || auth, "recaptcha-container", { size: "invisible" });
       }
 
-      const confirmation = await signInWithPhoneNumber(auth, `+91${mobile}`, window.recaptchaVerifier);
+      const confirmation = await signInWithPhoneNumber(window.authInstance || auth, `+91${mobile}`, window.recaptchaVerifier);
       setConfirmObj(confirmation);
       alert("OTP Sent Successfully ✅");
     } catch (error) {
@@ -391,12 +412,15 @@ export default function OwnerPayments() {
 
     try {
       setIsSubmitting(true);
+      const token = await user.getIdToken();
       const res = await axios.post(`${API}/agreements/sign`, {
         booking_id: selectedBooking.booking_id,
         owner_mobile: mobile,
         owner_signature: signatureBase64,
         accepted_terms: true,
         owner_device_info: JSON.stringify(deviceInfo) 
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (res.data.success) {
@@ -444,7 +468,17 @@ export default function OwnerPayments() {
     }
   };
 
-  if (loading) return <Box p={5} textAlign="center"><CircularProgress /></Box>;
+  /* ================= PROTECTION ================= */
+  if (authLoading || pageLoading) {
+    return (
+      <Box p={5} textAlign="center">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (role !== "owner") return <Navigate to="/" replace />;
 
   return (
     <Container sx={{ py: 4, maxWidth: '1400px' }}>
@@ -869,7 +903,7 @@ export default function OwnerPayments() {
             {/* STEP 2: PHONE OTP */}
             {step === 2 && (
               <Box py={2} textAlign="center">
-                <VerifiedUser sx={{ fontSize: 60, color: BRAND_BLUE, mb: 1 }} />
+                <Security sx={{ fontSize: 60, color: BRAND_BLUE, mb: 1 }} />
                 <Typography variant="h6">Phone Authentication</Typography>
                 <Typography variant="body2" color="textSecondary" mb={3}>
                     Verify the mobile number for Booking #{selectedBooking?.booking_id}

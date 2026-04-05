@@ -1,25 +1,25 @@
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../firebase";
+import React, { useEffect, useState, useCallback } from "react";
+import { useParams, useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { Box, CircularProgress } from "@mui/material";
 import api from "../api/api";
 
 const OwnerRooms = () => {
   const { pgId } = useParams();
   const navigate = useNavigate();
+  const { user, role, loading } = useAuth();
 
   const [rooms, setRooms] = useState([]);
   const [roomNo, setRoomNo] = useState("");
   const [totalSeats, setTotalSeats] = useState("");
-
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
 
   /* ================= LOAD ROOMS ================= */
-  const loadRooms = async () => {
+  const loadRooms = useCallback(async () => {
     try {
-      setLoading(true);
+      setPageLoading(true);
       setError("");
 
       console.log("📡 Fetching rooms for PG:", pgId);
@@ -38,22 +38,20 @@ const OwnerRooms = () => {
       console.error("❌ Rooms load error:", err);
       setError("Failed to load rooms. Please try again later.");
     } finally {
-      setLoading(false);
+      setPageLoading(false);
     }
-  };
-
-  /* ================= LOAD ON MOUNT ================= */
-  useEffect(() => {
-    if (pgId) loadRooms();
   }, [pgId]);
 
-  /* ================= AUTH CHECK ================= */
+  /* ================= AUTH + LOAD ================= */
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) navigate("/login");
-    });
-    return () => unsub();
-  }, [navigate]);
+    if (!loading && !user) {
+      navigate("/login");
+    }
+
+    if (user && role === "owner" && pgId) {
+      loadRooms();
+    }
+  }, [user, role, loading, pgId, navigate, loadRooms]);
 
   /* ================= ADD ROOM ================= */
   const addRoom = async () => {
@@ -67,7 +65,7 @@ const OwnerRooms = () => {
       await api.post("/rooms/add", {
         pg_id: pgId,
         room_no: roomNo,
-        total_seats: totalSeats
+        total_seats: parseInt(totalSeats)
       });
 
       setRoomNo("");
@@ -87,16 +85,17 @@ const OwnerRooms = () => {
     return { label: "PARTIAL", color: "#f59e0b" };
   };
 
-  /* ================= LOADING UI ================= */
-  // Cleaned up to remove the "Force Refresh" button and wake-up messages
-  if (loading) {
+  /* ================= PROTECTION ================= */
+  if (loading || pageLoading) {
     return (
-      <div style={styles.center}>
-        <div className="spinner"></div> 
-        <h3 style={{ color: "#4f46e5" }}>Loading rooms...</h3>
-      </div>
+      <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
+        <CircularProgress />
+      </Box>
     );
   }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (role !== "owner") return <Navigate to="/" replace />;
 
   /* ================= MAIN UI ================= */
   return (

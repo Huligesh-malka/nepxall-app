@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { Box, CircularProgress } from "@mui/material";
 import api from "../../api/api";
 
 /* ================= PLAN DATA ================= */
@@ -64,8 +67,11 @@ const plans = [
 ];
 
 export default function OwnerPremiumPlans() {
+  const navigate = useNavigate();
+  const { user, role, loading: authLoading } = useAuth();
+  
   const [currentPlan, setCurrentPlan] = useState("free");
-  const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(false);
   const [hoveredPlan, setHoveredPlan] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState(null);
 
@@ -74,21 +80,33 @@ export default function OwnerPremiumPlans() {
   }, []);
 
   const loadCurrentPlan = async () => {
+    if (!user) return;
+    
     try {
+      setPageLoading(true);
       const res = await api.get("/owner/current-plan");
       setCurrentPlan(res.data.plan || "free");
       setSelectedPlan(res.data.plan || "free");
     } catch {
       setCurrentPlan("free");
       setSelectedPlan("free");
+    } finally {
+      setPageLoading(false);
     }
   };
+
+  /* ================= AUTH + LOAD ================= */
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/login");
+    }
+  }, [user, authLoading, navigate]);
 
   const buyPlan = async (planId) => {
     if (planId === currentPlan) return;
 
     try {
-      setLoading(true);
+      setPageLoading(true);
       await api.post("/owner/buy-plan", { plan: planId });
       
       // Show success message
@@ -100,7 +118,7 @@ export default function OwnerPremiumPlans() {
     } catch (err) {
       showNotification("❌ Payment failed. Please try again.", "error");
     } finally {
-      setLoading(false);
+      setPageLoading(false);
     }
   };
 
@@ -114,6 +132,18 @@ export default function OwnerPremiumPlans() {
     if (planId === "business") return "Best Value";
     return null;
   };
+
+  /* ================= PROTECTION ================= */
+  if (authLoading || pageLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (role !== "owner") return <Navigate to="/" replace />;
 
   return (
     <div style={styles.container}>
@@ -243,7 +273,7 @@ export default function OwnerPremiumPlans() {
               ) : (
                 <button
                   onClick={() => buyPlan(plan.id)}
-                  disabled={loading}
+                  disabled={pageLoading}
                   style={{
                     ...styles.upgradeButton,
                     ...(isHovered && styles.upgradeButtonHover),
@@ -252,7 +282,7 @@ export default function OwnerPremiumPlans() {
                     border: plan.highlight ? 'none' : `2px solid ${plan.color}`
                   }}
                 >
-                  {loading ? (
+                  {pageLoading ? (
                     <div style={styles.loadingSpinner}>
                       <div style={styles.spinner}></div>
                       <span>Processing...</span>
@@ -303,6 +333,10 @@ export default function OwnerPremiumPlans() {
             opacity: 1;
             transform: translateY(0);
           }
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
       `}</style>
     </div>

@@ -1,41 +1,26 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../firebase";
+import { useParams, useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { Box, CircularProgress } from "@mui/material";
 import api from "../api/api";
 
 const OwnerReviewReply = () => {
   const { pgId } = useParams();
   const navigate = useNavigate();
+  const { user, role, loading: authLoading } = useAuth();
 
   const [reviews, setReviews] = useState([]);
   const [replyText, setReplyText] = useState({});
   const [editingId, setEditingId] = useState(null);
-
-  const [uid, setUid] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  /* ================= AUTH ================= */
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        navigate("/login");
-      } else {
-        setUid(user.uid);
-        setError(null);
-      }
-    });
-
-    return unsub;
-  }, [navigate]);
 
   /* ================= LOAD REVIEWS ================= */
   const loadReviews = useCallback(async () => {
     if (!pgId) return;
 
     try {
-      setLoading(true);
+      setPageLoading(true);
 
       const res = await api.get(`/reviews/${pgId}`);
 
@@ -48,13 +33,20 @@ const OwnerReviewReply = () => {
       console.error(err);
       setError("Failed to load reviews");
     } finally {
-      setLoading(false);
+      setPageLoading(false);
     }
   }, [pgId]);
 
+  /* ================= AUTH + LOAD ================= */
   useEffect(() => {
-    loadReviews();
-  }, [loadReviews]);
+    if (!authLoading && !user) {
+      navigate("/login");
+    }
+
+    if (user && role === "owner" && pgId) {
+      loadReviews();
+    }
+  }, [user, role, authLoading, pgId, navigate, loadReviews]);
 
   /* ================= SUBMIT / UPDATE REPLY ================= */
   const submitReply = async (reviewId) => {
@@ -78,16 +70,25 @@ const OwnerReviewReply = () => {
     }
   };
 
-  /* ================= STATES ================= */
-
-  if (loading) return <h3 style={{ textAlign: "center" }}>Loading...</h3>;
-
-  if (error)
+  /* ================= PROTECTION ================= */
+  if (authLoading || pageLoading) {
     return (
-      <div style={{ textAlign: "center", color: "red" }}>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (role !== "owner") return <Navigate to="/" replace />;
+
+  if (error) {
+    return (
+      <div style={{ textAlign: "center", color: "red", padding: 20 }}>
         {error}
       </div>
     );
+  }
 
   /* ================= UI ================= */
 

@@ -1,18 +1,17 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { auth } from "../firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { Box, CircularProgress } from "@mui/material";
 import api from "../api/api";
 import { formatDistanceToNow } from "date-fns";
 
 /* MUI */
 import {
-  Box,
   Typography,
   List,
   ListItem,
   ListItemText,
   Chip,
-  CircularProgress,
   Alert,
   Paper,
   Divider,
@@ -44,36 +43,23 @@ const typeConfig = {
 };
 
 export default function OwnerNotifications() {
-  const [uid, setUid] = useState(null);
+  const navigate = useNavigate();
+  const { user, role, loading: authLoading } = useAuth();
+  
   const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
-  /* ================= AUTH ================= */
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUid(user.uid);
-        setError(null);
-      } else {
-        setUid(null);
-        setLoading(false);
-      }
-    });
-
-    return unsub;
-  }, []);
-
   /* ================= FETCH ================= */
   const fetchNotifications = useCallback(async () => {
-    if (!uid) return;
+    if (!user) return;
 
     try {
       setRefreshing(true);
       setError(null);
 
-      const res = await api.get(`/notifications/${uid}`);
+      const res = await api.get(`/notifications/${user.uid}`);
 
       if (res.data?.success) {
         setNotifications(res.data.data || []);
@@ -84,14 +70,21 @@ export default function OwnerNotifications() {
       console.error(err);
       setError("Failed to load notifications");
     } finally {
-      setLoading(false);
+      setPageLoading(false);
       setRefreshing(false);
     }
-  }, [uid]);
+  }, [user]);
 
+  /* ================= AUTH + LOAD ================= */
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    if (!authLoading && !user) {
+      navigate("/login");
+    }
+
+    if (user && role === "owner") {
+      fetchNotifications();
+    }
+  }, [user, role, authLoading, navigate, fetchNotifications]);
 
   /* ================= ACTIONS ================= */
 
@@ -107,7 +100,7 @@ export default function OwnerNotifications() {
 
   const markAllAsRead = async () => {
     try {
-      await api.post(`/notifications/mark-all-read`, { user_id: uid });
+      await api.post(`/notifications/mark-all-read`, { user_id: user.uid });
 
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: 1 })));
     } catch {}
@@ -130,9 +123,8 @@ export default function OwnerNotifications() {
     }
   };
 
-  /* ================= STATES ================= */
-
-  if (loading) {
+  /* ================= PROTECTION ================= */
+  if (authLoading || pageLoading) {
     return (
       <Box sx={centerBox}>
         <CircularProgress />
@@ -141,13 +133,8 @@ export default function OwnerNotifications() {
     );
   }
 
-  if (!uid) {
-    return (
-      <Alert severity="warning">
-        Please login to view notifications
-      </Alert>
-    );
-  }
+  if (!user) return <Navigate to="/login" replace />;
+  if (role !== "owner") return <Navigate to="/" replace />;
 
   if (error) {
     return (

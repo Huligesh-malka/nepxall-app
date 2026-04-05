@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
+import { useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { Box, CircularProgress } from "@mui/material";
 import api from "../../api/api";
-import { auth } from "../../firebase";
 
 /* ── Close dropdown on outside click ── */
 function useOutsideClick(ref, cb) {
@@ -348,18 +350,23 @@ const SearchBar = ({ value, onChange }) => (
    MAIN COMPONENT
 ══════════════════════════════════════════════ */
 const OwnerVacateRequests = () => {
+  const navigate = useNavigate();
+  const { user, role, loading: authLoading } = useAuth();
+  
   const [requests,  setRequests]  = useState([]);
   const [damage,    setDamage]    = useState({});
   const [dues,      setDues]      = useState({});
   const [loadingId, setLoadingId] = useState(null);
-  const [loading,   setLoading]   = useState(true);
+  const [pageLoading,   setPageLoading]   = useState(true);
   const [filter,    setFilter]    = useState("all");
   const [search,    setSearch]    = useState("");
 
   const loadRequests = async () => {
-    setLoading(true);
+    if (!user) return;
+    
     try {
-      const token = await auth.currentUser.getIdToken();
+      setPageLoading(true);
+      const token = await user.getIdToken();
       const res = await api.get("/owner/vacate/requests", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -367,11 +374,20 @@ const OwnerVacateRequests = () => {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      setPageLoading(false);
     }
   };
 
-  useEffect(() => { loadRequests(); }, []);
+  /* ================= AUTH + LOAD ================= */
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/login");
+    }
+
+    if (user && role === "owner") {
+      loadRequests();
+    }
+  }, [user, role, authLoading, navigate]);
 
   /* Badge counts per filter key */
   const counts = useMemo(() => {
@@ -398,7 +414,7 @@ const OwnerVacateRequests = () => {
   const handleApprove = async (bookingId) => {
     try {
       setLoadingId(bookingId);
-      const token = await auth.currentUser.getIdToken();
+      const token = await user.getIdToken();
       const res = await api.post(
         `/owner/vacate/approve/${bookingId}`,
         {
@@ -415,7 +431,7 @@ const OwnerVacateRequests = () => {
 
   const handleReject = async (bookingId) => {
     try {
-      const token = await auth.currentUser.getIdToken();
+      const token = await user.getIdToken();
       await api.post(`/owner/refund/reject/${bookingId}`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -427,7 +443,7 @@ const OwnerVacateRequests = () => {
   const handleMarkPaid = async (bookingId) => {
     try {
       setLoadingId(bookingId);
-      const token = await auth.currentUser.getIdToken();
+      const token = await user.getIdToken();
       await api.post(`/owner/refund/mark-paid/${bookingId}`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -436,6 +452,18 @@ const OwnerVacateRequests = () => {
     } catch { alert("Payment failed"); }
     finally { setLoadingId(null); }
   };
+
+  /* ================= PROTECTION ================= */
+  if (authLoading || pageLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (role !== "owner") return <Navigate to="/" replace />;
 
   return (
     <div style={styles.page}>
@@ -457,14 +485,14 @@ const OwnerVacateRequests = () => {
       <FilterBar active={filter} onChange={setFilter} counts={counts} />
 
       {/* ── Content ── */}
-      {loading && (
+      {pageLoading && (
         <div style={styles.emptyState}>
           <div style={styles.spinner} />
           <p style={{ color: "#94a3b8", marginTop: 12 }}>Loading requests…</p>
         </div>
       )}
 
-      {!loading && visible.length === 0 && (
+      {!pageLoading && visible.length === 0 && (
         <div style={styles.emptyState}>
           <div style={{ fontSize: 44, marginBottom: 10 }}>
             {search ? "🔍" : "🏠"}
@@ -508,7 +536,7 @@ const OwnerVacateRequests = () => {
       </div>
 
       {/* ── Result count footer ── */}
-      {!loading && visible.length > 0 && (
+      {!pageLoading && visible.length > 0 && (
         <p style={styles.resultFooter}>
           Showing {visible.length} of {counts.all} request{counts.all !== 1 ? "s" : ""}
         </p>

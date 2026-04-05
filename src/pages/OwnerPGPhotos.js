@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { auth } from "../firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { useParams, useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { Box, CircularProgress } from "@mui/material";
 import api from "../api/api";
 
 const BACKEND_URL = import.meta.env.VITE_API_URL?.replace("/api", "") ||
@@ -10,28 +10,15 @@ const BACKEND_URL = import.meta.env.VITE_API_URL?.replace("/api", "") ||
 const OwnerPGPhotos = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user, role, loading } = useAuth();
 
   const [photos, setPhotos] = useState([]);
   const [files, setFiles] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [dragIndex, setDragIndex] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState("");
-
-  /* ================= INIT ================= */
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        loadPhotos();
-      } else {
-        navigate("/login");
-      }
-    });
-
-    return unsubscribe;
-  }, [id, navigate]);
 
   /* ================= LOAD PHOTOS ================= */
   const loadPhotos = useCallback(async () => {
@@ -68,6 +55,17 @@ const OwnerPGPhotos = () => {
       setPageLoading(false);
     }
   }, [id]);
+
+  /* ================= AUTH + LOAD ================= */
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/login");
+    }
+
+    if (user && role === "owner") {
+      loadPhotos();
+    }
+  }, [user, role, loading, id, navigate, loadPhotos]);
 
   /* ================= FILE SELECT ================= */
   const handleFileChange = (e) => {
@@ -225,9 +223,19 @@ const OwnerPGPhotos = () => {
     return `${BACKEND_URL}${normalizedPath}`;
   };
 
-  /* ================= UI ================= */
-  if (pageLoading) return <h3 style={{ textAlign: "center" }}>Loading...</h3>;
+  /* ================= PROTECTION ================= */
+  if (loading || pageLoading) {
+    return (
+      <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
+  if (!user) return <Navigate to="/login" replace />;
+  if (role !== "owner") return <Navigate to="/" replace />;
+
+  /* ================= UI ================= */
   return (
     <div style={{ maxWidth: 1200, margin: "auto", padding: 20 }}>
       <h2 style={{ marginBottom: 20 }}>📷 Manage PG Photos</h2>
@@ -337,11 +345,7 @@ const OwnerPGPhotos = () => {
           🖼️ Photo Gallery {photos.length > 0 && `(${photos.length})`}
         </h3>
 
-        {loading ? (
-          <div style={{ textAlign: "center", padding: 40 }}>
-            <p>Loading photos...</p>
-          </div>
-        ) : photos.length === 0 ? (
+        {photos.length === 0 ? (
           <div style={{
             textAlign: "center",
             padding: 60,

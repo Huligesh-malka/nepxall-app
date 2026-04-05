@@ -1,38 +1,25 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../firebase";
+import { useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { Box, CircularProgress } from "@mui/material";
 import api from "../api/api";
 
 const OwnerPGUsers = () => {
-  const [uid, setUid] = useState(null);
+  const navigate = useNavigate();
+  const { user, role, loading: authLoading } = useAuth();
+  
   const [users, setUsers] = useState([]);
-
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  /* ================= AUTH ================= */
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUid(user.uid);
-        setError(null);
-      } else {
-        setUid(null);
-        setLoading(false);
-      }
-    });
-
-    return unsub;
-  }, []);
 
   /* ================= LOAD USERS ================= */
   const loadUsers = useCallback(async () => {
-    if (!uid) return;
+    if (!user) return;
 
     try {
-      setLoading(true);
+      setPageLoading(true);
 
-      const res = await api.get(`/pg/owner/${uid}/users`);
+      const res = await api.get(`/pg/owner/${user.uid}/users`);
 
       setUsers(res.data || []);
       setError(null);
@@ -41,13 +28,20 @@ const OwnerPGUsers = () => {
       setError("Failed to load PG users");
       setUsers([]);
     } finally {
-      setLoading(false);
+      setPageLoading(false);
     }
-  }, [uid]);
+  }, [user]);
 
+  /* ================= AUTH + LOAD ================= */
   useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
+    if (!authLoading && !user) {
+      navigate("/login");
+    }
+
+    if (user && role === "owner") {
+      loadUsers();
+    }
+  }, [user, role, authLoading, navigate, loadUsers]);
 
   /* ================= STATUS COLOR ================= */
   const getStatusStyle = (status) => {
@@ -63,17 +57,25 @@ const OwnerPGUsers = () => {
     }
   };
 
-  /* ================= STATES ================= */
-
-  if (loading)
-    return <h3 style={{ textAlign: "center" }}>Loading users...</h3>;
-
-  if (error)
+  /* ================= PROTECTION ================= */
+  if (authLoading || pageLoading) {
     return (
-      <div style={{ textAlign: "center", color: "red" }}>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (role !== "owner") return <Navigate to="/" replace />;
+
+  if (error) {
+    return (
+      <div style={{ textAlign: "center", color: "red", padding: 20 }}>
         {error}
       </div>
     );
+  }
 
   /* ================= UI ================= */
 

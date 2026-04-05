@@ -1,15 +1,15 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { auth } from "../firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { pgAPI } from "../api/api";
 import { getImageUrl } from "../config";
+import { Box, CircularProgress } from "@mui/material";
 
 import QRCodeStyling from "qr-code-styling";
 
 import {
-  Typography, Box, Button, Grid, Alert, Snackbar,
-  CircularProgress, Paper, Table, TableBody,
+  Typography, Box as MuiBox, Button, Grid, Alert, Snackbar,
+  Paper, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow,
   Chip, Avatar, IconButton, Card, CardContent,
   Divider, Stack, Tooltip, Container
@@ -103,6 +103,7 @@ const getStatusBadgeStyle = (status) => {
 const OwnerDashboard = () => {
 
   const navigate = useNavigate();
+  const { user, role, loading: authLoading } = useAuth();
 
   const [pgs, setPGs] = useState([]);
   const [recentBookings, setRecentBookings] = useState([]);
@@ -110,8 +111,7 @@ const OwnerDashboard = () => {
   const [bookingHistory, setBookingHistory] = useState([]);
   const [pgDetailsMap, setPgDetailsMap] = useState({});
 
-  const [loading, setLoading] = useState(true);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const [stats, setStats] = useState({
@@ -136,22 +136,6 @@ const OwnerDashboard = () => {
     message: "",
     severity: "success"
   });
-
-  /* 🔐 AUTH CHECK */
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        navigate("/login");
-      } else {
-        console.log("👤 User authenticated:", user.uid);
-        setAuthLoading(false);
-        await loadAllData();
-      }
-    });
-
-    return () => unsub();
-  }, []);
 
   /* ---------------- HELPER FUNCTION TO GET RENT BY ROOM TYPE ---------------- */
   
@@ -202,12 +186,12 @@ const OwnerDashboard = () => {
 
   const loadAllData = useCallback(async (refresh = false) => {
     try {
-      if (!auth.currentUser) {
-        console.log("❌ No current user");
+      if (!user) {
+        console.log("❌ No user");
         return;
       }
 
-      refresh ? setRefreshing(true) : setLoading(true);
+      refresh ? setRefreshing(true) : setPageLoading(true);
       console.log("📡 Loading dashboard data...");
 
       /* -------- PG DATA USING pgAPI -------- */
@@ -382,9 +366,7 @@ const OwnerDashboard = () => {
       console.error("❌ Dashboard error:", err?.response?.data || err.message);
 
       if (err.response?.status === 401) {
-        console.log("🔐 Unauthorized - logging out");
-        await auth.signOut();
-        navigate("/login");
+        console.log("🔐 Unauthorized");
       }
 
       setSnackbar({
@@ -394,10 +376,21 @@ const OwnerDashboard = () => {
       });
 
     } finally {
-      setLoading(false);
+      setPageLoading(false);
       setRefreshing(false);
     }
-  }, [navigate]);
+  }, [user, recentEnquiries.length]);
+
+  /* ---------------- AUTH + LOAD ================= */
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/login");
+    }
+
+    if (user && role === "owner") {
+      loadAllData();
+    }
+  }, [user, role, authLoading, navigate, loadAllData]);
 
   /* ---------------- HANDLERS ---------------- */
 
@@ -570,9 +563,8 @@ const OwnerDashboard = () => {
     }
   };
 
-  /* ---------------- LOADER ---------------- */
-
-  if (authLoading || loading) {
+  /* ================= PROTECTION ================= */
+  if (authLoading || pageLoading) {
     return (
       <Box 
         minHeight="60vh" 
@@ -590,14 +582,17 @@ const OwnerDashboard = () => {
     );
   }
 
+  if (!user) return <Navigate to="/login" replace />;
+  if (role !== "owner") return <Navigate to="/" replace />;
+
   /* ---------------- UI ---------------- */
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
-      <Box sx={{ width: '100%' }}>
+      <MuiBox sx={{ width: '100%' }}>
 
         {/* HEADER */}
-        <Box 
+        <MuiBox 
           display="flex" 
           justifyContent="space-between" 
           alignItems="center" 
@@ -605,16 +600,16 @@ const OwnerDashboard = () => {
           flexWrap="wrap" 
           gap={2}
         >
-          <Box>
+          <MuiBox>
             <Typography variant="h4" fontWeight={700} gutterBottom>
               Owner Dashboard
             </Typography>
             <Typography color="text.secondary">
               Manage your properties and track performance
             </Typography>
-          </Box>
+          </MuiBox>
 
-          <Box display="flex" gap={2} flexWrap="wrap">
+          <MuiBox display="flex" gap={2} flexWrap="wrap">
             <IconButton 
               onClick={handleRefresh} 
               disabled={refreshing}
@@ -652,8 +647,8 @@ const OwnerDashboard = () => {
             >
               Add Property
             </Button>
-          </Box>
-        </Box>
+          </MuiBox>
+        </MuiBox>
 
         {/* STATS CARDS - 4 Cards with fixed layout */}
         <Grid container spacing={3} mb={4}>
@@ -735,7 +730,7 @@ const OwnerDashboard = () => {
         {/* PROPERTIES SECTION */}
         {pgs.length > 0 && (
           <>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <MuiBox display="flex" justifyContent="space-between" alignItems="center" mb={2}>
               <Typography variant="h5" fontWeight={600}>
                 Your Properties
                 <Chip 
@@ -744,7 +739,7 @@ const OwnerDashboard = () => {
                   sx={{ ml: 1, bgcolor: 'primary.main', color: 'white' }} 
                 />
               </Typography>
-            </Box>
+            </MuiBox>
 
             <Grid container spacing={3} mb={4}>
               {pgs.map(pg => (
@@ -772,8 +767,8 @@ const OwnerDashboard = () => {
         )}
 
         {/* COMPACT TABLE FOR RECENT BOOKINGS - 5 COLUMNS (Removed Total Amount) */}
-        <Box mt={4}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <MuiBox mt={4}>
+          <MuiBox display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h5" fontWeight={600}>
               Recent Bookings
               {stats.totalBookings > 0 && (
@@ -794,7 +789,7 @@ const OwnerDashboard = () => {
                 View All
               </Button>
             )}
-          </Box>
+          </MuiBox>
 
           <TableContainer component={Paper} sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderRadius: 2 }}>
             <Table>
@@ -836,11 +831,11 @@ const OwnerDashboard = () => {
 
                         {/* TENANT COLUMN */}
                         <TableCell>
-                          <Box display="flex" alignItems="center" gap={1}>
+                          <MuiBox display="flex" alignItems="center" gap={1}>
                             <Avatar sx={{ width: 32, height: 32, bgcolor: '#4CAF50', fontSize: '0.875rem' }}>
                               {booking.tenant_name?.charAt(0) || 'U'}
                             </Avatar>
-                            <Box>
+                            <MuiBox>
                               <Typography variant="body2" fontWeight={500}>
                                 {booking.tenant_name}
                               </Typography>
@@ -852,20 +847,20 @@ const OwnerDashboard = () => {
                                   <span style={{ color: '#f59e0b' }}>Hidden</span>
                                 )}
                               </Typography>
-                            </Box>
-                          </Box>
+                            </MuiBox>
+                          </MuiBox>
                         </TableCell>
 
                         {/* CHECK-IN COLUMN */}
                         <TableCell>
-                          <Box>
+                          <MuiBox>
                             <Typography variant="body2">
                               {formatDate(booking.check_in_date)}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
                               {booking.room_type}
                             </Typography>
-                          </Box>
+                          </MuiBox>
                         </TableCell>
 
                         {/* MONTHLY RENT COLUMN */}
@@ -896,7 +891,7 @@ const OwnerDashboard = () => {
               </TableBody>
             </Table>
           </TableContainer>
-        </Box>
+        </MuiBox>
 
         {/* SNACKBAR */}
         <Snackbar
@@ -915,7 +910,7 @@ const OwnerDashboard = () => {
           </Alert>
         </Snackbar>
 
-      </Box>
+      </MuiBox>
     </Container>
   );
 };

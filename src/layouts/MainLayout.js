@@ -1,5 +1,5 @@
 import React from "react";
-import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Outlet, useLocation, Navigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
@@ -7,19 +7,16 @@ import { Button, Box, CircularProgress, Typography } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 
 const MainLayout = () => {
-  const navigate = useNavigate();
   const location = useLocation();
-
   const { user, role, loading } = useAuth();
 
-  /* 🔥 LOGOUT */
   const handleLogout = async () => {
     await signOut(auth);
     localStorage.clear();
     window.location.href = "/login";
   };
 
-  /* 🔥 LOADING */
+  /* ✅ LOADING UI */
   if (loading) {
     return (
       <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
@@ -28,10 +25,9 @@ const MainLayout = () => {
     );
   }
 
-  /* 🔥 PROTECT ROUTES */
+  /* ✅ SAFE REDIRECT (NO navigate()) */
   if (!user && location.pathname !== "/login" && location.pathname !== "/register") {
-    navigate("/login");
-    return null;
+    return <Navigate to="/login" replace />;
   }
 
   return (

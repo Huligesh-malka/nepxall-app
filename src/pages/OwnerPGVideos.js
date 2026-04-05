@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { auth } from "../firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { useParams, useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { Box, CircularProgress } from "@mui/material";
 import api from "../api/api";
 
 const BACKEND_URL = import.meta.env.VITE_API_URL?.replace("/api", "") ||
@@ -10,29 +10,19 @@ const BACKEND_URL = import.meta.env.VITE_API_URL?.replace("/api", "") ||
 export default function OwnerPGVideos() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user, role, loading } = useAuth();
 
   const [videos, setVideos] = useState([]);
   const [files, setFiles] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
-
-  /* ================= INIT ================= */
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        loadVideos();
-      } else {
-        navigate("/login");
-      }
-    });
-
-    return unsubscribe;
-  }, [id]);
+  const [error, setError] = useState("");
 
   /* ================= LOAD VIDEOS ================= */
   const loadVideos = useCallback(async () => {
     try {
       setPageLoading(true);
+      setError("");
 
       const res = await api.get(`/pg/${id}`);
 
@@ -55,11 +45,23 @@ export default function OwnerPGVideos() {
       }
     } catch (err) {
       console.error("Load videos error:", err);
+      setError("Failed to load videos");
       setVideos([]);
     } finally {
       setPageLoading(false);
     }
   }, [id]);
+
+  /* ================= AUTH + LOAD ================= */
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/login");
+    }
+
+    if (user && role === "owner") {
+      loadVideos();
+    }
+  }, [user, role, loading, id, navigate, loadVideos]);
 
   /* ================= FILE SELECT ================= */
   const handleFileChange = (e) => {
@@ -83,7 +85,8 @@ export default function OwnerPGVideos() {
     if (!files.length) return alert("Select at least one video");
 
     try {
-      setLoading(true);
+      setUploading(true);
+      setError("");
 
       const formData = new FormData();
       files.forEach((file) => formData.append("videos", file));
@@ -96,7 +99,7 @@ export default function OwnerPGVideos() {
       
       // Update videos based on response
       if (response.data.videos && Array.isArray(response.data.videos)) {
-        // If backend returns only new videos (like with photos), append them
+        // If backend returns only new videos, append them
         if (response.data.videos.length === files.length) {
           console.log("⚠️ Backend returned only new videos, appending manually");
           setVideos([...videos, ...response.data.videos]);
@@ -112,9 +115,10 @@ export default function OwnerPGVideos() {
       alert("Videos uploaded ✅");
     } catch (err) {
       console.error("Upload error:", err);
+      setError(err.response?.data?.message || "Upload failed ❌");
       alert(err.response?.data?.message || "Upload failed ❌");
     } finally {
-      setLoading(false);
+      setUploading(false);
     }
   };
 
@@ -132,6 +136,7 @@ export default function OwnerPGVideos() {
       alert("Video deleted successfully!");
     } catch (err) {
       console.error("Delete error:", err);
+      setError("Delete failed");
       alert("Delete failed ❌");
       await loadVideos(); // Reload on error
     }
@@ -149,12 +154,35 @@ export default function OwnerPGVideos() {
     return `${BACKEND_URL}${normalizedPath}`;
   };
 
-  /* ================= UI ================= */
-  if (pageLoading) return <h3 style={{ textAlign: "center" }}>Loading...</h3>;
+  /* ================= PROTECTION ================= */
+  if (loading || pageLoading) {
+    return (
+      <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
+  if (!user) return <Navigate to="/login" replace />;
+  if (role !== "owner") return <Navigate to="/" replace />;
+
+  /* ================= UI ================= */
   return (
     <div style={{ maxWidth: 900, margin: "auto", padding: 20 }}>
       <h2>📹 Manage PG Videos</h2>
+
+      {error && (
+        <div style={{
+          backgroundColor: "#fee2e2",
+          color: "#991b1b",
+          padding: 12,
+          borderRadius: 8,
+          marginBottom: 20,
+          border: "1px solid #fecaca"
+        }}>
+          <strong>Error:</strong> {error}
+        </div>
+      )}
 
       {/* UPLOAD */}
       <div style={{ marginBottom: 20 }}>
@@ -194,7 +222,7 @@ export default function OwnerPGVideos() {
 
         <button
           onClick={uploadVideos}
-          disabled={loading || !files.length}
+          disabled={uploading || !files.length}
           style={{
             marginTop: 10,
             padding: "10px 18px",
@@ -207,7 +235,7 @@ export default function OwnerPGVideos() {
             opacity: files.length ? 1 : 0.5
           }}
         >
-          {loading ? "Uploading..." : "⬆ Upload Videos"}
+          {uploading ? "Uploading..." : "⬆ Upload Videos"}
         </button>
       </div>
 
