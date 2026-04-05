@@ -4,11 +4,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/api";
 import { io } from "socket.io-client";
-import {
-  format,
-  isToday,
-  isYesterday
-} from "date-fns";
+import { format, isToday, isYesterday } from "date-fns";
 
 const SOCKET_URL = "https://nepxall-backend.onrender.com";
 
@@ -20,715 +16,505 @@ const socket = io(SOCKET_URL, {
   reconnectionDelay: 1000,
 });
 
+/* ── Inject global CSS ── */
+const styleTag = document.createElement("style");
+styleTag.textContent = `
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  @keyframes spin    { to { transform: rotate(360deg); } }
+  @keyframes fadeUp  { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes blink   { 0%,80%,100% { opacity:.2; transform:scale(.8); } 40% { opacity:1; transform:scale(1); } }
+  @keyframes pulse   { 0%,100% { transform:scale(1); } 50% { transform:scale(1.08); } }
+  @keyframes slideUp { from { opacity:0; transform:translateY(16px) scale(.96); } to { opacity:1; transform:translateY(0) scale(1); } }
+
+  .chat-root { font-family:'Plus Jakarta Sans',sans-serif; }
+
+  .msg-row      { animation: fadeUp .18s ease both; }
+  .action-popup { animation: slideUp .15s ease both; }
+
+  .dot-1 { animation: blink 1.2s infinite .0s; }
+  .dot-2 { animation: blink 1.2s infinite .2s; }
+  .dot-3 { animation: blink 1.2s infinite .4s; }
+
+  .chat-input:focus { border-color: #6c5ce7 !important; box-shadow: 0 0 0 3px rgba(108,92,231,.12) !important; }
+
+  /* bubble hover */
+  .bubble:hover { filter: brightness(.97); }
+
+  /* scrollbar */
+  .msg-area::-webkit-scrollbar { width:4px; }
+  .msg-area::-webkit-scrollbar-thumb { background:#d1d5db; border-radius:4px; }
+
+  /* input area shine */
+  .send-btn:not(:disabled):hover { transform:scale(1.06); box-shadow:0 6px 20px rgba(108,92,231,.45) !important; }
+  .send-btn:not(:disabled):active { transform:scale(.96); }
+
+  .action-btn:hover { background:#f3f0ff !important; color:#6c5ce7 !important; }
+  .action-del:hover { background:#fff0f0 !important; color:#ef4444 !important; }
+`;
+if (!document.head.querySelector("style[data-chat]")) {
+  styleTag.setAttribute("data-chat", "1");
+  document.head.appendChild(styleTag);
+}
+
+/* ══════════════════════════════════
+   HELPERS
+══════════════════════════════════ */
+const fmtTime = (ts) => {
+  const d = new Date(ts);
+  if (isToday(d))     return format(d, "hh:mm a");
+  if (isYesterday(d)) return "Yesterday " + format(d, "hh:mm a");
+  return format(d, "MMM dd, hh:mm a");
+};
+
+const fmtDateHeader = (dateStr) => {
+  const d = new Date(dateStr);
+  if (isToday(d))     return "Today";
+  if (isYesterday(d)) return "Yesterday";
+  return format(d, "MMMM d, yyyy");
+};
+
+const groupByDate = (msgs) => {
+  const g = {};
+  msgs.forEach((m) => {
+    const k = format(new Date(m.created_at), "yyyy-MM-dd");
+    (g[k] = g[k] || []).push(m);
+  });
+  return g;
+};
+
+/* ══════════════════════════════════
+   MAIN COMPONENT
+══════════════════════════════════ */
 export default function PrivateChat() {
   const { userId, pgId } = useParams();
   const navigate = useNavigate();
-  const bottomRef = useRef();
-  const messagesContainerRef = useRef();
-  const longPressTimer = useRef();
+  const areaRef      = useRef();
+  const inputRef     = useRef();
+  const pressTimer   = useRef();
 
-  const [messages, setMessages] = useState([]);
-  const [me, setMe] = useState(null);
-  const [otherUser, setOtherUser] = useState(null);
-  const [text, setText] = useState("");
-  const [typing, setTyping] = useState(false);
-  const [otherTyping, setOtherTyping] = useState(false);
-  const [online, setOnline] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [editingMessage, setEditingMessage] = useState(null);
-  const [activeMessageId, setActiveMessageId] = useState(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [messageToDelete, setMessageToDelete] = useState(null);
-  const [connectionStatus, setConnectionStatus] = useState("connected");
+  const [messages,         setMessages]         = useState([]);
+  const [me,               setMe]               = useState(null);
+  const [otherUser,        setOtherUser]        = useState(null);
+  const [text,             setText]             = useState("");
+  const [typing,           setTyping]           = useState(false);
+  const [otherTyping,      setOtherTyping]      = useState(false);
+  const [online,           setOnline]           = useState(false);
+  const [loading,          setLoading]          = useState(true);
+  const [sending,          setSending]          = useState(false);
+  const [editingMsg,       setEditingMsg]       = useState(null);
+  const [activeId,         setActiveId]         = useState(null);
+  const [delConfirm,       setDelConfirm]       = useState(false);
+  const [msgToDel,         setMsgToDel]         = useState(null);
+  const [connStatus,       setConnStatus]       = useState("connected");
+  const typingTimer = useRef();
 
-  const typingTimeoutRef = useRef();
-
-  /* =========================
-     UTILITY FUNCTIONS
-  ========================= */
-
-  const formatMessageTime = (timestamp) => {
-    const date = new Date(timestamp);
-    if (isToday(date)) {
-      return format(date, "hh:mm a");
-    } else if (isYesterday(date)) {
-      return `Yesterday ${format(date, "hh:mm a")}`;
-    } else {
-      return format(date, "MMM dd, hh:mm a");
-    }
-  };
-
-  const groupMessagesByDate = (messages) => {
-    const groups = {};
-    messages.forEach(msg => {
-      const date = format(new Date(msg.created_at), "yyyy-MM-dd");
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(msg);
-    });
-    return groups;
-  };
-
-  const scrollToBottom = (smooth = true) => {
+  const scrollBottom = (smooth = true) => {
     setTimeout(() => {
-      if (messagesContainerRef.current) {
-        messagesContainerRef.current.scrollTo({
-          top: messagesContainerRef.current.scrollHeight,
-          behavior: smooth ? "smooth" : "auto"
-        });
-      }
-    }, 100);
+      areaRef.current?.scrollTo({
+        top: areaRef.current.scrollHeight,
+        behavior: smooth ? "smooth" : "auto",
+      });
+    }, 80);
   };
 
-  /* =========================
-     CHECK PARAMS
-  ========================= */
+  /* ── params guard ── */
+  useEffect(() => { if (!userId || !pgId) navigate(-1); }, [userId, pgId]);
 
+  /* ── socket lifecycle ── */
   useEffect(() => {
-    if (!userId || !pgId) {
-      navigate(-1);
-    }
-  }, [userId, pgId, navigate]);
-
-  /* =========================
-     SOCKET CONNECTION MANAGEMENT
-  ========================= */
-
-  useEffect(() => {
-    socket.on("connect", () => {
-      console.log("Socket connected");
-      setConnectionStatus("connected");
-    });
-
-    socket.on("disconnect", () => {
-      console.log("Socket disconnected");
-      setConnectionStatus("disconnected");
-    });
-
-    socket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error);
-      setConnectionStatus("error");
-    });
-
-    return () => {
-      socket.off("connect");
-      socket.off("disconnect");
-      socket.off("connect_error");
-    };
+    socket.on("connect",       () => setConnStatus("connected"));
+    socket.on("disconnect",    () => setConnStatus("disconnected"));
+    socket.on("connect_error", () => setConnStatus("error"));
+    return () => { socket.off("connect"); socket.off("disconnect"); socket.off("connect_error"); };
   }, []);
 
-  /* =========================
-     AUTH + LOAD DATA
-  ========================= */
-
+  /* ── auth + load ── */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
-      if (!fbUser) {
-        navigate("/login");
-        return;
-      }
-
+      if (!fbUser) { navigate("/login"); return; }
       try {
-        const token = await fbUser.getIdToken();
-        const config = {
-          headers: { Authorization: `Bearer ${token}` }
-        };
-
-        // Load current user
-        const meRes = await api.get("/private-chat/me", config);
+        const token  = await fbUser.getIdToken();
+        const cfg    = { headers: { Authorization: `Bearer ${token}` } };
+        const meRes  = await api.get("/private-chat/me", cfg);
+        const urRes  = await api.get(`/private-chat/user/${userId}?pg_id=${pgId}`, cfg);
+        const msgRes = await api.get(`/private-chat/messages/${userId}?pg_id=${pgId}&limit=100`, cfg);
         setMe(meRes.data);
-
-        // Load other user info
-        const userRes = await api.get(
-          `/private-chat/user/${userId}?pg_id=${pgId}`,
-          config
-        );
-        setOtherUser(userRes.data);
-
-        // Load messages
-        const msgRes = await api.get(
-          `/private-chat/messages/${userId}?pg_id=${pgId}&limit=100`,
-          config
-        );
+        setOtherUser(urRes.data);
         setMessages(msgRes.data || []);
-
         setLoading(false);
-        scrollToBottom(false);
-
-        // Connect socket and register
-        if (!socket.connected) {
-          socket.connect();
-        }
+        scrollBottom(false);
+        if (!socket.connected) socket.connect();
         socket.emit("register", fbUser.uid);
-
-        // Join room
-        socket.emit("join_private_room", {
-          userA: meRes.data.id,
-          userB: Number(userId),
-          pg_id: Number(pgId)
-        });
-
-      } catch (err) {
-        console.error("Error loading chat:", err);
-        setLoading(false);
-      }
+        socket.emit("join_private_room", { userA: meRes.data.id, userB: Number(userId), pg_id: Number(pgId) });
+      } catch (e) { console.error(e); setLoading(false); }
     });
-
     return () => {
-      if (socket.connected) {
-        socket.emit("leave_private_room", {
-          userA: me?.id,
-          userB: Number(userId),
-          pg_id: Number(pgId)
-        });
-      }
+      if (socket.connected) socket.emit("leave_private_room", { userA: me?.id, userB: Number(userId), pg_id: Number(pgId) });
       unsub?.();
     };
-  }, [userId, pgId, navigate]);
+  }, [userId, pgId]);
 
-  /* =========================
-     SOCKET EVENT HANDLERS
-  ========================= */
-
+  /* ── socket events ── */
   useEffect(() => {
-    // Receive new message
-    const handleReceiveMessage = (msg) => {
-      if (msg.pg_id !== Number(pgId)) return;
+    const onMsg  = (m) => { if (m.pg_id !== Number(pgId)) return; setMessages(p => p.some(x=>x.id===m.id)?p:[...p,m]); scrollBottom(); };
+    const onSent = (m) => setMessages(p => p.map(x => x.message_hash===m.message_hash ? {...x,...m} : x));
+    const onDel  = ({messageId}) => setMessages(p => p.filter(x=>x.id!==messageId));
+    const onType = ({userId:uid,isTyping}) => { if(uid===Number(userId)) setOtherTyping(isTyping); };
+    const onRead = ({readerId,messageIds}) => { if(readerId===Number(userId)) setMessages(p=>p.map(x=>messageIds.includes(x.id)?{...x,is_read:1}:x)); };
+    const onOn   = (uid) => { if(uid===otherUser?.firebase_uid) setOnline(true); };
+    const onOff  = (uid) => { if(uid===otherUser?.firebase_uid) setOnline(false); };
 
-      setMessages(prev => {
-        const exists = prev.some(m => m.id === msg.id);
-        if (exists) return prev;
-
-        return [...prev, msg];
-      });
-
-      scrollToBottom();
-    };
-
-    // Message sent confirmation
-    const handleMessageSent = (msg) => {
-      setMessages(prev => 
-        prev.map(m => 
-          m.message_hash === msg.message_hash 
-            ? { ...m, ...msg, status: msg.status }
-            : m
-        )
-      );
-    };
-
-    // Message deleted
-    const handleMessageDeleted = ({ messageId }) => {
-      setMessages(prev => prev.filter(m => m.id !== messageId));
-    };
-
-    // Typing indicator
-    const handleTyping = ({ userId: typingUserId, isTyping }) => {
-      if (typingUserId === Number(userId)) {
-        setOtherTyping(isTyping);
-      }
-    };
-
-    // Messages read
-    const handleMessagesRead = ({ readerId, messageIds }) => {
-      if (readerId === Number(userId)) {
-        setMessages(prev =>
-          prev.map(m =>
-            messageIds.includes(m.id) ? { ...m, is_read: 1 } : m
-          )
-        );
-      }
-    };
-
-    // Online status
-    const handleUserOnline = (uid) => {
-      if (uid === otherUser?.firebase_uid) {
-        setOnline(true);
-      }
-    };
-
-    const handleUserOffline = (uid) => {
-      if (uid === otherUser?.firebase_uid) {
-        setOnline(false);
-      }
-    };
-
-    socket.on("receive_private_message", handleReceiveMessage);
-    socket.on("message_sent_confirmation", handleMessageSent);
-    socket.on("message_deleted", handleMessageDeleted);
-    socket.on("user_typing", handleTyping);
-    socket.on("messages_read", handleMessagesRead);
-    socket.on("user_online", handleUserOnline);
-    socket.on("user_offline", handleUserOffline);
-
+    socket.on("receive_private_message",  onMsg);
+    socket.on("message_sent_confirmation",onSent);
+    socket.on("message_deleted",          onDel);
+    socket.on("user_typing",              onType);
+    socket.on("messages_read",            onRead);
+    socket.on("user_online",              onOn);
+    socket.on("user_offline",             onOff);
     return () => {
-      socket.off("receive_private_message", handleReceiveMessage);
-      socket.off("message_sent_confirmation", handleMessageSent);
-      socket.off("message_deleted", handleMessageDeleted);
-      socket.off("user_typing", handleTyping);
-      socket.off("messages_read", handleMessagesRead);
-      socket.off("user_online", handleUserOnline);
-      socket.off("user_offline", handleUserOffline);
+      socket.off("receive_private_message",  onMsg);
+      socket.off("message_sent_confirmation",onSent);
+      socket.off("message_deleted",          onDel);
+      socket.off("user_typing",              onType);
+      socket.off("messages_read",            onRead);
+      socket.off("user_online",              onOn);
+      socket.off("user_offline",             onOff);
     };
   }, [pgId, me?.id, userId, otherUser?.firebase_uid]);
 
-  /* =========================
-     TYPING INDICATOR
-  ========================= */
-
-  const handleTyping = useCallback((isTyping) => {
+  /* ── typing ── */
+  const emitTyping = useCallback((val) => {
     if (!me) return;
-
-    socket.emit("typing", {
-      userA: me.id,
-      userB: Number(userId),
-      pg_id: Number(pgId),
-      isTyping
-    });
+    socket.emit("typing", { userA: me.id, userB: Number(userId), pg_id: Number(pgId), isTyping: val });
   }, [me, userId, pgId]);
 
   const onTextChange = (e) => {
     setText(e.target.value);
-
-    if (!typing) {
-      setTyping(true);
-      handleTyping(true);
-    }
-
-    clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = setTimeout(() => {
-      setTyping(false);
-      handleTyping(false);
-    }, 1000);
+    if (!typing) { setTyping(true); emitTyping(true); }
+    clearTimeout(typingTimer.current);
+    typingTimer.current = setTimeout(() => { setTyping(false); emitTyping(false); }, 1000);
   };
 
-  /* =========================
-     SEND MESSAGE
-  ========================= */
-
+  /* ── send ── */
   const sendMessage = async () => {
     if (!text.trim() || sending) return;
-
     setSending(true);
-
     try {
       const token = await auth.currentUser.getIdToken();
-
-      const res = await api.post(
-        "/private-chat/send",
-        {
-          receiver_id: Number(userId),
-          pg_id: Number(pgId),
-          message: text
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-
-      // Optimistically add message
-      const tempMessage = {
-        ...res.data,
-        status: "sending",
-        created_at: new Date().toISOString()
-      };
-
-      setMessages(prev => {
-        const exists = prev.some(m => m.id === res.data.id);
-        if (exists) return prev;
-        return [...prev, tempMessage];
-      });
-
-      socket.emit("send_private_message", {
-        ...res.data,
-        sender_firebase_uid: auth.currentUser.uid,
-        receiver_firebase_uid: otherUser?.firebase_uid
-      });
-
-      setText("");
-      scrollToBottom();
-
-      // Stop typing
-      setTyping(false);
-      handleTyping(false);
-      clearTimeout(typingTimeoutRef.current);
-
-    } catch (err) {
-      console.error("Error sending message:", err);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  /* =========================
-     EDIT MESSAGE
-  ========================= */
-
-  const startEditing = (message) => {
-    setEditingMessage(message);
-    setText(message.message);
-    setActiveMessageId(null);
-  };
-
-  const cancelEditing = () => {
-    setEditingMessage(null);
-    setText("");
-  };
-
-  const updateMessage = async () => {
-    if (!editingMessage || !text.trim()) return;
-
-    try {
-      const token = await auth.currentUser.getIdToken();
-
-      await api.put(
-        `/private-chat/message/${editingMessage.id}`,
-        { message: text },
+      const res = await api.post("/private-chat/send",
+        { receiver_id: Number(userId), pg_id: Number(pgId), message: text },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      setMessages(prev =>
-        prev.map(m =>
-          m.id === editingMessage.id ? { ...m, message: text, edited: true } : m
-        )
-      );
-
-      cancelEditing();
-
-    } catch (err) {
-      console.error("Error updating message:", err);
-    }
+      const tmp = { ...res.data, status: "sending", created_at: new Date().toISOString() };
+      setMessages(p => p.some(x=>x.id===res.data.id)?p:[...p,tmp]);
+      socket.emit("send_private_message", { ...res.data, sender_firebase_uid: auth.currentUser.uid, receiver_firebase_uid: otherUser?.firebase_uid });
+      setText("");
+      scrollBottom();
+      setTyping(false); emitTyping(false); clearTimeout(typingTimer.current);
+    } catch(e) { console.error(e); }
+    finally { setSending(false); }
   };
 
-  /* =========================
-     DELETE MESSAGE
-  ========================= */
-
-  const confirmDelete = (message) => {
-    setMessageToDelete(message);
-    setShowDeleteConfirm(true);
-    setActiveMessageId(null);
-  };
-
-  const deleteMessage = async () => {
-    if (!messageToDelete) return;
-
+  /* ── edit ── */
+  const startEdit = (msg) => { setEditingMsg(msg); setText(msg.message); setActiveId(null); setTimeout(()=>inputRef.current?.focus(),50); };
+  const cancelEdit = () => { setEditingMsg(null); setText(""); };
+  const updateMsg = async () => {
+    if (!editingMsg || !text.trim()) return;
     try {
       const token = await auth.currentUser.getIdToken();
-
-      await api.delete(`/private-chat/message/${messageToDelete.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      socket.emit("delete_private_message", {
-        messageId: messageToDelete.id,
-        sender_id: me.id,
-        receiver_id: Number(userId),
-        pg_id: Number(pgId),
-        sender_firebase_uid: auth.currentUser.uid,
-        receiver_firebase_uid: otherUser?.firebase_uid
-      });
-
-      setMessages(prev =>
-        prev.filter(m => m.id !== messageToDelete.id)
-      );
-
-      setShowDeleteConfirm(false);
-      setMessageToDelete(null);
-
-    } catch (err) {
-      console.error("Error deleting message:", err);
-    }
+      await api.put(`/private-chat/message/${editingMsg.id}`, { message: text }, { headers: { Authorization: `Bearer ${token}` } });
+      setMessages(p => p.map(x => x.id===editingMsg.id ? {...x,message:text,edited:true} : x));
+      cancelEdit();
+    } catch(e) { console.error(e); }
   };
 
-  /* =========================
-     LONG PRESS HANDLER
-  ========================= */
-
-  const handleTouchStart = (messageId) => {
-    longPressTimer.current = setTimeout(() => {
-      setActiveMessageId(messageId);
-    }, 500);
+  /* ── delete ── */
+  const confirmDel = (msg) => { setMsgToDel(msg); setDelConfirm(true); setActiveId(null); };
+  const deleteMsg = async () => {
+    if (!msgToDel) return;
+    try {
+      const token = await auth.currentUser.getIdToken();
+      await api.delete(`/private-chat/message/${msgToDel.id}`, { headers: { Authorization: `Bearer ${token}` } });
+      socket.emit("delete_private_message", { messageId:msgToDel.id, sender_id:me.id, receiver_id:Number(userId), pg_id:Number(pgId), sender_firebase_uid:auth.currentUser.uid, receiver_firebase_uid:otherUser?.firebase_uid });
+      setMessages(p => p.filter(x=>x.id!==msgToDel.id));
+      setDelConfirm(false); setMsgToDel(null);
+    } catch(e) { console.error(e); }
   };
 
-  const handleTouchEnd = () => {
-    clearTimeout(longPressTimer.current);
-  };
+  /* ── long press ── */
+  const pressStart = (id) => { pressTimer.current = setTimeout(()=>setActiveId(id), 480); };
+  const pressEnd   = ()    => clearTimeout(pressTimer.current);
 
-  const handleTouchMove = () => {
-    clearTimeout(longPressTimer.current);
-  };
-
-  const handleMouseDown = (messageId) => {
-    longPressTimer.current = setTimeout(() => {
-      setActiveMessageId(messageId);
-    }, 500);
-  };
-
-  const handleMouseUp = () => {
-    clearTimeout(longPressTimer.current);
-  };
-
-  const handleMouseLeave = () => {
-    clearTimeout(longPressTimer.current);
-  };
-
-  /* =========================
-     CLICK OUTSIDE TO CLOSE ACTIVE MENU
-  ========================= */
-
+  /* ── close popup on outside click ── */
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest('.message-actions')) {
-        setActiveMessageId(null);
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    const h = (e) => { if (!e.target.closest(".msg-popup")) setActiveId(null); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  /* =========================
-     RENDER
-  ========================= */
+  /* ══════ RENDER ══════ */
+  if (loading) return (
+    <div style={s.loadWrap} className="chat-root">
+      <div style={s.spinner} />
+      <p style={s.loadTxt}>Loading conversation…</p>
+    </div>
+  );
 
-  if (loading) {
-    return (
-      <div style={styles.loaderContainer}>
-        <div style={styles.loader}></div>
-        <p style={styles.loaderText}>Loading conversation...</p>
-      </div>
-    );
-  }
-
-  const groupedMessages = groupMessagesByDate(messages);
-  const sortedDates = Object.keys(groupedMessages).sort();
+  const grouped    = groupByDate(messages);
+  const sortedDays = Object.keys(grouped).sort();
+  const otherInitial = (otherUser?.name || otherUser?.pg_name || "U")[0].toUpperCase();
 
   return (
-    <div style={styles.container}>
-      
-      {/* Header */}
-      <div style={styles.header}>
-        <button onClick={() => navigate(-1)} style={styles.backButton}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <div style={s.root} className="chat-root">
+
+      {/* ══ HEADER ══ */}
+      <div style={s.header}>
+        <button onClick={() => navigate(-1)} style={s.backBtn} title="Back">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
         </button>
 
-        <div style={styles.headerInfo}>
-          <div style={styles.avatar}>
-            {otherUser?.name?.charAt(0) || "U"}
-          </div>
-          <div style={styles.userDetails}>
-            <div style={styles.userName}>
-              {me?.role === "tenant"
-                ? otherUser?.pg_name || "PG"
-                : otherUser?.name || "User"}
-            </div>
-            <div style={styles.userStatus}>
-              <span style={online ? styles.online : styles.offline}>
-                {online ? "● Online" : "○ Offline"}
-              </span>
-            </div>
-          </div>
+        {/* compact avatar in header only */}
+        <div style={s.hdrAvatar}>{otherInitial}</div>
+
+        <div style={s.hdrMeta}>
+          <span style={s.hdrName}>
+            {me?.role === "tenant" ? otherUser?.pg_name || "PG" : otherUser?.name || "User"}
+          </span>
+          <span style={s.hdrStatus}>
+            <span style={{ ...s.statusDot, background: online ? "#22c55e" : "#94a3b8" }} />
+            {online ? "Online" : "Offline"}
+          </span>
         </div>
       </div>
 
-      {/* Messages */}
-      <div ref={messagesContainerRef} style={styles.messagesContainer}>
-        {sortedDates.map(date => (
-          <div key={date}>
-            <div style={styles.dateDivider}>
-              <span style={styles.dateText}>
-                {format(new Date(date), "MMMM d, yyyy")}
-              </span>
-            </div>
+      {/* ══ MESSAGES AREA ══ */}
+      <div ref={areaRef} style={s.area} className="msg-area">
 
-            {groupedMessages[date].map((msg, index) => {
-              const isMine = msg.sender_id === me?.id;
-              const showAvatar = index === 0 || 
-                groupedMessages[date][index - 1]?.sender_id !== msg.sender_id;
+        {/* chat background pattern */}
+        <div style={s.bgPattern} />
 
-              return (
-                <div
-                  key={msg.id}
-                  style={{
-                    ...styles.messageWrapper,
-                    justifyContent: isMine ? "flex-end" : "flex-start"
-                  }}
-                >
-                  {!isMine && showAvatar && (
-                    <div style={styles.messageAvatar}>
-                      {otherUser?.name?.charAt(0) || "U"}
-                    </div>
-                  )}
+        <div style={{ position:"relative", zIndex:1, padding:"20px 16px 8px" }}>
+          {sortedDays.map((day) => (
+            <div key={day}>
+              {/* date chip */}
+              <div style={s.dateRow}>
+                <span style={s.dateChip}>{fmtDateHeader(day)}</span>
+              </div>
 
-                  <div style={{ maxWidth: "70%", position: "relative" }}>
-                    <div
-                      className="message-content"
-                      style={styles.messageContent}
-                      onTouchStart={() => isMine && handleTouchStart(msg.id)}
-                      onTouchEnd={handleTouchEnd}
-                      onTouchMove={handleTouchMove}
-                      onMouseDown={() => isMine && handleMouseDown(msg.id)}
-                      onMouseUp={handleMouseUp}
-                      onMouseLeave={handleMouseLeave}
-                    >
+              {grouped[day].map((msg, idx) => {
+                const isMine   = msg.sender_id === me?.id;
+                const prevMsg  = grouped[day][idx - 1];
+                const nextMsg  = grouped[day][idx + 1];
+                const isFirst  = !prevMsg || prevMsg.sender_id !== msg.sender_id;
+                const isLast   = !nextMsg || nextMsg.sender_id !== msg.sender_id;
+
+                /* bubble corner shaping */
+                const myRadius   = `18px 4px ${isLast?"4px":"18px"} 18px`;
+                const theirRadius = `4px 18px 18px ${isLast?"4px":"18px"}`;
+
+                return (
+                  <div
+                    key={msg.id}
+                    className="msg-row"
+                    style={{
+                      display:"flex",
+                      justifyContent: isMine ? "flex-end" : "flex-start",
+                      marginBottom: isLast ? 12 : 3,
+                      paddingLeft: isMine ? 48 : 0,
+                      paddingRight: isMine ? 0 : 48,
+                    }}
+                  >
+                    <div style={{ position:"relative", maxWidth:"78%" }}>
+                      {/* bubble */}
                       <div
+                        className="bubble"
                         style={{
-                          ...styles.messageBubble,
-                          background: isMine ? "#7C3AED" : "#F3F4F6",
-                          color: isMine ? "#FFFFFF" : "#1F2937",
-                          borderBottomRightRadius: isMine ? 4 : 16,
-                          borderBottomLeftRadius: !isMine ? 4 : 16,
+                          background:    isMine ? "linear-gradient(135deg,#6c5ce7,#8b5cf6)" : "#ffffff",
+                          color:         isMine ? "#fff" : "#1e293b",
+                          borderRadius:  isMine ? myRadius : theirRadius,
+                          padding:       "10px 14px",
+                          fontSize:      14,
+                          lineHeight:    1.55,
+                          wordBreak:     "break-word",
+                          boxShadow:     isMine
+                            ? "0 2px 12px rgba(108,92,231,.28)"
+                            : "0 2px 8px rgba(0,0,0,.07)",
+                          cursor:        "pointer",
+                          transition:    "filter .15s",
+                          position:      "relative",
                         }}
+                        onMouseDown={() => isMine && pressStart(msg.id)}
+                        onMouseUp={pressEnd}
+                        onMouseLeave={pressEnd}
+                        onTouchStart={() => isMine && pressStart(msg.id)}
+                        onTouchEnd={pressEnd}
+                        onTouchMove={pressEnd}
                       >
                         {msg.message}
-                        
                         {msg.edited && (
-                          <span style={styles.editedIndicator}> • edited</span>
+                          <span style={{ fontSize:10, opacity:.6, marginLeft:6, fontStyle:"italic" }}>edited</span>
                         )}
                       </div>
 
-                      <div style={styles.messageMeta}>
-                        <span style={styles.messageTime}>
-                          {formatMessageTime(msg.created_at)}
-                        </span>
-                        
-                        {isMine && (
-                          <span style={{
-                            ...styles.messageStatus,
-                            color: msg.is_read ? "#10B981" : "#9CA3AF"
-                          }}>
-                            {msg.is_read ? "✓✓" : "✓"}
-                          </span>
-                        )}
-                      </div>
+                      {/* meta: time + read */}
+                      {isLast && (
+                        <div style={{
+                          display:"flex", alignItems:"center", gap:4,
+                          marginTop:4,
+                          justifyContent: isMine ? "flex-end" : "flex-start",
+                          padding:"0 2px",
+                        }}>
+                          <span style={{ fontSize:10, color:"#94a3b8" }}>{fmtTime(msg.created_at)}</span>
+                          {isMine && (
+                            <span style={{ fontSize:11, color: msg.is_read ? "#22c55e" : "#94a3b8", fontWeight:600 }}>
+                              {msg.is_read ? "✓✓" : "✓"}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* action popup — long press */}
+                      {isMine && activeId === msg.id && (
+                        <div className="msg-popup action-popup" style={{
+                          position:"absolute",
+                          top:-46,
+                          right:0,
+                          background:"#fff",
+                          borderRadius:14,
+                          padding:"5px",
+                          display:"flex",
+                          gap:4,
+                          boxShadow:"0 8px 30px rgba(0,0,0,.14)",
+                          border:"1px solid #f1f5f9",
+                          zIndex:20,
+                          whiteSpace:"nowrap",
+                        }}>
+                          <button className="action-btn" onClick={()=>startEdit(msg)} style={s.popBtn}>
+                            ✏️ Edit
+                          </button>
+                          <div style={{ width:1, background:"#f1f5f9" }} />
+                          <button className="action-btn action-del" onClick={()=>confirmDel(msg)} style={{...s.popBtn, color:"#ef4444"}}>
+                            🗑 Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
-
-                    {/* Action Menu - Shows on long press */}
-                    {isMine && activeMessageId === msg.id && (
-                      <div className="message-actions" style={styles.actionMenu}>
-                        <button
-                          onClick={() => startEditing(msg)}
-                          style={styles.actionButton}
-                        >
-                          ✏️ Edit
-                        </button>
-                        <button
-                          onClick={() => confirmDelete(msg)}
-                          style={{...styles.actionButton, color: "#EF4444"}}
-                        >
-                          🗑️ Delete
-                        </button>
-                      </div>
-                    )}
                   </div>
-
-                  {isMine && showAvatar && (
-                    <div style={{...styles.messageAvatar, background: "#7C3AED"}}>
-                      {me?.name?.charAt(0) || "M"}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ))}
-
-        {/* Typing Indicator */}
-        {otherTyping && (
-          <div style={styles.typingIndicator}>
-            <div style={styles.typingAvatar}>
-              {otherUser?.name?.charAt(0) || "U"}
+                );
+              })}
             </div>
-            <div style={styles.typingBubble}>
-              <span style={styles.typingDot}></span>
-              <span style={styles.typingDot}></span>
-              <span style={styles.typingDot}></span>
-            </div>
-          </div>
-        )}
+          ))}
 
-        <div ref={bottomRef} />
+          {/* typing indicator */}
+          {otherTyping && (
+            <div style={{ display:"flex", marginBottom:12, paddingRight:48 }}>
+              <div style={{
+                background:"#fff",
+                borderRadius:"4px 18px 18px 18px",
+                padding:"12px 16px",
+                display:"flex", gap:5, alignItems:"center",
+                boxShadow:"0 2px 8px rgba(0,0,0,.07)",
+              }}>
+                <span className="dot-1" style={s.typDot} />
+                <span className="dot-2" style={s.typDot} />
+                <span className="dot-3" style={s.typDot} />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Connection Status */}
-      {connectionStatus !== "connected" && (
-        <div style={styles.connectionStatus}>
-          {connectionStatus === "disconnected" 
-            ? "Connecting..." 
-            : "Connection lost. Reconnecting..."}
+      {/* ══ CONNECTION BANNER ══ */}
+      {connStatus !== "connected" && (
+        <div style={s.connBanner}>
+          <span style={s.connDot}>●</span>
+          {connStatus === "disconnected" ? "Reconnecting…" : "Connection lost. Retrying…"}
         </div>
       )}
 
-      {/* Input Area */}
-      <div style={styles.inputContainer}>
-        <input
-          value={text}
-          onChange={onTextChange}
-          placeholder={editingMessage ? "Edit message..." : "Type a message..."}
-          style={styles.input}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              editingMessage ? updateMessage() : sendMessage();
-            }
-          }}
-        />
-
-        {editingMessage ? (
-          <div style={styles.editActions}>
-            <button onClick={updateMessage} style={styles.sendButton}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                <path d="M20 6L9 17L4 12"/>
-              </svg>
-            </button>
-            <button onClick={cancelEditing} style={styles.cancelButton}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                <path d="M18 6L6 18M6 6L18 18"/>
-              </svg>
-            </button>
+      {/* ══ EDIT BANNER ══ */}
+      {editingMsg && (
+        <div style={s.editBanner}>
+          <div>
+            <span style={s.editLabel}>✏️ Editing message</span>
+            <p style={s.editPreview}>{editingMsg.message.slice(0, 60)}{editingMsg.message.length>60?"…":""}</p>
           </div>
-        ) : (
-          <button 
-            onClick={sendMessage}
-            disabled={!text.trim() || sending}
-            style={{
-              ...styles.sendButton,
-              opacity: !text.trim() || sending ? 0.5 : 1,
-              background: !text.trim() || sending ? "#9CA3AF" : "#7C3AED"
+          <button onClick={cancelEdit} style={s.editClose}>✕</button>
+        </div>
+      )}
+
+      {/* ══ INPUT AREA ══ */}
+      <div style={s.inputWrap}>
+        <div style={s.inputRow}>
+          <textarea
+            ref={inputRef}
+            rows={1}
+            value={text}
+            onChange={onTextChange}
+            placeholder={editingMsg ? "Edit your message…" : "Message…"}
+            className="chat-input"
+            style={s.textarea}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                editingMsg ? updateMsg() : sendMessage();
+              }
             }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-            </svg>
-          </button>
-        )}
+            onInput={(e) => {
+              e.target.style.height = "auto";
+              e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+            }}
+          />
+
+          {editingMsg ? (
+            <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+              <button onClick={updateMsg} style={s.sendBtn} className="send-btn" title="Save">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 6L9 17l-5-5"/>
+                </svg>
+              </button>
+              <button onClick={cancelEdit} style={{...s.sendBtn, background:"#ef4444", boxShadow:"0 4px 14px rgba(239,68,68,.3)"}} className="send-btn" title="Cancel">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={sendMessage}
+              disabled={!text.trim() || sending}
+              className="send-btn"
+              style={{
+                ...s.sendBtn,
+                opacity: !text.trim() || sending ? .45 : 1,
+                cursor:  !text.trim() || sending ? "not-allowed" : "pointer",
+              }}
+              title="Send"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modal}>
-            <h3 style={styles.modalTitle}>Delete Message</h3>
-            <p style={styles.modalText}>
-              Are you sure you want to delete this message?
-            </p>
-            <div style={styles.modalActions}>
-              <button 
-                onClick={() => setShowDeleteConfirm(false)}
-                style={styles.modalCancel}
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={deleteMessage}
-                style={styles.modalConfirm}
-              >
-                Delete
-              </button>
+      {/* ══ DELETE MODAL ══ */}
+      {delConfirm && (
+        <div style={s.overlay}>
+          <div style={s.modal}>
+            <div style={s.modalIcon}>🗑</div>
+            <h3 style={s.modalTitle}>Delete message?</h3>
+            <p style={s.modalSub}>This message will be permanently removed for everyone.</p>
+            <div style={s.modalBtns}>
+              <button onClick={() => setDelConfirm(false)} style={s.modalCancel}>Cancel</button>
+              <button onClick={deleteMsg}                  style={s.modalDel}>Delete</button>
             </div>
           </div>
         </div>
@@ -737,468 +523,195 @@ export default function PrivateChat() {
   );
 }
 
-/* =========================
-   STYLES - Unique Modern Design
-========================= */
-
-const styles = {
-  container: {
-    height: "100vh",
+/* ══════════════════════════════════
+   STYLES
+══════════════════════════════════ */
+const s = {
+  root: {
+    height: "100dvh",
     display: "flex",
     flexDirection: "column",
-    background: "#FFFFFF",
-    position: "relative",
+    background: "#f0f2f5",
+    fontFamily: "'Plus Jakarta Sans', sans-serif",
+    overflow: "hidden",
   },
 
+  /* loader */
+  loadWrap: { height:"100dvh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"#f8fafc" },
+  spinner:  { width:40, height:40, border:"3px solid #e2e8f0", borderTopColor:"#6c5ce7", borderRadius:"50%", animation:"spin 0.9s linear infinite" },
+  loadTxt:  { marginTop:14, color:"#94a3b8", fontSize:14, fontWeight:500 },
+
+  /* header */
   header: {
-    background: "#7C3AED",
-    padding: "16px 20px",
-    display: "flex",
-    alignItems: "center",
-    gap: 16,
-    color: "#FFFFFF",
-    boxShadow: "0 4px 20px rgba(124, 58, 237, 0.2)",
-  },
-
-  backButton: {
-    background: "rgba(255,255,255,0.2)",
-    border: "none",
-    padding: 8,
-    cursor: "pointer",
-    color: "#FFFFFF",
-    borderRadius: 12,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all 0.2s",
-    ":hover": {
-      background: "rgba(255,255,255,0.3)",
-      transform: "scale(1.05)",
-    }
-  },
-
-  headerInfo: {
-    flex: 1,
+    background: "linear-gradient(135deg, #5b4fcf 0%, #7c5cbf 100%)",
+    padding: "12px 16px",
     display: "flex",
     alignItems: "center",
     gap: 12,
+    boxShadow: "0 2px 16px rgba(91,79,207,.25)",
+    flexShrink: 0,
+    zIndex: 10,
   },
-
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    background: "#FFFFFF",
-    color: "#7C3AED",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: "600",
-    fontSize: 20,
-    textTransform: "uppercase",
-    boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
-  },
-
-  userDetails: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-  },
-
-  userName: {
-    fontWeight: "600",
-    fontSize: 16,
-    color: "#FFFFFF",
-  },
-
-  userStatus: {
-    fontSize: 13,
-  },
-
-  online: {
-    color: "#A7F3D0",
-  },
-
-  offline: {
-    color: "#E5E7EB",
-    opacity: 0.8,
-  },
-
-  messagesContainer: {
-    flex: 1,
-    overflowY: "auto",
-    padding: "20px 16px",
-    background: "#F9FAFB",
-  },
-
-  dateDivider: {
-    display: "flex",
-    justifyContent: "center",
-    margin: "20px 0",
-  },
-
-  dateText: {
-    background: "#E5E7EB",
-    padding: "6px 16px",
-    borderRadius: 30,
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#4B5563",
-  },
-
-  messageWrapper: {
-    display: "flex",
-    alignItems: "flex-end",
-    gap: 8,
-    marginBottom: 16,
-  },
-
-  messageAvatar: {
-    width: 32,
-    height: 32,
+  backBtn: {
+    width: 36, height: 36,
     borderRadius: 10,
-    background: "#9CA3AF",
-    color: "#FFFFFF",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 14,
-    fontWeight: "600",
-    textTransform: "uppercase",
+    background: "rgba(255,255,255,.15)",
+    border: "none",
+    color: "#fff",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    cursor: "pointer",
+    transition: "background .15s",
     flexShrink: 0,
   },
+  hdrAvatar: {
+    width: 40, height: 40,
+    borderRadius: 12,
+    background: "rgba(255,255,255,.22)",
+    color: "#fff",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    fontWeight: 700, fontSize: 17,
+    flexShrink: 0,
+    border: "2px solid rgba(255,255,255,.3)",
+  },
+  hdrMeta: { display:"flex", flexDirection:"column", gap:2 },
+  hdrName: { color:"#fff", fontWeight:700, fontSize:15.5, letterSpacing:"-0.2px" },
+  hdrStatus: { display:"flex", alignItems:"center", gap:5, fontSize:11.5, color:"rgba(255,255,255,.8)", fontWeight:500 },
+  statusDot: { width:7, height:7, borderRadius:"50%", flexShrink:0 },
 
-  messageContent: {
+  /* messages */
+  area: {
+    flex: 1,
+    overflowY: "auto",
     position: "relative",
-    cursor: "pointer",
+  },
+  bgPattern: {
+    position: "absolute", inset: 0,
+    background: `
+      radial-gradient(circle at 20% 20%, rgba(108,92,231,.04) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(139,92,246,.04) 0%, transparent 50%)
+    `,
+    pointerEvents: "none",
   },
 
-  messageBubble: {
-    padding: "12px 16px",
-    borderRadius: 16,
-    fontSize: 14,
-    lineHeight: 1.5,
-    wordBreak: "break-word",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+  /* date */
+  dateRow:  { display:"flex", justifyContent:"center", margin:"16px 0 10px" },
+  dateChip: {
+    background: "rgba(0,0,0,.06)",
+    backdropFilter: "blur(4px)",
+    color: "#64748b",
+    fontSize: 11.5,
+    fontWeight: 600,
+    padding: "4px 14px",
+    borderRadius: 20,
   },
 
-  editedIndicator: {
-    fontSize: 10,
-    opacity: 0.7,
-    fontStyle: "italic",
+  /* typing */
+  typDot: {
+    width: 7, height: 7,
+    background: "#6c5ce7",
+    borderRadius: "50%",
+    display: "inline-block",
   },
 
-  messageMeta: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 4,
-    padding: "0 4px",
-    justifyContent: "flex-end",
-  },
-
-  messageTime: {
-    fontSize: 10,
-    color: "#9CA3AF",
-  },
-
-  messageStatus: {
-    fontSize: 12,
-    fontWeight: "500",
-  },
-
-  actionMenu: {
-    position: "absolute",
-    top: -45,
-    right: 0,
-    background: "#FFFFFF",
-    borderRadius: 30,
-    padding: 4,
-    display: "flex",
-    gap: 4,
-    boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-    border: "1px solid #F3F4F6",
-    zIndex: 10,
-    animation: "fadeIn 0.2s ease",
-  },
-
-  actionButton: {
+  /* popup action button */
+  popBtn: {
     background: "none",
     border: "none",
-    padding: "8px 16px",
-    borderRadius: 25,
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#4B5563",
+    padding: "7px 12px",
+    borderRadius: 9,
+    fontSize: 12.5,
+    fontWeight: 600,
+    color: "#374151",
     cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    transition: "all 0.2s",
-    ":hover": {
-      background: "#F9FAFB",
-    }
+    transition: "background .12s, color .12s",
+    display: "flex", alignItems: "center", gap: 5,
   },
 
-  typingIndicator: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 16,
+  /* connection */
+  connBanner: {
+    display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+    padding:"7px 16px",
+    background:"#fef9c3",
+    color:"#92400e",
+    fontSize:12, fontWeight:600,
+    flexShrink:0,
+  },
+  connDot: { color:"#f59e0b" },
+
+  /* edit banner */
+  editBanner: {
+    display:"flex", alignItems:"center", justifyContent:"space-between",
+    padding:"10px 16px",
+    background:"#eef2ff",
+    borderTop:"2px solid #6c5ce7",
+    flexShrink:0,
+  },
+  editLabel:   { fontSize:11, fontWeight:700, color:"#6c5ce7", display:"block", marginBottom:2 },
+  editPreview: { fontSize:12.5, color:"#475569" },
+  editClose: {
+    background:"none", border:"none",
+    color:"#6c5ce7", fontSize:18, cursor:"pointer",
+    padding:"4px 6px", borderRadius:6,
   },
 
-  typingAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    background: "#9CA3AF",
-    color: "#FFFFFF",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 14,
-    fontWeight: "600",
+  /* input */
+  inputWrap: {
+    background:"#fff",
+    borderTop:"1px solid #f1f5f9",
+    padding:"10px 14px 12px",
+    flexShrink:0,
+    boxShadow:"0 -2px 16px rgba(0,0,0,.04)",
+  },
+  inputRow: { display:"flex", alignItems:"flex-end", gap:10 },
+  textarea: {
+    flex:1,
+    resize:"none",
+    border:"1.5px solid #e2e8f0",
+    borderRadius:20,
+    padding:"11px 16px",
+    fontSize:14,
+    lineHeight:1.5,
+    fontFamily:"'Plus Jakarta Sans',sans-serif",
+    color:"#1e293b",
+    background:"#f8fafc",
+    outline:"none",
+    transition:"border-color .2s, box-shadow .2s",
+    maxHeight:120,
+    overflowY:"auto",
+  },
+  sendBtn: {
+    width:44, height:44,
+    borderRadius:"50%",
+    background:"linear-gradient(135deg,#6c5ce7,#8b5cf6)",
+    border:"none",
+    display:"flex", alignItems:"center", justifyContent:"center",
+    cursor:"pointer",
+    flexShrink:0,
+    boxShadow:"0 4px 14px rgba(108,92,231,.35)",
+    transition:"transform .15s, box-shadow .15s, opacity .15s",
   },
 
-  typingBubble: {
-    background: "#F3F4F6",
-    padding: "12px 16px",
-    borderRadius: 16,
-    display: "flex",
-    gap: 4,
-    borderBottomLeftRadius: 4,
+  /* modal */
+  overlay: {
+    position:"fixed", inset:0,
+    background:"rgba(0,0,0,.45)",
+    backdropFilter:"blur(6px)",
+    display:"flex", alignItems:"center", justifyContent:"center",
+    zIndex:1000,
   },
-
-  typingDot: {
-    width: 8,
-    height: 8,
-    background: "#7C3AED",
-    borderRadius: "50%",
-    animation: "typing 1.4s infinite",
-  },
-
-  connectionStatus: {
-    textAlign: "center",
-    padding: "8px",
-    background: "#FEE2E2",
-    color: "#EF4444",
-    fontSize: 12,
-    fontWeight: "500",
-  },
-
-  inputContainer: {
-    background: "#FFFFFF",
-    borderTop: "1px solid #F3F4F6",
-    padding: "16px 20px",
-    display: "flex",
-    gap: 12,
-    alignItems: "center",
-    boxShadow: "0 -4px 10px rgba(0,0,0,0.02)",
-  },
-
-  input: {
-    flex: 1,
-    padding: "14px 18px",
-    border: "2px solid #F3F4F6",
-    borderRadius: 30,
-    fontSize: 14,
-    outline: "none",
-    transition: "all 0.2s",
-    background: "#F9FAFB",
-    color: "#1F2937",
-    ":focus": {
-      borderColor: "#7C3AED",
-      background: "#FFFFFF",
-    },
-    "::placeholder": {
-      color: "#9CA3AF",
-    }
-  },
-
-  editActions: {
-    display: "flex",
-    gap: 8,
-  },
-
-  sendButton: {
-    background: "#7C3AED",
-    border: "none",
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    color: "#FFFFFF",
-    transition: "all 0.2s",
-    boxShadow: "0 4px 12px rgba(124, 58, 237, 0.3)",
-    ":hover": {
-      transform: "scale(1.05)",
-      background: "#6D28D9",
-    },
-  },
-
-  cancelButton: {
-    background: "#EF4444",
-    border: "none",
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    color: "#FFFFFF",
-    transition: "all 0.2s",
-    boxShadow: "0 4px 12px rgba(239, 68, 68, 0.3)",
-    ":hover": {
-      transform: "scale(1.05)",
-      background: "#DC2626",
-    }
-  },
-
-  loaderContainer: {
-    height: "100vh",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    background: "#F9FAFB",
-  },
-
-  loader: {
-    width: 48,
-    height: 48,
-    border: "3px solid #F3F4F6",
-    borderTopColor: "#7C3AED",
-    borderRadius: "50%",
-    animation: "spin 1s linear infinite",
-  },
-
-  loaderText: {
-    marginTop: 16,
-    color: "#6B7280",
-    fontSize: 14,
-  },
-
-  modalOverlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: "rgba(0,0,0,0.5)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1000,
-    backdropFilter: "blur(4px)",
-  },
-
   modal: {
-    background: "#FFFFFF",
-    borderRadius: 24,
-    padding: 24,
-    width: "90%",
-    maxWidth: 320,
-    boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+    background:"#fff",
+    borderRadius:24,
+    padding:"28px 24px",
+    width:"88%", maxWidth:320,
+    textAlign:"center",
+    boxShadow:"0 24px 60px rgba(0,0,0,.18)",
+    animation:"slideUp .2s ease both",
   },
-
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1F2937",
-    marginBottom: 12,
-  },
-
-  modalText: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginBottom: 24,
-    lineHeight: 1.5,
-  },
-
-  modalActions: {
-    display: "flex",
-    gap: 12,
-  },
-
-  modalCancel: {
-    flex: 1,
-    padding: "12px",
-    background: "#F3F4F6",
-    border: "none",
-    borderRadius: 12,
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#4B5563",
-    cursor: "pointer",
-    transition: "all 0.2s",
-    ":hover": {
-      background: "#E5E7EB",
-    }
-  },
-
-  modalConfirm: {
-    flex: 1,
-    padding: "12px",
-    background: "#EF4444",
-    border: "none",
-    borderRadius: 12,
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#FFFFFF",
-    cursor: "pointer",
-    transition: "all 0.2s",
-    ":hover": {
-      background: "#DC2626",
-    }
-  },
+  modalIcon:   { fontSize:36, marginBottom:12 },
+  modalTitle:  { fontSize:18, fontWeight:700, color:"#0f172a", marginBottom:8 },
+  modalSub:    { fontSize:13, color:"#64748b", lineHeight:1.55, marginBottom:24 },
+  modalBtns:   { display:"flex", gap:10 },
+  modalCancel: { flex:1, padding:"12px", background:"#f1f5f9", border:"none", borderRadius:12, fontSize:14, fontWeight:600, color:"#475569", cursor:"pointer" },
+  modalDel:    { flex:1, padding:"12px", background:"linear-gradient(135deg,#ef4444,#dc2626)", border:"none", borderRadius:12, fontSize:14, fontWeight:600, color:"#fff", cursor:"pointer", boxShadow:"0 4px 12px rgba(239,68,68,.3)" },
 };
-
-// Add keyframe animations
-const styleSheet = document.createElement("style");
-styleSheet.textContent = `
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-  
-  @keyframes typing {
-    0%, 60%, 100% { transform: translateY(0); }
-    30% { transform: translateY(-6px); }
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(5px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  .typing-dot:nth-child(1) { animation-delay: 0s; }
-  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-
-  ::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: #F3F4F6;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: #9CA3AF;
-    border-radius: 3px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: #6B7280;
-  }
-`;
-document.head.appendChild(styleSheet);
