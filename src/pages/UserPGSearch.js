@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../firebase";
+import { useAuth } from "../context/AuthContext";
+import { Navigate } from "react-router-dom";
 
 import { 
   Search, 
@@ -114,7 +115,7 @@ const formatPrice = (price) => {
   }
 };
 
-// FIXED: Helper function to get correct image URL
+// Helper function to get correct image URL
 const getCorrectImageUrl = (photo) => {
   if (!photo) return null;
   
@@ -150,7 +151,6 @@ const getPriceRangeByType = (pg) => {
   const prices = [];
   
   if (pg.pg_category === "pg") {
-    // PG prices
     if (pg.single_sharing > 0) prices.push(pg.single_sharing);
     if (pg.double_sharing > 0) prices.push(pg.double_sharing);
     if (pg.triple_sharing > 0) prices.push(pg.triple_sharing);
@@ -158,11 +158,9 @@ const getPriceRangeByType = (pg) => {
     if (pg.single_room > 0) prices.push(pg.single_room);
     if (pg.double_room > 0) prices.push(pg.double_room);
   } else if (pg.pg_category === "coliving") {
-    // Co-Living prices
     if (pg.co_living_single_room > 0) prices.push(pg.co_living_single_room);
     if (pg.co_living_double_room > 0) prices.push(pg.co_living_double_room);
   } else if (pg.pg_category === "to_let") {
-    // To-Let prices
     if (pg.price_1bhk > 0) prices.push(pg.price_1bhk);
     if (pg.price_2bhk > 0) prices.push(pg.price_2bhk);
     if (pg.price_3bhk > 0) prices.push(pg.price_3bhk);
@@ -199,7 +197,6 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
   const [localMin, setLocalMin] = useState(minBudget);
   const [localMax, setLocalMax] = useState(maxBudget);
 
-  // Predefined budget ranges
   const budgetRanges = [
     { label: "Budget (₹0-5k)", min: 0, max: 5000 },
     { label: "Economy (₹5k-10k)", min: 5000, max: 10000 },
@@ -249,7 +246,6 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
         position: "relative",
         boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
       }}>
-        {/* Close Button */}
         <button
           onClick={onClose}
           style={{
@@ -293,7 +289,6 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
             Set your monthly budget range
           </p>
 
-          {/* Quick Budget Ranges */}
           <div style={{ marginBottom: 30 }}>
             <h4 style={{ 
               fontSize: 16, 
@@ -334,7 +329,6 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
             </div>
           </div>
 
-          {/* Custom Range */}
           <div style={{ marginBottom: 30 }}>
             <h4 style={{ 
               fontSize: 16, 
@@ -436,7 +430,6 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
               </div>
             </div>
 
-            {/* Input Fields */}
             <div style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
@@ -511,7 +504,6 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div style={{ display: "flex", gap: 12 }}>
             <button
               onClick={handleReset}
@@ -558,7 +550,6 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
 };
 
 /* ================= BOOKING MODAL COMPONENT ================= */
-/* ================= BOOKING MODAL COMPONENT (SIMPLIFIED) ================= */
 const BookingModal = ({ pg, onClose, onBook }) => {
   const [bookingData, setBookingData] = useState({
     checkInDate: "",
@@ -567,7 +558,6 @@ const BookingModal = ({ pg, onClose, onBook }) => {
   
   const [loading, setLoading] = useState(false);
 
-  // Set default room type when modal opens
   useEffect(() => {
     const defaultRoomType = getDefaultRoomType();
     setBookingData(prev => ({ ...prev, roomType: defaultRoomType }));
@@ -675,7 +665,6 @@ const BookingModal = ({ pg, onClose, onBook }) => {
     return types;
   };
 
-  // Get today's date for min date attribute
   const getTodayDate = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -684,7 +673,6 @@ const BookingModal = ({ pg, onClose, onBook }) => {
     return `${year}-${month}-${day}`;
   };
 
-  // Get max date (6 months from now)
   const getMaxDate = () => {
     const max = new Date();
     max.setMonth(max.getMonth() + 6);
@@ -760,7 +748,6 @@ const BookingModal = ({ pg, onClose, onBook }) => {
           </p>
 
           <form onSubmit={handleSubmit}>
-            {/* Check-in Date */}
             <div style={{ marginBottom: 24 }}>
               <label style={{
                 display: "block",
@@ -797,7 +784,6 @@ const BookingModal = ({ pg, onClose, onBook }) => {
               </p>
             </div>
 
-            {/* Room Type */}
             <div style={{ marginBottom: 24 }}>
               <label style={{
                 display: "block",
@@ -829,7 +815,6 @@ const BookingModal = ({ pg, onClose, onBook }) => {
               </select>
             </div>
 
-            {/* Info Box */}
             <div style={{
               background: "#f0fdf4",
               borderRadius: 12,
@@ -851,7 +836,6 @@ const BookingModal = ({ pg, onClose, onBook }) => {
               </ul>
             </div>
 
-            {/* Action Buttons */}
             <div style={{ display: "flex", gap: 12 }}>
               <button
                 type="button"
@@ -1913,7 +1897,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   );
 };
 
-// Add missing Wrench icon component
+// Wrench icon component
 const Wrench = ({ size, color }) => (
   <svg 
     width={size} 
@@ -2160,6 +2144,9 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
 /* ================= MAIN COMPONENT ================= */
 function UserPGSearch() {
   const navigate = useNavigate();
+  
+  // ✅ USE ONLY THIS - No direct auth.currentUser
+  const { user, role, loading: authLoading } = useAuth();
 
   const [allPGs, setAllPGs] = useState([]);
   const [pgs, setPgs] = useState([]);
@@ -2327,12 +2314,10 @@ function UserPGSearch() {
   const applyFilters = useCallback(() => {
     let filtered = [...allPGs];
 
-    // Property Type Filter (Quick Filter at top)
     if (propertyType !== "all") {
       filtered = filtered.filter((pg) => pg.pg_category === propertyType);
     }
 
-    // Location search
     if (filters.location) {
       filtered = filtered.filter((pg) =>
         `${pg.area || ""} ${pg.city || ""} ${pg.pg_name || ""}`
@@ -2341,7 +2326,6 @@ function UserPGSearch() {
       );
     }
 
-    // Budget filter using getEffectiveRent
     filtered = filtered.filter(
       (pg) => {
         const rent = getEffectiveRent(pg);
@@ -2349,7 +2333,6 @@ function UserPGSearch() {
       }
     );
 
-    // Amenities filters
     if (filters.food) filtered = filtered.filter((pg) => pg.food_available === true);
     if (filters.ac) filtered = filtered.filter((pg) => pg.ac_available === true);
     if (filters.wifi) filtered = filtered.filter((pg) => pg.wifi_available === true);
@@ -2359,7 +2342,6 @@ function UserPGSearch() {
       filtered = filtered.filter((pg) => pg.food_type === filters.foodType);
     }
 
-    // Nearby filter
     if (filters.nearMe && userLocation) {
       filtered = filtered
         .map((pg) => {
@@ -2379,7 +2361,6 @@ function UserPGSearch() {
         .sort((a, b) => a.distance - b.distance);
     }
 
-    // Sorting
     if (filters.sort === "low") {
       filtered.sort((a, b) => getEffectiveRent(a) - getEffectiveRent(b));
     } else if (filters.sort === "high") {
@@ -2425,7 +2406,6 @@ function UserPGSearch() {
     showNotification("All filters reset");
   };
 
-  // FIXED: Updated getImageUrl function
   const getImageUrl = (pg) => {
     if (Array.isArray(pg.photos) && pg.photos.length) {
       return getCorrectImageUrl(pg.photos[0]);
@@ -2440,8 +2420,6 @@ function UserPGSearch() {
   };
 
   const handleBookNow = (pg) => {
-    const user = auth.currentUser;
-
     if (!user) {
       showNotification("Please register or login to book this property");
       navigate("/register");
@@ -2452,53 +2430,48 @@ function UserPGSearch() {
   };
 
   const handleBookingSubmit = async (bookingData) => {
-  try {
-    const user = auth.currentUser;
-
-    if (!user) {
-      showNotification("Please register or login to continue");
-      navigate("/register");
-      return;
-    }
-
-    const token = await user.getIdToken(true);
-
-    // Simplified payload - only check_in_date and room_type
-    const payload = {
-      check_in_date: bookingData.checkInDate,
-      room_type: bookingData.roomType
-    };
-
-    const res = await api.post(
-      `/bookings/${bookingPG.id}`,
-      payload,
-      {
-        headers: { Authorization: `Bearer ${token}` }
+    try {
+      if (!user) {
+        showNotification("Please register or login to continue");
+        navigate("/register");
+        return;
       }
-    );
 
-    // HANDLE ALREADY BOOKED
-    if (res.data?.alreadyBooked) {
-      showNotification(res.data.message);
+      const token = await user.getIdToken(true);
+
+      const payload = {
+        check_in_date: bookingData.checkInDate,
+        room_type: bookingData.roomType
+      };
+
+      const res = await api.post(
+        `/bookings/${bookingPG.id}`,
+        payload,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (res.data?.alreadyBooked) {
+        showNotification(res.data.message);
+        setBookingPG(null);
+        return;
+      }
+
+      showNotification(res.data.message || "✅ Booking request sent to owner");
       setBookingPG(null);
-      return;
+
+    } catch (error) {
+      console.log("BOOKING ERROR:", error.response?.data);
+
+      if (error.response?.data?.message) {
+        showNotification(error.response.data.message);
+      } else {
+        showNotification("❌ Something went wrong. Try again");
+      }
     }
-
-    // SUCCESS
-    showNotification(res.data.message || "✅ Booking request sent to owner");
-    setBookingPG(null);
-
-  } catch (error) {
-    console.log("BOOKING ERROR:", error.response?.data);
-
-    // SHOW BACKEND MESSAGE
-    if (error.response?.data?.message) {
-      showNotification(error.response.data.message);
-    } else {
-      showNotification("❌ Something went wrong. Try again");
-    }
-  }
-};
+  };
+  
   const handleSaveFavorite = (pgId, isFavorite) => {
     const newFavorites = new Set(favorites);
     if (isFavorite) {
@@ -2520,7 +2493,6 @@ function UserPGSearch() {
   const toggleCompareMode = () => {
     setCompareMode(!compareMode);
     if (compareMode) {
-      // Clear selections when exiting compare mode
       setSelectedForCompare(new Set());
     }
   };
@@ -2564,10 +2536,6 @@ function UserPGSearch() {
     } catch (error) {
       return value.toString();
     }
-  };
-
-  const getDisplayPrice = (pg) => {
-    return getEffectiveRent(pg);
   };
 
   const getPriceRangeDisplay = (pg) => {
@@ -2660,6 +2628,28 @@ function UserPGSearch() {
     return info.slice(0, 3);
   };
 
+  // ✅ PROTECTION - MOVED AFTER ALL HOOKS
+  if (authLoading) {
+    return (
+      <div style={{ padding: 20, maxWidth: 1400, margin: "auto", minHeight: "100vh", textAlign: "center", paddingTop: 100 }}>
+        <div style={{ 
+          width: 50, 
+          height: 50, 
+          border: "4px solid #e5e7eb",
+          borderTop: "4px solid #3b82f6",
+          borderRadius: "50%",
+          animation: "spin 1s linear infinite",
+          margin: "0 auto 16px"
+        }} />
+        <p style={{ fontSize: 16, color: "#6b7280" }}>Loading authentication...</p>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
   return (
     <div style={{ padding: 20, maxWidth: 1400, margin: "auto", minHeight: "100vh" }}>
       {/* Notification Toast */}
@@ -2717,7 +2707,7 @@ function UserPGSearch() {
           </button>
         </div>
         
-        {/* ================= NEW FEATURES BANNER ================= */}
+        {/* Features Banner */}
         <div style={{
           display: "flex",
           gap: 20,
@@ -2801,7 +2791,7 @@ function UserPGSearch() {
         </p>
       </div>
 
-      {/* ================= PROPERTY TYPE QUICK FILTER ================= */}
+      {/* Property Type Quick Filter */}
       <div style={{
         background: "#ffffff",
         borderRadius: 16,
@@ -2902,7 +2892,7 @@ function UserPGSearch() {
         </div>
       </div>
 
-      {/* ================= MODERN FILTER BAR ================= */}
+      {/* Modern Filter Bar */}
       <div style={{
         background: "#ffffff",
         borderRadius: 16,
@@ -3008,7 +2998,6 @@ function UserPGSearch() {
             Near Me
           </button>
 
-          {/* Compare Mode Toggle */}
           <button
             onClick={toggleCompareMode}
             style={{
@@ -3030,7 +3019,6 @@ function UserPGSearch() {
             Compare
           </button>
 
-          {/* Compare Action Button (shows when in compare mode) */}
           {compareMode && (
             <>
               <button
@@ -3081,7 +3069,6 @@ function UserPGSearch() {
           )}
         </div>
 
-        {/* Budget Summary */}
         {(filters.minBudget > 0 || filters.maxBudget < 50000) && (
           <div style={{
             padding: "10px 16px",
@@ -3116,7 +3103,6 @@ function UserPGSearch() {
           </div>
         )}
 
-        {/* Nearby Info */}
         {filters.nearMe && userLocation && (
           <div style={{
             padding: "10px 16px",
@@ -3361,7 +3347,7 @@ function UserPGSearch() {
         )}
       </div>
 
-      {/* ================= RESULTS HEADER ================= */}
+      {/* Results Header */}
       <div style={{
         display: "flex",
         justifyContent: "space-between",
@@ -3399,7 +3385,7 @@ function UserPGSearch() {
         </button>
       </div>
 
-      {/* ================= PROPERTY CARDS ================= */}
+      {/* Property Cards */}
       {loading ? (
         <div style={{ 
           textAlign: "center", 
@@ -3575,7 +3561,6 @@ function UserPGSearch() {
                      pg.pg_type ? pg.pg_type.charAt(0).toUpperCase() + pg.pg_type.slice(1) + " PG" : "PG"}
                   </div>
                   
-                  {/* Distance badge if available */}
                   {pg.distance && (
                     <div style={{
                       position: "absolute",
@@ -3625,7 +3610,6 @@ function UserPGSearch() {
                     </span>
                   </div>
 
-                  {/* PRICE RANGE DISPLAY */}
                   <div style={{ 
                     display: "flex", 
                     justifyContent: "space-between", 
@@ -3816,7 +3800,7 @@ function UserPGSearch() {
         </div>
       )}
 
-      {/* ================= MODALS ================= */}
+      {/* Modals */}
       {showBudgetFilter && (
         <BudgetFilter
           minBudget={filters.minBudget}
