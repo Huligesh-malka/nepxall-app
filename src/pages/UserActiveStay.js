@@ -88,15 +88,14 @@ const UserActiveStay = () => {
   const [upiId, setUpiId] = useState("");
   const [vacateStatus, setVacateStatus] = useState(null);
 
+  // ✅ FIXED: Removed manual token attachment - interceptor handles it
   const loadStay = useCallback(async (showLoader = true) => {
     try {
       if (showLoader) setLoading(true);
       if (!user) return;
 
-      const token = await user.getIdToken();
-      const res = await api.get("/bookings/user/active-stay", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // ✅ NO MORE manual token attachment
+      const res = await api.get("/bookings/user/active-stay");
 
       setStays(Array.isArray(res.data) ? res.data : res.data ? [res.data] : []);
 
@@ -136,6 +135,7 @@ const UserActiveStay = () => {
     return <Navigate to="/login" replace />;
   }
 
+  // ✅ FIXED: Removed manual token attachment
   const submitRefundRequest = async (stayId) => {
     if (!refundReason || !refundUpi) {
       alert("Please provide both a reason and a UPI ID.");
@@ -147,12 +147,12 @@ const UserActiveStay = () => {
     }
     try {
       setIsSubmitting(true);
-      const token = await user.getIdToken();
-      const res = await api.post(
-        "/bookings/refunds/request",
-        { bookingId: stayId, reason: refundReason, upi_id: refundUpi },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      // ✅ NO MORE manual token attachment
+      const res = await api.post("/bookings/refunds/request", {
+        bookingId: stayId,
+        reason: refundReason,
+        upi_id: refundUpi
+      });
       if (res.data.success) {
         alert("✅ Refund request submitted successfully.");
         await loadStay(false);
@@ -169,25 +169,22 @@ const UserActiveStay = () => {
     }
   };
 
+  // ✅ FIXED: Removed manual token attachment
   const submitVacateRequest = async (stayId) => {
     if (!vacateReason || !vacateDate) {
       alert("Please fill all required fields");
       return;
     }
     try {
-      const token = await user.getIdToken();
-      const res = await api.post(
-        "/bookings/vacate/request",
-        {
-          bookingId: stayId,
-          vacate_date: vacateDate,
-          reason: vacateReason,
-          account_number: accountNumber,
-          ifsc_code: ifscCode,
-          upi_id: upiId,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      // ✅ NO MORE manual token attachment
+      const res = await api.post("/bookings/vacate/request", {
+        bookingId: stayId,
+        vacate_date: vacateDate,
+        reason: vacateReason,
+        account_number: accountNumber,
+        ifsc_code: ifscCode,
+        upi_id: upiId,
+      });
       if (res.data.success) {
         alert("✅ Vacate request submitted");
         setVacateStatus("pending");
@@ -205,14 +202,11 @@ const UserActiveStay = () => {
     }
   };
 
+  // ✅ FIXED: Removed manual token attachment
   const acceptRefund = async (bookingId) => {
     try {
-      const token = await user.getIdToken();
-      await api.post(
-        "/bookings/refunds/accept",
-        { bookingId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      // ✅ NO MORE manual token attachment
+      await api.post("/bookings/refunds/accept", { bookingId });
       alert("✅ Refund accepted");
       loadStay(false);
     } catch (err) {
@@ -221,14 +215,11 @@ const UserActiveStay = () => {
     }
   };
 
+  // ✅ FIXED: Removed manual token attachment
   const rejectRefund = async (bookingId) => {
     try {
-      const token = await user.getIdToken();
-      await api.post(
-        "/bookings/refunds/reject",
-        { bookingId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      // ✅ NO MORE manual token attachment
+      await api.post("/bookings/refunds/reject", { bookingId });
       alert("❌ Refund rejected");
       loadStay(false);
     } catch (err) {
