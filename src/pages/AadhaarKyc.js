@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { Navigate } from "react-router-dom";
 import api from "../api/api";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -7,6 +9,9 @@ const AadhaarKyc = () => {
   const { state } = useLocation();
   const bookingId = state?.bookingId;
 
+  // ✅ USE AUTH CONTEXT
+  const { user, role, loading: authLoading } = useAuth();
+
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [aadhaar, setAadhaar] = useState("");
@@ -14,20 +19,28 @@ const AadhaarKyc = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  // ✅ CONSENTS
   const [consentAadhaar, setConsentAadhaar] = useState(false);
   const [consentPolicy, setConsentPolicy] = useState(false);
   const [consentPolice, setConsentPolice] = useState(false);
 
-  //////////////////////////////////////////////////////
-  // VALIDATIONS
-  //////////////////////////////////////////////////////
   const isValidPhone = /^[6-9]\d{9}$/.test(phone);
   const isValidAadhaar = /^\d{12}$/.test(aadhaar);
 
-  //////////////////////////////////////////////////////
-  // SEND OTP
-  //////////////////////////////////////////////////////
+  // ✅ PROTECTION - AFTER ALL HOOKS
+  if (authLoading) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.card}>
+          <h2>Loading authentication...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
   const sendOtp = async () => {
     if (!name || !isValidPhone || !isValidAadhaar) {
       return alert("Enter valid details");
@@ -54,9 +67,6 @@ const AadhaarKyc = () => {
     }
   };
 
-  //////////////////////////////////////////////////////
-  // VERIFY OTP
-  //////////////////////////////////////////////////////
   const verifyOtp = async () => {
     try {
       setLoading(true);
@@ -78,9 +88,6 @@ const AadhaarKyc = () => {
     }
   };
 
-  //////////////////////////////////////////////////////
-  // UI
-  //////////////////////////////////////////////////////
   return (
     <div style={styles.container}>
       <div style={styles.card}>
@@ -111,7 +118,6 @@ const AadhaarKyc = () => {
               style={styles.input}
             />
 
-            {/* ✅ CONSENTS */}
             <div style={styles.checkboxContainer}>
               <label>
                 <input
@@ -167,12 +173,6 @@ const AadhaarKyc = () => {
   );
 };
 
-export default AadhaarKyc;
-
-//////////////////////////////////////////////////////
-// 🎨 STYLES
-//////////////////////////////////////////////////////
-
 const styles = {
   container: {
     minHeight: "100vh",
@@ -214,3 +214,5 @@ const styles = {
     fontSize: 14,
   },
 };
+
+export default AadhaarKyc;

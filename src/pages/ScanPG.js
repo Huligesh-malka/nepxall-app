@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import { API_CONFIG } from "../config";
 import api from "../api/api";
-import { auth } from "../firebase";
 import { X, BookOpen, Phone, MapPin, Check, Info } from "lucide-react";
 
 const ScanPG = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
+  // ✅ USE AUTH CONTEXT
+  const { user, loading: authLoading } = useAuth();
 
   const [pg, setPg] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
@@ -57,17 +60,12 @@ const ScanPG = () => {
     return null;
   };
 
-  //////////////////////////////////////////////////////
-  // 🏷 BOOK NOW CLICK - EXACT SAME AS PGDetails
-  //////////////////////////////////////////////////////
   const handleBookNow = () => {
     const selected = getSelectedDetails();
     if (!selected) {
       alert("Please select a room to proceed");
       return;
     }
-
-    const user = auth.currentUser;
 
     if (!user) {
       showNotificationMessage("Please register or login to book this property");
@@ -80,16 +78,11 @@ const ScanPG = () => {
     setShowBookingModal(true);
   };
 
-  //////////////////////////////////////////////////////
-  // 📝 BOOKING SUBMIT - EXACT SAME AS PGDetails
-  //////////////////////////////////////////////////////
   const handleBookingSubmit = async (bookingData) => {
     try {
       if (bookingLoading) return;
 
       setBookingLoading(true);
-
-      const user = auth.currentUser;
 
       if (!user) {
         showNotificationMessage("Please login to continue");
@@ -119,7 +112,6 @@ const ScanPG = () => {
         }
       );
 
-      // ✅ SUCCESS
       showNotificationMessage(
         res.data?.message || "✅ Booking request sent to owner"
       );
@@ -130,7 +122,6 @@ const ScanPG = () => {
     } catch (error) {
       console.log("BOOKING ERROR:", error?.response?.data);
 
-      // ⚠️ REAL BACKEND MESSAGE
       if (error?.response?.data?.message) {
         showNotificationMessage(error.response.data.message);
       } else {
@@ -142,9 +133,6 @@ const ScanPG = () => {
     }
   };
 
-  //////////////////////////////////////////////////////
-  // 📞 CALL OWNER
-  //////////////////////////////////////////////////////
   const handleCallOwner = () => {
     if (pg.contact?.phone) {
       window.location.href = `tel:${pg.contact.phone}`;
@@ -160,13 +148,11 @@ const ScanPG = () => {
     navigate(`/pg/${id}`);
   };
 
-  // Format price with commas
   const formatPrice = (price) => {
     if (!price || price === 0 || price === "0" || price === "") return "0";
     return Number(price).toLocaleString('en-IN');
   };
 
-  // Get room display name
   const getRoomDisplayName = (room) => {
     if (room.sharing_type?.toLowerCase().includes('single')) return 'Single Sharing';
     if (room.sharing_type?.toLowerCase().includes('double')) return 'Double Sharing';
@@ -175,14 +161,12 @@ const ScanPG = () => {
     return room.sharing_type || 'Standard Room';
   };
 
-  // Get all available prices based on property type
   const getAllPropertyPrices = () => {
     if (!pg?.price_details) return [];
     
     const prices = [];
     const { price_details } = pg;
 
-    // PG/Hostel Prices
     if (price_details.sharing) {
       if (price_details.sharing.single_sharing && price_details.sharing.single_sharing > 0) {
         prices.push({
@@ -228,7 +212,6 @@ const ScanPG = () => {
       }
     }
 
-    // Co-living Prices
     if (price_details.co_living) {
       if (price_details.co_living.single_room && price_details.co_living.single_room > 0) {
         prices.push({
@@ -246,7 +229,6 @@ const ScanPG = () => {
       }
     }
 
-    // To-let/BHK Prices
     if (price_details.to_let?.prices) {
       if (price_details.to_let.prices['1bhk'] && price_details.to_let.prices['1bhk'] > 0) {
         prices.push({
@@ -285,7 +267,6 @@ const ScanPG = () => {
     return prices;
   };
 
-  // Get room types for booking modal
   const getRoomTypes = () => {
     if (!pg) return [];
     
@@ -374,7 +355,6 @@ const ScanPG = () => {
 
   return (
     <div style={styles.container}>
-      {/* Notification Toast */}
       {notification && (
         <div style={styles.notification}>
           {notification.includes("✅") ? <Check size={18} /> : 
@@ -384,7 +364,6 @@ const ScanPG = () => {
         </div>
       )}
 
-      {/* Header with PG Name and Location */}
       <div style={styles.headerSection}>
         <h1 style={styles.title}>{pg.name}</h1>
         <div style={styles.locationRow}>
@@ -393,7 +372,6 @@ const ScanPG = () => {
             {pg.location?.area}, {pg.location?.city}
           </span>
         </div>
-        {/* Property Type Badge */}
         <div style={styles.typeBadge}>
           {pg.category === "to_let" ? "🏠 House/Flat" : 
            pg.category === "coliving" ? "🤝 Co-Living" : 
@@ -401,7 +379,6 @@ const ScanPG = () => {
         </div>
       </div>
 
-      {/* Room Selection Section */}
       <div style={styles.roomSection}>
         <h2 style={styles.sectionTitle}>Select Your Room</h2>
         
@@ -447,7 +424,6 @@ const ScanPG = () => {
         )}
       </div>
 
-      {/* Price Details Section - Shows all available prices */}
       {propertyPrices.length > 0 && (
         <div style={styles.priceSection}>
           <h3 style={styles.subSectionTitle}>Available Price Options</h3>
@@ -466,7 +442,6 @@ const ScanPG = () => {
             ))}
           </div>
 
-          {/* Additional Charges */}
           <div style={styles.additionalCharges}>
             <h4 style={styles.chargesTitle}>Additional Charges</h4>
             <div style={styles.chargesList}>
@@ -493,13 +468,11 @@ const ScanPG = () => {
         </div>
       )}
 
-      {/* View Full Details Button */}
       <button onClick={goToFullDetails} style={styles.viewDetailsBtn}>
         <span>View Full Property Details</span>
         <span style={styles.viewDetailsArrow}>→</span>
       </button>
 
-      {/* Footer Actions */}
       <div style={styles.footer}>
         <button
           onClick={handleBookNow}
@@ -522,7 +495,6 @@ const ScanPG = () => {
         )}
       </div>
 
-      {/* Booking Modal - EXACT SAME AS PGDetails */}
       {showBookingModal && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
@@ -552,7 +524,6 @@ const ScanPG = () => {
                 };
                 handleBookingSubmit(formData);
               }}>
-                {/* Full Name */}
                 <div style={styles.formGroup}>
                   <label style={styles.formLabel}>
                     Full Name *
@@ -567,7 +538,6 @@ const ScanPG = () => {
                   />
                 </div>
 
-                {/* Phone Number */}
                 <div style={styles.formGroup}>
                   <label style={styles.formLabel}>
                     Phone Number *
@@ -582,7 +552,6 @@ const ScanPG = () => {
                   />
                 </div>
 
-                {/* Check-in Date */}
                 <div style={styles.formGroup}>
                   <label style={styles.formLabel}>
                     Check-in Date *
@@ -597,7 +566,6 @@ const ScanPG = () => {
                   />
                 </div>
 
-                {/* Room Type */}
                 <div style={styles.formGroup}>
                   <label style={styles.formLabel}>
                     {pg?.category === "to_let" ? "BHK Type *" : "Room Type *"}
@@ -616,7 +584,6 @@ const ScanPG = () => {
                   </select>
                 </div>
 
-                {/* Action Buttons */}
                 <div style={styles.formActions}>
                   <button
                     type="button"
@@ -952,7 +919,6 @@ const styles = {
     alignItems: "center",
     justifyContent: "center"
   },
-  // Modal Styles - EXACT SAME AS PGDetails
   modalOverlay: {
     position: "fixed",
     top: 0,
@@ -1073,7 +1039,6 @@ const styles = {
   }
 };
 
-// Add global styles for animations
 const style = document.createElement('style');
 style.innerHTML = `
   @keyframes spin {

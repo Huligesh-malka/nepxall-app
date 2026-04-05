@@ -40,7 +40,6 @@ export default function PublicAgreementPage() {
 
       <div className="max-w-5xl mx-auto bg-white rounded-lg shadow-2xl overflow-hidden">
 
-        {/* HEADER */}
         <div className="text-center py-10 bg-gradient-to-r from-blue-700 to-blue-500 text-white">
           <img src={logo} className="w-20 mx-auto mb-3" alt="" />
           <h1 className="text-4xl font-bold">RENTAL AGREEMENT</h1>
@@ -51,7 +50,6 @@ export default function PublicAgreementPage() {
 
         <div className="p-10 space-y-6">
 
-          {/* OWNER + TENANT */}
           <div className="grid grid-cols-2 gap-6">
             <Box title="LANDLORD DETAILS">
               <Row label="Name" value={agreement.owner_name} />
@@ -66,7 +64,6 @@ export default function PublicAgreementPage() {
             </Box>
           </div>
 
-          {/* PROPERTY */}
           <div className="grid grid-cols-2 gap-6">
             <Box title="PROPERTY DETAILS">
               <Row label="Name" value={agreement.pg_name} />
@@ -80,7 +77,6 @@ export default function PublicAgreementPage() {
             </Box>
           </div>
 
-          {/* FINANCIAL */}
           <Box title="FINANCIAL DETAILS">
             <TableRow label="Monthly Rent" value={money(agreement.rent_amount)} />
             <TableRow label="Security Deposit" value={money(agreement.security_deposit)} />
@@ -89,7 +85,6 @@ export default function PublicAgreementPage() {
 
         </div>
 
-        {/* FOOTER */}
         <div className="bg-gradient-to-r from-blue-700 to-blue-500 text-white px-8 py-4 flex justify-between text-sm">
 
           <p className="font-bold text-lg">Nepxall</p>
@@ -107,8 +102,6 @@ export default function PublicAgreementPage() {
     </div>
   );
 }
-
-//////////////////////////////////////////////////////
 
 const Box = ({ title, children }) => (
   <div className="border rounded">

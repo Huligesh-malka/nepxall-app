@@ -1,12 +1,16 @@
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { Navigate } from "react-router-dom";
 import api from "../api/api";
 
 const ServicesPage = () => {
-  const { bookingId } = useParams(); // Optional booking ID from URL
+  const { bookingId } = useParams();
   const navigate = useNavigate();
 
-  // State Management
+  // ✅ USE AUTH CONTEXT
+  const { user, role, loading: authLoading } = useAuth();
+
   const [selectedService, setSelectedService] = useState(null);
   const [serviceDate, setServiceDate] = useState("");
   const [address, setAddress] = useState("");
@@ -22,6 +26,21 @@ const ServicesPage = () => {
     { id: "furniture", name: "🪑 Furniture Rental", price: 800 },
     { id: "wifi", name: "📶 WiFi Setup Help", price: 999 },
   ];
+
+  // ✅ PROTECTION - AFTER ALL HOOKS
+  if (authLoading) {
+    return (
+      <div style={container}>
+        <div style={{ textAlign: "center", padding: "50px" }}>
+          Loading authentication...
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
   const handleSubmit = async () => {
     setError("");
@@ -45,7 +64,6 @@ const ServicesPage = () => {
         amount: serviceObj.price,
       };
 
-      // Include bookingId only if it exists in the URL params
       if (bookingId) {
         payload.bookingId = bookingId;
       }
@@ -55,7 +73,6 @@ const ServicesPage = () => {
       if (res.data.success) {
         setSuccess("Service booked successfully! Redirecting...");
         
-        // Reset form after 2 seconds
         setTimeout(() => {
           setSuccess("");
           setSelectedService(null);
@@ -172,8 +189,6 @@ const ServicesPage = () => {
     </div>
   );
 };
-
-/* ================= STYLES ================= */
 
 const container = {
   maxWidth: 1000,

@@ -11,9 +11,7 @@ export default function AgreementPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  //////////////////////////////////////////////////////
-  // LOAD AGREEMENT DIRECTLY (NO AUTH WAIT)
-  //////////////////////////////////////////////////////
+  // LOAD AGREEMENT DIRECTLY (NO AUTH REQUIRED - PUBLIC PAGE)
   const loadAgreement = async () => {
     try {
       setLoading(true);
@@ -40,18 +38,12 @@ export default function AgreementPage() {
     if (bookingId) loadAgreement();
   }, [bookingId]);
 
-  //////////////////////////////////////////////////////
-  // HELPERS
-  //////////////////////////////////////////////////////
   const money = (v) =>
     `₹${Number(v || 0).toLocaleString("en-IN")}`;
 
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString("en-GB") : "-";
 
-  //////////////////////////////////////////////////////
-  // LOADING STATE
-  //////////////////////////////////////////////////////
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center text-lg font-semibold">
@@ -59,9 +51,6 @@ export default function AgreementPage() {
       </div>
     );
 
-  //////////////////////////////////////////////////////
-  // ERROR STATE
-  //////////////////////////////////////////////////////
   if (error)
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
@@ -75,9 +64,6 @@ export default function AgreementPage() {
       </div>
     );
 
-  //////////////////////////////////////////////////////
-  // NO AGREEMENT
-  //////////////////////////////////////////////////////
   if (!agreement)
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -85,14 +71,10 @@ export default function AgreementPage() {
       </div>
     );
 
-  //////////////////////////////////////////////////////
-  // UI
-  //////////////////////////////////////////////////////
   return (
     <div className="min-h-screen py-10 bg-gradient-to-br from-[#0F5ED7] to-[#22C55E]">
       <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden">
 
-        {/* HEADER */}
         <div className="text-center py-10 bg-gradient-to-r from-[#0F5ED7] to-[#22C55E] text-white relative">
           <div className="absolute top-4 right-6 text-xs bg-white/20 px-3 py-1 rounded-full">
             DIGITAL AGREEMENT
@@ -107,7 +89,6 @@ export default function AgreementPage() {
 
         <div className="p-10 space-y-8">
 
-          {/* OWNER + TENANT */}
           <div className="grid md:grid-cols-2 gap-6">
             <Box title="LANDLORD DETAILS">
               <Row label="Name" value={agreement.owner_name} />
@@ -122,7 +103,6 @@ export default function AgreementPage() {
             </Box>
           </div>
 
-          {/* PROPERTY */}
           <div className="grid md:grid-cols-2 gap-6">
             <Box title="PROPERTY DETAILS">
               <Row label="Name" value={agreement.pg_name} />
@@ -136,7 +116,6 @@ export default function AgreementPage() {
             </Box>
           </div>
 
-          {/* FINANCIAL */}
           <Box title="FINANCIAL DETAILS">
             <TableRow label="Monthly Rent" value={money(agreement.rent_amount)} />
             <TableRow label="Security Deposit" value={money(agreement.security_deposit)} />
@@ -144,7 +123,6 @@ export default function AgreementPage() {
             <TableRow label="Electricity" value="Payable separately" />
           </Box>
 
-          {/* QR */}
           <div className="text-center pt-10">
             <QRCodeCanvas
               value={`${window.location.origin}/public/agreement/${agreement.agreement_hash}`}
@@ -157,7 +135,6 @@ export default function AgreementPage() {
 
         </div>
 
-        {/* FOOTER */}
         <div className="bg-gradient-to-r from-[#0F5ED7] to-[#22C55E] text-white px-8 py-5 text-center text-sm">
           <p className="text-lg font-bold">Nepxall</p>
           <p>Agreement ID: {agreement.agreement_number}</p>
@@ -169,8 +146,6 @@ export default function AgreementPage() {
     </div>
   );
 }
-
-//////////////////////////////////////////////////////
 
 const Box = ({ title, children }) => (
   <div className="border rounded-xl overflow-hidden shadow-sm">
