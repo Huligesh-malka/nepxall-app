@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { auth } from "../firebase";
-import { useNavigate } from "react-router-dom";
-import { pgAPI } from "../api/api"; // ✅ Using pgAPI convenience methods
-import { getImageUrl } from "../config"; // ✅ Image URL helper
+import { useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { Box, CircularProgress } from "@mui/material";
+import { pgAPI } from "../api/api";
+import { getImageUrl } from "../config";
 
 // Fix for default marker icons in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -220,12 +221,13 @@ const initialLocation = {
 
 function OwnerAddPG() {
   const navigate = useNavigate();
+  const { user, role, loading: authLoading } = useAuth();
+  
   const [loading, setLoading] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [mapLoading, setMapLoading] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
-  const [user, setUser] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(initialLocation);
   const [photos, setPhotos] = useState([]);
   const [roomRates, setRoomRates] = useState(initialRoomRates);
@@ -252,28 +254,22 @@ function OwnerAddPG() {
     return () => document.head.removeChild(style);
   }, []);
 
-  // Store user from onAuthStateChanged
+  /* ================= AUTH + LOAD ================= */
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
-      if (currentUser) {
-        console.log("User logged in:", currentUser.uid);
-        setUser(currentUser);
-        setForm(prev => ({ 
-          ...prev, 
-          owner_id: currentUser.uid,
-          contact_email: currentUser.email || prev.contact_email,
-          contact_person: currentUser.displayName || prev.contact_person,
-          contact_phone: currentUser.phoneNumber || prev.contact_phone
-        }));
-      } else {
-        console.log("No user logged in - redirecting to login");
-        setUser(null);
-        navigate("/login");
-      }
-    });
+    if (!authLoading && !user) {
+      navigate("/login");
+    }
 
-    return () => unsubscribe();
-  }, [navigate]);
+    if (user && role === "owner") {
+      setForm(prev => ({ 
+        ...prev, 
+        owner_id: user.uid,
+        contact_email: user.email || prev.contact_email,
+        contact_person: user.displayName || prev.contact_person,
+        contact_phone: user.phoneNumber || prev.contact_phone
+      }));
+    }
+  }, [user, role, authLoading, navigate]);
 
   // Update co-living inclusions
   useEffect(() => {
@@ -723,7 +719,6 @@ function OwnerAddPG() {
       });
 
       console.log("Submitting property data with owner UID:", user.uid);
-      console.log("API URL:", pgAPI.createProperty.toString()); // Debug log
       
       // ✅ USING pgAPI CONVENIENCE METHOD
       const response = await pgAPI.createProperty(formData);
@@ -1361,28 +1356,17 @@ function OwnerAddPG() {
     );
   };
 
-  if (!user) {
+  /* ================= PROTECTION ================= */
+  if (authLoading) {
     return (
-      <div style={styles.container}>
-        <div style={styles.card}>
-          <h2 style={styles.title}>➕ Add New Property</h2>
-          <div style={styles.loginPrompt}>
-            <h3>🔒 Please Log In</h3>
-            <p>You need to be logged in to add a new property.</p>
-            <button 
-              onClick={() => navigate("/login")}
-              style={styles.loginButton}
-            >
-              🔑 Go to Login Page
-            </button>
-            <p style={styles.loginNote}>
-              After logging in, you'll be redirected back to this page.
-            </p>
-          </div>
-        </div>
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
     );
   }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (role !== "owner") return <Navigate to="/" replace />;
 
   const isSubmitDisabled = loading || 
     !selectedLocation.address || 
@@ -1851,7 +1835,7 @@ function OwnerAddPG() {
   );
 }
 
-// Styles (unchanged)
+// Styles (unchanged - keeping original styles)
 const styles = {
   container: {
     minHeight: "100vh",
