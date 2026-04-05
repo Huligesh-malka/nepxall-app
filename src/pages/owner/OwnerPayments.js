@@ -1,6 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext"; 
+   import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import SignatureCanvas from "react-signature-canvas";
 import jsPDF from "jspdf";
@@ -29,9 +27,6 @@ const BRAND_LIGHT_BG = "#f8fafc";
 const API = "https://nepxall-backend.onrender.com/api/owner";
 
 export default function OwnerPayments() {
-  const { user, role, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
-  
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -52,27 +47,11 @@ export default function OwnerPayments() {
 
   const sigCanvas = useRef(null);
   const receiptRef = useRef();
-
-  // Get token from auth context or localStorage
-  const getToken = useCallback(() => {
-    return localStorage.getItem("token") || user?.token;
-  }, [user]);
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    // Redirect if not authenticated or not owner
-    if (!authLoading && !user) {
-      navigate("/login");
-    }
-    if (!authLoading && role !== "owner") {
-      navigate("/");
-    }
-  }, [user, role, authLoading, navigate]);
-
-  useEffect(() => {
-    if (user && role === "owner") {
-      fetchPayments();
-    }
-  }, [user, role]);
+    fetchPayments();
+  }, []);
 
   // Sync canvas size when step 3 opens
   useEffect(() => {
@@ -89,7 +68,6 @@ export default function OwnerPayments() {
   const fetchPayments = async () => {
     try {
       setLoading(true);
-      const token = getToken();
       const res = await axios.get(`${API}/payments`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -97,9 +75,6 @@ export default function OwnerPayments() {
     } catch (err) {
       console.error(err);
       alert("Failed to fetch payments ❌");
-      if (err.response?.status === 401) {
-        navigate("/login");
-      }
     } finally {
       setLoading(false);
     }
@@ -108,7 +83,6 @@ export default function OwnerPayments() {
   const handleViewReceipt = async (bookingId) => {
     try {
       setIsSubmitting(true);
-      const token = getToken();
       const res = await axios.get(`${API}/receipt-details/${bookingId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -129,7 +103,6 @@ export default function OwnerPayments() {
   const handleDirectDownload = async (bookingId) => {
     try {
       setIsSubmitting(true);
-      const token = getToken();
       const res = await axios.get(`${API}/receipt-details/${bookingId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -330,7 +303,6 @@ export default function OwnerPayments() {
 
   const handleViewPdf = async (bookingId, filePath) => {
     try {
-      const token = getToken();
       await axios.post(`${API}/agreements/viewed`, { booking_id: bookingId }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -358,12 +330,9 @@ export default function OwnerPayments() {
     try {
       setIsSubmitting(true);
       
-      const token = getToken();
       const verifyRes = await axios.post(`${API}/agreements/verify-owner`, {
         booking_id: selectedBooking.booking_id,
         mobile: mobile
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (!verifyRes.data.success) {
@@ -422,15 +391,12 @@ export default function OwnerPayments() {
 
     try {
       setIsSubmitting(true);
-      const token = getToken();
       const res = await axios.post(`${API}/agreements/sign`, {
         booking_id: selectedBooking.booking_id,
         owner_mobile: mobile,
         owner_signature: signatureBase64,
         accepted_terms: true,
         owner_device_info: JSON.stringify(deviceInfo) 
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (res.data.success) {
@@ -477,25 +443,6 @@ export default function OwnerPayments() {
       alert("Failed to generate PDF ❌");
     }
   };
-
-  // Show loading state while checking authentication
-  if (authLoading) {
-    return (
-      <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  // Redirect if not authenticated
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Redirect if not owner
-  if (role !== "owner") {
-    return <Navigate to="/" replace />;
-  }
 
   if (loading) return <Box p={5} textAlign="center"><CircularProgress /></Box>;
 
