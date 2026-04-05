@@ -700,7 +700,7 @@ export default function PrivateChat() {
           </span>
           <span style={s.hdrStatus}>
             <span style={{ ...s.statusDot, background: online ? "#22c55e" : "#94a3b8" }} />
-            {online ? "Online" : "Offline"}
+            {online ? "" : ""}
           </span>
         </div>
       </div>
