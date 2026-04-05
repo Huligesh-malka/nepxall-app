@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { auth } from "../firebase";
+import { useAuth } from "../context/AuthContext";
+import { Navigate } from "react-router-dom";
 import api from "../api/api";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
@@ -66,6 +67,9 @@ const UserActiveStay = () => {
   const [stays, setStays] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  
+  // ✅ USE ONLY THIS - No direct auth.currentUser
+  const { user, role, loading: authLoading } = useAuth();
 
   const receiptRef = useRef();
   const [selectedStay, setSelectedStay] = useState(null);
@@ -87,7 +91,6 @@ const UserActiveStay = () => {
   const loadStay = useCallback(async (showLoader = true) => {
     try {
       if (showLoader) setLoading(true);
-      const user = auth.currentUser;
       if (!user) return;
 
       const token = await user.getIdToken();
@@ -111,14 +114,27 @@ const UserActiveStay = () => {
     } finally {
       if (showLoader) setLoading(false);
     }
-  }, []);
+  }, [user]);
 
+  // ✅ MOVED useEffect BEFORE conditional returns
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      user ? loadStay(true) : navigate("/login");
-    });
-    return () => unsubscribe();
-  }, [loadStay, navigate]);
+    if (user) {
+      loadStay(true);
+    }
+  }, [user, loadStay]);
+
+  // ✅ PROTECTION - MOVED AFTER ALL HOOKS
+  if (authLoading) {
+    return (
+      <div style={container}>
+        <p style={{ textAlign: "center", padding: 50 }}>⏳ Loading authentication...</p>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
   const submitRefundRequest = async (stayId) => {
     if (!refundReason || !refundUpi) {
@@ -131,7 +147,6 @@ const UserActiveStay = () => {
     }
     try {
       setIsSubmitting(true);
-      const user = auth.currentUser;
       const token = await user.getIdToken();
       const res = await api.post(
         "/bookings/refunds/request",
@@ -160,7 +175,6 @@ const UserActiveStay = () => {
       return;
     }
     try {
-      const user = auth.currentUser;
       const token = await user.getIdToken();
       const res = await api.post(
         "/bookings/vacate/request",
@@ -193,7 +207,6 @@ const UserActiveStay = () => {
 
   const acceptRefund = async (bookingId) => {
     try {
-      const user = auth.currentUser;
       const token = await user.getIdToken();
       await api.post(
         "/bookings/refunds/accept",
@@ -210,7 +223,6 @@ const UserActiveStay = () => {
 
   const rejectRefund = async (bookingId) => {
     try {
-      const user = auth.currentUser;
       const token = await user.getIdToken();
       await api.post(
         "/bookings/refunds/reject",
@@ -670,10 +682,10 @@ const UserActiveStay = () => {
                 <div style={sectionBlock}>
                   <label style={receiptLabel}>👤 ISSUED TO</label>
                   <p style={receiptValue}>
-                    {auth.currentUser?.displayName || "Valued Tenant"}
+                    {user?.displayName || "Valued Tenant"}
                   </p>
                   <p style={receiptSubValue}>
-                    Mob: {auth.currentUser?.phoneNumber || "Registered User"}
+                    Mob: {user?.phoneNumber || "Registered User"}
                   </p>
                 </div>
                 <div style={sectionBlock}>
