@@ -31,13 +31,10 @@ const UserBookingHistory = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
 
-  // ✅ PROTECTION AT TOP
-  if (authLoading) return <div>Loading...</div>;
-  if (!user) return <Navigate to="/login" replace />;
-
   // Constants
   const PAYMENT_TIMEOUT = 300;
 
+  // ⚠️ IMPORTANT: Move hooks BEFORE any conditional returns
   // Filter bookings based on active tab
   const filteredBookings = useMemo(() => {
     if (activeTab === "all") return bookings;
@@ -310,7 +307,7 @@ const UserBookingHistory = () => {
       case "paid":
         return {
           showPayButton: false,
-          showAgreementButton: true, // Show agreement button when payment is verified
+          showAgreementButton: true,
           message: null,
           badge: { text: "Payment Verified", style: "paid" },
           canPay: false
@@ -358,6 +355,10 @@ const UserBookingHistory = () => {
   const handleFillAgreement = useCallback((bookingId) => {
     navigate(`/agreement-form/${bookingId}`);
   }, [navigate]);
+
+  // ✅ PROTECTION - MOVED AFTER ALL HOOKS
+  if (authLoading) return <div>Loading...</div>;
+  if (!user) return <Navigate to="/login" replace />;
 
   // Loading state
   if (loading) {
@@ -856,7 +857,7 @@ const UserBookingHistory = () => {
   );
 };
 
-// Modern Styles
+// Modern Styles (same as before)
 const styles = {
   container: {
     maxWidth: 1200,

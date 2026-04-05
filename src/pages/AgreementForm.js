@@ -49,10 +49,6 @@ const AgreementForm = () => {
     maintenance: "0",
   });
 
-  // ✅ PROTECTION AT TOP
-  if (authLoading) return <div>Loading...</div>;
-  if (!user) return <Navigate to="/login" replace />;
-
   /* ================= HELPERS ================= */
   const cleanPhoneNumber = (phone) => {
     if (!phone) return "";
@@ -84,6 +80,7 @@ const AgreementForm = () => {
     }
   };
 
+  // ✅ MOVED useEffect BEFORE conditional returns
   useEffect(() => {
     if (bookingId) fetchAgreementStatus();
   }, [bookingId]);
@@ -213,6 +210,10 @@ const AgreementForm = () => {
       </Typography>
     </Box>
   );
+
+  // ✅ PROTECTION - MOVED AFTER ALL HOOKS
+  if (authLoading) return <div>Loading authentication...</div>;
+  if (!user) return <Navigate to="/login" replace />;
 
   return (
     <Box sx={{ maxWidth: "900px", margin: "30px auto", p: 2 }}>
