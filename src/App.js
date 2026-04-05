@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "./firebase";
+import { useAuth } from "./context/AuthContext";
 
 /* LAYOUTS */
 import MainLayout from "./layouts/MainLayout";
@@ -35,11 +34,11 @@ import VisitSchedulePage from "./pages/VisitSchedulePage";
 import PublicAgreementPage from "./pages/PublicAgreementPage";
 import ServicesPage from "./pages/ServicesPage";
 
-/* ⭐ DIGILOCKER */
+/* DIGILOCKER */
 import DigiLockerVerify from "./pages/DigiLockerVerify";
 import DigiLockerCallback from "./pages/DigiLockerCallback";
 
-/* ⭐ USER PREMIUM */
+/* USER PREMIUM */
 import UserPremiumPlans from "./pages/UserPremiumPlans";
 
 /* CHAT */
@@ -61,8 +60,6 @@ import OwnerChatList from "./pages/OwnerChatList";
 import CreatePlan from "./pages/CreatePlan";
 import OwnerPayments from "./pages/owner/OwnerPayments";
 import OwnerVacateRequests from "./pages/owner/OwnerVacateRequests";
-
-/* ⭐ OWNER PREMIUM */
 import OwnerPremiumPlans from "./pages/owner/OwnerPremiumPlans";
 
 /* HOTEL */
@@ -79,11 +76,8 @@ import SettlementHistory from "./pages/admin/SettlementHistory";
 import AdminPayments from "./pages/admin/AdminPayments";
 import AdminServiceBookings from "./pages/admin/AdminServiceBookings";
 import AdminRefunds from "./pages/admin/AdminRefunds";
-
-/* ✅ NEW ADMIN AGREEMENT PAGES */
 import AdminAgreements from "./pages/admin/AdminAgreements";
 import AdminAgreementDetails from "./pages/admin/AdminAgreementDetails";
-
 
 /* VENDOR */
 import VendorDashboard from "./pages/VendorDashboard";
@@ -95,32 +89,25 @@ import ScanPG from "./pages/ScanPG";
 import { testBackendConnection } from "./config";
 
 function App() {
-
-  const [user, setUser] = useState(undefined);
+  const { user, role, loading } = useAuth();
 
   useEffect(() => {
     testBackendConnection();
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-    });
-    return unsub;
   }, []);
 
-  if (user === undefined) return null;
+  /* 🔥 LOADING */
+  if (loading) return null;
 
+  /* 🔐 PRIVATE ROUTE */
   const PrivateRoute = ({ children }) =>
     user ? children : <Navigate to="/login" replace />;
 
-  const RoleRoute = ({ children, allowedRole }) => {
-    const role = localStorage.getItem("role");
-    return user && role === allowedRole
-      ? children
-      : <Navigate to="/" replace />;
-  };
+  /* 🔐 ROLE ROUTE */
+  const RoleRoute = ({ children, allowedRole }) =>
+    user && role === allowedRole ? children : <Navigate to="/" replace />;
 
   return (
     <Routes>
-
       {/* PUBLIC */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<UserPGSearch />} />
@@ -138,9 +125,8 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* USER ROUTES */}
+      {/* USER */}
       <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
-
         <Route path="/booking/:pgId" element={<BookingForm />} />
         <Route path="/user/bookings" element={<UserBookingHistory />} />
         <Route path="/user/services/:bookingId" element={<ServicesPage />} />
@@ -151,16 +137,12 @@ function App() {
         <Route path="/user/my-stay" element={<UserActiveStay />} />
         <Route path="/user/notifications" element={<NotificationBell />} />
         <Route path="/user/aadhaar-kyc" element={<AadhaarKyc />} />
-
         <Route path="/user/digilocker" element={<DigiLockerVerify />} />
         <Route path="/digilocker/callback" element={<DigiLockerCallback />} />
-
         <Route path="/user/visit-schedule/:bookingId" element={<VisitSchedulePage />} />
         <Route path="/public/agreement/:hash" element={<PublicAgreementPage />} />
         <Route path="/user/premium" element={<UserPremiumPlans />} />
-
         <Route path="/chat/private/:userId/:pgId" element={<PrivateChat />} />
-
       </Route>
 
       {/* OWNER */}
@@ -171,9 +153,8 @@ function App() {
           </RoleRoute>
         </PrivateRoute>
       }>
-        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route index element={<Navigate to="dashboard" />} />
         <Route path="dashboard" element={<OwnerDashboard />} />
-
         <Route path="payments" element={<OwnerPayments />} />
         <Route path="vacate" element={<OwnerVacateRequests />} />
         <Route path="premium" element={<OwnerPremiumPlans />} />
@@ -183,14 +164,6 @@ function App() {
         <Route path="hotels" element={<OwnerHotels />} />
         <Route path="add-hotel" element={<AddHotel />} />
         <Route path="add" element={<OwnerAddPG />} />
-        <Route path="edit/:id" element={<EditPG />} />
-        <Route path="rooms/:pgId" element={<OwnerRooms />} />
-        <Route path="photos/:id" element={<OwnerPGPhotos />} />
-        <Route path="videos/:id" element={<OwnerPGVideos />} />
-        <Route path="reviews/:pgId" element={<OwnerReviewReply />} />
-        <Route path="property/:propertyId/plans" element={<CreatePlan />} />
-        <Route path="notifications" element={<OwnerNotifications />} />
-        <Route path="chats" element={<OwnerChatList />} />
       </Route>
 
       {/* ADMIN */}
@@ -201,21 +174,8 @@ function App() {
           </RoleRoute>
         </PrivateRoute>
       }>
-        <Route index element={<Navigate to="finance" replace />} />
+        <Route index element={<Navigate to="finance" />} />
         <Route path="finance" element={<AdminFinanceDashboard />} />
-        <Route path="payments" element={<AdminPayments />} />
-        <Route path="settlements" element={<AdminSettlements />} />
-        <Route path="settlement-history" element={<SettlementHistory />} />
-        <Route path="pending-pgs" element={<AdminPendingPGs />} />
-        <Route path="pg/:id" element={<AdminPGDetails />} />
-        <Route path="owner-verification" element={<AdminOwnerVerification />} />
-        <Route path="services" element={<AdminServiceBookings />} />
-        <Route path="refunds" element={<AdminRefunds />} />
-
-
-        {/* ✅ NEW AGREEMENT ROUTES */}
-        <Route path="agreements" element={<AdminAgreements />} />
-        <Route path="agreement/:id" element={<AdminAgreementDetails />} />
       </Route>
 
       {/* VENDOR */}
@@ -226,13 +186,12 @@ function App() {
           </RoleRoute>
         </PrivateRoute>
       }>
-        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route index element={<Navigate to="dashboard" />} />
         <Route path="dashboard" element={<VendorDashboard />} />
       </Route>
 
       {/* FALLBACK */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-
+      <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
 }
