@@ -14,10 +14,10 @@ const MainLayout = () => {
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /* ================= FETCH ROLE ================= */
+  /* ================= FETCH USER ================= */
   const fetchUser = async (currentUser) => {
     try {
-      const idToken = await currentUser.getIdToken();
+      const idToken = await currentUser.getIdToken(true);
 
       const res = await userAPI.post("/auth/firebase", { idToken });
 
@@ -28,14 +28,16 @@ const MainLayout = () => {
 
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("user_id", res.data.userId);
+        localStorage.setItem("role", backendRole);
 
         console.log("✅ Role:", backendRole);
       } else {
-        handleLogout();
+        throw new Error("Invalid backend");
       }
     } catch (err) {
-      console.error("❌ Error:", err);
-      handleLogout();
+      console.error("❌ Auth Error:", err);
+      setUser(null);
+      setRole(null);
     } finally {
       setLoading(false);
     }
@@ -44,26 +46,60 @@ const MainLayout = () => {
   /* ================= AUTH ================= */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
+      console.log("🔥 Auth Changed:", currentUser);
 
       if (currentUser) {
+        setUser(currentUser);
+        setLoading(true);
         await fetchUser(currentUser);
       } else {
+        setUser(null);
         setRole(null);
         setLoading(false);
+
+        if (
+          location.pathname !== "/login" &&
+          location.pathname !== "/register"
+        ) {
+          navigate("/login");
+        }
       }
     });
 
     return () => unsub();
+  }, [navigate, location.pathname]);
+
+  /* ================= 🔥 LISTEN STORAGE EVENTS ================= */
+  useEffect(() => {
+    const updateAuthState = () => {
+      const token = localStorage.getItem("token");
+      const savedRole = localStorage.getItem("role");
+
+      if (token && savedRole) {
+        setRole(savedRole);
+        setUser(auth.currentUser);
+      }
+    };
+
+    window.addEventListener("storage", updateAuthState);
+    window.addEventListener("role-updated", updateAuthState);
+
+    return () => {
+      window.removeEventListener("storage", updateAuthState);
+      window.removeEventListener("role-updated", updateAuthState);
+    };
   }, []);
 
   /* ================= LOGOUT ================= */
   const handleLogout = async () => {
     await signOut(auth);
     localStorage.clear();
+
     setUser(null);
     setRole(null);
-    navigate("/login");
+
+    // 🔥 FORCE RESET
+    window.location.href = "/login";
   };
 
   /* ================= LOADING ================= */
@@ -77,24 +113,10 @@ const MainLayout = () => {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
-
-      {/* ✅ ALWAYS SHOW SIDEBAR */}
       <Sidebar role={role} user={user} />
 
-      <div
-        style={{
-          marginLeft: 250,
-          padding: 24,
-          width: "100%"
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            mb: 4
-          }}
-        >
+      <div style={{ marginLeft: 250, padding: 24, width: "100%" }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}>
           <Typography variant="h6" sx={{ fontWeight: 800 }}>
             {location.pathname === "/"
               ? "DASHBOARD"
