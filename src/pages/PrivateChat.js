@@ -407,8 +407,16 @@ export default function PrivateChat() {
         setMessages(msgRes.data || []);
         setLoading(false);
         scrollBottom(false);
+        
         if (!socket.connected) socket.connect();
+        
         socket.emit("register", fbUser.uid);
+        
+        // Request online status for the other user
+        if (urRes.data?.firebase_uid) {
+          socket.emit("get_online_status", urRes.data.firebase_uid);
+        }
+        
         socket.emit("join_private_room", {
           userA: meRes.data.id,
           userB: Number(userId),
@@ -458,10 +466,18 @@ export default function PrivateChat() {
       }
     };
     const onOn = (uid) => {
-      if (uid === otherUser?.firebase_uid) setOnline(true);
+      console.log("Received user_online event for:", uid, "Current other user UID:", otherUser?.firebase_uid);
+      if (uid === otherUser?.firebase_uid) {
+        console.log("Setting online to true");
+        setOnline(true);
+      }
     };
     const onOff = (uid) => {
-      if (uid === otherUser?.firebase_uid) setOnline(false);
+      console.log("Received user_offline event for:", uid, "Current other user UID:", otherUser?.firebase_uid);
+      if (uid === otherUser?.firebase_uid) {
+        console.log("Setting online to false");
+        setOnline(false);
+      }
     };
     const onEdit = ({ messageId, newMessage }) => {
       setMessages((p) =>
@@ -469,6 +485,12 @@ export default function PrivateChat() {
           x.id === messageId ? { ...x, message: newMessage, edited: true } : x
         )
       );
+    };
+    const onOnlineStatus = ({ firebase_uid, isOnline }) => {
+      console.log("Received online status for:", firebase_uid, "isOnline:", isOnline);
+      if (firebase_uid === otherUser?.firebase_uid) {
+        setOnline(isOnline);
+      }
     };
 
     socket.on("receive_private_message", onMsg);
@@ -479,6 +501,7 @@ export default function PrivateChat() {
     socket.on("user_online", onOn);
     socket.on("user_offline", onOff);
     socket.on("message_edited", onEdit);
+    socket.on("user_online_status", onOnlineStatus);
     
     return () => {
       socket.off("receive_private_message", onMsg);
@@ -489,6 +512,7 @@ export default function PrivateChat() {
       socket.off("user_online", onOn);
       socket.off("user_offline", onOff);
       socket.off("message_edited", onEdit);
+      socket.off("user_online_status", onOnlineStatus);
     };
   }, [pgId, me?.id, userId, otherUser?.firebase_uid]);
 
