@@ -1,15 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom"; // ✅ Added Navigate
 import api from "../../api/api";
+import { useAuth } from "../../context/AuthContext"; // ✅ Added AuthContext
 
 const AdminAgreements = () => {
   const [agreements, setAgreements] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // ✅ 1. Access Auth State
+  const { user, role, loading: authLoading } = useAuth();
+
   const fetchAgreements = async () => {
     try {
       // Endpoint matches the Backend Router: /api/agreements-form/admin/all
-      const res = await api.get("/agreements-form/admin/all"); 
+      const res = await api.get("/agreements-form/admin/all");
       if (res.data.success) {
         setAgreements(res.data.data);
       }
@@ -21,8 +25,24 @@ const AdminAgreements = () => {
   };
 
   useEffect(() => {
-    fetchAgreements();
-  }, []);
+    // Only fetch if auth is finished and user is admin
+    if (!authLoading && user && role === "admin") {
+      fetchAgreements();
+    }
+  }, [authLoading, user, role]);
+
+  // ✅ 2. Route Protection Block
+  if (authLoading) {
+    return <div style={centered}>Verifying Admin Session...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (role !== "admin") {
+    return <Navigate to="/" replace />;
+  }
 
   const getStatusStyle = (status) => {
     switch (status?.toLowerCase()) {
@@ -44,7 +64,7 @@ const AdminAgreements = () => {
     <div style={{ padding: "30px", maxWidth: "1200px", margin: "0 auto", fontFamily: "'Inter', sans-serif" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
         <h2 style={{ margin: 0, display: "flex", alignItems: "center", gap: "10px", color: "#1e293b" }}>
-          📄 Agreement Management 
+          📄 Agreement Management
         </h2>
         <span style={countBadge}>{agreements.length} Total Applications</span>
       </div>

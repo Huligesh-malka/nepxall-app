@@ -59,7 +59,7 @@ const AdminPayments = () => {
     try {
       setLoading(true);
       setError("");
-      const res = await api.get("/payments/admin/payments");
+      const res = await api.get("/admin/payments/all"); // Standardized endpoint
       if (res.data.success) {
         setPayments(res.data.data || []);
       } else {
@@ -77,7 +77,7 @@ const AdminPayments = () => {
     if (!window.confirm("Are you sure you want to approve this payment?")) return;
     try {
       setProcessing(orderId);
-      const res = await api.put(`/payments/admin/payments/${orderId}/verify`);
+      const res = await api.put(`/admin/payments/${orderId}/verify`);
       if (res.data.success) {
         setSnackbar({ open: true, message: "Payment approved successfully", severity: "success" });
         fetchPayments();
@@ -93,7 +93,7 @@ const AdminPayments = () => {
     if (!window.confirm("Are you sure you want to reject this payment? This action cannot be undone.")) return;
     try {
       setProcessing(orderId);
-      const res = await api.put(`/payments/admin/payments/${orderId}/reject`);
+      const res = await api.put(`/admin/payments/${orderId}/reject`);
       if (res.data.success) {
         setSnackbar({ open: true, message: "Payment rejected successfully", severity: "info" });
         fetchPayments();
@@ -122,8 +122,8 @@ const AdminPayments = () => {
     }
 
     const userName = p.reg_name || "User";
-    // 🔥 STEP 5: Updated WhatsApp Message to use total_amount
-    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${userName}*,%0AYour payment for *${p.pg_name}* (${p.sharing || 'N/A'} Sharing) has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.total_amount || p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
+    const total = p.total_amount || p.amount;
+    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${userName}*,%0AYour payment for *${p.pg_name}* (${p.sharing || 'N/A'} Sharing) has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${total}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
     const whatsappUrl = `https://wa.me/${cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone}?text=${message}`;
     window.open(whatsappUrl, "_blank");
   };
@@ -183,7 +183,7 @@ const AdminPayments = () => {
             variant="contained" 
             startIcon={<RefreshIcon />} 
             onClick={fetchPayments}
-            sx={{ borderRadius: "10px", textTransform: 'none', px: 3, backgroundColor: BRAND_BLUE, fontWeight: '700' }}
+            sx={{ borderRadius: "10px", textTransform: 'none', px: 3, backgroundColor: BRAND_BLUE, fontWeight: '700', boxShadow: '0 4px 12px rgba(11, 94, 215, 0.2)' }}
         >
             Refresh Data
         </Button>
@@ -363,7 +363,6 @@ const AdminPayments = () => {
                 <h3 style={{ ...statusText, color: BRAND_GREEN }}>PAID & VERIFIED</h3>
                 <p style={dateText}>Method: Digital Payment</p>
                 <Divider sx={{ my: 1 }} />
-                {/* 🔥 STEP 4: Updated Top Amount Box */}
                 <div style={amountDisplay}>₹{selectedPayment.total_amount || selectedPayment.amount}</div>
               </div>
             </div>
@@ -374,29 +373,28 @@ const AdminPayments = () => {
                 <span>TOTAL</span>
               </div>
 
-              {/* 🔥 STEP 2: REPLACE FULL BLOCK WITH DYNAMIC BREAKDOWN */}
-              {selectedPayment.rent_amount > 0 && (
+              {/* DYNAMIC BREAKDOWN LOGIC */}
+              {Number(selectedPayment.rent_amount) > 0 && (
                 <div style={tableRow}>
                   <span>Room Rent ({selectedPayment.sharing})</span>
                   <span>₹{selectedPayment.rent_amount}</span>
                 </div>
               )}
 
-              {selectedPayment.maintenance_amount > 0 && (
+              {Number(selectedPayment.maintenance_amount) > 0 && (
                 <div style={tableRow}>
                   <span>Maintenance Charges</span>
                   <span>₹{selectedPayment.maintenance_amount}</span>
                 </div>
               )}
 
-              {selectedPayment.security_deposit > 0 && (
+              {Number(selectedPayment.security_deposit) > 0 && (
                 <div style={tableRow}>
                   <span>Security Deposit</span>
                   <span>₹{selectedPayment.security_deposit}</span>
                 </div>
               )}
 
-              {/* 🔥 STEP 3: UPDATE TOTAL ROW */}
               <div style={{ ...tableRow, borderBottom: `2px solid ${BRAND_BLUE}`, fontWeight: "bold", background: "#f8fafc" }}>
                 <span>NET AMOUNT RECEIVED</span>
                 <span>₹{selectedPayment.total_amount || selectedPayment.amount}</span>

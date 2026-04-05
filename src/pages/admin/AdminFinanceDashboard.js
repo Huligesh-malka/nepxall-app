@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { Navigate } from "react-router-dom";
+import api from "../../api/api"; // Assuming you have a central API instance
+import { useAuth } from "../../context/AuthContext"; // ✅ Added AuthContext
 import {
   CurrencyRupeeIcon,
   ClockIcon,
@@ -9,23 +11,18 @@ import {
   BanknotesIcon,
 } from "@heroicons/react/24/outline";
 
-const API = "http://localhost:5000/api/payments";
-
 export default function AdminFinanceDashboard() {
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
-  const token = localStorage.getItem("token");
-
-  useEffect(() => {
-    fetchSummary();
-  }, []);
+  
+  // ✅ 1. Get Auth State
+  const { user, role, loading: authLoading } = useAuth();
 
   const fetchSummary = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API}/admin/finance-summary`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // Using 'api' instance which likely handles the token via interceptors
+      const res = await api.get(`/payments/admin/finance-summary`);
       setData(res.data.data);
     } catch (error) {
       console.error("Error fetching finance data:", error);
@@ -34,6 +31,31 @@ export default function AdminFinanceDashboard() {
     }
   };
 
+  useEffect(() => {
+    // ✅ 2. Only fetch if authenticated and admin
+    if (!authLoading && user && role === "admin") {
+      fetchSummary();
+    }
+  }, [authLoading, user, role]);
+
+  // ✅ 3. Handle Route Protection Logic
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (role !== "admin") {
+    return <Navigate to="/" replace />;
+  }
+
+  /* --- Helper Functions --- */
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -107,7 +129,7 @@ export default function AdminFinanceDashboard() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Finance Dashboard</h1>
               <p className="mt-2 text-sm text-gray-600">
-                Real-time overview of your financial metrics
+                Real-time overview of your financial metrics (Admin Access)
               </p>
             </div>
             <button
@@ -172,7 +194,7 @@ export default function AdminFinanceDashboard() {
                   <div className="relative w-full">
                     <div
                       className="bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-lg w-full transition-all duration-300 group-hover:from-blue-600 group-hover:to-blue-500"
-                      style={{ height: `${height * 0.6}px` }}
+                      style={{ height: `${height * 1.8}px` }} // Scaled for better visibility
                     >
                       <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
                         ₹{height * 100}

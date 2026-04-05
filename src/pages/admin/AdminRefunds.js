@@ -1,54 +1,82 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import { Navigate } from "react-router-dom";
 import api from "../../api/api";
-import { auth } from "../../firebase";
+import { useAuth } from "../../context/AuthContext"; // ✅ Added AuthContext
 
 const AdminRefunds = () => {
   const [refunds, setRefunds] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const loadRefunds = async () => {
+  // ✅ 1. Get Auth State
+  const { user, role, loading: authLoading } = useAuth();
+
+  // 🔹 Load data
+  const loadRefunds = useCallback(async () => {
+    // Only fetch if authenticated and admin
+    if (authLoading || !user || role !== "admin") return;
+
     try {
-      const user = auth.currentUser;
-      const token = await user.getIdToken();
-      const res = await api.get("/payments/admin/refunds", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setRefunds(res.data);
+      setLoading(true);
+      // Assuming 'api' instance handles tokens via interceptors
+      const res = await api.get("/payments/admin/refunds");
+      setRefunds(res.data || []);
     } catch (err) {
       console.error("❌ Error loading refunds:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [authLoading, user, role]);
 
   useEffect(() => {
     loadRefunds();
-  }, []);
+  }, [loadRefunds]);
 
+  // ✅ 2. Handle Route Protection Logic
+  if (authLoading) {
+    return <p style={{ padding: 20 }}>⏳ Verifying Admin Session...</p>;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (role !== "admin") {
+    return <Navigate to="/" replace />;
+  }
+
+  // 🔹 Update Status
   const updateStatus = async (id, status) => {
+    if (!window.confirm(`Are you sure you want to mark this as ${status}?`)) return;
+
     try {
-      const user = auth.currentUser;
-      const token = await user.getIdToken();
-      await api.put(
-        `/payments/admin/refunds/${id}`,
-        { status },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      loadRefunds();
+      await api.put(`/payments/admin/refunds/${id}`, { status });
+      loadRefunds(); // Refresh list after update
     } catch (err) {
       console.error("❌ Update failed:", err);
       alert("Failed to update status");
     }
   };
 
+  /* ================= UI ================= */
+
   if (loading) return <p style={{ padding: 20 }}>⏳ Loading refunds...</p>;
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2 style={{ marginBottom: 20, color: "#333" }}>💸 Refund Management</h2>
+    <div style={{ padding: 20, maxWidth: "1200px", margin: "0 auto" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <h2 style={{ color: "#333", margin: 0 }}>💸 Refund Management</h2>
+        <button 
+          onClick={loadRefunds}
+          style={{ background: "#f1f5f9", border: "1px solid #cbd5e1", padding: "5px 12px", borderRadius: "5px", cursor: "pointer", fontSize: "0.85rem" }}
+        >
+          Refresh Data
+        </button>
+      </div>
 
       {refunds.length === 0 ? (
-        <p>No refund requests found.</p>
+        <div style={{ textAlign: "center", padding: "40px", background: "#fff", borderRadius: "10px", boxShadow: "0 4px 6px rgba(0,0,0,0.05)" }}>
+          <p style={{ color: "#64748b" }}>No refund requests found.</p>
+        </div>
       ) : (
         <div style={tableContainer}>
           <table style={tableStyle}>
@@ -99,7 +127,8 @@ const AdminRefunds = () => {
                           Mark Paid
                         </button>
                       )}
-                      {r.status === "paid" && <span style={{ color: "#16a34a" }}>✅ Completed</span>}
+                      {r.status === "paid" && <span style={{ color: "#16a34a", fontSize: "0.85rem", fontWeight: "bold" }}>✅ Completed</span>}
+                      {r.status === "rejected" && <span style={{ color: "#dc2626", fontSize: "0.85rem" }}>Rejected</span>}
                     </div>
                   </td>
                 </tr>
@@ -114,7 +143,7 @@ const AdminRefunds = () => {
 
 export default AdminRefunds;
 
-/* ===== IMPROVED TABLE STYLES ===== */
+/* ===== STYLES (Kept from your original) ===== */
 
 const tableContainer = {
   width: "100%",
@@ -153,7 +182,6 @@ const td = {
 
 const rowStyle = {
   transition: "background 0.2s",
-  ":hover": { background: "#f8fafc" }
 };
 
 const codeText = {
@@ -167,8 +195,6 @@ const actionGroup = {
   display: "flex",
   gap: "8px",
 };
-
-/* ===== BUTTON & BADGE STYLES ===== */
 
 const approveBtn = {
   background: "#16a34a",

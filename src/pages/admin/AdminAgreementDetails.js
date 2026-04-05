@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Navigate } from "react-router-dom";
 import api from "../../api/api";
+import { useAuth } from "../../context/AuthContext";
 
 const AdminAgreementDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  
+  // 1. Hook into AuthContext for route protection
+  const { user, role, loading: authLoading } = useAuth();
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -27,8 +32,24 @@ const AdminAgreementDetails = () => {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [id]);
+    // Only fetch data if the user is authorized as an admin
+    if (!authLoading && user && role === "admin") {
+      fetchData();
+    }
+  }, [id, authLoading, user, role]);
+
+  // 2. ADD PROTECTION & ROLE VALIDATION (BEFORE RENDER)
+  if (authLoading) {
+    return <div style={loaderWrap}>Loading auth status...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (role !== "admin") {
+    return <Navigate to="/" replace />;
+  }
 
   const formatUrl = (path) => {
     if (!path) return null;
