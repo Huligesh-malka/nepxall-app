@@ -8,6 +8,26 @@ const OwnerVacateRequests = () => {
   const [dues, setDues] = useState({});
   const [loadingId, setLoadingId] = useState(null);
 
+  /* ================= MASK FUNCTIONS ================= */
+
+  const maskAccount = (acc) => {
+    if (!acc) return "N/A";
+    return "XXXX XXXX " + acc.slice(-4);
+  };
+
+  const maskIFSC = (ifsc) => {
+    if (!ifsc) return "N/A";
+    return "XXXX" + ifsc.slice(-3);
+  };
+
+  const maskUPI = (upi) => {
+    if (!upi) return "N/A";
+    const parts = upi.split("@");
+    return parts[0].slice(0, 2) + "***@" + parts[1];
+  };
+
+  /* ================= LOAD ================= */
+
   const loadRequests = async () => {
     try {
       const token = await auth.currentUser.getIdToken();
@@ -26,7 +46,11 @@ const OwnerVacateRequests = () => {
     loadRequests();
   }, []);
 
+  /* ================= ACTIONS ================= */
+
   const handleApprove = async (bookingId) => {
+    if (!window.confirm("Are you sure to approve vacate?")) return;
+
     try {
       setLoadingId(bookingId);
 
@@ -53,6 +77,8 @@ const OwnerVacateRequests = () => {
   };
 
   const handleReject = async (bookingId) => {
+    if (!window.confirm("Reject this refund request?")) return;
+
     try {
       const token = await auth.currentUser.getIdToken();
 
@@ -68,6 +94,8 @@ const OwnerVacateRequests = () => {
   };
 
   const handleMarkPaid = async (bookingId) => {
+    if (!window.confirm("Mark this as paid?")) return;
+
     try {
       setLoadingId(bookingId);
 
@@ -86,125 +114,139 @@ const OwnerVacateRequests = () => {
     }
   };
 
+  /* ================= UI ================= */
+
   return (
     <div style={container}>
       <h2>🚪 Vacate & Refund Requests</h2>
 
       {requests.length === 0 && <p>No requests found</p>}
 
-      {requests.map((item) => (
-        <div key={item.booking_id} style={card}>
-          <h3>{item.pg_name}</h3>
-          <p>👤 Tenant: {item.user_name}</p>
-          <p>📅 Move Out: {item.move_out_date || "Not provided"}</p>
+      {requests.map((item) => {
+        const finalRefund =
+          (item.security_deposit || 0) -
+          (item.damage_amount || 0) -
+          (item.pending_dues || 0);
 
-          {/* 💰 REFUND BOX */}
-          <div style={refundBox}>
-            <p><b>💳 Deposit:</b> ₹{item.security_deposit}</p>
-            <p><b>💰 Refund:</b> ₹{item.refund_amount || 0}</p>
+        return (
+          <div key={item.booking_id} style={card}>
+            <h3>{item.pg_name}</h3>
 
-            <p>
-              <b>Status:</b>{" "}
-              {item.refund_status === "pending" &&
-                item.user_approval === "pending" &&
-                "📝 Awaiting Owner Approval"}
+            {/* USER DETAILS */}
+            <p>👤 {item.user_name}</p>
+            <p>📞 {item.phone}</p>
+            <p>🆔 Booking: {item.booking_id}</p>
+            <p>📅 Move Out: {item.move_out_date || "Not provided"}</p>
 
-              {item.refund_status === "approved" &&
-                "⏳ Waiting for User"}
+            {/* REFUND BOX */}
+            <div style={refundBox}>
+              <p>💳 Deposit: ₹{item.security_deposit}</p>
+              <p>⚒ Damage: ₹{item.damage_amount || 0}</p>
+              <p>📉 Dues: ₹{item.pending_dues || 0}</p>
+              <hr />
+              <p><b>💰 Final Refund: ₹{finalRefund}</b></p>
 
-              {item.refund_status === "pending" &&
-                item.user_approval === "accepted" &&
-                "💰 Ready to Pay"}
+              <p>
+                <b>Status:</b>{" "}
+                {item.refund_status === "pending" &&
+                  item.user_approval === "pending" &&
+                  "📝 Awaiting Owner Approval"}
 
-              {item.user_approval === "rejected" &&
-                "❌ User Rejected (Re-Approve needed)"}
+                {item.refund_status === "approved" &&
+                  "⏳ Waiting for User"}
 
-              {item.refund_status === "rejected" &&
-                "❌ Rejected by Owner"}
+                {item.refund_status === "pending" &&
+                  item.user_approval === "accepted" &&
+                  "💰 Ready to Pay"}
 
-              {item.refund_status === "paid" &&
-                "💸 Paid"}
-            </p>
-          </div>
+                {item.user_approval === "rejected" &&
+                  "❌ User Rejected"}
 
-          {/* 🏦 BANK DETAILS */}
-          <div style={detailsBox}>
-            <p><b>🏦 Account:</b> {item.account_number || "N/A"}</p>
-            <p><b>🔢 IFSC:</b> {item.ifsc_code || "N/A"}</p>
-            <p><b>💸 UPI:</b> {item.upi_id || "N/A"}</p>
-            <p><b>📝 Reason:</b> {item.reason}</p>
-            <p><b>⚒ Damage:</b> ₹{item.damage_amount || 0}</p>
-          </div>
+                {item.refund_status === "rejected" &&
+                  "❌ Rejected by Owner"}
 
-          {/* APPROVE / RE-APPROVE */}
-          {item.refund_status !== "approved" &&
-            item.refund_status !== "paid" && (
-              <>
-                <input
-                  type="number"
-                  placeholder="Damage ₹"
-                  value={damage[item.booking_id] || ""}
-                  onChange={(e) =>
-                    setDamage({
-                      ...damage,
-                      [item.booking_id]: e.target.value
-                    })
-                  }
-                  style={input}
-                />
+                {item.refund_status === "paid" &&
+                  "💸 Paid"}
+              </p>
+            </div>
 
-                <input
-                  type="number"
-                  placeholder="Pending Dues ₹"
-                  value={dues[item.booking_id] || ""}
-                  onChange={(e) =>
-                    setDues({
-                      ...dues,
-                      [item.booking_id]: e.target.value
-                    })
-                  }
-                  style={input}
-                />
+            {/* MASKED BANK DETAILS */}
+            <div style={detailsBox}>
+              <p>🏦 Account: {maskAccount(item.account_number)}</p>
+              <p>🔢 IFSC: {maskIFSC(item.ifsc_code)}</p>
+              <p>💸 UPI: {maskUPI(item.upi_id)}</p>
+              <p>📝 Reason: {item.reason}</p>
+            </div>
 
+            {/* APPROVE / REJECT */}
+            {item.refund_status !== "approved" &&
+              item.refund_status !== "paid" && (
+                <>
+                  <input
+                    type="number"
+                    placeholder="Damage ₹"
+                    value={damage[item.booking_id] || ""}
+                    onChange={(e) =>
+                      setDamage({
+                        ...damage,
+                        [item.booking_id]: e.target.value
+                      })
+                    }
+                    style={input}
+                  />
+
+                  <input
+                    type="number"
+                    placeholder="Pending Dues ₹"
+                    value={dues[item.booking_id] || ""}
+                    onChange={(e) =>
+                      setDues({
+                        ...dues,
+                        [item.booking_id]: e.target.value
+                      })
+                    }
+                    style={input}
+                  />
+
+                  <button
+                    style={approveBtn}
+                    onClick={() => handleApprove(item.booking_id)}
+                    disabled={loadingId === item.booking_id}
+                  >
+                    {loadingId === item.booking_id
+                      ? "Processing..."
+                      : "✅ Approve Vacate"}
+                  </button>
+
+                  <button
+                    style={rejectBtn}
+                    onClick={() => handleReject(item.booking_id)}
+                  >
+                    ❌ Reject Refund
+                  </button>
+                </>
+            )}
+
+            {/* MARK PAID ONLY WHEN READY */}
+            {item.refund_status === "pending" &&
+              item.user_approval === "accepted" && (
                 <button
-                  style={approveBtn}
-                  onClick={() => handleApprove(item.booking_id)}
+                  style={paidBtn}
+                  onClick={() => handleMarkPaid(item.booking_id)}
                   disabled={loadingId === item.booking_id}
                 >
-                  {loadingId === item.booking_id
-                    ? "Processing..."
-                    : item.user_approval === "rejected"
-                    ? "🔄 Re-Approve Refund"
-                    : "✅ Approve Vacate"}
+                  💸 Mark as Paid
                 </button>
+            )}
 
-                <button
-                  style={rejectBtn}
-                  onClick={() => handleReject(item.booking_id)}
-                >
-                  ❌ Reject Refund
-                </button>
-              </>
-          )}
-
-          {/* MARK PAID */}
-          {item.refund_status === "pending" &&
-            item.user_approval === "accepted" && (
-              <button
-                style={paidBtn}
-                onClick={() => handleMarkPaid(item.booking_id)}
-              >
-                💸 Mark as Paid
-              </button>
-          )}
-
-          {item.refund_status === "paid" && (
-            <p style={{ color: "green", fontWeight: "bold" }}>
-              ✅ Payment Completed
-            </p>
-          )}
-        </div>
-      ))}
+            {item.refund_status === "paid" && (
+              <p style={{ color: "green", fontWeight: "bold" }}>
+                ✅ Payment Completed
+              </p>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -214,7 +256,7 @@ export default OwnerVacateRequests;
 /* ================= STYLES ================= */
 
 const container = {
-  maxWidth: 600,
+  maxWidth: 650,
   margin: "40px auto",
   padding: 20,
   fontFamily: "sans-serif"
@@ -224,7 +266,7 @@ const card = {
   background: "#fff",
   padding: 20,
   marginBottom: 20,
-  borderRadius: 10,
+  borderRadius: 12,
   boxShadow: "0 5px 15px rgba(0,0,0,0.1)"
 };
 
