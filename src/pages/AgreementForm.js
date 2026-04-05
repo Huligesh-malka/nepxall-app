@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { Navigate } from "react-router-dom";
 import api from "../api/api";
 import SignatureCanvas from "react-signature-canvas";
-import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { auth } from "../firebase";
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { 
   Box, TextField, Button, Typography, CircularProgress, 
   Alert, Snackbar, Paper, Grid, Divider, IconButton, 
@@ -17,9 +15,6 @@ const AgreementForm = () => {
   const { bookingId } = useParams();
   const navigate = useNavigate();
   const sigCanvas = useRef(null);
-  
-  // ✅ USE ONLY THIS - No localStorage.getItem("user_id")
-  const { user, role, loading: authLoading } = useAuth();
 
   /* ================= STATES ================= */
   const [loading, setLoading] = useState(false);
@@ -57,7 +52,7 @@ const AgreementForm = () => {
   };
 
   const handleAadhaarChange = (e) => {
-    const val = e.target.value.replace(/\D/g, "");
+    const val = e.target.value.replace(/\D/g, ""); // Remove non-digits
     if (val.length <= 4) {
       setFormData({ ...formData, aadhaar_last4: val });
     }
@@ -80,7 +75,6 @@ const AgreementForm = () => {
     }
   };
 
-  // ✅ MOVED useEffect BEFORE conditional returns
   useEffect(() => {
     if (bookingId) fetchAgreementStatus();
   }, [bookingId]);
@@ -132,9 +126,7 @@ const AgreementForm = () => {
       return setError("Aadhaar must be exactly 4 digits.");
     }
     setLoading(true);
-    
-    // ✅ REPLACED localStorage.getItem("user_id") with user?.uid
-    const userId = user?.uid;
+    const userId = localStorage.getItem("user_id");
     const data = { ...formData, user_id: userId, booking_id: bookingId };
 
     try {
@@ -143,11 +135,8 @@ const AgreementForm = () => {
         setSuccess("Details submitted!");
         fetchAgreementStatus(); 
       }
-    } catch (err) { 
-      setError("Submission failed."); 
-    } finally { 
-      setLoading(false); 
-    }
+    } catch (err) { setError("Submission failed."); }
+    finally { setLoading(false); }
   };
 
   const handleFinalTenantSign = async () => {
@@ -171,9 +160,7 @@ const AgreementForm = () => {
       }
     } catch (err) {
       setError(err.response?.data?.message || "Final signing failed.");
-    } finally { 
-      setLoading(false); 
-    }
+    } finally { setLoading(false); }
   };
 
   /* ================= LEGAL TEXT COMPONENT ================= */
@@ -215,20 +202,6 @@ const AgreementForm = () => {
       </Typography>
     </Box>
   );
-
-  // ✅ PROTECTION - MOVED AFTER ALL HOOKS
-  if (authLoading) {
-    return (
-      <Box sx={{ maxWidth: "900px", margin: "30px auto", p: 2, textAlign: "center" }}>
-        <CircularProgress />
-        <Typography sx={{ mt: 2 }}>Loading authentication...</Typography>
-      </Box>
-    );
-  }
-  
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
 
   return (
     <Box sx={{ maxWidth: "900px", margin: "30px auto", p: 2 }}>
@@ -361,24 +334,8 @@ const AgreementForm = () => {
               <Typography variant="h5" fontWeight="bold" mb={3}>Draft Rental Agreement</Typography>
               <form onSubmit={handleSubmitInitialForm}>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <TextField 
-                      fullWidth 
-                      name="full_name" 
-                      label="Full Name" 
-                      required 
-                      onChange={handleChange} 
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField 
-                      fullWidth 
-                      name="mobile" 
-                      label="Mobile" 
-                      required 
-                      onChange={handleChange} 
-                    />
-                  </Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="full_name" label="Full Name" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="mobile" label="Mobile" required onChange={handleChange} /></Grid>
                   <Grid item xs={12} md={6}>
                     <TextField 
                       fullWidth 
@@ -391,83 +348,15 @@ const AgreementForm = () => {
                       inputProps={{ maxLength: 4 }}
                     />
                   </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField 
-                      fullWidth 
-                      name="checkin_date" 
-                      label="Check-in Date" 
-                      type="date" 
-                      InputLabelProps={{ shrink: true }} 
-                      required 
-                      onChange={handleChange} 
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField 
-                      fullWidth 
-                      name="address" 
-                      label="Current Address" 
-                      multiline 
-                      rows={2} 
-                      required 
-                      onChange={handleChange} 
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <TextField 
-                      fullWidth 
-                      name="city" 
-                      label="City" 
-                      required 
-                      onChange={handleChange} 
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <TextField 
-                      fullWidth 
-                      name="state" 
-                      label="State" 
-                      required 
-                      onChange={handleChange} 
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <TextField 
-                      fullWidth 
-                      name="pincode" 
-                      label="Pincode" 
-                      required 
-                      onChange={handleChange} 
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField 
-                      fullWidth 
-                      name="rent" 
-                      label="Monthly Rent" 
-                      type="number" 
-                      required 
-                      onChange={handleChange} 
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField 
-                      fullWidth 
-                      name="deposit" 
-                      label="Security Deposit" 
-                      type="number" 
-                      required 
-                      onChange={handleChange} 
-                    />
-                  </Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="checkin_date" label="Check-in Date" type="date" InputLabelProps={{ shrink: true }} required onChange={handleChange} /></Grid>
+                  <Grid item xs={12}><TextField fullWidth name="address" label="Current Address" multiline rows={2} required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={4}><TextField fullWidth name="city" label="City" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={4}><TextField fullWidth name="state" label="State" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={4}><TextField fullWidth name="pincode" label="Pincode" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="rent" label="Monthly Rent" type="number" required onChange={handleChange} /></Grid>
+                  <Grid item xs={12} md={6}><TextField fullWidth name="deposit" label="Security Deposit" type="number" required onChange={handleChange} /></Grid>
                 </Grid>
-                <Button 
-                  type="submit" 
-                  variant="contained" 
-                  fullWidth 
-                  sx={{ mt: 4, py: 1.5 }} 
-                  disabled={loading}
-                >
+                <Button type="submit" variant="contained" fullWidth sx={{ mt: 4, py: 1.5 }} disabled={loading}>
                   {loading ? <CircularProgress size={24} /> : "Submit Details for Review"}
                 </Button>
               </form>
