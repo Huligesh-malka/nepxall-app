@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { useParams, useNavigate } from "react-router-dom";
-import { auth } from "../firebase";
-import { pgAPI } from "../api/api"; // ✅ Using pgAPI convenience methods
-import { getImageUrl } from "../config"; // ✅ Image URL helper
+import { useParams, useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { Box, CircularProgress } from "@mui/material";
+import { pgAPI } from "../api/api";
+import { getImageUrl } from "../config";
 import 'leaflet/dist/leaflet.css';
 
 // Fix for default marker icons in Leaflet
@@ -121,15 +122,15 @@ const initialBhkConfig = {
 function EditPG() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user, role, loading: authLoading } = useAuth();
   
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [mapLoading, setMapLoading] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
   const [manualEditMode, setManualEditMode] = useState(false);
-  const [user, setUser] = useState(null);
   
   const [selectedLocation, setSelectedLocation] = useState(initialLocation);
   const [photos, setPhotos] = useState([]);
@@ -245,29 +246,20 @@ function EditPG() {
     return () => document.head.removeChild(style);
   }, []);
 
-  // Store user from onAuthStateChanged
+  /* ================= AUTH + LOAD ================= */
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
-      if (currentUser) {
-        console.log("User logged in:", currentUser.uid);
-        setUser(currentUser);
-      } else {
-        console.log("No user logged in - redirecting to login");
-        setUser(null);
-        navigate("/login");
-      }
-    });
-
-    return () => unsubscribe();
-  }, [navigate]);
+    if (!authLoading && !user) {
+      navigate("/login");
+    }
+  }, [user, authLoading, navigate]);
 
   // Load property data
   useEffect(() => {
     const fetchPropertyData = async () => {
-      if (!id) return;
+      if (!id || !user) return;
       
       try {
-        setLoading(true);
+        setPageLoading(true);
         console.log("Fetching property with ID:", id);
         
         const response = await pgAPI.getProperty(id);
@@ -404,14 +396,14 @@ function EditPG() {
         alert("Failed to load property data. Please try again.");
         navigate("/owner/dashboard");
       } finally {
-        setLoading(false);
+        setPageLoading(false);
       }
     };
     
-    if (id && user) {
+    if (id && user && role === "owner") {
       fetchPropertyData();
     }
-  }, [id, user, navigate]);
+  }, [id, user, role, navigate]);
 
   // Update co-living inclusions when category changes
   useEffect(() => {
@@ -1483,14 +1475,17 @@ function EditPG() {
     );
   };
 
-  if (loading) {
+  /* ================= PROTECTION ================= */
+  if (authLoading || pageLoading) {
     return (
-      <div style={styles.loadingContainer}>
-        <div style={styles.spinner}></div>
-        <p>Loading property data...</p>
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
     );
   }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (role !== "owner") return <Navigate to="/" replace />;
 
   const isSubmitDisabled = updating || 
     !selectedLocation.address || 
@@ -2030,7 +2025,7 @@ function EditPG() {
   );
 }
 
-// Styles (same as before)
+// Styles (same as before - keeping original styles)
 const styles = {
   container: {
     minHeight: "100vh",
