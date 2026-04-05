@@ -40,13 +40,11 @@ export default function OwnerBankDetails() {
       if (err.response?.status !== 404) {
         setMessage("Failed to load bank details");
       }
-      console.log("GET BANK ERROR:", err.response?.data || err.message);
     } finally {
       setPageLoading(false);
     }
   };
 
-  /* ================= AUTH + LOAD ================= */
   useEffect(() => {
     if (!authLoading && !user) {
       navigate("/login");
@@ -71,16 +69,12 @@ export default function OwnerBankDetails() {
       setMessage("Bank details saved successfully");
       fetchBank();
     } catch (err) {
-      setMessage(
-        err.response?.data?.message || "Error saving bank details"
-      );
-      console.log("SAVE BANK ERROR:", err.response?.data || err.message);
+      setMessage(err.response?.data?.message || "Error saving bank details");
     } finally {
       setSaving(false);
     }
   };
 
-  /* ================= PROTECTION ================= */
   if (authLoading || pageLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
@@ -93,148 +87,101 @@ export default function OwnerBankDetails() {
   if (role !== "owner") return <Navigate to="/" replace />;
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
-          {/* Header Section */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-10">
-            <div className="flex items-center space-x-4">
-              <div className="bg-white/20 backdrop-blur-lg p-4 rounded-2xl">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-white">Bank Verification</h1>
-                <p className="text-blue-100 mt-2">
-                  Complete this step to start approving bookings and receive payments
-                </p>
-              </div>
-            </div>
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
+      <div className="max-w-3xl w-full">
+        <div className="bg-white rounded-xl shadow-md border overflow-hidden">
+
+          {/* HEADER (FIXED) */}
+          <div className="bg-white border-b px-8 py-6">
+            <h1 className="text-2xl font-bold text-gray-800">
+              Bank Verification
+            </h1>
+            <p className="text-gray-500 mt-1">
+              Complete this step to start approving bookings and receive payments
+            </p>
           </div>
 
-          {/* Form Section */}
-          <div className="px-8 py-8">
+          {/* FORM */}
+          <div className="px-8 py-6">
             {message && (
-              <div className={`mb-8 p-4 rounded-xl flex items-center space-x-3 ${
-                message.includes("successfully") 
-                  ? "bg-green-50 text-green-800 border border-green-200" 
-                  : "bg-red-50 text-red-800 border border-red-200"
-              }`}>
-                <span className="text-xl">
-                  {message.includes("successfully") ? "✅" : "❌"}
-                </span>
-                <span className="font-medium">{message}</span>
+              <div
+                className={`mb-6 p-3 rounded-md ${
+                  message.includes("success")
+                    ? "bg-green-100 text-green-700"
+                    : "bg-red-100 text-red-700"
+                }`}
+              >
+                {message}
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Account Holder Name
-                  </label>
-                  <input
-                    type="text"
-                    name="account_holder_name"
-                    value={form.account_holder_name}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 outline-none"
-                    placeholder="Enter account holder name"
-                    required
-                  />
-                </div>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Account Number
-                  </label>
-                  <input
-                    type="text"
-                    name="account_number"
-                    value={form.account_number}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 outline-none"
-                    placeholder="Enter account number"
-                    required
-                  />
-                </div>
+                <input
+                  type="text"
+                  name="account_holder_name"
+                  value={form.account_holder_name}
+                  onChange={handleChange}
+                  className="w-full p-3 border rounded-md"
+                  placeholder="Account Holder Name"
+                  required
+                />
 
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    IFSC Code
-                  </label>
-                  <input
-                    type="text"
-                    name="ifsc"
-                    value={form.ifsc}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 outline-none"
-                    placeholder="Enter IFSC code"
-                    required
-                  />
-                </div>
+                <input
+                  type="text"
+                  name="account_number"
+                  value={form.account_number}
+                  onChange={handleChange}
+                  className="w-full p-3 border rounded-md"
+                  placeholder="Account Number"
+                  required
+                />
 
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Bank Name
-                  </label>
-                  <input
-                    type="text"
-                    name="bank_name"
-                    value={form.bank_name}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 outline-none"
-                    placeholder="Enter bank name"
-                  />
-                </div>
+                <input
+                  type="text"
+                  name="ifsc"
+                  value={form.ifsc}
+                  onChange={handleChange}
+                  className="w-full p-3 border rounded-md"
+                  placeholder="IFSC Code"
+                  required
+                />
 
-                <div className="space-y-2 md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Branch
-                  </label>
-                  <input
-                    type="text"
-                    name="branch"
-                    value={form.branch}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 outline-none"
-                    placeholder="Enter branch name"
-                  />
-                </div>
+                <input
+                  type="text"
+                  name="bank_name"
+                  value={form.bank_name}
+                  onChange={handleChange}
+                  className="w-full p-3 border rounded-md"
+                  placeholder="Bank Name"
+                />
+
+                <input
+                  type="text"
+                  name="branch"
+                  value={form.branch}
+                  onChange={handleChange}
+                  className="w-full p-3 border rounded-md md:col-span-2"
+                  placeholder="Branch"
+                />
               </div>
 
-              <div className="pt-4">
-                <button 
-                  type="submit" 
-                  disabled={saving}
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-6 rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-indigo-700 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                >
-                  {saving ? (
-                    <span className="flex items-center justify-center space-x-3">
-                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      <span>Saving...</span>
-                    </span>
-                  ) : (
-                    "Save & Complete Verification"
-                  )}
-                </button>
-              </div>
+              <button
+                type="submit"
+                disabled={saving}
+                className="w-full bg-blue-600 text-white py-3 rounded-md font-semibold hover:bg-blue-700 disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save Bank Details"}
+              </button>
             </form>
           </div>
 
-          {/* Footer Note */}
-          <div className="bg-gray-50 px-8 py-4 border-t border-gray-100">
-            <p className="text-sm text-gray-500 flex items-center space-x-2">
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>Your bank details are encrypted and secure</span>
-            </p>
+          {/* FOOTER */}
+          <div className="bg-gray-50 px-8 py-3 border-t text-sm text-gray-500">
+            Your bank details are secure and encrypted
           </div>
+
         </div>
       </div>
     </div>
