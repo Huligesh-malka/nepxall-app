@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import api from "../../api/api";
 import { auth } from "../../firebase";
 
@@ -52,6 +52,28 @@ const statusConfig = (item) => {
   return { label: "Pending Review", color: "#64748b", bg: "#f8fafc", dot: "#94a3b8" };
 };
 
+/* ── Filter definitions ── */
+const FILTERS = [
+  { key: "all",           label: "All",            emoji: "📋" },
+  { key: "pending",       label: "Pending Review",  emoji: "🕐" },
+  { key: "awaiting",      label: "Awaiting Tenant", emoji: "⏳" },
+  { key: "ready_to_pay",  label: "Ready to Pay",    emoji: "💸" },
+  { key: "paid",          label: "Paid",            emoji: "✅" },
+  { key: "rejected",      label: "Rejected",        emoji: "❌" },
+];
+
+const matchesFilter = (item, filterKey) => {
+  switch (filterKey) {
+    case "all":          return true;
+    case "pending":      return item.refund_status === "pending" && item.user_approval === "pending";
+    case "awaiting":     return item.refund_status === "approved";
+    case "ready_to_pay": return item.refund_status === "pending" && item.user_approval === "accepted";
+    case "paid":         return item.refund_status === "paid";
+    case "rejected":     return item.refund_status === "rejected" || item.user_approval === "rejected";
+    default:             return true;
+  }
+};
+
 /* ══════════════════════════════════════════════
    ACTION MENU (3-dot)
 ══════════════════════════════════════════════ */
@@ -70,7 +92,6 @@ const ActionMenu = ({
 
   return (
     <div style={{ position: "relative" }} ref={menuRef}>
-      {/* 3-dot trigger */}
       <button
         onClick={() => setOpen((o) => !o)}
         style={{
@@ -89,7 +110,6 @@ const ActionMenu = ({
         ⋮
       </button>
 
-      {/* Dropdown */}
       {open && (
         <div style={styles.dropdown}>
           {canApprove && (
@@ -123,7 +143,6 @@ const ActionMenu = ({
         </div>
       )}
 
-      {/* Inline approval form */}
       {showForm && (
         <div style={styles.formOverlay}>
           <p style={styles.formTitle}>
@@ -181,10 +200,7 @@ const BankDetails = ({ item }) => {
     <div style={styles.bankSection}>
       <div style={styles.bankHeader}>
         <span style={styles.bankSectionTitle}>🏦 Bank Details</span>
-        <button
-          style={styles.revealBtn}
-          onClick={() => setRevealed((r) => !r)}
-        >
+        <button style={styles.revealBtn} onClick={() => setRevealed((r) => !r)}>
           {revealed ? "🔒 Hide" : "👁 Show"}
         </button>
       </div>
@@ -216,21 +232,16 @@ const RequestCard = ({
 
   return (
     <div style={styles.card}>
-      {/* Header */}
       <div style={styles.cardHeader}>
-        {/* Avatar — initial only, no + */}
         <div style={styles.avatar}>{initial}</div>
-
         <div style={{ flex: 1, minWidth: 0 }}>
           <h3 style={styles.pgName}>{item.pg_name}</h3>
           <p style={styles.tenantName}>👤 {item.user_name}</p>
         </div>
-
         <span style={{ ...styles.pill, color: st.color, background: st.bg }}>
           <span style={{ ...styles.pillDot, background: st.dot }} />
           {st.label}
         </span>
-
         <ActionMenu
           item={item}
           damage={damage}
@@ -244,7 +255,6 @@ const RequestCard = ({
         />
       </div>
 
-      {/* Info grid */}
       <div style={styles.infoGrid}>
         <InfoTile icon="📅" label="Move Out" value={formatDate(item.move_out_date)} />
         <InfoTile icon="💳" label="Deposit"  value={`₹${item.security_deposit || 0}`} />
@@ -254,17 +264,14 @@ const RequestCard = ({
 
       <div style={styles.divider} />
 
-      {/* Bank details */}
       <BankDetails item={item} />
 
-      {/* Reason */}
       {item.reason && (
         <p style={styles.reason}>
           <span style={styles.reasonLabel}>Reason: </span>{item.reason}
         </p>
       )}
 
-      {/* Paid banner */}
       {item.refund_status === "paid" && (
         <div style={styles.paidBanner}>✅ Payment Completed</div>
       )}
@@ -281,6 +288,63 @@ const InfoTile = ({ icon, label, value }) => (
 );
 
 /* ══════════════════════════════════════════════
+   FILTER BAR
+══════════════════════════════════════════════ */
+const FilterBar = ({ active, onChange, counts }) => (
+  <div style={styles.filterWrapper}>
+    <div style={styles.filterScroll}>
+      {FILTERS.map((f) => {
+        const isActive = active === f.key;
+        const count    = counts[f.key] ?? 0;
+        return (
+          <button
+            key={f.key}
+            onClick={() => onChange(f.key)}
+            style={{
+              ...styles.filterBtn,
+              ...(isActive ? styles.filterBtnActive : {}),
+            }}
+          >
+            <span style={styles.filterEmoji}>{f.emoji}</span>
+            {f.label}
+            {count > 0 && (
+              <span
+                style={{
+                  ...styles.filterCount,
+                  background: isActive ? "#6366f1" : "#e2e8f0",
+                  color:      isActive ? "#fff"    : "#64748b",
+                }}
+              >
+                {count}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  </div>
+);
+
+/* ══════════════════════════════════════════════
+   SEARCH BAR
+══════════════════════════════════════════════ */
+const SearchBar = ({ value, onChange }) => (
+  <div style={styles.searchWrapper}>
+    <span style={styles.searchIcon}>🔍</span>
+    <input
+      type="text"
+      placeholder="Search by PG name or tenant…"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={styles.searchInput}
+    />
+    {value && (
+      <button style={styles.clearBtn} onClick={() => onChange("")}>✕</button>
+    )}
+  </div>
+);
+
+/* ══════════════════════════════════════════════
    MAIN COMPONENT
 ══════════════════════════════════════════════ */
 const OwnerVacateRequests = () => {
@@ -289,6 +353,8 @@ const OwnerVacateRequests = () => {
   const [dues,      setDues]      = useState({});
   const [loadingId, setLoadingId] = useState(null);
   const [loading,   setLoading]   = useState(true);
+  const [filter,    setFilter]    = useState("all");
+  const [search,    setSearch]    = useState("");
 
   const loadRequests = async () => {
     setLoading(true);
@@ -306,6 +372,28 @@ const OwnerVacateRequests = () => {
   };
 
   useEffect(() => { loadRequests(); }, []);
+
+  /* Badge counts per filter key */
+  const counts = useMemo(() => {
+    const c = {};
+    FILTERS.forEach((f) => {
+      c[f.key] = requests.filter((r) => matchesFilter(r, f.key)).length;
+    });
+    return c;
+  }, [requests]);
+
+  /* Filtered + searched list */
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return requests.filter((r) => {
+      if (!matchesFilter(r, filter)) return false;
+      if (!q) return true;
+      return (
+        (r.pg_name   || "").toLowerCase().includes(q) ||
+        (r.user_name || "").toLowerCase().includes(q)
+      );
+    });
+  }, [requests, filter, search]);
 
   const handleApprove = async (bookingId) => {
     try {
@@ -351,16 +439,24 @@ const OwnerVacateRequests = () => {
 
   return (
     <div style={styles.page}>
+      {/* ── Page header ── */}
       <div style={styles.pageHeader}>
         <div>
           <h1 style={styles.pageTitle}>Vacate Requests</h1>
           <p style={styles.pageSubtitle}>
-            {requests.length} request{requests.length !== 1 ? "s" : ""} pending review
+            {counts.all} total · {counts.pending || 0} pending review
           </p>
         </div>
         <button onClick={loadRequests} style={styles.refreshBtn}>↻ Refresh</button>
       </div>
 
+      {/* ── Search ── */}
+      <SearchBar value={search} onChange={setSearch} />
+
+      {/* ── Filter tabs ── */}
+      <FilterBar active={filter} onChange={setFilter} counts={counts} />
+
+      {/* ── Content ── */}
       {loading && (
         <div style={styles.emptyState}>
           <div style={styles.spinner} />
@@ -368,16 +464,34 @@ const OwnerVacateRequests = () => {
         </div>
       )}
 
-      {!loading && requests.length === 0 && (
+      {!loading && visible.length === 0 && (
         <div style={styles.emptyState}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🏠</div>
-          <p style={{ color: "#64748b", fontWeight: 600 }}>No vacate requests yet</p>
-          <p style={{ color: "#94a3b8", fontSize: 13 }}>New requests will appear here</p>
+          <div style={{ fontSize: 44, marginBottom: 10 }}>
+            {search ? "🔍" : "🏠"}
+          </div>
+          <p style={{ color: "#64748b", fontWeight: 600, margin: "0 0 4px" }}>
+            {search ? "No results found" : "No requests here"}
+          </p>
+          <p style={{ color: "#94a3b8", fontSize: 13, margin: 0 }}>
+            {search
+              ? `Try a different search term`
+              : filter === "all"
+              ? "New requests will appear here"
+              : `No "${FILTERS.find((f) => f.key === filter)?.label}" requests`}
+          </p>
+          {(search || filter !== "all") && (
+            <button
+              style={styles.clearFilterBtn}
+              onClick={() => { setSearch(""); setFilter("all"); }}
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       )}
 
       <div style={styles.list}>
-        {requests.map((item) => (
+        {visible.map((item) => (
           <RequestCard
             key={item.booking_id}
             item={item}
@@ -392,6 +506,13 @@ const OwnerVacateRequests = () => {
           />
         ))}
       </div>
+
+      {/* ── Result count footer ── */}
+      {!loading && visible.length > 0 && (
+        <p style={styles.resultFooter}>
+          Showing {visible.length} of {counts.all} request{counts.all !== 1 ? "s" : ""}
+        </p>
+      )}
     </div>
   );
 };
@@ -414,7 +535,7 @@ const styles = {
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    marginBottom: 28,
+    marginBottom: 20,
   },
   pageTitle: {
     fontSize: 26,
@@ -435,6 +556,92 @@ const styles = {
     fontWeight: 600,
     boxShadow: "0 1px 2px rgba(0,0,0,.04)",
   },
+
+  /* Search */
+  searchWrapper: {
+    position: "relative",
+    marginBottom: 12,
+  },
+  searchIcon: {
+    position: "absolute",
+    left: 12,
+    top: "50%",
+    transform: "translateY(-50%)",
+    fontSize: 14,
+    pointerEvents: "none",
+  },
+  searchInput: {
+    width: "100%",
+    padding: "10px 36px 10px 36px",
+    borderRadius: 10,
+    border: "1.5px solid #e2e8f0",
+    fontSize: 13,
+    color: "#0f172a",
+    outline: "none",
+    boxSizing: "border-box",
+    fontFamily: "inherit",
+    background: "#fff",
+    boxShadow: "0 1px 3px rgba(0,0,0,.04)",
+  },
+  clearBtn: {
+    position: "absolute",
+    right: 10,
+    top: "50%",
+    transform: "translateY(-50%)",
+    background: "none",
+    border: "none",
+    fontSize: 13,
+    color: "#94a3b8",
+    cursor: "pointer",
+    padding: "2px 6px",
+  },
+
+  /* Filter bar */
+  filterWrapper: {
+    marginBottom: 20,
+    overflowX: "auto",
+  },
+  filterScroll: {
+    display: "flex",
+    gap: 8,
+    paddingBottom: 4,
+  },
+  filterBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "7px 14px",
+    borderRadius: 999,
+    border: "1.5px solid #e2e8f0",
+    background: "#fff",
+    fontSize: 12,
+    fontWeight: 600,
+    color: "#475569",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    transition: "all .15s",
+    boxShadow: "0 1px 2px rgba(0,0,0,.04)",
+  },
+  filterBtnActive: {
+    background: "#eef2ff",
+    borderColor: "#6366f1",
+    color: "#4f46e5",
+    boxShadow: "0 0 0 3px rgba(99,102,241,.08)",
+  },
+  filterEmoji: { fontSize: 13 },
+  filterCount: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 18,
+    height: 18,
+    borderRadius: 999,
+    fontSize: 10,
+    fontWeight: 700,
+    padding: "0 5px",
+    transition: "all .15s",
+  },
+
   list: { display: "flex", flexDirection: "column", gap: 16 },
 
   /* Card */
@@ -452,8 +659,6 @@ const styles = {
     gap: 12,
     marginBottom: 16,
   },
-
-  /* Avatar: letter only, no + icon */
   avatar: {
     width: 42,
     height: 42,
@@ -468,10 +673,8 @@ const styles = {
     flexShrink: 0,
     userSelect: "none",
   },
-
   pgName:     { margin: 0, fontSize: 15, fontWeight: 700, color: "#0f172a" },
   tenantName: { margin: "2px 0 0", fontSize: 12, color: "#64748b" },
-
   pill: {
     display: "inline-flex",
     alignItems: "center",
@@ -485,7 +688,6 @@ const styles = {
   },
   pillDot: { width: 6, height: 6, borderRadius: "50%", flexShrink: 0 },
 
-  /* Info tiles */
   infoGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(4, 1fr)",
@@ -514,7 +716,7 @@ const styles = {
 
   divider: { height: 1, background: "#f1f5f9", margin: "4px 0 12px" },
 
-  /* Bank section */
+  /* Bank */
   bankSection: {
     background: "#f8fafc",
     border: "1px solid #e2e8f0",
@@ -676,5 +878,24 @@ const styles = {
     borderRadius: "50%",
     animation: "spin 0.8s linear infinite",
     margin: "0 auto",
+  },
+
+  clearFilterBtn: {
+    marginTop: 14,
+    padding: "8px 18px",
+    background: "#eef2ff",
+    border: "none",
+    borderRadius: 8,
+    color: "#4f46e5",
+    fontWeight: 700,
+    fontSize: 13,
+    cursor: "pointer",
+  },
+
+  resultFooter: {
+    textAlign: "center",
+    marginTop: 20,
+    fontSize: 12,
+    color: "#94a3b8",
   },
 };
