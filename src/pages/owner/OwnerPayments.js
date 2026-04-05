@@ -6,6 +6,7 @@ import axios from "axios";
 import SignatureCanvas from "react-signature-canvas";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { auth } from "../../firebase";
 import {
   Container, Typography, Paper, Table, TableHead, TableRow, TableCell,
   TableBody, Chip, Button,
@@ -361,10 +362,10 @@ export default function OwnerPayments() {
       }
 
       if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(window.authInstance || auth, "recaptcha-container", { size: "invisible" });
+        window.recaptchaVerifier = new RecaptchaVerifier( auth, "recaptcha-container", { size: "invisible" });
       }
 
-      const confirmation = await signInWithPhoneNumber(window.authInstance || auth, `+91${mobile}`, window.recaptchaVerifier);
+      const confirmation = await signInWithPhoneNumber(auth, `+91${mobile}`, window.recaptchaVerifier);
       setConfirmObj(confirmation);
       alert("OTP Sent Successfully ✅");
     } catch (error) {
