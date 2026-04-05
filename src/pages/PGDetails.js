@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios"; // ← FOR OVERPASS API
+import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { Navigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import api from "../api/api"; // ← FOR YOUR BACKEND
-import { auth } from "../firebase";
+import api from "../api/api";
 
 // Import icons from lucide-react for consistency with search page
 import {
@@ -65,7 +66,7 @@ L.Icon.Default.mergeOptions({
 });
 
 // Base URL for images (from env, remove /api suffix)
-const BASE_URL = import.meta.env.VITE_API_URL?.replace("/api", "") || "https://nepxall-backend.onrender.com";
+const BASE_URL = process.env.REACT_APP_API_URL?.replace("/api", "") || "https://nepxall-backend.onrender.com";
 
 // FIXED: Helper function to get correct image URL
 const getCorrectImageUrl = (photo) => {
@@ -945,7 +946,7 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
     }
   };
 
-  // FIXED: Get image URL using helper
+  // Get image URL using helper
   const getImageUrl = () => {
     if (pg.photos && pg.photos.length > 0) {
       return getCorrectImageUrl(pg.photos[0]);
@@ -1204,6 +1205,9 @@ const NearbyPGsPanel = ({ nearbyPGs, isLoading, onViewPG }) => {
 export default function PGDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  
+  // ✅ USE ONLY THIS - No direct auth.currentUser
+  const { user, role, loading: authLoading } = useAuth();
 
   const [pg, setPG] = useState(null);
   const [media, setMedia] = useState([]);
@@ -1216,7 +1220,6 @@ export default function PGDetails() {
   const [error, setError] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [notification, setNotification] = useState(null);
-  // ✅ ADD THIS STATE
   const [bookingLoading, setBookingLoading] = useState(false);
 
   const [selectedFacilityCategory, setSelectedFacilityCategory] = useState("all");
@@ -1286,6 +1289,7 @@ export default function PGDetails() {
     setTimeout(() => setNotification(null), 3000);
   };
 
+  // ✅ MOVED ALL HOOKS BEFORE CONDITIONAL RETURNS
   useEffect(() => {
     const fetchPGDetails = async () => {
       try {
@@ -1294,7 +1298,6 @@ export default function PGDetails() {
         
         console.log("Fetching PG details for ID:", id);
         
-        // ✅ USE API INSTANCE (not axios directly)
         const res = await api.get(`/pg/${id}`);
         
         if (!res.data?.success) {
@@ -1304,7 +1307,6 @@ export default function PGDetails() {
         const data = res.data.data;
         console.log("PG data received:", data.pg_name);
 
-        // FIXED: Process photos using helper
         const photos = Array.isArray(data.photos)
           ? data.photos.map(p => ({ 
               type: "photo", 
@@ -1478,7 +1480,6 @@ export default function PGDetails() {
           return;
         }
 
-        // ✅ USE API INSTANCE
         const response = await api.get(
           `/pg/nearby/${pg.latitude}/${pg.longitude}?radius=5&exclude=${id}`
         );
@@ -1563,35 +1564,23 @@ export default function PGDetails() {
     }
   };
 
-  //////////////////////////////////////////////////////
-  // 🏷 BOOK NOW CLICK
-  //////////////////////////////////////////////////////
+  // ✅ BOOK NOW CLICK - Using user from auth context
   const handleBookNow = () => {
-    const user = auth.currentUser;
-
     if (!user) {
       showNotificationMessage("Please register or login to book this property");
-
       navigate("/register", {
         state: { redirectTo: `/pg/${id}` }
       });
-
       return;
     }
-
     setShowBookingModal(true);
   };
 
-  //////////////////////////////////////////////////////
-  // 📝 BOOKING SUBMIT
-  //////////////////////////////////////////////////////
+  // ✅ BOOKING SUBMIT - Using user from auth context
   const handleBookingSubmit = async (bookingData) => {
     try {
-      if (bookingLoading) return; // 🚫 prevent double click
-
+      if (bookingLoading) return;
       setBookingLoading(true);
-
-      const user = auth.currentUser;
 
       if (!user) {
         showNotificationMessage("Please login to continue");
@@ -1618,42 +1607,28 @@ export default function PGDetails() {
         }
       );
 
-      //////////////////////////////////////////////////////
-      // ✅ SUCCESS
-      //////////////////////////////////////////////////////
-      showNotificationMessage(
-        res.data?.message || "✅ Booking request sent to owner"
-      );
-
+      showNotificationMessage(res.data?.message || "✅ Booking request sent to owner");
       setShowBookingModal(false);
 
     } catch (error) {
       console.log("BOOKING ERROR:", error?.response?.data);
 
-      //////////////////////////////////////////////////////
-      // ⚠️ REAL BACKEND MESSAGE
-      //////////////////////////////////////////////////////
       if (error?.response?.data?.message) {
         showNotificationMessage(error.response.data.message);
       } else {
         showNotificationMessage("❌ Booking failed. Try again");
       }
-
     } finally {
       setBookingLoading(false);
     }
   };
 
-  //////////////////////////////////////////////////////
   // 📞 CALL OWNER
-  //////////////////////////////////////////////////////
   const handleCallOwner = () => {
     if (hasOwnerContact && pg?.contact_phone) {
       window.location.href = `tel:${pg.contact_phone}`;
     } else {
-      showNotificationMessage(
-        "Owner contact will be visible after booking approval"
-      );
+      showNotificationMessage("Owner contact will be visible after booking approval");
     }
   };
 
@@ -1793,6 +1768,16 @@ export default function PGDetails() {
              pg.four_sharing || pg.single_room || pg.double_room || pg.triple_room;
     }
   };
+
+  // ✅ PROTECTION - MOVED AFTER ALL HOOKS
+  if (authLoading) {
+    return (
+      <div style={styles.loadingContainer}>
+        <div className="spinner"></div>
+        <p>Loading authentication...</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -2580,6 +2565,12 @@ export default function PGDetails() {
     </div>
   );
 }
+
+// Styles remain the same as in the original file (too long to repeat, but they are included in the original code)
+// For brevity, I've omitted the styles object here, but it should be included from the original file
+
+
+
 
 /* ================= STYLES ================= */
 const styles = {
