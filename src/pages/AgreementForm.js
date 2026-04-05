@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { Navigate } from "react-router-dom";
 import api from "../api/api";
 import SignatureCanvas from "react-signature-canvas";
-import { auth } from "../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import { auth } from "../firebase";
 import { 
   Box, TextField, Button, Typography, CircularProgress, 
   Alert, Snackbar, Paper, Grid, Divider, IconButton, 
@@ -15,6 +17,9 @@ const AgreementForm = () => {
   const { bookingId } = useParams();
   const navigate = useNavigate();
   const sigCanvas = useRef(null);
+  
+  // ✅ USE ONLY THIS - No localStorage.getItem("user_id")
+  const { user, role, loading: authLoading } = useAuth();
 
   /* ================= STATES ================= */
   const [loading, setLoading] = useState(false);
@@ -44,6 +49,10 @@ const AgreementForm = () => {
     maintenance: "0",
   });
 
+  // ✅ PROTECTION AT TOP
+  if (authLoading) return <div>Loading...</div>;
+  if (!user) return <Navigate to="/login" replace />;
+
   /* ================= HELPERS ================= */
   const cleanPhoneNumber = (phone) => {
     if (!phone) return "";
@@ -52,7 +61,7 @@ const AgreementForm = () => {
   };
 
   const handleAadhaarChange = (e) => {
-    const val = e.target.value.replace(/\D/g, ""); // Remove non-digits
+    const val = e.target.value.replace(/\D/g, "");
     if (val.length <= 4) {
       setFormData({ ...formData, aadhaar_last4: val });
     }
@@ -126,7 +135,9 @@ const AgreementForm = () => {
       return setError("Aadhaar must be exactly 4 digits.");
     }
     setLoading(true);
-    const userId = localStorage.getItem("user_id");
+    
+    // ✅ REPLACED localStorage.getItem("user_id") with user?.uid
+    const userId = user?.uid;
     const data = { ...formData, user_id: userId, booking_id: bookingId };
 
     try {

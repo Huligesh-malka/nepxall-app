@@ -19,15 +19,15 @@ import RefundPolicy from "./pages/RefundPolicy";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 /* USER */
-import UserPGSearch from "./pages/UserPGSearch";
+import UserPGSearch from "./pages/UserPGSearch";   
 import PGDetails from "./pages/PGDetails";
 import BookingForm from "./pages/BookingForm";
-import UserBookingHistory from "./pages/UserBookingHistory";
+import UserBookingHistory from "./pages/UserBookingHistory";   2
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentPage from "./pages/PaymentPage";
 import NotificationBell from "./pages/NotificationBell";
 import AgreementPage from "./pages/AgreementPage";
-import AgreementForm from "./pages/AgreementForm";
+import AgreementForm from "./pages/AgreementForm";        1 
 import UserActiveStay from "./pages/UserActiveStay";
 import AadhaarKyc from "./pages/AadhaarKyc";
 import VisitSchedulePage from "./pages/VisitSchedulePage";
