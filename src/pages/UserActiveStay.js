@@ -8,7 +8,59 @@ import html2canvas from "html2canvas";
 /* ================= BRAND COLORS ================= */
 const BRAND_BLUE = "#0B5ED7";
 const BRAND_GREEN = "#4CAF50";
-const BRAND_RED = "#ef4444"; 
+const BRAND_RED = "#ef4444";
+
+/* ================= 3-DOT MENU COMPONENT ================= */
+const ThreeDotMenu = ({ items }) => {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef();
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={menuRef} style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen((prev) => !prev)}
+        style={dotBtn}
+        aria-label="More options"
+      >
+        <span style={dot} />
+        <span style={dot} />
+        <span style={dot} />
+      </button>
+
+      {open && (
+        <div style={dropdownMenu}>
+          {items.map((item, idx) => (
+            <button
+              key={idx}
+              style={{
+                ...dropdownItem,
+                color: item.danger ? BRAND_RED : item.warn ? "#f59e0b" : "#111827",
+                borderBottom: idx < items.length - 1 ? "1px solid #f3f4f6" : "none",
+              }}
+              onClick={() => {
+                item.onClick();
+                setOpen(false);
+              }}
+            >
+              <span style={{ marginRight: 10, fontSize: 15 }}>{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const UserActiveStay = () => {
   const [stays, setStays] = useState([]);
@@ -18,21 +70,19 @@ const UserActiveStay = () => {
   const receiptRef = useRef();
   const [selectedStay, setSelectedStay] = useState(null);
 
-  /* --- UPDATED STATES FOR REFUND FORM --- */
-  const [showRefundFormFor, setShowRefundFormFor] = useState(null); 
+  const [showRefundFormFor, setShowRefundFormFor] = useState(null);
   const [refundReason, setRefundReason] = useState("");
   const [refundUpi, setRefundUpi] = useState("");
-  const [confirmUpi, setConfirmUpi] = useState(""); // New State
+  const [confirmUpi, setConfirmUpi] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  /* --- VACATE STATES --- */
   const [showVacateFormFor, setShowVacateFormFor] = useState(null);
   const [vacateReason, setVacateReason] = useState("");
   const [vacateDate, setVacateDate] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [ifscCode, setIfscCode] = useState("");
   const [upiId, setUpiId] = useState("");
-  const [vacateStatus, setVacateStatus] = useState(null); // New state for vacate status
+  const [vacateStatus, setVacateStatus] = useState(null);
 
   const loadStay = useCallback(async (showLoader = true) => {
     try {
@@ -46,14 +96,16 @@ const UserActiveStay = () => {
       });
 
       setStays(Array.isArray(res.data) ? res.data : res.data ? [res.data] : []);
-      
-      // Check vacate status for each stay
-      res.data.forEach(stay => {
-        if (stay.vacate_status === "pending" || stay.vacate_status === "approved" || stay.vacate_status === "completed") {
+
+      res.data.forEach((stay) => {
+        if (
+          stay.vacate_status === "pending" ||
+          stay.vacate_status === "approved" ||
+          stay.vacate_status === "completed"
+        ) {
           setVacateStatus(stay.vacate_status);
         }
       });
-      
     } catch (err) {
       console.error("Error loading stays:", err);
     } finally {
@@ -73,29 +125,19 @@ const UserActiveStay = () => {
       alert("Please provide both a reason and a UPI ID.");
       return;
     }
-
     if (refundUpi !== confirmUpi) {
       alert("UPI IDs do not match!");
       return;
     }
-
     try {
       setIsSubmitting(true);
       const user = auth.currentUser;
       const token = await user.getIdToken();
-
       const res = await api.post(
         "/bookings/refunds/request",
-        {
-          bookingId: stayId,
-          reason: refundReason,
-          upi_id: refundUpi
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { bookingId: stayId, reason: refundReason, upi_id: refundUpi },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       if (res.data.success) {
         alert("✅ Refund request submitted successfully.");
         await loadStay(false);
@@ -117,11 +159,9 @@ const UserActiveStay = () => {
       alert("Please fill all required fields");
       return;
     }
-
     try {
       const user = auth.currentUser;
       const token = await user.getIdToken();
-
       const res = await api.post(
         "/bookings/vacate/request",
         {
@@ -130,16 +170,13 @@ const UserActiveStay = () => {
           reason: vacateReason,
           account_number: accountNumber,
           ifsc_code: ifscCode,
-          upi_id: upiId
+          upi_id: upiId,
         },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       if (res.data.success) {
         alert("✅ Vacate request submitted");
-        setVacateStatus("pending"); // Set status to pending
+        setVacateStatus("pending");
         setShowVacateFormFor(null);
         setVacateReason("");
         setVacateDate("");
@@ -148,7 +185,6 @@ const UserActiveStay = () => {
         setUpiId("");
         loadStay(false);
       }
-
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || "Vacate failed");
@@ -159,16 +195,13 @@ const UserActiveStay = () => {
     try {
       const user = auth.currentUser;
       const token = await user.getIdToken();
-
-      const res = await api.post(
+      await api.post(
         "/bookings/refunds/accept",
         { bookingId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       alert("✅ Refund accepted");
       loadStay(false);
-
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || "Accept failed");
@@ -179,16 +212,13 @@ const UserActiveStay = () => {
     try {
       const user = auth.currentUser;
       const token = await user.getIdToken();
-
-      const res = await api.post(
+      await api.post(
         "/bookings/refunds/reject",
         { bookingId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       alert("❌ Refund rejected");
       loadStay(false);
-
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || "Reject failed");
@@ -227,8 +257,8 @@ const UserActiveStay = () => {
     }, 500);
   };
 
-  // Logic to check if button should be disabled
-  const isRefundDisabled = isSubmitting || !refundReason || !refundUpi || refundUpi !== confirmUpi;
+  const isRefundDisabled =
+    isSubmitting || !refundReason || !refundUpi || refundUpi !== confirmUpi;
 
   if (loading)
     return (
@@ -258,16 +288,25 @@ const UserActiveStay = () => {
 
       {stays.map((stay) => (
         <div key={stay.id} style={card}>
-          
-          {/* SHOW VACATE STATUS ONLY (NO FORM) */}
-          {(stay.vacate_status === "pending" || stay.vacate_status === "approved" || stay.vacate_status === "completed") && (
-            <div style={{ 
-              background: stay.vacate_status === "pending" ? "#fef3c7" : stay.vacate_status === "approved" ? "#dcfce7" : "#e0e7ff",
-              padding: "15px", 
-              borderRadius: "8px", 
-              marginBottom: "15px",
-              textAlign: "center"
-            }}>
+
+          {/* VACATE STATUS BANNER */}
+          {(stay.vacate_status === "pending" ||
+            stay.vacate_status === "approved" ||
+            stay.vacate_status === "completed") && (
+            <div
+              style={{
+                background:
+                  stay.vacate_status === "pending"
+                    ? "#fef3c7"
+                    : stay.vacate_status === "approved"
+                    ? "#dcfce7"
+                    : "#e0e7ff",
+                padding: "15px",
+                borderRadius: "8px",
+                marginBottom: "15px",
+                textAlign: "center",
+              }}
+            >
               <p style={{ fontWeight: "bold", marginBottom: "5px" }}>
                 🚪 Vacate Request Status:
                 {stay.vacate_status === "pending" && " ⏳ Pending Approval"}
@@ -282,51 +321,47 @@ const UserActiveStay = () => {
             </div>
           )}
 
-          {/* VACATE FORM - Only show if no vacate request submitted */}
+          {/* VACATE FORM */}
           {!stay.vacate_status && showVacateFormFor === stay.id ? (
             <div style={refundFormContainer}>
               <h3 style={{ color: "#f59e0b" }}>Vacate Request</h3>
 
-              {/* 🔥 SHOW REFUND STATUS INSIDE VACATE */}
               {stay.refund_status && (
-                <div style={{ 
-                  background: "#f9fafb", 
-                  padding: "10px", 
-                  borderRadius: "8px", 
-                  marginBottom: "10px",
-                  textAlign: "center"
-                }}>
-                  
+                <div
+                  style={{
+                    background: "#f9fafb",
+                    padding: "10px",
+                    borderRadius: "8px",
+                    marginBottom: "10px",
+                    textAlign: "center",
+                  }}
+                >
                   <p style={{ fontWeight: "bold" }}>
                     Refund Status:
                     {stay.refund_status === "pending" && " ⏳ Pending"}
                     {stay.refund_status === "approved" && " ✅ Approved"}
                     {stay.refund_status === "paid" && " 💸 Paid"}
                   </p>
-
                   {stay.refund_amount > 0 && (
                     <p>💰 Refund Amount: ₹{stay.refund_amount}</p>
                   )}
-
-                  {/* ACCEPT / REJECT */}
-                  {stay.refund_status === "approved" && stay.user_approval === "pending" && (
-                    <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                      <button
-                        style={{ ...btn, background: "#4CAF50" }}
-                        onClick={() => acceptRefund(stay.id)}
-                      >
-                        ✅ Accept
-                      </button>
-
-                      <button
-                        style={{ ...btn, background: "#ef4444" }}
-                        onClick={() => rejectRefund(stay.id)}
-                      >
-                        ❌ Reject
-                      </button>
-                    </div>
-                  )}
-
+                  {stay.refund_status === "approved" &&
+                    stay.user_approval === "pending" && (
+                      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                        <button
+                          style={{ ...btn, background: "#4CAF50" }}
+                          onClick={() => acceptRefund(stay.id)}
+                        >
+                          ✅ Accept
+                        </button>
+                        <button
+                          style={{ ...btn, background: "#ef4444" }}
+                          onClick={() => rejectRefund(stay.id)}
+                        >
+                          ❌ Reject
+                        </button>
+                      </div>
+                    )}
                 </div>
               )}
 
@@ -339,7 +374,6 @@ const UserActiveStay = () => {
                   onChange={(e) => setVacateDate(e.target.value)}
                 />
               </div>
-
               <div style={inputGroup}>
                 <label style={labelStyle}>Reason</label>
                 <textarea
@@ -349,7 +383,6 @@ const UserActiveStay = () => {
                   onChange={(e) => setVacateReason(e.target.value)}
                 />
               </div>
-
               <div style={inputGroup}>
                 <label style={labelStyle}>Account Number</label>
                 <input
@@ -359,7 +392,6 @@ const UserActiveStay = () => {
                   onChange={(e) => setAccountNumber(e.target.value)}
                 />
               </div>
-
               <div style={inputGroup}>
                 <label style={labelStyle}>IFSC Code</label>
                 <input
@@ -369,7 +401,6 @@ const UserActiveStay = () => {
                   onChange={(e) => setIfscCode(e.target.value)}
                 />
               </div>
-
               <div style={inputGroup}>
                 <label style={labelStyle}>UPI ID (Optional)</label>
                 <input
@@ -394,7 +425,6 @@ const UserActiveStay = () => {
                 >
                   Cancel
                 </button>
-
                 <button
                   style={{ ...btn, background: "#f59e0b" }}
                   onClick={() => submitVacateRequest(stay.id)}
@@ -403,7 +433,9 @@ const UserActiveStay = () => {
                 </button>
               </div>
             </div>
+
           ) : showRefundFormFor === stay.id ? (
+            /* REFUND FORM */
             <div style={refundFormContainer}>
               {stay.refund_status ? (
                 <div style={{ textAlign: "center", padding: "20px 0" }}>
@@ -413,7 +445,7 @@ const UserActiveStay = () => {
                     {stay.refund_status === "paid" && "💸 Refunded Successfully"}
                     {stay.refund_status === "rejected" && "❌ Rejected (You can retry)"}
                   </div>
-                  <button 
+                  <button
                     style={{ ...btn, background: "#6b7280", flex: "none", width: "120px" }}
                     onClick={() => setShowRefundFormFor(null)}
                   >
@@ -426,7 +458,6 @@ const UserActiveStay = () => {
                   <p style={{ fontSize: "12px", color: "#666", marginBottom: "20px" }}>
                     Order ID: {stay.order_id}
                   </p>
-
                   <div style={inputGroup}>
                     <label style={labelStyle}>Refund Reason</label>
                     <textarea
@@ -436,7 +467,6 @@ const UserActiveStay = () => {
                       onChange={(e) => setRefundReason(e.target.value)}
                     />
                   </div>
-
                   <div style={inputGroup}>
                     <label style={labelStyle}>UPI ID for Transfer</label>
                     <input
@@ -447,14 +477,15 @@ const UserActiveStay = () => {
                       onChange={(e) => setRefundUpi(e.target.value)}
                     />
                   </div>
-
                   <div style={inputGroup}>
                     <label style={labelStyle}>Confirm UPI ID</label>
                     <input
-                      style={{ 
-                        ...inputField, 
-                        borderColor: confirmUpi && refundUpi !== confirmUpi ? BRAND_RED : "#ddd",
-                        backgroundColor: confirmUpi && refundUpi === confirmUpi ? "#f0fdf4" : "#fff"
+                      style={{
+                        ...inputField,
+                        borderColor:
+                          confirmUpi && refundUpi !== confirmUpi ? BRAND_RED : "#ddd",
+                        backgroundColor:
+                          confirmUpi && refundUpi === confirmUpi ? "#f0fdf4" : "#fff",
                       }}
                       type="text"
                       placeholder="Re-enter UPI ID"
@@ -462,10 +493,11 @@ const UserActiveStay = () => {
                       onChange={(e) => setConfirmUpi(e.target.value)}
                     />
                     {confirmUpi && refundUpi !== confirmUpi && (
-                       <span style={{ fontSize: '10px', color: BRAND_RED }}>UPI IDs do not match</span>
+                      <span style={{ fontSize: "10px", color: BRAND_RED }}>
+                        UPI IDs do not match
+                      </span>
                     )}
                   </div>
-
                   <div style={btnRow}>
                     <button
                       style={{ ...btn, background: "#6b7280" }}
@@ -477,12 +509,11 @@ const UserActiveStay = () => {
                     >
                       Cancel
                     </button>
-
                     <button
-                      style={{ 
-                        ...btn, 
+                      style={{
+                        ...btn,
                         background: isRefundDisabled ? "#cca7a7" : BRAND_RED,
-                        cursor: isRefundDisabled ? "not-allowed" : "pointer" 
+                        cursor: isRefundDisabled ? "not-allowed" : "pointer",
                       }}
                       disabled={isRefundDisabled}
                       onClick={() => submitRefundRequest(stay.id)}
@@ -493,11 +524,59 @@ const UserActiveStay = () => {
                 </>
               )}
             </div>
+
           ) : (
+            /* ── MAIN CARD VIEW ── */
             <>
+              {/* Header: PG name + badge + 3-dot menu */}
               <div style={headerSection}>
-                <h3 style={{ margin: 0, color: BRAND_BLUE }}>{stay.pg_name}</h3>
-                <span style={statusBadge}>VERIFIED ✅</span>
+                <div>
+                  <h3 style={{ margin: 0, color: BRAND_BLUE }}>{stay.pg_name}</h3>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={statusBadge}>VERIFIED ✅</span>
+
+                  {/* ── 3-DOT MENU ── */}
+                  <ThreeDotMenu
+                    items={[
+                      {
+                        icon: "📜",
+                        label: "Booking History",
+                        onClick: () => navigate("/user/bookings"),
+                      },
+                      {
+                        icon: "💳",
+                        label: "Pay Rent",
+                        onClick: () => navigate("/payment"),
+                      },
+                      {
+                        icon: "📥",
+                        label: "Download Receipt",
+                        onClick: () => handleDownloadReceipt(stay),
+                      },
+                      ...(stay.order_id
+                        ? [
+                            {
+                              icon: "🔁",
+                              label: "Request Refund",
+                              danger: true,
+                              onClick: () => setShowRefundFormFor(stay.id),
+                            },
+                          ]
+                        : []),
+                      ...(!stay.vacate_status
+                        ? [
+                            {
+                              icon: "🚪",
+                              label: "Vacate Room",
+                              warn: true,
+                              onClick: () => setShowVacateFormFor(stay.id),
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+                </div>
               </div>
 
               <div style={infoGrid}>
@@ -511,7 +590,14 @@ const UserActiveStay = () => {
                 </div>
                 <div style={{ ...infoItem, gridColumn: "span 2", marginTop: "10px" }}>
                   <label style={labelStyle}>🆔 Order ID</label>
-                  <p style={{ ...valStyle, fontSize: "12px", color: BRAND_BLUE, wordBreak: "break-all" }}>
+                  <p
+                    style={{
+                      ...valStyle,
+                      fontSize: "12px",
+                      color: BRAND_BLUE,
+                      wordBreak: "break-all",
+                    }}
+                  >
                     {stay.order_id || "N/A"}
                   </p>
                 </div>
@@ -522,52 +608,41 @@ const UserActiveStay = () => {
                   💰 Paid On: <span>{formatDate(stay.paid_date)}</span>
                 </p>
                 {stay.rent_amount > 0 && (
-                  <p style={priceRow}>Monthly Rent: <span>₹{stay.rent_amount}</span></p>
+                  <p style={priceRow}>
+                    Monthly Rent: <span>₹{stay.rent_amount}</span>
+                  </p>
                 )}
                 {stay.maintenance_amount > 0 && (
-                  <p style={priceRow}>Maintenance: <span>₹{stay.maintenance_amount}</span></p>
+                  <p style={priceRow}>
+                    Maintenance: <span>₹{stay.maintenance_amount}</span>
+                  </p>
                 )}
                 {stay.deposit_amount > 0 && (
-                  <p style={{ ...priceRow, borderTop: "1px dashed #eee", paddingTop: "10px", marginTop: "10px" }}>
-                    Security Deposit (Paid): <span style={{ fontWeight: "bold" }}>₹{stay.deposit_amount}</span>
+                  <p
+                    style={{
+                      ...priceRow,
+                      borderTop: "1px dashed #eee",
+                      paddingTop: "10px",
+                      marginTop: "10px",
+                    }}
+                  >
+                    Security Deposit (Paid):{" "}
+                    <span style={{ fontWeight: "bold" }}>₹{stay.deposit_amount}</span>
                   </p>
                 )}
                 <div style={totalBox}>
                   <span>Total Monthly Paid</span>
-                  <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>₹{stay.monthly_total}</span>
+                  <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
+                    ₹{stay.monthly_total}
+                  </span>
                 </div>
-              </div>
-
-              <div style={btnRow}>
-                <button style={btn} onClick={() => navigate("/user/bookings")}>📜 History</button>
-                <button style={payBtn} onClick={() => navigate("/payment")}>💳 Pay Rent</button>
-                <button style={receiptBtn} onClick={() => handleDownloadReceipt(stay)}>📥 Receipt</button>
-                
-                {stay.order_id && (
-                  <button
-                    style={{ ...btn, background: BRAND_RED }}
-                    onClick={() => setShowRefundFormFor(stay.id)}
-                  >
-                    🔁 Refund
-                  </button>
-                )}
-                
-                {/* VACATE BUTTON - Only show if no vacate request submitted */}
-                {!stay.vacate_status && (
-                  <button
-                    style={{ ...btn, background: "#f59e0b" }}
-                    onClick={() => setShowVacateFormFor(stay.id)}
-                  >
-                    🚪 Vacate
-                  </button>
-                )}
               </div>
             </>
           )}
         </div>
       ))}
 
-      {/* HIDDEN RECEIPT DESIGN FOR PDF */}
+      {/* HIDDEN RECEIPT FOR PDF */}
       {selectedStay && (
         <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
           <div ref={receiptRef} style={modernReceiptContainer}>
@@ -581,8 +656,12 @@ const UserActiveStay = () => {
               </div>
               <div style={{ textAlign: "right" }}>
                 <h2 style={receiptTitle}>RENT RECEIPT</h2>
-                <p style={{ ...orderIdText, color: BRAND_BLUE }}>Order ID: {selectedStay.order_id || "N/A"}</p>
-                <p style={dateText}>Date: {formatDate(selectedStay.paid_date || new Date())}</p>
+                <p style={{ ...orderIdText, color: BRAND_BLUE }}>
+                  Order ID: {selectedStay.order_id || "N/A"}
+                </p>
+                <p style={dateText}>
+                  Date: {formatDate(selectedStay.paid_date || new Date())}
+                </p>
               </div>
             </div>
 
@@ -590,13 +669,20 @@ const UserActiveStay = () => {
               <div style={{ flex: 1 }}>
                 <div style={sectionBlock}>
                   <label style={receiptLabel}>👤 ISSUED TO</label>
-                  <p style={receiptValue}>{auth.currentUser?.displayName || "Valued Tenant"}</p>
-                  <p style={receiptSubValue}>Mob: {auth.currentUser?.phoneNumber || "Registered User"}</p>
+                  <p style={receiptValue}>
+                    {auth.currentUser?.displayName || "Valued Tenant"}
+                  </p>
+                  <p style={receiptSubValue}>
+                    Mob: {auth.currentUser?.phoneNumber || "Registered User"}
+                  </p>
                 </div>
                 <div style={sectionBlock}>
                   <label style={receiptLabel}>🏠 PROPERTY DETAILS</label>
                   <p style={receiptValue}>{selectedStay.pg_name}</p>
-                  <p style={receiptSubValue}>{selectedStay.room_type} Sharing {selectedStay.room_no ? `| Room: ${selectedStay.room_no}` : ""}</p>
+                  <p style={receiptSubValue}>
+                    {selectedStay.room_type} Sharing{" "}
+                    {selectedStay.room_no ? `| Room: ${selectedStay.room_no}` : ""}
+                  </p>
                 </div>
               </div>
               <div style={paymentStatusBox}>
@@ -624,29 +710,64 @@ const UserActiveStay = () => {
                   <span>₹{selectedStay.maintenance_amount}</span>
                 </div>
               )}
-              <div style={{ ...tableRow, borderBottom: `2px solid ${BRAND_BLUE}`, fontWeight: "bold", background: "#f8fafc" }}>
+              <div
+                style={{
+                  ...tableRow,
+                  borderBottom: `2px solid ${BRAND_BLUE}`,
+                  fontWeight: "bold",
+                  background: "#f8fafc",
+                }}
+              >
                 <span>Total Amount Received</span>
                 <span>₹{selectedStay.monthly_total}</span>
               </div>
             </div>
 
             {selectedStay.deposit_amount > 0 && (
-              <div style={{ ...sectionBlock, marginTop: "30px", padding: "20px", background: "#f0f4f8", borderRadius: "10px" }}>
+              <div
+                style={{
+                  ...sectionBlock,
+                  marginTop: "30px",
+                  padding: "20px",
+                  background: "#f0f4f8",
+                  borderRadius: "10px",
+                }}
+              >
                 <label style={receiptLabel}>💳 SECURITY DEPOSIT (ONE-TIME)</label>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={receiptValue}>₹{selectedStay.deposit_amount}</span>
-                  <span style={{ color: BRAND_GREEN, fontWeight: "bold" }}>Paid (Refundable)</span>
+                  <span style={{ color: BRAND_GREEN, fontWeight: "bold" }}>
+                    Paid (Refundable)
+                  </span>
                 </div>
               </div>
             )}
 
             <div style={footerNote}>
-              <div style={{ textAlign: "left", marginBottom: "20px", color: "#4b5563" }}>
-                <p>✔ Verified Transaction: <strong>{selectedStay.order_id || "N/A"}</strong></p>
-                <p>✔ This is a digital proof of stay generated by Nepxall.</p>
+              <div
+                style={{ textAlign: "left", marginBottom: "20px", color: "#4b5563" }}
+              >
+                <p>
+                  ✔ Verified Transaction:{" "}
+                  <strong>{selectedStay.order_id || "N/A"}</strong>
+                </p>
+                <p>
+                  ✔ This is a digital proof of stay generated by Nepxall.
+                </p>
               </div>
-              <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>* System-generated receipt. No signature required.</p>
-              <p style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}>THANK YOU FOR STAYING WITH US!</p>
+              <p
+                style={{
+                  borderTop: "1px solid #e5e7eb",
+                  paddingTop: "20px",
+                }}
+              >
+                * System-generated receipt. No signature required.
+              </p>
+              <p
+                style={{ fontWeight: "bold", marginTop: 5, color: BRAND_BLUE }}
+              >
+                THANK YOU FOR STAYING WITH US!
+              </p>
             </div>
           </div>
         </div>
@@ -655,24 +776,98 @@ const UserActiveStay = () => {
   );
 };
 
-/* --- STYLES (UNCHANGED EXCEPT NEW INPUTS) --- */
-const container = { maxWidth: 600, margin: "40px auto", padding: "0 20px", fontFamily: "Inter, sans-serif" };
-const card = { background: "#fff", padding: 30, borderRadius: 16, boxShadow: "0 10px 25px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0", marginBottom: "25px" };
-const headerSection = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 };
-const infoGrid = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: 20 };
-const labelStyle = { fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: "600" };
-const valStyle = { margin: "2px 0 0 0", fontWeight: "700", fontSize: "15px", color: "#111827" };
-const priceList = { marginBottom: 20, background: "#f9fafb", padding: "15px", borderRadius: "12px" };
-const priceRow = { display: "flex", justifyContent: "space-between", color: "#4b5563", margin: "10px 0", fontSize: "14px" };
-const totalBox = { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 15, padding: "15px", background: "#f0fdf4", borderRadius: "8px", color: "#166534" };
-const statusBadge = { padding: "6px 12px", borderRadius: "20px", fontSize: "11px", fontWeight: "bold", background: "#dcfce7", color: "#166534" };
-const btnRow = { display: "flex", gap: 8, flexWrap: "wrap" }; 
-const btn = { flex: 1, minWidth: "100px", padding: "12px", background: BRAND_BLUE, color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "600", fontSize: "13px" };
-const payBtn = { ...btn, background: BRAND_GREEN };
-const receiptBtn = { ...btn, background: "#4b5563" };
+/* ===== STYLES ===== */
+const container = {
+  maxWidth: 600,
+  margin: "40px auto",
+  padding: "0 20px",
+  fontFamily: "Inter, sans-serif",
+};
+const card = {
+  background: "#fff",
+  padding: 30,
+  borderRadius: 16,
+  boxShadow: "0 10px 25px rgba(0,0,0,0.06)",
+  border: "1px solid #f0f0f0",
+  marginBottom: "25px",
+};
+const headerSection = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 20,
+};
+const infoGrid = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: "10px",
+  marginBottom: 20,
+};
+const labelStyle = {
+  fontSize: "11px",
+  color: "#6b7280",
+  textTransform: "uppercase",
+  letterSpacing: "0.5px",
+  fontWeight: "600",
+};
+const valStyle = {
+  margin: "2px 0 0 0",
+  fontWeight: "700",
+  fontSize: "15px",
+  color: "#111827",
+};
+const priceList = {
+  marginBottom: 20,
+  background: "#f9fafb",
+  padding: "15px",
+  borderRadius: "12px",
+};
+const priceRow = {
+  display: "flex",
+  justifyContent: "space-between",
+  color: "#4b5563",
+  margin: "10px 0",
+  fontSize: "14px",
+};
+const totalBox = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginTop: 15,
+  padding: "15px",
+  background: "#f0fdf4",
+  borderRadius: "8px",
+  color: "#166534",
+};
+const statusBadge = {
+  padding: "6px 12px",
+  borderRadius: "20px",
+  fontSize: "11px",
+  fontWeight: "bold",
+  background: "#dcfce7",
+  color: "#166534",
+};
+const btnRow = { display: "flex", gap: 8, flexWrap: "wrap" };
+const btn = {
+  flex: 1,
+  minWidth: "100px",
+  padding: "12px",
+  background: BRAND_BLUE,
+  color: "#fff",
+  border: "none",
+  borderRadius: "10px",
+  cursor: "pointer",
+  fontWeight: "600",
+  fontSize: "13px",
+};
 const infoItem = { display: "flex", flexDirection: "column" };
-const emptyBox = { textAlign: "center", padding: 60, background: "#fff", borderRadius: 16, border: "2px dashed #e5e7eb" };
-
+const emptyBox = {
+  textAlign: "center",
+  padding: 60,
+  background: "#fff",
+  borderRadius: 16,
+  border: "2px dashed #e5e7eb",
+};
 const refundFormContainer = { animation: "fadeIn 0.3s ease" };
 const inputGroup = { marginBottom: "15px" };
 const inputField = {
@@ -684,28 +879,139 @@ const inputField = {
   fontFamily: "inherit",
   fontSize: "14px",
   outline: "none",
-  boxSizing: "border-box"
+  boxSizing: "border-box",
 };
 
-const modernReceiptContainer = { width: "210mm", minHeight: "297mm", padding: "60px", background: "#ffffff", color: "#111827", fontFamily: "Helvetica, Arial, sans-serif" };
-const receiptHeader = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "20px", marginBottom: "30px" };
-const logoText = { margin: 0, fontSize: "36px", fontWeight: "900", letterSpacing: "-1px" };
+/* 3-dot button styles */
+const dotBtn = {
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  padding: "6px 10px",
+  borderRadius: "8px",
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
+  alignItems: "center",
+  transition: "background 0.15s",
+};
+const dot = {
+  display: "block",
+  width: "4px",
+  height: "4px",
+  borderRadius: "50%",
+  background: "#6b7280",
+};
+const dropdownMenu = {
+  position: "absolute",
+  top: "calc(100% + 6px)",
+  right: 0,
+  background: "#fff",
+  border: "1px solid #e5e7eb",
+  borderRadius: "12px",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+  zIndex: 999,
+  minWidth: "190px",
+  overflow: "hidden",
+};
+const dropdownItem = {
+  display: "flex",
+  alignItems: "center",
+  width: "100%",
+  padding: "12px 16px",
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  fontSize: "14px",
+  fontWeight: "500",
+  textAlign: "left",
+  fontFamily: "Inter, sans-serif",
+  transition: "background 0.12s",
+};
+
+/* Receipt styles */
+const modernReceiptContainer = {
+  width: "210mm",
+  minHeight: "297mm",
+  padding: "60px",
+  background: "#ffffff",
+  color: "#111827",
+  fontFamily: "Helvetica, Arial, sans-serif",
+};
+const receiptHeader = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  paddingBottom: "20px",
+  marginBottom: "30px",
+};
+const logoText = {
+  margin: 0,
+  fontSize: "36px",
+  fontWeight: "900",
+  letterSpacing: "-1px",
+};
 const tagline = { margin: 0, fontSize: "12px", color: "#6b7280" };
 const receiptTitle = { margin: 0, fontSize: "22px", color: "#111827" };
 const orderIdText = { margin: 0, fontSize: "14px", fontWeight: "bold" };
-const mainReceiptBody = { display: "flex", gap: "30px", marginBottom: "40px" };
+const mainReceiptBody = {
+  display: "flex",
+  gap: "30px",
+  marginBottom: "40px",
+};
 const sectionBlock = { marginBottom: "20px" };
-const receiptLabel = { fontSize: "11px", color: "#9ca3af", fontWeight: "bold", letterSpacing: "1px", display: "block", marginBottom: "5px" };
-const receiptValue = { fontSize: "16px", fontWeight: "bold", margin: 0, color: "#111827" };
+const receiptLabel = {
+  fontSize: "11px",
+  color: "#9ca3af",
+  fontWeight: "bold",
+  letterSpacing: "1px",
+  display: "block",
+  marginBottom: "5px",
+};
+const receiptValue = {
+  fontSize: "16px",
+  fontWeight: "bold",
+  margin: 0,
+  color: "#111827",
+};
 const receiptSubValue = { fontSize: "13px", color: "#4b5563", margin: "2px 0" };
-const paymentStatusBox = { width: "200px", background: "#f8fafc", borderRadius: "15px", border: "1px solid #e2e8f0", padding: "20px", textAlign: "center" };
+const paymentStatusBox = {
+  width: "200px",
+  background: "#f8fafc",
+  borderRadius: "15px",
+  border: "1px solid #e2e8f0",
+  padding: "20px",
+  textAlign: "center",
+};
 const statusCircle = { fontSize: "30px", marginBottom: "5px" };
 const statusText = { margin: 0, fontSize: "18px", fontWeight: "bold" };
 const dateText = { fontSize: "12px", color: "#6b7280", margin: "5px 0" };
-const amountDisplay = { fontSize: "24px", fontWeight: "900", color: "#111827", marginTop: "10px" };
+const amountDisplay = {
+  fontSize: "24px",
+  fontWeight: "900",
+  color: "#111827",
+  marginTop: "10px",
+};
 const tableContainer = { marginTop: "10px" };
-const tableHeader = { display: "flex", justifyContent: "space-between", padding: "12px", color: "#fff", borderRadius: "8px 8px 0 0", fontWeight: "bold" };
-const tableRow = { display: "flex", justifyContent: "space-between", padding: "15px 12px", borderBottom: "1px solid #e5e7eb" };
-const footerNote = { marginTop: "50px", textAlign: "center", color: "#9ca3af", fontSize: "12px" };
+const tableHeader = {
+  display: "flex",
+  justifyContent: "space-between",
+  padding: "12px",
+  color: "#fff",
+  borderRadius: "8px 8px 0 0",
+  fontWeight: "bold",
+};
+const tableRow = {
+  display: "flex",
+  justifyContent: "space-between",
+  padding: "15px 12px",
+  borderBottom: "1px solid #e5e7eb",
+};
+const footerNote = {
+  marginTop: "50px",
+  textAlign: "center",
+  color: "#9ca3af",
+  fontSize: "12px",
+};
 
 export default UserActiveStay;
