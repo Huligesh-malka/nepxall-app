@@ -95,14 +95,11 @@ function App() {
     testBackendConnection();
   }, []);
 
-  /* 🔄 LOADING STATE */
   if (loading) return null;
 
-  /* 🔐 PRIVATE ROUTE */
   const PrivateRoute = ({ children }) =>
     user ? children : <Navigate to="/login" replace />;
 
-  /* 🔐 ROLE ROUTE */
   const RoleRoute = ({ children, allowedRole }) =>
     user && role === allowedRole ? children : <Navigate to="/" replace />;
 
@@ -154,12 +151,29 @@ function App() {
           </RoleRoute>
         </PrivateRoute>
       }>
-        <Route index element={<Navigate to="dashboard" />} />
+        <Route index element={<Navigate to="dashboard" replace />} />
+
         <Route path="dashboard" element={<OwnerDashboard />} />
         <Route path="payments" element={<OwnerPayments />} />
         <Route path="vacate" element={<OwnerVacateRequests />} />
         <Route path="premium" element={<OwnerPremiumPlans />} />
         <Route path="bookings" element={<OwnerBookings />} />
+
+        {/* 🔥 IMPORTANT FIX */}
+        <Route path="bank" element={<OwnerBankDetails />} />
+        <Route path="verification" element={<OwnerVerificationPage />} />
+        <Route path="notifications" element={<OwnerNotifications />} />
+        <Route path="chats" element={<OwnerChatList />} />
+
+        <Route path="hotels" element={<OwnerHotels />} />
+        <Route path="add-hotel" element={<AddHotel />} />
+        <Route path="add" element={<OwnerAddPG />} />
+        <Route path="edit/:id" element={<EditPG />} />
+        <Route path="rooms/:pgId" element={<OwnerRooms />} />
+        <Route path="photos/:id" element={<OwnerPGPhotos />} />
+        <Route path="videos/:id" element={<OwnerPGVideos />} />
+        <Route path="reviews/:pgId" element={<OwnerReviewReply />} />
+        <Route path="property/:propertyId/plans" element={<CreatePlan />} />
       </Route>
 
       {/* ADMIN */}
@@ -170,8 +184,19 @@ function App() {
           </RoleRoute>
         </PrivateRoute>
       }>
-        <Route index element={<Navigate to="finance" />} />
+        <Route index element={<Navigate to="finance" replace />} />
+
         <Route path="finance" element={<AdminFinanceDashboard />} />
+        <Route path="payments" element={<AdminPayments />} />
+        <Route path="settlements" element={<AdminSettlements />} />
+        <Route path="settlement-history" element={<SettlementHistory />} />
+        <Route path="pending-pgs" element={<AdminPendingPGs />} />
+        <Route path="pg/:id" element={<AdminPGDetails />} />
+        <Route path="owner-verification" element={<AdminOwnerVerification />} />
+        <Route path="services" element={<AdminServiceBookings />} />
+        <Route path="refunds" element={<AdminRefunds />} />
+        <Route path="agreements" element={<AdminAgreements />} />
+        <Route path="agreement/:id" element={<AdminAgreementDetails />} />
       </Route>
 
       {/* VENDOR */}
@@ -182,12 +207,12 @@ function App() {
           </RoleRoute>
         </PrivateRoute>
       }>
-        <Route index element={<Navigate to="dashboard" />} />
+        <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<VendorDashboard />} />
       </Route>
 
       {/* FALLBACK */}
-      <Route path="*" element={<Navigate to="/" />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
 
     </Routes>
   );
