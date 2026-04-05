@@ -25,7 +25,13 @@ export default function OwnerBankDetails() {
     setMessage("");
 
     try {
-      const res = await api.get("/owner/bank");
+     const token = await user.getIdToken();
+
+const res = await api.get("/owner/bank", {
+  headers: {
+    Authorization: `Bearer ${token}`
+  }
+});
 
       if (res.data) {
         setForm({
@@ -65,7 +71,13 @@ export default function OwnerBankDetails() {
     setMessage("");
 
     try {
-      await api.post("/owner/bank", form);
+      const token = await user.getIdToken();
+
+await api.post("/owner/bank", form, {
+  headers: {
+    Authorization: `Bearer ${token}`
+  }
+});
       setMessage("Bank details saved successfully");
       fetchBank();
     } catch (err) {
