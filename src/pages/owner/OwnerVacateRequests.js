@@ -2,14 +2,42 @@ import React, { useEffect, useState, useRef } from "react";
 import api from "../../api/api";
 import { auth } from "../../firebase";
 
-/* ── tiny hook: close dropdown on outside click ── */
+/* ── Close dropdown on outside click ── */
 function useOutsideClick(ref, cb) {
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) cb(); };
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) cb();
+    };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [ref, cb]);
 }
+
+/* ── Format ISO date → "22 Apr 2026" ── */
+const formatDate = (raw) => {
+  if (!raw) return "—";
+  try {
+    const d = new Date(raw);
+    return d.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return raw;
+  }
+};
+
+/* ── Mask helpers ── */
+const maskAccount = (v) =>
+  v && v !== "N/A" ? "••••" + String(v).slice(-4) : "N/A";
+const maskIFSC = (v) =>
+  v && v !== "N/A" ? String(v).slice(0, 4) + "•••••" : "N/A";
+const maskUPI = (v) => {
+  if (!v || v === "N/A") return "N/A";
+  const [user, domain] = String(v).split("@");
+  return user.slice(0, 2) + "•••" + (domain ? "@" + domain : "");
+};
 
 /* ── Status config ── */
 const statusConfig = (item) => {
@@ -25,24 +53,24 @@ const statusConfig = (item) => {
 };
 
 /* ══════════════════════════════════════════════
-   DROPDOWN MENU (3-dot)
+   ACTION MENU (3-dot)
 ══════════════════════════════════════════════ */
-const ActionMenu = ({ item, damage, dues, setDamage, setDues, loadingId, onApprove, onReject, onMarkPaid }) => {
-  const [open, setOpen] = useState(false);
+const ActionMenu = ({
+  item, damage, dues, setDamage, setDues,
+  loadingId, onApprove, onReject, onMarkPaid,
+}) => {
+  const [open, setOpen]         = useState(false);
   const [showForm, setShowForm] = useState(false);
   const menuRef = useRef(null);
   useOutsideClick(menuRef, () => setOpen(false));
 
-  const canApprove =
-    item.refund_status !== "approved" && item.refund_status !== "paid";
-  const canMarkPaid =
-    item.refund_status === "pending" && item.user_approval === "accepted";
-  const canReject =
-    item.refund_status !== "paid" && item.refund_status !== "rejected";
+  const canApprove  = item.refund_status !== "approved" && item.refund_status !== "paid";
+  const canMarkPaid = item.refund_status === "pending" && item.user_approval === "accepted";
+  const canReject   = item.refund_status !== "paid" && item.refund_status !== "rejected";
 
   return (
     <div style={{ position: "relative" }} ref={menuRef}>
-      {/* 3-dot button */}
+      {/* 3-dot trigger */}
       <button
         onClick={() => setOpen((o) => !o)}
         style={{
@@ -95,7 +123,7 @@ const ActionMenu = ({ item, damage, dues, setDamage, setDues, loadingId, onAppro
         </div>
       )}
 
-      {/* Inline approval form (slides in below card) */}
+      {/* Inline approval form */}
       {showForm && (
         <div style={styles.formOverlay}>
           <p style={styles.formTitle}>
@@ -106,7 +134,9 @@ const ActionMenu = ({ item, damage, dues, setDamage, setDues, loadingId, onAppro
             type="number"
             placeholder="0"
             value={damage[item.booking_id] || ""}
-            onChange={(e) => setDamage((d) => ({ ...d, [item.booking_id]: e.target.value }))}
+            onChange={(e) =>
+              setDamage((d) => ({ ...d, [item.booking_id]: e.target.value }))
+            }
             style={styles.input}
           />
           <label style={styles.label}>Pending Dues (₹)</label>
@@ -114,7 +144,9 @@ const ActionMenu = ({ item, damage, dues, setDamage, setDues, loadingId, onAppro
             type="number"
             placeholder="0"
             value={dues[item.booking_id] || ""}
-            onChange={(e) => setDues((d) => ({ ...d, [item.booking_id]: e.target.value }))}
+            onChange={(e) =>
+              setDues((d) => ({ ...d, [item.booking_id]: e.target.value }))
+            }
             style={styles.input}
           />
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
@@ -136,28 +168,69 @@ const ActionMenu = ({ item, damage, dues, setDamage, setDues, loadingId, onAppro
 };
 
 /* ══════════════════════════════════════════════
+   BANK DETAILS — collapsible + masked
+══════════════════════════════════════════════ */
+const BankDetails = ({ item }) => {
+  const [revealed, setRevealed] = useState(false);
+
+  const account = revealed ? (item.account_number || "N/A") : maskAccount(item.account_number);
+  const ifsc    = revealed ? (item.ifsc_code || "N/A")      : maskIFSC(item.ifsc_code);
+  const upi     = revealed ? (item.upi_id || "N/A")         : maskUPI(item.upi_id);
+
+  return (
+    <div style={styles.bankSection}>
+      <div style={styles.bankHeader}>
+        <span style={styles.bankSectionTitle}>🏦 Bank Details</span>
+        <button
+          style={styles.revealBtn}
+          onClick={() => setRevealed((r) => !r)}
+        >
+          {revealed ? "🔒 Hide" : "👁 Show"}
+        </button>
+      </div>
+      <div style={styles.bankRow}>
+        <BankChip label="Account" value={account} />
+        <BankChip label="IFSC"    value={ifsc} />
+        <BankChip label="UPI"     value={upi} />
+      </div>
+    </div>
+  );
+};
+
+const BankChip = ({ label, value }) => (
+  <div style={styles.bankChip}>
+    <span style={styles.bankLabel}>{label}</span>
+    <span style={styles.bankValue}>{value}</span>
+  </div>
+);
+
+/* ══════════════════════════════════════════════
    SINGLE REQUEST CARD
 ══════════════════════════════════════════════ */
-const RequestCard = ({ item, damage, dues, setDamage, setDues, loadingId, onApprove, onReject, onMarkPaid }) => {
-  const st = statusConfig(item);
+const RequestCard = ({
+  item, damage, dues, setDamage, setDues,
+  loadingId, onApprove, onReject, onMarkPaid,
+}) => {
+  const st      = statusConfig(item);
+  const initial = (item.pg_name || item.user_name || "P")[0].toUpperCase();
 
   return (
     <div style={styles.card}>
-      {/* ── Header row ── */}
+      {/* Header */}
       <div style={styles.cardHeader}>
-        <div style={styles.avatar}>
-          {(item.user_name || "T")[0].toUpperCase()}
-        </div>
-        <div style={{ flex: 1 }}>
+        {/* Avatar — initial only, no + */}
+        <div style={styles.avatar}>{initial}</div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
           <h3 style={styles.pgName}>{item.pg_name}</h3>
           <p style={styles.tenantName}>👤 {item.user_name}</p>
         </div>
-        {/* Status pill */}
+
         <span style={{ ...styles.pill, color: st.color, background: st.bg }}>
           <span style={{ ...styles.pillDot, background: st.dot }} />
           {st.label}
         </span>
-        {/* 3-dot menu */}
+
         <ActionMenu
           item={item}
           damage={damage}
@@ -171,32 +244,27 @@ const RequestCard = ({ item, damage, dues, setDamage, setDues, loadingId, onAppr
         />
       </div>
 
-      {/* ── Info grid ── */}
+      {/* Info grid */}
       <div style={styles.infoGrid}>
-        <InfoTile icon="📅" label="Move Out" value={item.move_out_date || "—"} />
-        <InfoTile icon="💳" label="Deposit" value={`₹${item.security_deposit || 0}`} />
-        <InfoTile icon="💰" label="Refund" value={`₹${item.refund_amount || 0}`} />
-        <InfoTile icon="⚒" label="Damage" value={`₹${item.damage_amount || 0}`} />
+        <InfoTile icon="📅" label="Move Out" value={formatDate(item.move_out_date)} />
+        <InfoTile icon="💳" label="Deposit"  value={`₹${item.security_deposit || 0}`} />
+        <InfoTile icon="💰" label="Refund"   value={`₹${item.refund_amount || 0}`} />
+        <InfoTile icon="⚒"  label="Damage"   value={`₹${item.damage_amount || 0}`} />
       </div>
 
-      {/* ── Divider ── */}
       <div style={styles.divider} />
 
-      {/* ── Bank details ── */}
-      <div style={styles.bankRow}>
-        <BankChip label="Account" value={item.account_number || "N/A"} />
-        <BankChip label="IFSC" value={item.ifsc_code || "N/A"} />
-        <BankChip label="UPI" value={item.upi_id || "N/A"} />
-      </div>
+      {/* Bank details */}
+      <BankDetails item={item} />
 
-      {/* ── Reason ── */}
+      {/* Reason */}
       {item.reason && (
         <p style={styles.reason}>
           <span style={styles.reasonLabel}>Reason: </span>{item.reason}
         </p>
       )}
 
-      {/* ── Paid banner ── */}
+      {/* Paid banner */}
       {item.refund_status === "paid" && (
         <div style={styles.paidBanner}>✅ Payment Completed</div>
       )}
@@ -212,24 +280,18 @@ const InfoTile = ({ icon, label, value }) => (
   </div>
 );
 
-const BankChip = ({ label, value }) => (
-  <div style={styles.bankChip}>
-    <span style={styles.bankLabel}>{label}</span>
-    <span style={styles.bankValue}>{value}</span>
-  </div>
-);
-
 /* ══════════════════════════════════════════════
    MAIN COMPONENT
 ══════════════════════════════════════════════ */
 const OwnerVacateRequests = () => {
-  const [requests, setRequests] = useState([]);
-  const [damage, setDamage] = useState({});
-  const [dues, setDues] = useState({});
+  const [requests,  setRequests]  = useState([]);
+  const [damage,    setDamage]    = useState({});
+  const [dues,      setDues]      = useState({});
   const [loadingId, setLoadingId] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading,   setLoading]   = useState(true);
 
   const loadRequests = async () => {
+    setLoading(true);
     try {
       const token = await auth.currentUser.getIdToken();
       const res = await api.get("/owner/vacate/requests", {
@@ -251,7 +313,10 @@ const OwnerVacateRequests = () => {
       const token = await auth.currentUser.getIdToken();
       const res = await api.post(
         `/owner/vacate/approve/${bookingId}`,
-        { damage_amount: Number(damage[bookingId]) || 0, pending_dues: Number(dues[bookingId]) || 0 },
+        {
+          damage_amount: Number(damage[bookingId]) || 0,
+          pending_dues:  Number(dues[bookingId])   || 0,
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       alert(`✅ Approved! Refund: ₹${res.data.refundAmount}`);
@@ -263,7 +328,9 @@ const OwnerVacateRequests = () => {
   const handleReject = async (bookingId) => {
     try {
       const token = await auth.currentUser.getIdToken();
-      await api.post(`/owner/refund/reject/${bookingId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      await api.post(`/owner/refund/reject/${bookingId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       alert("❌ Refund Rejected");
       loadRequests();
     } catch { alert("Reject failed"); }
@@ -273,7 +340,9 @@ const OwnerVacateRequests = () => {
     try {
       setLoadingId(bookingId);
       const token = await auth.currentUser.getIdToken();
-      await api.post(`/owner/refund/mark-paid/${bookingId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      await api.post(`/owner/refund/mark-paid/${bookingId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       alert("💸 Payment Completed");
       loadRequests();
     } catch { alert("Payment failed"); }
@@ -282,11 +351,12 @@ const OwnerVacateRequests = () => {
 
   return (
     <div style={styles.page}>
-      {/* Page header */}
       <div style={styles.pageHeader}>
         <div>
           <h1 style={styles.pageTitle}>Vacate Requests</h1>
-          <p style={styles.pageSubtitle}>{requests.length} request{requests.length !== 1 ? "s" : ""} pending review</p>
+          <p style={styles.pageSubtitle}>
+            {requests.length} request{requests.length !== 1 ? "s" : ""} pending review
+          </p>
         </div>
         <button onClick={loadRequests} style={styles.refreshBtn}>↻ Refresh</button>
       </div>
@@ -353,11 +423,7 @@ const styles = {
     margin: 0,
     letterSpacing: "-0.5px",
   },
-  pageSubtitle: {
-    fontSize: 13,
-    color: "#94a3b8",
-    margin: "4px 0 0",
-  },
+  pageSubtitle: { fontSize: 13, color: "#94a3b8", margin: "4px 0 0" },
   refreshBtn: {
     background: "#fff",
     border: "1px solid #e2e8f0",
@@ -370,6 +436,8 @@ const styles = {
     boxShadow: "0 1px 2px rgba(0,0,0,.04)",
   },
   list: { display: "flex", flexDirection: "column", gap: 16 },
+
+  /* Card */
   card: {
     background: "#fff",
     borderRadius: 16,
@@ -384,6 +452,8 @@ const styles = {
     gap: 12,
     marginBottom: 16,
   },
+
+  /* Avatar: letter only, no + icon */
   avatar: {
     width: 42,
     height: 42,
@@ -394,11 +464,14 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     fontWeight: 700,
-    fontSize: 16,
+    fontSize: 17,
     flexShrink: 0,
+    userSelect: "none",
   },
-  pgName: { margin: 0, fontSize: 15, fontWeight: 700, color: "#0f172a" },
+
+  pgName:     { margin: 0, fontSize: 15, fontWeight: 700, color: "#0f172a" },
   tenantName: { margin: "2px 0 0", fontSize: 12, color: "#64748b" },
+
   pill: {
     display: "inline-flex",
     alignItems: "center",
@@ -411,6 +484,8 @@ const styles = {
     flexShrink: 0,
   },
   pillDot: { width: 6, height: 6, borderRadius: "50%", flexShrink: 0 },
+
+  /* Info tiles */
   infoGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(4, 1fr)",
@@ -427,23 +502,59 @@ const styles = {
     gap: 3,
     border: "1px solid #f1f5f9",
   },
-  tileIcon: { fontSize: 16 },
-  tileLabel: { fontSize: 10, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.3 },
+  tileIcon:  { fontSize: 16 },
+  tileLabel: {
+    fontSize: 10,
+    color: "#94a3b8",
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
   tileValue: { fontSize: 13, fontWeight: 700, color: "#0f172a" },
+
   divider: { height: 1, background: "#f1f5f9", margin: "4px 0 12px" },
-  bankRow: { display: "flex", gap: 8, flexWrap: "wrap" },
-  bankChip: {
+
+  /* Bank section */
+  bankSection: {
+    background: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: 12,
+    padding: "12px 14px",
+    marginBottom: 10,
+  },
+  bankHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  bankSectionTitle: { fontSize: 12, fontWeight: 700, color: "#475569" },
+  revealBtn: {
     background: "#eef2ff",
+    border: "none",
+    borderRadius: 6,
+    padding: "4px 10px",
+    fontSize: 11,
+    fontWeight: 700,
+    color: "#4f46e5",
+    cursor: "pointer",
+  },
+  bankRow:  { display: "flex", gap: 8, flexWrap: "wrap" },
+  bankChip: {
+    background: "#fff",
+    border: "1px solid #e2e8f0",
     borderRadius: 8,
-    padding: "6px 10px",
+    padding: "6px 12px",
     display: "flex",
     flexDirection: "column",
-    gap: 1,
+    gap: 2,
   },
   bankLabel: { fontSize: 10, color: "#818cf8", fontWeight: 700, textTransform: "uppercase" },
   bankValue: { fontSize: 12, color: "#3730a3", fontWeight: 600 },
-  reason: { marginTop: 10, fontSize: 12, color: "#64748b", lineHeight: 1.5 },
+
+  reason:      { marginTop: 6, fontSize: 12, color: "#64748b", lineHeight: 1.5 },
   reasonLabel: { fontWeight: 700, color: "#475569" },
+
   paidBanner: {
     marginTop: 14,
     padding: "10px 14px",
@@ -456,7 +567,7 @@ const styles = {
     border: "1px solid #bbf7d0",
   },
 
-  /* ── Dropdown ── */
+  /* Dropdown */
   dropdown: {
     position: "absolute",
     right: 0,
@@ -497,7 +608,7 @@ const styles = {
     flexShrink: 0,
   },
 
-  /* ── Inline approval form ── */
+  /* Approval form */
   formOverlay: {
     position: "absolute",
     right: 0,
@@ -511,7 +622,15 @@ const styles = {
     zIndex: 200,
   },
   formTitle: { margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "#0f172a" },
-  label: { display: "block", fontSize: 11, fontWeight: 700, color: "#64748b", marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.3 },
+  label: {
+    display: "block",
+    fontSize: 11,
+    fontWeight: 700,
+    color: "#64748b",
+    marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
   input: {
     width: "100%",
     padding: "8px 10px",
@@ -547,11 +666,8 @@ const styles = {
     fontSize: 13,
     cursor: "pointer",
   },
-  emptyState: {
-    textAlign: "center",
-    padding: "60px 20px",
-    color: "#94a3b8",
-  },
+
+  emptyState: { textAlign: "center", padding: "60px 20px", color: "#94a3b8" },
   spinner: {
     width: 36,
     height: 36,
