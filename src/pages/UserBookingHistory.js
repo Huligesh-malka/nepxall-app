@@ -1,15 +1,10 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { Navigate } from "react-router-dom";
 import PropTypes from "prop-types";
 import api from "../api/api";
 
 const UserBookingHistory = () => {
   const navigate = useNavigate();
-  
-  // ✅ USE ONLY THIS - No localStorage.getItem("user_id")
-  const { user, role, loading: authLoading } = useAuth();
 
   // State management
   const [bookings, setBookings] = useState([]);
@@ -34,7 +29,6 @@ const UserBookingHistory = () => {
   // Constants
   const PAYMENT_TIMEOUT = 300;
 
-  // ⚠️ IMPORTANT: Move hooks BEFORE any conditional returns
   // Filter bookings based on active tab
   const filteredBookings = useMemo(() => {
     if (activeTab === "all") return bookings;
@@ -140,8 +134,8 @@ const UserBookingHistory = () => {
       }
 
       const res = await api.post("/payments/create-payment", {
-        bookingId: booking.id
-      });
+  bookingId: booking.id
+});
 
       if (!res.data.success) {
         throw new Error(res.data.message || "Payment initialization failed");
@@ -253,8 +247,8 @@ const UserBookingHistory = () => {
       setError("");
       
       const res = await api.post("/payments/create-payment", {
-        bookingId: paymentData.bookingId
-      });
+  bookingId: paymentData.bookingId
+});
 
       if (!res.data.success) {
         throw new Error(res.data.message || "Failed to refresh QR");
@@ -307,7 +301,7 @@ const UserBookingHistory = () => {
       case "paid":
         return {
           showPayButton: false,
-          showAgreementButton: true,
+          showAgreementButton: true, // Show agreement button when payment is verified
           message: null,
           badge: { text: "Payment Verified", style: "paid" },
           canPay: false
@@ -355,10 +349,6 @@ const UserBookingHistory = () => {
   const handleFillAgreement = useCallback((bookingId) => {
     navigate(`/agreement-form/${bookingId}`);
   }, [navigate]);
-
-  // ✅ PROTECTION - MOVED AFTER ALL HOOKS
-  if (authLoading) return <div>Loading...</div>;
-  if (!user) return <Navigate to="/login" replace />;
 
   // Loading state
   if (loading) {
@@ -512,33 +502,35 @@ const UserBookingHistory = () => {
                   </div>
 
                   {/* Price Breakdown */}
-                  <div style={styles.priceSection}>
-                    {rent > 0 && (
-                      <div style={styles.priceRow}>
-                        <span>Rent</span>
-                        <span>₹{rent.toLocaleString()}</span>
-                      </div>
-                    )}
+<div style={styles.priceSection}>
 
-                    {deposit > 0 && (
-                      <div style={styles.priceRow}>
-                        <span>Security Deposit</span>
-                        <span>₹{deposit.toLocaleString()}</span>
-                      </div>
-                    )}
+  {rent > 0 && (
+    <div style={styles.priceRow}>
+      <span>Rent</span>
+      <span>₹{rent.toLocaleString()}</span>
+    </div>
+  )}
 
-                    {maintenance > 0 && (
-                      <div style={styles.priceRow}>
-                        <span>Maintenance</span>
-                        <span>₹{maintenance.toLocaleString()}</span>
-                      </div>
-                    )}
+  {deposit > 0 && (
+    <div style={styles.priceRow}>
+      <span>Security Deposit</span>
+      <span>₹{deposit.toLocaleString()}</span>
+    </div>
+  )}
 
-                    <div style={styles.totalPrice}>
-                      <span>Total Amount</span>
-                      <span>₹{total.toLocaleString()}</span>
-                    </div>
-                  </div>
+  {maintenance > 0 && (
+    <div style={styles.priceRow}>
+      <span>Maintenance</span>
+      <span>₹{maintenance.toLocaleString()}</span>
+    </div>
+  )}
+
+  <div style={styles.totalPrice}>
+    <span>Total Amount</span>
+    <span>₹{total.toLocaleString()}</span>
+  </div>
+
+</div>
 
                   {/* Message if any */}
                   {paymentDisplay.message && (
@@ -843,21 +835,13 @@ const UserBookingHistory = () => {
               transform: translateY(0);
             }
           }
-          @keyframes fadeIn {
-            from {
-              opacity: 0;
-            }
-            to {
-              opacity: 1;
-            }
-          }
         `}
       </style>
     </div>
   );
 };
 
-// Modern Styles (same as before)
+// Modern Styles
 const styles = {
   container: {
     maxWidth: 1200,
@@ -1092,6 +1076,9 @@ const styles = {
     color: "#4b5563",
     fontSize: 14,
     borderBottom: "1px dashed #e5e7eb",
+    ":last-child": {
+      borderBottom: "none",
+    }
   },
   
   totalPrice: {

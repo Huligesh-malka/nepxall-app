@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { Navigate } from "react-router-dom";
 import api from "../api/api";
 import SignatureCanvas from "react-signature-canvas";
-import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { auth } from "../firebase";
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { 
   Box, TextField, Button, Typography, CircularProgress, 
   Alert, Snackbar, Paper, Grid, Divider, IconButton, 
@@ -17,9 +15,6 @@ const AgreementForm = () => {
   const { bookingId } = useParams();
   const navigate = useNavigate();
   const sigCanvas = useRef(null);
-  
-  // ✅ USE ONLY THIS - No localStorage.getItem("user_id")
-  const { user, role, loading: authLoading } = useAuth();
 
   /* ================= STATES ================= */
   const [loading, setLoading] = useState(false);
@@ -57,7 +52,7 @@ const AgreementForm = () => {
   };
 
   const handleAadhaarChange = (e) => {
-    const val = e.target.value.replace(/\D/g, "");
+    const val = e.target.value.replace(/\D/g, ""); // Remove non-digits
     if (val.length <= 4) {
       setFormData({ ...formData, aadhaar_last4: val });
     }
@@ -80,7 +75,6 @@ const AgreementForm = () => {
     }
   };
 
-  // ✅ MOVED useEffect BEFORE conditional returns
   useEffect(() => {
     if (bookingId) fetchAgreementStatus();
   }, [bookingId]);
@@ -132,9 +126,7 @@ const AgreementForm = () => {
       return setError("Aadhaar must be exactly 4 digits.");
     }
     setLoading(true);
-    
-    // ✅ REPLACED localStorage.getItem("user_id") with user?.uid
-    const userId = user?.uid;
+    const userId = localStorage.getItem("user_id");
     const data = { ...formData, user_id: userId, booking_id: bookingId };
 
     try {
@@ -210,10 +202,6 @@ const AgreementForm = () => {
       </Typography>
     </Box>
   );
-
-  // ✅ PROTECTION - MOVED AFTER ALL HOOKS
-  if (authLoading) return <div>Loading authentication...</div>;
-  if (!user) return <Navigate to="/login" replace />;
 
   return (
     <Box sx={{ maxWidth: "900px", margin: "30px auto", p: 2 }}>

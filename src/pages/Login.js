@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box, TextField, Button, Typography, Paper,
-  CircularProgress, Alert, MenuItem
+  CircularProgress, Alert, MenuItem, Snackbar
 } from "@mui/material";
 import { auth } from "../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
@@ -25,13 +25,12 @@ const PhoneLogin = () => {
   const [canResend, setCanResend] = useState(true);
 
   const navigate = useNavigate();
-  // Use useRef to persist the verifier without re-renders
-  const recaptchaRef = useRef(null);
 
   /* ================= SESSION RESTORE ================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const savedRole = localStorage.getItem("role");
+
     if (token && savedRole) {
       redirect(savedRole);
     }
@@ -52,55 +51,45 @@ const PhoneLogin = () => {
     }
   }, [otpTimer]);
 
-  /* ================= RECAPTCHA SETUP ================= */
+  /* ================= RECAPTCHA FIX ================= */
   useEffect(() => {
-    const initRecaptcha = () => {
-      // Check if container exists and verifier isn't already set
-      if (!recaptchaRef.current && document.getElementById("recaptcha-container")) {
-        try {
-          recaptchaRef.current = new RecaptchaVerifier(
-            auth, // First argument should be auth in many versions
-            "recaptcha-container",
-            {
-              size: "invisible",
-              callback: (response) => {
-                console.log("reCAPTCHA solved");
-              },
-              "expired-callback": () => {
-                console.log("reCAPTCHA expired");
-                resetRecaptcha();
-              }
-            }
-          );
-        } catch (err) {
-          console.error("Recaptcha init error:", err);
-        }
-      }
-    };
-
-    initRecaptcha();
-
-    // Cleanup on unmount
-    return () => {
-      if (recaptchaRef.current) {
-        recaptchaRef.current.clear();
-        recaptchaRef.current = null;
-      }
-    };
+    setupRecaptcha();
   }, []);
 
+  const setupRecaptcha = () => {
+    try {
+      if (window.recaptchaVerifier) return;
+
+      window.recaptchaVerifier = new RecaptchaVerifier(
+        "recaptcha-container",
+        {
+          size: "invisible",
+          callback: () => {
+            console.log("reCAPTCHA solved");
+          },
+          "expired-callback": () => {
+            console.log("reCAPTCHA expired");
+            resetRecaptcha();
+          }
+        },
+        auth
+      );
+
+      window.recaptchaVerifier.render().catch(console.error);
+
+    } catch (err) {
+      console.error("Recaptcha init error:", err);
+    }
+  };
+
   const resetRecaptcha = () => {
-    if (recaptchaRef.current) {
-      recaptchaRef.current.clear();
-      recaptchaRef.current = null;
+    if (window.recaptchaVerifier) {
+      try {
+        window.recaptchaVerifier.clear();
+      } catch (e) {}
+      window.recaptchaVerifier = null;
     }
-    // Re-trigger the logic to create a new one
-    const container = document.getElementById("recaptcha-container");
-    if (container) {
-      recaptchaRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
-        size: "invisible"
-      });
-    }
+    setupRecaptcha();
   };
 
   /* ================= REDIRECT ================= */
@@ -116,6 +105,7 @@ const PhoneLogin = () => {
     try {
       setLoading(true);
       setError("");
+
       const idToken = await user.getIdToken(true);
 
       const res = await userAPI.post("/auth/firebase", {
@@ -127,6 +117,7 @@ const PhoneLogin = () => {
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("role", res.data.role);
         localStorage.setItem("name", res.data.name);
+
         const userId = res.data.user?.id || res.data.userId;
         localStorage.setItem("user_id", userId);
 
@@ -134,8 +125,10 @@ const PhoneLogin = () => {
         window.dispatchEvent(new Event("role-updated"));
 
         setSuccess(`Welcome ${res.data.name}`);
+
         setTimeout(() => redirect(res.data.role), 1000);
       }
+
     } catch (err) {
       console.error("Sync Error:", err);
       setError(err?.response?.data?.message || "Server sync failed");
@@ -155,12 +148,12 @@ const PhoneLogin = () => {
       setLoading(true);
       setError("");
 
-      if (!recaptchaRef.current) {
-        setError("Captcha not initialized. Please refresh.");
-        return;
+      if (!window.recaptchaVerifier) {
+        setupRecaptcha();
       }
 
-      const appVerifier = recaptchaRef.current;
+      const appVerifier = window.recaptchaVerifier;
+
       const confirmation = await signInWithPhoneNumber(
         auth,
         `+91${phone}`,
@@ -171,10 +164,15 @@ const PhoneLogin = () => {
       setOtpTimer(60);
       setCanResend(false);
       setSuccess("OTP sent successfully");
+
     } catch (err) {
       console.error("Firebase SMS Error:", err);
-      resetRecaptcha(); 
-      setError("Failed to send OTP. Try again later.");
+
+      resetRecaptcha(); // 🔥 important fix
+
+      setError(
+        "Failed to send OTP. Check internet / disable VPN / allow cookies."
+      );
     } finally {
       setLoading(false);
     }
@@ -183,8 +181,10 @@ const PhoneLogin = () => {
   /* ================= VERIFY OTP ================= */
   const verifyOtp = async () => {
     if (otp.length !== 6) return setError("Enter valid 6 digit OTP");
+
     try {
       setLoading(true);
+
       const res = await confirmObj.confirm(otp);
       setFirebaseUser(res.user);
 
@@ -193,6 +193,7 @@ const PhoneLogin = () => {
       } else {
         await syncUser(res.user, null);
       }
+
     } catch (err) {
       setError("Invalid OTP or expired");
     } finally {
@@ -206,15 +207,17 @@ const PhoneLogin = () => {
     await syncUser(firebaseUser, role);
   };
 
+  /* ================= UI ================= */
   return (
     <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" bgcolor="#f8fafc">
       <Paper sx={{ p: 4, width: 380, borderRadius: 4 }}>
-        <Typography variant="h5" align="center" fontWeight="bold" gutterBottom>
+        
+        <Typography variant="h5" align="center" fontWeight="bold">
           {isNewUser ? "Select Role" : "Nepxall Login"}
         </Typography>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+        {error && <Alert severity="error">{error}</Alert>}
+        {success && <Alert severity="success">{success}</Alert>}
 
         {!confirmObj && !isNewUser && (
           <>
@@ -226,8 +229,9 @@ const PhoneLogin = () => {
               inputProps={{ maxLength: 10 }}
               margin="normal"
             />
-            <Button fullWidth variant="contained" onClick={sendOtp} disabled={loading || !canResend} sx={{ mt: 2 }}>
-              {loading ? <CircularProgress size={24} /> : otpTimer > 0 ? `Resend in ${otpTimer}s` : "Get OTP"}
+
+            <Button fullWidth onClick={sendOtp} disabled={loading}>
+              {loading ? <CircularProgress size={20} /> : "Get OTP"}
             </Button>
           </>
         )}
@@ -242,8 +246,9 @@ const PhoneLogin = () => {
               inputProps={{ maxLength: 6 }}
               margin="normal"
             />
-            <Button fullWidth variant="contained" onClick={verifyOtp} disabled={loading} sx={{ mt: 2 }}>
-              {loading ? <CircularProgress size={24} /> : "Verify OTP"}
+
+            <Button fullWidth onClick={verifyOtp} disabled={loading}>
+              {loading ? <CircularProgress size={20} /> : "Verify"}
             </Button>
           </>
         )}
@@ -253,7 +258,6 @@ const PhoneLogin = () => {
             <TextField
               select
               fullWidth
-              label="Account Role"
               value={role}
               onChange={(e) => setRole(e.target.value)}
               margin="normal"
@@ -262,14 +266,15 @@ const PhoneLogin = () => {
               <MenuItem value="owner">Owner</MenuItem>
               <MenuItem value="vendor">Vendor</MenuItem>
             </TextField>
-            <Button fullWidth variant="contained" onClick={completeRegistration} disabled={loading} sx={{ mt: 2 }}>
-              {loading ? <CircularProgress size={24} /> : "Create Account"}
+
+            <Button fullWidth onClick={completeRegistration}>
+              Create Account
             </Button>
           </>
         )}
 
-        {/* This must always be in the DOM */}
-        <div id="recaptcha-container" style={{ marginTop: '10px' }}></div>
+        <div id="recaptcha-container"></div>
+
       </Paper>
     </Box>
   );
