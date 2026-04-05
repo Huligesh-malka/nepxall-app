@@ -25,13 +25,13 @@ export default function OwnerBankDetails() {
     setMessage("");
 
     try {
-     const token = await user.getIdToken();
+      const token = await user.getIdToken();
 
-const res = await api.get("/owner/bank", {
-  headers: {
-    Authorization: `Bearer ${token}`
-  }
-});
+      const res = await api.get("/owner/bank", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
 
       if (res.data) {
         setForm({
@@ -73,11 +73,12 @@ const res = await api.get("/owner/bank", {
     try {
       const token = await user.getIdToken();
 
-await api.post("/owner/bank", form, {
-  headers: {
-    Authorization: `Bearer ${token}`
-  }
-});
+      await api.post("/owner/bank", form, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
       setMessage("Bank details saved successfully");
       fetchBank();
     } catch (err) {
@@ -87,6 +88,7 @@ await api.post("/owner/bank", form, {
     }
   };
 
+  /* ================= LOADING ================= */
   if (authLoading || pageLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
@@ -99,103 +101,136 @@ await api.post("/owner/bank", form, {
   if (role !== "owner") return <Navigate to="/" replace />;
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-      <div className="max-w-3xl w-full">
-        <div className="bg-white rounded-xl shadow-md border overflow-hidden">
+    <div style={{
+      padding: "24px",
+      maxWidth: "800px",
+      margin: "0 auto"
+    }}>
+      <div style={{
+        background: "#fff",
+        borderRadius: "12px",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+        border: "1px solid #eee",
+        overflow: "hidden"
+      }}>
 
-          {/* HEADER (FIXED) */}
-          <div className="bg-white border-b px-8 py-6">
-            <h1 className="text-2xl font-bold text-gray-800">
-              Bank Verification
-            </h1>
-            <p className="text-gray-500 mt-1">
-              Complete this step to start approving bookings and receive payments
-            </p>
-          </div>
-
-          {/* FORM */}
-          <div className="px-8 py-6">
-            {message && (
-              <div
-                className={`mb-6 p-3 rounded-md ${
-                  message.includes("success")
-                    ? "bg-green-100 text-green-700"
-                    : "bg-red-100 text-red-700"
-                }`}
-              >
-                {message}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-
-                <input
-                  type="text"
-                  name="account_holder_name"
-                  value={form.account_holder_name}
-                  onChange={handleChange}
-                  className="w-full p-3 border rounded-md"
-                  placeholder="Account Holder Name"
-                  required
-                />
-
-                <input
-                  type="text"
-                  name="account_number"
-                  value={form.account_number}
-                  onChange={handleChange}
-                  className="w-full p-3 border rounded-md"
-                  placeholder="Account Number"
-                  required
-                />
-
-                <input
-                  type="text"
-                  name="ifsc"
-                  value={form.ifsc}
-                  onChange={handleChange}
-                  className="w-full p-3 border rounded-md"
-                  placeholder="IFSC Code"
-                  required
-                />
-
-                <input
-                  type="text"
-                  name="bank_name"
-                  value={form.bank_name}
-                  onChange={handleChange}
-                  className="w-full p-3 border rounded-md"
-                  placeholder="Bank Name"
-                />
-
-                <input
-                  type="text"
-                  name="branch"
-                  value={form.branch}
-                  onChange={handleChange}
-                  className="w-full p-3 border rounded-md md:col-span-2"
-                  placeholder="Branch"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="w-full bg-blue-600 text-white py-3 rounded-md font-semibold hover:bg-blue-700 disabled:opacity-50"
-              >
-                {saving ? "Saving..." : "Save Bank Details"}
-              </button>
-            </form>
-          </div>
-
-          {/* FOOTER */}
-          <div className="bg-gray-50 px-8 py-3 border-t text-sm text-gray-500">
-            Your bank details are secure and encrypted
-          </div>
-
+        {/* HEADER */}
+        <div style={{
+          borderBottom: "1px solid #eee",
+          padding: "20px"
+        }}>
+          <h2 style={{ margin: 0 }}>Bank Verification</h2>
+          <p style={{ color: "#666", marginTop: "6px" }}>
+            Complete this step to receive payments
+          </p>
         </div>
+
+        {/* FORM */}
+        <div style={{ padding: "20px" }}>
+          {message && (
+            <div style={{
+              marginBottom: "16px",
+              padding: "10px",
+              borderRadius: "6px",
+              background: message.includes("success") ? "#dcfce7" : "#fee2e2",
+              color: message.includes("success") ? "#166534" : "#991b1b"
+            }}>
+              {message}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "12px"
+            }}>
+
+              <input
+                name="account_holder_name"
+                value={form.account_holder_name}
+                onChange={handleChange}
+                placeholder="Account Holder Name"
+                style={inputStyle}
+                required
+              />
+
+              <input
+                name="account_number"
+                value={form.account_number}
+                onChange={handleChange}
+                placeholder="Account Number"
+                style={inputStyle}
+                required
+              />
+
+              <input
+                name="ifsc"
+                value={form.ifsc}
+                onChange={handleChange}
+                placeholder="IFSC Code"
+                style={inputStyle}
+                required
+              />
+
+              <input
+                name="bank_name"
+                value={form.bank_name}
+                onChange={handleChange}
+                placeholder="Bank Name"
+                style={inputStyle}
+              />
+
+              <input
+                name="branch"
+                value={form.branch}
+                onChange={handleChange}
+                placeholder="Branch"
+                style={{ ...inputStyle, gridColumn: "span 2" }}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={saving}
+              style={buttonStyle}
+            >
+              {saving ? "Saving..." : "Save Bank Details"}
+            </button>
+          </form>
+        </div>
+
+        {/* FOOTER */}
+        <div style={{
+          borderTop: "1px solid #eee",
+          padding: "12px",
+          fontSize: "12px",
+          color: "#777"
+        }}>
+          Your bank details are secure
+        </div>
+
       </div>
     </div>
   );
 }
+
+/* ================= STYLES ================= */
+
+const inputStyle = {
+  padding: "12px",
+  border: "1px solid #ddd",
+  borderRadius: "6px",
+  width: "100%"
+};
+
+const buttonStyle = {
+  marginTop: "16px",
+  width: "100%",
+  padding: "12px",
+  background: "#2563eb",
+  color: "#fff",
+  border: "none",
+  borderRadius: "6px",
+  cursor: "pointer"
+};
