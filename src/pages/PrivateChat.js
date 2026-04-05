@@ -324,7 +324,6 @@ export default function PrivateChat() {
   const [delConfirm, setDelConfirm] = useState(false);
   const [msgToDel, setMsgToDel] = useState(null);
   const [connStatus, setConnStatus] = useState("connected");
-  const [isScrolled, setIsScrolled] = useState(false);
   const typingTimer = useRef();
 
   const scrollBottom = (smooth = true) => {
@@ -336,11 +335,36 @@ export default function PrivateChat() {
     }, 80);
   };
 
-  const handleScroll = () => {
-    if (areaRef.current) {
-      setIsScrolled(areaRef.current.scrollTop > 50);
+  // Mark messages as read when they come into view
+  const markMessagesAsRead = useCallback(() => {
+    if (!me || !messages.length) return;
+    
+    const unreadMessages = messages.filter(
+      msg => msg.sender_id !== me.id && !msg.is_read
+    );
+    
+    if (unreadMessages.length > 0) {
+      const messageIds = unreadMessages.map(msg => msg.id);
+      socket.emit("mark_messages_read", {
+        userA: Number(userId),
+        userB: me.id,
+        pg_id: Number(pgId),
+        messageIds
+      });
+      
+      // Update local state
+      setMessages(prev =>
+        prev.map(msg =>
+          messageIds.includes(msg.id) ? { ...msg, is_read: 1 } : msg
+        )
+      );
     }
-  };
+  }, [messages, me, userId, pgId]);
+
+  // Trigger mark as read when messages change or component mounts
+  useEffect(() => {
+    markMessagesAsRead();
+  }, [messages, markMessagesAsRead]);
 
   /* ── params guard ── */
   useEffect(() => {
@@ -425,18 +449,26 @@ export default function PrivateChat() {
       if (uid === Number(userId)) setOtherTyping(isTyping);
     };
     const onRead = ({ readerId, messageIds }) => {
-      if (readerId === Number(userId))
+      if (readerId === Number(userId)) {
         setMessages((p) =>
           p.map((x) =>
             messageIds.includes(x.id) ? { ...x, is_read: 1 } : x
           )
         );
+      }
     };
     const onOn = (uid) => {
       if (uid === otherUser?.firebase_uid) setOnline(true);
     };
     const onOff = (uid) => {
       if (uid === otherUser?.firebase_uid) setOnline(false);
+    };
+    const onEdit = ({ messageId, newMessage }) => {
+      setMessages((p) =>
+        p.map((x) =>
+          x.id === messageId ? { ...x, message: newMessage, edited: true } : x
+        )
+      );
     };
 
     socket.on("receive_private_message", onMsg);
@@ -446,6 +478,8 @@ export default function PrivateChat() {
     socket.on("messages_read", onRead);
     socket.on("user_online", onOn);
     socket.on("user_offline", onOff);
+    socket.on("message_edited", onEdit);
+    
     return () => {
       socket.off("receive_private_message", onMsg);
       socket.off("message_sent_confirmation", onSent);
@@ -454,6 +488,7 @@ export default function PrivateChat() {
       socket.off("messages_read", onRead);
       socket.off("user_online", onOn);
       socket.off("user_offline", onOff);
+      socket.off("message_edited", onEdit);
     };
   }, [pgId, me?.id, userId, otherUser?.firebase_uid]);
 
@@ -538,11 +573,25 @@ export default function PrivateChat() {
         { message: text },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      
+      // Update local state immediately
       setMessages((p) =>
         p.map((x) =>
           x.id === editingMsg.id ? { ...x, message: text, edited: true } : x
         )
       );
+      
+      // Emit edit event to socket for real-time update
+      socket.emit("edit_private_message", {
+        messageId: editingMsg.id,
+        newMessage: text,
+        sender_id: me.id,
+        receiver_id: Number(userId),
+        pg_id: Number(pgId),
+        sender_firebase_uid: auth.currentUser.uid,
+        receiver_firebase_uid: otherUser?.firebase_uid,
+      });
+      
       cancelEdit();
     } catch (e) {
       console.error(e);
@@ -633,7 +682,7 @@ export default function PrivateChat() {
       </div>
 
       {/* ══ MESSAGES AREA ══ */}
-      <div ref={areaRef} style={s.area} className="msg-area" onScroll={handleScroll}>
+      <div ref={areaRef} style={s.area} className="msg-area">
         {/* Premium background pattern */}
         <div style={s.bgPattern} />
 
@@ -648,7 +697,6 @@ export default function PrivateChat() {
 
               {grouped[day].map((msg, idx) => {
                 const isMine = msg.sender_id === me?.id;
-                const prevMsg = grouped[day][idx - 1];
                 const nextMsg = grouped[day][idx + 1];
                 const isLast = !nextMsg || nextMsg.sender_id !== msg.sender_id;
 
