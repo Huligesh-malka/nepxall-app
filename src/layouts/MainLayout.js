@@ -1,5 +1,5 @@
 import React from "react";
-import { Outlet, useLocation, Navigate } from "react-router-dom";
+import { Outlet, useLocation, Navigate, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
@@ -8,15 +8,23 @@ import { useAuth } from "../context/AuthContext";
 
 const MainLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, role, loading } = useAuth();
 
+  /* ================= LOGOUT ================= */
   const handleLogout = async () => {
-    await signOut(auth);
-    localStorage.clear();
-    window.location.href = "/login";
+    try {
+      await signOut(auth);
+      localStorage.clear();
+
+      // ✅ Smooth navigation (no reload)
+      navigate("/login", { replace: true });
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
   };
 
-  /* ✅ LOADING UI */
+  /* ================= LOADING ================= */
   if (loading) {
     return (
       <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
@@ -25,30 +33,56 @@ const MainLayout = () => {
     );
   }
 
-  /* ✅ SAFE REDIRECT (NO navigate()) */
+  /* ================= AUTH PROTECTION ================= */
   if (!user && location.pathname !== "/login" && location.pathname !== "/register") {
     return <Navigate to="/login" replace />;
   }
 
+  /* ================= TITLE ================= */
+  const getTitle = () => {
+    if (location.pathname === "/") return "DASHBOARD";
+
+    const path = location.pathname.split("/").pop();
+    return path ? path.replace("-", " ").toUpperCase() : "PAGE";
+  };
+
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
+
+      {/* 🔥 SIDEBAR */}
       <Sidebar role={role} user={user} />
 
-      <div style={{ marginLeft: 250, padding: 24, width: "100%" }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}>
+      {/* 🔥 MAIN CONTENT */}
+      <div
+        style={{
+          marginLeft: 250,
+          padding: "24px",
+          width: "100%",
+          minHeight: "100vh",
+          background: "#f8fafc", // ✅ fixes white/dark issue globally
+        }}
+      >
+        {/* HEADER */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 4,
+          }}
+        >
           <Typography variant="h6" sx={{ fontWeight: 800 }}>
-            {location.pathname === "/"
-              ? "DASHBOARD"
-              : location.pathname.split("/").pop()?.toUpperCase()}
+            {getTitle()}
           </Typography>
 
           {user && (
-            <Button color="error" onClick={handleLogout}>
+            <Button variant="contained" color="error" onClick={handleLogout}>
               Logout
             </Button>
           )}
         </Box>
 
+        {/* PAGE CONTENT */}
         <Outlet />
       </div>
     </div>
