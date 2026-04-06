@@ -44,35 +44,35 @@ const maskUPI = (v) => {
 /* ── Status config ── */
 const statusConfig = (item) => {
   if (item.refund_status === "paid")
-    return { label: "Paid", color: "#22c55e", bg: "#f0fdf4", dot: "#16a34a" };
+    return { label: "Paid", color: "#22c55e", bg: "#f0fdf4", dot: "#16a34a", icon: "✅" };
   if (item.refund_status === "rejected" || item.user_approval === "rejected")
-    return { label: "Rejected", color: "#ef4444", bg: "#fef2f2", dot: "#dc2626" };
+    return { label: "Rejected", color: "#ef4444", bg: "#fef2f2", dot: "#dc2626", icon: "❌" };
   if (item.refund_status === "approved")
-    return { label: "Awaiting Tenant", color: "#f59e0b", bg: "#fffbeb", dot: "#d97706" };
+    return { label: "Awaiting", color: "#f59e0b", bg: "#fffbeb", dot: "#d97706", icon: "⏳" };
   if (item.refund_status === "pending" && item.user_approval === "accepted")
-    return { label: "Ready to Pay", color: "#6366f1", bg: "#eef2ff", dot: "#4f46e5" };
-  return { label: "Pending Review", color: "#64748b", bg: "#f8fafc", dot: "#94a3b8" };
+    return { label: "Ready", color: "#6366f1", bg: "#eef2ff", dot: "#4f46e5", icon: "💸" };
+  return { label: "Pending", color: "#64748b", bg: "#f8fafc", dot: "#94a3b8", icon: "🕐" };
 };
 
 /* ── Filter definitions ── */
 const FILTERS = [
-  { key: "all",           label: "All",            emoji: "📋" },
-  { key: "pending",       label: "Pending Review",  emoji: "🕐" },
-  { key: "awaiting",      label: "Awaiting Tenant", emoji: "⏳" },
-  { key: "ready_to_pay",  label: "Ready to Pay",    emoji: "💸" },
-  { key: "paid",          label: "Paid",            emoji: "✅" },
-  { key: "rejected",      label: "Rejected",        emoji: "❌" },
+  { key: "all", label: "All", emoji: "📋" },
+  { key: "pending", label: "Pending", emoji: "🕐" },
+  { key: "awaiting", label: "Awaiting", emoji: "⏳" },
+  { key: "ready", label: "Ready", emoji: "💸" },
+  { key: "paid", label: "Paid", emoji: "✅" },
+  { key: "rejected", label: "Rejected", emoji: "❌" },
 ];
 
 const matchesFilter = (item, filterKey) => {
   switch (filterKey) {
-    case "all":          return true;
-    case "pending":      return item.refund_status === "pending" && item.user_approval === "pending";
-    case "awaiting":     return item.refund_status === "approved";
-    case "ready_to_pay": return item.refund_status === "pending" && item.user_approval === "accepted";
-    case "paid":         return item.refund_status === "paid";
-    case "rejected":     return item.refund_status === "rejected" || item.user_approval === "rejected";
-    default:             return true;
+    case "all": return true;
+    case "pending": return item.refund_status === "pending" && item.user_approval === "pending";
+    case "awaiting": return item.refund_status === "approved";
+    case "ready": return item.refund_status === "pending" && item.user_approval === "accepted";
+    case "paid": return item.refund_status === "paid";
+    case "rejected": return item.refund_status === "rejected" || item.user_approval === "rejected";
+    default: return true;
   }
 };
 
@@ -83,30 +83,20 @@ const ActionMenu = ({
   item, damage, dues, setDamage, setDues,
   loadingId, onApprove, onReject, onMarkPaid,
 }) => {
-  const [open, setOpen]         = useState(false);
+  const [open, setOpen] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const menuRef = useRef(null);
   useOutsideClick(menuRef, () => setOpen(false));
 
-  const canApprove  = item.refund_status !== "approved" && item.refund_status !== "paid";
+  const canApprove = item.refund_status !== "approved" && item.refund_status !== "paid";
   const canMarkPaid = item.refund_status === "pending" && item.user_approval === "accepted";
-  const canReject   = item.refund_status !== "paid" && item.refund_status !== "rejected";
+  const canReject = item.refund_status !== "paid" && item.refund_status !== "rejected";
 
   return (
     <div style={{ position: "relative" }} ref={menuRef}>
       <button
         onClick={() => setOpen((o) => !o)}
-        style={{
-          background: open ? "#f1f5f9" : "transparent",
-          border: "none",
-          borderRadius: 8,
-          padding: "6px 10px",
-          cursor: "pointer",
-          fontSize: 20,
-          color: "#64748b",
-          lineHeight: 1,
-          transition: "background .15s",
-        }}
+        style={styles.actionButton}
         title="Actions"
       >
         ⋮
@@ -115,12 +105,9 @@ const ActionMenu = ({
       {open && (
         <div style={styles.dropdown}>
           {canApprove && (
-            <button
-              style={styles.menuItem}
-              onClick={() => { setShowForm(true); setOpen(false); }}
-            >
+            <button style={styles.menuItem} onClick={() => { setShowForm(true); setOpen(false); }}>
               <span style={{ ...styles.menuIcon, background: "#dcfce7", color: "#16a34a" }}>✓</span>
-              {item.user_approval === "rejected" ? "Re-Approve Refund" : "Approve Vacate"}
+              {item.user_approval === "rejected" ? "Re-Approve" : "Approve"}
             </button>
           )}
           {canMarkPaid && (
@@ -130,16 +117,13 @@ const ActionMenu = ({
               disabled={loadingId === item.booking_id}
             >
               <span style={{ ...styles.menuIcon, background: "#ede9fe", color: "#7c3aed" }}>₹</span>
-              Mark as Paid
+              Mark Paid
             </button>
           )}
           {canReject && (
-            <button
-              style={{ ...styles.menuItem, color: "#ef4444" }}
-              onClick={() => { onReject(item.booking_id); setOpen(false); }}
-            >
+            <button style={{ ...styles.menuItem, color: "#ef4444" }} onClick={() => { onReject(item.booking_id); setOpen(false); }}>
               <span style={{ ...styles.menuIcon, background: "#fee2e2", color: "#dc2626" }}>✕</span>
-              Reject Refund
+              Reject
             </button>
           )}
         </div>
@@ -148,16 +132,14 @@ const ActionMenu = ({
       {showForm && (
         <div style={styles.formOverlay}>
           <p style={styles.formTitle}>
-            {item.user_approval === "rejected" ? "🔄 Re-Approve Refund" : "✅ Approve Vacate"}
+            {item.user_approval === "rejected" ? "🔄 Re-Approve" : "✅ Approve Vacate"}
           </p>
           <label style={styles.label}>Damage Amount (₹)</label>
           <input
             type="number"
             placeholder="0"
             value={damage[item.booking_id] || ""}
-            onChange={(e) =>
-              setDamage((d) => ({ ...d, [item.booking_id]: e.target.value }))
-            }
+            onChange={(e) => setDamage((d) => ({ ...d, [item.booking_id]: e.target.value }))}
             style={styles.input}
           />
           <label style={styles.label}>Pending Dues (₹)</label>
@@ -165,22 +147,14 @@ const ActionMenu = ({
             type="number"
             placeholder="0"
             value={dues[item.booking_id] || ""}
-            onChange={(e) =>
-              setDues((d) => ({ ...d, [item.booking_id]: e.target.value }))
-            }
+            onChange={(e) => setDues((d) => ({ ...d, [item.booking_id]: e.target.value }))}
             style={styles.input}
           />
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-            <button
-              style={styles.confirmBtn}
-              onClick={() => { onApprove(item.booking_id); setShowForm(false); }}
-              disabled={loadingId === item.booking_id}
-            >
-              {loadingId === item.booking_id ? "Processing…" : "Confirm"}
+            <button style={styles.confirmBtn} onClick={() => { onApprove(item.booking_id); setShowForm(false); }} disabled={loadingId === item.booking_id}>
+              {loadingId === item.booking_id ? "..." : "Confirm"}
             </button>
-            <button style={styles.cancelBtn} onClick={() => setShowForm(false)}>
-              Cancel
-            </button>
+            <button style={styles.cancelBtn} onClick={() => setShowForm(false)}>Cancel</button>
           </div>
         </div>
       )}
@@ -189,14 +163,13 @@ const ActionMenu = ({
 };
 
 /* ══════════════════════════════════════════════
-   BANK DETAILS — collapsible + masked
+   BANK DETAILS
 ══════════════════════════════════════════════ */
 const BankDetails = ({ item }) => {
   const [revealed, setRevealed] = useState(false);
-
   const account = revealed ? (item.account_number || "N/A") : maskAccount(item.account_number);
-  const ifsc    = revealed ? (item.ifsc_code || "N/A")      : maskIFSC(item.ifsc_code);
-  const upi     = revealed ? (item.upi_id || "N/A")         : maskUPI(item.upi_id);
+  const ifsc = revealed ? (item.ifsc_code || "N/A") : maskIFSC(item.ifsc_code);
+  const upi = revealed ? (item.upi_id || "N/A") : maskUPI(item.upi_id);
 
   return (
     <div style={styles.bankSection}>
@@ -207,186 +180,89 @@ const BankDetails = ({ item }) => {
         </button>
       </div>
       <div style={styles.bankRow}>
-        <BankChip label="Account" value={account} />
-        <BankChip label="IFSC"    value={ifsc} />
-        <BankChip label="UPI"     value={upi} />
+        <div style={styles.bankChip}><span style={styles.bankLabel}>Account</span><span style={styles.bankValue}>{account}</span></div>
+        <div style={styles.bankChip}><span style={styles.bankLabel}>IFSC</span><span style={styles.bankValue}>{ifsc}</span></div>
+        <div style={styles.bankChip}><span style={styles.bankLabel}>UPI</span><span style={styles.bankValue}>{upi}</span></div>
       </div>
     </div>
   );
 };
 
-const BankChip = ({ label, value }) => (
-  <div style={styles.bankChip}>
-    <span style={styles.bankLabel}>{label}</span>
-    <span style={styles.bankValue}>{value}</span>
-  </div>
-);
-
 /* ══════════════════════════════════════════════
-   SINGLE REQUEST CARD
+   REQUEST CARD
 ══════════════════════════════════════════════ */
-const RequestCard = ({
-  item, damage, dues, setDamage, setDues,
-  loadingId, onApprove, onReject, onMarkPaid,
-}) => {
-  const st      = statusConfig(item);
-  const initial = (item.pg_name || item.user_name || "P")[0].toUpperCase();
+const RequestCard = ({ item, damage, dues, setDamage, setDues, loadingId, onApprove, onReject, onMarkPaid }) => {
+  const st = statusConfig(item);
 
   return (
-    <div style={styles.card}>
-      <div style={styles.cardHeader}>
-        <div style={styles.avatar}>{initial}</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h3 style={styles.pgName}>{item.pg_name}</h3>
-          <p style={styles.tenantName}>👤 {item.user_name}</p>
+    <div style={styles.requestCard}>
+      <div style={styles.requestHeader}>
+        <div style={styles.requestAvatar}>{item.user_name?.[0]?.toUpperCase() || "U"}</div>
+        <div style={{ flex: 1 }}>
+          <div style={styles.requestTenant}>{item.user_name}</div>
+          <div style={styles.requestId}>#{item.booking_id}</div>
         </div>
-        <span style={{ ...styles.pill, color: st.color, background: st.bg }}>
-          <span style={{ ...styles.pillDot, background: st.dot }} />
-          {st.label}
+        <span style={{ ...styles.requestStatus, color: st.color, background: st.bg }}>
+          {st.icon} {st.label}
         </span>
-        <ActionMenu
-          item={item}
-          damage={damage}
-          dues={dues}
-          setDamage={setDamage}
-          setDues={setDues}
-          loadingId={loadingId}
-          onApprove={onApprove}
-          onReject={onReject}
-          onMarkPaid={onMarkPaid}
-        />
+        <ActionMenu item={item} damage={damage} dues={dues} setDamage={setDamage} setDues={setDues} loadingId={loadingId} onApprove={onApprove} onReject={onReject} onMarkPaid={onMarkPaid} />
       </div>
 
-      <div style={styles.infoGrid}>
-        <InfoTile icon="📅" label="Move Out" value={formatDate(item.move_out_date)} />
-        <InfoTile icon="💳" label="Deposit"  value={`₹${item.security_deposit || 0}`} />
-        <InfoTile icon="💰" label="Refund"   value={`₹${item.refund_amount || 0}`} />
-        <InfoTile icon="⚒"  label="Damage"   value={`₹${item.damage_amount || 0}`} />
+      <div style={styles.requestDetails}>
+        <div style={styles.detailItem}><span style={styles.detailLabel}>📅 Move Out</span><span style={styles.detailValue}>{formatDate(item.move_out_date)}</span></div>
+        <div style={styles.detailItem}><span style={styles.detailLabel}>💰 Deposit</span><span style={styles.detailValue}>₹{item.security_deposit || 0}</span></div>
+        <div style={styles.detailItem}><span style={styles.detailLabel}>💸 Refund</span><span style={styles.detailValue}>₹{item.refund_amount || 0}</span></div>
+        <div style={styles.detailItem}><span style={styles.detailLabel}>⚒️ Damage</span><span style={styles.detailValue}>₹{item.damage_amount || 0}</span></div>
       </div>
-
-      <div style={styles.divider} />
 
       <BankDetails item={item} />
-
-      {item.reason && (
-        <p style={styles.reason}>
-          <span style={styles.reasonLabel}>Reason: </span>{item.reason}
-        </p>
-      )}
-
-      {item.refund_status === "paid" && (
-        <div style={styles.paidBanner}>✅ Payment Completed</div>
-      )}
+      {item.reason && <div style={styles.requestReason}><span>📝 Reason:</span> {item.reason}</div>}
     </div>
   );
 };
 
-const InfoTile = ({ icon, label, value }) => (
-  <div style={styles.tile}>
-    <span style={styles.tileIcon}>{icon}</span>
-    <span style={styles.tileLabel}>{label}</span>
-    <span style={styles.tileValue}>{value}</span>
-  </div>
-);
-
 /* ══════════════════════════════════════════════
-   FILTER BAR
+   PG CARD (Main Selection)
 ══════════════════════════════════════════════ */
-const FilterBar = ({ active, onChange, counts }) => (
-  <div style={styles.filterWrapper}>
-    <div style={styles.filterScroll}>
-      {FILTERS.map((f) => {
-        const isActive = active === f.key;
-        const count    = counts[f.key] ?? 0;
-        return (
-          <button
-            key={f.key}
-            onClick={() => onChange(f.key)}
-            style={{
-              ...styles.filterBtn,
-              ...(isActive ? styles.filterBtnActive : {}),
-            }}
-          >
-            <span style={styles.filterEmoji}>{f.emoji}</span>
-            {f.label}
-            {count > 0 && (
-              <span
-                style={{
-                  ...styles.filterCount,
-                  background: isActive ? "#6366f1" : "#e2e8f0",
-                  color:      isActive ? "#fff"    : "#64748b",
-                }}
-              >
-                {count}
-              </span>
-            )}
-          </button>
-        );
-      })}
-    </div>
-  </div>
-);
-
-/* ══════════════════════════════════════════════
-   SEARCH BAR
-══════════════════════════════════════════════ */
-const SearchBar = ({ value, onChange }) => (
-  <div style={styles.searchWrapper}>
-    <span style={styles.searchIcon}>🔍</span>
-    <input
-      type="text"
-      placeholder="Search by PG name or tenant…"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      style={styles.searchInput}
-    />
-    {value && (
-      <button style={styles.clearBtn} onClick={() => onChange("")}>✕</button>
-    )}
-  </div>
-);
-
-/* ══════════════════════════════════════════════
-   PG GROUP HEADER
-══════════════════════════════════════════════ */
-const PGGroupHeader = ({ pgName, count, totalRefund }) => {
-  const [expanded, setExpanded] = useState(true);
-  
+const PGCard = ({ pg, stats, isSelected, onSelect }) => {
   return (
-    <Box
-      sx={{
-        p: 2,
-        bgcolor: "#f1f5f9",
-        borderRadius: 2,
-        fontWeight: "bold",
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        mb: 1,
-        transition: "all 0.2s",
-        "&:hover": { bgcolor: "#e2e8f0" }
-      }}
-      onClick={() => setExpanded(!expanded)}
+    <div 
+      style={{ ...styles.pgCard, ...(isSelected ? styles.pgCardSelected : {}) }}
+      onClick={() => onSelect(pg.name)}
     >
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-        <span style={{ fontSize: 20 }}>🏠</span>
-        <span style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>{pgName}</span>
-        <span style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>
-          ({count} {count === 1 ? "request" : "requests"})
-        </span>
-      </Box>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "#16a34a" }}>
-          ₹{totalRefund.toLocaleString()}
-        </span>
-        <span style={{ fontSize: 18, color: "#64748b" }}>
-          {expanded ? "▼" : "▶"}
-        </span>
-      </Box>
-    </Box>
+      <div style={styles.pgCardIcon}>🏠</div>
+      <div style={styles.pgCardContent}>
+        <div style={styles.pgCardName}>{pg.name}</div>
+        <div style={styles.pgCardStats}>
+          <span>📋 {pg.totalRequests}</span>
+          <span>🕐 {stats.pending}</span>
+          <span>⏳ {stats.awaiting}</span>
+          <span>💸 {stats.ready}</span>
+          <span>✅ {stats.paid}</span>
+        </div>
+      </div>
+      <div style={styles.pgCardArrow}>{isSelected ? "←" : "→"}</div>
+    </div>
   );
 };
+
+/* ══════════════════════════════════════════════
+   FILTER CHIPS
+══════════════════════════════════════════════ */
+const FilterChips = ({ active, onChange, counts }) => (
+  <div style={styles.filterChips}>
+    {FILTERS.map((f) => (
+      <button
+        key={f.key}
+        onClick={() => onChange(f.key)}
+        style={{ ...styles.chip, ...(active === f.key ? styles.chipActive : {}) }}
+      >
+        <span>{f.emoji}</span> {f.label}
+        {counts[f.key] > 0 && <span style={styles.chipCount}>{counts[f.key]}</span>}
+      </button>
+    ))}
+  </div>
+);
 
 /* ══════════════════════════════════════════════
    MAIN COMPONENT
@@ -394,19 +270,17 @@ const PGGroupHeader = ({ pgName, count, totalRefund }) => {
 const OwnerVacateRequests = () => {
   const navigate = useNavigate();
   const { user, role, loading: authLoading } = useAuth();
-  
-  const [requests,  setRequests]  = useState([]);
-  const [damage,    setDamage]    = useState({});
-  const [dues,      setDues]      = useState({});
+
+  const [requests, setRequests] = useState([]);
+  const [damage, setDamage] = useState({});
+  const [dues, setDues] = useState({});
   const [loadingId, setLoadingId] = useState(null);
-  const [pageLoading,   setPageLoading]   = useState(true);
-  const [filter,    setFilter]    = useState("all");
-  const [search,    setSearch]    = useState("");
-  const [expandedPGs, setExpandedPGs] = useState({});
+  const [pageLoading, setPageLoading] = useState(true);
+  const [filter, setFilter] = useState("all");
+  const [selectedPG, setSelectedPG] = useState(null);
 
   const loadRequests = async () => {
     if (!user) return;
-    
     try {
       setPageLoading(true);
       const token = await user.getIdToken();
@@ -421,83 +295,82 @@ const OwnerVacateRequests = () => {
     }
   };
 
-  /* ================= AUTH + LOAD ================= */
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/login");
-    }
-
-    if (user && role === "owner") {
-      loadRequests();
-    }
+    if (!authLoading && !user) navigate("/login");
+    if (user && role === "owner") loadRequests();
   }, [user, role, authLoading, navigate]);
 
-  /* Badge counts per filter key */
-  const counts = useMemo(() => {
-    const c = {};
-    FILTERS.forEach((f) => {
-      c[f.key] = requests.filter((r) => matchesFilter(r, f.key)).length;
+  // Group by PG
+  const pgGroups = useMemo(() => {
+    const groups = {};
+    requests.forEach(req => {
+      const pgName = req.pg_name || "Unknown PG";
+      if (!groups[pgName]) groups[pgName] = [];
+      groups[pgName].push(req);
     });
-    return c;
+    return groups;
   }, [requests]);
 
-  /* Filtered + searched list */
-  const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return requests.filter((r) => {
-      if (!matchesFilter(r, filter)) return false;
-      if (!q) return true;
-      return (
-        (r.pg_name   || "").toLowerCase().includes(q) ||
-        (r.user_name || "").toLowerCase().includes(q)
-      );
-    });
-  }, [requests, filter, search]);
-
-  /* Group visible requests by PG */
-  const groupedData = useMemo(() => {
-    return visible.reduce((acc, item) => {
-      const key = item.pg_name || "Unknown PG";
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(item);
-      return acc;
-    }, {});
-  }, [visible]);
-
-  /* Calculate PG totals */
+  // Calculate PG stats
   const pgStats = useMemo(() => {
     const stats = {};
-    Object.keys(groupedData).forEach((pgName) => {
-      const requests = groupedData[pgName];
-      const totalRefund = requests.reduce((sum, r) => sum + (r.refund_amount || 0), 0);
-      const statusCounts = {
-        pending: requests.filter(r => r.refund_status === "pending" && r.user_approval === "pending").length,
-        awaiting: requests.filter(r => r.refund_status === "approved").length,
-        ready: requests.filter(r => r.refund_status === "pending" && r.user_approval === "accepted").length,
-        paid: requests.filter(r => r.refund_status === "paid").length,
-        rejected: requests.filter(r => r.refund_status === "rejected" || r.user_approval === "rejected").length,
+    Object.keys(pgGroups).forEach(pgName => {
+      const reqs = pgGroups[pgName];
+      stats[pgName] = {
+        total: reqs.length,
+        pending: reqs.filter(r => r.refund_status === "pending" && r.user_approval === "pending").length,
+        awaiting: reqs.filter(r => r.refund_status === "approved").length,
+        ready: reqs.filter(r => r.refund_status === "pending" && r.user_approval === "accepted").length,
+        paid: reqs.filter(r => r.refund_status === "paid").length,
+        rejected: reqs.filter(r => r.refund_status === "rejected" || r.user_approval === "rejected").length,
       };
-      stats[pgName] = { totalRefund, statusCounts };
     });
     return stats;
-  }, [groupedData]);
+  }, [pgGroups]);
 
-  const togglePG = (pgName) => {
-    setExpandedPGs(prev => ({ ...prev, [pgName]: !prev[pgName] }));
-  };
+  // PG list for selection
+  const pgList = useMemo(() => {
+    return Object.keys(pgGroups).map(pgName => ({
+      name: pgName,
+      totalRequests: pgGroups[pgName].length,
+      stats: pgStats[pgName]
+    }));
+  }, [pgGroups, pgStats]);
+
+  // Auto-select first PG if none selected and PGs exist
+  useEffect(() => {
+    if (!selectedPG && pgList.length > 0) {
+      setSelectedPG(pgList[0].name);
+    }
+  }, [pgList, selectedPG]);
+
+  // Get current PG requests
+  const currentPGRequests = selectedPG ? pgGroups[selectedPG] || [] : [];
+
+  // Filter current PG requests
+  const filteredRequests = useMemo(() => {
+    return currentPGRequests.filter(req => matchesFilter(req, filter));
+  }, [currentPGRequests, filter]);
+
+  // Counts for filter badges
+  const counts = useMemo(() => {
+    const c = { all: currentPGRequests.length };
+    FILTERS.forEach(f => {
+      if (f.key !== "all") {
+        c[f.key] = currentPGRequests.filter(r => matchesFilter(r, f.key)).length;
+      }
+    });
+    return c;
+  }, [currentPGRequests]);
 
   const handleApprove = async (bookingId) => {
     try {
       setLoadingId(bookingId);
       const token = await user.getIdToken();
-      const res = await api.post(
-        `/owner/vacate/approve/${bookingId}`,
-        {
-          damage_amount: Number(damage[bookingId]) || 0,
-          pending_dues:  Number(dues[bookingId])   || 0,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.post(`/owner/vacate/approve/${bookingId}`, {
+        damage_amount: Number(damage[bookingId]) || 0,
+        pending_dues: Number(dues[bookingId]) || 0,
+      }, { headers: { Authorization: `Bearer ${token}` } });
       alert(`✅ Approved! Refund: ₹${res.data.refundAmount}`);
       loadRequests();
     } catch { alert("Approval failed"); }
@@ -528,7 +401,6 @@ const OwnerVacateRequests = () => {
     finally { setLoadingId(null); }
   };
 
-  /* ================= PROTECTION ================= */
   if (authLoading || pageLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
@@ -540,159 +412,95 @@ const OwnerVacateRequests = () => {
   if (!user) return <Navigate to="/login" replace />;
   if (role !== "owner") return <Navigate to="/" replace />;
 
+  const totalPending = Object.values(pgStats).reduce((sum, s) => sum + s.pending, 0);
+
   return (
-    <div style={styles.page}>
-      {/* ── Page header ── */}
-      <div style={styles.pageHeader}>
+    <div style={styles.container}>
+      {/* Header */}
+      <div style={styles.header}>
         <div>
-          <h1 style={styles.pageTitle}>Vacate Requests</h1>
-          <p style={styles.pageSubtitle}>
-            {counts.all} total · {counts.pending || 0} pending review
-          </p>
+          <h1 style={styles.title}>Vacate Requests</h1>
+          <p style={styles.subtitle}>{Object.keys(pgGroups).length} PGs · {totalPending} pending review</p>
         </div>
         <button onClick={loadRequests} style={styles.refreshBtn}>↻ Refresh</button>
       </div>
 
-      {/* ── Search ── */}
-      <SearchBar value={search} onChange={setSearch} />
-
-      {/* ── Filter tabs ── */}
-      <FilterBar active={filter} onChange={setFilter} counts={counts} />
-
-      {/* ── Content ── */}
-      {pageLoading && (
-        <div style={styles.emptyState}>
-          <div style={styles.spinner} />
-          <p style={{ color: "#94a3b8", marginTop: 12 }}>Loading requests…</p>
-        </div>
-      )}
-
-      {!pageLoading && visible.length === 0 && (
-        <div style={styles.emptyState}>
-          <div style={{ fontSize: 44, marginBottom: 10 }}>
-            {search ? "🔍" : "🏠"}
+      {/* Two Column Layout */}
+      <div style={styles.twoColumnLayout}>
+        {/* Left Column - PG List */}
+        <div style={styles.leftColumn}>
+          <div style={styles.leftHeader}>
+            <span>🏘️ Your Properties</span>
+            <span style={styles.leftCount}>{pgList.length}</span>
           </div>
-          <p style={{ color: "#64748b", fontWeight: 600, margin: "0 0 4px" }}>
-            {search ? "No results found" : "No requests here"}
-          </p>
-          <p style={{ color: "#94a3b8", fontSize: 13, margin: 0 }}>
-            {search
-              ? `Try a different search term`
-              : filter === "all"
-              ? "New requests will appear here"
-              : `No "${FILTERS.find((f) => f.key === filter)?.label}" requests`}
-          </p>
-          {(search || filter !== "all") && (
-            <button
-              style={styles.clearFilterBtn}
-              onClick={() => { setSearch(""); setFilter("all"); }}
-            >
-              Clear filters
-            </button>
+          <div style={styles.pgList}>
+            {pgList.map((pg) => (
+              <PGCard
+                key={pg.name}
+                pg={pg}
+                stats={pg.stats}
+                isSelected={selectedPG === pg.name}
+                onSelect={setSelectedPG}
+              />
+            ))}
+            {pgList.length === 0 && (
+              <div style={styles.emptyPG}>No vacate requests yet</div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column - Requests */}
+        <div style={styles.rightColumn}>
+          {selectedPG && (
+            <>
+              {/* Selected PG Header */}
+              <div style={styles.selectedHeader}>
+                <div>
+                  <div style={styles.selectedTitle}>{selectedPG}</div>
+                  <div style={styles.selectedSubtitle}>
+                    {pgStats[selectedPG]?.total || 0} total requests
+                  </div>
+                </div>
+                <div style={styles.selectedStats}>
+                  {pgStats[selectedPG]?.pending > 0 && <span style={{ ...styles.statBadge, background: "#fef3c7", color: "#d97706" }}>🕐 {pgStats[selectedPG].pending}</span>}
+                  {pgStats[selectedPG]?.awaiting > 0 && <span style={{ ...styles.statBadge, background: "#fffbeb", color: "#f59e0b" }}>⏳ {pgStats[selectedPG].awaiting}</span>}
+                  {pgStats[selectedPG]?.ready > 0 && <span style={{ ...styles.statBadge, background: "#eef2ff", color: "#4f46e5" }}>💸 {pgStats[selectedPG].ready}</span>}
+                  {pgStats[selectedPG]?.paid > 0 && <span style={{ ...styles.statBadge, background: "#dcfce7", color: "#16a34a" }}>✅ {pgStats[selectedPG].paid}</span>}
+                </div>
+              </div>
+
+              {/* Filters */}
+              <FilterChips active={filter} onChange={setFilter} counts={counts} />
+
+              {/* Requests List */}
+              <div style={styles.requestsList}>
+                {filteredRequests.length === 0 ? (
+                  <div style={styles.emptyRequests}>
+                    <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
+                    <div>No requests found</div>
+                    <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>Try a different filter</div>
+                  </div>
+                ) : (
+                  filteredRequests.map((item) => (
+                    <RequestCard
+                      key={item.booking_id}
+                      item={item}
+                      damage={damage}
+                      dues={dues}
+                      setDamage={setDamage}
+                      setDues={setDues}
+                      loadingId={loadingId}
+                      onApprove={handleApprove}
+                      onReject={handleReject}
+                      onMarkPaid={handleMarkPaid}
+                    />
+                  ))
+                )}
+              </div>
+            </>
           )}
         </div>
-      )}
-
-      {/* ── Grouped PG List ── */}
-      {!pageLoading && visible.length > 0 && (
-        <div style={styles.list}>
-          {Object.keys(groupedData).map((pgName) => {
-            const isExpanded = expandedPGs[pgName] !== false; // default expanded
-            const { totalRefund, statusCounts } = pgStats[pgName];
-            
-            return (
-              <Box key={pgName} sx={{ mb: 3 }}>
-                {/* PG Header */}
-                <Box
-                  sx={{
-                    p: 2,
-                    bgcolor: "#f1f5f9",
-                    borderRadius: 2,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    transition: "all 0.2s",
-                    "&:hover": { bgcolor: "#e2e8f0" }
-                  }}
-                  onClick={() => togglePG(pgName)}
-                >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 20 }}>🏠</span>
-                    <span style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>{pgName}</span>
-                    <span style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>
-                      ({groupedData[pgName].length} {groupedData[pgName].length === 1 ? "request" : "requests"})
-                    </span>
-                    {/* Status pills */}
-                    <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                      {statusCounts.pending > 0 && (
-                        <span style={{ ...styles.miniPill, background: "#fef3c7", color: "#d97706" }}>
-                          🕐 {statusCounts.pending}
-                        </span>
-                      )}
-                      {statusCounts.awaiting > 0 && (
-                        <span style={{ ...styles.miniPill, background: "#fffbeb", color: "#f59e0b" }}>
-                          ⏳ {statusCounts.awaiting}
-                        </span>
-                      )}
-                      {statusCounts.ready > 0 && (
-                        <span style={{ ...styles.miniPill, background: "#eef2ff", color: "#4f46e5" }}>
-                          💸 {statusCounts.ready}
-                        </span>
-                      )}
-                      {statusCounts.paid > 0 && (
-                        <span style={{ ...styles.miniPill, background: "#dcfce7", color: "#16a34a" }}>
-                          ✅ {statusCounts.paid}
-                        </span>
-                      )}
-                      {statusCounts.rejected > 0 && (
-                        <span style={{ ...styles.miniPill, background: "#fee2e2", color: "#dc2626" }}>
-                          ❌ {statusCounts.rejected}
-                        </span>
-                      )}
-                    </Box>
-                  </Box>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "#16a34a" }}>
-                      ₹{totalRefund.toLocaleString()}
-                    </span>
-                    <span style={{ fontSize: 18, color: "#64748b" }}>
-                      {isExpanded ? "▼" : "▶"}
-                    </span>
-                  </Box>
-                </Box>
-
-                {/* Cards (only if expanded) */}
-                {isExpanded && (
-                  <Box sx={{ mt: 2 }}>
-                    {groupedData[pgName].map((item) => (
-                      <RequestCard
-                        key={item.booking_id}
-                        item={item}
-                        damage={damage}
-                        dues={dues}
-                        setDamage={setDamage}
-                        setDues={setDues}
-                        loadingId={loadingId}
-                        onApprove={handleApprove}
-                        onReject={handleReject}
-                        onMarkPaid={handleMarkPaid}
-                      />
-                    ))}
-                  </Box>
-                )}
-              </Box>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── Result count footer ── */}
-      {!pageLoading && visible.length > 0 && (
-        <p style={styles.resultFooter}>
-          Showing {visible.length} of {counts.all} request{counts.all !== 1 ? "s" : ""}
-        </p>
-      )}
+      </div>
     </div>
   );
 };
@@ -703,275 +511,356 @@ export default OwnerVacateRequests;
    STYLES
 ══════════════════════════════════════════════ */
 const styles = {
-  page: {
-    maxWidth: 680,
-    margin: "0 auto",
-    padding: "32px 16px 60px",
-    fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
-    background: "#f8fafc",
+  container: {
     minHeight: "100vh",
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    padding: "32px 24px",
   },
-  pageHeader: {
+  header: {
+    maxWidth: 1400,
+    margin: "0 auto 32px",
     display: "flex",
-    alignItems: "flex-start",
     justifyContent: "space-between",
-    marginBottom: 20,
+    alignItems: "flex-start",
+    flexWrap: "wrap",
+    gap: 16,
   },
-  pageTitle: {
-    fontSize: 26,
-    fontWeight: 700,
-    color: "#0f172a",
+  title: {
+    fontSize: 32,
+    fontWeight: 800,
+    color: "#fff",
     margin: 0,
     letterSpacing: "-0.5px",
+    textShadow: "0 2px 4px rgba(0,0,0,0.1)",
   },
-  pageSubtitle: { fontSize: 13, color: "#94a3b8", margin: "4px 0 0" },
+  subtitle: {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.8)",
+    margin: "8px 0 0",
+  },
   refreshBtn: {
+    background: "rgba(255,255,255,0.2)",
+    backdropFilter: "blur(10px)",
+    border: "1px solid rgba(255,255,255,0.3)",
+    borderRadius: 12,
+    padding: "10px 20px",
+    fontSize: 14,
+    fontWeight: 600,
+    color: "#fff",
+    cursor: "pointer",
+    transition: "all 0.2s",
+  },
+  twoColumnLayout: {
+    maxWidth: 1400,
+    margin: "0 auto",
+    display: "grid",
+    gridTemplateColumns: "360px 1fr",
+    gap: 24,
+  },
+  leftColumn: {
+    background: "#fff",
+    borderRadius: 24,
+    overflow: "hidden",
+    boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
+    height: "fit-content",
+    maxHeight: "calc(100vh - 140px)",
+    display: "flex",
+    flexDirection: "column",
+  },
+  leftHeader: {
+    padding: "20px 24px",
+    background: "#f8fafc",
+    borderBottom: "1px solid #e2e8f0",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    fontWeight: 700,
+    fontSize: 16,
+    color: "#0f172a",
+  },
+  leftCount: {
+    background: "#e2e8f0",
+    padding: "2px 10px",
+    borderRadius: 20,
+    fontSize: 13,
+    fontWeight: 600,
+  },
+  pgList: {
+    flex: 1,
+    overflowY: "auto",
+    padding: 12,
+  },
+  pgCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "16px",
+    marginBottom: 8,
+    borderRadius: 16,
+    cursor: "pointer",
+    transition: "all 0.2s",
     background: "#fff",
     border: "1px solid #e2e8f0",
-    borderRadius: 8,
-    padding: "8px 14px",
-    fontSize: 13,
-    color: "#475569",
-    cursor: "pointer",
-    fontWeight: 600,
-    boxShadow: "0 1px 2px rgba(0,0,0,.04)",
   },
-
-  /* Search */
-  searchWrapper: {
-    position: "relative",
-    marginBottom: 12,
+  pgCardSelected: {
+    background: "linear-gradient(135deg, #667eea15 0%, #764ba215 100%)",
+    borderColor: "#667eea",
+    boxShadow: "0 4px 12px rgba(102,126,234,0.15)",
   },
-  searchIcon: {
-    position: "absolute",
-    left: 12,
-    top: "50%",
-    transform: "translateY(-50%)",
-    fontSize: 14,
-    pointerEvents: "none",
+  pgCardIcon: {
+    fontSize: 32,
   },
-  searchInput: {
-    width: "100%",
-    padding: "10px 36px 10px 36px",
-    borderRadius: 10,
-    border: "1.5px solid #e2e8f0",
-    fontSize: 13,
+  pgCardContent: {
+    flex: 1,
+  },
+  pgCardName: {
+    fontSize: 16,
+    fontWeight: 700,
     color: "#0f172a",
-    outline: "none",
-    boxSizing: "border-box",
-    fontFamily: "inherit",
-    background: "#fff",
-    boxShadow: "0 1px 3px rgba(0,0,0,.04)",
+    marginBottom: 6,
   },
-  clearBtn: {
-    position: "absolute",
-    right: 10,
-    top: "50%",
-    transform: "translateY(-50%)",
-    background: "none",
-    border: "none",
-    fontSize: 13,
-    color: "#94a3b8",
-    cursor: "pointer",
-    padding: "2px 6px",
-  },
-
-  /* Filter bar */
-  filterWrapper: {
-    marginBottom: 20,
-    overflowX: "auto",
-  },
-  filterScroll: {
+  pgCardStats: {
     display: "flex",
     gap: 8,
-    paddingBottom: 4,
+    fontSize: 11,
+    fontWeight: 600,
+    color: "#64748b",
   },
-  filterBtn: {
+  pgCardArrow: {
+    fontSize: 18,
+    color: "#94a3b8",
+  },
+  emptyPG: {
+    textAlign: "center",
+    padding: "40px 20px",
+    color: "#94a3b8",
+  },
+  rightColumn: {
+    background: "#fff",
+    borderRadius: 24,
+    boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
+    maxHeight: "calc(100vh - 140px)",
+  },
+  selectedHeader: {
+    padding: "24px",
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    color: "#fff",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 16,
+  },
+  selectedTitle: {
+    fontSize: 24,
+    fontWeight: 800,
+    marginBottom: 4,
+  },
+  selectedSubtitle: {
+    fontSize: 13,
+    opacity: 0.9,
+  },
+  selectedStats: {
+    display: "flex",
+    gap: 8,
+  },
+  statBadge: {
+    padding: "6px 12px",
+    borderRadius: 20,
+    fontSize: 12,
+    fontWeight: 600,
+  },
+  filterChips: {
+    padding: "16px 20px",
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap",
+    borderBottom: "1px solid #e2e8f0",
+    background: "#fafbfc",
+  },
+  chip: {
     display: "inline-flex",
     alignItems: "center",
     gap: 6,
-    padding: "7px 14px",
-    borderRadius: 999,
-    border: "1.5px solid #e2e8f0",
+    padding: "6px 14px",
+    borderRadius: 24,
+    border: "1px solid #e2e8f0",
     background: "#fff",
-    fontSize: 12,
-    fontWeight: 600,
+    fontSize: 13,
+    fontWeight: 500,
     color: "#475569",
     cursor: "pointer",
-    whiteSpace: "nowrap",
-    transition: "all .15s",
-    boxShadow: "0 1px 2px rgba(0,0,0,.04)",
+    transition: "all 0.15s",
   },
-  filterBtnActive: {
-    background: "#eef2ff",
-    borderColor: "#6366f1",
-    color: "#4f46e5",
-    boxShadow: "0 0 0 3px rgba(99,102,241,.08)",
+  chipActive: {
+    background: "#667eea",
+    borderColor: "#667eea",
+    color: "#fff",
   },
-  filterEmoji: { fontSize: 13 },
-  filterCount: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 18,
-    height: 18,
-    borderRadius: 999,
-    fontSize: 10,
-    fontWeight: 700,
-    padding: "0 5px",
-    transition: "all .15s",
+  chipCount: {
+    background: "rgba(0,0,0,0.1)",
+    padding: "2px 6px",
+    borderRadius: 12,
+    fontSize: 11,
+    fontWeight: 600,
   },
-
-  list: { display: "flex", flexDirection: "column", gap: 16 },
-
-  /* Card */
-  card: {
+  requestsList: {
+    flex: 1,
+    overflowY: "auto",
+    padding: "20px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
+  },
+  requestCard: {
     background: "#fff",
-    borderRadius: 16,
-    padding: "20px 20px 18px",
-    boxShadow: "0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04)",
-    border: "1px solid #f1f5f9",
-    position: "relative",
-    marginBottom: 12,
+    borderRadius: 20,
+    padding: "20px",
+    border: "1px solid #e2e8f0",
+    transition: "all 0.2s",
   },
-  cardHeader: {
+  requestHeader: {
     display: "flex",
     alignItems: "center",
     gap: 12,
     marginBottom: 16,
   },
-  avatar: {
-    width: 42,
-    height: 42,
+  requestAvatar: {
+    width: 44,
+    height: 44,
     borderRadius: 12,
-    background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
-    color: "#fff",
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    fontSize: 18,
     fontWeight: 700,
-    fontSize: 17,
-    flexShrink: 0,
-    userSelect: "none",
+    color: "#fff",
   },
-  pgName:     { margin: 0, fontSize: 15, fontWeight: 700, color: "#0f172a" },
-  tenantName: { margin: "2px 0 0", fontSize: 12, color: "#64748b" },
-  pill: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 5,
+  requestTenant: {
+    fontSize: 16,
+    fontWeight: 700,
+    color: "#0f172a",
+  },
+  requestId: {
     fontSize: 11,
-    fontWeight: 700,
-    padding: "4px 10px",
-    borderRadius: 999,
-    letterSpacing: 0.2,
-    flexShrink: 0,
+    color: "#94a3b8",
+    marginTop: 2,
   },
-  pillDot: { width: 6, height: 6, borderRadius: "50%", flexShrink: 0 },
-  miniPill: {
+  requestStatus: {
+    padding: "4px 12px",
+    borderRadius: 20,
+    fontSize: 12,
+    fontWeight: 600,
     display: "inline-flex",
     alignItems: "center",
     gap: 4,
-    fontSize: 10,
-    fontWeight: 600,
-    padding: "2px 8px",
-    borderRadius: 12,
   },
-
-  infoGrid: {
+  requestDetails: {
     display: "grid",
     gridTemplateColumns: "repeat(4, 1fr)",
-    gap: 8,
-    marginBottom: 14,
+    gap: 12,
+    marginBottom: 16,
   },
-  tile: {
+  detailItem: {
     background: "#f8fafc",
-    borderRadius: 10,
-    padding: "10px 8px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 3,
-    border: "1px solid #f1f5f9",
+    padding: "10px",
+    borderRadius: 12,
+    textAlign: "center",
   },
-  tileIcon:  { fontSize: 16 },
-  tileLabel: {
-    fontSize: 10,
+  detailLabel: {
+    display: "block",
+    fontSize: 11,
     color: "#94a3b8",
-    fontWeight: 600,
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
+    marginBottom: 4,
   },
-  tileValue: { fontSize: 13, fontWeight: 700, color: "#0f172a" },
-
-  divider: { height: 1, background: "#f1f5f9", margin: "4px 0 12px" },
-
-  /* Bank */
+  detailValue: {
+    fontSize: 15,
+    fontWeight: 700,
+    color: "#0f172a",
+  },
+  requestReason: {
+    marginTop: 12,
+    padding: "10px 12px",
+    background: "#fef3c7",
+    borderRadius: 12,
+    fontSize: 13,
+    color: "#92400e",
+  },
   bankSection: {
     background: "#f8fafc",
-    border: "1px solid #e2e8f0",
     borderRadius: 12,
-    padding: "12px 14px",
-    marginBottom: 10,
+    padding: "12px",
   },
   bankHeader: {
     display: "flex",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 10,
   },
-  bankSectionTitle: { fontSize: 12, fontWeight: 700, color: "#475569" },
+  bankSectionTitle: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#475569",
+  },
   revealBtn: {
     background: "#eef2ff",
     border: "none",
     borderRadius: 6,
     padding: "4px 10px",
     fontSize: 11,
-    fontWeight: 700,
+    fontWeight: 600,
     color: "#4f46e5",
     cursor: "pointer",
   },
-  bankRow:  { display: "flex", gap: 8, flexWrap: "wrap" },
+  bankRow: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap",
+  },
   bankChip: {
     background: "#fff",
     border: "1px solid #e2e8f0",
     borderRadius: 8,
     padding: "6px 12px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 2,
+    flex: 1,
+    minWidth: 100,
   },
-  bankLabel: { fontSize: 10, color: "#818cf8", fontWeight: 700, textTransform: "uppercase" },
-  bankValue: { fontSize: 12, color: "#3730a3", fontWeight: 600 },
-
-  reason:      { marginTop: 6, fontSize: 12, color: "#64748b", lineHeight: 1.5 },
-  reasonLabel: { fontWeight: 700, color: "#475569" },
-
-  paidBanner: {
-    marginTop: 14,
-    padding: "10px 14px",
-    background: "#f0fdf4",
+  bankLabel: {
+    display: "block",
+    fontSize: 10,
+    color: "#94a3b8",
+    marginBottom: 2,
+  },
+  bankValue: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: "#0f172a",
+  },
+  actionButton: {
+    background: "transparent",
+    border: "none",
     borderRadius: 8,
-    color: "#16a34a",
-    fontWeight: 700,
-    fontSize: 13,
-    textAlign: "center",
-    border: "1px solid #bbf7d0",
+    padding: "6px 10px",
+    cursor: "pointer",
+    fontSize: 20,
+    color: "#64748b",
+    lineHeight: 1,
   },
-
-  /* Dropdown */
   dropdown: {
     position: "absolute",
     right: 0,
     top: "calc(100% + 4px)",
     background: "#fff",
     borderRadius: 12,
-    boxShadow: "0 8px 30px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.06)",
-    border: "1px solid #f1f5f9",
-    minWidth: 190,
+    boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
+    border: "1px solid #e2e8f0",
+    minWidth: 170,
     zIndex: 100,
     overflow: "hidden",
-    padding: "6px 0",
   },
   menuItem: {
     display: "flex",
@@ -986,7 +875,6 @@ const styles = {
     fontWeight: 600,
     color: "#0f172a",
     textAlign: "left",
-    transition: "background .12s",
   },
   menuIcon: {
     width: 26,
@@ -997,31 +885,31 @@ const styles = {
     justifyContent: "center",
     fontSize: 13,
     fontWeight: 700,
-    flexShrink: 0,
   },
-
-  /* Approval form */
   formOverlay: {
     position: "absolute",
     right: 0,
     top: "calc(100% + 4px)",
     background: "#fff",
     borderRadius: 14,
-    boxShadow: "0 8px 30px rgba(0,0,0,.12)",
+    boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
     border: "1px solid #e2e8f0",
-    padding: "18px 18px 16px",
+    padding: "18px",
     minWidth: 240,
     zIndex: 200,
   },
-  formTitle: { margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "#0f172a" },
+  formTitle: {
+    margin: "0 0 12px",
+    fontSize: 14,
+    fontWeight: 700,
+    color: "#0f172a",
+  },
   label: {
     display: "block",
     fontSize: 11,
     fontWeight: 700,
     color: "#64748b",
     marginBottom: 4,
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
   },
   input: {
     width: "100%",
@@ -1029,17 +917,13 @@ const styles = {
     borderRadius: 8,
     border: "1.5px solid #e2e8f0",
     fontSize: 13,
-    color: "#0f172a",
-    outline: "none",
     marginBottom: 10,
     boxSizing: "border-box",
-    fontFamily: "inherit",
-    background: "#f8fafc",
   },
   confirmBtn: {
     flex: 1,
     padding: "9px 0",
-    background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+    background: "linear-gradient(135deg, #667eea, #764ba2)",
     color: "#fff",
     border: "none",
     borderRadius: 8,
@@ -1058,39 +942,14 @@ const styles = {
     fontSize: 13,
     cursor: "pointer",
   },
-
-  emptyState: { textAlign: "center", padding: "60px 20px", color: "#94a3b8" },
-  spinner: {
-    width: 36,
-    height: 36,
-    border: "3px solid #e2e8f0",
-    borderTopColor: "#6366f1",
-    borderRadius: "50%",
-    animation: "spin 0.8s linear infinite",
-    margin: "0 auto",
-  },
-
-  clearFilterBtn: {
-    marginTop: 14,
-    padding: "8px 18px",
-    background: "#eef2ff",
-    border: "none",
-    borderRadius: 8,
-    color: "#4f46e5",
-    fontWeight: 700,
-    fontSize: 13,
-    cursor: "pointer",
-  },
-
-  resultFooter: {
+  emptyRequests: {
     textAlign: "center",
-    marginTop: 20,
-    fontSize: 12,
+    padding: "60px 20px",
     color: "#94a3b8",
   },
 };
 
-// Add keyframes animation for spinner
+// Add keyframes for spinner
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
   @keyframes spin {
