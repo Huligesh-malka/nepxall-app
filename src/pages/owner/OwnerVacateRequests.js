@@ -347,6 +347,48 @@ const SearchBar = ({ value, onChange }) => (
 );
 
 /* ══════════════════════════════════════════════
+   PG GROUP HEADER
+══════════════════════════════════════════════ */
+const PGGroupHeader = ({ pgName, count, totalRefund }) => {
+  const [expanded, setExpanded] = useState(true);
+  
+  return (
+    <Box
+      sx={{
+        p: 2,
+        bgcolor: "#f1f5f9",
+        borderRadius: 2,
+        fontWeight: "bold",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        mb: 1,
+        transition: "all 0.2s",
+        "&:hover": { bgcolor: "#e2e8f0" }
+      }}
+      onClick={() => setExpanded(!expanded)}
+    >
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <span style={{ fontSize: 20 }}>🏠</span>
+        <span style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>{pgName}</span>
+        <span style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>
+          ({count} {count === 1 ? "request" : "requests"})
+        </span>
+      </Box>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#16a34a" }}>
+          ₹{totalRefund.toLocaleString()}
+        </span>
+        <span style={{ fontSize: 18, color: "#64748b" }}>
+          {expanded ? "▼" : "▶"}
+        </span>
+      </Box>
+    </Box>
+  );
+};
+
+/* ══════════════════════════════════════════════
    MAIN COMPONENT
 ══════════════════════════════════════════════ */
 const OwnerVacateRequests = () => {
@@ -360,6 +402,7 @@ const OwnerVacateRequests = () => {
   const [pageLoading,   setPageLoading]   = useState(true);
   const [filter,    setFilter]    = useState("all");
   const [search,    setSearch]    = useState("");
+  const [expandedPGs, setExpandedPGs] = useState({});
 
   const loadRequests = async () => {
     if (!user) return;
@@ -410,6 +453,38 @@ const OwnerVacateRequests = () => {
       );
     });
   }, [requests, filter, search]);
+
+  /* Group visible requests by PG */
+  const groupedData = useMemo(() => {
+    return visible.reduce((acc, item) => {
+      const key = item.pg_name || "Unknown PG";
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {});
+  }, [visible]);
+
+  /* Calculate PG totals */
+  const pgStats = useMemo(() => {
+    const stats = {};
+    Object.keys(groupedData).forEach((pgName) => {
+      const requests = groupedData[pgName];
+      const totalRefund = requests.reduce((sum, r) => sum + (r.refund_amount || 0), 0);
+      const statusCounts = {
+        pending: requests.filter(r => r.refund_status === "pending" && r.user_approval === "pending").length,
+        awaiting: requests.filter(r => r.refund_status === "approved").length,
+        ready: requests.filter(r => r.refund_status === "pending" && r.user_approval === "accepted").length,
+        paid: requests.filter(r => r.refund_status === "paid").length,
+        rejected: requests.filter(r => r.refund_status === "rejected" || r.user_approval === "rejected").length,
+      };
+      stats[pgName] = { totalRefund, statusCounts };
+    });
+    return stats;
+  }, [groupedData]);
+
+  const togglePG = (pgName) => {
+    setExpandedPGs(prev => ({ ...prev, [pgName]: !prev[pgName] }));
+  };
 
   const handleApprove = async (bookingId) => {
     try {
@@ -518,22 +593,99 @@ const OwnerVacateRequests = () => {
         </div>
       )}
 
-      <div style={styles.list}>
-        {visible.map((item) => (
-          <RequestCard
-            key={item.booking_id}
-            item={item}
-            damage={damage}
-            dues={dues}
-            setDamage={setDamage}
-            setDues={setDues}
-            loadingId={loadingId}
-            onApprove={handleApprove}
-            onReject={handleReject}
-            onMarkPaid={handleMarkPaid}
-          />
-        ))}
-      </div>
+      {/* ── Grouped PG List ── */}
+      {!pageLoading && visible.length > 0 && (
+        <div style={styles.list}>
+          {Object.keys(groupedData).map((pgName) => {
+            const isExpanded = expandedPGs[pgName] !== false; // default expanded
+            const { totalRefund, statusCounts } = pgStats[pgName];
+            
+            return (
+              <Box key={pgName} sx={{ mb: 3 }}>
+                {/* PG Header */}
+                <Box
+                  sx={{
+                    p: 2,
+                    bgcolor: "#f1f5f9",
+                    borderRadius: 2,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    transition: "all 0.2s",
+                    "&:hover": { bgcolor: "#e2e8f0" }
+                  }}
+                  onClick={() => togglePG(pgName)}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 20 }}>🏠</span>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>{pgName}</span>
+                    <span style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>
+                      ({groupedData[pgName].length} {groupedData[pgName].length === 1 ? "request" : "requests"})
+                    </span>
+                    {/* Status pills */}
+                    <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                      {statusCounts.pending > 0 && (
+                        <span style={{ ...styles.miniPill, background: "#fef3c7", color: "#d97706" }}>
+                          🕐 {statusCounts.pending}
+                        </span>
+                      )}
+                      {statusCounts.awaiting > 0 && (
+                        <span style={{ ...styles.miniPill, background: "#fffbeb", color: "#f59e0b" }}>
+                          ⏳ {statusCounts.awaiting}
+                        </span>
+                      )}
+                      {statusCounts.ready > 0 && (
+                        <span style={{ ...styles.miniPill, background: "#eef2ff", color: "#4f46e5" }}>
+                          💸 {statusCounts.ready}
+                        </span>
+                      )}
+                      {statusCounts.paid > 0 && (
+                        <span style={{ ...styles.miniPill, background: "#dcfce7", color: "#16a34a" }}>
+                          ✅ {statusCounts.paid}
+                        </span>
+                      )}
+                      {statusCounts.rejected > 0 && (
+                        <span style={{ ...styles.miniPill, background: "#fee2e2", color: "#dc2626" }}>
+                          ❌ {statusCounts.rejected}
+                        </span>
+                      )}
+                    </Box>
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#16a34a" }}>
+                      ₹{totalRefund.toLocaleString()}
+                    </span>
+                    <span style={{ fontSize: 18, color: "#64748b" }}>
+                      {isExpanded ? "▼" : "▶"}
+                    </span>
+                  </Box>
+                </Box>
+
+                {/* Cards (only if expanded) */}
+                {isExpanded && (
+                  <Box sx={{ mt: 2 }}>
+                    {groupedData[pgName].map((item) => (
+                      <RequestCard
+                        key={item.booking_id}
+                        item={item}
+                        damage={damage}
+                        dues={dues}
+                        setDamage={setDamage}
+                        setDues={setDues}
+                        loadingId={loadingId}
+                        onApprove={handleApprove}
+                        onReject={handleReject}
+                        onMarkPaid={handleMarkPaid}
+                      />
+                    ))}
+                  </Box>
+                )}
+              </Box>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── Result count footer ── */}
       {!pageLoading && visible.length > 0 && (
@@ -680,6 +832,7 @@ const styles = {
     boxShadow: "0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04)",
     border: "1px solid #f1f5f9",
     position: "relative",
+    marginBottom: 12,
   },
   cardHeader: {
     display: "flex",
@@ -715,6 +868,15 @@ const styles = {
     flexShrink: 0,
   },
   pillDot: { width: 6, height: 6, borderRadius: "50%", flexShrink: 0 },
+  miniPill: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
+    fontSize: 10,
+    fontWeight: 600,
+    padding: "2px 8px",
+    borderRadius: 12,
+  },
 
   infoGrid: {
     display: "grid",
@@ -927,3 +1089,12 @@ const styles = {
     color: "#94a3b8",
   },
 };
+
+// Add keyframes animation for spinner
+const styleSheet = document.createElement("style");
+styleSheet.textContent = `
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
+document.head.appendChild(styleSheet);
