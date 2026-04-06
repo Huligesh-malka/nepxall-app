@@ -10,15 +10,13 @@ import { auth } from "../../firebase";
 import {
   Container, Typography, Paper, Table, TableHead, TableRow, TableCell,
   TableBody, Chip, Button,
-  Modal, Fade, Checkbox, TextField, Backdrop, IconButton, Divider, Alert, Stack, Grid, Card, CardContent
+  Modal, Fade, Checkbox, TextField, Backdrop, IconButton, Divider, Alert, Stack, Grid, Card, CardContent, Collapse
 } from "@mui/material";
 import { 
   Refresh, ArrowBack, Security, 
   InfoOutlined, BorderColor, Close, CheckCircle, Download, 
-  Person, Home, AccountBalance, Payment
+  Person, Home, AccountBalance, Payment, ExpandMore, ExpandLess, Receipt
 } from "@mui/icons-material";
-
-import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
 // Brand Colors
 const BRAND_BLUE = "#2563eb";
@@ -36,6 +34,7 @@ export default function OwnerPayments() {
   
   const [data, setData] = useState([]);
   const [pageLoading, setPageLoading] = useState(true);
+  const [expandedPGs, setExpandedPGs] = useState({});
 
   // Modal & Flow State
   const [openSignModal, setOpenSignModal] = useState(false);
@@ -469,6 +468,30 @@ export default function OwnerPayments() {
     }
   };
 
+  const togglePGExpand = (pgName) => {
+    setExpandedPGs(prev => ({
+      ...prev,
+      [pgName]: !prev[pgName]
+    }));
+  };
+
+  // 🔥 GROUP BY PG NAME
+  const groupedData = data.reduce((acc, item) => {
+    const key = item.pg_name || "Unknown PG";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(item);
+    return acc;
+  }, {});
+
+  // Calculate summary stats for each PG
+  const getPGStats = (bookings) => {
+    const totalAmount = bookings.reduce((sum, item) => sum + (parseFloat(item.owner_amount) || 0), 0);
+    const paidCount = bookings.filter(item => item.owner_settlement === "DONE").length;
+    const pendingCount = bookings.filter(item => item.owner_settlement !== "DONE").length;
+    const signedCount = bookings.filter(item => !!item.signed_pdf).length;
+    return { totalAmount, paidCount, pendingCount, signedCount, total: bookings.length };
+  };
+
   /* ================= PROTECTION ================= */
   if (authLoading || pageLoading) {
     return (
@@ -498,6 +521,7 @@ export default function OwnerPayments() {
         <Table>
           <TableHead sx={{ bgcolor: '#f8f9fa' }}>
             <TableRow>
+              <TableCell sx={{ fontWeight: 700, width: '40px' }}></TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Booking ID</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Tenant Name</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Amount</TableCell>
@@ -508,108 +532,180 @@ export default function OwnerPayments() {
           </TableHead>
           <TableBody>
             {data.length === 0 ? (
-              <TableRow><TableCell colSpan={6} align="center" sx={{ py: 6 }}>No active settlements found.</TableCell></TableRow>
-            ) : data.map(item => {
-              const isSigned = !!item.signed_pdf;
-              return (
-                <TableRow key={item.booking_id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                  <TableCell>
-  <Box>
-    <Typography sx={{ fontWeight: 600 }}>
-      #{item.booking_id}
-    </Typography>
+              <TableRow>
+                <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                  No active settlements found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              Object.keys(groupedData).map((pgName) => {
+                const stats = getPGStats(groupedData[pgName]);
+                const isExpanded = expandedPGs[pgName] !== false; // Default to expanded
+                
+                return (
+                  <React.Fragment key={pgName}>
+                    {/* 🔥 PG HEADER ROW */}
+                    <TableRow 
+                      sx={{ 
+                        bgcolor: "#f1f5f9", 
+                        cursor: "pointer",
+                        '&:hover': { bgcolor: "#e2e8f0" }
+                      }}
+                      onClick={() => togglePGExpand(pgName)}
+                    >
+                      <TableCell sx={{ p: 1, width: '40px' }}>
+                        {isExpanded ? <ExpandLess sx={{ color: BRAND_BLUE }} /> : <ExpandMore sx={{ color: BRAND_BLUE }} />}
+                      </TableCell>
+                      <TableCell colSpan={6} sx={{ fontWeight: "bold", py: 1.5 }}>
+                        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <span style={{ fontSize: '20px' }}>🏠</span>
+                            <span style={{ fontSize: '16px' }}>{pgName}</span>
+                          </Box>
+                          <Box display="flex" gap={2} sx={{ ml: 'auto' }}>
+                            <Chip 
+                              label={`${stats.total} Booking${stats.total !== 1 ? 's' : ''}`} 
+                              size="small" 
+                              variant="outlined"
+                              sx={{ bgcolor: 'white' }}
+                            />
+                            <Chip 
+                              label={`₹${stats.totalAmount.toLocaleString()}`} 
+                              size="small" 
+                              color="primary"
+                              sx={{ fontWeight: 'bold' }}
+                            />
+                            <Chip 
+                              label={`${stats.paidCount} Paid`} 
+                              size="small" 
+                              color="success"
+                            />
+                            {stats.pendingCount > 0 && (
+                              <Chip 
+                                label={`${stats.pendingCount} Pending`} 
+                                size="small" 
+                                color="warning"
+                              />
+                            )}
+                          </Box>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
 
-    <Typography variant="caption" color="text.secondary">
-      {item.order_id}
-    </Typography>
-  </Box>
-</TableCell>
-                  <TableCell>{item.tenant_name}</TableCell>
-                  <TableCell>
-                    <Typography fontWeight="bold" color="primary.main">₹{item.owner_amount}</Typography>
-                  </TableCell>
+                    {/* 🔥 BOOKINGS ROWS WITH COLLAPSE */}
+                    <TableRow>
+                      <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
+                        <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                          <Box sx={{ margin: 0 }}>
+                            {groupedData[pgName].map(item => {
+                              const isSigned = !!item.signed_pdf;
+                              return (
+                                <TableRow key={item.booking_id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 }, bgcolor: '#ffffff' }}>
+                                  <TableCell sx={{ width: '40px' }}></TableCell>
+                                  <TableCell>
+                                    <Box>
+                                      <Typography sx={{ fontWeight: 600 }}>
+                                        #{item.booking_id}
+                                      </Typography>
+                                      <Typography variant="caption" color="text.secondary">
+                                        {item.order_id}
+                                      </Typography>
+                                    </Box>
+                                  </TableCell>
+                                  <TableCell>{item.tenant_name}</TableCell>
+                                  <TableCell>
+                                    <Typography fontWeight="bold" color="primary.main">₹{item.owner_amount}</Typography>
+                                  </TableCell>
 
-                  <TableCell align="center">
-                    <Chip 
-                      label={item.room_type || "N/A"} 
-                      size="small" 
-                      color={getSharingColor(item.room_type)} 
-                      variant="filled" 
-                      sx={{ fontWeight: '600', textTransform: 'capitalize' }}
-                    />
-                  </TableCell>
+                                  <TableCell align="center">
+                                    <Chip 
+                                      label={item.room_type || "N/A"} 
+                                      size="small" 
+                                      color={getSharingColor(item.room_type)} 
+                                      variant="filled" 
+                                      sx={{ fontWeight: '600', textTransform: 'capitalize' }}
+                                    />
+                                  </TableCell>
 
-                  <TableCell align="center">
-                    {!item.final_pdf ? (
-                      <Chip label="Processing PDF..." variant="outlined" size="small" />
-                    ) : isSigned ? (
-                      <Button 
-                        color="success" 
-                        variant="contained" 
-                        size="small"
-                        sx={{ borderRadius: 2, textTransform: 'none' }}
-                        onClick={() => handleViewPdf(item.booking_id, item.signed_pdf)}
-                      >
-                        VIEW SIGNED PDF
-                      </Button>
-                    ) : (
-                      <Stack direction="row" spacing={1} justifyContent="center">
-                        <Button 
-                          variant="outlined" 
-                          size="small" 
-                          sx={{ borderRadius: 2, textTransform: 'none' }}
-                          onClick={() => handleViewPdf(item.booking_id, item.final_pdf)}
-                        >
-                          VIEW DRAFT
-                        </Button>
-                        {item.viewed_by_owner && (
-                          <Button 
-                            variant="contained" 
-                            color="warning" 
-                            size="small" 
-                            sx={{ borderRadius: 2, textTransform: 'none' }}
-                            onClick={() => handleOpenSign(item)}
-                          >
-                            SIGN NOW
-                          </Button>
-                        )}
-                      </Stack>
-                    )}
-                  </TableCell>
+                                  <TableCell align="center">
+                                    {!item.final_pdf ? (
+                                      <Chip label="Processing PDF..." variant="outlined" size="small" />
+                                    ) : isSigned ? (
+                                      <Button 
+                                        color="success" 
+                                        variant="contained" 
+                                        size="small"
+                                        sx={{ borderRadius: 2, textTransform: 'none' }}
+                                        onClick={() => handleViewPdf(item.booking_id, item.signed_pdf)}
+                                      >
+                                        VIEW SIGNED PDF
+                                      </Button>
+                                    ) : (
+                                      <Stack direction="row" spacing={1} justifyContent="center">
+                                        <Button 
+                                          variant="outlined" 
+                                          size="small" 
+                                          sx={{ borderRadius: 2, textTransform: 'none' }}
+                                          onClick={() => handleViewPdf(item.booking_id, item.final_pdf)}
+                                        >
+                                          VIEW DRAFT
+                                        </Button>
+                                        {item.viewed_by_owner && (
+                                          <Button 
+                                            variant="contained" 
+                                            color="warning" 
+                                            size="small" 
+                                            sx={{ borderRadius: 2, textTransform: 'none' }}
+                                            onClick={() => handleOpenSign(item)}
+                                          >
+                                            SIGN NOW
+                                          </Button>
+                                        )}
+                                      </Stack>
+                                    )}
+                                  </TableCell>
 
-                  <TableCell align="center">
-                    {item.owner_settlement === "DONE" ? (
-                      <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
-                        <Chip
-                          label="✅ Paid"
-                          color="success"
-                          size="small"
-                          sx={{ fontWeight: "bold" }}
-                        />
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          size="small"
-                          startIcon={<Download />}
-                          onClick={() => handleDirectDownload(item.booking_id)}
-                          disabled={isSubmitting}
-                          sx={{ borderRadius: 2, textTransform: 'none' }}
-                        >
-                          Receipt
-                        </Button>
-                      </Stack>
-                    ) : (
-                      <Chip
-                        label="⏳ Pending"
-                        color="warning"
-                        size="small"
-                        sx={{ fontWeight: "bold" }}
-                      />
-                    )}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+                                  <TableCell align="center">
+                                    {item.owner_settlement === "DONE" ? (
+                                      <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                                        <Chip
+                                          label="✅ Paid"
+                                          color="success"
+                                          size="small"
+                                          sx={{ fontWeight: "bold" }}
+                                        />
+                                        <Button
+                                          variant="contained"
+                                          color="primary"
+                                          size="small"
+                                          startIcon={<Receipt />}
+                                          onClick={() => handleDirectDownload(item.booking_id)}
+                                          disabled={isSubmitting}
+                                          sx={{ borderRadius: 2, textTransform: 'none' }}
+                                        >
+                                          Receipt
+                                        </Button>
+                                      </Stack>
+                                    ) : (
+                                      <Chip
+                                        label="⏳ Pending"
+                                        color="warning"
+                                        size="small"
+                                        sx={{ fontWeight: "bold" }}
+                                      />
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </Box>
+                        </Collapse>
+                      </TableCell>
+                    </TableRow>
+                  </React.Fragment>
+                );
+              })
+            )}
           </TableBody>
         </Table>
       </Paper>
