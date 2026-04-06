@@ -230,7 +230,7 @@ export default function AdminSettlements() {
                     {/* Amount */}
                     <TableCell>
                       <Typography fontWeight="800" color="primary.main">
-                        ₹{Number(item.owner_amount).toLocaleString("en-IN")}
+                       ₹{Number(item.amount).toLocaleString("en-IN")}
                       </Typography>
                     </TableCell>
 

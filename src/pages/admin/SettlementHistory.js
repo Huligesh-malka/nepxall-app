@@ -274,7 +274,7 @@ export default function SettlementHistory() {
                     <Box display="flex" alignItems="center" gap={1}>
                       <CalendarIcon sx={{ fontSize: 16, color: "text.secondary" }} />
                       <Typography variant="body2" color="text.primary">
-                        {formatDate(item.settlement_date)}
+                        {formatDate(item.settled_at)}
                       </Typography>
                     </Box>
                   </TableCell>
