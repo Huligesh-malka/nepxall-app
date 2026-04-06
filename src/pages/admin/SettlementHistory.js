@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Navigate } from "react-router-dom";
-import api from "../../api/api"; // ✅ Using centralized API instance
-import { useAuth } from "../../context/AuthContext"; // ✅ Added AuthContext
+import api from "../../api/api"; 
+import { useAuth } from "../../context/AuthContext";
 import {
   Box,
   Paper,
@@ -41,12 +41,10 @@ export default function SettlementHistory() {
   /* ================= FETCH HISTORY ================= */
 
   const fetchHistory = useCallback(async () => {
-    // Only fetch if authenticated and admin
     if (authLoading || !user || role !== "admin") return;
 
     try {
       setLoading(true);
-      // Path standardized to your API instance prefix
       const res = await api.get("/admin/settlements/settlement-history");
       setData(res.data.data || []);
       setError(null);
@@ -282,16 +280,29 @@ export default function SettlementHistory() {
                   </TableCell>
 
                   <TableCell align="center">
-                    <Chip
-                      label="Completed"
-                      size="small"
-                      sx={{
-                        bgcolor: "#dcfce7",
-                        color: "#166534",
-                        fontWeight: "bold",
-                        px: 1
-                      }}
-                    />
+                    {item.owner_settlement === "DONE" ? (
+                      <Chip
+                        label="✅ Completed"
+                        size="small"
+                        sx={{
+                          bgcolor: "#dcfce7",
+                          color: "#166534",
+                          fontWeight: "bold",
+                          px: 1
+                        }}
+                      />
+                    ) : (
+                      <Chip
+                        label="⏳ Awaiting"
+                        size="small"
+                        sx={{
+                          bgcolor: "#fef3c7",
+                          color: "#92400e",
+                          fontWeight: "bold",
+                          px: 1
+                        }}
+                      />
+                    )}
                   </TableCell>
                 </TableRow>
               ))
