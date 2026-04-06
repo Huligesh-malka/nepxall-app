@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Navigate } from "react-router-dom";
-import api from "../../api/api"; // ✅ Using your centralized API instance
-import { useAuth } from "../../context/AuthContext"; // ✅ Added AuthContext
+import api from "../../api/api"; 
+import { useAuth } from "../../context/AuthContext";
 import {
   Box,
   Container,
@@ -28,7 +28,8 @@ import {
   Person,
   ReceiptLong,
   ContentCopy,
-  Home
+  Home,
+  Verified
 } from "@mui/icons-material";
 
 import { styled } from "@mui/material/styles";
@@ -44,20 +45,19 @@ const StyledTableCell = styled(TableCell)(() => ({
   fontWeight: 600
 }));
 
-const GradientButton = styled(Button)(({ theme }) => ({
-  background: `linear-gradient(45deg, ${theme.palette.success.main} 30%, ${theme.palette.success.light} 90%)`,
+const ApproveButton = styled(Button)(({ theme }) => ({
+  background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.primary.light} 90%)`,
   color: "white",
   borderRadius: theme.spacing(1.5),
   textTransform: "none",
   fontWeight: "bold",
-  "&:hover": { transform: "translateY(-2px)" },
+  padding: "6px 16px",
+  "&:hover": { transform: "translateY(-2px)", boxShadow: theme.shadows[4] },
   "&:disabled": { background: "#ccc" }
 }));
 
 export default function AdminSettlements() {
   const theme = useTheme();
-
-  // ✅ 1. Get Auth State
   const { user, role, loading: authLoading } = useAuth();
 
   const [data, setData] = useState([]);
@@ -68,12 +68,11 @@ export default function AdminSettlements() {
   /* ================= FETCH SETTLEMENTS ================= */
 
   const fetchSettlements = useCallback(async () => {
-    // Only fetch if authenticated and admin
     if (authLoading || !user || role !== "admin") return;
 
     try {
       setLoading(true);
-      // Path adjusted to match your API structure
+      // Fetching all pending approvals for the admin
       const res = await api.get("/admin/settlements/pending-settlements");
       setData(res.data.data || []);
       setError("");
@@ -89,21 +88,21 @@ export default function AdminSettlements() {
     fetchSettlements();
   }, [fetchSettlements]);
 
-  /* ================= MARK SETTLED ================= */
+  /* ================= APPROVE SETTLEMENT ================= */
 
-  const markSettled = async (bookingId) => {
-    if (!window.confirm("Confirm settlement payment to owner?")) return;
+  const approveSettlement = async (bookingId) => {
+    if (!window.confirm("Confirm Admin Approval? This will allow the owner to mark the payment as received.")) return;
 
     try {
       setProcessingId(bookingId);
-
+      // Backend should now update admin_settlement = 'DONE'
       await api.put(`/admin/settlements/mark-settled/${bookingId}`);
       
-      alert("Settlement marked as successful");
+      alert("Settlement approved successfully!");
       fetchSettlements();
     } catch (err) {
       console.error(err);
-      alert("Settlement update failed");
+      alert("Approval failed. Please check backend logic.");
     } finally {
       setProcessingId(null);
     }
@@ -113,7 +112,6 @@ export default function AdminSettlements() {
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    alert("Copied to clipboard!");
   };
 
   /* ================= ROUTE PROTECTION ================= */
@@ -139,12 +137,10 @@ export default function AdminSettlements() {
     );
   }
 
-  /* ================= UI ================= */
-
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 6 }}>
       <Typography variant="h4" fontWeight="800" mb={3} color="primary">
-        💰 Owner Settlements
+        ⚖️ Settlement Approvals
       </Typography>
 
       {error && (
@@ -160,20 +156,20 @@ export default function AdminSettlements() {
               sx={{ fontSize: 80, color: theme.palette.success.main, opacity: 0.5 }}
             />
             <Typography variant="h6" mt={2} color="textSecondary">
-              No pending settlements
+              No settlements awaiting approval
             </Typography>
           </CardContent>
         ) : (
           <TableContainer>
             <Table>
-              <TableHead sx={{ bgcolor: "#f5f5f5" }}>
+              <TableHead sx={{ bgcolor: "#f8f9fa" }}>
                 <TableRow>
-                  <StyledTableCell>Booking</StyledTableCell>
+                  <StyledTableCell>Booking & Order</StyledTableCell>
                   <StyledTableCell>Owner Info</StyledTableCell>
-                  <StyledTableCell>PG / Property</StyledTableCell>
-                  <StyledTableCell>Owner Share</StyledTableCell>
+                  <StyledTableCell>Property</StyledTableCell>
+                  <StyledTableCell>Payable Amount</StyledTableCell>
                   <StyledTableCell>Bank Details</StyledTableCell>
-                  <StyledTableCell align="center">Action</StyledTableCell>
+                  <StyledTableCell align="center">Admin Action</StyledTableCell>
                 </TableRow>
               </TableHead>
 
@@ -186,13 +182,14 @@ export default function AdminSettlements() {
                         <Avatar sx={{ bgcolor: "#eef2ff", color: "#4f46e5" }}>
                           <ReceiptLong fontSize="small" />
                         </Avatar>
-                        <Typography variant="body2" fontWeight="bold">
-  #{item.booking_id}
-</Typography>
-
-<Typography variant="caption" color="textSecondary">
-  {item.order_id}
-</Typography>
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">
+                            #{item.booking_id}
+                          </Typography>
+                          <Typography variant="caption" color="textSecondary" display="block">
+                            {item.order_id}
+                          </Typography>
+                        </Box>
                       </Box>
                     </TableCell>
 
@@ -224,7 +221,7 @@ export default function AdminSettlements() {
                             {item.pg_name}
                           </Typography>
                           <Typography variant="caption" color="textSecondary">
-                            {item.area}, {item.city}
+                            {item.area}
                           </Typography>
                         </Box>
                       </Box>
@@ -232,49 +229,58 @@ export default function AdminSettlements() {
 
                     {/* Amount */}
                     <TableCell>
-                      <Typography fontWeight="bold" color="success.main">
+                      <Typography fontWeight="800" color="primary.main">
                         ₹{Number(item.owner_amount).toLocaleString("en-IN")}
                       </Typography>
                     </TableCell>
 
                     {/* Bank */}
                     <TableCell>
-                      <Typography variant="body2" fontWeight="bold" gutterBottom>
+                      <Typography variant="caption" fontWeight="bold" display="block" gutterBottom>
                         {item.account_holder_name}
                       </Typography>
-                      <Box display="flex" gap={1} mb={0.5}>
+                      <Box display="flex" gap={0.5} mb={0.5}>
                         <Chip
                           label={item.account_number}
                           size="small"
+                          variant="outlined"
                           onDelete={() => copyToClipboard(item.account_number)}
-                          deleteIcon={<ContentCopy sx={{ fontSize: "12px !important" }} />}
-                          sx={{ fontSize: 11 }}
+                          deleteIcon={<ContentCopy sx={{ fontSize: "10px !important" }} />}
+                          sx={{ fontSize: 10, height: 20 }}
                         />
                         <Chip
                           label={item.ifsc}
                           size="small"
+                          variant="outlined"
                           onDelete={() => copyToClipboard(item.ifsc)}
-                          deleteIcon={<ContentCopy sx={{ fontSize: "12px !important" }} />}
-                          sx={{ fontSize: 11 }}
+                          deleteIcon={<ContentCopy sx={{ fontSize: "10px !important" }} />}
+                          sx={{ fontSize: 10, height: 20 }}
                         />
                       </Box>
-                      <Typography variant="caption" display="block">
-                        {item.bank_name}
-                      </Typography>
                     </TableCell>
 
-                    {/* Action */}
+                    {/* Action - UPDATED LOGIC */}
                     <TableCell align="center">
-                      <GradientButton
-                        disabled={processingId === item.booking_id}
-                        onClick={() => markSettled(item.booking_id)}
-                      >
-                        {processingId === item.booking_id ? (
-                          <CircularProgress size={20} color="inherit" />
-                        ) : (
-                          "Mark Settled"
-                        )}
-                      </GradientButton>
+                      {item.admin_settlement === "DONE" ? (
+                        <Chip
+                          icon={<Verified />}
+                          label="Approved"
+                          color="success"
+                          variant="filled"
+                          size="small"
+                        />
+                      ) : (
+                        <ApproveButton
+                          disabled={processingId === item.booking_id}
+                          onClick={() => approveSettlement(item.booking_id)}
+                        >
+                          {processingId === item.booking_id ? (
+                            <CircularProgress size={20} color="inherit" />
+                          ) : (
+                            "Approve Settlement"
+                          )}
+                        </ApproveButton>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

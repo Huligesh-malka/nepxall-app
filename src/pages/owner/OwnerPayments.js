@@ -137,6 +137,33 @@ export default function OwnerPayments() {
     }
   };
 
+  const handleMarkPaid = async (bookingId) => {
+  try {
+    setIsSubmitting(true);
+
+    const token = await user.getIdToken();
+
+    await axios.post(
+      `${API}/mark-paid`,
+      { booking_id: bookingId },
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+
+    alert("Marked as Paid ✅");
+
+    // 🔄 Refresh data
+    fetchPayments();
+
+  } catch (err) {
+    console.error(err);
+    alert("Error ❌");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
   // Generate PDF from receipt data - MODERN DESIGN WITH BRAND COLORS
   const generateAndDownloadPDF = async (receiptInfo) => {
     // Create a temporary div to render receipt for PDF capture
@@ -668,33 +695,58 @@ export default function OwnerPayments() {
 
                                   <TableCell align="center">
                                     {item.owner_settlement === "DONE" ? (
-                                      <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
-                                        <Chip
-                                          label="✅ Paid"
-                                          color="success"
-                                          size="small"
-                                          sx={{ fontWeight: "bold" }}
-                                        />
-                                        <Button
-                                          variant="contained"
-                                          color="primary"
-                                          size="small"
-                                          startIcon={<Receipt />}
-                                          onClick={() => handleDirectDownload(item.booking_id)}
-                                          disabled={isSubmitting}
-                                          sx={{ borderRadius: 2, textTransform: 'none' }}
-                                        >
-                                          Receipt
-                                        </Button>
-                                      </Stack>
-                                    ) : (
-                                      <Chip
-                                        label="⏳ Pending"
-                                        color="warning"
-                                        size="small"
-                                        sx={{ fontWeight: "bold" }}
-                                      />
-                                    )}
+  // 🟢 FINAL STATE → Paid + Receipt
+  <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+    <Chip
+      label="✅ Paid"
+      color="success"
+      size="small"
+      sx={{ fontWeight: "bold" }}
+    />
+
+    <Button
+      variant="contained"
+      color="primary"
+      size="small"
+      startIcon={<Receipt />}
+      onClick={() => handleDirectDownload(item.booking_id)}
+      disabled={isSubmitting}
+      sx={{ borderRadius: 2, textTransform: 'none' }}
+    >
+      Receipt
+    </Button>
+  </Stack>
+
+) : item.admin_settlement === "DONE" ? (
+  // 🟡 ADMIN DONE → SHOW BUTTON
+  <Stack direction="row" spacing={1} justifyContent="center">
+    <Chip
+      label="💰 Settled"
+      color="info"
+      size="small"
+      sx={{ fontWeight: "bold" }}
+    />
+
+    <Button
+      variant="contained"
+      color="success"
+      size="small"
+      onClick={() => handleMarkPaid(item.booking_id)}
+      sx={{ borderRadius: 2, textTransform: 'none' }}
+    >
+      Mark as Paid
+    </Button>
+  </Stack>
+
+) : (
+  // 🔴 WAITING ADMIN
+  <Chip
+    label="⏳ Waiting Admin"
+    color="warning"
+    size="small"
+    sx={{ fontWeight: "bold" }}
+  />
+)}
                                   </TableCell>
                                 </TableRow>
                               );
