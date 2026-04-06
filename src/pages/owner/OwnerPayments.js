@@ -513,7 +513,10 @@ export default function OwnerPayments() {
 
   // Calculate summary stats for each PG
   const getPGStats = (bookings) => {
-    const totalAmount = bookings.reduce((sum, item) => sum + (parseFloat(item.owner_amount) || 0), 0);
+    const totalAmount = bookings.reduce(
+  (sum, item) => sum + (parseFloat(item.amount || item.owner_amount) || 0),
+  0
+);
     const paidCount = bookings.filter(item => item.owner_settlement === "DONE").length;
     const pendingCount = bookings.filter(item => item.owner_settlement !== "DONE").length;
     const signedCount = bookings.filter(item => !!item.signed_pdf).length;
@@ -642,7 +645,7 @@ export default function OwnerPayments() {
                                   </TableCell>
                                   <TableCell>{item.tenant_name}</TableCell>
                                   <TableCell>
-                                    <Typography fontWeight="bold" color="primary.main">₹{item.owner_amount}</Typography>
+                                    <Typography fontWeight="bold" color="primary.main">₹{item.amount || item.owner_amount}</Typography>
                                   </TableCell>
 
                                   <TableCell align="center">
