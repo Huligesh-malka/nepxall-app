@@ -1,12 +1,3 @@
-Here is the updated code with vertical layout, unique avatar styles for each status, and first-letter-only PG selection.
-```css
-/* Unique styles for different statuses with avatar symbols */
-/* Vertical layout implementation */
-/* PG selection with first letter avatar */
-/* No horizontal scroll, all vertical stacking */
-```
-
-```jsx
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -39,7 +30,7 @@ const maskUPI = (v) => {
   return user.slice(0, 2) + "•••" + (domain ? "@" + domain : "");
 };
 
-/* ── Status config with unique avatar symbols ── */
+/* ── Status config with UNIQUE AVATAR SYMBOLS for each status ── */
 const statusConfig = (item) => {
   if (item.refund_status === "paid") return { 
     label: "Paid", 
@@ -183,15 +174,15 @@ const BankDetails = ({ item }) => {
 };
 
 /* ══════════════════════════════════════════════
-   REQUEST CARD - with unique status avatar styles
+   REQUEST CARD - with UNIQUE STATUS AVATAR SYMBOLS
 ══════════════════════════════════════════════ */
 const RequestCard = ({ item, damage, dues, setDamage, setDues, loadingId, onApprove, onReject, onMarkPaid }) => {
   const st = statusConfig(item);
   return (
     <div style={s.card}>
       <div style={s.cardTop}>
-        <div style={{ ...s.avatar, background: st.avatarBg, boxShadow: `0 0 0 3px ${st.avatarBg}20` }}>
-          <span style={{ fontSize: 20, fontWeight: 700, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.2)" }}>{st.avatarSymbol}</span>
+        <div style={{ ...s.avatar, background: st.avatarBg }}>
+          <span style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>{st.avatarSymbol}</span>
         </div>
         <div style={{ flex: 1 }}>
           <div style={s.tenantName}>{item.user_name}</div>
@@ -215,7 +206,7 @@ const RequestCard = ({ item, damage, dues, setDamage, setDues, loadingId, onAppr
 };
 
 /* ══════════════════════════════════════════════
-   PG SELECTION SCREEN - vertical layout, first letter only avatar
+   PG SELECTION SCREEN - VERTICAL LAYOUT with FIRST LETTER ONLY AVATAR
 ══════════════════════════════════════════════ */
 const PGSelectionScreen = ({ pgList, pgStats, onSelect, onRefresh }) => {
   const totalRequests = pgList.reduce((sum, pg) => sum + pg.totalRequests, 0);
@@ -264,7 +255,7 @@ const PGSelectionScreen = ({ pgList, pgStats, onSelect, onRefresh }) => {
         <button onClick={onRefresh} style={s.refreshBtn}>↻ Refresh</button>
       </div>
 
-      {/* Vertical layout for PG cards - flex column instead of grid */}
+      {/* VERTICAL LAYOUT - No horizontal grid */}
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {pgList.map((pg) => {
           const stats = pgStats[pg.name] || {};
@@ -322,7 +313,6 @@ const PGDetailScreen = ({ pgName, requests, pgStats, damage, dues, setDamage, se
 
   return (
     <div style={s.container}>
-      {/* Header */}
       <div style={s.detailHeader}>
         <button onClick={onBack} style={s.backBtn}>← Back</button>
         <div style={{ flex: 1 }}>
@@ -331,7 +321,6 @@ const PGDetailScreen = ({ pgName, requests, pgStats, damage, dues, setDamage, se
         </div>
       </div>
 
-      {/* Summary badges - vertical friendly */}
       <div style={s.summaryRow}>
         {stats.pending > 0 && <div style={{ ...s.summaryCard, borderLeft: "3px solid #d97706" }}><div style={s.summaryNum}>{stats.pending}</div><div style={s.summaryLabel}>Pending</div></div>}
         {stats.awaiting > 0 && <div style={{ ...s.summaryCard, borderLeft: "3px solid #f59e0b" }}><div style={s.summaryNum}>{stats.awaiting}</div><div style={s.summaryLabel}>Awaiting</div></div>}
@@ -340,7 +329,6 @@ const PGDetailScreen = ({ pgName, requests, pgStats, damage, dues, setDamage, se
         {stats.rejected > 0 && <div style={{ ...s.summaryCard, borderLeft: "3px solid #dc2626" }}><div style={s.summaryNum}>{stats.rejected}</div><div style={s.summaryLabel}>Rejected</div></div>}
       </div>
 
-      {/* Filters - horizontal but scrollable on mobile */}
       <div style={s.filterRow}>
         {FILTERS.map((f) => (
           <button key={f.key} onClick={() => setFilter(f.key)} style={{ ...s.filterChip, ...(filter === f.key ? s.filterChipActive : {}) }}>
@@ -350,7 +338,6 @@ const PGDetailScreen = ({ pgName, requests, pgStats, damage, dues, setDamage, se
         ))}
       </div>
 
-      {/* Cards - vertical stack */}
       <div style={s.cardsList}>
         {filtered.length === 0 ? (
           <div style={s.emptyState}>
@@ -360,7 +347,7 @@ const PGDetailScreen = ({ pgName, requests, pgStats, damage, dues, setDamage, se
           </div>
         ) : (
           filtered.map((item) => (
-            <RequestCard key={item.booking_id} item={item} damage={damage} dues={dues} setDamage={setDamage} setDues={setDues} loadingId={loadingId} onApprove={onApprove} onReject={onReject} onMarkPaid={onMarkPaid} />
+            <RequestCard key={item.booking_id} item={item} damage={damage} dues={dues} setDamage={setDamage} setDues={setDues} loadingId={loadingId} onApprove={handleApprove} onReject={handleReject} onMarkPaid={handleMarkPaid} />
           ))
         )}
       </div>
@@ -494,7 +481,7 @@ const OwnerVacateRequests = () => {
 export default OwnerVacateRequests;
 
 /* ══════════════════════════════════════════════
-   STYLES - Vertical layout optimized
+   STYLES - VERTICAL LAYOUT OPTIMIZED
 ══════════════════════════════════════════════ */
 const s = {
   container: {
@@ -551,7 +538,7 @@ const s = {
     whiteSpace: "nowrap",
   },
   
-  /* PG Card - Vertical Layout (no horizontal grid) */
+  /* PG Card - VERTICAL LAYOUT (no horizontal grid) */
   pgCardVertical: {
     background: "#fff",
     borderRadius: 16,
@@ -615,7 +602,6 @@ const s = {
     marginLeft: 8,
   },
 
-  /* Summary row */
   summaryRow: {
     display: "flex",
     gap: 10,
@@ -641,7 +627,6 @@ const s = {
     marginTop: 2,
   },
   
-  /* Filter row - scrollable horizontally on mobile, but main layout vertical */
   filterRow: {
     display: "flex",
     gap: 8,
@@ -677,7 +662,6 @@ const s = {
     background: "rgba(255,255,255,0.25)",
   },
   
-  /* Cards list - vertical stack */
   cardsList: {
     display: "flex",
     flexDirection: "column",
@@ -804,7 +788,6 @@ const s = {
     color: "#78350f",
   },
   
-  /* Action menu */
   actionBtn: {
     background: "transparent",
     border: "none",
@@ -910,7 +893,6 @@ const s = {
     cursor: "pointer",
   },
   
-  /* Empty state */
   emptyState: {
     textAlign: "center",
     padding: "50px 20px",
@@ -931,4 +913,3 @@ const s = {
     color: "#94a3b8",
   },
 };
-```
