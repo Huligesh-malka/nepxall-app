@@ -513,7 +513,17 @@ export default function OwnerPayments() {
               const isSigned = !!item.signed_pdf;
               return (
                 <TableRow key={item.booking_id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                  <TableCell sx={{ fontWeight: 600 }}>#{item.booking_id}</TableCell>
+                  <TableCell>
+  <Box>
+    <Typography sx={{ fontWeight: 600 }}>
+      #{item.booking_id}
+    </Typography>
+
+    <Typography variant="caption" color="text.secondary">
+      {item.order_id}
+    </Typography>
+  </Box>
+</TableCell>
                   <TableCell>{item.tenant_name}</TableCell>
                   <TableCell>
                     <Typography fontWeight="bold" color="primary.main">₹{item.owner_amount}</Typography>
