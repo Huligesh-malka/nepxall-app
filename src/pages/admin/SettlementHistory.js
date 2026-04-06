@@ -223,12 +223,18 @@ export default function SettlementHistory() {
               data.map((item) => (
                 <TableRow key={item.booking_id} hover sx={{ transition: "0.2s" }}>
                   <TableCell>
-                    <Chip
-                      label={`#${item.booking_id}`}
-                      size="small"
-                      sx={{ fontWeight: "bold", bgcolor: "#f1f5f9" }}
-                    />
-                  </TableCell>
+  <Box>
+    <Chip
+      label={`#${item.booking_id}`}
+      size="small"
+      sx={{ fontWeight: "bold", bgcolor: "#f1f5f9", mb: 0.5 }}
+    />
+
+    <Typography variant="caption" color="text.secondary">
+      {item.order_id}
+    </Typography>
+  </Box>
+</TableCell>
 
                   <TableCell>
                     <Box display="flex" alignItems="center" gap={1.5}>
