@@ -549,7 +549,7 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
   );
 };
 
-/* ================= BOOKING MODAL COMPONENT ================= */
+/* ================= BOOKING MODAL COMPONENT (FIXED) ================= */
 const BookingModal = ({ pg, onClose, onBook }) => {
   const [bookingData, setBookingData] = useState({
     checkInDate: "",
@@ -558,9 +558,13 @@ const BookingModal = ({ pg, onClose, onBook }) => {
   
   const [loading, setLoading] = useState(false);
 
+  // ✅ FIX 3: Fixed default room type initialization
   useEffect(() => {
     const defaultRoomType = getDefaultRoomType();
-    setBookingData(prev => ({ ...prev, roomType: defaultRoomType }));
+    setBookingData({
+      checkInDate: "",
+      roomType: defaultRoomType || ""
+    });
   }, [pg]);
 
   const getDefaultRoomType = () => {
@@ -588,22 +592,25 @@ const BookingModal = ({ pg, onClose, onBook }) => {
     setBookingData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!bookingData.checkInDate) {
-      alert("Please select check-in date");
-      return;
-    }
-    
-    if (!bookingData.roomType) {
-      alert("Please select room type");
-      return;
-    }
-    
-    setLoading(true);
-    await onBook(bookingData);
-    setLoading(false);
+  // ✅ FIX 1: Updated date function - tomorrow only
+  const getTomorrowDate = () => {
+    const today = new Date();
+    today.setDate(today.getDate() + 1); // ✅ tomorrow only
+
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  };
+
+  const getMaxDate = () => {
+    const max = new Date();
+    max.setMonth(max.getMonth() + 6);
+    const year = max.getFullYear();
+    const month = String(max.getMonth() + 1).padStart(2, '0');
+    const day = String(max.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const getRoomTypes = () => {
@@ -665,22 +672,56 @@ const BookingModal = ({ pg, onClose, onBook }) => {
     return types;
   };
 
-  const getTodayDate = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  const getSelectedPrice = () => {
+    if (!bookingData.roomType) return null;
+    
+    if (pg.pg_category === "pg") {
+      if (bookingData.roomType === "Single Sharing") return pg.single_sharing;
+      if (bookingData.roomType === "Double Sharing") return pg.double_sharing;
+      if (bookingData.roomType === "Triple Sharing") return pg.triple_sharing;
+      if (bookingData.roomType === "Four Sharing") return pg.four_sharing;
+      if (bookingData.roomType === "Single Room") return pg.single_room;
+      if (bookingData.roomType === "Double Room") return pg.double_room;
+    } else if (pg.pg_category === "coliving") {
+      if (bookingData.roomType === "Single Room") return pg.co_living_single_room;
+      if (bookingData.roomType === "Double Room") return pg.co_living_double_room;
+    } else if (pg.pg_category === "to_let") {
+      if (bookingData.roomType === "1BHK") return pg.price_1bhk;
+      if (bookingData.roomType === "2BHK") return pg.price_2bhk;
+      if (bookingData.roomType === "3BHK") return pg.price_3bhk;
+      if (bookingData.roomType === "4BHK") return pg.price_4bhk;
+    }
+    return null;
   };
 
-  const getMaxDate = () => {
-    const max = new Date();
-    max.setMonth(max.getMonth() + 6);
-    const year = max.getFullYear();
-    const month = String(max.getMonth() + 1).padStart(2, '0');
-    const day = String(max.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  // ✅ FIX 2: Updated handleSubmit with loading state and success handling
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!bookingData.checkInDate) {
+      alert("Please select check-in date");
+      return;
+    }
+
+    if (!bookingData.roomType) {
+      alert("Please select room type");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await onBook(bookingData);
+      alert("✅ Booking request sent (valid for 24 hours)");
+      onClose(); // 🔥 close modal after success
+    } catch (err) {
+      alert(err?.response?.data?.message || "Booking failed");
+    }
+
+    setLoading(false);
   };
+
+  const selectedPrice = getSelectedPrice();
 
   return (
     <div style={{
@@ -747,6 +788,19 @@ const BookingModal = ({ pg, onClose, onBook }) => {
             Your details will be auto-filled from your profile
           </p>
 
+          {/* ✅ BONUS: 24h warning box */}
+          <div style={{
+            background: "#fff7ed",
+            padding: 12,
+            borderRadius: 8,
+            marginBottom: 15,
+            fontSize: 13,
+            color: "#9a3412",
+            border: "1px solid #fed7aa"
+          }}>
+            ⚠️ You can only request this PG once every 24 hours
+          </div>
+
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: 24 }}>
               <label style={{
@@ -764,7 +818,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                 value={bookingData.checkInDate}
                 onChange={handleInputChange}
                 required
-                min={getTodayDate()}
+                min={getTomorrowDate()}
                 max={getMaxDate()}
                 style={{
                   width: "100%",
@@ -780,7 +834,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                 color: "#6b7280",
                 marginTop: 4
               }}>
-                You can book up to 6 months in advance
+                Earliest check-in: tomorrow (24h notice required)
               </p>
             </div>
 
@@ -813,6 +867,13 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                   <option key={index} value={type.value}>{type.label}</option>
                 ))}
               </select>
+              
+              {/* ✅ BONUS: Show selected price dynamically */}
+              {selectedPrice !== null && selectedPrice > 0 && (
+                <p style={{ marginTop: 8, fontWeight: 600, color: "#10b981", fontSize: 14 }}>
+                  Selected: {bookingData.roomType} - ₹{formatPrice(selectedPrice)}/month
+                </p>
+              )}
             </div>
 
             <div style={{
@@ -1178,8 +1239,8 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
     
     if ((pg.pg_category === "pg" || pg.pg_category === "coliving") && hasFacility("food_available")) {
       const foodLabel = pg.food_type === 'veg' ? "Vegetarian" : 
-                       pg.food_type === 'non-veg' ? "Non-Vegetarian" : 
-                       pg.food_type === 'both' ? "Veg & Non-Veg" : "Food Included";
+                      pg.food_type === 'non-veg' ? "Non-Vegetarian" : 
+                      pg.food_type === 'both' ? "Veg & Non-Veg" : "Food Included";
       const foodIcon = pg.food_type === 'veg' ? <Leaf size={16} /> : 
                       pg.food_type === 'non-veg' ? <Flame size={16} /> : 
                       <Utensils size={16} />;
@@ -1188,7 +1249,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
         value: foodLabel,
         icon: foodIcon,
         color: pg.food_type === 'veg' ? '#10b981' : 
-               pg.food_type === 'non-veg' ? '#ef4444' : '#f97316'
+              pg.food_type === 'non-veg' ? '#ef4444' : '#f97316'
       });
     }
     
@@ -1930,7 +1991,7 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
         return pg.pg_name;
       case 'type':
         return pg.pg_category === 'pg' ? 'PG' : 
-               pg.pg_category === 'coliving' ? 'Co-Living' : 'To-Let';
+              pg.pg_category === 'coliving' ? 'Co-Living' : 'To-Let';
       case 'price':
         return `₹${formatPrice(getEffectiveRent(pg))}`;
       case 'deposit':
@@ -1939,7 +2000,7 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
         return pg.area || pg.city || 'N/A';
       case 'food':
         return pg.food_available ? 
-               (pg.food_type === 'veg' ? 'Vegetarian' : 
+              (pg.food_type === 'veg' ? 'Vegetarian' : 
                 pg.food_type === 'non-veg' ? 'Non-Veg' : 'Both') : 'No';
       case 'wifi':
         return pg.wifi_available ? 'Yes' : 'No';
@@ -3557,8 +3618,8 @@ function UserPGSearch() {
                     letterSpacing: "0.5px"
                   }}>
                     {pg.pg_category === "to_let" ? "To-Let" : 
-                     pg.pg_category === "coliving" ? "Co-Living" :
-                     pg.pg_type ? pg.pg_type.charAt(0).toUpperCase() + pg.pg_type.slice(1) + " PG" : "PG"}
+                    pg.pg_category === "coliving" ? "Co-Living" :
+                    pg.pg_type ? pg.pg_type.charAt(0).toUpperCase() + pg.pg_type.slice(1) + " PG" : "PG"}
                   </div>
                   
                   {pg.distance && (

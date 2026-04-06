@@ -17,7 +17,6 @@ const OwnerBookings = () => {
   /* ================= LOAD BOOKINGS ================= */
   const loadOwnerBookings = useCallback(async () => {
     try {
-      setPageLoading(true);
       setError("");
 
       if (!user) return;
@@ -42,16 +41,25 @@ const OwnerBookings = () => {
     }
   }, [user]);
 
-  /* ================= AUTH + LOAD ================= */
+  /* ================= AUTO REFRESH ================= */
+  useEffect(() => {
+    if (user && role === "owner") {
+      loadOwnerBookings();
+
+      const interval = setInterval(() => {
+        loadOwnerBookings();
+      }, 30000); // refresh every 30 sec
+
+      return () => clearInterval(interval);
+    }
+  }, [user, role, loadOwnerBookings]);
+
+  /* ================= AUTH ================= */
   useEffect(() => {
     if (!loading && !user) {
       navigate("/login");
     }
-
-    if (user && role === "owner") {
-      loadOwnerBookings();
-    }
-  }, [user, role, loading, navigate, loadOwnerBookings]);
+  }, [user, loading, navigate]);
 
   /* ================= UPDATE STATUS ================= */
   const updateStatus = async (bookingId, status) => {
@@ -75,7 +83,7 @@ const OwnerBookings = () => {
       console.error(err);
 
       if (err.response?.data?.code === "ONBOARDING_PENDING") {
-        alert("⚠️ Please complete owner verification first");
+        alert("⚠️ Complete owner verification first");
         navigate("/owner/bank");
         return;
       }
@@ -84,6 +92,22 @@ const OwnerBookings = () => {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  /* ================= TIME LEFT ================= */
+  const getRemainingTime = (createdAt) => {
+    const created = new Date(createdAt);
+    const expiry = new Date(created.getTime() + 24 * 60 * 60 * 1000);
+    const now = new Date();
+
+    const diff = expiry - now;
+
+    if (diff <= 0) return "Expired";
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff / (1000 * 60)) % 60);
+
+    return `${hours}h ${minutes}m left`;
   };
 
   /* ================= PROTECTION ================= */
@@ -107,62 +131,71 @@ const OwnerBookings = () => {
       {error && <div style={errorBox}>{error}</div>}
 
       {bookings.length === 0 ? (
-        <div style={emptyBox}>
-          No booking requests
-          <br />
-          <button style={reloadBtn} onClick={loadOwnerBookings}>
-            Reload
-          </button>
-        </div>
+        <div style={emptyBox}>No booking requests</div>
       ) : (
-        bookings.map((b) => (
-          <div key={b.id} style={card}>
-            <p><b>PG:</b> {b.pg_name}</p>
-            <p><b>Tenant:</b> {b.tenant_name}</p>
-            <p>
-              <b>Phone:</b>{" "}
-              {b.tenant_phone ? (
-                b.tenant_phone
-              ) : (
-                <span style={{ color: "#f59e0b" }}>
-                  🔒 Hidden until approval
-                </span>
-              )}
-            </p>
-            <p>
-              <b>Check-in:</b>{" "}
-              {b.check_in_date
-                ? new Date(b.check_in_date).toDateString()
-                : "N/A"}
-            </p>
-            <p><b>Room Type:</b> {b.room_type}</p>
-            <p>
-              <b>Status:</b>{" "}
-              <span style={statusBadge(b.status)}>
-                {b.status?.toUpperCase()}
-              </span>
-            </p>
+        bookings.map((b) => {
+          const isExpired = getRemainingTime(b.created_at) === "Expired";
 
-            {b.status === "pending" && (
-              <div style={{ marginTop: 12 }}>
-                <button
-                  style={approveBtn}
-                  disabled={actionLoading === b.id}
-                  onClick={() => updateStatus(b.id, "approved")}
-                >
-                  {actionLoading === b.id ? "Processing..." : "✅ Approve"}
-                </button>
-                <button
-                  style={rejectBtn}
-                  disabled={actionLoading === b.id}
-                  onClick={() => updateStatus(b.id, "rejected")}
-                >
-                  {actionLoading === b.id ? "Processing..." : "❌ Reject"}
-                </button>
-              </div>
-            )}
-          </div>
-        ))
+          return (
+            <div key={b.id} style={card}>
+              <p><b>PG:</b> {b.pg_name}</p>
+              <p><b>Tenant:</b> {b.tenant_name}</p>
+
+              <p>
+                <b>Phone:</b>{" "}
+                {b.tenant_phone ? b.tenant_phone : "🔒 Hidden"}
+              </p>
+
+              <p>
+                <b>Check-in:</b>{" "}
+                {b.check_in_date
+                  ? new Date(b.check_in_date).toDateString()
+                  : "N/A"}
+              </p>
+
+              <p><b>Room:</b> {b.room_type}</p>
+
+              <p>
+                <b>Status:</b>{" "}
+                <span style={statusBadge(b.status)}>
+                  {b.status?.toUpperCase()}
+                </span>
+              </p>
+
+              {b.status === "pending" && (
+                <p style={{ color: isExpired ? "red" : "#2563eb" }}>
+                  ⏳ {getRemainingTime(b.created_at)}
+                </p>
+              )}
+
+              {b.status === "pending" && !isExpired && (
+                <div style={{ marginTop: 12 }}>
+                  <button
+                    style={approveBtn}
+                    disabled={actionLoading === b.id}
+                    onClick={() => updateStatus(b.id, "approved")}
+                  >
+                    {actionLoading === b.id ? "Processing..." : "✅ Approve"}
+                  </button>
+
+                  <button
+                    style={rejectBtn}
+                    disabled={actionLoading === b.id}
+                    onClick={() => updateStatus(b.id, "rejected")}
+                  >
+                    {actionLoading === b.id ? "Processing..." : "❌ Reject"}
+                  </button>
+                </div>
+              )}
+
+              {isExpired && (
+                <p style={{ color: "red", fontWeight: "bold" }}>
+                  ❌ Booking expired
+                </p>
+              )}
+            </div>
+          );
+        })
       )}
     </div>
   );
@@ -217,6 +250,10 @@ const statusBadge = (status) => ({
       ? "#16a34a"
       : status === "rejected"
       ? "#dc2626"
+      : status === "confirmed"
+      ? "#2563eb"
+      : status === "expired"
+      ? "#6b7280"
       : "#f59e0b",
 });
 
@@ -233,16 +270,6 @@ const approveBtn = {
 const rejectBtn = {
   padding: "10px 16px",
   background: "#dc2626",
-  color: "#fff",
-  border: "none",
-  borderRadius: 6,
-  cursor: "pointer",
-};
-
-const reloadBtn = {
-  marginTop: 10,
-  padding: "8px 14px",
-  background: "#2563eb",
   color: "#fff",
   border: "none",
   borderRadius: 6,
