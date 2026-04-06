@@ -1,3 +1,12 @@
+Here is the updated code with vertical layout, unique avatar styles for each status, and first-letter-only PG selection.
+```css
+/* Unique styles for different statuses with avatar symbols */
+/* Vertical layout implementation */
+/* PG selection with first letter avatar */
+/* No horizontal scroll, all vertical stacking */
+```
+
+```jsx
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -30,13 +39,48 @@ const maskUPI = (v) => {
   return user.slice(0, 2) + "•••" + (domain ? "@" + domain : "");
 };
 
-/* ── Status config ── */
+/* ── Status config with unique avatar symbols ── */
 const statusConfig = (item) => {
-  if (item.refund_status === "paid") return { label: "Paid", color: "#16a34a", bg: "#dcfce7" };
-  if (item.refund_status === "rejected" || item.user_approval === "rejected") return { label: "Rejected", color: "#dc2626", bg: "#fee2e2" };
-  if (item.refund_status === "approved") return { label: "Awaiting", color: "#d97706", bg: "#fef3c7" };
-  if (item.refund_status === "pending" && item.user_approval === "accepted") return { label: "Ready", color: "#4f46e5", bg: "#eef2ff" };
-  return { label: "Pending", color: "#64748b", bg: "#f1f5f9" };
+  if (item.refund_status === "paid") return { 
+    label: "Paid", 
+    color: "#16a34a", 
+    bg: "#dcfce7",
+    avatarSymbol: "✓",
+    avatarBg: "#22c55e",
+    avatarIconBg: "#166534"
+  };
+  if (item.refund_status === "rejected" || item.user_approval === "rejected") return { 
+    label: "Rejected", 
+    color: "#dc2626", 
+    bg: "#fee2e2",
+    avatarSymbol: "✕",
+    avatarBg: "#ef4444",
+    avatarIconBg: "#7f1d1d"
+  };
+  if (item.refund_status === "approved") return { 
+    label: "Awaiting", 
+    color: "#d97706", 
+    bg: "#fef3c7",
+    avatarSymbol: "⏳",
+    avatarBg: "#f59e0b",
+    avatarIconBg: "#78350f"
+  };
+  if (item.refund_status === "pending" && item.user_approval === "accepted") return { 
+    label: "Ready", 
+    color: "#4f46e5", 
+    bg: "#eef2ff",
+    avatarSymbol: "⚡",
+    avatarBg: "#6366f1",
+    avatarIconBg: "#312e81"
+  };
+  return { 
+    label: "Pending", 
+    color: "#64748b", 
+    bg: "#f1f5f9",
+    avatarSymbol: "○",
+    avatarBg: "#94a3b8",
+    avatarIconBg: "#475569"
+  };
 };
 
 /* ── Filter definitions ── */
@@ -139,14 +183,16 @@ const BankDetails = ({ item }) => {
 };
 
 /* ══════════════════════════════════════════════
-   REQUEST CARD
+   REQUEST CARD - with unique status avatar styles
 ══════════════════════════════════════════════ */
 const RequestCard = ({ item, damage, dues, setDamage, setDues, loadingId, onApprove, onReject, onMarkPaid }) => {
   const st = statusConfig(item);
   return (
     <div style={s.card}>
       <div style={s.cardTop}>
-        <div style={s.avatar}>{item.user_name?.[0]?.toUpperCase() || "U"}</div>
+        <div style={{ ...s.avatar, background: st.avatarBg, boxShadow: `0 0 0 3px ${st.avatarBg}20` }}>
+          <span style={{ fontSize: 20, fontWeight: 700, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.2)" }}>{st.avatarSymbol}</span>
+        </div>
         <div style={{ flex: 1 }}>
           <div style={s.tenantName}>{item.user_name}</div>
           <div style={s.bookingId}>Booking #{item.booking_id}</div>
@@ -169,11 +215,44 @@ const RequestCard = ({ item, damage, dues, setDamage, setDues, loadingId, onAppr
 };
 
 /* ══════════════════════════════════════════════
-   PG SELECTION SCREEN
+   PG SELECTION SCREEN - vertical layout, first letter only avatar
 ══════════════════════════════════════════════ */
 const PGSelectionScreen = ({ pgList, pgStats, onSelect, onRefresh }) => {
   const totalRequests = pgList.reduce((sum, pg) => sum + pg.totalRequests, 0);
   const totalPending = Object.values(pgStats).reduce((sum, s) => sum + s.pending, 0);
+
+  // Unique gradient colors for PG avatars based on first letter
+  const getAvatarGradient = (letter) => {
+    const gradients = {
+      A: "linear-gradient(135deg, #ff6b6b, #ee5a24)",
+      B: "linear-gradient(135deg, #4ecdc4, #44bdaf)",
+      C: "linear-gradient(135deg, #45b7d1, #2c98b5)",
+      D: "linear-gradient(135deg, #f9ca24, #f6b93b)",
+      E: "linear-gradient(135deg, #6c5ce7, #5a4bd1)",
+      F: "linear-gradient(135deg, #a55eea, #8b4bcb)",
+      G: "linear-gradient(135deg, #20bf6b, #0f9d58)",
+      H: "linear-gradient(135deg, #fa8231, #e17026)",
+      I: "linear-gradient(135deg, #2d98da, #1f7fa8)",
+      J: "linear-gradient(135deg, #eb3b5a, #c92a42)",
+      K: "linear-gradient(135deg, #8854d0, #6c3cb0)",
+      L: "linear-gradient(135deg, #3b3b98, #2c2c70)",
+      M: "linear-gradient(135deg, #58b19f, #40957f)",
+      N: "linear-gradient(135deg, #e66767, #d94a4a)",
+      O: "linear-gradient(135deg, #f8c291, #e6a66b)",
+      P: "linear-gradient(135deg, #b71540, #94002e)",
+      Q: "linear-gradient(135deg, #0abde3, #008bb5)",
+      R: "linear-gradient(135deg, #f6e58d, #e8d064)",
+      S: "linear-gradient(135deg, #ff7979, #e86161)",
+      T: "linear-gradient(135deg, #badc58, #a1c433)",
+      U: "linear-gradient(135deg, #c44569, #ad3252)",
+      V: "linear-gradient(135deg, #7ed6df, #5db8c4)",
+      W: "linear-gradient(135deg, #e056fd, #c638e0)",
+      X: "linear-gradient(135deg, #686de0, #5249bd)",
+      Y: "linear-gradient(135deg, #ffbe76, #f5a623)",
+      Z: "linear-gradient(135deg, #95afc0, #748ca3)"
+    };
+    return gradients[letter] || "linear-gradient(135deg, #4f46e5, #7c3aed)";
+  };
 
   return (
     <div style={s.container}>
@@ -182,29 +261,33 @@ const PGSelectionScreen = ({ pgList, pgStats, onSelect, onRefresh }) => {
           <h1 style={s.pageTitle}>Vacate Requests</h1>
           <p style={s.pageSubtitle}>{pgList.length} properties · {totalRequests} total · {totalPending} pending</p>
         </div>
-        <button onClick={onRefresh} style={s.refreshBtn}>Refresh</button>
+        <button onClick={onRefresh} style={s.refreshBtn}>↻ Refresh</button>
       </div>
 
-      <div style={s.pgGrid}>
+      {/* Vertical layout for PG cards - flex column instead of grid */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {pgList.map((pg) => {
           const stats = pgStats[pg.name] || {};
+          const firstLetter = pg.name[0]?.toUpperCase() || "P";
           return (
-            <div key={pg.name} style={s.pgCard} onClick={() => onSelect(pg.name)}>
-              <div style={s.pgCardHeader}>
-                <div style={s.pgAvatar}>{pg.name[0]?.toUpperCase() || "P"}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={s.pgName}>{pg.name}</div>
-                  <div style={s.pgTotal}>{pg.totalRequests} request{pg.totalRequests !== 1 ? "s" : ""}</div>
+            <div key={pg.name} style={s.pgCardVertical} onClick={() => onSelect(pg.name)}>
+              <div style={s.pgCardContent}>
+                <div style={{ ...s.pgAvatarVertical, background: getAvatarGradient(firstLetter) }}>
+                  <span style={s.pgAvatarLetter}>{firstLetter}</span>
                 </div>
-                <span style={s.arrowIcon}>›</span>
-              </div>
-              <div style={s.pgStatRow}>
-                {stats.pending > 0 && <span style={{ ...s.pgBadge, background: "#fef3c7", color: "#92400e" }}>Pending {stats.pending}</span>}
-                {stats.awaiting > 0 && <span style={{ ...s.pgBadge, background: "#fffbeb", color: "#b45309" }}>Awaiting {stats.awaiting}</span>}
-                {stats.ready > 0 && <span style={{ ...s.pgBadge, background: "#eef2ff", color: "#3730a3" }}>Ready {stats.ready}</span>}
-                {stats.paid > 0 && <span style={{ ...s.pgBadge, background: "#dcfce7", color: "#166534" }}>Paid {stats.paid}</span>}
-                {stats.rejected > 0 && <span style={{ ...s.pgBadge, background: "#fee2e2", color: "#991b1b" }}>Rejected {stats.rejected}</span>}
-                {pg.totalRequests === 0 && <span style={{ ...s.pgBadge, background: "#f1f5f9", color: "#64748b" }}>No requests</span>}
+                <div style={s.pgInfo}>
+                  <div style={s.pgNameVertical}>{pg.name}</div>
+                  <div style={s.pgTotalVertical}>{pg.totalRequests} request{pg.totalRequests !== 1 ? "s" : ""}</div>
+                </div>
+                <div style={s.pgStatRowVertical}>
+                  {stats.pending > 0 && <span style={{ ...s.pgBadgeVertical, background: "#fef3c7", color: "#92400e" }}>📋 P{stats.pending}</span>}
+                  {stats.awaiting > 0 && <span style={{ ...s.pgBadgeVertical, background: "#fffbeb", color: "#b45309" }}>⏳ A{stats.awaiting}</span>}
+                  {stats.ready > 0 && <span style={{ ...s.pgBadgeVertical, background: "#eef2ff", color: "#3730a3" }}>⚡ R{stats.ready}</span>}
+                  {stats.paid > 0 && <span style={{ ...s.pgBadgeVertical, background: "#dcfce7", color: "#166534" }}>✓ Pd{stats.paid}</span>}
+                  {stats.rejected > 0 && <span style={{ ...s.pgBadgeVertical, background: "#fee2e2", color: "#991b1b" }}>✕ Rj{stats.rejected}</span>}
+                  {pg.totalRequests === 0 && <span style={{ ...s.pgBadgeVertical, background: "#f1f5f9", color: "#64748b" }}>○ No requests</span>}
+                </div>
+                <span style={s.arrowIconVertical}>›</span>
               </div>
             </div>
           );
@@ -248,7 +331,7 @@ const PGDetailScreen = ({ pgName, requests, pgStats, damage, dues, setDamage, se
         </div>
       </div>
 
-      {/* Summary badges */}
+      {/* Summary badges - vertical friendly */}
       <div style={s.summaryRow}>
         {stats.pending > 0 && <div style={{ ...s.summaryCard, borderLeft: "3px solid #d97706" }}><div style={s.summaryNum}>{stats.pending}</div><div style={s.summaryLabel}>Pending</div></div>}
         {stats.awaiting > 0 && <div style={{ ...s.summaryCard, borderLeft: "3px solid #f59e0b" }}><div style={s.summaryNum}>{stats.awaiting}</div><div style={s.summaryLabel}>Awaiting</div></div>}
@@ -257,7 +340,7 @@ const PGDetailScreen = ({ pgName, requests, pgStats, damage, dues, setDamage, se
         {stats.rejected > 0 && <div style={{ ...s.summaryCard, borderLeft: "3px solid #dc2626" }}><div style={s.summaryNum}>{stats.rejected}</div><div style={s.summaryLabel}>Rejected</div></div>}
       </div>
 
-      {/* Filters */}
+      {/* Filters - horizontal but scrollable on mobile */}
       <div style={s.filterRow}>
         {FILTERS.map((f) => (
           <button key={f.key} onClick={() => setFilter(f.key)} style={{ ...s.filterChip, ...(filter === f.key ? s.filterChipActive : {}) }}>
@@ -267,7 +350,7 @@ const PGDetailScreen = ({ pgName, requests, pgStats, damage, dues, setDamage, se
         ))}
       </div>
 
-      {/* Cards */}
+      {/* Cards - vertical stack */}
       <div style={s.cardsList}>
         {filtered.length === 0 ? (
           <div style={s.emptyState}>
@@ -411,13 +494,13 @@ const OwnerVacateRequests = () => {
 export default OwnerVacateRequests;
 
 /* ══════════════════════════════════════════════
-   STYLES
+   STYLES - Vertical layout optimized
 ══════════════════════════════════════════════ */
 const s = {
   container: {
     minHeight: "100vh",
     background: "#f0f2f5",
-    padding: "24px",
+    padding: "20px 16px",
     maxWidth: 900,
     margin: "0 auto",
   },
@@ -425,24 +508,24 @@ const s = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 28,
+    marginBottom: 24,
     flexWrap: "wrap",
     gap: 12,
   },
   detailHeader: {
     display: "flex",
     alignItems: "flex-start",
-    gap: 16,
-    marginBottom: 24,
+    gap: 12,
+    marginBottom: 20,
   },
   pageTitle: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: 700,
     color: "#1a1a2e",
     margin: 0,
   },
   pageSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#666",
     margin: "4px 0 0",
   },
@@ -450,7 +533,7 @@ const s = {
     background: "#fff",
     border: "1px solid #ddd",
     borderRadius: 10,
-    padding: "8px 18px",
+    padding: "8px 16px",
     fontSize: 14,
     fontWeight: 500,
     color: "#333",
@@ -460,99 +543,105 @@ const s = {
     background: "#fff",
     border: "1px solid #ddd",
     borderRadius: 10,
-    padding: "8px 16px",
+    padding: "8px 14px",
     fontSize: 14,
     fontWeight: 500,
     color: "#333",
     cursor: "pointer",
     whiteSpace: "nowrap",
   },
-  /* PG Grid */
-  pgGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-    gap: 16,
-  },
-  pgCard: {
+  
+  /* PG Card - Vertical Layout (no horizontal grid) */
+  pgCardVertical: {
     background: "#fff",
     borderRadius: 16,
-    padding: "18px",
     border: "1px solid #e5e7eb",
     cursor: "pointer",
     transition: "all 0.15s",
     boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+    overflow: "hidden",
   },
-  pgCardHeader: {
+  pgCardContent: {
     display: "flex",
     alignItems: "center",
     gap: 12,
-    marginBottom: 14,
+    padding: "16px",
   },
-  pgAvatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 12,
-    background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
+  pgAvatarVertical: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 20,
+    flexShrink: 0,
+    boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+  },
+  pgAvatarLetter: {
+    fontSize: 24,
     fontWeight: 700,
     color: "#fff",
-    flexShrink: 0,
+    textShadow: "0 1px 2px rgba(0,0,0,0.2)",
   },
-  pgName: {
-    fontSize: 15,
-    fontWeight: 600,
+  pgInfo: {
+    flex: 1,
+  },
+  pgNameVertical: {
+    fontSize: 16,
+    fontWeight: 700,
     color: "#1a1a2e",
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  pgTotal: {
+  pgTotalVertical: {
     fontSize: 12,
     color: "#94a3b8",
   },
-  arrowIcon: {
-    fontSize: 20,
-    color: "#cbd5e1",
-    fontWeight: 300,
-  },
-  pgStatRow: {
+  pgStatRowVertical: {
     display: "flex",
-    flexWrap: "wrap",
     gap: 6,
+    flexWrap: "wrap",
   },
-  pgBadge: {
-    padding: "3px 10px",
-    borderRadius: 20,
+  pgBadgeVertical: {
+    padding: "3px 8px",
+    borderRadius: 16,
     fontSize: 11,
     fontWeight: 600,
+    whiteSpace: "nowrap",
   },
+  arrowIconVertical: {
+    fontSize: 22,
+    color: "#cbd5e1",
+    fontWeight: 300,
+    marginLeft: 8,
+  },
+
   /* Summary row */
   summaryRow: {
     display: "flex",
-    gap: 12,
+    gap: 10,
     marginBottom: 20,
     flexWrap: "wrap",
   },
   summaryCard: {
     background: "#fff",
     borderRadius: 12,
-    padding: "12px 18px",
+    padding: "10px 16px",
     border: "1px solid #e5e7eb",
-    minWidth: 80,
+    minWidth: 70,
   },
   summaryNum: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 700,
     color: "#1a1a2e",
-    lineHeight: 1.1,
+    lineHeight: 1.2,
   },
   summaryLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#94a3b8",
     marginTop: 2,
   },
-  /* Filter row */
+  
+  /* Filter row - scrollable horizontally on mobile, but main layout vertical */
   filterRow: {
     display: "flex",
     gap: 8,
@@ -587,7 +676,8 @@ const s = {
   chipCountActive: {
     background: "rgba(255,255,255,0.25)",
   },
-  /* Cards list */
+  
+  /* Cards list - vertical stack */
   cardsList: {
     display: "flex",
     flexDirection: "column",
@@ -596,7 +686,7 @@ const s = {
   card: {
     background: "#fff",
     borderRadius: 16,
-    padding: "18px",
+    padding: "16px",
     border: "1px solid #e5e7eb",
     boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
   },
@@ -604,19 +694,15 @@ const s = {
     display: "flex",
     alignItems: "center",
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 16,
-    fontWeight: 700,
-    color: "#fff",
     flexShrink: 0,
   },
   tenantName: {
@@ -630,47 +716,48 @@ const s = {
     marginTop: 2,
   },
   statusBadge: {
-    padding: "4px 12px",
+    padding: "4px 10px",
     borderRadius: 20,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 600,
+    whiteSpace: "nowrap",
   },
   detailGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
+    gridTemplateColumns: "repeat(2, 1fr)",
     gap: 10,
     marginBottom: 14,
   },
   detailBox: {
     background: "#f8fafc",
     borderRadius: 10,
-    padding: "10px",
+    padding: "8px",
     textAlign: "center",
   },
   detailLabel: {
     display: "block",
-    fontSize: 11,
+    fontSize: 10,
     color: "#94a3b8",
-    marginBottom: 4,
+    marginBottom: 3,
   },
   detailVal: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 600,
     color: "#1a1a2e",
   },
   bankSection: {
     background: "#f8fafc",
     borderRadius: 12,
-    padding: "12px",
+    padding: "10px",
   },
   bankHeader: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   bankTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 600,
     color: "#64748b",
   },
@@ -678,44 +765,45 @@ const s = {
     background: "#eef2ff",
     border: "none",
     borderRadius: 6,
-    padding: "4px 10px",
-    fontSize: 11,
+    padding: "3px 8px",
+    fontSize: 10,
     fontWeight: 600,
     color: "#4f46e5",
     cursor: "pointer",
   },
   bankRow: {
     display: "flex",
-    gap: 8,
+    gap: 6,
     flexWrap: "wrap",
   },
   bankChip: {
     background: "#fff",
     border: "1px solid #e5e7eb",
     borderRadius: 8,
-    padding: "6px 12px",
+    padding: "5px 10px",
     flex: 1,
-    minWidth: 90,
+    minWidth: 80,
   },
   bankLabel: {
     display: "block",
-    fontSize: 10,
+    fontSize: 9,
     color: "#94a3b8",
     marginBottom: 2,
   },
   bankValue: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 600,
     color: "#1a1a2e",
   },
   reasonBox: {
-    marginTop: 12,
-    padding: "10px 12px",
+    marginTop: 10,
+    padding: "8px 10px",
     background: "#fefce8",
     borderRadius: 10,
-    fontSize: 12,
+    fontSize: 11,
     color: "#78350f",
   },
+  
   /* Action menu */
   actionBtn: {
     background: "transparent",
@@ -735,7 +823,7 @@ const s = {
     borderRadius: 12,
     boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
     border: "1px solid #e5e7eb",
-    minWidth: 160,
+    minWidth: 150,
     zIndex: 100,
     overflow: "hidden",
   },
@@ -744,11 +832,11 @@ const s = {
     alignItems: "center",
     gap: 10,
     width: "100%",
-    padding: "10px 14px",
+    padding: "8px 12px",
     background: "transparent",
     border: "none",
     cursor: "pointer",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 500,
     color: "#334155",
     textAlign: "left",
@@ -772,73 +860,75 @@ const s = {
     borderRadius: 14,
     boxShadow: "0 4px 24px rgba(0,0,0,0.14)",
     border: "1px solid #e5e7eb",
-    padding: "16px",
-    minWidth: 240,
+    padding: "14px",
+    minWidth: 220,
     zIndex: 200,
   },
   formTitle: {
-    margin: "0 0 12px",
-    fontSize: 14,
+    margin: "0 0 10px",
+    fontSize: 13,
     fontWeight: 700,
     color: "#1a1a2e",
   },
   label: {
     display: "block",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 600,
     color: "#64748b",
-    marginBottom: 4,
+    marginBottom: 3,
   },
   input: {
     width: "100%",
-    padding: "8px 10px",
+    padding: "7px 9px",
     borderRadius: 8,
     border: "1px solid #e2e8f0",
-    fontSize: 13,
-    marginBottom: 10,
+    fontSize: 12,
+    marginBottom: 8,
     boxSizing: "border-box",
     outline: "none",
   },
   confirmBtn: {
     flex: 1,
-    padding: "8px 0",
+    padding: "7px 0",
     background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
     color: "#fff",
     border: "none",
     borderRadius: 8,
     fontWeight: 600,
-    fontSize: 13,
+    fontSize: 12,
     cursor: "pointer",
   },
   cancelBtn: {
     flex: 1,
-    padding: "8px 0",
+    padding: "7px 0",
     background: "#f1f5f9",
     color: "#64748b",
     border: "none",
     borderRadius: 8,
     fontWeight: 500,
-    fontSize: 13,
+    fontSize: 12,
     cursor: "pointer",
   },
+  
   /* Empty state */
   emptyState: {
     textAlign: "center",
-    padding: "60px 20px",
+    padding: "50px 20px",
     color: "#94a3b8",
   },
   emptyIcon: {
-    fontSize: 48,
-    marginBottom: 12,
+    fontSize: 44,
+    marginBottom: 10,
   },
   emptyTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 600,
     color: "#64748b",
     marginBottom: 4,
   },
   emptySubtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#94a3b8",
   },
 };
+```
