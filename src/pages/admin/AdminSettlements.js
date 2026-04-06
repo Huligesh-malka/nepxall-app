@@ -187,8 +187,12 @@ export default function AdminSettlements() {
                           <ReceiptLong fontSize="small" />
                         </Avatar>
                         <Typography variant="body2" fontWeight="bold">
-                          #{item.booking_id}
-                        </Typography>
+  #{item.booking_id}
+</Typography>
+
+<Typography variant="caption" color="textSecondary">
+  {item.order_id}
+</Typography>
                       </Box>
                     </TableCell>
 
