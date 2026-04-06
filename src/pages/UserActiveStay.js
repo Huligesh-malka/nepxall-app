@@ -84,9 +84,9 @@ const UserActiveStay = () => {
   const [vacateForms, setVacateForms] = useState({});
 
   // ✅ Load stays
-  const loadStay = useCallback(async (showLoader = true) => {
+  const loadStay = useCallback(async (forceRefresh = false) => {
     try {
-      if (showLoader) setLoading(true);
+      if (forceRefresh) setLoading(true);
       if (!user) return;
 
       const res = await api.get("/bookings/user/active-stay");
@@ -94,7 +94,7 @@ const UserActiveStay = () => {
     } catch (err) {
       console.error("Error loading stays:", err);
     } finally {
-      if (showLoader) setLoading(false);
+      if (forceRefresh) setLoading(false);
     }
   }, [user]);
 
@@ -138,7 +138,7 @@ const UserActiveStay = () => {
       });
       if (res.data.success) {
         alert("✅ Refund request submitted successfully.");
-        await loadStay(false);
+        await loadStay(true);
         setShowRefundFormFor(null);
         // ✅ Clear only this stay's refund form
         setRefundForms(prev => ({
@@ -184,12 +184,24 @@ const UserActiveStay = () => {
       if (res.data.success) {
         alert("✅ Vacate request submitted");
         setShowVacateFormFor(null);
+        
+        // ✅ FIX 5: Force UI update immediately to prevent flicker/disappearing
+        setStays(prev =>
+          prev.map(s =>
+            s.id === stayId
+              ? { ...s, vacate_status: "requested" }
+              : s
+          )
+        );
+        
         // ✅ Clear only this stay's vacate form
         setVacateForms(prev => ({
           ...prev,
           [stayId]: {}
         }));
-        loadStay(false);
+        
+        // ✅ Force refresh from backend
+        await loadStay(true);
       }
     } catch (err) {
       console.error(err);
@@ -202,7 +214,7 @@ const UserActiveStay = () => {
     try {
       await api.post("/bookings/refunds/accept", { bookingId });
       alert("✅ Refund accepted");
-      loadStay(false);
+      await loadStay(true);
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || "Accept failed");
@@ -214,7 +226,7 @@ const UserActiveStay = () => {
     try {
       await api.post("/bookings/refunds/reject", { bookingId });
       alert("❌ Refund rejected");
-      loadStay(false);
+      await loadStay(true);
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || "Reject failed");
@@ -293,14 +305,14 @@ const UserActiveStay = () => {
         return (
           <div key={stay.id} style={card}>
 
-            {/* VACATE STATUS BANNER */}
-            {(stay.vacate_status === "pending" ||
+            {/* ✅ FIX 1 & 2: CORRECT STATUS VALUES with "requested" instead of "pending" */}
+            {(stay.vacate_status === "requested" ||
               stay.vacate_status === "approved" ||
               stay.vacate_status === "completed") && (
               <div
                 style={{
                   background:
-                    stay.vacate_status === "pending"
+                    stay.vacate_status === "requested"
                       ? "#fef3c7"
                       : stay.vacate_status === "approved"
                       ? "#dcfce7"
@@ -313,7 +325,7 @@ const UserActiveStay = () => {
               >
                 <p style={{ fontWeight: "bold", marginBottom: "5px" }}>
                   🚪 Vacate Request Status:
-                  {stay.vacate_status === "pending" && " ⏳ Pending Approval"}
+                  {stay.vacate_status === "requested" && " ⏳ Requested"}
                   {stay.vacate_status === "approved" && " ✅ Approved"}
                   {stay.vacate_status === "completed" && " ✓ Completed"}
                 </p>
@@ -325,8 +337,8 @@ const UserActiveStay = () => {
               </div>
             )}
 
-            {/* VACATE FORM - Using per-stay state */}
-            {!stay.vacate_status && showVacateFormFor === stay.id ? (
+            {/* ✅ FIX 3: SAFE CONDITION for showing vacate form */}
+            {(!stay.vacate_status || stay.vacate_status === null) && showVacateFormFor === stay.id ? (
               <div style={refundFormContainer}>
                 <h3 style={{ color: "#f59e0b" }}>Vacate Request</h3>
 
@@ -641,7 +653,7 @@ const UserActiveStay = () => {
                               },
                             ]
                           : []),
-                        ...(!stay.vacate_status
+                        ...((!stay.vacate_status || stay.vacate_status === null)
                           ? [
                               {
                                 icon: "🚪",
