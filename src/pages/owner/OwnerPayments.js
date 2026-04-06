@@ -6,7 +6,8 @@ import axios from "axios";
 import SignatureCanvas from "react-signature-canvas";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { auth, RecaptchaVerifier, signInWithPhoneNumber } from "../../firebase";
+import { auth } from "../../firebase";
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import {
   Container, Typography, Paper, Table, TableHead, TableRow, TableCell,
   TableBody, Chip, Button,
