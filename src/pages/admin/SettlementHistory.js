@@ -83,10 +83,11 @@ export default function SettlementHistory() {
       .slice(0, 2);
   };
 
-  /* ================= CALCULATIONS ================= */
+  /* ================= CALCULATIONS (FIXED KEY) ================= */
 
   const stats = useMemo(() => {
-    const total = data.reduce((sum, item) => sum + (Number(item.owner_amount) || 0), 0);
+    // FIXED: Changed item.owner_amount to item.amount
+    const total = data.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
     const average = data.length > 0 ? Math.round(total / data.length) : 0;
     return { total, average };
   }, [data]);
@@ -266,7 +267,8 @@ export default function SettlementHistory() {
 
                   <TableCell>
                     <Typography fontWeight="700" color="success.main">
-                      ₹{Number(item.owner_amount).toLocaleString("en-IN")}
+                      {/* FIXED: Changed item.owner_amount to item.amount */}
+                      ₹{Number(item.amount).toLocaleString("en-IN")}
                     </Typography>
                   </TableCell>
 
@@ -293,7 +295,7 @@ export default function SettlementHistory() {
                       />
                     ) : (
                       <Chip
-                        label="⏳ Awaiting"
+                        label="⏳ Awaiting Owner"
                         size="small"
                         sx={{
                           bgcolor: "#fef3c7",
