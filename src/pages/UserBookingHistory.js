@@ -19,20 +19,12 @@ const UserBookingHistory = () => {
   const [paymentStatuses, setPaymentStatuses] = useState({});
   const [paymentData, setPaymentData] = useState(null);
   
-  // Timer state
-  const [timeLeft, setTimeLeft] = useState(300);
-  const [isExpired, setIsExpired] = useState(false);
-  const timerRef = useRef(null);
-  
   // State for screenshot upload
   const [screenshot, setScreenshot] = useState(null);
   const [screenshotPreview, setScreenshotPreview] = useState("");
   const [uploading, setUploading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
-
-  // Constants
-  const PAYMENT_TIMEOUT = 300;
 
   // Filter bookings based on active tab
   const filteredBookings = useMemo(() => {
@@ -42,33 +34,6 @@ const UserBookingHistory = () => {
     if (activeTab === "confirmed") return bookings.filter(b => b.status === "confirmed");
     return bookings;
   }, [bookings, activeTab]);
-
-  // Timer functions
-  const startTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-    
-    setTimeLeft(PAYMENT_TIMEOUT);
-    setIsExpired(false);
-    
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
-          setIsExpired(true);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  }, [PAYMENT_TIMEOUT]);
-
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-  };
 
   // Load bookings
   const loadBookings = useCallback(async (showLoading = true) => {
@@ -115,12 +80,6 @@ const UserBookingHistory = () => {
   // Initial load
   useEffect(() => {
     loadBookings();
-    
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
   }, [loadBookings]);
 
   // Create payment
@@ -154,7 +113,6 @@ const UserBookingHistory = () => {
         bookingId: booking.id
       });
 
-      startTimer();
       setScreenshot(null);
       setScreenshotPreview("");
 
@@ -164,7 +122,7 @@ const UserBookingHistory = () => {
     } finally {
       setPayingId(null);
     }
-  }, [startTimer]);
+  }, []);
 
   // Handle screenshot
   const handleScreenshotChange = useCallback((e) => {
@@ -197,11 +155,6 @@ const UserBookingHistory = () => {
       return;
     }
 
-    if (isExpired) {
-      alert("Payment time expired. Please refresh QR code.");
-      return;
-    }
-
     try {
       setUploading(true);
       setError("");
@@ -218,10 +171,6 @@ const UserBookingHistory = () => {
 
       if (!res.data.success) {
         throw new Error(res.data.message || "Failed to submit payment");
-      }
-
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
       }
 
       setPaymentStatuses(prev => ({
@@ -241,7 +190,7 @@ const UserBookingHistory = () => {
     } finally {
       setUploading(false);
     }
-  }, [screenshot, isExpired, paymentData, loadBookings]);
+  }, [screenshot, paymentData, loadBookings]);
 
   // Refresh QR
   const refreshQR = useCallback(async () => {
@@ -266,8 +215,6 @@ const UserBookingHistory = () => {
         amount: paymentData.amount,
         bookingId: paymentData.bookingId
       });
-
-      startTimer();
       
     } catch (err) {
       console.error("REFRESH QR ERROR:", err);
@@ -275,13 +222,10 @@ const UserBookingHistory = () => {
     } finally {
       setRefreshing(false);
     }
-  }, [paymentData, startTimer]);
+  }, [paymentData]);
 
   // Close modal
   const closeModal = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
     setPaymentData(null);
     setScreenshot(null);
     setScreenshotPreview("");
@@ -655,41 +599,11 @@ const UserBookingHistory = () => {
               <button style={styles.modalClose} onClick={closeModal}>×</button>
             </div>
 
-            {/* Amount and Timer */}
+            {/* Amount */}
             <div style={styles.modalAmountSection}>
               <div style={styles.modalAmount}>
                 <span style={styles.modalAmountLabel}>Amount to Pay</span>
                 <span style={styles.modalAmountValue}>₹{paymentData.amount.toLocaleString()}</span>
-              </div>
-              <div style={styles.modalTimer}>
-                <svg width="60" height="60" viewBox="0 0 100 100">
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="45"
-                    fill="none"
-                    stroke="#e0e0e0"
-                    strokeWidth="8"
-                  />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="45"
-                    fill="none"
-                    stroke={timeLeft > 180 ? "#10b981" : timeLeft > 60 ? "#f59e0b" : "#ef4444"}
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                    strokeDasharray={2 * Math.PI * 45}
-                    strokeDashoffset={2 * Math.PI * 45 * (1 - timeLeft / PAYMENT_TIMEOUT)}
-                    transform="rotate(-90 50 50)"
-                    style={styles.timerCircle}
-                  />
-                </svg>
-                <div style={styles.timerText}>
-                  <span style={{ color: timeLeft > 180 ? "#10b981" : timeLeft > 60 ? "#f59e0b" : "#ef4444" }}>
-                    {formatTime(timeLeft)}
-                  </span>
-                </div>
               </div>
             </div>
 
@@ -776,43 +690,44 @@ const UserBookingHistory = () => {
 
             {/* Action Buttons */}
             <div style={styles.modalActions}>
-              {isExpired ? (
-                <button
-                  style={styles.refreshButton}
-                  onClick={refreshQR}
-                  disabled={refreshing}
-                >
-                  {refreshing ? (
-                    <>
-                      <span style={styles.buttonSpinner}></span>
-                      Refreshing...
-                    </>
-                  ) : (
-                    <>
-                      <span>⟳</span>
-                      Refresh QR Code
-                    </>
-                  )}
-                </button>
-              ) : (
-                <button
-                  style={styles.submitButton}
-                  onClick={submitPaymentWithScreenshot}
-                  disabled={uploading || !screenshot}
-                >
-                  {uploading ? (
-                    <>
-                      <span style={styles.buttonSpinner}></span>
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <span>✅</span>
-                      Submit for Verification
-                    </>
-                  )}
-                </button>
-              )}
+              <button
+                style={styles.submitButton}
+                onClick={submitPaymentWithScreenshot}
+                disabled={uploading || !screenshot}
+              >
+                {uploading ? (
+                  <>
+                    <span style={styles.buttonSpinner}></span>
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <span>✅</span>
+                    Submit for Verification
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Refresh QR Button */}
+            <div style={styles.refreshSection}>
+              <button
+                style={styles.refreshButton}
+                onClick={refreshQR}
+                disabled={refreshing}
+              >
+                {refreshing ? (
+                  <>
+                    <span style={styles.buttonSpinner}></span>
+                    Refreshing...
+                  </>
+                ) : (
+                  <>
+                    <span>⟳</span>
+                    Refresh QR Code
+                  </>
+                )}
+              </button>
             </div>
 
             {/* Warning */}
@@ -1403,9 +1318,6 @@ const styles = {
   
   modalAmountSection: {
     padding: "0 24px 20px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
     borderBottom: "1px solid #e5e7eb",
   },
   
@@ -1427,25 +1339,6 @@ const styles = {
     fontWeight: 800,
     color: "#1f2937",
     lineHeight: 1,
-  },
-  
-  modalTimer: {
-    position: "relative",
-    width: 60,
-    height: 60,
-  },
-  
-  timerCircle: {
-    transition: "stroke-dashoffset 1s linear",
-  },
-  
-  timerText: {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    transform: "translate(-50%, -50%)",
-    fontSize: 14,
-    fontWeight: 700,
   },
   
   orderIdSection: {
@@ -1645,29 +1538,31 @@ const styles = {
     }
   },
   
+  refreshSection: {
+    padding: "0 24px 20px",
+  },
+  
   refreshButton: {
     width: "100%",
-    padding: "16px",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    border: "none",
+    padding: "12px",
+    background: "#f3f4f6",
+    border: "1px solid #e5e7eb",
     borderRadius: 16,
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: 600,
+    color: "#4b5563",
+    fontSize: 14,
+    fontWeight: 500,
     cursor: "pointer",
-    transition: "all 0.3s ease",
+    transition: "all 0.2s ease",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
     ":hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 10px 20px rgba(102,126,234,0.3)",
+      background: "#e5e7eb",
     },
     ":disabled": {
       opacity: 0.5,
       cursor: "not-allowed",
-      transform: "none",
     }
   },
   
