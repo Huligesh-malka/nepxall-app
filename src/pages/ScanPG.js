@@ -20,7 +20,7 @@ const ScanPG = () => {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [notification, setNotification] = useState(null);
-  const [status, setStatus] = useState(null); // ✅ NEW: For check-in status
+  const [status, setStatus] = useState(null); // ✅ For check-in status
 
   useEffect(() => {
     fetchPG();
@@ -144,56 +144,58 @@ const ScanPG = () => {
 
   // 🔥 FIXED JOIN FUNCTION WITH ROOM SELECTION
   const handleJoin = async () => {
-  try {
-    if (!selectedRoom) {
-      setStatus({
-        success: false,
-        message: "❌ Please select a room first"
-      });
-      return;
-    }
-
-    if (!selectedRoom?.id) {
-      setStatus({
-        success: false,
-        message: "❌ Room ID missing. Please reselect room"
-      });
-      return;
-    }
-
-    console.log("FINAL ROOM:", selectedRoom);
-
-    const token = await user.getIdToken();
-
-    const res = await api.post(
-      `/scan/join`,
-      {
-        pg_id: id,
-        room_id: selectedRoom.id   // ✅ FINAL
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+    try {
+      if (!selectedRoom) {
+        setStatus({
+          success: false,
+          message: "❌ Please select a room first"
+        });
+        return;
       }
-    );
 
-    setStatus({
-      success: true,
-      message: "🎉 Joined successfully"
-    });
+      if (!selectedRoom?.id) {
+        setStatus({
+          success: false,
+          message: "❌ Room ID missing. Please reselect room"
+        });
+        return;
+      }
 
-    fetchPG();
+      console.log("SENDING ROOM ID:", selectedRoom.id); // 🔥 DEBUG
+      console.log("FINAL ROOM:", selectedRoom);
 
-  } catch (err) {
-    console.error("Join error:", err);
+      const token = await user.getIdToken();
 
-    setStatus({
-      success: false,
-      message: err.response?.data?.message || "❌ Join failed"
-    });
-  }
-};
+      const res = await api.post(
+        `/scan/join`,
+        {
+          pg_id: id,
+          room_id: selectedRoom.id   // ✅ FINAL
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      setStatus({
+        success: true,
+        message: "🎉 Joined successfully"
+      });
+
+      fetchPG();
+
+    } catch (err) {
+      console.error("Join error:", err);
+
+      setStatus({
+        success: false,
+        message: err.response?.data?.message || "❌ Join failed"
+      });
+    }
+  };
+
   const handleBookNow = () => {
     const selected = getSelectedDetails();
     if (!selected) {
@@ -498,7 +500,7 @@ const ScanPG = () => {
         </div>
       )}
 
-      {/* ✅ UPDATED STATUS UI WITH JOIN BUTTON */}
+      {/* ✅ UPDATED STATUS UI WITH JOIN BUTTON - FIXED CONDITION */}
       {status && (
         <div style={{
           marginTop: 20,
@@ -516,10 +518,8 @@ const ScanPG = () => {
             {status.message}
           </p>
 
-          {/* 🔥 SHOW JOIN BUTTON only after room selection */}
-          {status.message && 
-           status.message.toLowerCase().includes("join") && 
-           selectedRoom && (
+          {/* 🔥 FIXED JOIN BUTTON CONDITION - Only shows when message is exactly "Select a room to join" or contains it */}
+          {status?.message?.includes("Select a room") && selectedRoom && (
             <button 
               onClick={handleJoin}
               style={{
@@ -544,7 +544,7 @@ const ScanPG = () => {
           {/* 🔥 Optional: Show retry button for other errors */}
           {!status.success && 
            status.message && 
-           !status.message.toLowerCase().includes("join") && (
+           !status.message.includes("Select a room") && (
             <button 
               onClick={handleCheckin}
               style={{
@@ -580,7 +580,7 @@ const ScanPG = () => {
         </div>
       </div>
 
-      {/* 🔥 ROOM SECTION WITH CONDITIONAL RENDERING */}
+      {/* 🔥 ROOM SECTION WITH FIXED SELECTION LOGIC */}
       <div style={styles.roomSection}>
         <h2 style={styles.sectionTitle}>Select Your Room</h2>
         
@@ -589,7 +589,8 @@ const ScanPG = () => {
             <div style={styles.roomGrid}>
               {pg.available_room_details.map((room, index) => {
                 const roomDisplayName = getRoomDisplayName(room);
-                const isSelected = selectedRoom?.room_number === room.room_number;
+                // 🔥 FIXED: Use id instead of room_number for selection
+                const isSelected = selectedRoom?.id === room.id;
                 
                 return (
                   <div
@@ -633,7 +634,7 @@ const ScanPG = () => {
                 fontWeight: "500",
                 color: "#065f46"
               }}>
-                ✅ Selected: Room {selectedRoom.room_number}
+                ✅ Selected: Room {selectedRoom.room_number} (ID: {selectedRoom.id})
               </div>
             )}
           </>
