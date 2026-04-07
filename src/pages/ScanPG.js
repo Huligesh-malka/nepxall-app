@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import { API_CONFIG } from "../config";
@@ -9,6 +9,7 @@ import { X, BookOpen, Phone, MapPin, Check, Info } from "lucide-react";
 const ScanPG = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // ✅ USE AUTH CONTEXT
   const { user, loading: authLoading } = useAuth();
@@ -19,6 +20,7 @@ const ScanPG = () => {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [notification, setNotification] = useState(null);
+  const [status, setStatus] = useState(null); // ✅ NEW: For check-in status
 
   useEffect(() => {
     fetchPG();
@@ -60,16 +62,22 @@ const ScanPG = () => {
     return null;
   };
 
-  // 🔥 NEW CHECK-IN FUNCTION
+  // 🔥 FIXED CHECK-IN FUNCTION
   const handleCheckin = async () => {
     try {
+      // ✅ PROBLEM 1 FIX: Redirect with state
       if (!user) {
-        showNotificationMessage("Please login first");
-        navigate("/login");
+        navigate("/login", {
+          state: { redirectTo: `/scan/${id}` }
+        });
         return;
       }
 
+      // ✅ PROBLEM 2 FIX: Add debug logging
+      console.log("USER:", user);
+      
       const token = await user.getIdToken();
+      console.log("TOKEN:", token ? "Present" : "Missing");
 
       const res = await api.post(
         `/scan/checkin`,
@@ -81,11 +89,26 @@ const ScanPG = () => {
         }
       );
 
-      showNotificationMessage(res.data.message);
+      // ✅ Set status for UI feedback
+      setStatus({
+        success: true,
+        message: res.data.message || "✅ Check-in successful!"
+      });
+
+      // Clear status after 5 seconds
+      setTimeout(() => setStatus(null), 5000);
 
     } catch (err) {
-      console.error(err);
-      showNotificationMessage("❌ Check-in failed");
+      console.error("Check-in error:", err);
+      
+      // ✅ Set error status
+      setStatus({
+        success: false,
+        message: err.response?.data?.message || "❌ Check-in failed. Please try again."
+      });
+
+      // Clear status after 5 seconds
+      setTimeout(() => setStatus(null), 5000);
     }
   };
 
@@ -393,6 +416,26 @@ const ScanPG = () => {
         </div>
       )}
 
+      {/* ✅ NEW: Status UI for check-in result */}
+      {status && (
+        <div style={{
+          marginTop: 20,
+          marginBottom: 20,
+          padding: 20,
+          borderRadius: 12,
+          background: status.success ? "#d1fae5" : "#fee2e2",
+          color: status.success ? "#065f46" : "#991b1b",
+          textAlign: "center",
+          border: `2px solid ${status.success ? "#10b981" : "#ef4444"}`,
+          animation: "slideDown 0.3s ease"
+        }}>
+          <h2 style={{ margin: 0, fontSize: "20px", fontWeight: "700" }}>
+            {status.success ? "✅ ACCESS GRANTED" : "❌ ACCESS DENIED"}
+          </h2>
+          <p style={{ margin: "8px 0 0 0", fontSize: "14px" }}>{status.message}</p>
+        </div>
+      )}
+
       <div style={styles.headerSection}>
         <h1 style={styles.title}>{pg.name}</h1>
         <div style={styles.locationRow}>
@@ -502,13 +545,12 @@ const ScanPG = () => {
         <span style={styles.viewDetailsArrow}>→</span>
       </button>
 
-      {/* 🔥 UPDATED FOOTER SECTION WITH CHECK-IN BUTTON */}
+      {/* ✅ FIXED FOOTER SECTION WITH CHECK-IN BUTTON - REMOVED DISABLED */}
       <div style={styles.footer}>
-        {/* NEW CHECK-IN BUTTON */}
+        {/* ✅ PROBLEM 3 FIX: Removed disabled={!user} */}
         <button 
           onClick={handleCheckin} 
           style={styles.checkinBtn}
-          disabled={!user}
         >
           📍 {user ? 'Check-in Now' : 'Login to Check-in'}
         </button>
@@ -1100,6 +1142,17 @@ style.innerHTML = `
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+  }
+  
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 `;
 document.head.appendChild(style);
