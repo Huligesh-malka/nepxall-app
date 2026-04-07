@@ -160,7 +160,7 @@ const ScanPG = () => {
         `/scan/join`,
         {
           pg_id: id,
-           room_number: room.room_no   // 🔥 IMPORTANT
+          room_id: selectedRoom.id   // 🔥 IMPORTANT
         },
         {
           headers: {
