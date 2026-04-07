@@ -153,7 +153,15 @@ const ScanPG = () => {
       return;
     }
 
-    console.log("SENDING ROOM:", selectedRoom.room_number); // ✅ DEBUG
+    if (!selectedRoom?.id) {
+      setStatus({
+        success: false,
+        message: "❌ Room ID missing. Please reselect room"
+      });
+      return;
+    }
+
+    console.log("FINAL ROOM:", selectedRoom);
 
     const token = await user.getIdToken();
 
@@ -161,7 +169,7 @@ const ScanPG = () => {
       `/scan/join`,
       {
         pg_id: id,
-        room_id: selectedRoom.id   // ✅ FIXED HERE
+        room_id: selectedRoom.id   // ✅ FINAL
       },
       {
         headers: {
@@ -172,22 +180,20 @@ const ScanPG = () => {
 
     setStatus({
       success: true,
-      message: "🎉 Joined successfully with selected room"
+      message: "🎉 Joined successfully"
     });
 
-    setTimeout(() => {
-      fetchPG();
-    }, 1000);
+    fetchPG();
 
   } catch (err) {
     console.error("Join error:", err);
+
     setStatus({
       success: false,
       message: err.response?.data?.message || "❌ Join failed"
     });
   }
 };
-
   const handleBookNow = () => {
     const selected = getSelectedDetails();
     if (!selected) {
