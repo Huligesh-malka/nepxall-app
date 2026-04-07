@@ -32,6 +32,7 @@ const UserBookingHistory = () => {
     if (activeTab === "pending") return bookings.filter(b => b.status === "pending");
     if (activeTab === "approved") return bookings.filter(b => b.status === "approved");
     if (activeTab === "confirmed") return bookings.filter(b => b.status === "confirmed");
+    if (activeTab === "left") return bookings.filter(b => b.status === "left");
     return bookings;
   }, [bookings, activeTab]);
 
@@ -347,7 +348,7 @@ const UserBookingHistory = () => {
       {/* Tabs */}
       {bookings.length > 0 && (
         <div style={styles.tabsContainer}>
-          {["all", "pending", "approved", "confirmed"].map((tab) => (
+          {["all", "pending", "approved", "confirmed", "left"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -388,9 +389,18 @@ const UserBookingHistory = () => {
             
             const paymentDisplay = getPaymentStatusDisplay(booking.id, booking.status);
             
-            const showPayButton = paymentDisplay.canPay && (
-              booking.status === "approved" || paymentStatuses[booking.id] === "rejected"
-            );
+            // ✅ FIX 2: FIX PAY BUTTON LOGIC
+            // Only approved status AND payment not submitted/paid
+            let showPayButton = false;
+            if (booking.status === "approved") {
+              const paymentStatus = paymentStatuses[booking.id];
+              showPayButton = paymentStatus !== "submitted" && paymentStatus !== "paid";
+            }
+            
+            // ✅ OPTIONAL FIX: Hide pay button if confirmed
+            if (booking.status === "confirmed") {
+              showPayButton = false;
+            }
 
             return (
               <div key={booking.id} style={styles.card}>
@@ -405,6 +415,7 @@ const UserBookingHistory = () => {
                       ...styles.statusBadge,
                       ...(booking.status === "confirmed" ? styles.statusConfirmed :
                          booking.status === "approved" ? styles.statusApproved :
+                         booking.status === "left" ? styles.statusLeft :
                          styles.statusPending)
                     }}>
                       {booking.status}
@@ -574,6 +585,22 @@ const UserBookingHistory = () => {
                       )}
                     </div>
                   </div>
+
+                  {/* ✅ FIX 3: LEFT STATUS UI */}
+                  {booking.status === "left" && (
+                    <div style={{
+                      marginTop: 16,
+                      padding: "12px",
+                      background: "#6b7280",
+                      color: "#fff",
+                      borderRadius: 12,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      textAlign: "center"
+                    }}>
+                      🚪 You have vacated - You can book again
+                    </div>
+                  )}
 
                   {/* Confirmed Badge */}
                   {booking.status === "confirmed" && paymentStatuses[booking.id] === "paid" && (
@@ -927,6 +954,11 @@ const styles = {
   
   statusPending: {
     background: "#f59e0b",
+    color: "#fff",
+  },
+  
+  statusLeft: {
+    background: "#6b7280",
     color: "#fff",
   },
   
