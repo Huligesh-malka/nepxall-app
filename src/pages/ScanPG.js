@@ -21,6 +21,7 @@ const ScanPG = () => {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [notification, setNotification] = useState(null);
   const [status, setStatus] = useState(null); // ✅ For check-in status
+  const [joined, setJoined] = useState(false); // 🔥 FIX 1: Track if user has joined
 
   useEffect(() => {
     fetchPG();
@@ -43,7 +44,7 @@ const ScanPG = () => {
   };
 
   const handleRoomSelection = (room) => {
-    console.log("Selected Room:", room); // 🔥 ADDED FOR CLARITY
+    console.log("Selected Room:", room);
     setSelectedRoom(room);
   };
 
@@ -142,7 +143,7 @@ const ScanPG = () => {
     }
   };
 
-  // 🔥 FIXED JOIN FUNCTION WITH ROOM SELECTION
+  // 🔥 FIX 2: FINAL VERSION WITH AUTO CHECK-IN AND JOIN DISABLE
   const handleJoin = async () => {
     try {
       if (!selectedRoom) {
@@ -161,7 +162,7 @@ const ScanPG = () => {
         return;
       }
 
-      console.log("SENDING ROOM ID:", selectedRoom.id); // 🔥 DEBUG
+      console.log("SENDING ROOM ID:", selectedRoom.id);
       console.log("FINAL ROOM:", selectedRoom);
 
       const token = await user.getIdToken();
@@ -170,7 +171,7 @@ const ScanPG = () => {
         `/scan/join`,
         {
           pg_id: id,
-          room_id: selectedRoom.id   // ✅ FINAL
+          room_id: selectedRoom.id
         },
         {
           headers: {
@@ -179,11 +180,15 @@ const ScanPG = () => {
         }
       );
 
+      // ✅ AUTO SUCCESS FLOW
       setStatus({
         success: true,
-        message: "🎉 Joined successfully"
+        message: "🎉 Joined & Check-in successful"
       });
 
+      setJoined(true); // 🔥 FIX 1: Disable join button after success
+
+      // 🔥 REFRESH DATA
       fetchPG();
 
     } catch (err) {
@@ -500,7 +505,7 @@ const ScanPG = () => {
         </div>
       )}
 
-      {/* ✅ UPDATED STATUS UI WITH JOIN BUTTON - FIXED CONDITION */}
+      {/* ✅ UPDATED STATUS UI WITH JOIN BUTTON - FIXED CONDITIONS */}
       {status && (
         <div style={{
           marginTop: 20,
@@ -518,8 +523,8 @@ const ScanPG = () => {
             {status.message}
           </p>
 
-          {/* 🔥 FIXED JOIN BUTTON CONDITION - Only shows when message is exactly "Select a room to join" or contains it */}
-          {status?.message?.includes("Select a room") && selectedRoom && (
+          {/* 🔥 FIX 3: JOIN BUTTON - Only shows if not joined AND message is "Select a room" AND room selected */}
+          {!joined && status?.message?.includes("Select a room") && selectedRoom && (
             <button 
               onClick={handleJoin}
               style={{
@@ -589,7 +594,6 @@ const ScanPG = () => {
             <div style={styles.roomGrid}>
               {pg.available_room_details.map((room, index) => {
                 const roomDisplayName = getRoomDisplayName(room);
-                // 🔥 FIXED: Use id instead of room_number for selection
                 const isSelected = selectedRoom?.id === room.id;
                 
                 return (
