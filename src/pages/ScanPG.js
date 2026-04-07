@@ -144,49 +144,49 @@ const ScanPG = () => {
 
   // 🔥 FIXED JOIN FUNCTION WITH ROOM SELECTION
   const handleJoin = async () => {
-    try {
-      // 🔥 REQUIRE ROOM SELECTION
-      if (!selectedRoom) {
-        setStatus({
-          success: false,
-          message: "❌ Please select a room first"
-        });
-        return;
-      }
-
-      const token = await user.getIdToken();
-
-      const res = await api.post(
-        `/scan/join`,
-        {
-          pg_id: id,
-          room_id: selectedRoom.id   // 🔥 IMPORTANT
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      setStatus({
-        success: true,
-        message: "🎉 Joined successfully with selected room"
-      });
-
-      // Refresh PG data after join
-      setTimeout(() => {
-        fetchPG();
-      }, 1000);
-
-    } catch (err) {
-      console.error("Join error:", err);
+  try {
+    if (!selectedRoom) {
       setStatus({
         success: false,
-        message: err.response?.data?.message || "❌ Join failed"
+        message: "❌ Please select a room first"
       });
+      return;
     }
-  };
+
+    console.log("SENDING ROOM:", selectedRoom.room_number); // ✅ DEBUG
+
+    const token = await user.getIdToken();
+
+    const res = await api.post(
+      `/scan/join`,
+      {
+        pg_id: id,
+        room_id: selectedRoom.room_number   // ✅ FIXED HERE
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    setStatus({
+      success: true,
+      message: "🎉 Joined successfully with selected room"
+    });
+
+    setTimeout(() => {
+      fetchPG();
+    }, 1000);
+
+  } catch (err) {
+    console.error("Join error:", err);
+    setStatus({
+      success: false,
+      message: err.response?.data?.message || "❌ Join failed"
+    });
+  }
+};
 
   const handleBookNow = () => {
     const selected = getSelectedDetails();
