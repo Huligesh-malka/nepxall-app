@@ -122,6 +122,7 @@ const AdminPayments = () => {
     }
 
     const userName = p.reg_name || "User";
+    // 🔥 STEP 5: Updated WhatsApp Message to use total_amount
     const message = `*Payment Receipt - Nepxall*%0A%0AHello *${userName}*,%0AYour payment for *${p.pg_name}* (${p.sharing || 'N/A'} Sharing) has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.total_amount || p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
     const whatsappUrl = `https://wa.me/${cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone}?text=${message}`;
     window.open(whatsappUrl, "_blank");
@@ -242,35 +243,12 @@ const AdminPayments = () => {
                       {p.utr && <Typography variant="caption" sx={{ color: BRAND_GREEN, fontWeight: 'bold' }}>UTR: {p.utr}</Typography>}
                     </TableCell>
                     <TableCell>
-                      {/* FIX 3: IMPROVED STATUS COLOR */}
                       <Chip 
                         label={p.status.toUpperCase()} 
                         size="small" 
                         sx={{ fontWeight: '800', borderRadius: '6px' }}
-                        color={
-                          p.status === "paid" || p.status === "confirmed"
-                            ? "success"
-                            : p.status === "submitted" || p.status === "approved"
-                            ? "warning"
-                            : p.status === "rejected"
-                            ? "error"
-                            : "default"
-                        } 
+                        color={p.status === "paid" || p.status === "confirmed" ? "success" : p.status === "submitted" || p.status === "approved" ? "warning" : "error"} 
                       />
-                      {/* FIX 2: SHOW ACTIVE STATUS (NEW UI 🔥) */}
-                      {(p.status === "paid" || p.status === "confirmed") && (
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            color: "#16a34a",
-                            fontWeight: "bold",
-                            display: "block",
-                            mt: 1
-                          }}
-                        >
-                          ✅ User moved to ACTIVE (PG Users)
-                        </Typography>
-                      )}
                     </TableCell>
                     <TableCell align="center">
                       <Stack direction="row" spacing={1} justifyContent="center">
@@ -287,36 +265,24 @@ const AdminPayments = () => {
                           </Tooltip>
                         )}
 
-                        {/* FIX 1: PREVENT DOUBLE APPROVE - Added verified_by_admin check */}
                         <Button
                           variant="contained"
                           color="success"
                           size="small"
                           disableElevation
                           startIcon={<CheckCircleIcon />}
-                          disabled={
-                            processing === p.order_id ||
-                            p.status === "paid" ||
-                            p.status === "confirmed" ||
-                            p.verified_by_admin === 1
-                          }
+                          disabled={processing === p.order_id || p.status === "paid" || p.status === "confirmed"}
                           onClick={() => approvePayment(p.order_id)}
                           sx={{ textTransform: 'none', borderRadius: '8px', fontWeight: '700' }}
                         >
                           {processing === p.order_id ? <CircularProgress size={16} color="inherit" /> : "Approve"}
                         </Button>
-                        
-                        {/* FIX 4: DISABLE REJECT AFTER APPROVE */}
                         <Button
                           variant="outlined"
                           color="error"
                           size="small"
                           startIcon={<CancelIcon />}
-                          disabled={
-                            processing === p.order_id ||
-                            p.status === "rejected" ||
-                            p.status === "paid"
-                          }
+                          disabled={processing === p.order_id || p.status === "rejected"}
                           onClick={() => rejectPayment(p.order_id)}
                           sx={{ textTransform: 'none', borderRadius: '8px', fontWeight: '700' }}
                         >
@@ -397,6 +363,7 @@ const AdminPayments = () => {
                 <h3 style={{ ...statusText, color: BRAND_GREEN }}>PAID & VERIFIED</h3>
                 <p style={dateText}>Method: Digital Payment</p>
                 <Divider sx={{ my: 1 }} />
+                {/* 🔥 STEP 4: Updated Top Amount Box */}
                 <div style={amountDisplay}>₹{selectedPayment.total_amount || selectedPayment.amount}</div>
               </div>
             </div>
@@ -407,6 +374,7 @@ const AdminPayments = () => {
                 <span>TOTAL</span>
               </div>
 
+              {/* 🔥 STEP 2: REPLACE FULL BLOCK WITH DYNAMIC BREAKDOWN */}
               {selectedPayment.rent_amount > 0 && (
                 <div style={tableRow}>
                   <span>Room Rent ({selectedPayment.sharing})</span>
@@ -428,6 +396,7 @@ const AdminPayments = () => {
                 </div>
               )}
 
+              {/* 🔥 STEP 3: UPDATE TOTAL ROW */}
               <div style={{ ...tableRow, borderBottom: `2px solid ${BRAND_BLUE}`, fontWeight: "bold", background: "#f8fafc" }}>
                 <span>NET AMOUNT RECEIVED</span>
                 <span>₹{selectedPayment.total_amount || selectedPayment.amount}</span>
