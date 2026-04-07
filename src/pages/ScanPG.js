@@ -22,6 +22,7 @@ const ScanPG = () => {
   const [notification, setNotification] = useState(null);
   const [status, setStatus] = useState(null); // ✅ For check-in status
   const [joined, setJoined] = useState(false); // 🔥 FIX 1: Track if user has joined
+  const [joinLoading, setJoinLoading] = useState(false); // 🔥 NEW: Loading state for join button
 
   useEffect(() => {
     fetchPG();
@@ -64,7 +65,7 @@ const ScanPG = () => {
     return null;
   };
 
-  // 🔥 FIXED CHECK-IN FUNCTION WITH CASE HANDLING
+  // 🔥 UPDATED CHECK-IN: Better UX for new users with auto-scroll
   const handleCheckin = async () => {
     try {
       // ✅ Redirect with state if not logged in
@@ -97,8 +98,10 @@ const ScanPG = () => {
       if (data.type === "NOT_JOINED") {
         setStatus({
           success: false,
-          message: "🏠 Please join this PG first"
+          message: "🏠 Step 1: Select a room below and click 'Join PG'"
         });
+        // Smooth scroll to room section
+        document.getElementById('room-selector')?.scrollIntoView({ behavior: 'smooth' });
         return;
       }
 
@@ -123,6 +126,7 @@ const ScanPG = () => {
           success: true,
           message: data.message || "✅ ACCESS GRANTED"
         });
+        setJoined(true);
         return;
       }
 
@@ -131,6 +135,7 @@ const ScanPG = () => {
         success: true,
         message: res.data.message || "✅ Check-in successful!"
       });
+      setJoined(true);
 
     } catch (err) {
       console.error("Check-in error:", err);
@@ -143,8 +148,10 @@ const ScanPG = () => {
     }
   };
 
-  // 🔥 FIX 2: FINAL VERSION WITH AUTO CHECK-IN AND JOIN DISABLE
+  // 🔥 UPDATED JOIN: Includes Loading states and better feedback
   const handleJoin = async () => {
+    if (joinLoading) return;
+
     try {
       if (!selectedRoom) {
         setStatus({
@@ -162,6 +169,7 @@ const ScanPG = () => {
         return;
       }
 
+      setJoinLoading(true);
       console.log("SENDING ROOM ID:", selectedRoom.id);
       console.log("FINAL ROOM:", selectedRoom);
 
@@ -180,17 +188,14 @@ const ScanPG = () => {
         }
       );
 
-      // ✅ AUTO SUCCESS FLOW
-      setStatus({
-        success: true,
-        message: "🎉 Joined & Check-in successful"
-      });
-
-      setJoined(true); // 🔥 FIX 1: Disable join button after success
-
-      // 🔥 REFRESH DATA
-      fetchPG();
-
+      if (res.data.success) {
+        setJoined(true);
+        setStatus({
+          success: true,
+          message: `🎉 Success! You are now in Room ${res.data.room_no || selectedRoom.room_number}`
+        });
+        fetchPG(); // Refresh occupancy counts
+      }
     } catch (err) {
       console.error("Join error:", err);
 
@@ -198,6 +203,8 @@ const ScanPG = () => {
         success: false,
         message: err.response?.data?.message || "❌ Join failed"
       });
+    } finally {
+      setJoinLoading(false);
     }
   };
 
@@ -523,26 +530,25 @@ const ScanPG = () => {
             {status.message}
           </p>
 
-          {/* 🔥 FIX 3: JOIN BUTTON - Only shows if not joined AND message is "Select a room" AND room selected */}
+          {/* 🔥 UPDATED JOIN BUTTON with loading state and proper conditions */}
           {!joined && status?.message?.includes("Select a room") && selectedRoom && (
             <button 
               onClick={handleJoin}
+              disabled={joinLoading}
               style={{
                 marginTop: 12,
-                padding: "8px 16px",
-                background: "#10b981",
+                padding: "10px 20px",
+                background: joinLoading ? "#9ca3af" : "#10b981",
                 color: "white",
                 border: "none",
                 borderRadius: "8px",
-                cursor: "pointer",
-                fontSize: "13px",
+                cursor: joinLoading ? "not-allowed" : "pointer",
+                fontSize: "14px",
                 fontWeight: "600",
                 transition: "all 0.2s ease"
               }}
-              onMouseEnter={(e) => e.target.style.background = "#059669"}
-              onMouseLeave={(e) => e.target.style.background = "#10b981"}
             >
-              ✅ Join PG
+              {joinLoading ? "⏳ Joining..." : "✅ Confirm & Join PG"}
             </button>
           )}
 
@@ -585,8 +591,8 @@ const ScanPG = () => {
         </div>
       </div>
 
-      {/* 🔥 ROOM SECTION WITH FIXED SELECTION LOGIC */}
-      <div style={styles.roomSection}>
+      {/* 🔥 ROOM SECTION WITH ID FOR AUTO-SCROLL */}
+      <div id="room-selector" style={styles.roomSection}>
         <h2 style={styles.sectionTitle}>Select Your Room</h2>
         
         {pg.available_room_details && pg.available_room_details.length > 0 ? (
