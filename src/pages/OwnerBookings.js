@@ -14,12 +14,12 @@ const OwnerBookings = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  /* ================= LOAD BOOKINGS ================= */
+  //////////////////////////////////////////////////////
+  // LOAD BOOKINGS
+  //////////////////////////////////////////////////////
   const loadOwnerBookings = useCallback(async () => {
     try {
       setError("");
-
-      if (!user) return;
 
       const token = await user.getIdToken(true);
 
@@ -30,38 +30,35 @@ const OwnerBookings = () => {
       setBookings(res.data || []);
     } catch (err) {
       console.error(err);
-
-      if (err.response?.status === 403) {
-        setError("You are not registered as an owner.");
-      } else {
-        setError("Failed to load booking history");
-      }
+      setError("Failed to load booking history");
     } finally {
       setPageLoading(false);
     }
   }, [user]);
 
-  /* ================= AUTO REFRESH ================= */
+  //////////////////////////////////////////////////////
+  // AUTO REFRESH
+  //////////////////////////////////////////////////////
   useEffect(() => {
     if (user && role === "owner") {
       loadOwnerBookings();
-
-      const interval = setInterval(() => {
-        loadOwnerBookings();
-      }, 30000); // refresh every 30 sec
-
+      const interval = setInterval(loadOwnerBookings, 30000);
       return () => clearInterval(interval);
     }
   }, [user, role, loadOwnerBookings]);
 
-  /* ================= AUTH ================= */
+  //////////////////////////////////////////////////////
+  // AUTH CHECK
+  //////////////////////////////////////////////////////
   useEffect(() => {
     if (!loading && !user) {
       navigate("/login");
     }
   }, [user, loading, navigate]);
 
-  /* ================= UPDATE STATUS ================= */
+  //////////////////////////////////////////////////////
+  // UPDATE STATUS
+  //////////////////////////////////////////////////////
   const updateStatus = async (bookingId, status) => {
     try {
       setActionLoading(bookingId);
@@ -77,31 +74,25 @@ const OwnerBookings = () => {
 
       setSuccess(`Booking ${status.toUpperCase()} successfully`);
       loadOwnerBookings();
-
       setTimeout(() => setSuccess(""), 2500);
+
     } catch (err) {
       console.error(err);
-
-      if (err.response?.data?.code === "ONBOARDING_PENDING") {
-        alert("⚠️ Complete owner verification first");
-        navigate("/owner/bank");
-        return;
-      }
-
       alert(err.response?.data?.message || "Action failed");
     } finally {
       setActionLoading(null);
     }
   };
 
-  /* ================= TIME LEFT ================= */
+  //////////////////////////////////////////////////////
+  // TIME LEFT
+  //////////////////////////////////////////////////////
   const getRemainingTime = (createdAt) => {
     const created = new Date(createdAt);
     const expiry = new Date(created.getTime() + 24 * 60 * 60 * 1000);
     const now = new Date();
 
     const diff = expiry - now;
-
     if (diff <= 0) return "Expired";
 
     const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -110,7 +101,9 @@ const OwnerBookings = () => {
     return `${hours}h ${minutes}m left`;
   };
 
-  /* ================= PROTECTION ================= */
+  //////////////////////////////////////////////////////
+  // LOADING
+  //////////////////////////////////////////////////////
   if (loading || pageLoading) {
     return (
       <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
@@ -122,7 +115,9 @@ const OwnerBookings = () => {
   if (!user) return <Navigate to="/login" replace />;
   if (role !== "owner") return <Navigate to="/" replace />;
 
-  /* ================= UI ================= */
+  //////////////////////////////////////////////////////
+  // UI
+  //////////////////////////////////////////////////////
   return (
     <div style={container}>
       <h2>🏠 Owner Booking Requests</h2>
@@ -141,10 +136,7 @@ const OwnerBookings = () => {
               <p><b>PG:</b> {b.pg_name}</p>
               <p><b>Tenant:</b> {b.tenant_name}</p>
 
-              <p>
-                <b>Phone:</b>{" "}
-                {b.tenant_phone ? b.tenant_phone : "🔒 Hidden"}
-              </p>
+              <p><b>Phone:</b> {b.tenant_phone || "🔒 Hidden"}</p>
 
               <p>
                 <b>Check-in:</b>{" "}
@@ -162,32 +154,65 @@ const OwnerBookings = () => {
                 </span>
               </p>
 
-              {b.status === "pending" && (
-                <p style={{ color: isExpired ? "red" : "#2563eb" }}>
-                  ⏳ {getRemainingTime(b.created_at)}
+              //////////////////////////////////////////////////////
+              // PENDING → APPROVE / REJECT
+              //////////////////////////////////////////////////////
+              {b.status === "pending" && !isExpired && (
+                <>
+                  <p style={{ color: "#2563eb" }}>
+                    ⏳ {getRemainingTime(b.created_at)}
+                  </p>
+
+                  <div style={{ marginTop: 12 }}>
+                    <button
+                      style={approveBtn}
+                      disabled={actionLoading === b.id}
+                      onClick={() => updateStatus(b.id, "approved")}
+                    >
+                      {actionLoading === b.id ? "Processing..." : "✅ Approve"}
+                    </button>
+
+                    <button
+                      style={rejectBtn}
+                      disabled={actionLoading === b.id}
+                      onClick={() => updateStatus(b.id, "rejected")}
+                    >
+                      {actionLoading === b.id ? "Processing..." : "❌ Reject"}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              //////////////////////////////////////////////////////
+              // APPROVED → WAITING PAYMENT
+              //////////////////////////////////////////////////////
+              {b.status === "approved" && (
+                <p style={{ color: "#2563eb", fontWeight: "bold" }}>
+                  💳 Waiting for user payment
                 </p>
               )}
 
-              {b.status === "pending" && !isExpired && (
-                <div style={{ marginTop: 12 }}>
-                  <button
-                    style={approveBtn}
-                    disabled={actionLoading === b.id}
-                    onClick={() => updateStatus(b.id, "approved")}
-                  >
-                    {actionLoading === b.id ? "Processing..." : "✅ Approve"}
-                  </button>
-
-                  <button
-                    style={rejectBtn}
-                    disabled={actionLoading === b.id}
-                    onClick={() => updateStatus(b.id, "rejected")}
-                  >
-                    {actionLoading === b.id ? "Processing..." : "❌ Reject"}
-                  </button>
-                </div>
+              //////////////////////////////////////////////////////
+              // CONFIRMED → LOCKED
+              //////////////////////////////////////////////////////
+              {b.status === "confirmed" && (
+                <p style={{ color: "#16a34a", fontWeight: "bold" }}>
+                  ✅ Payment done - Booking Active
+                </p>
               )}
 
+              //////////////////////////////////////////////////////
+              // LEFT → VACATED
+              //////////////////////////////////////////////////////
+              {b.status === "left" && (
+                <p style={{ color: "#6b7280", fontWeight: "bold" }}>
+                  🚪 User vacated - Room available
+                </p>
+              )}
+
+              //////////////////////////////////////////////////////
+              // EXPIRED
+              //////////////////////////////////////////////////////
               {isExpired && (
                 <p style={{ color: "red", fontWeight: "bold" }}>
                   ❌ Booking expired
@@ -203,7 +228,10 @@ const OwnerBookings = () => {
 
 export default OwnerBookings;
 
-/* ================= STYLES ================= */
+//////////////////////////////////////////////////////
+// STYLES
+//////////////////////////////////////////////////////
+
 const container = { maxWidth: 900, margin: "auto", padding: 20 };
 
 const card = {
@@ -247,12 +275,12 @@ const statusBadge = (status) => ({
   fontWeight: "bold",
   background:
     status === "approved"
+      ? "#2563eb"
+      : status === "confirmed"
       ? "#16a34a"
       : status === "rejected"
       ? "#dc2626"
-      : status === "confirmed"
-      ? "#2563eb"
-      : status === "expired"
+      : status === "left"
       ? "#6b7280"
       : "#f59e0b",
 });
