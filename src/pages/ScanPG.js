@@ -62,10 +62,10 @@ const ScanPG = () => {
     return null;
   };
 
-  // 🔥 FIXED CHECK-IN FUNCTION
+  // 🔥 FIXED CHECK-IN FUNCTION WITH CASE HANDLING
   const handleCheckin = async () => {
     try {
-      // ✅ PROBLEM 1 FIX: Redirect with state
+      // ✅ Redirect with state if not logged in
       if (!user) {
         navigate("/login", {
           state: { redirectTo: `/scan/${id}` }
@@ -73,7 +73,7 @@ const ScanPG = () => {
         return;
       }
 
-      // ✅ PROBLEM 2 FIX: Add debug logging
+      // ✅ Debug logging
       console.log("USER:", user);
       
       const token = await user.getIdToken();
@@ -89,14 +89,38 @@ const ScanPG = () => {
         }
       );
 
-      // ✅ Set status for UI feedback
+      const data = res.data;
+
+      // 🔥 HANDLE ALL CASES
+      if (data.type === "NOT_JOINED") {
+        setStatus({
+          success: false,
+          message: "🏠 Please join this PG first"
+        });
+        return;
+      }
+
+      if (data.type === "NOT_PAID") {
+        setStatus({
+          success: false,
+          message: "❌ You have not paid. Please pay first"
+        });
+        return;
+      }
+
+      if (data.type === "SUCCESS") {
+        setStatus({
+          success: true,
+          message: data.message || "✅ ACCESS GRANTED"
+        });
+        return;
+      }
+
+      // Fallback
       setStatus({
         success: true,
         message: res.data.message || "✅ Check-in successful!"
       });
-
-      // Clear status after 5 seconds
-      setTimeout(() => setStatus(null), 5000);
 
     } catch (err) {
       console.error("Check-in error:", err);
@@ -106,9 +130,40 @@ const ScanPG = () => {
         success: false,
         message: err.response?.data?.message || "❌ Check-in failed. Please try again."
       });
+    }
+  };
 
-      // Clear status after 5 seconds
-      setTimeout(() => setStatus(null), 5000);
+  // 🔥 NEW: JOIN FUNCTION
+  const handleJoin = async () => {
+    try {
+      const token = await user.getIdToken();
+
+      const res = await api.post(
+        `/scan/join`,
+        { pg_id: id },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      setStatus({
+        success: true,
+        message: res.data.message || "🎉 Joined successfully! Please check-in now."
+      });
+
+      // Refresh PG data after join
+      setTimeout(() => {
+        fetchPG();
+      }, 1000);
+
+    } catch (err) {
+      console.error("Join error:", err);
+      setStatus({
+        success: false,
+        message: err.response?.data?.message || "❌ Join failed. Please try again."
+      });
     }
   };
 
@@ -416,7 +471,7 @@ const ScanPG = () => {
         </div>
       )}
 
-      {/* ✅ NEW: Status UI for check-in result */}
+      {/* ✅ UPDATED STATUS UI WITH JOIN BUTTON */}
       {status && (
         <div style={{
           marginTop: 20,
@@ -430,9 +485,53 @@ const ScanPG = () => {
           animation: "slideDown 0.3s ease"
         }}>
           <h2 style={{ margin: 0, fontSize: "20px", fontWeight: "700" }}>
-            {status.success ? "✅ ACCESS GRANTED" : "❌ ACCESS DENIED"}
+            {status.success ? "✅ ACCESS GRANTED" : "❌ ACTION REQUIRED"}
           </h2>
+
           <p style={{ margin: "8px 0 0 0", fontSize: "14px" }}>{status.message}</p>
+
+          {/* 🔥 SHOW JOIN BUTTON when message contains "join" */}
+          {status.message && status.message.toLowerCase().includes("join") && (
+            <button 
+              onClick={handleJoin}
+              style={{
+                marginTop: 15,
+                padding: "12px 24px",
+                background: "#10b981",
+                color: "white",
+                border: "none",
+                borderRadius: "10px",
+                cursor: "pointer",
+                fontSize: "14px",
+                fontWeight: "600",
+                transition: "all 0.2s ease"
+              }}
+              onMouseEnter={(e) => e.target.style.background = "#059669"}
+              onMouseLeave={(e) => e.target.style.background = "#10b981"}
+            >
+              ✅ Join PG
+            </button>
+          )}
+
+          {/* 🔥 Optional: Show retry button for other errors */}
+          {!status.success && !status.message.toLowerCase().includes("join") && (
+            <button 
+              onClick={handleCheckin}
+              style={{
+                marginTop: 15,
+                padding: "12px 24px",
+                background: "#ef4444",
+                color: "white",
+                border: "none",
+                borderRadius: "10px",
+                cursor: "pointer",
+                fontSize: "14px",
+                fontWeight: "600"
+              }}
+            >
+              Try Again
+            </button>
+          )}
         </div>
       )}
 
@@ -451,6 +550,7 @@ const ScanPG = () => {
         </div>
       </div>
 
+      {/* 🔥 ROOM SECTION WITH CONDITIONAL RENDERING */}
       <div style={styles.roomSection}>
         <h2 style={styles.sectionTitle}>Select Your Room</h2>
         
@@ -492,6 +592,9 @@ const ScanPG = () => {
         ) : (
           <div style={styles.noRooms}>
             <p>No rooms currently available</p>
+            <p style={{ fontSize: "14px", marginTop: "8px" }}>
+              Please join this PG to check room availability
+            </p>
           </div>
         )}
       </div>
@@ -545,9 +648,8 @@ const ScanPG = () => {
         <span style={styles.viewDetailsArrow}>→</span>
       </button>
 
-      {/* ✅ FIXED FOOTER SECTION WITH CHECK-IN BUTTON - REMOVED DISABLED */}
+      {/* ✅ FOOTER SECTION WITH CHECK-IN BUTTON */}
       <div style={styles.footer}>
-        {/* ✅ PROBLEM 3 FIX: Removed disabled={!user} */}
         <button 
           onClick={handleCheckin} 
           style={styles.checkinBtn}
@@ -555,7 +657,6 @@ const ScanPG = () => {
           📍 {user ? 'Check-in Now' : 'Login to Check-in'}
         </button>
 
-        {/* EXISTING BOOK BUTTON */}
         <button
           onClick={handleBookNow}
           style={{
@@ -569,7 +670,6 @@ const ScanPG = () => {
           {selectedRoom ? 'Book Now' : 'Select a room to continue'}
         </button>
 
-        {/* CALL BUTTON */}
         {pg.contact?.phone && (
           <button onClick={handleCallOwner} style={styles.callBtn}>
             <Phone size={18} style={{ marginRight: 8 }} />
