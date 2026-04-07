@@ -183,36 +183,28 @@ const OwnerBookings = () => {
                 </>
               )}
 
-              //////////////////////////////////////////////////////
-              // APPROVED → WAITING PAYMENT
-              //////////////////////////////////////////////////////
+             
               {b.status === "approved" && (
                 <p style={{ color: "#2563eb", fontWeight: "bold" }}>
                   💳 Waiting for user payment
                 </p>
               )}
 
-              //////////////////////////////////////////////////////
-              // CONFIRMED → LOCKED
-              //////////////////////////////////////////////////////
+           
               {b.status === "confirmed" && (
                 <p style={{ color: "#16a34a", fontWeight: "bold" }}>
                   ✅ Payment done - Booking Active
                 </p>
               )}
 
-              //////////////////////////////////////////////////////
-              // LEFT → VACATED
-              //////////////////////////////////////////////////////
+             
               {b.status === "left" && (
                 <p style={{ color: "#6b7280", fontWeight: "bold" }}>
                   🚪 User vacated - Room available
                 </p>
               )}
 
-              //////////////////////////////////////////////////////
-              // EXPIRED
-              //////////////////////////////////////////////////////
+           
               {isExpired && (
                 <p style={{ color: "red", fontWeight: "bold" }}>
                   ❌ Booking expired
