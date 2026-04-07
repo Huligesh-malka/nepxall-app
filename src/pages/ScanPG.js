@@ -43,6 +43,7 @@ const ScanPG = () => {
   };
 
   const handleRoomSelection = (room) => {
+    console.log("Selected Room:", room); // 🔥 ADDED FOR CLARITY
     setSelectedRoom(room);
   };
 
@@ -108,6 +109,14 @@ const ScanPG = () => {
         return;
       }
 
+      if (data.type === "READY_TO_JOIN") { // 🔥 NEW CASE
+        setStatus({
+          success: false,
+          message: "Select a room to join"
+        });
+        return;
+      }
+
       if (data.type === "SUCCESS") {
         setStatus({
           success: true,
@@ -133,14 +142,26 @@ const ScanPG = () => {
     }
   };
 
-  // 🔥 NEW: JOIN FUNCTION
+  // 🔥 FIXED JOIN FUNCTION WITH ROOM SELECTION
   const handleJoin = async () => {
     try {
+      // 🔥 REQUIRE ROOM SELECTION
+      if (!selectedRoom) {
+        setStatus({
+          success: false,
+          message: "❌ Please select a room first"
+        });
+        return;
+      }
+
       const token = await user.getIdToken();
 
       const res = await api.post(
         `/scan/join`,
-        { pg_id: id },
+        {
+          pg_id: id,
+          room_id: selectedRoom.id   // 🔥 IMPORTANT
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -150,7 +171,7 @@ const ScanPG = () => {
 
       setStatus({
         success: true,
-        message: res.data.message || "🎉 Joined successfully! Please check-in now."
+        message: "🎉 Joined successfully with selected room"
       });
 
       // Refresh PG data after join
@@ -162,7 +183,7 @@ const ScanPG = () => {
       console.error("Join error:", err);
       setStatus({
         success: false,
-        message: err.response?.data?.message || "❌ Join failed. Please try again."
+        message: err.response?.data?.message || "❌ Join failed"
       });
     }
   };
@@ -476,7 +497,7 @@ const ScanPG = () => {
         <div style={{
           marginTop: 20,
           marginBottom: 20,
-          padding: 20,
+          padding: 16,
           borderRadius: 12,
           background: status.success ? "#d1fae5" : "#fee2e2",
           color: status.success ? "#065f46" : "#991b1b",
@@ -484,25 +505,26 @@ const ScanPG = () => {
           border: `2px solid ${status.success ? "#10b981" : "#ef4444"}`,
           animation: "slideDown 0.3s ease"
         }}>
-          <h2 style={{ margin: 0, fontSize: "20px", fontWeight: "700" }}>
-            {status.success ? "✅ ACCESS GRANTED" : "❌ ACTION REQUIRED"}
-          </h2>
+          <p style={{ margin: 0, fontSize: "14px", fontWeight: "600" }}>
+            {status.success ? "✅ " : "❌ "}
+            {status.message}
+          </p>
 
-          <p style={{ margin: "8px 0 0 0", fontSize: "14px" }}>{status.message}</p>
-
-          {/* 🔥 SHOW JOIN BUTTON when message contains "join" */}
-          {status.message && status.message.toLowerCase().includes("join") && (
+          {/* 🔥 SHOW JOIN BUTTON only after room selection */}
+          {status.message && 
+           status.message.toLowerCase().includes("join") && 
+           selectedRoom && (
             <button 
               onClick={handleJoin}
               style={{
-                marginTop: 15,
-                padding: "12px 24px",
+                marginTop: 12,
+                padding: "8px 16px",
                 background: "#10b981",
                 color: "white",
                 border: "none",
-                borderRadius: "10px",
+                borderRadius: "8px",
                 cursor: "pointer",
-                fontSize: "14px",
+                fontSize: "13px",
                 fontWeight: "600",
                 transition: "all 0.2s ease"
               }}
@@ -514,18 +536,20 @@ const ScanPG = () => {
           )}
 
           {/* 🔥 Optional: Show retry button for other errors */}
-          {!status.success && !status.message.toLowerCase().includes("join") && (
+          {!status.success && 
+           status.message && 
+           !status.message.toLowerCase().includes("join") && (
             <button 
               onClick={handleCheckin}
               style={{
-                marginTop: 15,
-                padding: "12px 24px",
+                marginTop: 12,
+                padding: "8px 16px",
                 background: "#ef4444",
                 color: "white",
                 border: "none",
-                borderRadius: "10px",
+                borderRadius: "8px",
                 cursor: "pointer",
-                fontSize: "14px",
+                fontSize: "13px",
                 fontWeight: "600"
               }}
             >
@@ -555,40 +579,58 @@ const ScanPG = () => {
         <h2 style={styles.sectionTitle}>Select Your Room</h2>
         
         {pg.available_room_details && pg.available_room_details.length > 0 ? (
-          <div style={styles.roomGrid}>
-            {pg.available_room_details.map((room, index) => {
-              const roomDisplayName = getRoomDisplayName(room);
-              const isSelected = selectedRoom?.room_number === room.room_number;
-              
-              return (
-                <div
-                  key={index}
-                  style={{
-                    ...styles.roomCard,
-                    ...(isSelected ? styles.roomCardSelected : {}),
-                    ...(room.available_beds === 0 ? styles.roomCardSoldOut : {})
-                  }}
-                  onClick={() => room.available_beds > 0 && handleRoomSelection(room)}
-                >
-                  <div style={styles.roomCardHeader}>
-                    <span style={styles.roomName}>{roomDisplayName}</span>
-                    {room.available_beds > 0 ? (
-                      <span style={styles.roomAvailability}>● {room.available_beds} left</span>
-                    ) : (
-                      <span style={styles.roomSoldOut}>Sold Out</span>
-                    )}
+          <>
+            <div style={styles.roomGrid}>
+              {pg.available_room_details.map((room, index) => {
+                const roomDisplayName = getRoomDisplayName(room);
+                const isSelected = selectedRoom?.room_number === room.room_number;
+                
+                return (
+                  <div
+                    key={index}
+                    style={{
+                      ...styles.roomCard,
+                      ...(isSelected ? styles.roomCardSelected : {}),
+                      ...(room.available_beds === 0 ? styles.roomCardSoldOut : {})
+                    }}
+                    onClick={() => room.available_beds > 0 && handleRoomSelection(room)}
+                  >
+                    <div style={styles.roomCardHeader}>
+                      <span style={styles.roomName}>{roomDisplayName}</span>
+                      {room.available_beds > 0 ? (
+                        <span style={styles.roomAvailability}>● {room.available_beds} left</span>
+                      ) : (
+                        <span style={styles.roomSoldOut}>Sold Out</span>
+                      )}
+                    </div>
+                    
+                    <div style={styles.roomFooter}>
+                      <span style={styles.roomNumber}>Room {room.room_number}</span>
+                      {isSelected && (
+                        <span style={styles.selectedBadge}>✓ Selected</span>
+                      )}
+                    </div>
                   </div>
-                  
-                  <div style={styles.roomFooter}>
-                    <span style={styles.roomNumber}>Room {room.room_number}</span>
-                    {isSelected && (
-                      <span style={styles.selectedBadge}>✓ Selected</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+
+            {/* 🔥 SHOW SELECTED ROOM INFO */}
+            {selectedRoom && (
+              <div style={{
+                marginTop: 12,
+                padding: 10,
+                background: "#ecfdf5",
+                borderRadius: 8,
+                textAlign: "center",
+                fontSize: "13px",
+                fontWeight: "500",
+                color: "#065f46"
+              }}>
+                ✅ Selected: Room {selectedRoom.room_number}
+              </div>
+            )}
+          </>
         ) : (
           <div style={styles.noRooms}>
             <p>No rooms currently available</p>
@@ -648,34 +690,36 @@ const ScanPG = () => {
         <span style={styles.viewDetailsArrow}>→</span>
       </button>
 
-      {/* ✅ FOOTER SECTION WITH CHECK-IN BUTTON */}
+      {/* ✅ FOOTER SECTION WITH SMALLER BUTTONS */}
       <div style={styles.footer}>
-        <button 
-          onClick={handleCheckin} 
-          style={styles.checkinBtn}
-        >
-          📍 {user ? 'Check-in Now' : 'Login to Check-in'}
-        </button>
-
-        <button
-          onClick={handleBookNow}
-          style={{
-            ...styles.bookBtn,
-            opacity: selectedRoom ? 1 : 0.5,
-            cursor: selectedRoom ? 'pointer' : 'not-allowed'
-          }}
-          disabled={!selectedRoom}
-        >
-          <BookOpen size={18} style={{ marginRight: 8 }} />
-          {selectedRoom ? 'Book Now' : 'Select a room to continue'}
-        </button>
-
-        {pg.contact?.phone && (
-          <button onClick={handleCallOwner} style={styles.callBtn}>
-            <Phone size={18} style={{ marginRight: 8 }} />
-            Call {pg.contact.person || 'Owner'}
+        <div style={styles.buttonGroup}>
+          <button 
+            onClick={handleCheckin} 
+            style={styles.checkinBtn}
+          >
+            📍 {user ? 'Check-in' : 'Login'}
           </button>
-        )}
+
+          <button
+            onClick={handleBookNow}
+            style={{
+              ...styles.bookBtn,
+              opacity: selectedRoom ? 1 : 0.5,
+              cursor: selectedRoom ? 'pointer' : 'not-allowed'
+            }}
+            disabled={!selectedRoom}
+          >
+            <BookOpen size={16} style={{ marginRight: 6 }} />
+            {selectedRoom ? 'Book' : 'Select Room'}
+          </button>
+
+          {pg.contact?.phone && (
+            <button onClick={handleCallOwner} style={styles.callBtn}>
+              <Phone size={16} style={{ marginRight: 6 }} />
+              Call
+            </button>
+          )}
+        </div>
       </div>
 
       {showBookingModal && (
@@ -788,7 +832,7 @@ const ScanPG = () => {
                       </>
                     ) : (
                       <>
-                        <BookOpen size={18} />
+                        <BookOpen size={16} />
                         Submit Booking
                       </>
                     )}
@@ -807,7 +851,7 @@ const styles = {
   container: {
     maxWidth: 600,
     margin: "0 auto",
-    padding: "24px 20px 120px 20px",
+    padding: "24px 20px 100px 20px",
     backgroundColor: "#ffffff",
     minHeight: "100vh",
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
@@ -850,19 +894,20 @@ const styles = {
     right: 20,
     background: "#10b981",
     color: "white",
-    padding: "12px 24px",
+    padding: "10px 20px",
     borderRadius: 10,
     boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
     zIndex: 4000,
     display: "flex",
     alignItems: "center",
-    gap: 8
+    gap: 8,
+    fontSize: "13px"
   },
   headerSection: {
     marginBottom: "32px"
   },
   title: {
-    fontSize: "28px",
+    fontSize: "24px",
     fontWeight: "700",
     color: "#111827",
     margin: "0 0 8px 0"
@@ -877,15 +922,15 @@ const styles = {
     color: "#6b7280"
   },
   locationText: {
-    fontSize: "15px",
+    fontSize: "14px",
     color: "#6b7280"
   },
   typeBadge: {
     display: "inline-block",
     backgroundColor: "#f3f4f6",
-    padding: "6px 14px",
+    padding: "4px 12px",
     borderRadius: "30px",
-    fontSize: "13px",
+    fontSize: "12px",
     fontWeight: "500",
     color: "#4b5563"
   },
@@ -893,35 +938,35 @@ const styles = {
     marginBottom: "32px"
   },
   sectionTitle: {
-    fontSize: "20px",
-    fontWeight: "600",
-    color: "#111827",
-    margin: "0 0 20px 0"
-  },
-  subSectionTitle: {
     fontSize: "18px",
     fontWeight: "600",
     color: "#111827",
     margin: "0 0 16px 0"
   },
+  subSectionTitle: {
+    fontSize: "16px",
+    fontWeight: "600",
+    color: "#111827",
+    margin: "0 0 12px 0"
+  },
   roomGrid: {
     display: "grid",
     gridTemplateColumns: "1fr",
-    gap: "16px"
+    gap: "12px"
   },
   roomCard: {
     backgroundColor: "#ffffff",
     border: "2px solid #e5e7eb",
-    borderRadius: "20px",
-    padding: "20px",
+    borderRadius: "16px",
+    padding: "16px",
     cursor: "pointer",
     transition: "all 0.2s ease"
   },
   roomCardSelected: {
     borderColor: "#4f46e5",
     backgroundColor: "#f5f3ff",
-    transform: "scale(1.02)",
-    boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.2)"
+    transform: "scale(1.01)",
+    boxShadow: "0 4px 12px rgba(79, 70, 229, 0.15)"
   },
   roomCardSoldOut: {
     opacity: 0.5,
@@ -931,27 +976,27 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "12px"
+    marginBottom: "10px"
   },
   roomName: {
-    fontSize: "18px",
+    fontSize: "16px",
     fontWeight: "600",
     color: "#111827"
   },
   roomAvailability: {
-    fontSize: "14px",
+    fontSize: "12px",
     color: "#10b981",
     fontWeight: "500",
     backgroundColor: "#d1fae5",
-    padding: "4px 10px",
+    padding: "3px 8px",
     borderRadius: "20px"
   },
   roomSoldOut: {
-    fontSize: "14px",
+    fontSize: "12px",
     color: "#ef4444",
     fontWeight: "500",
     backgroundColor: "#fee2e2",
-    padding: "4px 10px",
+    padding: "3px 8px",
     borderRadius: "20px"
   },
   roomFooter: {
@@ -959,82 +1004,83 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     borderTop: "1px solid #e5e7eb",
-    paddingTop: "12px"
+    paddingTop: "10px"
   },
   roomNumber: {
-    fontSize: "14px",
+    fontSize: "13px",
     color: "#6b7280"
   },
   selectedBadge: {
-    fontSize: "14px",
+    fontSize: "12px",
     color: "#4f46e5",
     fontWeight: "600"
   },
   noRooms: {
     textAlign: "center",
-    padding: "40px",
+    padding: "30px",
     backgroundColor: "#f9fafb",
-    borderRadius: "20px",
+    borderRadius: "16px",
     border: "2px dashed #e5e7eb",
-    color: "#6b7280"
+    color: "#6b7280",
+    fontSize: "14px"
   },
   priceSection: {
     backgroundColor: "#f9fafb",
-    borderRadius: "20px",
-    padding: "20px",
-    marginBottom: "32px"
+    borderRadius: "16px",
+    padding: "16px",
+    marginBottom: "24px"
   },
   priceGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-    gap: "12px",
-    marginBottom: "20px"
+    gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+    gap: "10px",
+    marginBottom: "16px"
   },
   priceCard: {
     backgroundColor: "#ffffff",
-    padding: "16px",
-    borderRadius: "16px",
+    padding: "12px",
+    borderRadius: "12px",
     border: "1px solid #e5e7eb",
     textAlign: "center"
   },
   priceCardLabel: {
-    fontSize: "14px",
+    fontSize: "12px",
     color: "#6b7280",
-    marginBottom: "8px",
+    marginBottom: "6px",
     fontWeight: "500"
   },
   priceCardValue: {
-    fontSize: "18px",
+    fontSize: "15px",
     fontWeight: "700",
     color: "#4f46e5",
-    marginBottom: "4px"
+    marginBottom: "3px"
   },
   priceCardConfig: {
-    fontSize: "11px",
+    fontSize: "10px",
     color: "#9ca3af"
   },
   additionalCharges: {
     borderTop: "1px solid #e5e7eb",
-    paddingTop: "20px",
-    marginTop: "8px"
+    paddingTop: "16px",
+    marginTop: "6px"
   },
   chargesTitle: {
-    fontSize: "15px",
+    fontSize: "13px",
     fontWeight: "600",
     color: "#374151",
-    margin: "0 0 12px 0"
+    margin: "0 0 10px 0"
   },
   chargesList: {
     display: "flex",
     flexDirection: "column",
-    gap: "10px"
+    gap: "8px"
   },
   chargeRow: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    fontSize: "14px",
-    padding: "4px 0"
+    fontSize: "13px",
+    padding: "3px 0"
   },
   chargeValue: {
     fontWeight: "600",
@@ -1042,47 +1088,49 @@ const styles = {
   },
   viewDetailsBtn: {
     width: "100%",
-    padding: "18px",
+    padding: "14px",
     backgroundColor: "#ffffff",
     color: "#4f46e5",
     border: "2px solid #4f46e5",
-    borderRadius: "16px",
+    borderRadius: "12px",
     fontWeight: "600",
-    fontSize: "16px",
+    fontSize: "14px",
     cursor: "pointer",
-    marginBottom: "24px",
+    marginBottom: "20px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: "8px"
+    gap: "6px"
   },
   viewDetailsArrow: {
-    fontSize: "20px"
+    fontSize: "18px"
   },
   footer: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
     position: "fixed",
-    bottom: "0",
-    left: "0",
-    right: "0",
-    maxWidth: "600px",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    maxWidth: 600,
     margin: "0 auto",
     backgroundColor: "#ffffff",
-    padding: "20px",
+    padding: "12px 20px",
     borderTop: "1px solid #e5e7eb",
-    boxShadow: "0 -4px 12px rgba(0, 0, 0, 0.05)"
+    boxShadow: "0 -2px 10px rgba(0, 0, 0, 0.05)"
+  },
+  buttonGroup: {
+    display: "flex",
+    gap: "10px",
+    alignItems: "center"
   },
   checkinBtn: {
-    width: "100%",
-    padding: "18px",
+    flex: 1,
+    padding: "10px",
     backgroundColor: "#f59e0b",
     color: "#ffffff",
     border: "none",
-    borderRadius: "16px",
-    fontWeight: "700",
-    fontSize: "16px",
+    borderRadius: "10px",
+    fontWeight: "600",
+    fontSize: "13px",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
@@ -1090,28 +1138,28 @@ const styles = {
     transition: "all 0.2s ease"
   },
   bookBtn: {
-    width: "100%",
-    padding: "18px",
+    flex: 1,
+    padding: "10px",
     backgroundColor: "#4f46e5",
     color: "#ffffff",
     border: "none",
-    borderRadius: "16px",
-    fontWeight: "700",
-    fontSize: "16px",
+    borderRadius: "10px",
+    fontWeight: "600",
+    fontSize: "13px",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center"
   },
   callBtn: {
-    width: "100%",
-    padding: "18px",
+    flex: 1,
+    padding: "10px",
     backgroundColor: "#ffffff",
     color: "#22c55e",
     border: "2px solid #22c55e",
-    borderRadius: "16px",
+    borderRadius: "10px",
     fontWeight: "600",
-    fontSize: "16px",
+    fontSize: "13px",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
@@ -1146,90 +1194,90 @@ const styles = {
     right: 16,
     background: "rgba(255,255,255,0.9)",
     border: "none",
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: "50%",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
     zIndex: 100,
-    boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+    boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
   },
   modalBody: {
-    padding: 30
+    padding: 24
   },
   modalTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 700,
     color: "#111827",
-    marginBottom: 8
+    marginBottom: 6
   },
   modalSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#6b7280",
-    marginBottom: 24
+    marginBottom: 20
   },
   formGroup: {
-    marginBottom: 20
+    marginBottom: 16
   },
   formLabel: {
     display: "block",
-    marginBottom: 8,
-    fontSize: 14,
+    marginBottom: 6,
+    fontSize: 13,
     fontWeight: 500,
     color: "#374151"
   },
   formInput: {
     width: "100%",
-    padding: "12px 16px",
+    padding: "10px 14px",
     border: "1px solid #d1d5db",
-    borderRadius: 10,
-    fontSize: 14,
+    borderRadius: 8,
+    fontSize: 13,
     background: "#f9fafb"
   },
   formSelect: {
     width: "100%",
-    padding: "12px 16px",
+    padding: "10px 14px",
     border: "1px solid #d1d5db",
-    borderRadius: 10,
-    fontSize: 14,
+    borderRadius: 8,
+    fontSize: 13,
     background: "#f9fafb"
   },
   formActions: {
     display: "flex",
-    gap: 12,
-    marginTop: 24
+    gap: 10,
+    marginTop: 20
   },
   cancelBtn: {
     flex: 1,
-    padding: "14px",
+    padding: "10px",
     background: "#f3f4f6",
     color: "#374151",
     border: "none",
-    borderRadius: 10,
-    fontSize: 14,
+    borderRadius: 8,
+    fontSize: 13,
     fontWeight: 600,
     cursor: "pointer"
   },
   submitBtn: {
     flex: 2,
-    padding: "14px",
+    padding: "10px",
     background: "#10b981",
     color: "white",
     border: "none",
-    borderRadius: 10,
-    fontSize: 14,
+    borderRadius: 8,
+    fontSize: 13,
     fontWeight: 600,
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8
+    gap: 6
   },
   spinner: {
-    width: 18,
-    height: 18,
+    width: 16,
+    height: 16,
     border: "2px solid rgba(255,255,255,0.3)",
     borderTop: "2px solid white",
     borderRadius: "50%",
