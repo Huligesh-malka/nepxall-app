@@ -20,7 +20,7 @@ const ScanPG = () => {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [notification, setNotification] = useState(null);
-  const [status, setStatus] = useState(null); // ✅ For check-in status
+  const [status, setStatus] = useState(null); // ✅ NEW: For check-in status
 
   useEffect(() => {
     fetchPG();
@@ -43,7 +43,7 @@ const ScanPG = () => {
   };
 
   const handleRoomSelection = (room) => {
-    console.log("Selected Room:", room);
+    console.log("Selected Room:", room); // 🔥 ADDED FOR CLARITY
     setSelectedRoom(room);
   };
 
@@ -63,7 +63,7 @@ const ScanPG = () => {
     return null;
   };
 
-  // 🔥 FIX 1: HANDLE ALREADY_JOINED IN CHECKIN
+  // 🔥 FIXED CHECK-IN FUNCTION WITH CASE HANDLING
   const handleCheckin = async () => {
     try {
       // ✅ Redirect with state if not logged in
@@ -92,15 +92,7 @@ const ScanPG = () => {
 
       const data = res.data;
 
-      // 🔥 FIX 1: ADDED ALREADY_JOINED HANDLER
-      if (data.type === "ALREADY_JOINED") {
-        setStatus({
-          success: true,
-          message: "✅ You already joined this PG"
-        });
-        return;
-      }
-
+      // 🔥 HANDLE ALL CASES
       if (data.type === "NOT_JOINED") {
         setStatus({
           success: false,
@@ -117,9 +109,11 @@ const ScanPG = () => {
         return;
       }
 
-      // 🔥 FIX 3: REMOVE CONFUSING MESSAGE - Changed to setStatus(null)
-      if (data.type === "READY_TO_JOIN") {
-        setStatus(null); // ❌ Don't show message - just show rooms
+      if (data.type === "READY_TO_JOIN") { // 🔥 NEW CASE
+        setStatus({
+          success: false,
+          message: "Select a room to join"
+        });
         return;
       }
 
@@ -148,7 +142,7 @@ const ScanPG = () => {
     }
   };
 
-  // 🔥 FIX 2: HANDLE JOIN RESPONSE PROPERLY
+  // 🔥 FIXED JOIN FUNCTION WITH ROOM SELECTION
   const handleJoin = async () => {
     try {
       // 🔥 REQUIRE ROOM SELECTION
@@ -166,7 +160,7 @@ const ScanPG = () => {
         `/scan/join`,
         {
           pg_id: id,
-          room_id: selectedRoom.id
+          room_id: selectedRoom.id   // 🔥 IMPORTANT
         },
         {
           headers: {
@@ -175,21 +169,10 @@ const ScanPG = () => {
         }
       );
 
-      // 🔥 FIX 2: REPLACED with proper response handling
-      if (res.data.type === "ALREADY_JOINED") {
-        setStatus({
-          success: true,
-          message: "✅ You already joined this PG"
-        });
-        return;
-      }
-
-      if (res.data.type === "JOIN_SUCCESS") {
-        setStatus({
-          success: true,
-          message: "🎉 Joined successfully"
-        });
-      }
+      setStatus({
+        success: true,
+        message: "🎉 Joined successfully with selected room"
+      });
 
       // Refresh PG data after join
       setTimeout(() => {
