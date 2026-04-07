@@ -60,6 +60,35 @@ const ScanPG = () => {
     return null;
   };
 
+  // 🔥 NEW CHECK-IN FUNCTION
+  const handleCheckin = async () => {
+    try {
+      if (!user) {
+        showNotificationMessage("Please login first");
+        navigate("/login");
+        return;
+      }
+
+      const token = await user.getIdToken();
+
+      const res = await api.post(
+        `/scan/checkin`,
+        { pg_id: id },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      showNotificationMessage(res.data.message);
+
+    } catch (err) {
+      console.error(err);
+      showNotificationMessage("❌ Check-in failed");
+    }
+  };
+
   const handleBookNow = () => {
     const selected = getSelectedDetails();
     if (!selected) {
@@ -473,7 +502,18 @@ const ScanPG = () => {
         <span style={styles.viewDetailsArrow}>→</span>
       </button>
 
+      {/* 🔥 UPDATED FOOTER SECTION WITH CHECK-IN BUTTON */}
       <div style={styles.footer}>
+        {/* NEW CHECK-IN BUTTON */}
+        <button 
+          onClick={handleCheckin} 
+          style={styles.checkinBtn}
+          disabled={!user}
+        >
+          📍 {user ? 'Check-in Now' : 'Login to Check-in'}
+        </button>
+
+        {/* EXISTING BOOK BUTTON */}
         <button
           onClick={handleBookNow}
           style={{
@@ -487,6 +527,7 @@ const ScanPG = () => {
           {selectedRoom ? 'Book Now' : 'Select a room to continue'}
         </button>
 
+        {/* CALL BUTTON */}
         {pg.contact?.phone && (
           <button onClick={handleCallOwner} style={styles.callBtn}>
             <Phone size={18} style={{ marginRight: 8 }} />
@@ -890,6 +931,21 @@ const styles = {
     padding: "20px",
     borderTop: "1px solid #e5e7eb",
     boxShadow: "0 -4px 12px rgba(0, 0, 0, 0.05)"
+  },
+  checkinBtn: {
+    width: "100%",
+    padding: "18px",
+    backgroundColor: "#f59e0b",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "16px",
+    fontWeight: "700",
+    fontSize: "16px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "all 0.2s ease"
   },
   bookBtn: {
     width: "100%",
