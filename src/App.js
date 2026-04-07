@@ -110,8 +110,10 @@ function App() {
       <Route element={<MainLayout />}>
         <Route path="/" element={<UserPGSearch />} />
         <Route path="/pg/:id" element={<PGDetails />} />
-        <Route path="/scan/:id" element={<ScanPG />} />
+        
       </Route>
+
+      <Route path="/scan/:id" element={<ScanPG />} />
 
       {/* STATIC */}
       <Route path="/contact" element={<Contact />} />
