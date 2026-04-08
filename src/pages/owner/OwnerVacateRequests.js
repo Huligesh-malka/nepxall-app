@@ -33,7 +33,8 @@ const maskUPI = (v) => {
 /* ── Status config ── */
 const statusConfig = (item) => {
   if (item.refund_status === "paid") return { label: "Paid", color: "#16a34a", bg: "#dcfce7" };
-  if (item.refund_status === "rejected" || item.user_approval === "rejected") return { label: "Rejected", color: "#dc2626", bg: "#fee2e2" };
+  if (item.refund_status === "rejected") return { label: "Rejected", color: "#dc2626", bg: "#fee2e2" };
+  if (item.user_approval === "rejected") return { label: "User Rejected", color: "#dc2626", bg: "#fee2e2" };
   if (item.refund_status === "approved") return { label: "Awaiting", color: "#d97706", bg: "#fef3c7" };
   if (item.refund_status === "pending" && item.user_approval === "accepted") return { label: "Ready", color: "#4f46e5", bg: "#eef2ff" };
   return { label: "Pending", color: "#64748b", bg: "#f1f5f9" };
@@ -52,7 +53,9 @@ const FILTERS = [
 const matchesFilter = (item, key) => {
   switch (key) {
     case "all": return true;
-    case "pending": return item.refund_status === "pending" && item.user_approval === "pending";
+    case "pending": 
+      return item.refund_status === "pending" && 
+        (!item.user_approval || item.user_approval === "pending");
     case "awaiting": return item.refund_status === "approved";
     case "ready": return item.refund_status === "pending" && item.user_approval === "accepted";
     case "paid": return item.refund_status === "paid";
@@ -70,9 +73,18 @@ const ActionMenu = ({ item, damage, dues, setDamage, setDues, loadingId, onAppro
   const menuRef = useRef(null);
   useOutsideClick(menuRef, () => setOpen(false));
 
-  const canApprove = item.refund_status !== "approved" && item.refund_status !== "paid";
+  // ✅ FIXED: Approve button logic
+  const canApprove =
+    item.refund_status !== "paid" &&
+    item.user_approval !== "accepted";
+
+  // ✅ FIXED: Mark Paid button logic
   const canMarkPaid = item.refund_status === "pending" && item.user_approval === "accepted";
-  const canReject = item.refund_status !== "paid" && item.refund_status !== "rejected";
+
+  // ✅ FIXED: Reject button logic
+  const canReject =
+    item.refund_status !== "paid" &&
+    item.user_approval !== "accepted";
 
   return (
     <div style={{ position: "relative" }} ref={menuRef}>
@@ -80,7 +92,7 @@ const ActionMenu = ({ item, damage, dues, setDamage, setDues, loadingId, onAppro
       {open && (
         <div style={s.dropdown}>
           {canApprove && (
-            <button style={s.menuItem} onClick={() => { setShowForm(true); setOpen(false); }}>
+            <button style={s.menuItem} onClick={() => { setShowForm(true); setOpen(false); }} disabled={loadingId === item.booking_id}>
               <span style={{ ...s.menuIcon, background: "#dcfce7", color: "#16a34a" }}>✓</span>
               {item.user_approval === "rejected" ? "Re-Approve" : "Approve"}
             </button>
@@ -92,7 +104,7 @@ const ActionMenu = ({ item, damage, dues, setDamage, setDues, loadingId, onAppro
             </button>
           )}
           {canReject && (
-            <button style={{ ...s.menuItem, color: "#ef4444" }} onClick={() => { onReject(item.booking_id); setOpen(false); }}>
+            <button style={{ ...s.menuItem, color: "#ef4444" }} onClick={() => { onReject(item.booking_id); setOpen(false); }} disabled={loadingId === item.booking_id}>
               <span style={{ ...s.menuIcon, background: "#fee2e2", color: "#dc2626" }}>✕</span>
               Reject
             </button>
@@ -334,7 +346,7 @@ const OwnerVacateRequests = () => {
       const reqs = pgGroups[pgName];
       stats[pgName] = {
         total: reqs.length,
-        pending: reqs.filter(r => r.refund_status === "pending" && r.user_approval === "pending").length,
+        pending: reqs.filter(r => r.refund_status === "pending" && (!r.user_approval || r.user_approval === "pending")).length,
         awaiting: reqs.filter(r => r.refund_status === "approved").length,
         ready: reqs.filter(r => r.refund_status === "pending" && r.user_approval === "accepted").length,
         paid: reqs.filter(r => r.refund_status === "paid").length,
@@ -352,17 +364,18 @@ const OwnerVacateRequests = () => {
       const token = await user.getIdToken();
       const res = await api.post(`/owner/vacate/approve/${bookingId}`, { damage_amount: Number(damage[bookingId]) || 0, pending_dues: Number(dues[bookingId]) || 0 }, { headers: { Authorization: `Bearer ${token}` } });
       alert(`Approved! Refund: ₹${res.data.refundAmount}`);
-      loadRequests();
+      await loadRequests(); // ✅ force refresh
     } catch { alert("Approval failed"); } finally { setLoadingId(null); }
   };
 
   const handleReject = async (bookingId) => {
     try {
+      setLoadingId(bookingId);
       const token = await user.getIdToken();
       await api.post(`/owner/refund/reject/${bookingId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
       alert("Refund Rejected");
-      loadRequests();
-    } catch { alert("Reject failed"); }
+      await loadRequests(); // ✅ force refresh
+    } catch { alert("Reject failed"); } finally { setLoadingId(null); }
   };
 
   const handleMarkPaid = async (bookingId) => {
@@ -371,7 +384,7 @@ const OwnerVacateRequests = () => {
       const token = await user.getIdToken();
       await api.post(`/owner/refund/mark-paid/${bookingId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
       alert("Payment Completed");
-      loadRequests();
+      await loadRequests(); // ✅ force refresh
     } catch { alert("Payment failed"); } finally { setLoadingId(null); }
   };
 
