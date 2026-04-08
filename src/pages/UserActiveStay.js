@@ -337,49 +337,81 @@ const UserActiveStay = () => {
               </div>
             )}
 
-            {/* ✅ FIX 3: SAFE CONDITION for showing vacate form */}
-            {(!stay.vacate_status || stay.vacate_status === null) && showVacateFormFor === stay.id ? (
+            {/* ✅ FIX 3: SAFE CONDITION for showing vacate form - Now includes rejected refund status to allow re-request */}
+            {(!stay.vacate_status || stay.vacate_status === null || stay.refund_status === "rejected") && showVacateFormFor === stay.id ? (
               <div style={refundFormContainer}>
                 <h3 style={{ color: "#f59e0b" }}>Vacate Request</h3>
 
-                {stay.refund_status && (
-                  <div
-                    style={{
-                      background: "#f9fafb",
-                      padding: "10px",
-                      borderRadius: "8px",
-                      marginBottom: "10px",
-                      textAlign: "center",
-                    }}
-                  >
-                    <p style={{ fontWeight: "bold" }}>
-                      Refund Status:
-                      {stay.refund_status === "pending" && " ⏳ Pending"}
-                      {stay.refund_status === "approved" && " ✅ Approved"}
-                      {stay.refund_status === "paid" && " 💸 Paid"}
-                    </p>
-                    {stay.refund_amount > 0 && (
-                      <p>💰 Refund Amount: ₹{stay.refund_amount}</p>
-                    )}
+                {/* ✅ REFUND STATUS UI - FULL FIX */}
+                <div
+                  style={{
+                    background: "#f9fafb",
+                    padding: "10px",
+                    borderRadius: "8px",
+                    marginBottom: "10px",
+                    textAlign: "center",
+                  }}
+                >
+                  <p style={{ fontWeight: "bold" }}>
+                    Refund Status:
+                    
+                    {stay.refund_status === "pending" &&
+                      (!stay.user_approval || stay.user_approval === null) &&
+                      " ⏳ Waiting for Owner Approval"}
+
                     {stay.refund_status === "approved" &&
-                      stay.user_approval === "pending" && (
-                        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                          <button
-                            style={{ ...btn, background: "#4CAF50" }}
-                            onClick={() => acceptRefund(stay.id)}
-                          >
-                            ✅ Accept
-                          </button>
-                          <button
-                            style={{ ...btn, background: "#ef4444" }}
-                            onClick={() => rejectRefund(stay.id)}
-                          >
-                            ❌ Reject
-                          </button>
-                        </div>
-                      )}
-                  </div>
-                )}
+                      (stay.user_approval === "pending" || !stay.user_approval) &&
+                      " ✅ Owner Approved - Please Accept"}
+
+                    {stay.refund_status === "pending" &&
+                      stay.user_approval === "accepted" &&
+                      " ⏳ Waiting for Owner Payment"}
+
+                    {stay.refund_status === "pending" &&
+                      stay.user_approval === "rejected" &&
+                      " ⚠️ You Rejected - Owner will review again"}
+
+                    {stay.refund_status === "rejected" &&
+                      " ❌ Owner Rejected (You can request again)"}
+
+                    {stay.refund_status === "paid" &&
+                      " 💸 Refund Completed"}
+                  </p>
+
+                  {/* 💰 Amount */}
+                  {stay.refund_amount > 0 && (
+                    <p>💰 Refund Amount: ₹{stay.refund_amount}</p>
+                  )}
+
+                  {/* ✅ SHOW BUTTONS ONLY WHEN NEEDED - handles NULL as pending */}
+                  {stay.refund_status === "approved" &&
+                    (stay.user_approval === "pending" || !stay.user_approval) && (
+                      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                        <button
+                          style={{ ...btn, background: "#4CAF50" }}
+                          onClick={() => acceptRefund(stay.id)}
+                        >
+                          ✅ Accept
+                        </button>
+                        <button
+                          style={{ ...btn, background: "#ef4444" }}
+                          onClick={() => rejectRefund(stay.id)}
+                        >
+                          ❌ Reject
+                        </button>
+                      </div>
+                  )}
+
+                  {/* 🔁 RE-REQUEST BUTTON */}
+                  {stay.refund_status === "rejected" && (
+                    <button
+                      style={{ ...btn, background: "#f59e0b", marginTop: 10 }}
+                      onClick={() => setShowVacateFormFor(stay.id)}
+                    >
+                      🔁 Request Again
+                    </button>
+                  )}
+                </div>
 
                 <div style={inputGroup}>
                   <label style={labelStyle}>Vacate Date</label>
@@ -653,7 +685,8 @@ const UserActiveStay = () => {
                               },
                             ]
                           : []),
-                        ...((!stay.vacate_status || stay.vacate_status === null)
+                        // ✅ FIXED: Menu condition - allows vacate again after rejection
+                        ...((!stay.vacate_status || stay.vacate_status === null || stay.refund_status === "rejected")
                           ? [
                               {
                                 icon: "🚪",
