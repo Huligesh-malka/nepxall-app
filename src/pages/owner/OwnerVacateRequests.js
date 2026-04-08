@@ -195,7 +195,7 @@ const RequestCard = ({ item, damage, dues, setDamage, setDues, loadingId, onAppr
 /* ══════════════════════════════════════════════
    PG SELECTION SCREEN
 ══════════════════════════════════════════════ */
-const PGSelectionScreen = ({ pgList, pgStats, onSelect, onRefresh }) => {
+const PGSelectionScreen = ({ pgList, pgStats, view, setView, onSelect, onRefresh }) => {
   const totalRequests = pgList.reduce((sum, pg) => sum + pg.totalRequests, 0);
   const totalPending = Object.values(pgStats).reduce((sum, s) => sum + s.pending, 0);
 
@@ -207,6 +207,40 @@ const PGSelectionScreen = ({ pgList, pgStats, onSelect, onRefresh }) => {
           <p style={s.pageSubtitle}>{pgList.length} properties · {totalRequests} total · {totalPending} pending</p>
         </div>
         <button onClick={onRefresh} style={s.refreshBtn}>Refresh</button>
+      </div>
+
+      {/* Active/History Tabs */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 24 }}>
+        <button 
+          onClick={() => setView("active")}
+          style={{
+            padding: "8px 20px",
+            borderRadius: 24,
+            border: "none",
+            background: view === "active" ? "#4f46e5" : "#e5e7eb",
+            color: view === "active" ? "#fff" : "#333",
+            cursor: "pointer",
+            fontWeight: 600,
+            fontSize: 14,
+          }}
+        >
+          Active
+        </button>
+        <button 
+          onClick={() => setView("history")}
+          style={{
+            padding: "8px 20px",
+            borderRadius: 24,
+            border: "none",
+            background: view === "history" ? "#4f46e5" : "#e5e7eb",
+            color: view === "history" ? "#fff" : "#333",
+            cursor: "pointer",
+            fontWeight: 600,
+            fontSize: 14,
+          }}
+        >
+          History
+        </button>
       </div>
 
       <div style={s.pgGrid}>
@@ -249,7 +283,7 @@ const PGSelectionScreen = ({ pgList, pgStats, onSelect, onRefresh }) => {
 /* ══════════════════════════════════════════════
    PG DETAIL SCREEN
 ══════════════════════════════════════════════ */
-const PGDetailScreen = ({ pgName, requests, pgStats, damage, dues, setDamage, setDues, loadingId, onApprove, onReject, onMarkPaid, onBack }) => {
+const PGDetailScreen = ({ pgName, requests, pgStats, view, damage, dues, setDamage, setDues, loadingId, onApprove, onReject, onMarkPaid, onBack }) => {
   const [filter, setFilter] = useState("all");
   const stats = pgStats[pgName] || {};
 
@@ -269,6 +303,26 @@ const PGDetailScreen = ({ pgName, requests, pgStats, damage, dues, setDamage, se
           <h1 style={s.pageTitle}>{pgName}</h1>
           <p style={s.pageSubtitle}>{requests.length} total request{requests.length !== 1 ? "s" : ""}</p>
         </div>
+      </div>
+
+      {/* Active/History Tabs */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+        <button 
+          disabled
+          style={{
+            padding: "6px 16px",
+            borderRadius: 20,
+            border: "none",
+            background: view === "active" ? "#4f46e5" : "#e5e7eb",
+            color: view === "active" ? "#fff" : "#333",
+            fontWeight: 500,
+            fontSize: 13,
+            cursor: "default",
+            opacity: 0.7,
+          }}
+        >
+          {view === "active" ? "Active View" : "History View"}
+        </button>
       </div>
 
       <div style={s.summaryRow}>
@@ -318,6 +372,7 @@ const OwnerVacateRequests = () => {
   const [loadingId, setLoadingId] = useState(null);
   const [pageLoading, setPageLoading] = useState(true);
   const [selectedPG, setSelectedPG] = useState(null);
+  const [view, setView] = useState("active"); // active | history
 
   const loadRequests = async () => {
     if (!user) return;
@@ -352,32 +407,37 @@ const OwnerVacateRequests = () => {
     return Array.from(map.values());
   }, [requests]);
 
-  // ✅ STEP 2: Show only valid vacate states (active lifecycle)
+  // ✅ STEP 2: Active requests (LEAVING or not paid/completed)
   const activeRequests = useMemo(() => {
     return uniqueRequests.filter(
       (r) =>
         r.status === "LEAVING" ||
-        r.refund_status !== "paid"
+        (r.refund_status !== "paid" && r.vacate_status !== "completed")
     );
   }, [uniqueRequests]);
 
-  // ✅ STEP 4: Hide completed rows
-  const finalRequests = useMemo(() => {
-    return activeRequests.filter(
-      (r) => !(r.status === "LEFT" && r.vacate_status === "completed")
+  // ✅ STEP 3: History requests (paid OR completed)
+  const historyRequests = useMemo(() => {
+    return uniqueRequests.filter(
+      (r) =>
+        r.refund_status === "paid" ||
+        (r.status === "LEFT" && r.vacate_status === "completed")
     );
-  }, [activeRequests]);
+  }, [uniqueRequests]);
 
-  // Group by PG name using unique requests
+  // ✅ STEP 4: Display based on view
+  const displayRequests = view === "active" ? activeRequests : historyRequests;
+
+  // Group by PG name using display requests
   const pgGroups = useMemo(() => {
     const groups = {};
-    finalRequests.forEach(req => {
+    displayRequests.forEach(req => {
       const name = req.pg_name || "Unknown PG";
       if (!groups[name]) groups[name] = [];
       groups[name].push(req);
     });
     return groups;
-  }, [finalRequests]);
+  }, [displayRequests]);
 
   const pgStats = useMemo(() => {
     const stats = {};
@@ -437,6 +497,7 @@ const OwnerVacateRequests = () => {
         pgName={selectedPG}
         requests={pgGroups[selectedPG] || []}
         pgStats={pgStats}
+        view={view}
         damage={damage}
         dues={dues}
         setDamage={setDamage}
@@ -454,6 +515,8 @@ const OwnerVacateRequests = () => {
     <PGSelectionScreen
       pgList={pgList}
       pgStats={pgStats}
+      view={view}
+      setView={setView}
       onSelect={setSelectedPG}
       onRefresh={loadRequests}
     />
