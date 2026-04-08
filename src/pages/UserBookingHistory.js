@@ -233,7 +233,7 @@ const UserBookingHistory = () => {
     setError("");
   }, []);
 
-  // ✅ FIXED: IMPROVED FUNCTION - Single source of truth for payment display logic
+  // Get payment status
   const getPaymentStatusDisplay = useCallback((bookingId, bookingStatus) => {
     const status = paymentStatuses[bookingId];
     
@@ -243,8 +243,7 @@ const UserBookingHistory = () => {
         showAgreementButton: false,
         message: null,
         badge: null,
-        canPay: bookingStatus === "approved",
-        buttonText: "Pay"
+        canPay: bookingStatus === "approved"
       };
     }
 
@@ -255,8 +254,7 @@ const UserBookingHistory = () => {
           showAgreementButton: true,
           message: null,
           badge: { text: "Payment Verified", style: "paid" },
-          canPay: false,
-          buttonText: null
+          canPay: false
         };
       
       case "submitted":
@@ -265,19 +263,16 @@ const UserBookingHistory = () => {
           showAgreementButton: false,
           message: "Payment submitted. Waiting for verification...",
           badge: { text: "Pending Verification", style: "submitted" },
-          canPay: false,
-          buttonText: null
+          canPay: false
         };
       
       case "rejected":
         return {
-          // ✅ IMPROVED: Only show pay button if booking is still approved
-          showPayButton: bookingStatus === "approved",
+          showPayButton: true,
           showAgreementButton: false,
           message: "Payment was rejected. Please try again.",
           badge: { text: "Payment Rejected", style: "rejected" },
-          canPay: bookingStatus === "approved",
-          buttonText: bookingStatus === "approved" ? "Pay Again" : "Pay"
+          canPay: true
         };
       
       case "pending":
@@ -286,8 +281,7 @@ const UserBookingHistory = () => {
           showAgreementButton: false,
           message: null,
           badge: { text: "Payment Pending", style: "pending" },
-          canPay: true,
-          buttonText: "Pay"
+          canPay: true
         };
       
       default:
@@ -296,8 +290,7 @@ const UserBookingHistory = () => {
           showAgreementButton: false,
           message: null,
           badge: null,
-          canPay: bookingStatus === "approved",
-          buttonText: "Pay"
+          canPay: bookingStatus === "approved"
         };
     }
   }, [paymentStatuses]);
@@ -394,15 +387,20 @@ const UserBookingHistory = () => {
             const maintenance = Number(booking.maintenance_amount || 0);
             const total = Number(booking.total_amount) || rent + deposit + maintenance;
             
-            // ✅ FIX 1 & 2: USE SINGLE SOURCE OF TRUTH
-            // No more duplicate logic - just use getPaymentStatusDisplay
             const paymentDisplay = getPaymentStatusDisplay(booking.id, booking.status);
             
-            // ✅ REMOVED all the old duplicate logic:
-            // - No more let showPayButton = false;
-            // - No more if (booking.status === "approved") checks
-            // - No more manual paymentStatus checks
-            // Everything comes from paymentDisplay.showPayButton now
+            // ✅ FIX 2: FIX PAY BUTTON LOGIC
+            // Only approved status AND payment not submitted/paid
+            let showPayButton = false;
+            if (booking.status === "approved") {
+              const paymentStatus = paymentStatuses[booking.id];
+              showPayButton = paymentStatus !== "submitted" && paymentStatus !== "paid";
+            }
+            
+            // ✅ OPTIONAL FIX: Hide pay button if confirmed
+            if (booking.status === "confirmed") {
+              showPayButton = false;
+            }
 
             return (
               <div key={booking.id} style={styles.card}>
@@ -554,8 +552,7 @@ const UserBookingHistory = () => {
                     </div>
 
                     <div style={styles.actionRow}>
-                      {/* ✅ FIX 3: Use paymentDisplay.showPayButton directly */}
-                      {paymentDisplay.showPayButton && (
+                      {showPayButton && (
                         <button
                           style={styles.payButton}
                           onClick={() => handlePayNow(booking)}
@@ -569,8 +566,7 @@ const UserBookingHistory = () => {
                           ) : (
                             <>
                               <span>💳</span>
-                              {/* ✅ BONUS: Dynamic button text for rejected payments */}
-                              {paymentDisplay.buttonText === "Pay Again" ? "Pay Again" : `Pay ₹${total.toLocaleString()}`}
+                              Pay ₹{total.toLocaleString()}
                             </>
                           )}
                         </button>
@@ -590,7 +586,7 @@ const UserBookingHistory = () => {
                     </div>
                   </div>
 
-                  {/* ✅ LEFT STATUS UI */}
+                  {/* ✅ FIX 3: LEFT STATUS UI */}
                   {booking.status === "left" && (
                     <div style={{
                       marginTop: 16,
