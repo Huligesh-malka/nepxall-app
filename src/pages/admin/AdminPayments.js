@@ -210,7 +210,23 @@ const AdminPayments = () => {
               payments.map((p) => {
                 const displayName = p.reg_name || "Guest User";
                 const displayPhone = p.reg_phone || "N/A";
-
+                // Determine if approve button should be disabled
+                const isApproved = p.status === "paid" || p.status === "confirmed";
+                const isRejected = p.status === "rejected";
+                const isProcessing = processing === p.order_id;
+                
+                // Approve button disabled conditions:
+                // 1. Already approved (paid/confirmed)
+                // 2. Already rejected (to prevent action, but we want to allow re-approve after reject, so we don't disable based on reject alone)
+                // Actually, we want to allow approve after reject, so only disable if already approved or processing
+                const isApproveDisabled = isApproved || isProcessing;
+                
+                // Reject button disabled conditions:
+                // 1. Already approved (cannot reject a paid payment)
+                // 2. Already processing
+                // 3. Already rejected (to prevent double reject)
+                const isRejectDisabled = isApproved || isProcessing || isRejected;
+                
                 return (
                   <TableRow key={p.order_id} hover>
                     <TableCell>
@@ -242,7 +258,6 @@ const AdminPayments = () => {
                       {p.utr && <Typography variant="caption" sx={{ color: BRAND_GREEN, fontWeight: 'bold' }}>UTR: {p.utr}</Typography>}
                     </TableCell>
                     <TableCell>
-                      {/* FIX 3: IMPROVED STATUS COLOR */}
                       <Chip 
                         label={p.status.toUpperCase()} 
                         size="small" 
@@ -257,7 +272,6 @@ const AdminPayments = () => {
                             : "default"
                         } 
                       />
-                      {/* FIX 2: SHOW ACTIVE STATUS (NEW UI 🔥) */}
                       {(p.status === "paid" || p.status === "confirmed") && (
                         <Typography
                           variant="caption"
@@ -269,6 +283,19 @@ const AdminPayments = () => {
                           }}
                         >
                           ✅ User moved to ACTIVE (PG Users)
+                        </Typography>
+                      )}
+                      {p.status === "rejected" && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: "#dc2626",
+                            fontWeight: "bold",
+                            display: "block",
+                            mt: 1
+                          }}
+                        >
+                          ⚠️ Payment rejected. User can re-upload proof.
                         </Typography>
                       )}
                     </TableCell>
@@ -287,36 +314,27 @@ const AdminPayments = () => {
                           </Tooltip>
                         )}
 
-                        {/* FIX 1: PREVENT DOUBLE APPROVE - Added verified_by_admin check */}
+                        {/* Approve Button - Enabled even after reject (if not already approved) */}
                         <Button
                           variant="contained"
                           color="success"
                           size="small"
                           disableElevation
                           startIcon={<CheckCircleIcon />}
-                          disabled={
-                            processing === p.order_id ||
-                            p.status === "paid" ||
-                            p.status === "confirmed" ||
-                            p.verified_by_admin === 1
-                          }
+                          disabled={isApproveDisabled}
                           onClick={() => approvePayment(p.order_id)}
                           sx={{ textTransform: 'none', borderRadius: '8px', fontWeight: '700' }}
                         >
-                          {processing === p.order_id ? <CircularProgress size={16} color="inherit" /> : "Approve"}
+                          {isProcessing ? <CircularProgress size={16} color="inherit" /> : "Approve"}
                         </Button>
                         
-                        {/* FIX 4: DISABLE REJECT AFTER APPROVE */}
+                        {/* Reject Button - Disabled only if already approved or already rejected */}
                         <Button
                           variant="outlined"
                           color="error"
                           size="small"
                           startIcon={<CancelIcon />}
-                          disabled={
-                            processing === p.order_id ||
-                            p.status === "rejected" ||
-                            p.status === "paid"
-                          }
+                          disabled={isRejectDisabled}
                           onClick={() => rejectPayment(p.order_id)}
                           sx={{ textTransform: 'none', borderRadius: '8px', fontWeight: '700' }}
                         >
