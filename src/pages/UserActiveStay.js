@@ -337,8 +337,8 @@ const UserActiveStay = () => {
               </div>
             )}
 
-            {/* ✅ FIX 3: SAFE CONDITION for showing vacate form - Now includes rejected refund status to allow re-request */}
-            {(!stay.vacate_status || stay.vacate_status === null || stay.refund_status === "rejected") && showVacateFormFor === stay.id ? (
+            {/* ✅ FIXED: SIMPLIFIED CONDITION - Just check if form should be shown */}
+            {showVacateFormFor === stay.id ? (
               <div style={refundFormContainer}>
                 <h3 style={{ color: "#f59e0b" }}>Vacate Request</h3>
 
@@ -402,11 +402,23 @@ const UserActiveStay = () => {
                       </div>
                   )}
 
-                  {/* 🔁 RE-REQUEST BUTTON */}
+                  {/* ✅ FIXED: "Request Again" button - Proper reset and reopen */}
                   {stay.refund_status === "rejected" && (
                     <button
                       style={{ ...btn, background: "#f59e0b", marginTop: 10 }}
-                      onClick={() => setShowVacateFormFor(stay.id)}
+                      onClick={() => {
+                        // First reset to null to force state change
+                        setShowVacateFormFor(null);
+                        // Then reopen the form after a microtask
+                        setTimeout(() => {
+                          setShowVacateFormFor(stay.id);
+                        }, 0);
+                        // Clear old vacate form data for this stay
+                        setVacateForms(prev => ({
+                          ...prev,
+                          [stay.id]: {}
+                        }));
+                      }}
                     >
                       🔁 Request Again
                     </button>
@@ -686,6 +698,7 @@ const UserActiveStay = () => {
                             ]
                           : []),
                         // ✅ FIXED: Menu condition - allows vacate again after rejection
+                        // Allow vacate if no pending/approved/completed vacate, or if refund was rejected
                         ...((!stay.vacate_status || stay.vacate_status === null || stay.refund_status === "rejected")
                           ? [
                               {
