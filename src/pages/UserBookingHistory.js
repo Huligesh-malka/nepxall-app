@@ -389,18 +389,32 @@ const UserBookingHistory = () => {
             
             const paymentDisplay = getPaymentStatusDisplay(booking.id, booking.status);
             
-            // ✅ FIX 2: FIX PAY BUTTON LOGIC
-            // Only approved status AND payment not submitted/paid
+            // ✅ FIXED: Show Pay button when:
+            // 1. Booking status is "approved" AND
+            // 2. Payment status is "pending", "rejected", or doesn't exist
+            // 3. Hide when payment is "submitted" or "paid"
+            // 4. Hide when booking is "confirmed"
+            const paymentStatus = paymentStatuses[booking.id];
             let showPayButton = false;
+            
             if (booking.status === "approved") {
-              const paymentStatus = paymentStatuses[booking.id];
-              showPayButton = paymentStatus !== "submitted" && paymentStatus !== "paid";
+              // Show pay button for pending, rejected, or no payment status
+              if (paymentStatus === "pending" || paymentStatus === "rejected" || !paymentStatus) {
+                showPayButton = true;
+              }
+              // Don't show for submitted or paid
+              if (paymentStatus === "submitted" || paymentStatus === "paid") {
+                showPayButton = false;
+              }
             }
             
-            // ✅ OPTIONAL FIX: Hide pay button if confirmed
+            // Never show pay button for confirmed bookings
             if (booking.status === "confirmed") {
               showPayButton = false;
             }
+
+            // Debug log to help troubleshoot
+            console.log(`Booking ${booking.id}: status=${booking.status}, paymentStatus=${paymentStatus}, showPayButton=${showPayButton}`);
 
             return (
               <div key={booking.id} style={styles.card}>
