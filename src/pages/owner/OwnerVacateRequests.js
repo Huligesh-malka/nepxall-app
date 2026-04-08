@@ -32,11 +32,26 @@ const maskUPI = (v) => {
 
 /* ── Status config ── */
 const statusConfig = (item) => {
-  if (item.refund_status === "paid") return { label: "Paid", color: "#16a34a", bg: "#dcfce7" };
-  if (item.refund_status === "rejected") return { label: "Rejected", color: "#dc2626", bg: "#fee2e2" };
-  if (item.user_approval === "rejected") return { label: "User Rejected", color: "#dc2626", bg: "#fee2e2" };
-  if (item.refund_status === "approved") return { label: "Awaiting", color: "#d97706", bg: "#fef3c7" };
-  if (item.refund_status === "pending" && item.user_approval === "accepted") return { label: "Ready", color: "#4f46e5", bg: "#eef2ff" };
+  if (item.status === "LEAVING" && item.vacate_status === "requested") {
+    return { label: "Pending", color: "#64748b", bg: "#f1f5f9" };
+  }
+
+  if (item.refund_status === "approved") {
+    return { label: "Awaiting", color: "#d97706", bg: "#fef3c7" };
+  }
+
+  if (item.refund_status === "pending" && item.user_approval === "accepted") {
+    return { label: "Ready", color: "#4f46e5", bg: "#eef2ff" };
+  }
+
+  if (item.refund_status === "paid") {
+    return { label: "Paid", color: "#16a34a", bg: "#dcfce7" };
+  }
+
+  if (item.refund_status === "rejected") {
+    return { label: "Rejected", color: "#dc2626", bg: "#fee2e2" };
+  }
+
   return { label: "Pending", color: "#64748b", bg: "#f1f5f9" };
 };
 
@@ -323,35 +338,46 @@ const OwnerVacateRequests = () => {
     if (user && role === "owner") loadRequests();
   }, [user, role, authLoading, navigate]);
 
-  // ✅ LATEST + ONLY ACTIVE REQUESTS FILTER
-  // Shows only the most recent request per user per PG, and only if not paid
-  const latestActiveRequests = useMemo(() => {
+  // ✅ STEP 1: Keep only latest record per booking (no duplicates)
+  const uniqueRequests = useMemo(() => {
     const map = new Map();
-
-    requests.forEach((item) => {
-      const key = `${item.user_id}-${item.pg_id}`;
-
-      if (!map.has(key) || item.booking_id > map.get(key).booking_id) {
-        map.set(key, item);
+    
+    requests.forEach((r) => {
+      // Always keep latest row (based on id or created_at)
+      if (!map.has(r.booking_id) || map.get(r.booking_id).id < r.id) {
+        map.set(r.booking_id, r);
       }
     });
-
-    // Show only active (not paid)
-    return Array.from(map.values()).filter(
-      (r) => r.refund_status !== "paid"
-    );
+    
+    return Array.from(map.values());
   }, [requests]);
 
-  // Use filtered requests for PG grouping
+  // ✅ STEP 2: Show only valid vacate states (active lifecycle)
+  const activeRequests = useMemo(() => {
+    return uniqueRequests.filter(
+      (r) =>
+        r.status === "LEAVING" ||
+        r.refund_status !== "paid"
+    );
+  }, [uniqueRequests]);
+
+  // ✅ STEP 4: Hide completed rows
+  const finalRequests = useMemo(() => {
+    return activeRequests.filter(
+      (r) => !(r.status === "LEFT" && r.vacate_status === "completed")
+    );
+  }, [activeRequests]);
+
+  // Group by PG name using unique requests
   const pgGroups = useMemo(() => {
     const groups = {};
-    latestActiveRequests.forEach(req => {
+    finalRequests.forEach(req => {
       const name = req.pg_name || "Unknown PG";
       if (!groups[name]) groups[name] = [];
       groups[name].push(req);
     });
     return groups;
-  }, [latestActiveRequests]);
+  }, [finalRequests]);
 
   const pgStats = useMemo(() => {
     const stats = {};
