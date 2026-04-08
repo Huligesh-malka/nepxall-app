@@ -73,15 +73,12 @@ const ActionMenu = ({ item, damage, dues, setDamage, setDues, loadingId, onAppro
   const menuRef = useRef(null);
   useOutsideClick(menuRef, () => setOpen(false));
 
-  // ✅ FIXED: Approve button logic
   const canApprove =
     item.refund_status !== "paid" &&
     item.user_approval !== "accepted";
 
-  // ✅ FIXED: Mark Paid button logic
   const canMarkPaid = item.refund_status === "pending" && item.user_approval === "accepted";
 
-  // ✅ FIXED: Reject button logic
   const canReject =
     item.refund_status !== "paid" &&
     item.user_approval !== "accepted";
@@ -251,7 +248,6 @@ const PGDetailScreen = ({ pgName, requests, pgStats, damage, dues, setDamage, se
 
   return (
     <div style={s.container}>
-      {/* Header */}
       <div style={s.detailHeader}>
         <button onClick={onBack} style={s.backBtn}>← Back</button>
         <div style={{ flex: 1 }}>
@@ -260,7 +256,6 @@ const PGDetailScreen = ({ pgName, requests, pgStats, damage, dues, setDamage, se
         </div>
       </div>
 
-      {/* Summary badges */}
       <div style={s.summaryRow}>
         {stats.pending > 0 && <div style={{ ...s.summaryCard, borderLeft: "3px solid #d97706" }}><div style={s.summaryNum}>{stats.pending}</div><div style={s.summaryLabel}>Pending</div></div>}
         {stats.awaiting > 0 && <div style={{ ...s.summaryCard, borderLeft: "3px solid #f59e0b" }}><div style={s.summaryNum}>{stats.awaiting}</div><div style={s.summaryLabel}>Awaiting</div></div>}
@@ -269,7 +264,6 @@ const PGDetailScreen = ({ pgName, requests, pgStats, damage, dues, setDamage, se
         {stats.rejected > 0 && <div style={{ ...s.summaryCard, borderLeft: "3px solid #dc2626" }}><div style={s.summaryNum}>{stats.rejected}</div><div style={s.summaryLabel}>Rejected</div></div>}
       </div>
 
-      {/* Filters */}
       <div style={s.filterRow}>
         {FILTERS.map((f) => (
           <button key={f.key} onClick={() => setFilter(f.key)} style={{ ...s.filterChip, ...(filter === f.key ? s.filterChipActive : {}) }}>
@@ -279,7 +273,6 @@ const PGDetailScreen = ({ pgName, requests, pgStats, damage, dues, setDamage, se
         ))}
       </div>
 
-      {/* Cards */}
       <div style={s.cardsList}>
         {filtered.length === 0 ? (
           <div style={s.emptyState}>
@@ -330,15 +323,35 @@ const OwnerVacateRequests = () => {
     if (user && role === "owner") loadRequests();
   }, [user, role, authLoading, navigate]);
 
+  // ✅ LATEST + ONLY ACTIVE REQUESTS FILTER
+  // Shows only the most recent request per user per PG, and only if not paid
+  const latestActiveRequests = useMemo(() => {
+    const map = new Map();
+
+    requests.forEach((item) => {
+      const key = `${item.user_id}-${item.pg_id}`;
+
+      if (!map.has(key) || item.booking_id > map.get(key).booking_id) {
+        map.set(key, item);
+      }
+    });
+
+    // Show only active (not paid)
+    return Array.from(map.values()).filter(
+      (r) => r.refund_status !== "paid"
+    );
+  }, [requests]);
+
+  // Use filtered requests for PG grouping
   const pgGroups = useMemo(() => {
     const groups = {};
-    requests.forEach(req => {
+    latestActiveRequests.forEach(req => {
       const name = req.pg_name || "Unknown PG";
       if (!groups[name]) groups[name] = [];
       groups[name].push(req);
     });
     return groups;
-  }, [requests]);
+  }, [latestActiveRequests]);
 
   const pgStats = useMemo(() => {
     const stats = {};
@@ -364,7 +377,7 @@ const OwnerVacateRequests = () => {
       const token = await user.getIdToken();
       const res = await api.post(`/owner/vacate/approve/${bookingId}`, { damage_amount: Number(damage[bookingId]) || 0, pending_dues: Number(dues[bookingId]) || 0 }, { headers: { Authorization: `Bearer ${token}` } });
       alert(`Approved! Refund: ₹${res.data.refundAmount}`);
-      await loadRequests(); // ✅ force refresh
+      await loadRequests();
     } catch { alert("Approval failed"); } finally { setLoadingId(null); }
   };
 
@@ -374,7 +387,7 @@ const OwnerVacateRequests = () => {
       const token = await user.getIdToken();
       await api.post(`/owner/refund/reject/${bookingId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
       alert("Refund Rejected");
-      await loadRequests(); // ✅ force refresh
+      await loadRequests();
     } catch { alert("Reject failed"); } finally { setLoadingId(null); }
   };
 
@@ -384,7 +397,7 @@ const OwnerVacateRequests = () => {
       const token = await user.getIdToken();
       await api.post(`/owner/refund/mark-paid/${bookingId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
       alert("Payment Completed");
-      await loadRequests(); // ✅ force refresh
+      await loadRequests();
     } catch { alert("Payment failed"); } finally { setLoadingId(null); }
   };
 
@@ -480,7 +493,6 @@ const s = {
     cursor: "pointer",
     whiteSpace: "nowrap",
   },
-  /* PG Grid */
   pgGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
@@ -540,7 +552,6 @@ const s = {
     fontSize: 11,
     fontWeight: 600,
   },
-  /* Summary row */
   summaryRow: {
     display: "flex",
     gap: 12,
@@ -565,7 +576,6 @@ const s = {
     color: "#94a3b8",
     marginTop: 2,
   },
-  /* Filter row */
   filterRow: {
     display: "flex",
     gap: 8,
@@ -600,7 +610,6 @@ const s = {
   chipCountActive: {
     background: "rgba(255,255,255,0.25)",
   },
-  /* Cards list */
   cardsList: {
     display: "flex",
     flexDirection: "column",
@@ -729,7 +738,6 @@ const s = {
     fontSize: 12,
     color: "#78350f",
   },
-  /* Action menu */
   actionBtn: {
     background: "transparent",
     border: "none",
@@ -834,7 +842,6 @@ const s = {
     fontSize: 13,
     cursor: "pointer",
   },
-  /* Empty state */
   emptyState: {
     textAlign: "center",
     padding: "60px 20px",
