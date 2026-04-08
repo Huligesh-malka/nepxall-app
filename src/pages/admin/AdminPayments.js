@@ -210,22 +210,19 @@ const AdminPayments = () => {
               payments.map((p) => {
                 const displayName = p.reg_name || "Guest User";
                 const displayPhone = p.reg_phone || "N/A";
-                // Determine if approve button should be disabled
+                
+                // ✅ FIX 1: CORRECT BUTTON LOGIC
                 const isApproved = p.status === "paid" || p.status === "confirmed";
                 const isRejected = p.status === "rejected";
                 const isProcessing = processing === p.order_id;
                 
-                // Approve button disabled conditions:
-                // 1. Already approved (paid/confirmed)
-                // 2. Already rejected (to prevent action, but we want to allow re-approve after reject, so we don't disable based on reject alone)
-                // Actually, we want to allow approve after reject, so only disable if already approved or processing
+                // ✅ Approve disabled only if already approved OR processing
+                // (Allows re-approve after reject)
                 const isApproveDisabled = isApproved || isProcessing;
                 
-                // Reject button disabled conditions:
-                // 1. Already approved (cannot reject a paid payment)
-                // 2. Already processing
-                // 3. Already rejected (to prevent double reject)
-                const isRejectDisabled = isApproved || isProcessing || isRejected;
+                // ✅ Reject disabled only if already rejected OR processing
+                // (Allows reject after approve/paid)
+                const isRejectDisabled = isRejected || isProcessing;
                 
                 return (
                   <TableRow key={p.order_id} hover>
@@ -273,17 +270,29 @@ const AdminPayments = () => {
                         } 
                       />
                       {(p.status === "paid" || p.status === "confirmed") && (
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            color: "#16a34a",
-                            fontWeight: "bold",
-                            display: "block",
-                            mt: 1
-                          }}
-                        >
-                          ✅ User moved to ACTIVE (PG Users)
-                        </Typography>
+                        <>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: "#16a34a",
+                              fontWeight: "bold",
+                              display: "block",
+                              mt: 1
+                            }}
+                          >
+                            ✅ Approved (Can still reject)
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: "#6b7280",
+                              fontSize: "10px",
+                              display: "block"
+                            }}
+                          >
+                            User moved to ACTIVE (PG Users)
+                          </Typography>
+                        </>
                       )}
                       {p.status === "rejected" && (
                         <Typography
@@ -295,7 +304,7 @@ const AdminPayments = () => {
                             mt: 1
                           }}
                         >
-                          ⚠️ Payment rejected. User can re-upload proof.
+                          ⚠️ Payment rejected. Can re-approve.
                         </Typography>
                       )}
                     </TableCell>
@@ -314,7 +323,7 @@ const AdminPayments = () => {
                           </Tooltip>
                         )}
 
-                        {/* Approve Button - Enabled even after reject (if not already approved) */}
+                        {/* ✅ FIX 2: DYNAMIC BUTTON TEXT */}
                         <Button
                           variant="contained"
                           color="success"
@@ -325,10 +334,13 @@ const AdminPayments = () => {
                           onClick={() => approvePayment(p.order_id)}
                           sx={{ textTransform: 'none', borderRadius: '8px', fontWeight: '700' }}
                         >
-                          {isProcessing ? <CircularProgress size={16} color="inherit" /> : "Approve"}
+                          {isProcessing ? 
+                            <CircularProgress size={16} color="inherit" /> : 
+                            (p.status === "rejected" ? "Re-Approve" : "Approve")
+                          }
                         </Button>
                         
-                        {/* Reject Button - Disabled only if already approved or already rejected */}
+                        {/* Reject Button - Disabled only if already rejected */}
                         <Button
                           variant="outlined"
                           color="error"
