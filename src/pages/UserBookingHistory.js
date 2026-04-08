@@ -46,7 +46,8 @@ const UserBookingHistory = () => {
       setBookings(res.data || []);
       
       if (res.data && res.data.length > 0) {
-        await checkAllPaymentStatuses(res.data);
+        // ✅ THIRD FIX: Spread array to force re-render
+        await checkAllPaymentStatuses([...res.data]);
       }
     } catch (err) {
       console.error("Error loading bookings:", err);
@@ -72,7 +73,8 @@ const UserBookingHistory = () => {
         }
       }));
       
-      setPaymentStatuses(statusMap);
+      // ✅ SECOND FIX: Use spread to force React re-render
+      setPaymentStatuses({ ...statusMap });
     } catch (err) {
       console.error("Error checking payment statuses:", err);
     }
@@ -389,32 +391,22 @@ const UserBookingHistory = () => {
             
             const paymentDisplay = getPaymentStatusDisplay(booking.id, booking.status);
             
-            // ✅ FIXED: Show Pay button when:
-            // 1. Booking status is "approved" AND
-            // 2. Payment status is "pending", "rejected", or doesn't exist
-            // 3. Hide when payment is "submitted" or "paid"
-            // 4. Hide when booking is "confirmed"
+            // ✅ 🔥 MAIN FIX: Simplified Pay Button Logic
             const paymentStatus = paymentStatuses[booking.id];
-            let showPayButton = false;
             
-            if (booking.status === "approved") {
-              // Show pay button for pending, rejected, or no payment status
-              if (paymentStatus === "pending" || paymentStatus === "rejected" || !paymentStatus) {
-                showPayButton = true;
-              }
-              // Don't show for submitted or paid
-              if (paymentStatus === "submitted" || paymentStatus === "paid") {
-                showPayButton = false;
-              }
-            }
-            
-            // Never show pay button for confirmed bookings
-            if (booking.status === "confirmed") {
-              showPayButton = false;
-            }
+            // ✅ FINAL FIX: Replace complex logic with simple condition
+            const showPayButton =
+              booking.status === "approved" &&
+              paymentStatus !== "paid" &&
+              paymentStatus !== "submitted";
 
-            // Debug log to help troubleshoot
-            console.log(`Booking ${booking.id}: status=${booking.status}, paymentStatus=${paymentStatus}, showPayButton=${showPayButton}`);
+            // 🧪 DEBUG: Optional debug log
+            console.log("DEBUG:", {
+              bookingId: booking.id,
+              bookingStatus: booking.status,
+              paymentStatus,
+              showPayButton
+            });
 
             return (
               <div key={booking.id} style={styles.card}>
