@@ -1,5 +1,3 @@
-Here is the updated frontend code for the `ScanPG` component. It implements the "Check Paid" button flow with a confirmation checkbox and a "Join" button, matching your backend logic.
-```javascript
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -1332,8 +1330,9 @@ const styles = {
   }
 };
 
-const style = document.createElement('style');
-style.innerHTML = `
+// Add CSS animations
+const styleSheet = document.createElement("style");
+styleSheet.textContent = `
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
@@ -1350,6 +1349,6 @@ style.innerHTML = `
     }
   }
 `;
-document.head.appendChild(style);
+document.head.appendChild(styleSheet);
 
 export default ScanPG;
