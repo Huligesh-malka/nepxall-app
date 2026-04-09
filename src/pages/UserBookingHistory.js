@@ -20,6 +20,7 @@ const UserBookingHistory = () => {
   const [paymentData, setPaymentData] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+  const [submittingPayment, setSubmittingPayment] = useState(false); // New state for payment submission loading
   
   // Track submitted payments to prevent multiple submissions
   const [submittedPayments, setSubmittedPayments] = useState({});
@@ -142,7 +143,7 @@ const UserBookingHistory = () => {
     }
 
     try {
-      setUploading(true);
+      setSubmittingPayment(true);
       setError("");
 
       // Mark as submitted immediately
@@ -178,7 +179,7 @@ const UserBookingHistory = () => {
         return newState;
       });
     } finally {
-      setUploading(false);
+      setSubmittingPayment(false);
     }
   }, [paymentData, submittedPayments, loadBookings]);
 
@@ -670,9 +671,14 @@ const UserBookingHistory = () => {
               <button
                 style={styles.submitButton}
                 onClick={submitPayment}
-                disabled={submittedPayments[paymentData.bookingId]}
+                disabled={submittedPayments[paymentData.bookingId] || submittingPayment}
               >
-                {submittedPayments[paymentData.bookingId] ? (
+                {submittingPayment ? (
+                  <>
+                    <span style={styles.buttonSpinner}></span>
+                    Submitting...
+                  </>
+                ) : submittedPayments[paymentData.bookingId] ? (
                   <>
                     <span>⏳</span>
                     Payment Submitted - Waiting for Verification
