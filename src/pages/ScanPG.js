@@ -153,11 +153,23 @@ const ScanPG = () => {
     } catch (err) {
       console.error("Check-in error:", err);
       
-      // ✅ Set error status
-      setStatus({
-        success: false,
-        message: err.response?.data?.message || "❌ Check-in failed. Please try again."
-      });
+      // ✅ CRITICAL: Handle the 404/401 cases from backend
+      const errMsg = err.response?.data?.message || "❌ Check-in failed";
+      setStatus({ success: false, message: errMsg });
+      
+      // If user exists in Firebase but not in your MySQL DB
+      if (err.response?.status === 404) {
+        showNotificationMessage("Profile missing. Please complete registration.");
+        // Optionally redirect to registration completion
+        setTimeout(() => {
+          navigate("/register", { 
+            state: { 
+              redirectTo: `/scan/${id}`,
+              message: "Please complete your profile registration"
+            } 
+          });
+        }, 2000);
+      }
     }
   };
 
@@ -735,14 +747,18 @@ const ScanPG = () => {
         <span style={styles.viewDetailsArrow}>→</span>
       </button>
 
-      {/* ✅ FOOTER SECTION WITH SMALLER BUTTONS */}
+      {/* ✅ FOOTER SECTION WITH UPDATED BUTTON TEXT BASED ON JOINED STATE */}
       <div style={styles.footer}>
         <div style={styles.buttonGroup}>
+          {/* 🔥 FIXED: Button text changes based on joined state */}
           <button 
             onClick={handleCheckin} 
-            style={styles.checkinBtn}
+            style={{
+              ...styles.checkinBtn,
+              background: joined ? "#10b981" : "#4f46e5"
+            }}
           >
-            📍 {user ? 'Check-in' : 'Login'}
+            {joined ? '✅ Verified' : user ? '📍 Check-in' : '🔑 Login to Join'}
           </button>
 
           <button
@@ -1170,7 +1186,7 @@ const styles = {
   checkinBtn: {
     flex: 1,
     padding: "10px",
-    backgroundColor: "#f59e0b",
+    backgroundColor: "#4f46e5",
     color: "#ffffff",
     border: "none",
     borderRadius: "10px",
