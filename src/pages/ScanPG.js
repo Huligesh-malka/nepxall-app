@@ -24,6 +24,7 @@ const ScanPG = () => {
   const [joined, setJoined] = useState(false); // 🔥 FIX 1: Track if user has joined
   const [joinLoading, setJoinLoading] = useState(false); // 🔥 NEW: Loading state for join button
   const [confirmChecked, setConfirmChecked] = useState(false); // 🔥 NEW: Checkbox state
+  const [joinTriggered, setJoinTriggered] = useState(false); // 🔥 HARD LOCK for double API prevention
 
   useEffect(() => {
     fetchPG();
@@ -160,18 +161,20 @@ const ScanPG = () => {
     }
   };
 
-  // 🔥 UPDATED JOIN: Handles the actual DB insert after confirmation with extra safety
+  // 🔥 FINAL JOIN FIX: Hard lock to prevent double API calls
   const handleJoin = async () => {
-    // 🔥 EXTRA SAFETY: Prevent multiple calls
-    if (joinLoading || joined) return;
-
-    // 🔥 Safety check for no room selected
+    // 🔥 HARD LOCK - prevents any duplicate calls
+    if (joinLoading || joined || joinTriggered) return;
+    
+    setJoinTriggered(true); // 🔥 IMMEDIATE LOCK
+    setJoinLoading(true);
+    
+    // Safety check for no room selected
     if (!selectedRoom) {
       console.log("No room selected, joining without room");
     }
 
     try {
-      setJoinLoading(true);
       console.log("SENDING ROOM ID:", selectedRoom?.id || null);
       console.log("FINAL ROOM:", selectedRoom);
 
@@ -203,7 +206,10 @@ const ScanPG = () => {
       }
     } catch (err) {
       console.error("Join error:", err);
-
+      
+      // 🔥 Reset hard lock ONLY on error to allow retry
+      setJoinTriggered(false);
+      
       setStatus({
         success: false,
         message: err.response?.data?.message || "❌ Join failed"
@@ -549,18 +555,18 @@ const ScanPG = () => {
                 <span style={{ fontSize: "13px" }}>I confirm that I want to join this PG</span>
               </label>
 
-              {/* ✅ JOIN BUTTON */}
+              {/* ✅ JOIN BUTTON WITH HARD LOCK DISABLE */}
               <button 
                 onClick={handleJoin}
-                disabled={!confirmChecked || joinLoading}
+                disabled={!confirmChecked || joinLoading || joinTriggered}
                 style={{
                   marginTop: 12,
                   padding: "10px 20px",
-                  background: (!confirmChecked || joinLoading) ? "#9ca3af" : "#10b981",
+                  background: (!confirmChecked || joinLoading || joinTriggered) ? "#9ca3af" : "#10b981",
                   color: "white",
                   border: "none",
                   borderRadius: "8px",
-                  cursor: (!confirmChecked || joinLoading) ? "not-allowed" : "pointer",
+                  cursor: (!confirmChecked || joinLoading || joinTriggered) ? "not-allowed" : "pointer",
                   fontSize: "14px",
                   fontWeight: "600",
                   transition: "all 0.2s ease"
