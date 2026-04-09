@@ -47,6 +47,7 @@ const UserBookingHistory = () => {
       setBookings(res.data || []);
       
       if (res.data && res.data.length > 0) {
+        // ✅ THIRD FIX: Spread array to force re-render
         await checkAllPaymentStatuses([...res.data]);
       }
     } catch (err) {
@@ -73,6 +74,7 @@ const UserBookingHistory = () => {
         }
       }));
       
+      // ✅ SECOND FIX: Use spread to force React re-render
       setPaymentStatuses({ ...statusMap });
     } catch (err) {
       console.error("Error checking payment statuses:", err);
@@ -84,7 +86,7 @@ const UserBookingHistory = () => {
     loadBookings();
   }, [loadBookings]);
 
-  // 🔥 FIX 1: REMOVED paymentType from UI state - Backend still uses TOKEN/REMAINING internally
+  // 🔥 1. UPDATE handlePayNow - Send payment type based on booking status
   const handlePayNow = useCallback(async (booking) => {
     try {
       setPayingId(booking.id);
@@ -99,25 +101,25 @@ const UserBookingHistory = () => {
         throw new Error("Invalid payment amount");
       }
 
-      // ✅ Backend determines payment type from booking status
-      // No frontend paymentType needed
+      // 🔥 FIX: Determine payment type based on booking status
+      const isPartialPaid = booking.status === "PARTIAL_PAID";
+      
       const res = await api.post("/payments/create-payment", {
-        bookingId: booking.id
-        // Backend will check booking.status and decide TOKEN or REMAINING
+        bookingId: booking.id,
+        type: isPartialPaid ? "REMAINING" : "TOKEN"
       });
 
       if (!res.data.success) {
         throw new Error(res.data.message || "Payment initialization failed");
       }
 
-      // ✅ FIX: Store only what UI needs - NO paymentType in UI state
       setPaymentData({
         qr: res.data.qr,
         upiLink: res.data.upiLink,
         orderId: res.data.orderId,
         amount: res.data.amount,
-        bookingId: booking.id
-        // ❌ REMOVED: paymentType field
+        bookingId: booking.id,
+        paymentType: isPartialPaid ? "REMAINING" : "TOKEN"
       });
 
       setScreenshot(null);
@@ -155,7 +157,7 @@ const UserBookingHistory = () => {
     reader.readAsDataURL(file);
   }, []);
 
-  // 🔥 FIX 4: REMOVED paymentType from API submit
+  // Submit payment
   const submitPaymentWithScreenshot = useCallback(async () => {
     if (!screenshot) {
       alert("Please upload payment screenshot");
@@ -169,7 +171,9 @@ const UserBookingHistory = () => {
       const formData = new FormData();
       formData.append("orderId", paymentData.orderId);
       formData.append("screenshot", screenshot);
-      // ❌ REMOVED: paymentType field - Backend knows from order_id
+      if (paymentData.paymentType) {
+        formData.append("paymentType", paymentData.paymentType);
+      }
 
       const res = await api.post("/payments/submit-screenshot", formData, {
         headers: {
@@ -201,7 +205,7 @@ const UserBookingHistory = () => {
     }
   }, [screenshot, paymentData, loadBookings]);
 
-  // 🔥 FIX 5: Refresh QR - Backend determines type, NO paymentType needed
+  // Refresh QR
   const refreshQR = useCallback(async () => {
     if (!paymentData) return;
     
@@ -209,22 +213,24 @@ const UserBookingHistory = () => {
       setRefreshing(true);
       setError("");
       
-      // Backend will check booking status to determine TOKEN or REMAINING
+      const isPartialPaid = paymentData.paymentType === "REMAINING";
+      
       const res = await api.post("/payments/create-payment", {
-        bookingId: paymentData.bookingId
+        bookingId: paymentData.bookingId,
+        type: paymentData.paymentType || (isPartialPaid ? "REMAINING" : "TOKEN")
       });
 
       if (!res.data.success) {
         throw new Error(res.data.message || "Failed to refresh QR");
       }
 
-      // Update payment data - NO paymentType
       setPaymentData({
         qr: res.data.qr,
         upiLink: res.data.upiLink,
         orderId: res.data.orderId,
         amount: res.data.amount,
-        bookingId: paymentData.bookingId
+        bookingId: paymentData.bookingId,
+        paymentType: paymentData.paymentType
       });
       
     } catch (err) {
@@ -243,9 +249,11 @@ const UserBookingHistory = () => {
     setError("");
   }, []);
 
+  // 🔥 4. UPDATE getPaymentStatusDisplay - Add PARTIAL_PAID handling
   const getPaymentStatusDisplay = useCallback((bookingId, bookingStatus, totalAmount) => {
     const status = paymentStatuses[bookingId];
     
+    // 🔥 FIX: Handle PARTIAL_PAID status
     if (bookingStatus === "PARTIAL_PAID") {
       const remainingAmount = totalAmount - 1000;
       return {
@@ -315,6 +323,7 @@ const UserBookingHistory = () => {
     }
   }, [paymentStatuses]);
 
+  // Handle agreement form navigation
   const handleFillAgreement = useCallback((bookingId) => {
     navigate(`/agreement-form/${bookingId}`);
   }, [navigate]);
@@ -333,6 +342,7 @@ const UserBookingHistory = () => {
     return <Navigate to="/login" replace />;
   }
 
+  // Loading state
   if (loading) {
     return (
       <div style={styles.loadingContainer}>
@@ -342,6 +352,7 @@ const UserBookingHistory = () => {
     );
   }
 
+  // Error state
   if (error && !bookings.length) {
     return (
       <div style={styles.errorContainer}>
@@ -411,20 +422,30 @@ const UserBookingHistory = () => {
             
             const paymentDisplay = getPaymentStatusDisplay(booking.id, booking.status, total);
             
+            // 🔥 3. FIX SHOW BUTTON LOGIC - Simple condition for showing pay button
             const paymentStatus = paymentStatuses[booking.id];
             
-            // Show pay button for approved OR PARTIAL_PAID status
+            // ✅ FINAL FIX: Show pay button for approved OR PARTIAL_PAID status
             const showPayButton =
               (booking.status === "approved" || booking.status === "PARTIAL_PAID") &&
               paymentStatus !== "submitted";
 
-            // 🔥 FIX 3: Clean button text - NO "TOKEN" word
+            // 🔥 2. FIX PAY BUTTON TEXT - Dynamic text based on status
             const getPayButtonText = () => {
               if (booking.status === "PARTIAL_PAID") {
-                return `Pay Balance ₹${remainingAmount.toLocaleString()}`;
+                return `Pay Remaining ₹${remainingAmount.toLocaleString()}`;
               }
               return `Pay ₹1000`;
             };
+
+            // 🧪 DEBUG: Optional debug log
+            console.log("DEBUG:", {
+              bookingId: booking.id,
+              bookingStatus: booking.status,
+              paymentStatus,
+              showPayButton,
+              buttonText: getPayButtonText()
+            });
 
             return (
               <div key={booking.id} style={styles.card}>
@@ -649,13 +670,15 @@ const UserBookingHistory = () => {
         </div>
       )}
 
-      {/* 🔥 FIX 2: MODAL TITLE - Clean, no TOKEN/REMAINING */}
+      {/* Payment Modal */}
       {paymentData && (
         <div style={styles.modalOverlay} onClick={closeModal}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
             <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>Complete Your Payment</h2>
+              <h2 style={styles.modalTitle}>
+                {paymentData.paymentType === "REMAINING" ? "Pay Remaining Amount" : "Pay Token Amount"}
+              </h2>
               <button style={styles.modalClose} onClick={closeModal}>×</button>
             </div>
 
@@ -667,7 +690,7 @@ const UserBookingHistory = () => {
               </div>
             </div>
 
-            {/* 🔥 Order ID - Main identifier, NO TOKEN/REMAINING visible */}
+            {/* Order ID */}
             <div style={styles.orderIdSection}>
               <span style={styles.orderIdLabel}>Order ID:</span>
               <code style={styles.orderIdValue}>{paymentData.orderId}</code>
