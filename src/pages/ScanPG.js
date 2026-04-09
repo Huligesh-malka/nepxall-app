@@ -164,13 +164,14 @@ const ScanPG = () => {
   const handleJoin = async () => {
     if (joinLoading) return;
 
+    // 🔥 Safety check for no room selected
+    if (!selectedRoom) {
+      console.log("No room selected, joining without room");
+    }
+
     try {
-      
-
-      
-
       setJoinLoading(true);
-      console.log("SENDING ROOM ID:", selectedRoom.id);
+      console.log("SENDING ROOM ID:", selectedRoom?.id || null);
       console.log("FINAL ROOM:", selectedRoom);
 
       const token = await user.getIdToken();
@@ -193,7 +194,9 @@ const ScanPG = () => {
         setConfirmChecked(false); // 🔥 reset checkbox
         setStatus({
           success: true,
-          message: `🎉 PG Joined Successfully! Room ${res.data.room_no || selectedRoom.room_number}`
+          message: selectedRoom
+            ? `🎉 PG Joined Successfully! Room ${res.data.room_no || selectedRoom.room_number}`
+            : "🎉 PG Joined Successfully! You can select a room later"
         });
         fetchPG(); // Refresh occupancy counts
       }
