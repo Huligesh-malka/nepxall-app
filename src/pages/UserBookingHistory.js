@@ -33,7 +33,6 @@ const UserBookingHistory = () => {
     if (activeTab === "approved") return bookings.filter(b => b.status === "approved");
     if (activeTab === "confirmed") return bookings.filter(b => b.status === "confirmed");
     if (activeTab === "left") return bookings.filter(b => b.status === "left");
-    if (activeTab === "partial") return bookings.filter(b => b.status === "PARTIAL_PAID");
     return bookings;
   }, [bookings, activeTab]);
 
@@ -86,7 +85,7 @@ const UserBookingHistory = () => {
     loadBookings();
   }, [loadBookings]);
 
-  // 🔥 1. UPDATE handlePayNow - Send payment type based on booking status
+  // Create payment
   const handlePayNow = useCallback(async (booking) => {
     try {
       setPayingId(booking.id);
@@ -101,12 +100,8 @@ const UserBookingHistory = () => {
         throw new Error("Invalid payment amount");
       }
 
-      // 🔥 FIX: Determine payment type based on booking status
-      const isPartialPaid = booking.status === "PARTIAL_PAID";
-      
       const res = await api.post("/payments/create-payment", {
-        bookingId: booking.id,
-        type: isPartialPaid ? "REMAINING" : "TOKEN"
+        bookingId: booking.id
       });
 
       if (!res.data.success) {
@@ -118,8 +113,7 @@ const UserBookingHistory = () => {
         upiLink: res.data.upiLink,
         orderId: res.data.orderId,
         amount: res.data.amount,
-        bookingId: booking.id,
-        paymentType: isPartialPaid ? "REMAINING" : "TOKEN"
+        bookingId: booking.id
       });
 
       setScreenshot(null);
@@ -171,9 +165,6 @@ const UserBookingHistory = () => {
       const formData = new FormData();
       formData.append("orderId", paymentData.orderId);
       formData.append("screenshot", screenshot);
-      if (paymentData.paymentType) {
-        formData.append("paymentType", paymentData.paymentType);
-      }
 
       const res = await api.post("/payments/submit-screenshot", formData, {
         headers: {
@@ -194,7 +185,6 @@ const UserBookingHistory = () => {
       setScreenshot(null);
       setScreenshotPreview("");
       
-      // Reload bookings to get updated status
       loadBookings(false);
 
     } catch (err) {
@@ -213,11 +203,8 @@ const UserBookingHistory = () => {
       setRefreshing(true);
       setError("");
       
-      const isPartialPaid = paymentData.paymentType === "REMAINING";
-      
       const res = await api.post("/payments/create-payment", {
-        bookingId: paymentData.bookingId,
-        type: paymentData.paymentType || (isPartialPaid ? "REMAINING" : "TOKEN")
+        bookingId: paymentData.bookingId
       });
 
       if (!res.data.success) {
@@ -228,9 +215,8 @@ const UserBookingHistory = () => {
         qr: res.data.qr,
         upiLink: res.data.upiLink,
         orderId: res.data.orderId,
-        amount: res.data.amount,
-        bookingId: paymentData.bookingId,
-        paymentType: paymentData.paymentType
+        amount: paymentData.amount,
+        bookingId: paymentData.bookingId
       });
       
     } catch (err) {
@@ -249,21 +235,9 @@ const UserBookingHistory = () => {
     setError("");
   }, []);
 
-  // 🔥 4. UPDATE getPaymentStatusDisplay - Add PARTIAL_PAID handling
-  const getPaymentStatusDisplay = useCallback((bookingId, bookingStatus, totalAmount) => {
+  // Get payment status
+  const getPaymentStatusDisplay = useCallback((bookingId, bookingStatus) => {
     const status = paymentStatuses[bookingId];
-    
-    // 🔥 FIX: Handle PARTIAL_PAID status
-    if (bookingStatus === "PARTIAL_PAID") {
-      const remainingAmount = totalAmount - 1000;
-      return {
-        showPayButton: true,
-        showAgreementButton: false,
-        message: `₹1000 paid. Please pay remaining amount ₹${remainingAmount.toLocaleString()} to join.`,
-        badge: { text: "Partial Paid", style: "pending" },
-        canPay: true
-      };
-    }
     
     if (!status) {
       return {
@@ -376,7 +350,7 @@ const UserBookingHistory = () => {
       {/* Tabs */}
       {bookings.length > 0 && (
         <div style={styles.tabsContainer}>
-          {["all", "pending", "approved", "partial", "confirmed", "left"].map((tab) => (
+          {["all", "pending", "approved", "confirmed", "left"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -385,13 +359,9 @@ const UserBookingHistory = () => {
                 ...(activeTab === tab ? styles.activeTab : {})
               }}
             >
-              {tab === "partial" ? "Partial Paid" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
               <span style={styles.tabCount}>
-                {bookings.filter(b => {
-                  if (tab === "all") return true;
-                  if (tab === "partial") return b.status === "PARTIAL_PAID";
-                  return b.status === tab;
-                }).length}
+                {bookings.filter(b => tab === "all" ? true : b.status === tab).length}
               </span>
             </button>
           ))}
@@ -418,33 +388,24 @@ const UserBookingHistory = () => {
             const deposit = Number(booking.security_deposit || 0);
             const maintenance = Number(booking.maintenance_amount || 0);
             const total = Number(booking.total_amount) || rent + deposit + maintenance;
-            const remainingAmount = total - 1000;
             
-            const paymentDisplay = getPaymentStatusDisplay(booking.id, booking.status, total);
+            const paymentDisplay = getPaymentStatusDisplay(booking.id, booking.status);
             
-            // 🔥 3. FIX SHOW BUTTON LOGIC - Simple condition for showing pay button
+            // ✅ 🔥 MAIN FIX: Simplified Pay Button Logic
             const paymentStatus = paymentStatuses[booking.id];
             
-            // ✅ FINAL FIX: Show pay button for approved OR PARTIAL_PAID status
+            // ✅ FINAL FIX: Replace complex logic with simple condition
             const showPayButton =
-              (booking.status === "approved" || booking.status === "PARTIAL_PAID") &&
+              booking.status === "approved" &&
+              paymentStatus !== "paid" &&
               paymentStatus !== "submitted";
-
-            // 🔥 2. FIX PAY BUTTON TEXT - Dynamic text based on status
-            const getPayButtonText = () => {
-              if (booking.status === "PARTIAL_PAID") {
-                return `Pay Remaining ₹${remainingAmount.toLocaleString()}`;
-              }
-              return `Pay ₹1000`;
-            };
 
             // 🧪 DEBUG: Optional debug log
             console.log("DEBUG:", {
               bookingId: booking.id,
               bookingStatus: booking.status,
               paymentStatus,
-              showPayButton,
-              buttonText: getPayButtonText()
+              showPayButton
             });
 
             return (
@@ -460,11 +421,10 @@ const UserBookingHistory = () => {
                       ...styles.statusBadge,
                       ...(booking.status === "confirmed" ? styles.statusConfirmed :
                          booking.status === "approved" ? styles.statusApproved :
-                         booking.status === "PARTIAL_PAID" ? styles.statusPartial :
                          booking.status === "left" ? styles.statusLeft :
                          styles.statusPending)
                     }}>
-                      {booking.status === "PARTIAL_PAID" ? "Partial Paid" : booking.status}
+                      {booking.status}
                     </span>
                     {paymentDisplay.badge && (
                       <span style={{
@@ -548,14 +508,6 @@ const UserBookingHistory = () => {
                       <span>Total Amount</span>
                       <span>₹{total.toLocaleString()}</span>
                     </div>
-
-                    {/* Show paid amount for partial payments */}
-                    {booking.status === "PARTIAL_PAID" && (
-                      <div style={styles.paidAmountRow}>
-                        <span>Already Paid</span>
-                        <span style={{ color: "#10b981" }}>₹1,000</span>
-                      </div>
-                    )}
                   </div>
 
                   {/* Message if any */}
@@ -620,7 +572,7 @@ const UserBookingHistory = () => {
                           ) : (
                             <>
                               <span>💳</span>
-                              {getPayButtonText()}
+                              Pay ₹{total.toLocaleString()}
                             </>
                           )}
                         </button>
@@ -640,7 +592,7 @@ const UserBookingHistory = () => {
                     </div>
                   </div>
 
-                  {/* LEFT STATUS UI */}
+                  {/* ✅ FIX 3: LEFT STATUS UI */}
                   {booking.status === "left" && (
                     <div style={{
                       marginTop: 16,
@@ -676,9 +628,7 @@ const UserBookingHistory = () => {
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
             <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>
-                {paymentData.paymentType === "REMAINING" ? "Pay Remaining Amount" : "Pay Token Amount"}
-              </h2>
+              <h2 style={styles.modalTitle}>Complete Payment</h2>
               <button style={styles.modalClose} onClick={closeModal}>×</button>
             </div>
 
@@ -1008,11 +958,6 @@ const styles = {
     color: "#fff",
   },
   
-  statusPartial: {
-    background: "#f59e0b",
-    color: "#fff",
-  },
-  
   statusPending: {
     background: "#f59e0b",
     color: "#fff",
@@ -1120,17 +1065,6 @@ const styles = {
     fontSize: 16,
     fontWeight: 700,
     color: "#1f2937",
-  },
-  
-  paidAmountRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    marginTop: 8,
-    paddingTop: 8,
-    fontSize: 14,
-    fontWeight: 600,
-    color: "#10b981",
-    borderTop: "1px dashed #e5e7eb",
   },
   
   messageBox: {

@@ -211,16 +211,18 @@ const AdminPayments = () => {
                 const displayName = p.reg_name || "Guest User";
                 const displayPhone = p.reg_phone || "N/A";
                 
-                // ✅ FIX 3: CORRECT BUTTON LOGIC USING NEW STATUS
-                const isFullyPaid = p.status === "FULLY_PAID";
-                const isPartiallyPaid = p.status === "PARTIAL_PAID";
+                // ✅ FIX 1: CORRECT BUTTON LOGIC
+                const isApproved = p.status === "paid" || p.status === "confirmed";
+                const isRejected = p.status === "rejected";
                 const isProcessing = processing === p.order_id;
                 
-                // ❌ disable approve only if fully paid
-                const isApproveDisabled = isFullyPaid || isProcessing;
+                // ✅ Approve disabled only if already approved OR processing
+                // (Allows re-approve after reject)
+                const isApproveDisabled = isApproved || isProcessing;
                 
-                // ❌ disable reject only if processing
-                const isRejectDisabled = isProcessing;
+                // ✅ Reject disabled only if already rejected OR processing
+                // (Allows reject after approve/paid)
+                const isRejectDisabled = isRejected || isProcessing;
                 
                 return (
                   <TableRow key={p.order_id} hover>
@@ -247,70 +249,65 @@ const AdminPayments = () => {
                         sx={{ height: '20px', fontSize: '10px', mt: 0.5, fontWeight: 'bold' }} 
                       />
                     </TableCell>
-                    
-                    {/* ✅ FIX 1: AMOUNT COLUMN WITH TOTAL/PAID/REMAINING */}
-                    <TableCell>
-                      <Typography fontWeight="800" color={DARK_TEXT}>
-                        Total: ₹{p.total_amount}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: "#16a34a", fontWeight: "600" }}>
-                        Paid: ₹{p.total_paid || 0}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: "#dc2626", display: "block", fontWeight: "600" }}>
-                        Remaining: ₹{p.remaining_amount || 0}
-                      </Typography>
-                    </TableCell>
-                    
+                    <TableCell><Typography fontWeight="800" color={DARK_TEXT}>₹{p.total_amount || p.amount}</Typography></TableCell>
                     <TableCell>
                       <Typography variant="caption" display="block" sx={{ fontFamily: "monospace", color: "#707EAE" }}>{p.order_id}</Typography>
                       {p.utr && <Typography variant="caption" sx={{ color: BRAND_GREEN, fontWeight: 'bold' }}>UTR: {p.utr}</Typography>}
                     </TableCell>
-                    
-                    {/* ✅ FIX 2: STATUS LOGIC WITH NEW BACKEND STATUS */}
                     <TableCell>
                       <Chip 
-                        label={p.status} 
+                        label={p.status.toUpperCase()} 
                         size="small" 
                         sx={{ fontWeight: '800', borderRadius: '6px' }}
                         color={
-                          p.status === "FULLY_PAID"
+                          p.status === "paid" || p.status === "confirmed"
                             ? "success"
-                            : p.status === "PARTIAL_PAID"
+                            : p.status === "submitted" || p.status === "approved"
                             ? "warning"
+                            : p.status === "rejected"
+                            ? "error"
                             : "default"
                         } 
                       />
-                      
-                      {/* ✅ FIX 5: EXTRA STATUS MESSAGES */}
-                      {p.status === "PARTIAL_PAID" && (
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            color: "#f59e0b",
-                            fontWeight: "bold",
-                            display: "block",
-                            mt: 1
-                          }}
-                        >
-                          ⚠️ Partial payment done. Waiting for remaining.
-                        </Typography>
+                      {(p.status === "paid" || p.status === "confirmed") && (
+                        <>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: "#16a34a",
+                              fontWeight: "bold",
+                              display: "block",
+                              mt: 1
+                            }}
+                          >
+                            ✅ Approved (Can still reject)
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: "#6b7280",
+                              fontSize: "10px",
+                              display: "block"
+                            }}
+                          >
+                            User moved to ACTIVE (PG Users)
+                          </Typography>
+                        </>
                       )}
-
-                      {p.status === "FULLY_PAID" && (
+                      {p.status === "rejected" && (
                         <Typography
                           variant="caption"
                           sx={{
-                            color: "#16a34a",
+                            color: "#dc2626",
                             fontWeight: "bold",
                             display: "block",
                             mt: 1
                           }}
                         >
-                          ✅ Fully paid - User Active
+                          ⚠️ Payment rejected. Can re-approve.
                         </Typography>
                       )}
                     </TableCell>
-                    
                     <TableCell align="center">
                       <Stack direction="row" spacing={1} justifyContent="center">
                         {p.screenshot && (
@@ -326,7 +323,7 @@ const AdminPayments = () => {
                           </Tooltip>
                         )}
 
-                        {/* ✅ FIX 4: SMART BUTTON TEXT BASED ON PARTIAL/FULL */}
+                        {/* ✅ FIX 2: DYNAMIC BUTTON TEXT */}
                         <Button
                           variant="contained"
                           color="success"
@@ -339,10 +336,11 @@ const AdminPayments = () => {
                         >
                           {isProcessing ? 
                             <CircularProgress size={16} color="inherit" /> : 
-                            (isPartiallyPaid ? "Approve Remaining" : "Approve")
+                            (p.status === "rejected" ? "Re-Approve" : "Approve")
                           }
                         </Button>
                         
+                        {/* Reject Button - Disabled only if already rejected */}
                         <Button
                           variant="outlined"
                           color="error"
@@ -356,26 +354,24 @@ const AdminPayments = () => {
                         </Button>
                       </Stack>
                     </TableCell>
-                    
-                    {/* ✅ FIX 6: DISABLE RECEIPT UNLESS FULLY PAID */}
                     <TableCell align="center">
                       <Stack direction="row" spacing={0.5} justifyContent="center">
-                        <Tooltip title={p.status === "FULLY_PAID" ? "Download PDF" : "Only available for fully paid payments"}>
+                        <Tooltip title={(p.status === "paid" || p.status === "confirmed") ? "Download PDF" : "Wait for approval"}>
                           <span>
                             <IconButton 
                               color="primary" 
-                              disabled={p.status !== "FULLY_PAID" || isGenerating} 
+                              disabled={(p.status !== "paid" && p.status !== "confirmed") || isGenerating} 
                               onClick={() => handleDownloadReceipt(p)}
                             >
                               <ReceiptLongIcon />
                             </IconButton>
                           </span>
                         </Tooltip>
-                        <Tooltip title={p.status === "FULLY_PAID" ? "WhatsApp Notify" : "Only available for fully paid payments"}>
+                        <Tooltip title={(p.status === "paid" || p.status === "confirmed") ? "WhatsApp Notify" : "Wait for approval"}>
                           <span>
                             <IconButton 
                               sx={{ color: "#25D366" }} 
-                              disabled={p.status !== "FULLY_PAID"} 
+                              disabled={(p.status !== "paid" && p.status !== "confirmed")} 
                               onClick={() => handleWhatsAppShare(p)}
                             >
                               <WhatsAppIcon />
