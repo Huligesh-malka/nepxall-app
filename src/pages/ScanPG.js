@@ -160,9 +160,10 @@ const ScanPG = () => {
     }
   };
 
-  // 🔥 UPDATED JOIN: Handles the actual DB insert after confirmation
+  // 🔥 UPDATED JOIN: Handles the actual DB insert after confirmation with extra safety
   const handleJoin = async () => {
-    if (joinLoading) return;
+    // 🔥 EXTRA SAFETY: Prevent multiple calls
+    if (joinLoading || joined) return;
 
     // 🔥 Safety check for no room selected
     if (!selectedRoom) {
@@ -534,7 +535,7 @@ const ScanPG = () => {
             {status.message}
           </p>
 
-          {/* 🔥 NEW: Show confirm join button with checkbox when user gets "Are you sure" message */}
+          {/* 🔥 ONLY ONE JOIN BUTTON: Show confirm join button with checkbox when user gets "Are you sure" message */}
           {!joined && status?.message?.includes("Are you sure") && (
             <div style={{ marginTop: 12 }}>
 
@@ -571,32 +572,11 @@ const ScanPG = () => {
             </div>
           )}
 
-          {/* Optional: Show join button for "Select a room" message as well */}
-          {!joined && status?.message?.includes("Select a room") && selectedRoom && (
-            <button 
-              onClick={handleJoin}
-              disabled={joinLoading}
-              style={{
-                marginTop: 12,
-                padding: "10px 20px",
-                background: joinLoading ? "#9ca3af" : "#10b981",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                cursor: joinLoading ? "not-allowed" : "pointer",
-                fontSize: "14px",
-                fontWeight: "600",
-                transition: "all 0.2s ease"
-              }}
-            >
-              {joinLoading ? "⏳ Joining..." : "✅ Join PG"}
-            </button>
-          )}
+          {/* 🔥 REMOVED: The duplicate "Select a room" join button that was causing double API calls */}
 
           {/* 🔥 Optional: Show retry button for other errors */}
           {!status.success && 
            status.message && 
-           !status.message.includes("Select a room") && 
            !status.message.includes("Are you sure") && (
             <button 
               onClick={handleCheckin}
