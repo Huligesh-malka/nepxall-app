@@ -67,100 +67,76 @@ const ScanPG = () => {
     return null;
   };
 
-  // 🔥 UPDATED CHECK-IN: Better UX for new users with auto-scroll and CONFIRM_JOIN handling
+  // ✅ UPDATED CHECK-IN: Matches the new "Automatic" backend logic
   const handleCheckin = async () => {
     try {
-      // ✅ Redirect with state if not logged in
       if (!user) {
-        navigate("/login", {
-          state: { redirectTo: `/scan/${id}` }
-        });
+        navigate("/login", { state: { redirectTo: `/scan/${id}` } });
         return;
       }
 
-      // ✅ Debug logging
-      console.log("USER:", user);
-      
       const token = await user.getIdToken();
-      console.log("TOKEN:", token ? "Present" : "Missing");
-
+      
       const res = await api.post(
         `/scan/checkin`,
         { pg_id: id },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       const data = res.data;
 
-      // 🔥 HANDLE CONFIRM_JOIN CASE (New confirmation flow)
-      if (data.type === "CONFIRM_JOIN") {
-        setStatus({
-          success: false,
-          message: data.message || "⚠️ Are you sure you want to join this PG? Select a room and confirm."
-        });
-        // Smooth scroll to room section
-        document.getElementById('room-selector')?.scrollIntoView({ behavior: 'smooth' });
-        return;
-      }
-
-      // 🔥 HANDLE NOT_JOINED CASE
-      if (data.type === "NOT_JOINED") {
-        setStatus({
-          success: false,
-          message: "🏠 Step 1: Select a room below and click 'Join PG'"
-        });
-        // Smooth scroll to room section
-        document.getElementById('room-selector')?.scrollIntoView({ behavior: 'smooth' });
-        return;
-      }
-
-      if (data.type === "NOT_PAID") {
-        setStatus({
-          success: false,
-          message: "❌ You have not paid. Please pay first"
-        });
-        return;
-      }
-
-      if (data.type === "READY_TO_JOIN") {
-        setStatus({
-          success: false,
-          message: "Select a room to join"
-        });
-        return;
-      }
-
-      if (data.type === "SUCCESS") {
+      // 1. SUCCESS: Already joined (Verified)
+      if (data.type === "ALREADY_JOINED" || (data.success === true && data.type !== "CONFIRM_JOIN")) {
         setStatus({
           success: true,
-          message: data.message || "✅ ACCESS GRANTED"
+          message: "✅ Verified: You have already joined this PG."
         });
         setJoined(true);
         return;
       }
 
-      // Fallback
-      setStatus({
-        success: true,
-        message: res.data.message || "✅ Check-in successful!"
-      });
-      setJoined(true);
+      // 2. TRIGGER: Found a paid booking, now show the RED "Confirm Join" box
+      if (data.type === "CONFIRM_JOIN") {
+        setStatus({
+          success: false, // Keeps it red/yellow for attention
+          message: data.message || "⚠️ Are you sure you want to join this PG? Select a room and confirm below."
+        });
+        // Scroll to room selector so they can pick a room before hitting Confirm
+        document.getElementById('room-selector')?.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+
+      // 3. ERROR: No payment found
+      if (data.type === "NOT_PAID") {
+        setStatus({
+          success: false,
+          message: "❌ No paid booking found. Please complete payment first."
+        });
+        return;
+      }
+
+      // Fallback for any other unexpected types
+      if (data.success) {
+        setStatus({
+          success: true,
+          message: data.message || "✅ Check-in successful!"
+        });
+        setJoined(true);
+      } else {
+        setStatus({
+          success: false,
+          message: data.message || "❌ Check-in failed"
+        });
+      }
 
     } catch (err) {
       console.error("Check-in error:", err);
-      
-      // ✅ CRITICAL: Handle the 404/401 cases from backend
       const errMsg = err.response?.data?.message || "❌ Check-in failed";
       setStatus({ success: false, message: errMsg });
       
       // If user exists in Firebase but not in your MySQL DB
       if (err.response?.status === 404) {
         showNotificationMessage("Profile missing. Please complete registration.");
-        // Optionally redirect to registration completion
         setTimeout(() => {
           navigate("/register", { 
             state: { 
@@ -173,7 +149,7 @@ const ScanPG = () => {
     }
   };
 
-  // 🔥 FINAL JOIN FIX: Hard lock to prevent double API calls
+  // 🔥 FINAL JOIN FIX: Hard lock to prevent double API calls - matches automatic backend
   const handleJoin = async () => {
     // 🔥 HARD LOCK - prevents any duplicate calls
     if (joinLoading || joined || joinTriggered) return;
@@ -181,9 +157,9 @@ const ScanPG = () => {
     setJoinTriggered(true); // 🔥 IMMEDIATE LOCK
     setJoinLoading(true);
     
-    // Safety check for no room selected
+    // Safety check for no room selected - backend will handle room assignment automatically if null
     if (!selectedRoom) {
-      console.log("No room selected, joining without room");
+      console.log("No room selected, joining without room (backend will auto-assign from booking)");
     }
 
     try {
@@ -196,7 +172,7 @@ const ScanPG = () => {
         `/scan/join`,
         {
           pg_id: id,
-          room_id: selectedRoom?.id || null
+          room_id: selectedRoom?.id || null  // Backend will use booking's room_id if this is null
         },
         {
           headers: {
@@ -210,11 +186,16 @@ const ScanPG = () => {
         setConfirmChecked(false); // 🔥 reset checkbox
         setStatus({
           success: true,
-          message: selectedRoom
-            ? `🎉 PG Joined Successfully! Room ${res.data.room_no || selectedRoom.room_number}`
-            : "🎉 PG Joined Successfully! You can select a room later"
+          message: res.data.message || "🎉 PG Joined Successfully!"
         });
         fetchPG(); // Refresh occupancy counts
+      } else {
+        // If API returns success false but not an error
+        setStatus({
+          success: false,
+          message: res.data.message || "❌ Join failed"
+        });
+        setJoinTriggered(false); // Allow retry on non-success response
       }
     } catch (err) {
       console.error("Join error:", err);
@@ -535,7 +516,7 @@ const ScanPG = () => {
         </div>
       )}
 
-      {/* ✅ UPDATED STATUS UI WITH JOIN BUTTON - NEW CONFIRMATION FLOW */}
+      {/* ✅ UPDATED STATUS UI WITH JOIN BUTTON - MATCHES BACKEND "CONFIRM_JOIN" FLOW */}
       {status && (
         <div style={{
           marginTop: 20,
@@ -553,11 +534,11 @@ const ScanPG = () => {
             {status.message}
           </p>
 
-          {/* 🔥 ONLY ONE JOIN BUTTON: Show confirm join button with checkbox when user gets "Are you sure" message */}
-          {!joined && status?.message?.includes("Are you sure") && (
+          {/* 🔥 SHOW CONFIRM JOIN BUTTON WITH CHECKBOX WHEN BACKEND RETURNS CONFIRM_JOIN */}
+          {!joined && status.message?.includes("Are you sure") && (
             <div style={{ marginTop: 12 }}>
 
-              {/* ✅ CHECKBOX */}
+              {/* ✅ CHECKBOX FOR CONFIRMATION */}
               <label style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", cursor: "pointer" }}>
                 <input
                   type="checkbox"
@@ -590,9 +571,7 @@ const ScanPG = () => {
             </div>
           )}
 
-          {/* 🔥 REMOVED: The duplicate "Select a room" join button that was causing double API calls */}
-
-          {/* 🔥 Optional: Show retry button for other errors */}
+          {/* 🔥 Show Try Again button for errors that are not the confirmation flow */}
           {!status.success && 
            status.message && 
            !status.message.includes("Are you sure") && (
