@@ -120,17 +120,12 @@ const ScanPG = () => {
         return;
       }
 
-      // ❌ CASE: Payment pending
+      // ❌ CASE: Payment pending - NO REDIRECT, user stays on page
       if (data.type === "PAYMENT_PENDING") {
         setStatus({
           success: false,
-          message: "💰 Payment required. Redirecting..."
+          message: "💰 Payment pending. Please complete payment from My Bookings."
         });
-
-        // Redirect to payment page after 1.5 seconds
-        setTimeout(() => {
-          navigate(`/payment/${id}`);
-        }, 1500);
         return;
       }
 
