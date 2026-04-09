@@ -165,21 +165,9 @@ const ScanPG = () => {
     if (joinLoading) return;
 
     try {
-      if (!selectedRoom) {
-        setStatus({
-          success: false,
-          message: "❌ Please select a room first"
-        });
-        return;
-      }
+      
 
-      if (!selectedRoom?.id) {
-        setStatus({
-          success: false,
-          message: "❌ Room ID missing. Please reselect room"
-        });
-        return;
-      }
+      
 
       setJoinLoading(true);
       console.log("SENDING ROOM ID:", selectedRoom.id);
@@ -191,7 +179,7 @@ const ScanPG = () => {
         `/scan/join`,
         {
           pg_id: id,
-          room_id: selectedRoom.id
+          room_id: selectedRoom?.id || null
         },
         {
           headers: {
