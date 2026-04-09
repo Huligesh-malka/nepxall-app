@@ -4,14 +4,13 @@ import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import { API_CONFIG } from "../config";
 import api from "../api/api";
-import { X, BookOpen, Phone, MapPin, Check, Info } from "lucide-react";
+import { X, BookOpen, Phone, MapPin, Check, Info, AlertCircle } from "lucide-react";
 
 const ScanPG = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ USE AUTH CONTEXT
   const { user, loading: authLoading } = useAuth();
 
   const [pg, setPg] = useState(null);
@@ -20,15 +19,20 @@ const ScanPG = () => {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [notification, setNotification] = useState(null);
-  const [status, setStatus] = useState(null); // ✅ For check-in status
-  const [joined, setJoined] = useState(false); // 🔥 FIX 1: Track if user has joined
-  const [joinLoading, setJoinLoading] = useState(false); // 🔥 NEW: Loading state for join button
-  const [confirmChecked, setConfirmChecked] = useState(false); // 🔥 NEW: Checkbox state
-  const [joinTriggered, setJoinTriggered] = useState(false); // 🔥 HARD LOCK for double API prevention
+  const [status, setStatus] = useState(null);
+  const [joined, setJoined] = useState(false);
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [confirmChecked, setConfirmChecked] = useState(false);
+  const [showConfirmBox, setShowConfirmBox] = useState(false);
+  const [bookingId, setBookingId] = useState(null);
 
   useEffect(() => {
     fetchPG();
-  }, [id]);
+    // Check if user has already joined on page load
+    if (user) {
+      checkExistingJoin();
+    }
+  }, [id, user]);
 
   const fetchPG = async () => {
     try {
@@ -46,35 +50,45 @@ const ScanPG = () => {
     }
   };
 
+  const checkExistingJoin = async () => {
+    try {
+      const token = await user.getIdToken();
+      const res = await api.post(
+        `/scan/checkin`,
+        { pg_id: id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (res.data.type === "ALREADY_JOINED" || res.data.success === true) {
+        setJoined(true);
+        setStatus({
+          success: true,
+          message: "✅ You have successfully joined this PG",
+        });
+      }
+    } catch (err) {
+      console.log("Check existing join error:", err);
+    }
+  };
+
   const handleRoomSelection = (room) => {
-    console.log("Selected Room:", room);
+    if (room.available_beds === 0) return;
     setSelectedRoom(room);
   };
 
-  const getSelectedPrice = () => {
-    if (selectedRoom) return selectedRoom.price;
-    return null;
-  };
-
-  const getSelectedDetails = () => {
-    if (selectedRoom) {
-      return {
-        type: "room",
-        name: `Room ${selectedRoom.room_number} (${selectedRoom.sharing_type})`,
-        price: selectedRoom.price
-      };
-    }
-    return null;
-  };
-
-  // ✅ UPDATED CHECK-IN: Matches the new "Automatic" backend logic
+  // ✅ CHECK-IN BUTTON HANDLER
   const handleCheckin = async () => {
-    try {
-      if (!user) {
-        navigate("/login", { state: { redirectTo: `/scan/${id}` } });
-        return;
-      }
+    if (!user) {
+      navigate("/login", { state: { redirectTo: `/scan/${id}` } });
+      return;
+    }
 
+    // Reset states
+    setShowConfirmBox(false);
+    setConfirmChecked(false);
+    setStatus(null);
+
+    try {
       const token = await user.getIdToken();
       
       const res = await api.post(
@@ -85,52 +99,53 @@ const ScanPG = () => {
 
       const data = res.data;
 
-      // 1. SUCCESS: Already joined (Verified)
-      if (data.type === "ALREADY_JOINED" || (data.success === true && data.type !== "CONFIRM_JOIN")) {
+      // Case 1: Already joined
+      if (data.type === "ALREADY_JOINED") {
+        setJoined(true);
         setStatus({
           success: true,
-          message: "✅ Verified: You have already joined this PG.",
-          type: data.type
+          message: data.message || "✅ You have already joined this PG",
         });
-        setJoined(true);
         return;
       }
 
-      // 2. TRIGGER: Found a paid booking, now show the RED "Confirm Join" box
+      // Case 2: Found paid booking - Show confirmation box
       if (data.type === "CONFIRM_JOIN") {
+        setBookingId(data.booking_id);
+        setShowConfirmBox(true);
         setStatus({
-          success: false, // Keeps it red/yellow for attention
-          message: data.message || "⚠️ Valid booking found! Confirm to join this PG.",
-          type: "CONFIRM_JOIN" // 🔥 CRITICAL: Store type for UI condition
+          success: false,
+          message: data.message || "⚠️ Valid booking found! Please confirm to join.",
+          type: "CONFIRM_JOIN"
         });
-        // Scroll to room selector so they can pick a room before hitting Confirm
-        document.getElementById('room-selector')?.scrollIntoView({ behavior: 'smooth' });
+        // Scroll to confirmation box
+        document.getElementById('confirm-box')?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
         return;
       }
 
-      // 3. ERROR: No payment found
+      // Case 3: No payment found
       if (data.type === "NOT_PAID") {
         setStatus({
           success: false,
           message: "❌ No paid booking found. Please complete payment first.",
-          type: data.type
         });
         return;
       }
 
-      // Fallback for any other unexpected types
+      // Default case
       if (data.success) {
+        setJoined(true);
         setStatus({
           success: true,
           message: data.message || "✅ Check-in successful!",
-          type: data.type
         });
-        setJoined(true);
       } else {
         setStatus({
           success: false,
           message: data.message || "❌ Check-in failed",
-          type: data.type
         });
       }
 
@@ -139,7 +154,6 @@ const ScanPG = () => {
       const errMsg = err.response?.data?.message || "❌ Check-in failed";
       setStatus({ success: false, message: errMsg });
       
-      // If user exists in Firebase but not in your MySQL DB
       if (err.response?.status === 404) {
         showNotificationMessage("Profile missing. Please complete registration.");
         setTimeout(() => {
@@ -154,30 +168,20 @@ const ScanPG = () => {
     }
   };
 
-  // 🔥 FINAL JOIN FIX: Hard lock to prevent double API calls - matches automatic backend
+  // ✅ JOIN BUTTON HANDLER - Called when user confirms
   const handleJoin = async () => {
-    // 🔥 HARD LOCK - prevents any duplicate calls
-    if (joinLoading || joined || joinTriggered) return;
+    if (joinLoading || joined) return;
     
-    setJoinTriggered(true); // 🔥 IMMEDIATE LOCK
     setJoinLoading(true);
-    
-    // Safety check for no room selected - backend will handle room assignment automatically if null
-    if (!selectedRoom) {
-      console.log("No room selected, joining without room (backend will auto-assign from booking)");
-    }
 
     try {
-      console.log("SENDING ROOM ID:", selectedRoom?.id || null);
-      console.log("FINAL ROOM:", selectedRoom);
-
       const token = await user.getIdToken();
 
       const res = await api.post(
         `/scan/join`,
         {
           pg_id: id,
-          room_id: selectedRoom?.id || null  // Backend will use booking's room_id if this is null
+          room_id: selectedRoom?.id || null
         },
         {
           headers: {
@@ -188,30 +192,25 @@ const ScanPG = () => {
 
       if (res.data.success) {
         setJoined(true);
-        setConfirmChecked(false); // 🔥 reset checkbox
-        setJoinTriggered(false); // Reset lock on success
+        setShowConfirmBox(false);
+        setConfirmChecked(false);
         setStatus({
           success: true,
-          message: res.data.message || "🎉 PG Joined Successfully!"
+          message: res.data.message || "🎉 Successfully joined PG!"
         });
-        fetchPG(); // Refresh occupancy counts
+        fetchPG(); // Refresh data
+        showNotificationMessage("🎉 Successfully joined PG!");
       } else {
-        // If API returns success false but not an error
         setStatus({
           success: false,
           message: res.data.message || "❌ Join failed"
         });
-        setJoinTriggered(false); // Allow retry on non-success response
       }
     } catch (err) {
       console.error("Join error:", err);
-      
-      // 🔥 Reset hard lock ONLY on error to allow retry
-      setJoinTriggered(false);
-      
       setStatus({
         success: false,
-        message: err.response?.data?.message || "❌ Join failed"
+        message: err.response?.data?.message || "❌ Join failed. Please try again."
       });
     } finally {
       setJoinLoading(false);
@@ -219,8 +218,7 @@ const ScanPG = () => {
   };
 
   const handleBookNow = () => {
-    const selected = getSelectedDetails();
-    if (!selected) {
+    if (!selectedRoom) {
       alert("Please select a room to proceed");
       return;
     }
@@ -325,51 +323,6 @@ const ScanPG = () => {
     const prices = [];
     const { price_details } = pg;
 
-    if (price_details.sharing) {
-      if (price_details.sharing.single_sharing && price_details.sharing.single_sharing > 0) {
-        prices.push({
-          label: "Single Sharing",
-          price: price_details.sharing.single_sharing,
-          type: "pg"
-        });
-      }
-      if (price_details.sharing.double_sharing && price_details.sharing.double_sharing > 0) {
-        prices.push({
-          label: "Double Sharing",
-          price: price_details.sharing.double_sharing,
-          type: "pg"
-        });
-      }
-      if (price_details.sharing.triple_sharing && price_details.sharing.triple_sharing > 0) {
-        prices.push({
-          label: "Triple Sharing",
-          price: price_details.sharing.triple_sharing,
-          type: "pg"
-        });
-      }
-      if (price_details.sharing.four_sharing && price_details.sharing.four_sharing > 0) {
-        prices.push({
-          label: "Four Sharing",
-          price: price_details.sharing.four_sharing,
-          type: "pg"
-        });
-      }
-      if (price_details.sharing.single_room && price_details.sharing.single_room > 0) {
-        prices.push({
-          label: "Single Room",
-          price: price_details.sharing.single_room,
-          type: "pg"
-        });
-      }
-      if (price_details.sharing.double_room && price_details.sharing.double_room > 0) {
-        prices.push({
-          label: "Double Room",
-          price: price_details.sharing.double_room,
-          type: "pg"
-        });
-      }
-    }
-
     if (price_details.co_living) {
       if (price_details.co_living.single_room && price_details.co_living.single_room > 0) {
         prices.push({
@@ -387,38 +340,18 @@ const ScanPG = () => {
       }
     }
 
-    if (price_details.to_let?.prices) {
-      if (price_details.to_let.prices['1bhk'] && price_details.to_let.prices['1bhk'] > 0) {
-        prices.push({
-          label: "1 BHK",
-          price: price_details.to_let.prices['1bhk'],
-          type: "tolet",
-          config: price_details.to_let.configurations?.['1bhk']
-        });
+    if (price_details.sharing) {
+      if (price_details.sharing.single_sharing && price_details.sharing.single_sharing > 0) {
+        prices.push({ label: "Single Sharing", price: price_details.sharing.single_sharing, type: "pg" });
       }
-      if (price_details.to_let.prices['2bhk'] && price_details.to_let.prices['2bhk'] > 0) {
-        prices.push({
-          label: "2 BHK",
-          price: price_details.to_let.prices['2bhk'],
-          type: "tolet",
-          config: price_details.to_let.configurations?.['2bhk']
-        });
+      if (price_details.sharing.double_sharing && price_details.sharing.double_sharing > 0) {
+        prices.push({ label: "Double Sharing", price: price_details.sharing.double_sharing, type: "pg" });
       }
-      if (price_details.to_let.prices['3bhk'] && price_details.to_let.prices['3bhk'] > 0) {
-        prices.push({
-          label: "3 BHK",
-          price: price_details.to_let.prices['3bhk'],
-          type: "tolet",
-          config: price_details.to_let.configurations?.['3bhk']
-        });
+      if (price_details.sharing.triple_sharing && price_details.sharing.triple_sharing > 0) {
+        prices.push({ label: "Triple Sharing", price: price_details.sharing.triple_sharing, type: "pg" });
       }
-      if (price_details.to_let.prices['4bhk'] && price_details.to_let.prices['4bhk'] > 0) {
-        prices.push({
-          label: "4 BHK",
-          price: price_details.to_let.prices['4bhk'],
-          type: "tolet",
-          config: price_details.to_let.configurations?.['4bhk']
-        });
+      if (price_details.sharing.four_sharing && price_details.sharing.four_sharing > 0) {
+        prices.push({ label: "Four Sharing", price: price_details.sharing.four_sharing, type: "pg" });
       }
     }
 
@@ -430,24 +363,7 @@ const ScanPG = () => {
     
     const types = [];
     
-    if (pg.category === "to_let") {
-      if (pg.price_details?.to_let?.prices?.['1bhk']) types.push({ 
-        value: "1 BHK", 
-        label: `1 BHK - ₹${formatPrice(pg.price_details.to_let.prices['1bhk'])}` 
-      });
-      if (pg.price_details?.to_let?.prices?.['2bhk']) types.push({ 
-        value: "2 BHK", 
-        label: `2 BHK - ₹${formatPrice(pg.price_details.to_let.prices['2bhk'])}` 
-      });
-      if (pg.price_details?.to_let?.prices?.['3bhk']) types.push({ 
-        value: "3 BHK", 
-        label: `3 BHK - ₹${formatPrice(pg.price_details.to_let.prices['3bhk'])}` 
-      });
-      if (pg.price_details?.to_let?.prices?.['4bhk']) types.push({ 
-        value: "4 BHK", 
-        label: `4 BHK - ₹${formatPrice(pg.price_details.to_let.prices['4bhk'])}` 
-      });
-    } else if (pg.category === "coliving") {
+    if (pg.category === "coliving") {
       if (pg.price_details?.co_living?.single_room) types.push({ 
         value: "Co-Living Single Room", 
         label: `Co-Living Single Room - ₹${formatPrice(pg.price_details.co_living.single_room)}` 
@@ -472,14 +388,6 @@ const ScanPG = () => {
       if (pg.price_details?.sharing?.four_sharing) types.push({ 
         value: "Four Sharing", 
         label: `Four Sharing - ₹${formatPrice(pg.price_details.sharing.four_sharing)}` 
-      });
-      if (pg.price_details?.sharing?.single_room) types.push({ 
-        value: "Single Room", 
-        label: `Single Room - ₹${formatPrice(pg.price_details.sharing.single_room)}` 
-      });
-      if (pg.price_details?.sharing?.double_room) types.push({ 
-        value: "Double Room", 
-        label: `Double Room - ₹${formatPrice(pg.price_details.sharing.double_room)}` 
       });
     }
     
@@ -508,7 +416,6 @@ const ScanPG = () => {
     );
   }
 
-  const selectedDetails = getSelectedDetails();
   const propertyPrices = getAllPropertyPrices();
 
   return (
@@ -522,81 +429,90 @@ const ScanPG = () => {
         </div>
       )}
 
-      {/* ✅ UPDATED STATUS UI WITH JOIN BUTTON - USING status.type === "CONFIRM_JOIN" */}
-      {status && (
+      {/* Status Message */}
+      {status && !showConfirmBox && (
         <div style={{
-          marginTop: 20,
           marginBottom: 20,
           padding: 16,
           borderRadius: 12,
           background: status.success ? "#d1fae5" : "#fee2e2",
           color: status.success ? "#065f46" : "#991b1b",
           textAlign: "center",
-          border: `2px solid ${status.success ? "#10b981" : "#ef4444"}`,
-          animation: "slideDown 0.3s ease"
+          border: `1px solid ${status.success ? "#10b981" : "#ef4444"}`,
         }}>
-          <p style={{ margin: 0, fontSize: "14px", fontWeight: "600" }}>
-            {status.success ? "✅ " : "⚠️ "}
+          <p style={{ margin: 0, fontSize: "14px", fontWeight: "500" }}>
             {status.message}
           </p>
+        </div>
+      )}
 
-          {/* 🔥 FIXED: SHOW CONFIRM JOIN BUTTON WHEN status.type === "CONFIRM_JOIN" */}
-          {!joined && status.type === "CONFIRM_JOIN" && (
-            <div style={{ marginTop: 12 }}>
+      {/* CONFIRMATION BOX - Shows when user clicks Check-in and has paid booking */}
+      {showConfirmBox && (
+        <div id="confirm-box" style={styles.confirmBox}>
+          <div style={styles.confirmBoxHeader}>
+            <AlertCircle size={24} color="#f59e0b" />
+            <h3 style={styles.confirmBoxTitle}>Confirm Join</h3>
+          </div>
+          
+          <p style={styles.confirmBoxMessage}>
+            You have a valid paid booking. Please confirm to join this PG.
+          </p>
 
-              {/* ✅ CHECKBOX FOR CONFIRMATION */}
-              <label style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={confirmChecked}
-                  onChange={(e) => setConfirmChecked(e.target.checked)}
-                />
-                <span style={{ fontSize: "13px" }}>I confirm that I want to join this PG</span>
-              </label>
-
-              {/* ✅ JOIN BUTTON WITH HARD LOCK DISABLE */}
-              <button 
-                onClick={handleJoin}
-                disabled={!confirmChecked || joinLoading || joinTriggered}
-                style={{
-                  marginTop: 12,
-                  padding: "10px 20px",
-                  background: (!confirmChecked || joinLoading || joinTriggered) ? "#9ca3af" : "#10b981",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: (!confirmChecked || joinLoading || joinTriggered) ? "not-allowed" : "pointer",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  transition: "all 0.2s ease"
-                }}
-              >
-                {joinLoading ? "⏳ Joining..." : "✅ Confirm Join PG"}
-              </button>
-
+          {/* Room Selection Info */}
+          {pg.available_room_details && pg.available_room_details.length > 0 && (
+            <div style={styles.roomSelectionBox}>
+              <p style={styles.roomSelectionLabel}>Select a room (optional):</p>
+              <div style={styles.confirmRoomGrid}>
+                {pg.available_room_details.map((room) => (
+                  <button
+                    key={room.id}
+                    onClick={() => handleRoomSelection(room)}
+                    style={{
+                      ...styles.confirmRoomBtn,
+                      ...(selectedRoom?.id === room.id ? styles.confirmRoomBtnSelected : {})
+                    }}
+                  >
+                    {getRoomDisplayName(room)} - Room {room.room_number}
+                    {room.available_beds > 0 && <span style={styles.roomPrice}>₹{formatPrice(room.price)}</span>}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
-          {/* 🔥 Show Try Again button for errors that are not the confirmation flow */}
-          {!status.success && 
-           status.type !== "CONFIRM_JOIN" && (
-            <button 
-              onClick={handleCheckin}
+          {/* Checkbox and Join Button */}
+          <label style={styles.checkboxLabel}>
+            <input
+              type="checkbox"
+              checked={confirmChecked}
+              onChange={(e) => setConfirmChecked(e.target.checked)}
+              style={styles.checkbox}
+            />
+            <span>I confirm that I want to join this PG</span>
+          </label>
+
+          <div style={styles.confirmBoxActions}>
+            <button
+              onClick={() => {
+                setShowConfirmBox(false);
+                setStatus(null);
+                setConfirmChecked(false);
+              }}
+              style={styles.cancelConfirmBtn}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleJoin}
+              disabled={!confirmChecked || joinLoading}
               style={{
-                marginTop: 12,
-                padding: "8px 16px",
-                background: "#ef4444",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                cursor: "pointer",
-                fontSize: "13px",
-                fontWeight: "600"
+                ...styles.confirmJoinBtn,
+                ...(!confirmChecked || joinLoading ? styles.confirmJoinBtnDisabled : {})
               }}
             >
-              Try Again
+              {joinLoading ? "⏳ Joining..." : "✅ Confirm & Join"}
             </button>
-          )}
+          </div>
         </div>
       )}
 
@@ -615,63 +531,43 @@ const ScanPG = () => {
         </div>
       </div>
 
-      {/* 🔥 ROOM SECTION WITH ID FOR AUTO-SCROLL */}
-      <div id="room-selector" style={styles.roomSection}>
+      {/* Room Section */}
+      <div style={styles.roomSection}>
         <h2 style={styles.sectionTitle}>Select Your Room</h2>
         
         {pg.available_room_details && pg.available_room_details.length > 0 ? (
-          <>
-            <div style={styles.roomGrid}>
-              {pg.available_room_details.map((room, index) => {
-                const roomDisplayName = getRoomDisplayName(room);
-                const isSelected = selectedRoom?.id === room.id;
-                
-                return (
-                  <div
-                    key={index}
-                    style={{
-                      ...styles.roomCard,
-                      ...(isSelected ? styles.roomCardSelected : {}),
-                      ...(room.available_beds === 0 ? styles.roomCardSoldOut : {})
-                    }}
-                    onClick={() => room.available_beds > 0 && handleRoomSelection(room)}
-                  >
-                    <div style={styles.roomCardHeader}>
-                      <span style={styles.roomName}>{roomDisplayName}</span>
-                      {room.available_beds > 0 ? (
-                        <span style={styles.roomAvailability}>● {room.available_beds} left</span>
-                      ) : (
-                        <span style={styles.roomSoldOut}>Sold Out</span>
-                      )}
-                    </div>
-                    
-                    <div style={styles.roomFooter}>
-                      <span style={styles.roomNumber}>Room {room.room_number}</span>
-                      {isSelected && (
-                        <span style={styles.selectedBadge}>✓ Selected</span>
-                      )}
-                    </div>
+          <div style={styles.roomGrid}>
+            {pg.available_room_details.map((room, index) => {
+              const roomDisplayName = getRoomDisplayName(room);
+              const isSelected = selectedRoom?.id === room.id;
+              
+              return (
+                <div
+                  key={index}
+                  style={{
+                    ...styles.roomCard,
+                    ...(isSelected ? styles.roomCardSelected : {}),
+                    ...(room.available_beds === 0 ? styles.roomCardSoldOut : {})
+                  }}
+                  onClick={() => handleRoomSelection(room)}
+                >
+                  <div style={styles.roomCardHeader}>
+                    <span style={styles.roomName}>{roomDisplayName}</span>
+                    {room.available_beds > 0 ? (
+                      <span style={styles.roomAvailability}>● {room.available_beds} left</span>
+                    ) : (
+                      <span style={styles.roomSoldOut}>Sold Out</span>
+                    )}
                   </div>
-                );
-              })}
-            </div>
-
-            {/* 🔥 SHOW SELECTED ROOM INFO */}
-            {selectedRoom && (
-              <div style={{
-                marginTop: 12,
-                padding: 10,
-                background: "#ecfdf5",
-                borderRadius: 8,
-                textAlign: "center",
-                fontSize: "13px",
-                fontWeight: "500",
-                color: "#065f46"
-              }}>
-                ✅ Selected: Room {selectedRoom.room_number} (ID: {selectedRoom.id})
-              </div>
-            )}
-          </>
+                  
+                  <div style={styles.roomFooter}>
+                    <span style={styles.roomNumber}>Room {room.room_number}</span>
+                    <span style={styles.roomPriceDisplay}>₹{formatPrice(room.price)}/month</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <div style={styles.noRooms}>
             <p>No rooms currently available</p>
@@ -691,11 +587,6 @@ const ScanPG = () => {
               <div key={index} style={styles.priceCard}>
                 <div style={styles.priceCardLabel}>{item.label}</div>
                 <div style={styles.priceCardValue}>₹{formatPrice(item.price)}/month</div>
-                {item.config && (
-                  <div style={styles.priceCardConfig}>
-                    {item.config.bedrooms} bed • {item.config.bathrooms} bath
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -715,12 +606,6 @@ const ScanPG = () => {
                   <span style={styles.chargeValue}>₹{formatPrice(pg.price_details.maintenance_amount)}/month</span>
                 </div>
               )}
-              {pg.price_details?.brokerage_amount > 0 && (
-                <div style={styles.chargeRow}>
-                  <span>Brokerage</span>
-                  <span style={styles.chargeValue}>₹{formatPrice(pg.price_details.brokerage_amount)}</span>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -731,16 +616,16 @@ const ScanPG = () => {
         <span style={styles.viewDetailsArrow}>→</span>
       </button>
 
-      {/* ✅ FOOTER SECTION WITH UPDATED BUTTON TEXT BASED ON JOINED STATE */}
+      {/* Footer Buttons */}
       <div style={styles.footer}>
         <div style={styles.buttonGroup}>
-          {/* 🔥 FIXED: Button text changes based on joined state */}
           <button 
             onClick={handleCheckin} 
             style={{
               ...styles.checkinBtn,
               background: joined ? "#10b981" : "#4f46e5"
             }}
+            disabled={joined}
           >
             {joined ? '✅ Verified' : user ? '📍 Check-in' : '🔑 Login to Join'}
           </button>
@@ -767,6 +652,7 @@ const ScanPG = () => {
         </div>
       </div>
 
+      {/* Booking Modal */}
       {showBookingModal && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
@@ -840,14 +726,14 @@ const ScanPG = () => {
 
                 <div style={styles.formGroup}>
                   <label style={styles.formLabel}>
-                    {pg?.category === "to_let" ? "BHK Type *" : "Room Type *"}
+                    Room Type *
                   </label>
                   <select
                     name="roomType"
                     required
                     disabled={bookingLoading}
                     style={styles.formSelect}
-                    defaultValue={selectedRoom ? getRoomDisplayName(selectedRoom) : ''}
+                    defaultValue=""
                   >
                     <option value="" disabled>Select room type</option>
                     {getRoomTypes().map((type, index) => (
@@ -947,6 +833,116 @@ const styles = {
     alignItems: "center",
     gap: 8,
     fontSize: "13px"
+  },
+  confirmBox: {
+    backgroundColor: "#fffbeb",
+    border: "2px solid #f59e0b",
+    borderRadius: "16px",
+    padding: "20px",
+    marginBottom: "24px",
+    boxShadow: "0 4px 12px rgba(245, 158, 11, 0.1)"
+  },
+  confirmBoxHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    marginBottom: "12px"
+  },
+  confirmBoxTitle: {
+    fontSize: "18px",
+    fontWeight: "600",
+    color: "#92400e",
+    margin: 0
+  },
+  confirmBoxMessage: {
+    fontSize: "14px",
+    color: "#78350f",
+    marginBottom: "16px",
+    lineHeight: 1.5
+  },
+  roomSelectionBox: {
+    marginBottom: "16px",
+    padding: "12px",
+    backgroundColor: "#fef3c7",
+    borderRadius: "12px"
+  },
+  roomSelectionLabel: {
+    fontSize: "13px",
+    fontWeight: "500",
+    color: "#92400e",
+    marginBottom: "10px"
+  },
+  confirmRoomGrid: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px"
+  },
+  confirmRoomBtn: {
+    padding: "10px",
+    backgroundColor: "#fff",
+    border: "1px solid #fcd34d",
+    borderRadius: "8px",
+    fontSize: "13px",
+    cursor: "pointer",
+    textAlign: "left",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center"
+  },
+  confirmRoomBtnSelected: {
+    backgroundColor: "#fef3c7",
+    borderColor: "#f59e0b",
+    fontWeight: "500"
+  },
+  roomPrice: {
+    fontSize: "12px",
+    color: "#b45309",
+    fontWeight: "600"
+  },
+  checkboxLabel: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    marginBottom: "20px",
+    cursor: "pointer",
+    fontSize: "14px",
+    color: "#78350f"
+  },
+  checkbox: {
+    width: "18px",
+    height: "18px",
+    cursor: "pointer"
+  },
+  confirmBoxActions: {
+    display: "flex",
+    gap: "12px"
+  },
+  cancelConfirmBtn: {
+    flex: 1,
+    padding: "10px",
+    backgroundColor: "#fff",
+    border: "1px solid #d1d5db",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: "500",
+    cursor: "pointer",
+    color: "#6b7280"
+  },
+  confirmJoinBtn: {
+    flex: 1,
+    padding: "10px",
+    backgroundColor: "#10b981",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
+    color: "white"
+  },
+  confirmJoinBtnDisabled: {
+    backgroundColor: "#9ca3af",
+    cursor: "not-allowed",
+    opacity: 0.6
   },
   headerSection: {
     marginBottom: "32px"
@@ -1055,10 +1051,10 @@ const styles = {
     fontSize: "13px",
     color: "#6b7280"
   },
-  selectedBadge: {
-    fontSize: "12px",
-    color: "#4f46e5",
-    fontWeight: "600"
+  roomPriceDisplay: {
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "#4f46e5"
   },
   noRooms: {
     textAlign: "center",
@@ -1097,12 +1093,7 @@ const styles = {
   priceCardValue: {
     fontSize: "15px",
     fontWeight: "700",
-    color: "#4f46e5",
-    marginBottom: "3px"
-  },
-  priceCardConfig: {
-    fontSize: "10px",
-    color: "#9ca3af"
+    color: "#4f46e5"
   },
   additionalCharges: {
     borderTop: "1px solid #e5e7eb",
@@ -1169,13 +1160,13 @@ const styles = {
   },
   checkinBtn: {
     flex: 1,
-    padding: "10px",
+    padding: "12px",
     backgroundColor: "#4f46e5",
     color: "#ffffff",
     border: "none",
-    borderRadius: "10px",
+    borderRadius: "12px",
     fontWeight: "600",
-    fontSize: "13px",
+    fontSize: "14px",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
@@ -1184,13 +1175,13 @@ const styles = {
   },
   bookBtn: {
     flex: 1,
-    padding: "10px",
+    padding: "12px",
     backgroundColor: "#4f46e5",
     color: "#ffffff",
     border: "none",
-    borderRadius: "10px",
+    borderRadius: "12px",
     fontWeight: "600",
-    fontSize: "13px",
+    fontSize: "14px",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
@@ -1198,13 +1189,13 @@ const styles = {
   },
   callBtn: {
     flex: 1,
-    padding: "10px",
+    padding: "12px",
     backgroundColor: "#ffffff",
     color: "#22c55e",
     border: "2px solid #22c55e",
-    borderRadius: "10px",
+    borderRadius: "12px",
     fontWeight: "600",
-    fontSize: "13px",
+    fontSize: "14px",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
@@ -1336,17 +1327,6 @@ styleSheet.textContent = `
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-  }
-  
-  @keyframes slideDown {
-    from {
-      opacity: 0;
-      transform: translateY(-20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
   }
 `;
 document.head.appendChild(styleSheet);
