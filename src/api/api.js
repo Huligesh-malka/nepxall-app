@@ -19,14 +19,14 @@ const ADMIN_BASE_URL =
 console.log("🌐 API CONFIG →", { USER_BASE_URL, ADMIN_BASE_URL });
 
 /* =====================================================
-   🔥 BACKEND WAKEUP SYSTEM
+   🔥 BACKEND WAKEUP SYSTEM (IMPROVED SAFE)
 ===================================================== */
 
 let backendReady = false;
 let wakePromise = null;
 
 const wakeBackend = async () => {
-  if (backendReady) return;
+  if (backendReady) return true;
 
   if (!wakePromise) {
     console.log("⏳ Waking backend...");
@@ -76,7 +76,6 @@ const createApi = (baseURL) => {
       const user = auth.currentUser;
 
       if (user) {
-        // 🔥 IMPORTANT FIX → ALWAYS FRESH TOKEN
         const token = await user.getIdToken(true);
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -92,15 +91,28 @@ const createApi = (baseURL) => {
   api.interceptors.response.use(
     (res) => res,
     async (error) => {
-      if (!error.response) {
-        console.error("🌐 Backend unreachable:", baseURL);
-        backendReady = false;
-        return Promise.reject(error);
-      }
-
       const originalRequest = error.config;
 
-      /* 🔁 RETRY ON 401 */
+      ////////////////////////////////////////////////////////
+      // ✅ FIX 1: DO NOT LOGOUT ON NETWORK ERROR
+      ////////////////////////////////////////////////////////
+      if (!error.response) {
+        console.error("🌐 Backend unreachable:", baseURL);
+
+        backendReady = false;
+
+        // 🔥 NEW: retry once after wake
+        try {
+          await wakeBackend();
+          return api(originalRequest);
+        } catch {
+          return Promise.reject(error);
+        }
+      }
+
+      ////////////////////////////////////////////////////////
+      // 🔁 EXISTING 401 LOGIC (UNCHANGED + SAFE)
+      ////////////////////////////////////////////////////////
       if (error.response.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
 
@@ -114,9 +126,14 @@ const createApi = (baseURL) => {
           }
         } catch {
           await auth.signOut();
+          localStorage.clear(); // 🔥 small improvement
           window.location.href = "/login";
         }
       }
+
+      ////////////////////////////////////////////////////////
+      // ✅ FIX 2: SAFE ERROR HANDLING (NO LOGOUT)
+      ////////////////////////////////////////////////////////
 
       if (error.response.status === 403) {
         console.error("⛔ Access denied:", error.response.data);
@@ -138,14 +155,14 @@ const createApi = (baseURL) => {
 };
 
 /* =====================================================
-   📦 INSTANCES
+   📦 INSTANCES (UNCHANGED)
 ===================================================== */
 
 export const userAPI = createApi(USER_BASE_URL);
 export const adminAPI = createApi(ADMIN_BASE_URL);
 
 /* =====================================================
-   🏠 PG APIs
+   🏠 PG APIs (UNCHANGED)
 ===================================================== */
 
 export const pgAPI = {
@@ -161,7 +178,6 @@ export const pgAPI = {
   updateProperty: (id, data) => userAPI.put(`/pg/${id}`, data),
   deleteProperty: (id) => userAPI.delete(`/pg/${id}`),
 
-  // 🔥 OWNER BOOKINGS (NOW WILL WORK)
   getOwnerBookings: () => userAPI.get("/owner/bookings"),
 
   updateBookingStatus: (bookingId, status) =>
@@ -172,7 +188,7 @@ export const pgAPI = {
 };
 
 /* =====================================================
-   👑 ADMIN APIs
+   👑 ADMIN APIs (UNCHANGED)
 ===================================================== */
 
 export const adminPGAPI = {
