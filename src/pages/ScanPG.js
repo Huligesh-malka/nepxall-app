@@ -89,7 +89,8 @@ const ScanPG = () => {
       if (data.type === "ALREADY_JOINED" || (data.success === true && data.type !== "CONFIRM_JOIN")) {
         setStatus({
           success: true,
-          message: "✅ Verified: You have already joined this PG."
+          message: "✅ Verified: You have already joined this PG.",
+          type: data.type
         });
         setJoined(true);
         return;
@@ -99,7 +100,8 @@ const ScanPG = () => {
       if (data.type === "CONFIRM_JOIN") {
         setStatus({
           success: false, // Keeps it red/yellow for attention
-          message: data.message || "⚠️ Are you sure you want to join this PG? Select a room and confirm below."
+          message: data.message || "⚠️ Valid booking found! Confirm to join this PG.",
+          type: "CONFIRM_JOIN" // 🔥 CRITICAL: Store type for UI condition
         });
         // Scroll to room selector so they can pick a room before hitting Confirm
         document.getElementById('room-selector')?.scrollIntoView({ behavior: 'smooth' });
@@ -110,7 +112,8 @@ const ScanPG = () => {
       if (data.type === "NOT_PAID") {
         setStatus({
           success: false,
-          message: "❌ No paid booking found. Please complete payment first."
+          message: "❌ No paid booking found. Please complete payment first.",
+          type: data.type
         });
         return;
       }
@@ -119,13 +122,15 @@ const ScanPG = () => {
       if (data.success) {
         setStatus({
           success: true,
-          message: data.message || "✅ Check-in successful!"
+          message: data.message || "✅ Check-in successful!",
+          type: data.type
         });
         setJoined(true);
       } else {
         setStatus({
           success: false,
-          message: data.message || "❌ Check-in failed"
+          message: data.message || "❌ Check-in failed",
+          type: data.type
         });
       }
 
@@ -184,6 +189,7 @@ const ScanPG = () => {
       if (res.data.success) {
         setJoined(true);
         setConfirmChecked(false); // 🔥 reset checkbox
+        setJoinTriggered(false); // Reset lock on success
         setStatus({
           success: true,
           message: res.data.message || "🎉 PG Joined Successfully!"
@@ -516,7 +522,7 @@ const ScanPG = () => {
         </div>
       )}
 
-      {/* ✅ UPDATED STATUS UI WITH JOIN BUTTON - MATCHES BACKEND "CONFIRM_JOIN" FLOW */}
+      {/* ✅ UPDATED STATUS UI WITH JOIN BUTTON - USING status.type === "CONFIRM_JOIN" */}
       {status && (
         <div style={{
           marginTop: 20,
@@ -534,8 +540,8 @@ const ScanPG = () => {
             {status.message}
           </p>
 
-          {/* 🔥 SHOW CONFIRM JOIN BUTTON WITH CHECKBOX WHEN BACKEND RETURNS CONFIRM_JOIN */}
-          {!joined && status.message?.includes("Are you sure") && (
+          {/* 🔥 FIXED: SHOW CONFIRM JOIN BUTTON WHEN status.type === "CONFIRM_JOIN" */}
+          {!joined && status.type === "CONFIRM_JOIN" && (
             <div style={{ marginTop: 12 }}>
 
               {/* ✅ CHECKBOX FOR CONFIRMATION */}
@@ -573,8 +579,7 @@ const ScanPG = () => {
 
           {/* 🔥 Show Try Again button for errors that are not the confirmation flow */}
           {!status.success && 
-           status.message && 
-           !status.message.includes("Are you sure") && (
+           status.type !== "CONFIRM_JOIN" && (
             <button 
               onClick={handleCheckin}
               style={{
