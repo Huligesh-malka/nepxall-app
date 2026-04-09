@@ -216,17 +216,25 @@ const AdminPayments = () => {
                 // ✅ UPDATED: Status logic for FULLY_PAID and PARTIAL_PAID
                 const isFullyPaid = p.status === "FULLY_PAID";
                 const isPartiallyPaid = p.status === "PARTIAL_PAID";
+                const isSubmitted = p.payment_status === "submitted";
                 const isRejected = p.status === "rejected";
                 const isProcessing = processing === p.order_id;
                 
-                // ✅ Approve disabled if already fully paid or processing
-                const isApproveDisabled = isFullyPaid || isProcessing;
+                // ✅ FIXED: Approve disabled if fully paid, processing, or no payment made
+                const isApproveDisabled = isFullyPaid || isProcessing || p.total_paid === 0;
                 
                 // ✅ Reject disabled if already rejected or processing
                 const isRejectDisabled = isRejected || isProcessing;
                 
                 return (
-                  <TableRow key={p.order_id} hover>
+                  // ✅ OPTIONAL: Highlight partial payment row
+                  <TableRow 
+                    key={p.order_id} 
+                    hover
+                    sx={{
+                      backgroundColor: isPartiallyPaid ? "#fff7ed" : "white"
+                    }}
+                  >
                     <TableCell>
                       <Stack direction="row" spacing={2} alignItems="center">
                           <Avatar sx={{ bgcolor: BRAND_BLUE, fontWeight: 'bold' }}>
@@ -251,7 +259,7 @@ const AdminPayments = () => {
                       />
                     </TableCell>
                     
-                    {/* ✅ STEP 1: UPDATED AMOUNT COLUMN - Shows Total, Paid, and Remaining */}
+                    {/* ✅ UPDATED AMOUNT COLUMN - Shows Total, Paid, and Remaining */}
                     <TableCell>
                       <Typography fontWeight="800" color={DARK_TEXT}>
                         Total: ₹{p.total_amount}
@@ -271,7 +279,7 @@ const AdminPayments = () => {
                       {p.utr && <Typography variant="caption" sx={{ color: BRAND_GREEN, fontWeight: 'bold' }}>UTR: {p.utr}</Typography>}
                     </TableCell>
                     
-                    {/* ✅ STEP 2: UPDATED STATUS LOGIC */}
+                    {/* ✅ UPDATED STATUS LOGIC with "Waiting for Approval" */}
                     <TableCell>
                       <Chip 
                         label={p.status} 
@@ -285,6 +293,21 @@ const AdminPayments = () => {
                             : "default"
                         } 
                       />
+                      
+                      {/* ✅ NEW: Show waiting for approval message */}
+                      {isSubmitted && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: "#3b82f6",
+                            fontWeight: "bold",
+                            display: "block",
+                            mt: 1
+                          }}
+                        >
+                          ⏳ Waiting for admin verification
+                        </Typography>
+                      )}
                       
                       {isFullyPaid && (
                         <>
@@ -346,7 +369,7 @@ const AdminPayments = () => {
                           </Tooltip>
                         )}
 
-                        {/* ✅ STEP 3 & 4: Using order_id (no backend change) */}
+                        {/* ✅ Using order_id (no backend change) */}
                         <Button
                           variant="contained"
                           color="success"
