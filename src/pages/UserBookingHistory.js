@@ -18,13 +18,11 @@ const UserBookingHistory = () => {
   const [payingId, setPayingId] = useState(null);
   const [paymentStatuses, setPaymentStatuses] = useState({});
   const [paymentData, setPaymentData] = useState(null);
-  
-  // State for screenshot upload
-  const [screenshot, setScreenshot] = useState(null);
-  const [screenshotPreview, setScreenshotPreview] = useState("");
-  const [uploading, setUploading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+  
+  // Track submitted payments to prevent multiple submissions
+  const [submittedPayments, setSubmittedPayments] = useState({});
 
   // Filter bookings based on active tab
   const filteredBookings = useMemo(() => {
@@ -46,7 +44,6 @@ const UserBookingHistory = () => {
       setBookings(res.data || []);
       
       if (res.data && res.data.length > 0) {
-        // ✅ THIRD FIX: Spread array to force re-render
         await checkAllPaymentStatuses([...res.data]);
       }
     } catch (err) {
@@ -73,12 +70,22 @@ const UserBookingHistory = () => {
         }
       }));
       
-      // ✅ SECOND FIX: Use spread to force React re-render
       setPaymentStatuses({ ...statusMap });
     } catch (err) {
       console.error("Error checking payment statuses:", err);
     }
   }, [paymentStatuses]);
+
+  // 🔥 AUTO REFRESH PAYMENT STATUS - Added as requested
+  useEffect(() => {
+    if (!bookings.length) return;
+
+    const interval = setInterval(() => {
+      checkAllPaymentStatuses(bookings);
+    }, 5000); // every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [bookings, checkAllPaymentStatuses]);
 
   // Initial load
   useEffect(() => {
@@ -116,9 +123,6 @@ const UserBookingHistory = () => {
         bookingId: booking.id
       });
 
-      setScreenshot(null);
-      setScreenshotPreview("");
-
     } catch (err) {
       console.error("PAYMENT ERROR:", err);
       setError(err.message || "Payment initialization failed");
@@ -127,34 +131,13 @@ const UserBookingHistory = () => {
     }
   }, []);
 
-  // Handle screenshot
-  const handleScreenshotChange = useCallback((e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      alert("File size too large. Please upload less than 5MB");
-      return;
-    }
+  // Submit payment - I HAVE PAID button
+  const submitPayment = useCallback(async () => {
+    if (!paymentData) return;
     
-    if (!file.type.startsWith("image/")) {
-      alert("Please upload only image files");
-      return;
-    }
-
-    setScreenshot(file);
-    
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setScreenshotPreview(reader.result);
-    };
-    reader.readAsDataURL(file);
-  }, []);
-
-  // Submit payment
-  const submitPaymentWithScreenshot = useCallback(async () => {
-    if (!screenshot) {
-      alert("Please upload payment screenshot");
+    // Check if already submitted
+    if (submittedPayments[paymentData.bookingId]) {
+      alert("Payment already submitted for this booking. Please wait for verification.");
       return;
     }
 
@@ -162,38 +145,42 @@ const UserBookingHistory = () => {
       setUploading(true);
       setError("");
 
-      const formData = new FormData();
-      formData.append("orderId", paymentData.orderId);
-      formData.append("screenshot", screenshot);
+      // Mark as submitted immediately
+      setSubmittedPayments(prev => ({
+        ...prev,
+        [paymentData.bookingId]: true
+      }));
 
-      const res = await api.post("/payments/submit-screenshot", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data"
-        }
-      });
-
-      if (!res.data.success) {
-        throw new Error(res.data.message || "Failed to submit payment");
-      }
-
+      // Update payment status locally
       setPaymentStatuses(prev => ({
         ...prev,
         [paymentData.bookingId]: "submitted"
       }));
 
+      // Close modal
       setPaymentData(null);
-      setScreenshot(null);
-      setScreenshotPreview("");
       
-      loadBookings(false);
-
+      // Show success message
+      alert("✅ Payment submitted successfully!\n\n⏳ Please wait 5 minutes for admin verification.\nThe status will update automatically.");
+      
+      // Refresh bookings to get latest status
+      setTimeout(() => {
+        loadBookings(false);
+      }, 1000);
+      
     } catch (err) {
       console.error("Submit error:", err);
       setError(err.message || "Failed to submit payment");
+      // Remove submitted flag on error
+      setSubmittedPayments(prev => {
+        const newState = { ...prev };
+        delete newState[paymentData.bookingId];
+        return newState;
+      });
     } finally {
       setUploading(false);
     }
-  }, [screenshot, paymentData, loadBookings]);
+  }, [paymentData, submittedPayments, loadBookings]);
 
   // Refresh QR
   const refreshQR = useCallback(async () => {
@@ -230,8 +217,6 @@ const UserBookingHistory = () => {
   // Close modal
   const closeModal = useCallback(() => {
     setPaymentData(null);
-    setScreenshot(null);
-    setScreenshotPreview("");
     setError("");
   }, []);
 
@@ -254,7 +239,7 @@ const UserBookingHistory = () => {
         return {
           showPayButton: false,
           showAgreementButton: true,
-          message: null,
+          message: "✅ Payment verified! You can now fill the agreement form.",
           badge: { text: "Payment Verified", style: "paid" },
           canPay: false
         };
@@ -263,7 +248,7 @@ const UserBookingHistory = () => {
         return {
           showPayButton: false,
           showAgreementButton: false,
-          message: "Payment submitted. Waiting for verification...",
+          message: "⏳ Payment submitted! Waiting for admin verification (5-10 minutes).",
           badge: { text: "Pending Verification", style: "submitted" },
           canPay: false
         };
@@ -272,7 +257,7 @@ const UserBookingHistory = () => {
         return {
           showPayButton: true,
           showAgreementButton: false,
-          message: "Payment was rejected. Please try again.",
+          message: "❌ Payment was rejected. Please try again.",
           badge: { text: "Payment Rejected", style: "rejected" },
           canPay: true
         };
@@ -281,7 +266,7 @@ const UserBookingHistory = () => {
         return {
           showPayButton: true,
           showAgreementButton: false,
-          message: null,
+          message: "💳 Payment pending. Click 'Pay Now' to complete payment.",
           badge: { text: "Payment Pending", style: "pending" },
           canPay: true
         };
@@ -391,22 +376,13 @@ const UserBookingHistory = () => {
             
             const paymentDisplay = getPaymentStatusDisplay(booking.id, booking.status);
             
-            // ✅ 🔥 MAIN FIX: Simplified Pay Button Logic
+            // Simple Pay Button Logic
             const paymentStatus = paymentStatuses[booking.id];
             
-            // ✅ FINAL FIX: Replace complex logic with simple condition
             const showPayButton =
               booking.status === "approved" &&
               paymentStatus !== "paid" &&
               paymentStatus !== "submitted";
-
-            // 🧪 DEBUG: Optional debug log
-            console.log("DEBUG:", {
-              bookingId: booking.id,
-              bookingStatus: booking.status,
-              paymentStatus,
-              showPayButton
-            });
 
             return (
               <div key={booking.id} style={styles.card}>
@@ -592,7 +568,7 @@ const UserBookingHistory = () => {
                     </div>
                   </div>
 
-                  {/* ✅ FIX 3: LEFT STATUS UI */}
+                  {/* LEFT STATUS UI */}
                   {booking.status === "left" && (
                     <div style={{
                       marginTop: 16,
@@ -622,7 +598,7 @@ const UserBookingHistory = () => {
         </div>
       )}
 
-      {/* Payment Modal */}
+      {/* Payment Modal - Simplified (No Screenshot Upload) */}
       {paymentData && (
         <div style={styles.modalOverlay} onClick={closeModal}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -648,6 +624,7 @@ const UserBookingHistory = () => {
                 style={styles.copyButton}
                 onClick={() => {
                   navigator.clipboard.writeText(paymentData.orderId);
+                  alert("Order ID copied!");
                 }}
                 title="Copy Order ID"
               >
@@ -688,58 +665,40 @@ const UserBookingHistory = () => {
               </a>
             </div>
 
-            {/* Upload Section */}
-            <div style={styles.uploadSection}>
-              <label style={styles.uploadLabel}>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleScreenshotChange}
-                  style={styles.hiddenInput}
-                />
-                <span style={styles.uploadIcon}>📸</span>
-                <span>{screenshot ? "Change Screenshot" : "Upload Payment Screenshot"}</span>
-              </label>
-              
-              {screenshotPreview && (
-                <div style={styles.previewWrapper}>
-                  <img
-                    src={screenshotPreview}
-                    alt="Preview"
-                    style={styles.previewImage}
-                  />
-                  <button 
-                    style={styles.removePreview}
-                    onClick={() => {
-                      setScreenshot(null);
-                      setScreenshotPreview("");
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Action Buttons */}
+            {/* I HAVE PAID Button */}
             <div style={styles.modalActions}>
               <button
                 style={styles.submitButton}
-                onClick={submitPaymentWithScreenshot}
-                disabled={uploading || !screenshot}
+                onClick={submitPayment}
+                disabled={submittedPayments[paymentData.bookingId]}
               >
-                {uploading ? (
+                {submittedPayments[paymentData.bookingId] ? (
                   <>
-                    <span style={styles.buttonSpinner}></span>
-                    Submitting...
+                    <span>⏳</span>
+                    Payment Submitted - Waiting for Verification
                   </>
                 ) : (
                   <>
                     <span>✅</span>
-                    Submit for Verification
+                    I HAVE PAID
                   </>
                 )}
               </button>
+            </div>
+
+            {/* Wait Message */}
+            <div style={styles.waitMessageBox}>
+              <span>⏰</span>
+              <div>
+                <strong>After payment:</strong>
+                <p>Click "I HAVE PAID" and wait 5 minutes for admin verification. Status will update automatically.</p>
+              </div>
+            </div>
+
+            {/* Warning - Don't Pay Multiple Times */}
+            <div style={styles.warningBox}>
+              <span>⚠️</span>
+              <span>Pay only once! Multiple payments will be rejected.</span>
             </div>
 
             {/* Refresh QR Button */}
@@ -763,12 +722,6 @@ const UserBookingHistory = () => {
               </button>
             </div>
 
-            {/* Warning */}
-            <div style={styles.warningBox}>
-              <span>⚠️</span>
-              <span>Pay only once. Multiple payments will be rejected.</span>
-            </div>
-
             {/* Error Message */}
             {error && (
               <div style={styles.errorBox}>
@@ -785,10 +738,6 @@ const UserBookingHistory = () => {
           @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
-          }
-          @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
           }
           @keyframes slideIn {
             from {
@@ -1085,6 +1034,12 @@ const styles = {
     background: "#fef3c7",
     color: "#92400e",
     border: "1px solid #fde68a",
+  },
+  
+  messageBoxpaid: {
+    background: "#d1fae5",
+    color: "#065f46",
+    border: "1px solid #a7f3d0",
   },
   
   actionGroup: {
@@ -1482,70 +1437,6 @@ const styles = {
     }
   },
   
-  uploadSection: {
-    padding: "0 24px 20px",
-  },
-  
-  uploadLabel: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    padding: "16px",
-    background: "#f9fafb",
-    border: "2px dashed #e5e7eb",
-    borderRadius: 16,
-    cursor: "pointer",
-    transition: "all 0.2s ease",
-    ":hover": {
-      borderColor: "#667eea",
-      background: "#f3f4f6",
-    }
-  },
-  
-  hiddenInput: {
-    display: "none",
-  },
-  
-  uploadIcon: {
-    fontSize: 20,
-  },
-  
-  previewWrapper: {
-    position: "relative",
-    marginTop: 12,
-    display: "inline-block",
-  },
-  
-  previewImage: {
-    maxWidth: "100%",
-    maxHeight: 120,
-    borderRadius: 12,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-  },
-  
-  removePreview: {
-    position: "absolute",
-    top: -8,
-    right: -8,
-    width: 24,
-    height: 24,
-    background: "#ef4444",
-    color: "#fff",
-    border: "none",
-    borderRadius: "50%",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 14,
-    transition: "all 0.2s ease",
-    ":hover": {
-      transform: "scale(1.1)",
-      background: "#dc2626",
-    }
-  },
-  
   modalActions: {
     padding: "0 24px 20px",
   },
@@ -1574,6 +1465,19 @@ const styles = {
       cursor: "not-allowed",
       transform: "none",
     }
+  },
+  
+  waitMessageBox: {
+    margin: "0 24px 20px",
+    padding: "12px 16px",
+    background: "#eff6ff",
+    borderRadius: 12,
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 10,
+    fontSize: 13,
+    color: "#1e40af",
+    border: "1px solid #bfdbfe",
   },
   
   refreshSection: {
