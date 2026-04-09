@@ -65,7 +65,7 @@ const ScanPG = () => {
     return null;
   };
 
-  // 🔥 UPDATED CHECK-IN: Better UX for new users with auto-scroll
+  // 🔥 UPDATED CHECK-IN: Better UX for new users with auto-scroll and CONFIRM_JOIN handling
   const handleCheckin = async () => {
     try {
       // ✅ Redirect with state if not logged in
@@ -94,7 +94,18 @@ const ScanPG = () => {
 
       const data = res.data;
 
-      // 🔥 HANDLE ALL CASES
+      // 🔥 HANDLE CONFIRM_JOIN CASE (New confirmation flow)
+      if (data.type === "CONFIRM_JOIN") {
+        setStatus({
+          success: false,
+          message: data.message || "⚠️ Are you sure you want to join this PG? Select a room and confirm."
+        });
+        // Smooth scroll to room section
+        document.getElementById('room-selector')?.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+
+      // 🔥 HANDLE NOT_JOINED CASE
       if (data.type === "NOT_JOINED") {
         setStatus({
           success: false,
@@ -113,7 +124,7 @@ const ScanPG = () => {
         return;
       }
 
-      if (data.type === "READY_TO_JOIN") { // 🔥 NEW CASE
+      if (data.type === "READY_TO_JOIN") {
         setStatus({
           success: false,
           message: "Select a room to join"
@@ -148,7 +159,7 @@ const ScanPG = () => {
     }
   };
 
-  // 🔥 UPDATED JOIN: Includes Loading states and better feedback
+  // 🔥 UPDATED JOIN: Handles the actual DB insert after confirmation
   const handleJoin = async () => {
     if (joinLoading) return;
 
@@ -512,7 +523,7 @@ const ScanPG = () => {
         </div>
       )}
 
-      {/* ✅ UPDATED STATUS UI WITH JOIN BUTTON - FIXED CONDITIONS */}
+      {/* ✅ UPDATED STATUS UI WITH JOIN BUTTON - NEW CONFIRMATION FLOW */}
       {status && (
         <div style={{
           marginTop: 20,
@@ -526,11 +537,33 @@ const ScanPG = () => {
           animation: "slideDown 0.3s ease"
         }}>
           <p style={{ margin: 0, fontSize: "14px", fontWeight: "600" }}>
-            {status.success ? "✅ " : "❌ "}
+            {status.success ? "✅ " : "⚠️ "}
             {status.message}
           </p>
 
-          {/* 🔥 UPDATED JOIN BUTTON with loading state and proper conditions */}
+          {/* 🔥 NEW: Show confirm join button when user gets "Are you sure" message */}
+          {!joined && status?.message?.includes("Are you sure") && selectedRoom && (
+            <button 
+              onClick={handleJoin}
+              disabled={joinLoading}
+              style={{
+                marginTop: 12,
+                padding: "10px 20px",
+                background: joinLoading ? "#9ca3af" : "#10b981",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                cursor: joinLoading ? "not-allowed" : "pointer",
+                fontSize: "14px",
+                fontWeight: "600",
+                transition: "all 0.2s ease"
+              }}
+            >
+              {joinLoading ? "⏳ Joining..." : "✅ Confirm Join PG"}
+            </button>
+          )}
+
+          {/* Optional: Show join button for "Select a room" message as well */}
           {!joined && status?.message?.includes("Select a room") && selectedRoom && (
             <button 
               onClick={handleJoin}
@@ -548,14 +581,15 @@ const ScanPG = () => {
                 transition: "all 0.2s ease"
               }}
             >
-              {joinLoading ? "⏳ Joining..." : "✅ Confirm & Join PG"}
+              {joinLoading ? "⏳ Joining..." : "✅ Join PG"}
             </button>
           )}
 
           {/* 🔥 Optional: Show retry button for other errors */}
           {!status.success && 
            status.message && 
-           !status.message.includes("Select a room") && (
+           !status.message.includes("Select a room") && 
+           !status.message.includes("Are you sure") && (
             <button 
               onClick={handleCheckin}
               style={{
