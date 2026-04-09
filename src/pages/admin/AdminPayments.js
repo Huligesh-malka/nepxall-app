@@ -73,6 +73,7 @@ const AdminPayments = () => {
     }
   };
 
+  // ✅ UPDATED: Using order_id (no backend change needed)
   const approvePayment = async (orderId) => {
     if (!window.confirm("Are you sure you want to approve this payment?")) return;
     try {
@@ -122,7 +123,8 @@ const AdminPayments = () => {
     }
 
     const userName = p.reg_name || "User";
-    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${userName}*,%0AYour payment for *${p.pg_name}* (${p.sharing || 'N/A'} Sharing) has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.total_amount || p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
+    // ✅ UPDATED: Show total, paid, and remaining in WhatsApp message
+    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${userName}*,%0AYour payment for *${p.pg_name}* (${p.sharing || 'N/A'} Sharing) has been verified successfully.%0A%0A*Details:*%0A💰 Total Amount: ₹${p.total_amount || p.amount}%0A💵 Paid Amount: ₹${p.total_paid || 0}%0A📊 Remaining: ₹${p.remaining_amount || 0}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: ${p.status === "FULLY_PAID" ? "Fully Paid" : "Partially Paid"}%0A📅 Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
     const whatsappUrl = `https://wa.me/${cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone}?text=${message}`;
     window.open(whatsappUrl, "_blank");
   };
@@ -211,17 +213,16 @@ const AdminPayments = () => {
                 const displayName = p.reg_name || "Guest User";
                 const displayPhone = p.reg_phone || "N/A";
                 
-                // ✅ FIX 1: CORRECT BUTTON LOGIC
-                const isApproved = p.status === "paid" || p.status === "confirmed";
+                // ✅ UPDATED: Status logic for FULLY_PAID and PARTIAL_PAID
+                const isFullyPaid = p.status === "FULLY_PAID";
+                const isPartiallyPaid = p.status === "PARTIAL_PAID";
                 const isRejected = p.status === "rejected";
                 const isProcessing = processing === p.order_id;
                 
-                // ✅ Approve disabled only if already approved OR processing
-                // (Allows re-approve after reject)
-                const isApproveDisabled = isApproved || isProcessing;
+                // ✅ Approve disabled if already fully paid or processing
+                const isApproveDisabled = isFullyPaid || isProcessing;
                 
-                // ✅ Reject disabled only if already rejected OR processing
-                // (Allows reject after approve/paid)
+                // ✅ Reject disabled if already rejected or processing
                 const isRejectDisabled = isRejected || isProcessing;
                 
                 return (
@@ -249,27 +250,43 @@ const AdminPayments = () => {
                         sx={{ height: '20px', fontSize: '10px', mt: 0.5, fontWeight: 'bold' }} 
                       />
                     </TableCell>
-                    <TableCell><Typography fontWeight="800" color={DARK_TEXT}>₹{p.total_amount || p.amount}</Typography></TableCell>
+                    
+                    {/* ✅ STEP 1: UPDATED AMOUNT COLUMN - Shows Total, Paid, and Remaining */}
+                    <TableCell>
+                      <Typography fontWeight="800" color={DARK_TEXT}>
+                        Total: ₹{p.total_amount}
+                      </Typography>
+                      
+                      <Typography variant="caption" color="green" display="block">
+                        Paid: ₹{p.total_paid || 0}
+                      </Typography>
+
+                      <Typography variant="caption" color="error" display="block">
+                        Remaining: ₹{p.remaining_amount || 0}
+                      </Typography>
+                    </TableCell>
+                    
                     <TableCell>
                       <Typography variant="caption" display="block" sx={{ fontFamily: "monospace", color: "#707EAE" }}>{p.order_id}</Typography>
                       {p.utr && <Typography variant="caption" sx={{ color: BRAND_GREEN, fontWeight: 'bold' }}>UTR: {p.utr}</Typography>}
                     </TableCell>
+                    
+                    {/* ✅ STEP 2: UPDATED STATUS LOGIC */}
                     <TableCell>
                       <Chip 
-                        label={p.status.toUpperCase()} 
+                        label={p.status} 
                         size="small" 
                         sx={{ fontWeight: '800', borderRadius: '6px' }}
                         color={
-                          p.status === "paid" || p.status === "confirmed"
+                          p.status === "FULLY_PAID"
                             ? "success"
-                            : p.status === "submitted" || p.status === "approved"
+                            : p.status === "PARTIAL_PAID"
                             ? "warning"
-                            : p.status === "rejected"
-                            ? "error"
                             : "default"
                         } 
                       />
-                      {(p.status === "paid" || p.status === "confirmed") && (
+                      
+                      {isFullyPaid && (
                         <>
                           <Typography
                             variant="caption"
@@ -280,20 +297,25 @@ const AdminPayments = () => {
                               mt: 1
                             }}
                           >
-                            ✅ Approved (Can still reject)
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              color: "#6b7280",
-                              fontSize: "10px",
-                              display: "block"
-                            }}
-                          >
-                            User moved to ACTIVE (PG Users)
+                            ✅ Fully Paid - User Active
                           </Typography>
                         </>
                       )}
+                      
+                      {isPartiallyPaid && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: "#eab308",
+                            fontWeight: "bold",
+                            display: "block",
+                            mt: 1
+                          }}
+                        >
+                          ⚠️ Partial Payment - ₹{p.remaining_amount || 0} remaining
+                        </Typography>
+                      )}
+                      
                       {p.status === "rejected" && (
                         <Typography
                           variant="caption"
@@ -308,6 +330,7 @@ const AdminPayments = () => {
                         </Typography>
                       )}
                     </TableCell>
+                    
                     <TableCell align="center">
                       <Stack direction="row" spacing={1} justifyContent="center">
                         {p.screenshot && (
@@ -323,7 +346,7 @@ const AdminPayments = () => {
                           </Tooltip>
                         )}
 
-                        {/* ✅ FIX 2: DYNAMIC BUTTON TEXT */}
+                        {/* ✅ STEP 3 & 4: Using order_id (no backend change) */}
                         <Button
                           variant="contained"
                           color="success"
@@ -354,24 +377,25 @@ const AdminPayments = () => {
                         </Button>
                       </Stack>
                     </TableCell>
+                    
                     <TableCell align="center">
                       <Stack direction="row" spacing={0.5} justifyContent="center">
-                        <Tooltip title={(p.status === "paid" || p.status === "confirmed") ? "Download PDF" : "Wait for approval"}>
+                        <Tooltip title={isFullyPaid ? "Download PDF" : "Wait for full payment"}>
                           <span>
                             <IconButton 
                               color="primary" 
-                              disabled={(p.status !== "paid" && p.status !== "confirmed") || isGenerating} 
+                              disabled={!isFullyPaid || isGenerating} 
                               onClick={() => handleDownloadReceipt(p)}
                             >
                               <ReceiptLongIcon />
                             </IconButton>
                           </span>
                         </Tooltip>
-                        <Tooltip title={(p.status === "paid" || p.status === "confirmed") ? "WhatsApp Notify" : "Wait for approval"}>
+                        <Tooltip title={isFullyPaid ? "WhatsApp Notify" : "Wait for full payment"}>
                           <span>
                             <IconButton 
                               sx={{ color: "#25D366" }} 
-                              disabled={(p.status !== "paid" && p.status !== "confirmed")} 
+                              disabled={!isFullyPaid} 
                               onClick={() => handleWhatsAppShare(p)}
                             >
                               <WhatsAppIcon />
@@ -427,7 +451,17 @@ const AdminPayments = () => {
                 <h3 style={{ ...statusText, color: BRAND_GREEN }}>PAID & VERIFIED</h3>
                 <p style={dateText}>Method: Digital Payment</p>
                 <Divider sx={{ my: 1 }} />
-                <div style={amountDisplay}>₹{selectedPayment.total_amount || selectedPayment.amount}</div>
+                <div style={amountDisplay}>₹{selectedPayment.total_amount}</div>
+                {selectedPayment.total_paid > 0 && (
+                  <>
+                    <Typography variant="caption" color="green" display="block" sx={{ mt: 1 }}>
+                      Paid: ₹{selectedPayment.total_paid}
+                    </Typography>
+                    <Typography variant="caption" color="error" display="block">
+                      Remaining: ₹{selectedPayment.remaining_amount || 0}
+                    </Typography>
+                  </>
+                )}
               </div>
             </div>
 
@@ -460,7 +494,7 @@ const AdminPayments = () => {
 
               <div style={{ ...tableRow, borderBottom: `2px solid ${BRAND_BLUE}`, fontWeight: "bold", background: "#f8fafc" }}>
                 <span>NET AMOUNT RECEIVED</span>
-                <span>₹{selectedPayment.total_amount || selectedPayment.amount}</span>
+                <span>₹{selectedPayment.total_amount}</span>
               </div>
             </div>
 
@@ -469,6 +503,9 @@ const AdminPayments = () => {
                 <p>• Verified Transaction ID: <strong>{selectedPayment.order_id}</strong></p>
                 {selectedPayment.utr && <p>• Bank UTR: <strong>{selectedPayment.utr}</strong></p>}
                 <p>• Payment timestamp: {formatDate(selectedPayment.submitted_at || selectedPayment.created_at)}</p>
+                {selectedPayment.total_paid > 0 && (
+                  <p>• Payment Type: {selectedPayment.total_paid === selectedPayment.total_amount ? "Full Payment" : "Partial Payment"}</p>
+                )}
               </div>
               <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>This is a computer-generated document. It does not require a physical signature.</p>
               <p style={{ fontWeight: "bold", marginTop: 10, color: BRAND_BLUE, fontSize: '16px' }}>NEPXALL - MAKING LIVING EASIER</p>
