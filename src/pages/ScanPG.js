@@ -23,6 +23,7 @@ const ScanPG = () => {
   const [status, setStatus] = useState(null); // ✅ For check-in status
   const [joined, setJoined] = useState(false); // 🔥 FIX 1: Track if user has joined
   const [joinLoading, setJoinLoading] = useState(false); // 🔥 NEW: Loading state for join button
+  const [confirmChecked, setConfirmChecked] = useState(false); // 🔥 NEW: Checkbox state
 
   useEffect(() => {
     fetchPG();
@@ -201,9 +202,10 @@ const ScanPG = () => {
 
       if (res.data.success) {
         setJoined(true);
+        setConfirmChecked(false); // 🔥 reset checkbox
         setStatus({
           success: true,
-          message: `🎉 Success! You are now in Room ${res.data.room_no || selectedRoom.room_number}`
+          message: `🎉 PG Joined Successfully! Room ${res.data.room_no || selectedRoom.room_number}`
         });
         fetchPG(); // Refresh occupancy counts
       }
@@ -541,26 +543,41 @@ const ScanPG = () => {
             {status.message}
           </p>
 
-          {/* 🔥 NEW: Show confirm join button when user gets "Are you sure" message */}
-          {!joined && status?.message?.includes("Are you sure") && selectedRoom && (
-            <button 
-              onClick={handleJoin}
-              disabled={joinLoading}
-              style={{
-                marginTop: 12,
-                padding: "10px 20px",
-                background: joinLoading ? "#9ca3af" : "#10b981",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                cursor: joinLoading ? "not-allowed" : "pointer",
-                fontSize: "14px",
-                fontWeight: "600",
-                transition: "all 0.2s ease"
-              }}
-            >
-              {joinLoading ? "⏳ Joining..." : "✅ Confirm Join PG"}
-            </button>
+          {/* 🔥 NEW: Show confirm join button with checkbox when user gets "Are you sure" message */}
+          {!joined && status?.message?.includes("Are you sure") && (
+            <div style={{ marginTop: 12 }}>
+
+              {/* ✅ CHECKBOX */}
+              <label style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={confirmChecked}
+                  onChange={(e) => setConfirmChecked(e.target.checked)}
+                />
+                <span style={{ fontSize: "13px" }}>I confirm that I want to join this PG</span>
+              </label>
+
+              {/* ✅ JOIN BUTTON */}
+              <button 
+                onClick={handleJoin}
+                disabled={!confirmChecked || joinLoading}
+                style={{
+                  marginTop: 12,
+                  padding: "10px 20px",
+                  background: (!confirmChecked || joinLoading) ? "#9ca3af" : "#10b981",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: (!confirmChecked || joinLoading) ? "not-allowed" : "pointer",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                {joinLoading ? "⏳ Joining..." : "✅ Confirm Join PG"}
+              </button>
+
+            </div>
           )}
 
           {/* Optional: Show join button for "Select a room" message as well */}
