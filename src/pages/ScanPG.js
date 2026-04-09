@@ -50,6 +50,7 @@ const ScanPG = () => {
     }
   };
 
+  // ✅ FIXED: Removed the faulty OR condition that caused fake "Verified" UI
   const checkExistingJoin = async () => {
     try {
       const token = await user.getIdToken();
@@ -59,11 +60,12 @@ const ScanPG = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      if (res.data.type === "ALREADY_JOINED" || res.data.success === true) {
+      // ✅ ONLY set joined when type is ALREADY_JOINED
+      if (res.data.type === "ALREADY_JOINED") {
         setJoined(true);
         setStatus({
           success: true,
-          message: "✅ You have successfully joined this PG",
+          message: "✅ You have already joined this PG",
         });
       }
     } catch (err) {
@@ -76,7 +78,7 @@ const ScanPG = () => {
     setSelectedRoom(room);
   };
 
-  // ✅ CHECK-IN BUTTON HANDLER
+  // ✅ CHECK-IN BUTTON HANDLER - FIXED
   const handleCheckin = async () => {
     if (!user) {
       navigate("/login", { state: { redirectTo: `/scan/${id}` } });
@@ -109,7 +111,7 @@ const ScanPG = () => {
         return;
       }
 
-      // Case 2: Found paid booking - Show confirmation box
+      // Case 2: Found valid booking - Show confirmation box
       if (data.type === "CONFIRM_JOIN") {
         setBookingId(data.booking_id);
         setShowConfirmBox(true);
@@ -126,23 +128,18 @@ const ScanPG = () => {
         return;
       }
 
-      // Case 3: No payment found
-      if (data.type === "NOT_PAID") {
+      // ✅ FIXED: Changed from NOT_PAID to NO_BOOKING
+      if (data.type === "NO_BOOKING") {
         setStatus({
           success: false,
-          message: "❌ No paid booking found. Please complete payment first.",
+          message: "❌ No booking found. Please book first.",
         });
         return;
       }
 
-      // Default case
-      if (data.success) {
-        setJoined(true);
-        setStatus({
-          success: true,
-          message: data.message || "✅ Check-in successful!",
-        });
-      } else {
+      // ✅ REMOVED the default success case that caused auto-join without confirmation
+      // Only show error for other cases
+      if (!data.success && data.type !== "CONFIRM_JOIN") {
         setStatus({
           success: false,
           message: data.message || "❌ Check-in failed",
@@ -200,6 +197,11 @@ const ScanPG = () => {
         });
         fetchPG(); // Refresh data
         showNotificationMessage("🎉 Successfully joined PG!");
+        
+        // ✅ OPTIONAL: Auto refresh after 1 second for better UX
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       } else {
         setStatus({
           success: false,
@@ -446,7 +448,7 @@ const ScanPG = () => {
         </div>
       )}
 
-      {/* CONFIRMATION BOX - Shows when user clicks Check-in and has paid booking */}
+      {/* CONFIRMATION BOX - Shows when user clicks Check-in and has valid booking */}
       {showConfirmBox && (
         <div id="confirm-box" style={styles.confirmBox}>
           <div style={styles.confirmBoxHeader}>
@@ -454,8 +456,9 @@ const ScanPG = () => {
             <h3 style={styles.confirmBoxTitle}>Confirm Join</h3>
           </div>
           
+          {/* ✅ FIXED: Updated confirmation message text */}
           <p style={styles.confirmBoxMessage}>
-            You have a valid paid booking. Please confirm to join this PG.
+            You have a valid booking. Please confirm to join this PG.
           </p>
 
           {/* Room Selection Info */}
