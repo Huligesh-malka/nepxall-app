@@ -50,7 +50,7 @@ const ScanPG = () => {
     }
   };
 
-  // ✅ FIXED: Removed the faulty OR condition that caused fake "Verified" UI
+  // ✅ FIXED: Check existing join
   const checkExistingJoin = async () => {
     try {
       const token = await user.getIdToken();
@@ -60,7 +60,7 @@ const ScanPG = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // ✅ ONLY set joined when type is ALREADY_JOINED
+      // ✅ Only set joined when type is ALREADY_JOINED
       if (res.data.type === "ALREADY_JOINED") {
         setJoined(true);
         setStatus({
@@ -78,7 +78,7 @@ const ScanPG = () => {
     setSelectedRoom(room);
   };
 
-  // ✅ CHECK-IN BUTTON HANDLER - FIXED
+  // ✅ FIXED: CHECK-IN BUTTON HANDLER with all backend types
   const handleCheckin = async () => {
     if (!user) {
       navigate("/login", { state: { redirectTo: `/scan/${id}` } });
@@ -101,25 +101,57 @@ const ScanPG = () => {
 
       const data = res.data;
 
-      // Case 1: Already joined
+      // ✅ CASE: Already joined
       if (data.type === "ALREADY_JOINED") {
         setJoined(true);
         setStatus({
           success: true,
-          message: data.message || "✅ You have already joined this PG",
+          message: data.message || "✅ You have already joined this PG"
         });
         return;
       }
 
-      // Case 2: Found valid booking - Show confirmation box
-      if (data.type === "CONFIRM_JOIN") {
+      // ❌ CASE: Not active user
+      if (data.type === "NOT_ACTIVE") {
+        setStatus({
+          success: false,
+          message: data.message || "❌ Not approved by owner"
+        });
+        return;
+      }
+
+      // ❌ CASE: Payment pending
+      if (data.type === "PAYMENT_PENDING") {
+        setStatus({
+          success: false,
+          message: "💰 Payment required. Redirecting..."
+        });
+
+        // Redirect to payment page after 1.5 seconds
+        setTimeout(() => {
+          navigate(`/payment/${id}`);
+        }, 1500);
+        return;
+      }
+
+      // ❌ CASE: No booking
+      if (data.type === "NO_BOOKING") {
+        setStatus({
+          success: false,
+          message: "❌ No booking found. Please book first."
+        });
+        return;
+      }
+
+      // ✅ CASE: Allow join (IMPORTANT - replaces CONFIRM_JOIN)
+      if (data.type === "ALLOW_JOIN") {
         setBookingId(data.booking_id);
         setShowConfirmBox(true);
         setStatus({
-          success: false,
-          message: data.message || "⚠️ Valid booking found! Please confirm to join.",
-          type: "CONFIRM_JOIN"
+          success: true,
+          message: "✅ Payment verified. Please confirm to join"
         });
+
         // Scroll to confirmation box
         document.getElementById('confirm-box')?.scrollIntoView({ 
           behavior: 'smooth', 
@@ -128,18 +160,8 @@ const ScanPG = () => {
         return;
       }
 
-      // ✅ FIXED: Changed from NOT_PAID to NO_BOOKING
-      if (data.type === "NO_BOOKING") {
-        setStatus({
-          success: false,
-          message: "❌ No booking found. Please book first.",
-        });
-        return;
-      }
-
-      // ✅ REMOVED the default success case that caused auto-join without confirmation
-      // Only show error for other cases
-      if (!data.success && data.type !== "CONFIRM_JOIN") {
+      // Fallback for any other response
+      if (!data.success) {
         setStatus({
           success: false,
           message: data.message || "❌ Check-in failed",
@@ -198,7 +220,7 @@ const ScanPG = () => {
         fetchPG(); // Refresh data
         showNotificationMessage("🎉 Successfully joined PG!");
         
-        // ✅ OPTIONAL: Auto refresh after 1 second for better UX
+        // Auto refresh after 1 second for better UX
         setTimeout(() => {
           window.location.reload();
         }, 1000);
@@ -458,7 +480,7 @@ const ScanPG = () => {
           
           {/* ✅ FIXED: Updated confirmation message text */}
           <p style={styles.confirmBoxMessage}>
-            You have a valid booking. Please confirm to join this PG.
+            ✅ Payment verified. Confirm to check-in to this PG.
           </p>
 
           {/* Room Selection Info */}
@@ -630,7 +652,7 @@ const ScanPG = () => {
             }}
             disabled={joined}
           >
-            {joined ? '✅ Verified' : user ? '📍 Check-in' : '🔑 Login to Join'}
+            {joined ? '✅ Checked-In' : user ? '📍 Check-in' : '🔑 Login to Join'}
           </button>
 
           <button
