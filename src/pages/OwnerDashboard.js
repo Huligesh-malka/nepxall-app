@@ -434,7 +434,7 @@ const OwnerDashboard = () => {
     navigate(`/owner/bookings/${bookingId}`);
   };
 
-  // ⭐ QR Code Generator Function
+  // ⭐ QR Code Generator Function (FIXED - Will scan instantly)
   const handleGenerateQR = async (propertyId) => {
     try {
       const BRAND_BLUE = "#0B5ED7";
@@ -445,38 +445,26 @@ const OwnerDashboard = () => {
 
       const url = `https://nepxall-app.vercel.app/scan/${propertyId}`;
 
-      /* QR DESIGN */
+      /* QR DESIGN - FIXED: Clean black & white for perfect scanning */
       const qr = new QRCodeStyling({
         width: 600,
         height: 600,
         data: url,
-        image: window.location.origin + "/logo.png",
+        // NO LOGO - this was causing scanner failure
         dotsOptions: {
-          type: "rounded",
-          gradient: {
-            type: "linear",
-            rotation: 0,
-            colorStops: [
-              { offset: 0, color: BRAND_BLUE },
-              { offset: 1, color: BRAND_GREEN }
-            ]
-          }
-        },
-        cornersSquareOptions: {
-          type: "extra-rounded",
-          color: BRAND_GREEN
-        },
-        cornersDotOptions: {
-          type: "dot",
-          color: BRAND_BLUE
+          type: "square",
+          color: "#000000"
         },
         backgroundOptions: {
           color: "#ffffff"
         },
-        imageOptions: {
-          crossOrigin: "anonymous",
-          margin: 10,
-          imageSize: 0.35
+        cornersSquareOptions: {
+          type: "square",
+          color: "#000000"
+        },
+        cornersDotOptions: {
+          type: "square",
+          color: "#000000"
         }
       });
 
