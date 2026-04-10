@@ -76,6 +76,9 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
   };
 
   const selectedStay = stays.find(s => s.id === parseInt(selectedStayId));
+  
+  // ✅ ADD THIS - Check if user has already joined
+  const isJoined = selectedStay?.is_joined > 0;
 
   return (
     <div style={container}>
@@ -94,7 +97,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
             style={selector}
             value={selectedStayId} 
             onChange={(e) => setSelectedStayId(e.target.value)}
-            disabled={loadingStays}
+            disabled={loadingStays || isJoined}
           >
             <option value="">{loadingStays ? "Loading bookings..." : "Select Booking"}</option>
             {stays.map(s => (
@@ -127,8 +130,29 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* Form Fields - Only show if booking selected */}
-        {selectedStay && (
+        {/* ✅ ADD THIS - Show message when already joined */}
+        {selectedStay && isJoined && (
+          <div style={{
+            background: "#dcfce7",
+            padding: 20,
+            borderRadius: 12,
+            border: "1px solid #22c55e",
+            marginBottom: 20
+          }}>
+            <h4 style={{ color: "#166534", margin: 0 }}>
+              ✅ You have already joined this PG
+            </h4>
+            <p style={{ color: "#166534", marginTop: 8 }}>
+              ❌ Refund is not allowed after joining.
+            </p>
+            <p style={{ color: "#166534", marginTop: 8 }}>
+              📞 If you have any queries, please contact support.
+            </p>
+          </div>
+        )}
+
+        {/* Form Fields - Only show if booking selected AND not joined */}
+        {selectedStay && !isJoined && (
           <>
             <div style={formGroup}>
               <label style={label}>
@@ -203,7 +227,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
                   opacity: isSubmitting ? 0.7 : 1,
                 }}
                 onClick={submitRefundRequest}
-                disabled={!isFormValid() || isSubmitting}
+                disabled={!isFormValid() || isSubmitting || isJoined}
               >
                 {isSubmitting ? "Submitting..." : "Submit Refund Request"}
               </button>
