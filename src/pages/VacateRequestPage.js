@@ -74,10 +74,14 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
       });
       if (res.data.success) {
         alert("✅ Vacate request submitted successfully");
-        onSuccess();
+        loadBookings(); // ✅ FIX: Refresh safely instead of calling onSuccess()
       }
     } catch (err) {
       console.error(err);
+      // ✅ EXTRA SAFE: Ignore duplicate error
+      if (err.response?.data?.message === "Vacate already requested") {
+        return; // ignore duplicate error
+      }
       alert(err.response?.data?.message || "Vacate request failed");
     } finally {
       setIsSubmitting(false);
@@ -549,4 +553,4 @@ const completionButton = {
   transition: "all 0.2s",
 };
 
-export default VacateRequestPage;
+export default VacateRequestPage;   
