@@ -127,6 +127,7 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
   };
 
   const selectedStay = stays.find(s => s.id === parseInt(selectedStayId));
+  const isJoined = selectedStay?.is_joined > 0;
 
   // Show completion screen if refund is paid
   if (selectedStay?.refund_status === "paid") {
@@ -194,6 +195,24 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
               <span style={infoLabel}>Security Deposit:</span>
               <span style={infoValue}>₹{selectedStay.deposit_amount}</span>
             </div>
+          </div>
+        )}
+
+        {/* Warning Message - Show if not joined */}
+        {selectedStay && !isJoined && (
+          <div style={{
+            marginTop: 15,
+            padding: 15,
+            background: "#fee2e2",
+            borderRadius: 8,
+            border: "1px solid #ef4444"
+          }}>
+            <p style={{ margin: 0, color: "#991b1b", fontWeight: 500 }}>
+              ❌ You have not joined this PG yet
+            </p>
+            <p style={{ marginTop: 6, fontSize: 13, color: "#991b1b" }}>
+              Vacate request is only allowed after check-in.
+            </p>
           </div>
         )}
 
@@ -292,8 +311,9 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* Form Fields - Only show if booking selected AND refund not paid AND not pending */}
+        {/* Form Fields - Only show if booking selected AND joined AND refund not paid AND not pending */}
         {selectedStay && 
+         isJoined &&
          selectedStay.refund_status !== "paid" && 
          selectedStay.refund_status !== "pending" && (
           <>
@@ -380,11 +400,11 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
               <button 
                 style={{ 
                   ...submitButton, 
-                  opacity: isFormValid() && !isSubmitting ? 1 : 0.7,
-                  cursor: isFormValid() && !isSubmitting ? "pointer" : "not-allowed"
+                  opacity: isFormValid() && !isSubmitting && isJoined ? 1 : 0.7,
+                  cursor: isFormValid() && !isSubmitting && isJoined ? "pointer" : "not-allowed"
                 }}
                 onClick={submitVacateRequest}
-                disabled={!isFormValid() || isSubmitting}
+                disabled={!isFormValid() || isSubmitting || !isJoined}
               >
                 {isSubmitting ? "Submitting..." : "Submit Vacate Request"}
               </button>
