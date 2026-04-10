@@ -1,15 +1,17 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import api from "../api/api";
-import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import VacateRequestPage from "./VacateRequestPage";
+import RefundRequestPage from "./RefundRequestPage";
 
 /* ================= BRAND COLORS ================= */
 const BRAND_BLUE = "#0B5ED7";
 const BRAND_GREEN = "#4CAF50";
 const BRAND_RED = "#ef4444";
+const BRAND_ORANGE = "#f59e0b";
 
 /* ================= 3-DOT MENU COMPONENT ================= */
 const ThreeDotMenu = ({ items }) => {
@@ -45,7 +47,7 @@ const ThreeDotMenu = ({ items }) => {
               key={idx}
               style={{
                 ...dropdownItem,
-                color: item.danger ? BRAND_RED : item.warn ? "#f59e0b" : "#111827",
+                color: item.danger ? BRAND_RED : item.warn ? BRAND_ORANGE : "#111827",
                 borderBottom: idx < items.length - 1 ? "1px solid #f3f4f6" : "none",
               }}
               onClick={() => {
@@ -63,40 +65,216 @@ const ThreeDotMenu = ({ items }) => {
   );
 };
 
+// Stay Details Component
+const StayDetails = ({ stay, onAcceptRefund, onRejectRefund, formatDate, onVacateClick, onRefundClick }) => {
+  return (
+    <div style={detailsContainer}>
+      {/* Vacate Status Banner */}
+      {(stay.vacate_status === "requested" ||
+        stay.vacate_status === "approved" ||
+        stay.vacate_status === "completed") && (
+        <div
+          style={{
+            background:
+              stay.vacate_status === "requested"
+                ? "#fef3c7"
+                : stay.vacate_status === "approved"
+                ? "#dcfce7"
+                : "#e0e7ff",
+            padding: "15px",
+            borderRadius: "8px",
+            marginBottom: "20px",
+            textAlign: "center",
+          }}
+        >
+          <p style={{ fontWeight: "bold", marginBottom: "5px" }}>
+            🚪 Vacate Request Status:
+            {stay.vacate_status === "requested" && " ⏳ Requested"}
+            {stay.vacate_status === "approved" && " ✅ Approved"}
+            {stay.vacate_status === "completed" && " ✓ Completed"}
+          </p>
+          {stay.vacate_date && (
+            <p style={{ fontSize: "12px", color: "#666" }}>
+              Vacate Date: {formatDate(stay.vacate_date)}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Refund Status Banner */}
+      {(stay.refund_status === "pending" || stay.refund_status === "approved" || stay.refund_status === "paid") && (
+        <div
+          style={{
+            background: "#f9fafb",
+            padding: "15px",
+            borderRadius: "8px",
+            marginBottom: "20px",
+            textAlign: "center",
+          }}
+        >
+          <p style={{ fontWeight: "bold" }}>
+            Refund Status:
+            {stay.refund_status === "pending" &&
+              (!stay.user_approval || stay.user_approval === null) &&
+              " ⏳ Waiting for Owner Approval"}
+
+            {stay.refund_status === "approved" &&
+              (stay.user_approval === "pending" || !stay.user_approval) &&
+              " ✅ Owner Approved - Please Accept"}
+
+            {stay.refund_status === "pending" &&
+              stay.user_approval === "accepted" &&
+              " ⏳ Waiting for Owner Payment"}
+
+            {stay.refund_status === "pending" &&
+              stay.user_approval === "rejected" &&
+              " ⚠️ You Rejected - Owner will review again"}
+
+            {stay.refund_status === "rejected" &&
+              " ❌ Owner Rejected (You can request again)"}
+
+            {stay.refund_status === "paid" &&
+              " 💸 Refund Completed"}
+          </p>
+
+          {stay.refund_amount > 0 && (
+            <p>💰 Refund Amount: ₹{stay.refund_amount}</p>
+          )}
+
+          {stay.refund_status === "approved" &&
+            (stay.user_approval === "pending" || !stay.user_approval) && (
+              <div style={{ display: "flex", gap: 8, marginTop: 10, justifyContent: "center" }}>
+                <button
+                  style={{ ...btn, background: "#4CAF50", width: "auto", padding: "10px 20px" }}
+                  onClick={() => onAcceptRefund(stay.id)}
+                >
+                  ✅ Accept Refund
+                </button>
+                <button
+                  style={{ ...btn, background: "#ef4444", width: "auto", padding: "10px 20px" }}
+                  onClick={() => onRejectRefund(stay.id)}
+                >
+                  ❌ Reject Refund
+                </button>
+              </div>
+          )}
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div style={actionButtonsContainer}>
+        {(!stay.vacate_status || stay.vacate_status === null || stay.refund_status === "rejected") && (
+          <button 
+            style={{ ...actionButton, background: BRAND_ORANGE }}
+            onClick={onVacateClick}
+          >
+            🚪 Request Vacate
+          </button>
+        )}
+        
+        {(!stay.refund_status || stay.refund_status === "rejected") && stay.refund_status !== "paid" && (
+          <button 
+            style={{ ...actionButton, background: BRAND_RED }}
+            onClick={onRefundClick}
+          >
+            💰 Request Refund
+          </button>
+        )}
+      </div>
+
+      {/* Stay Information */}
+      <div style={infoGrid}>
+        <div style={infoItem}>
+          <label style={labelStyle}>🚪 Allotted Room</label>
+          <p style={valStyle}>{stay.room_no || "Allocating..."}</p>
+        </div>
+        <div style={infoItem}>
+          <label style={labelStyle}>👥 Sharing Type</label>
+          <p style={valStyle}>{stay.room_type || "N/A"}</p>
+        </div>
+        <div style={{ ...infoItem, gridColumn: "span 2", marginTop: "10px" }}>
+          <label style={labelStyle}>🆔 Order ID</label>
+          <p
+            style={{
+              ...valStyle,
+              fontSize: "12px",
+              color: BRAND_BLUE,
+              wordBreak: "break-all",
+            }}
+          >
+            {stay.order_id || "N/A"}
+          </p>
+        </div>
+      </div>
+
+      <div style={priceList}>
+        <p style={{ ...priceRow, color: BRAND_GREEN, fontWeight: "700" }}>
+          💰 Paid On: <span>{formatDate(stay.paid_date)}</span>
+        </p>
+        {stay.rent_amount > 0 && (
+          <p style={priceRow}>
+            Monthly Rent: <span>₹{stay.rent_amount}</span>
+          </p>
+        )}
+        {stay.maintenance_amount > 0 && (
+          <p style={priceRow}>
+            Maintenance: <span>₹{stay.maintenance_amount}</span>
+          </p>
+        )}
+        {stay.deposit_amount > 0 && (
+          <p
+            style={{
+              ...priceRow,
+              borderTop: "1px dashed #eee",
+              paddingTop: "10px",
+              marginTop: "10px",
+            }}
+          >
+            Security Deposit (Paid):{" "}
+            <span style={{ fontWeight: "bold" }}>₹{stay.deposit_amount}</span>
+          </p>
+        )}
+        <div style={totalBox}>
+          <span>Total Monthly Paid</span>
+          <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
+            ₹{stay.monthly_total}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const UserActiveStay = () => {
   const [stays, setStays] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedStayId, setSelectedStayId] = useState(null);
+  const [currentView, setCurrentView] = useState('details');
   const navigate = useNavigate();
-  
-  // ✅ USE ONLY THIS - No direct auth.currentUser
-  const { user, role, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const receiptRef = useRef();
   const [selectedStay, setSelectedStay] = useState(null);
 
-  const [showRefundFormFor, setShowRefundFormFor] = useState(null);
-  // ✅ REFUND - per-stay state
-  const [refundForms, setRefundForms] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [showVacateFormFor, setShowVacateFormFor] = useState(null);
-  // ✅ VACATE - per-stay state (FIXED: no more global state)
-  const [vacateForms, setVacateForms] = useState({});
-
-  // ✅ Load stays
+  // Load stays
   const loadStay = useCallback(async (forceRefresh = false) => {
     try {
       if (forceRefresh) setLoading(true);
       if (!user) return;
 
       const res = await api.get("/bookings/user/active-stay");
-      setStays(Array.isArray(res.data) ? res.data : res.data ? [res.data] : []);
+      const staysData = Array.isArray(res.data) ? res.data : res.data ? [res.data] : [];
+      setStays(staysData);
+      
+      if (staysData.length > 0 && !selectedStayId) {
+        setSelectedStayId(staysData[0].id);
+      }
     } catch (err) {
       console.error("Error loading stays:", err);
     } finally {
       if (forceRefresh) setLoading(false);
     }
-  }, [user]);
+  }, [user, selectedStayId]);
 
   useEffect(() => {
     if (user) {
@@ -104,112 +282,9 @@ const UserActiveStay = () => {
     }
   }, [user, loadStay]);
 
-  // ✅ PROTECTION - MOVED AFTER ALL HOOKS
-  if (authLoading) {
-    return (
-      <div style={container}>
-        <p style={{ textAlign: "center", padding: 50 }}>⏳ Loading authentication...</p>
-      </div>
-    );
-  }
-  
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
+  const currentStay = stays.find(s => s.id === selectedStayId);
 
-  // ✅ REFUND SUBMIT - using per-stay state
-  const submitRefundRequest = async (stayId) => {
-    const form = refundForms[stayId] || {};
-    
-    if (!form.reason || !form.upiId) {
-      alert("Please provide both a reason and a UPI ID.");
-      return;
-    }
-    if (form.upiId !== form.confirmUpi) {
-      alert("UPI IDs do not match!");
-      return;
-    }
-    try {
-      setIsSubmitting(true);
-      const res = await api.post("/bookings/refunds/request", {
-        bookingId: stayId,
-        reason: form.reason,
-        upi_id: form.upiId
-      });
-      if (res.data.success) {
-        alert("✅ Refund request submitted successfully.");
-        await loadStay(true);
-        setShowRefundFormFor(null);
-        // ✅ Clear only this stay's refund form
-        setRefundForms(prev => ({
-          ...prev,
-          [stayId]: {}
-        }));
-      }
-    } catch (err) {
-      console.error("Refund Error:", err);
-      alert(err.response?.data?.message || "Refund request failed.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // ✅ VACATE SUBMIT - using per-stay state (FIXED)
-  const submitVacateRequest = async (stayId) => {
-    const form = vacateForms[stayId] || {};
-    
-    if (!form.vacateReason || !form.vacateDate) {
-      alert("Please fill all required fields");
-      return;
-    }
-    
-    // ✅ Prevent past date selection
-    const selectedDate = new Date(form.vacateDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (selectedDate < today) {
-      alert("Vacate date cannot be in the past");
-      return;
-    }
-    
-    try {
-      const res = await api.post("/bookings/vacate/request", {
-        bookingId: stayId,
-        vacate_date: form.vacateDate,
-        reason: form.vacateReason,
-        account_number: form.accountNumber || "",
-        ifsc_code: form.ifscCode || "",
-        upi_id: form.upiId || "",
-      });
-      if (res.data.success) {
-        alert("✅ Vacate request submitted");
-        setShowVacateFormFor(null);
-        
-        // ✅ FIX 5: Force UI update immediately to prevent flicker/disappearing
-        setStays(prev =>
-          prev.map(s =>
-            s.id === stayId
-              ? { ...s, vacate_status: "requested" }
-              : s
-          )
-        );
-        
-        // ✅ Clear only this stay's vacate form
-        setVacateForms(prev => ({
-          ...prev,
-          [stayId]: {}
-        }));
-        
-        // ✅ Force refresh from backend
-        await loadStay(true);
-      }
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || "Vacate failed");
-    }
-  };
-
-  // ✅ Accept refund
+  // Accept refund
   const acceptRefund = async (bookingId) => {
     try {
       await api.post("/bookings/refunds/accept", { bookingId });
@@ -221,7 +296,7 @@ const UserActiveStay = () => {
     }
   };
 
-  // ✅ Reject refund
+  // Reject refund
   const rejectRefund = async (bookingId) => {
     try {
       await api.post("/bookings/refunds/reject", { bookingId });
@@ -265,22 +340,29 @@ const UserActiveStay = () => {
     }, 500);
   };
 
-  // ✅ Helper to check if refund button should be disabled
-  const isRefundDisabled = (stayId) => {
-    const form = refundForms[stayId] || {};
-    return isSubmitting || !form.reason || !form.upiId || form.upiId !== form.confirmUpi;
-  };
-
-  if (loading)
+  if (authLoading) {
     return (
-      <div style={container}>
+      <div style={mainContent}>
+        <p style={{ textAlign: "center", padding: 50 }}>⏳ Loading authentication...</p>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (loading) {
+    return (
+      <div style={mainContent}>
         <p style={{ textAlign: "center", padding: 50 }}>⏳ Syncing your stays...</p>
       </div>
     );
+  }
 
-  if (stays.length === 0)
+  if (stays.length === 0) {
     return (
-      <div style={container}>
+      <div style={mainContent}>
         <div style={emptyBox}>
           <h3 style={{ color: "#4b5563" }}>No Active Stays Found</h3>
           <p style={{ color: "#9ca3af", marginBottom: 20 }}>
@@ -292,493 +374,154 @@ const UserActiveStay = () => {
         </div>
       </div>
     );
+  }
 
   return (
-    <div style={container}>
-      <h2 style={{ marginBottom: 25, color: "#111827" }}>🏠 My Current Stays</h2>
+    <div style={mainContent}>
+      {/* Stay Selection Dropdown */}
+      <div style={staySelector}>
+        <label style={selectorLabel}>Select Stay:</label>
+        <select 
+          style={selector}
+          value={selectedStayId || ''}
+          onChange={(e) => {
+            setSelectedStayId(Number(e.target.value));
+            setCurrentView('details');
+          }}
+        >
+          {stays.map((stay) => (
+            <option key={stay.id} value={stay.id}>
+              {stay.pg_name} - Room {stay.room_no}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      {stays.map((stay) => {
-        // Get per-stay vacate form data
-        const vacateForm = vacateForms[stay.id] || {};
-        const refundForm = refundForms[stay.id] || {};
-        
-        return (
-          <div key={stay.id} style={card}>
+      {currentStay && (
+        <div style={contentCard}>
+          {/* Header with PG name and 3-dot menu */}
+          <div style={cardHeader}>
+            <div>
+              <h2 style={pgName}>{currentStay.pg_name}</h2>
+              <p style={roomInfo}>
+                Room {currentStay.room_no} • {currentStay.room_type} Sharing
+              </p>
+            </div>
+            <ThreeDotMenu
+              items={[
+                {
+                  icon: "📜",
+                  label: "Booking History",
+                  onClick: () => navigate("/user/bookings"),
+                },
+                {
+                  icon: "💳",
+                  label: "Pay Rent",
+                  onClick: () => navigate("/payment"),
+                },
+                {
+                  icon: "📥",
+                  label: "Download Receipt",
+                  onClick: () => handleDownloadReceipt(currentStay),
+                },
+              ]}
+            />
+          </div>
 
-            {/* ✅ FIX 1 & 2: CORRECT STATUS VALUES with "requested" instead of "pending" */}
-            {(stay.vacate_status === "requested" ||
-              stay.vacate_status === "approved" ||
-              stay.vacate_status === "completed") && (
-              <div
-                style={{
-                  background:
-                    stay.vacate_status === "requested"
-                      ? "#fef3c7"
-                      : stay.vacate_status === "approved"
-                      ? "#dcfce7"
-                      : "#e0e7ff",
-                  padding: "15px",
-                  borderRadius: "8px",
-                  marginBottom: "15px",
-                  textAlign: "center",
-                }}
-              >
-                <p style={{ fontWeight: "bold", marginBottom: "5px" }}>
-                  🚪 Vacate Request Status:
-                  {stay.vacate_status === "requested" && " ⏳ Requested"}
-                  {stay.vacate_status === "approved" && " ✅ Approved"}
-                  {stay.vacate_status === "completed" && " ✓ Completed"}
-                </p>
-                {stay.vacate_date && (
-                  <p style={{ fontSize: "12px", color: "#666" }}>
-                    Vacate Date: {formatDate(stay.vacate_date)}
-                  </p>
-                )}
-              </div>
+          {/* View Navigation Tabs */}
+          <div style={viewNav}>
+            <button
+              style={{ ...navTab, ...(currentView === 'details' ? activeNavTab : {}) }}
+              onClick={() => setCurrentView('details')}
+            >
+              📋 Stay Details
+            </button>
+            <button
+              style={{ 
+                ...navTab, 
+                ...(currentView === 'vacate' ? activeNavTab : {}),
+                ...((currentStay.vacate_status === 'requested' || 
+                    currentStay.vacate_status === 'approved' || 
+                    currentStay.vacate_status === 'completed') ? disabledNavTab : {})
+              }}
+              onClick={() => {
+                if (currentStay.vacate_status !== 'requested' && 
+                    currentStay.vacate_status !== 'approved' && 
+                    currentStay.vacate_status !== 'completed') {
+                  setCurrentView('vacate');
+                }
+              }}
+              disabled={currentStay.vacate_status === 'requested' || 
+                        currentStay.vacate_status === 'approved' || 
+                        currentStay.vacate_status === 'completed'}
+            >
+              🚪 Vacate Room
+              {(currentStay.vacate_status === 'requested' || currentStay.vacate_status === 'approved') && (
+                <span style={statusBadge}>Pending</span>
+              )}
+            </button>
+            <button
+              style={{ 
+                ...navTab, 
+                ...(currentView === 'refund' ? activeNavTab : {}),
+                ...(currentStay.refund_status === 'paid' ? disabledNavTab : {})
+              }}
+              onClick={() => {
+                if (currentStay.refund_status !== 'paid') {
+                  setCurrentView('refund');
+                }
+              }}
+              disabled={currentStay.refund_status === 'paid'}
+            >
+              💰 Request Refund
+              {currentStay.refund_status === 'pending' && (
+                <span style={{...statusBadge, background: BRAND_ORANGE}}>Pending</span>
+              )}
+              {currentStay.refund_status === 'approved' && (
+                <span style={{...statusBadge, background: BRAND_GREEN}}>Approved</span>
+              )}
+            </button>
+          </div>
+
+          {/* Content Area - Renders different components based on currentView */}
+          <div style={viewContent}>
+            {currentView === 'details' && (
+              <StayDetails 
+                stay={currentStay}
+                onAcceptRefund={acceptRefund}
+                onRejectRefund={rejectRefund}
+                formatDate={formatDate}
+                onVacateClick={() => setCurrentView('vacate')}
+                onRefundClick={() => setCurrentView('refund')}
+              />
             )}
-
-            {/* ✅ FIXED: SIMPLIFIED CONDITION - Just check if form should be shown */}
-            {showVacateFormFor === stay.id ? (
-              <div style={refundFormContainer}>
-                <h3 style={{ color: "#f59e0b" }}>Vacate Request</h3>
-
-                {/* ✅ REFUND STATUS UI - FULL FIX */}
-                <div
-                  style={{
-                    background: "#f9fafb",
-                    padding: "10px",
-                    borderRadius: "8px",
-                    marginBottom: "10px",
-                    textAlign: "center",
-                  }}
-                >
-                  <p style={{ fontWeight: "bold" }}>
-                    Refund Status:
-                    
-                    {stay.refund_status === "pending" &&
-                      (!stay.user_approval || stay.user_approval === null) &&
-                      " ⏳ Waiting for Owner Approval"}
-
-                    {stay.refund_status === "approved" &&
-                      (stay.user_approval === "pending" || !stay.user_approval) &&
-                      " ✅ Owner Approved - Please Accept"}
-
-                    {stay.refund_status === "pending" &&
-                      stay.user_approval === "accepted" &&
-                      " ⏳ Waiting for Owner Payment"}
-
-                    {stay.refund_status === "pending" &&
-                      stay.user_approval === "rejected" &&
-                      " ⚠️ You Rejected - Owner will review again"}
-
-                    {stay.refund_status === "rejected" &&
-                      " ❌ Owner Rejected (You can request again)"}
-
-                    {stay.refund_status === "paid" &&
-                      " 💸 Refund Completed"}
-                  </p>
-
-                  {/* 💰 Amount */}
-                  {stay.refund_amount > 0 && (
-                    <p>💰 Refund Amount: ₹{stay.refund_amount}</p>
-                  )}
-
-                  {/* ✅ SHOW BUTTONS ONLY WHEN NEEDED - handles NULL as pending */}
-                  {stay.refund_status === "approved" &&
-                    (stay.user_approval === "pending" || !stay.user_approval) && (
-                      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                        <button
-                          style={{ ...btn, background: "#4CAF50" }}
-                          onClick={() => acceptRefund(stay.id)}
-                        >
-                          ✅ Accept
-                        </button>
-                        <button
-                          style={{ ...btn, background: "#ef4444" }}
-                          onClick={() => rejectRefund(stay.id)}
-                        >
-                          ❌ Reject
-                        </button>
-                      </div>
-                  )}
-
-                  {/* ✅ FIXED: "Request Again" button - Proper reset and reopen */}
-                  {stay.refund_status === "rejected" && (
-                    <button
-                      style={{ ...btn, background: "#f59e0b", marginTop: 10 }}
-                      onClick={() => {
-                        // First reset to null to force state change
-                        setShowVacateFormFor(null);
-                        // Then reopen the form after a microtask
-                        setTimeout(() => {
-                          setShowVacateFormFor(stay.id);
-                        }, 0);
-                        // Clear old vacate form data for this stay
-                        setVacateForms(prev => ({
-                          ...prev,
-                          [stay.id]: {}
-                        }));
-                      }}
-                    >
-                      🔁 Request Again
-                    </button>
-                  )}
-                </div>
-
-                <div style={inputGroup}>
-                  <label style={labelStyle}>Vacate Date</label>
-                  <input
-                    type="date"
-                    style={inputField}
-                    min={new Date().toISOString().split("T")[0]}
-                    value={vacateForm.vacateDate || ""}
-                    onChange={(e) =>
-                      setVacateForms(prev => ({
-                        ...prev,
-                        [stay.id]: {
-                          ...prev[stay.id],
-                          vacateDate: e.target.value
-                        }
-                      }))
-                    }
-                  />
-                </div>
-                <div style={inputGroup}>
-                  <label style={labelStyle}>Reason</label>
-                  <textarea
-                    style={inputField}
-                    placeholder="Why are you vacating?"
-                    value={vacateForm.vacateReason || ""}
-                    onChange={(e) =>
-                      setVacateForms(prev => ({
-                        ...prev,
-                        [stay.id]: {
-                          ...prev[stay.id],
-                          vacateReason: e.target.value
-                        }
-                      }))
-                    }
-                  />
-                </div>
-                <div style={inputGroup}>
-                  <label style={labelStyle}>Account Number (Optional)</label>
-                  <input
-                    style={inputField}
-                    placeholder="Enter account number"
-                    value={vacateForm.accountNumber || ""}
-                    onChange={(e) =>
-                      setVacateForms(prev => ({
-                        ...prev,
-                        [stay.id]: {
-                          ...prev[stay.id],
-                          accountNumber: e.target.value
-                        }
-                      }))
-                    }
-                  />
-                </div>
-                <div style={inputGroup}>
-                  <label style={labelStyle}>IFSC Code (Optional)</label>
-                  <input
-                    style={inputField}
-                    placeholder="Enter IFSC code"
-                    value={vacateForm.ifscCode || ""}
-                    onChange={(e) =>
-                      setVacateForms(prev => ({
-                        ...prev,
-                        [stay.id]: {
-                          ...prev[stay.id],
-                          ifscCode: e.target.value
-                        }
-                      }))
-                    }
-                  />
-                </div>
-                <div style={inputGroup}>
-                  <label style={labelStyle}>UPI ID (Optional)</label>
-                  <input
-                    style={inputField}
-                    placeholder="name@bank"
-                    value={vacateForm.upiId || ""}
-                    onChange={(e) =>
-                      setVacateForms(prev => ({
-                        ...prev,
-                        [stay.id]: {
-                          ...prev[stay.id],
-                          upiId: e.target.value
-                        }
-                      }))
-                    }
-                  />
-                </div>
-
-                <div style={btnRow}>
-                  <button
-                    style={{ ...btn, background: "#6b7280" }}
-                    onClick={() => {
-                      setShowVacateFormFor(null);
-                      // Clear only this stay's vacate form
-                      setVacateForms(prev => ({
-                        ...prev,
-                        [stay.id]: {}
-                      }));
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    style={{ ...btn, background: "#f59e0b" }}
-                    onClick={() => submitVacateRequest(stay.id)}
-                  >
-                    Submit Vacate
-                  </button>
-                </div>
-              </div>
-
-            ) : showRefundFormFor === stay.id ? (
-              /* REFUND FORM - Using per-stay state */
-              <div style={refundFormContainer}>
-                {stay.refund_status ? (
-                  <div style={{ textAlign: "center", padding: "20px 0" }}>
-                    <div style={{ fontWeight: "700", fontSize: "16px", marginBottom: "10px" }}>
-                      {stay.refund_status === "pending" && "⏳ Waiting for Admin Approval"}
-                      {stay.refund_status === "approved" && "✅ Approved - Processing"}
-                      {stay.refund_status === "paid" && "💸 Refunded Successfully"}
-                      {stay.refund_status === "rejected" && "❌ Rejected (You can retry)"}
-                    </div>
-                    <button
-                      style={{ ...btn, background: "#6b7280", flex: "none", width: "120px" }}
-                      onClick={() => {
-                        setShowRefundFormFor(null);
-                        setRefundForms(prev => ({
-                          ...prev,
-                          [stay.id]: {}
-                        }));
-                      }}
-                    >
-                      Close
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <h3 style={{ color: BRAND_RED, marginBottom: "15px" }}>Request Refund</h3>
-                    <p style={{ fontSize: "12px", color: "#666", marginBottom: "20px" }}>
-                      Order ID: {stay.order_id}
-                    </p>
-                    <div style={inputGroup}>
-                      <label style={labelStyle}>Refund Reason</label>
-                      <textarea
-                        style={inputField}
-                        placeholder="Tell us why you want a refund..."
-                        value={refundForm.reason || ""}
-                        onChange={(e) =>
-                          setRefundForms(prev => ({
-                            ...prev,
-                            [stay.id]: {
-                              ...prev[stay.id],
-                              reason: e.target.value
-                            }
-                          }))
-                        }
-                      />
-                    </div>
-                    <div style={inputGroup}>
-                      <label style={labelStyle}>UPI ID for Transfer</label>
-                      <input
-                        style={inputField}
-                        type="text"
-                        placeholder="e.g. name@bank"
-                        value={refundForm.upiId || ""}
-                        onChange={(e) =>
-                          setRefundForms(prev => ({
-                            ...prev,
-                            [stay.id]: {
-                              ...prev[stay.id],
-                              upiId: e.target.value
-                            }
-                          }))
-                        }
-                      />
-                    </div>
-                    <div style={inputGroup}>
-                      <label style={labelStyle}>Confirm UPI ID</label>
-                      <input
-                        style={{
-                          ...inputField,
-                          borderColor:
-                            refundForm.confirmUpi && refundForm.upiId !== refundForm.confirmUpi ? BRAND_RED : "#ddd",
-                          backgroundColor:
-                            refundForm.confirmUpi && refundForm.upiId === refundForm.confirmUpi ? "#f0fdf4" : "#fff",
-                        }}
-                        type="text"
-                        placeholder="Re-enter UPI ID"
-                        value={refundForm.confirmUpi || ""}
-                        onChange={(e) =>
-                          setRefundForms(prev => ({
-                            ...prev,
-                            [stay.id]: {
-                              ...prev[stay.id],
-                              confirmUpi: e.target.value
-                            }
-                          }))
-                        }
-                      />
-                      {refundForm.confirmUpi && refundForm.upiId !== refundForm.confirmUpi && (
-                        <span style={{ fontSize: "10px", color: BRAND_RED }}>
-                          UPI IDs do not match
-                        </span>
-                      )}
-                    </div>
-                    <div style={btnRow}>
-                      <button
-                        style={{ ...btn, background: "#6b7280" }}
-                        onClick={() => {
-                          setShowRefundFormFor(null);
-                          setRefundForms(prev => ({
-                            ...prev,
-                            [stay.id]: {}
-                          }));
-                        }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        style={{
-                          ...btn,
-                          background: isRefundDisabled(stay.id) ? "#cca7a7" : BRAND_RED,
-                          cursor: isRefundDisabled(stay.id) ? "not-allowed" : "pointer",
-                        }}
-                        disabled={isRefundDisabled(stay.id)}
-                        onClick={() => submitRefundRequest(stay.id)}
-                      >
-                        {isSubmitting ? "Submitting..." : "Submit Request"}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-
-            ) : (
-              /* ── MAIN CARD VIEW ── */
-              <>
-                {/* Header: PG name + badge + 3-dot menu */}
-                <div style={headerSection}>
-                  <div>
-                    <h3 style={{ margin: 0, color: BRAND_BLUE }}>{stay.pg_name}</h3>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={statusBadge}>VERIFIED ✅</span>
-
-                    {/* ── 3-DOT MENU ── */}
-                    <ThreeDotMenu
-                      items={[
-                        {
-                          icon: "📜",
-                          label: "Booking History",
-                          onClick: () => navigate("/user/bookings"),
-                        },
-                        {
-                          icon: "💳",
-                          label: "Pay Rent",
-                          onClick: () => navigate("/payment"),
-                        },
-                        {
-                          icon: "📥",
-                          label: "Download Receipt",
-                          onClick: () => handleDownloadReceipt(stay),
-                        },
-                        ...(stay.order_id
-                          ? [
-                              {
-                                icon: "🔁",
-                                label: "Request Refund",
-                                danger: true,
-                                onClick: () => setShowRefundFormFor(stay.id),
-                              },
-                            ]
-                          : []),
-                        // ✅ FIXED: Menu condition - allows vacate again after rejection
-                        // Allow vacate if no pending/approved/completed vacate, or if refund was rejected
-                        ...((!stay.vacate_status || stay.vacate_status === null || stay.refund_status === "rejected")
-                          ? [
-                              {
-                                icon: "🚪",
-                                label: "Vacate Room",
-                                warn: true,
-                                onClick: () => setShowVacateFormFor(stay.id),
-                              },
-                            ]
-                          : []),
-                      ]}
-                    />
-                  </div>
-                </div>
-
-                <div style={infoGrid}>
-                  <div style={infoItem}>
-                    <label style={labelStyle}>🚪 Allotted Room</label>
-                    <p style={valStyle}>{stay.room_no || "Allocating..."}</p>
-                  </div>
-                  <div style={infoItem}>
-                    <label style={labelStyle}>👥 Sharing Type</label>
-                    <p style={valStyle}>{stay.room_type || "N/A"}</p>
-                  </div>
-                  <div style={{ ...infoItem, gridColumn: "span 2", marginTop: "10px" }}>
-                    <label style={labelStyle}>🆔 Order ID</label>
-                    <p
-                      style={{
-                        ...valStyle,
-                        fontSize: "12px",
-                        color: BRAND_BLUE,
-                        wordBreak: "break-all",
-                      }}
-                    >
-                      {stay.order_id || "N/A"}
-                    </p>
-                  </div>
-                </div>
-
-                <div style={priceList}>
-                  <p style={{ ...priceRow, color: BRAND_GREEN, fontWeight: "700" }}>
-                    💰 Paid On: <span>{formatDate(stay.paid_date)}</span>
-                  </p>
-                  {stay.rent_amount > 0 && (
-                    <p style={priceRow}>
-                      Monthly Rent: <span>₹{stay.rent_amount}</span>
-                    </p>
-                  )}
-                  {stay.maintenance_amount > 0 && (
-                    <p style={priceRow}>
-                      Maintenance: <span>₹{stay.maintenance_amount}</span>
-                    </p>
-                  )}
-                  {stay.deposit_amount > 0 && (
-                    <p
-                      style={{
-                        ...priceRow,
-                        borderTop: "1px dashed #eee",
-                        paddingTop: "10px",
-                        marginTop: "10px",
-                      }}
-                    >
-                      Security Deposit (Paid):{" "}
-                      <span style={{ fontWeight: "bold" }}>₹{stay.deposit_amount}</span>
-                    </p>
-                  )}
-                  <div style={totalBox}>
-                    <span>Total Monthly Paid</span>
-                    <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
-                      ₹{stay.monthly_total}
-                    </span>
-                  </div>
-                </div>
-              </>
+            
+            {currentView === 'vacate' && (
+              <VacateRequestPage 
+                stay={currentStay}
+                onSuccess={() => {
+                  loadStay(true);
+                  setCurrentView('details');
+                }}
+                onCancel={() => setCurrentView('details')}
+              />
+            )}
+            
+            {currentView === 'refund' && (
+              <RefundRequestPage 
+                stay={currentStay}
+                onSuccess={() => {
+                  loadStay(true);
+                  setCurrentView('details');
+                }}
+                onCancel={() => setCurrentView('details')}
+              />
             )}
           </div>
-        );
-      })}
+        </div>
+      )}
 
-      {/* HIDDEN RECEIPT FOR PDF */}
+      {/* Hidden Receipt for PDF */}
       {selectedStay && (
         <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
           <div ref={receiptRef} style={modernReceiptContainer}>
@@ -913,32 +656,132 @@ const UserActiveStay = () => {
 };
 
 /* ===== STYLES ===== */
-const container = {
-  maxWidth: 600,
+const mainContent = {
+  maxWidth: 900,
   margin: "40px auto",
   padding: "0 20px",
   fontFamily: "Inter, sans-serif",
 };
-const card = {
-  background: "#fff",
-  padding: 30,
-  borderRadius: 16,
-  boxShadow: "0 10px 25px rgba(0,0,0,0.06)",
-  border: "1px solid #f0f0f0",
-  marginBottom: "25px",
+
+const staySelector = {
+  marginBottom: 20,
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
 };
-const headerSection = {
+
+const selectorLabel = {
+  fontSize: 14,
+  fontWeight: 500,
+  color: "#374151",
+};
+
+const selector = {
+  padding: "8px 12px",
+  borderRadius: 8,
+  border: "1px solid #d1d5db",
+  fontSize: 14,
+  backgroundColor: "#fff",
+  cursor: "pointer",
+};
+
+const contentCard = {
+  background: "#fff",
+  borderRadius: 16,
+  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+  overflow: "hidden",
+};
+
+const cardHeader = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  marginBottom: 20,
+  padding: "24px 30px",
+  borderBottom: "1px solid #f0f0f0",
+  background: "#fff",
 };
+
+const pgName = {
+  fontSize: 20,
+  fontWeight: 700,
+  color: "#111827",
+  margin: 0,
+};
+
+const roomInfo = {
+  fontSize: 14,
+  color: "#6b7280",
+  margin: "5px 0 0 0",
+};
+
+const viewNav = {
+  display: "flex",
+  padding: "0 30px",
+  borderBottom: "1px solid #e5e7eb",
+  gap: 8,
+};
+
+const navTab = {
+  padding: "12px 20px",
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  fontSize: 14,
+  fontWeight: 500,
+  color: "#6b7280",
+  position: "relative",
+  transition: "all 0.2s",
+};
+
+const activeNavTab = {
+  color: BRAND_BLUE,
+  borderBottom: `2px solid ${BRAND_BLUE}`,
+};
+
+const disabledNavTab = {
+  opacity: 0.5,
+  cursor: "not-allowed",
+};
+
+const viewContent = {
+  padding: "30px",
+};
+
+const actionButtonsContainer = {
+  display: "flex",
+  gap: 12,
+  marginBottom: 25,
+};
+
+const actionButton = {
+  flex: 1,
+  padding: "12px",
+  border: "none",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontSize: 14,
+  fontWeight: 600,
+  color: "#fff",
+  transition: "all 0.2s",
+};
+
+const statusBadge = {
+  marginLeft: 8,
+  padding: "2px 6px",
+  borderRadius: 10,
+  fontSize: 10,
+  fontWeight: 600,
+  background: BRAND_ORANGE,
+  color: "#fff",
+};
+
 const infoGrid = {
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
   gap: "10px",
   marginBottom: 20,
 };
+
 const labelStyle = {
   fontSize: "11px",
   color: "#6b7280",
@@ -946,18 +789,21 @@ const labelStyle = {
   letterSpacing: "0.5px",
   fontWeight: "600",
 };
+
 const valStyle = {
   margin: "2px 0 0 0",
   fontWeight: "700",
   fontSize: "15px",
   color: "#111827",
 };
+
 const priceList = {
   marginBottom: 20,
   background: "#f9fafb",
   padding: "15px",
   borderRadius: "12px",
 };
+
 const priceRow = {
   display: "flex",
   justifyContent: "space-between",
@@ -965,6 +811,7 @@ const priceRow = {
   margin: "10px 0",
   fontSize: "14px",
 };
+
 const totalBox = {
   display: "flex",
   justifyContent: "space-between",
@@ -975,15 +822,8 @@ const totalBox = {
   borderRadius: "8px",
   color: "#166534",
 };
-const statusBadge = {
-  padding: "6px 12px",
-  borderRadius: "20px",
-  fontSize: "11px",
-  fontWeight: "bold",
-  background: "#dcfce7",
-  color: "#166534",
-};
-const btnRow = { display: "flex", gap: 8, flexWrap: "wrap" };
+
+const infoItem = { display: "flex", flexDirection: "column" };
 const btn = {
   flex: 1,
   minWidth: "100px",
@@ -996,7 +836,7 @@ const btn = {
   fontWeight: "600",
   fontSize: "13px",
 };
-const infoItem = { display: "flex", flexDirection: "column" };
+
 const emptyBox = {
   textAlign: "center",
   padding: 60,
@@ -1004,21 +844,12 @@ const emptyBox = {
   borderRadius: 16,
   border: "2px dashed #e5e7eb",
 };
-const refundFormContainer = { animation: "fadeIn 0.3s ease" };
-const inputGroup = { marginBottom: "15px" };
-const inputField = {
-  width: "100%",
-  padding: "10px",
-  borderRadius: "8px",
-  border: "1px solid #ddd",
-  marginTop: "5px",
-  fontFamily: "inherit",
-  fontSize: "14px",
-  outline: "none",
-  boxSizing: "border-box",
+
+const detailsContainer = {
+  animation: "fadeIn 0.3s ease",
 };
 
-/* 3-dot button styles */
+// 3-dot button styles
 const dotBtn = {
   background: "none",
   border: "none",
@@ -1031,6 +862,7 @@ const dotBtn = {
   alignItems: "center",
   transition: "background 0.15s",
 };
+
 const dot = {
   display: "block",
   width: "4px",
@@ -1038,6 +870,7 @@ const dot = {
   borderRadius: "50%",
   background: "#6b7280",
 };
+
 const dropdownMenu = {
   position: "absolute",
   top: "calc(100% + 6px)",
@@ -1050,6 +883,7 @@ const dropdownMenu = {
   minWidth: "190px",
   overflow: "hidden",
 };
+
 const dropdownItem = {
   display: "flex",
   alignItems: "center",
@@ -1065,7 +899,7 @@ const dropdownItem = {
   transition: "background 0.12s",
 };
 
-/* Receipt styles */
+// Receipt styles
 const modernReceiptContainer = {
   width: "210mm",
   minHeight: "297mm",
@@ -1074,6 +908,7 @@ const modernReceiptContainer = {
   color: "#111827",
   fontFamily: "Helvetica, Arial, sans-serif",
 };
+
 const receiptHeader = {
   display: "flex",
   justifyContent: "space-between",
@@ -1081,12 +916,14 @@ const receiptHeader = {
   paddingBottom: "20px",
   marginBottom: "30px",
 };
+
 const logoText = {
   margin: 0,
   fontSize: "36px",
   fontWeight: "900",
   letterSpacing: "-1px",
 };
+
 const tagline = { margin: 0, fontSize: "12px", color: "#6b7280" };
 const receiptTitle = { margin: 0, fontSize: "22px", color: "#111827" };
 const orderIdText = { margin: 0, fontSize: "14px", fontWeight: "bold" };
