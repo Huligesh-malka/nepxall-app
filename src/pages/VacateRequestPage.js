@@ -112,6 +112,25 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
 
   const selectedStay = stays.find(s => s.id === parseInt(selectedStayId));
 
+  // ✅ BONUS: Show completion screen if refund is paid
+  if (selectedStay?.refund_status === "paid") {
+    return (
+      <div style={container}>
+        <div style={completionCard}>
+          <div style={completionIcon}>🎉</div>
+          <h2 style={completionTitle}>✅ Refund completed successfully</h2>
+          <p style={completionText}>
+            Your security deposit refund has been processed successfully.
+            The amount has been credited to your account.
+          </p>
+          <button style={completionButton} onClick={onCancel}>
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={container}>
       <div style={header}>
@@ -162,7 +181,7 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* Refund Status Section - ADD THIS BELOW INFO CARD */}
+        {/* Refund Status Section - UPDATED WITH FINAL LOGIC */}
         {selectedStay && (
           <div style={{
             marginTop: 15,
@@ -173,13 +192,21 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
           }}>
             <p style={{ margin: 0, fontSize: 14 }}>
               <b>💰 Refund Status:</b> {
-                selectedStay.refund_status === "approved" ? "✅ Approved" :
-                selectedStay.refund_status === "rejected" ? "❌ Rejected" :
-                selectedStay.refund_status === "pending" ? "⏳ Pending" :
-                "Not Requested"
+                selectedStay.refund_status === "paid" 
+                  ? "✅ Refund Completed Successfully" 
+                  : selectedStay.refund_status === "approved" 
+                  ? "💰 Approved - Waiting for your action"
+                  : selectedStay.refund_status === "pending" && selectedStay.user_approval === "accepted"
+                  ? "⏳ Waiting for owner to send payment"
+                  : selectedStay.refund_status === "pending"
+                  ? "⏳ Waiting for owner approval"
+                  : selectedStay.refund_status === "rejected"
+                  ? "❌ Rejected"
+                  : "Not Requested"
               }
             </p>
 
+            {/* UPDATED Button Condition with safety check */}
             {selectedStay.refund_status === "approved" &&
              selectedStay.user_approval === "pending" && (
               <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
@@ -221,8 +248,8 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* Form Fields - Only show if booking selected */}
-        {selectedStay && (
+        {/* Form Fields - Only show if booking selected AND refund not paid */}
+        {selectedStay && selectedStay.refund_status !== "paid" && (
           <>
             <div style={formGroup}>
               <label style={label}>
@@ -470,6 +497,48 @@ const cancelButton = {
 const submitButton = {
   flex: 1,
   padding: "12px",
+  background: BRAND_ORANGE,
+  color: "#fff",
+  border: "none",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontSize: 14,
+  fontWeight: 500,
+  transition: "all 0.2s",
+};
+
+// Bonus: Completion screen styles
+const completionCard = {
+  maxWidth: 500,
+  margin: "0 auto",
+  padding: 40,
+  textAlign: "center",
+  background: "#fff",
+  borderRadius: 16,
+  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+};
+
+const completionIcon = {
+  fontSize: 64,
+  marginBottom: 20,
+};
+
+const completionTitle = {
+  fontSize: 24,
+  fontWeight: 700,
+  color: "#10b981",
+  margin: "0 0 16px 0",
+};
+
+const completionText = {
+  fontSize: 14,
+  color: "#6b7280",
+  margin: "0 0 24px 0",
+  lineHeight: 1.5,
+};
+
+const completionButton = {
+  padding: "10px 24px",
   background: BRAND_ORANGE,
   color: "#fff",
   border: "none",
