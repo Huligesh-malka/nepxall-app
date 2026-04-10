@@ -84,6 +84,32 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
     }
   };
 
+  const handleAcceptRefund = async (bookingId) => {
+    try {
+      await api.post("/bookings/refunds/accept", {
+        bookingId: bookingId
+      });
+      alert("✅ Refund accepted successfully");
+      loadBookings(); // Refresh the data
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Failed to accept refund");
+    }
+  };
+
+  const handleRejectRefund = async (bookingId) => {
+    try {
+      await api.post("/bookings/refunds/reject", {
+        bookingId: bookingId
+      });
+      alert("❌ Refund rejected");
+      loadBookings(); // Refresh the data
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Failed to reject refund");
+    }
+  };
+
   const selectedStay = stays.find(s => s.id === parseInt(selectedStayId));
 
   return (
@@ -133,6 +159,65 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
               <span style={infoLabel}>Security Deposit:</span>
               <span style={infoValue}>₹{selectedStay.deposit_amount}</span>
             </div>
+          </div>
+        )}
+
+        {/* Refund Status Section - ADD THIS BELOW INFO CARD */}
+        {selectedStay && (
+          <div style={{
+            marginTop: 15,
+            padding: 12,
+            background: "#f1f5f9",
+            borderRadius: 8,
+            border: "1px solid #e2e8f0"
+          }}>
+            <p style={{ margin: 0, fontSize: 14 }}>
+              <b>💰 Refund Status:</b> {
+                selectedStay.refund_status === "approved" ? "✅ Approved" :
+                selectedStay.refund_status === "rejected" ? "❌ Rejected" :
+                selectedStay.refund_status === "pending" ? "⏳ Pending" :
+                "Not Requested"
+              }
+            </p>
+
+            {selectedStay.refund_status === "approved" &&
+             selectedStay.user_approval === "pending" && (
+              <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+                <button
+                  onClick={() => handleAcceptRefund(selectedStay.id)}
+                  style={{
+                    flex: 1,
+                    padding: "8px 16px",
+                    background: "#10b981",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontSize: 13,
+                    fontWeight: 500
+                  }}
+                >
+                  ✅ Accept Refund
+                </button>
+
+                <button
+                  onClick={() => handleRejectRefund(selectedStay.id)}
+                  style={{
+                    flex: 1,
+                    padding: "8px 16px",
+                    background: "#ef4444",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontSize: 13,
+                    fontWeight: 500
+                  }}
+                >
+                  ❌ Reject Refund
+                </button>
+              </div>
+            )}
           </div>
         )}
 
