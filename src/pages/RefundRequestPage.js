@@ -142,7 +142,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
               <span style={infoValue}>₹{selectedStay.monthly_total}</span>
             </div>
             
-            {/* 🔥 Show Refund Amount if approved */}
+            {/* 🔥 Show Refund Amount if approved or paid */}
             {selectedStay?.refund_amount > 0 && (
               <div style={{
                 ...infoRow,
@@ -163,7 +163,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* 🔥 Show Waiting for Admin Message */}
+        {/* 🔥 FIXED: Status Messages - Using correct DB status values */}
         {selectedStay && refundStatus === "pending" && (
           <div style={{
             background: "#fef3c7",
@@ -175,7 +175,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 24 }}>⏳</span>
               <div>
-                <h4 style={{ margin: 0, color: "#92400e" }}>Waiting for admin approval</h4>
+                <h4 style={{ margin: 0, color: "#92400e" }}>Waiting for Admin Approval</h4>
                 <p style={{ margin: "5px 0 0", color: "#92400e", fontSize: 13 }}>
                   Your refund request is being reviewed by the admin. You'll be notified once it's approved.
                 </p>
@@ -184,7 +184,6 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* 🔥 Show Approved Message */}
         {selectedStay && refundStatus === "approved" && (
           <div style={{
             background: "#dcfce7",
@@ -194,9 +193,9 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
             border: "1px solid #22c55e"
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 24 }}>💰</span>
+              <span style={{ fontSize: 24 }}>✅</span>
               <div>
-                <h4 style={{ margin: 0, color: "#166534" }}>Refund Approved!</h4>
+                <h4 style={{ margin: 0, color: "#166534" }}>Refund Approved - Waiting for Payment</h4>
                 <p style={{ margin: "5px 0 0", color: "#166534", fontSize: 13 }}>
                   Your refund of ₹{selectedStay.refund_amount} has been approved. The amount will be credited to your UPI ID shortly.
                 </p>
@@ -205,8 +204,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* 🔥 Show Completed Message */}
-        {selectedStay && refundStatus === "completed" && (
+        {selectedStay && refundStatus === "paid" && (
           <div style={{
             background: "#dbeafe",
             padding: 15,
@@ -215,11 +213,31 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
             border: "1px solid #3b82f6"
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 24 }}>✅</span>
+              <span style={{ fontSize: 24 }}>💰</span>
               <div>
-                <h4 style={{ margin: 0, color: "#1e3a8a" }}>Refund Completed!</h4>
+                <h4 style={{ margin: 0, color: "#1e3a8a" }}>Refund Completed Successfully</h4>
                 <p style={{ margin: "5px 0 0", color: "#1e3a8a", fontSize: 13 }}>
                   Your refund of ₹{selectedStay.refund_amount} has been successfully credited to your UPI ID.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedStay && refundStatus === "rejected" && (
+          <div style={{
+            background: "#fee2e2",
+            padding: 15,
+            borderRadius: 8,
+            marginBottom: 20,
+            border: "1px solid #ef4444"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 24 }}>❌</span>
+              <div>
+                <h4 style={{ margin: 0, color: "#991b1b" }}>Refund Rejected</h4>
+                <p style={{ margin: "5px 0 0", color: "#991b1b", fontSize: 13 }}>
+                  Your refund request has been rejected. You can apply again if eligible.
                 </p>
               </div>
             </div>
@@ -247,8 +265,8 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* Form Fields - Only show if booking selected AND not joined AND no pending/approved/completed refund */}
-        {selectedStay && !isJoined && !refundStatus && (
+        {/* 🔥 FIXED: Form Fields - Show when NOT joined AND (no refund OR refund is rejected) */}
+        {selectedStay && !isJoined && (!refundStatus || refundStatus === "rejected") && (
           <>
             <div style={formGroup}>
               <label style={label}>
@@ -331,8 +349,8 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
           </>
         )}
 
-        {/* Show message if refund already requested */}
-        {selectedStay && refundStatus && !isJoined && (
+        {/* 🔥 FIXED: Bottom status text for existing refunds (pending/approved/paid) */}
+        {selectedStay && refundStatus && refundStatus !== "rejected" && !isJoined && (
           <div style={{
             background: "#fef3c7",
             padding: 20,
@@ -347,7 +365,9 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
               You have already requested a refund for this booking. Please wait for admin approval.
             </p>
             <p style={{ color: "#92400e", marginTop: 8 }}>
-              Status: {refundStatus === "pending" ? "⏳ Pending" : refundStatus === "approved" ? "✅ Approved" : "🎉 Completed"}
+              Status: {refundStatus === "pending" && "⏳ Pending"}
+              {refundStatus === "approved" && "✅ Approved"}
+              {refundStatus === "paid" && "💰 Completed"}
             </p>
           </div>
         )}
