@@ -1,11 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import api from "../api/api";
 
 const BRAND_BLUE = "#0B5ED7";
 const BRAND_RED = "#ef4444";
 const BRAND_ORANGE = "#f59e0b";
 
-const VacateRequestPage = ({ stay, onSuccess, onCancel }) => {
+const VacateRequestPage = ({ onSuccess, onCancel }) => {
+  const [stays, setStays] = useState([]);
+  const [selectedStayId, setSelectedStayId] = useState("");
   const [formData, setFormData] = useState({
     vacateDate: "",
     vacateReason: "",
@@ -14,13 +16,39 @@ const VacateRequestPage = ({ stay, onSuccess, onCancel }) => {
     upiId: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadingStays, setLoadingStays] = useState(true);
+
+  const loadBookings = async () => {
+    try {
+      setLoadingStays(true);
+      const res = await api.get("/bookings/user/active-stay");
+      setStays(res.data || []);
+    } catch (err) {
+      console.error("Error loading bookings:", err);
+      alert("Failed to load your bookings");
+    } finally {
+      setLoadingStays(false);
+    }
+  };
+
+  useEffect(() => {
+    loadBookings();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const isFormValid = () => {
+    return selectedStayId && formData.vacateReason && formData.vacateDate;
+  };
+
   const submitVacateRequest = async () => {
+    if (!selectedStayId) {
+      alert("Please select a booking");
+      return;
+    }
     if (!formData.vacateReason || !formData.vacateDate) {
       alert("Please fill all required fields");
       return;
@@ -37,7 +65,7 @@ const VacateRequestPage = ({ stay, onSuccess, onCancel }) => {
     try {
       setIsSubmitting(true);
       const res = await api.post("/bookings/vacate/request", {
-        bookingId: stay.id,
+        bookingId: selectedStayId,
         vacate_date: formData.vacateDate,
         reason: formData.vacateReason,
         account_number: formData.accountNumber || "",
@@ -56,123 +84,155 @@ const VacateRequestPage = ({ stay, onSuccess, onCancel }) => {
     }
   };
 
+  const selectedStay = stays.find(s => s.id === parseInt(selectedStayId));
+
   return (
     <div style={container}>
       <div style={header}>
         <h2 style={title}>🚪 Vacate Room Request</h2>
-        <p style={subtitle}>Request to vacate your room at {stay.pg_name}</p>
+        <p style={subtitle}>Request to vacate your room</p>
       </div>
 
       <div style={content}>
-        {/* Stay Info Card */}
-        <div style={infoCard}>
-          <div style={infoRow}>
-            <span style={infoLabel}>PG Name:</span>
-            <span style={infoValue}>{stay.pg_name}</span>
-          </div>
-          <div style={infoRow}>
-            <span style={infoLabel}>Room Number:</span>
-            <span style={infoValue}>{stay.room_no}</span>
-          </div>
-          <div style={infoRow}>
-            <span style={infoLabel}>Room Type:</span>
-            <span style={infoValue}>{stay.room_type} Sharing</span>
-          </div>
-          <div style={infoRow}>
-            <span style={infoLabel}>Security Deposit:</span>
-            <span style={infoValue}>₹{stay.deposit_amount}</span>
-          </div>
-        </div>
-
-        {/* Form Fields */}
+        {/* Booking Selection Dropdown */}
         <div style={formGroup}>
           <label style={label}>
-            Vacate Date <span style={required}>*</span>
+            Select Booking <span style={required}>*</span>
           </label>
-          <input
-            type="date"
-            name="vacateDate"
-            style={input}
-            min={new Date().toISOString().split("T")[0]}
-            value={formData.vacateDate}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div style={formGroup}>
-          <label style={label}>
-            Reason for Vacating <span style={required}>*</span>
-          </label>
-          <textarea
-            name="vacateReason"
-            style={textarea}
-            placeholder="Please provide a reason for vacating..."
-            rows={4}
-            value={formData.vacateReason}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div style={formGroup}>
-          <label style={label}>Account Number (Optional)</label>
-          <input
-            type="text"
-            name="accountNumber"
-            style={input}
-            placeholder="Enter account number for refund"
-            value={formData.accountNumber}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div style={formGroup}>
-          <label style={label}>IFSC Code (Optional)</label>
-          <input
-            type="text"
-            name="ifscCode"
-            style={input}
-            placeholder="Enter IFSC code"
-            value={formData.ifscCode}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div style={formGroup}>
-          <label style={label}>UPI ID (Optional)</label>
-          <input
-            type="text"
-            name="upiId"
-            style={input}
-            placeholder="name@bank"
-            value={formData.upiId}
-            onChange={handleChange}
-          />
-        </div>
-
-        {/* Important Notes */}
-        <div style={notesCard}>
-          <h4 style={notesTitle}>📋 Important Notes:</h4>
-          <ul style={notesList}>
-            <li>Your vacate request will be reviewed by the owner</li>
-            <li>Security deposit refund will be processed after vacate approval</li>
-            <li>Please ensure all dues are cleared before vacating</li>
-            <li>You'll receive updates on your request status</li>
-          </ul>
-        </div>
-
-        {/* Action Buttons */}
-        <div style={buttonGroup}>
-          <button style={cancelButton} onClick={onCancel}>
-            Cancel
-          </button>
-          <button 
-            style={{ ...submitButton, opacity: isSubmitting ? 0.7 : 1 }}
-            onClick={submitVacateRequest}
-            disabled={isSubmitting}
+          <select 
+            style={selector}
+            value={selectedStayId} 
+            onChange={(e) => setSelectedStayId(e.target.value)}
+            disabled={loadingStays}
           >
-            {isSubmitting ? "Submitting..." : "Submit Vacate Request"}
-          </button>
+            <option value="">{loadingStays ? "Loading bookings..." : "Select Booking"}</option>
+            {stays.map(s => (
+              <option key={s.id} value={s.id}>
+                {s.pg_name} - Room {s.room_no}
+              </option>
+            ))}
+          </select>
         </div>
+
+        {/* Stay Info Card - Only show if booking selected */}
+        {selectedStay && (
+          <div style={infoCard}>
+            <div style={infoRow}>
+              <span style={infoLabel}>PG Name:</span>
+              <span style={infoValue}>{selectedStay.pg_name}</span>
+            </div>
+            <div style={infoRow}>
+              <span style={infoLabel}>Room Number:</span>
+              <span style={infoValue}>{selectedStay.room_no}</span>
+            </div>
+            <div style={infoRow}>
+              <span style={infoLabel}>Room Type:</span>
+              <span style={infoValue}>{selectedStay.room_type} Sharing</span>
+            </div>
+            <div style={infoRow}>
+              <span style={infoLabel}>Security Deposit:</span>
+              <span style={infoValue}>₹{selectedStay.deposit_amount}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Form Fields - Only show if booking selected */}
+        {selectedStay && (
+          <>
+            <div style={formGroup}>
+              <label style={label}>
+                Vacate Date <span style={required}>*</span>
+              </label>
+              <input
+                type="date"
+                name="vacateDate"
+                style={input}
+                min={new Date().toISOString().split("T")[0]}
+                value={formData.vacateDate}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div style={formGroup}>
+              <label style={label}>
+                Reason for Vacating <span style={required}>*</span>
+              </label>
+              <textarea
+                name="vacateReason"
+                style={textarea}
+                placeholder="Please provide a reason for vacating..."
+                rows={4}
+                value={formData.vacateReason}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div style={formGroup}>
+              <label style={label}>Account Number (Optional)</label>
+              <input
+                type="text"
+                name="accountNumber"
+                style={input}
+                placeholder="Enter account number for refund"
+                value={formData.accountNumber}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div style={formGroup}>
+              <label style={label}>IFSC Code (Optional)</label>
+              <input
+                type="text"
+                name="ifscCode"
+                style={input}
+                placeholder="Enter IFSC code"
+                value={formData.ifscCode}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div style={formGroup}>
+              <label style={label}>UPI ID (Optional)</label>
+              <input
+                type="text"
+                name="upiId"
+                style={input}
+                placeholder="name@bank"
+                value={formData.upiId}
+                onChange={handleChange}
+              />
+            </div>
+
+            {/* Important Notes */}
+            <div style={notesCard}>
+              <h4 style={notesTitle}>📋 Important Notes:</h4>
+              <ul style={notesList}>
+                <li>Your vacate request will be reviewed by the owner</li>
+                <li>Security deposit refund will be processed after vacate approval</li>
+                <li>Please ensure all dues are cleared before vacating</li>
+                <li>You'll receive updates on your request status</li>
+              </ul>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={buttonGroup}>
+              <button style={cancelButton} onClick={onCancel}>
+                Cancel
+              </button>
+              <button 
+                style={{ 
+                  ...submitButton, 
+                  opacity: isFormValid() && !isSubmitting ? 1 : 0.7,
+                  cursor: isFormValid() && !isSubmitting ? "pointer" : "not-allowed"
+                }}
+                onClick={submitVacateRequest}
+                disabled={!isFormValid() || isSubmitting}
+              >
+                {isSubmitting ? "Submitting..." : "Submit Vacate Request"}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -244,6 +304,18 @@ const label = {
 
 const required = {
   color: BRAND_RED,
+};
+
+const selector = {
+  width: "100%",
+  padding: "10px 12px",
+  border: "1px solid #d1d5db",
+  borderRadius: 8,
+  fontSize: 14,
+  outline: "none",
+  backgroundColor: "#fff",
+  cursor: "pointer",
+  boxSizing: "border-box",
 };
 
 const input = {

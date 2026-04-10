@@ -1,17 +1,37 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import api from "../api/api";
 
 const BRAND_BLUE = "#0B5ED7";
 const BRAND_RED = "#ef4444";
 const BRAND_GREEN = "#4CAF50";
 
-const RefundRequestPage = ({ stay, onSuccess, onCancel }) => {
+const RefundRequestPage = ({ onSuccess, onCancel }) => {
+  const [stays, setStays] = useState([]);
+  const [selectedStayId, setSelectedStayId] = useState("");
   const [formData, setFormData] = useState({
     reason: "",
     upiId: "",
     confirmUpi: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadingStays, setLoadingStays] = useState(true);
+
+  const loadBookings = async () => {
+    try {
+      setLoadingStays(true);
+      const res = await api.get("/bookings/user/active-stay");
+      setStays(res.data || []);
+    } catch (err) {
+      console.error("Error loading bookings:", err);
+      alert("Failed to load your bookings");
+    } finally {
+      setLoadingStays(false);
+    }
+  };
+
+  useEffect(() => {
+    loadBookings();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -19,10 +39,14 @@ const RefundRequestPage = ({ stay, onSuccess, onCancel }) => {
   };
 
   const isFormValid = () => {
-    return formData.reason && formData.upiId && formData.upiId === formData.confirmUpi;
+    return selectedStayId && formData.reason && formData.upiId && formData.upiId === formData.confirmUpi;
   };
 
   const submitRefundRequest = async () => {
+    if (!selectedStayId) {
+      alert("Please select a booking");
+      return;
+    }
     if (!formData.reason || !formData.upiId) {
       alert("Please provide both a reason and a UPI ID.");
       return;
@@ -35,7 +59,7 @@ const RefundRequestPage = ({ stay, onSuccess, onCancel }) => {
     try {
       setIsSubmitting(true);
       const res = await api.post("/bookings/refunds/request", {
-        bookingId: stay.id,
+        bookingId: selectedStayId,
         reason: formData.reason,
         upi_id: formData.upiId
       });
@@ -51,75 +75,60 @@ const RefundRequestPage = ({ stay, onSuccess, onCancel }) => {
     }
   };
 
-  // If refund is already paid or in progress
-  if (stay.refund_status === "paid") {
-    return (
-      <div style={container}>
-        <div style={infoCard}>
-          <div style={successIcon}>💸</div>
-          <h3 style={infoTitle}>Refund Already Processed</h3>
-          <p style={infoText}>
-            Your refund has already been completed. You cannot request another refund.
-          </p>
-          <button style={backButton} onClick={onCancel}>
-            Go Back
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const selectedStay = stays.find(s => s.id === parseInt(selectedStayId));
 
   return (
     <div style={container}>
       <div style={header}>
         <h2 style={title}>💰 Request Refund</h2>
-        <p style={subtitle}>Request a refund for your stay at {stay.pg_name}</p>
+        <p style={subtitle}>Request a refund for your stay</p>
       </div>
 
       <div style={content}>
-        {/* Stay Info Card */}
-        <div style={infoCard}>
-          <div style={infoRow}>
-            <span style={infoLabel}>Order ID:</span>
-            <span style={infoValue}>{stay.order_id}</span>
-          </div>
-          <div style={infoRow}>
-            <span style={infoLabel}>Total Paid:</span>
-            <span style={infoValue}>₹{stay.monthly_total}</span>
-          </div>
-          <div style={infoRow}>
-            <span style={infoLabel}>Security Deposit:</span>
-            <span style={infoValue}>₹{stay.deposit_amount}</span>
-          </div>
+        {/* Booking Selection Dropdown */}
+        <div style={formGroup}>
+          <label style={label}>
+            Select Booking <span style={required}>*</span>
+          </label>
+          <select 
+            style={selector}
+            value={selectedStayId} 
+            onChange={(e) => setSelectedStayId(e.target.value)}
+            disabled={loadingStays}
+          >
+            <option value="">{loadingStays ? "Loading bookings..." : "Select Booking"}</option>
+            {stays.map(s => (
+              <option key={s.id} value={s.id}>
+                {s.pg_name} - Room {s.room_no}
+              </option>
+            ))}
+          </select>
         </div>
 
-        {/* Refund Status if any */}
-        {stay.refund_status === "pending" && (
-          <div style={warningCard}>
-            <p style={warningText}>
-              ⏳ You already have a pending refund request. Please wait for admin approval.
-            </p>
+        {/* Stay Info Card - Only show if booking selected */}
+        {selectedStay && (
+          <div style={infoCard}>
+            <div style={infoRow}>
+              <span style={infoLabel}>PG Name:</span>
+              <span style={infoValue}>{selectedStay.pg_name}</span>
+            </div>
+            <div style={infoRow}>
+              <span style={infoLabel}>Room Number:</span>
+              <span style={infoValue}>{selectedStay.room_no}</span>
+            </div>
+            <div style={infoRow}>
+              <span style={infoLabel}>Room Type:</span>
+              <span style={infoValue}>{selectedStay.room_type} Sharing</span>
+            </div>
+            <div style={infoRow}>
+              <span style={infoLabel}>Monthly Rent:</span>
+              <span style={infoValue}>₹{selectedStay.monthly_total}</span>
+            </div>
           </div>
         )}
 
-        {stay.refund_status === "approved" && (
-          <div style={warningCard}>
-            <p style={warningText}>
-              ✅ Your refund has been approved! Please check your email for further instructions.
-            </p>
-          </div>
-        )}
-
-        {stay.refund_status === "rejected" && (
-          <div style={warningCard}>
-            <p style={warningText}>
-              ❌ Your previous refund request was rejected. You can submit a new request.
-            </p>
-          </div>
-        )}
-
-        {/* Form Fields - Only show if no pending/approved refund */}
-        {(!stay.refund_status || stay.refund_status === "rejected") && (
+        {/* Form Fields - Only show if booking selected */}
+        {selectedStay && (
           <>
             <div style={formGroup}>
               <label style={label}>
@@ -201,15 +210,6 @@ const RefundRequestPage = ({ stay, onSuccess, onCancel }) => {
             </div>
           </>
         )}
-
-        {/* If refund is pending/approved, show only back button */}
-        {(stay.refund_status === "pending" || stay.refund_status === "approved") && (
-          <div style={buttonGroup}>
-            <button style={cancelButton} onClick={onCancel}>
-              Go Back
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -267,19 +267,6 @@ const infoValue = {
   fontWeight: 600,
 };
 
-const warningCard = {
-  background: "#fef3c7",
-  padding: 15,
-  borderRadius: 8,
-  marginBottom: 25,
-};
-
-const warningText = {
-  margin: 0,
-  color: "#92400e",
-  fontSize: 14,
-};
-
 const formGroup = {
   marginBottom: 20,
 };
@@ -294,6 +281,18 @@ const label = {
 
 const required = {
   color: BRAND_RED,
+};
+
+const selector = {
+  width: "100%",
+  padding: "10px 12px",
+  border: "1px solid #d1d5db",
+  borderRadius: 8,
+  fontSize: 14,
+  outline: "none",
+  backgroundColor: "#fff",
+  cursor: "pointer",
+  boxSizing: "border-box",
 };
 
 const input = {
@@ -378,39 +377,6 @@ const submitButton = {
   fontSize: 14,
   fontWeight: 500,
   transition: "all 0.2s",
-};
-
-const successIcon = {
-  fontSize: 48,
-  textAlign: "center",
-  marginBottom: 15,
-};
-
-const infoTitle = {
-  fontSize: 18,
-  fontWeight: 600,
-  color: "#111827",
-  textAlign: "center",
-  marginBottom: 10,
-};
-
-const infoText = {
-  fontSize: 14,
-  color: "#6b7280",
-  textAlign: "center",
-  marginBottom: 20,
-};
-
-const backButton = {
-  width: "100%",
-  padding: "12px",
-  background: BRAND_BLUE,
-  color: "#fff",
-  border: "none",
-  borderRadius: 8,
-  cursor: "pointer",
-  fontSize: 14,
-  fontWeight: 500,
 };
 
 export default RefundRequestPage;

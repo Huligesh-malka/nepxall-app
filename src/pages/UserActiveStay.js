@@ -63,84 +63,10 @@ const ThreeDotMenu = ({ items }) => {
   );
 };
 
-// Stay Details Component (WITHOUT Vacate/Refund buttons)
+// Stay Details Component - ONLY shows Room, Payment, Deposit, Receipt
 const StayDetails = ({ stay, formatDate }) => {
   return (
     <div style={detailsContainer}>
-      {/* Vacate Status Banner */}
-      {(stay.vacate_status === "requested" ||
-        stay.vacate_status === "approved" ||
-        stay.vacate_status === "completed") && (
-        <div
-          style={{
-            background:
-              stay.vacate_status === "requested"
-                ? "#fef3c7"
-                : stay.vacate_status === "approved"
-                ? "#dcfce7"
-                : "#e0e7ff",
-            padding: "15px",
-            borderRadius: "8px",
-            marginBottom: "20px",
-            textAlign: "center",
-          }}
-        >
-          <p style={{ fontWeight: "bold", marginBottom: "5px" }}>
-            🚪 Vacate Request Status:
-            {stay.vacate_status === "requested" && " ⏳ Requested"}
-            {stay.vacate_status === "approved" && " ✅ Approved"}
-            {stay.vacate_status === "completed" && " ✓ Completed"}
-          </p>
-          {stay.vacate_date && (
-            <p style={{ fontSize: "12px", color: "#666" }}>
-              Vacate Date: {formatDate(stay.vacate_date)}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Refund Status Banner */}
-      {(stay.refund_status === "pending" || stay.refund_status === "approved" || stay.refund_status === "paid") && (
-        <div
-          style={{
-            background: "#f9fafb",
-            padding: "15px",
-            borderRadius: "8px",
-            marginBottom: "20px",
-            textAlign: "center",
-          }}
-        >
-          <p style={{ fontWeight: "bold" }}>
-            Refund Status:
-            {stay.refund_status === "pending" &&
-              (!stay.user_approval || stay.user_approval === null) &&
-              " ⏳ Waiting for Owner Approval"}
-
-            {stay.refund_status === "approved" &&
-              (stay.user_approval === "pending" || !stay.user_approval) &&
-              " ✅ Owner Approved - Waiting for your acceptance"}
-
-            {stay.refund_status === "pending" &&
-              stay.user_approval === "accepted" &&
-              " ⏳ Waiting for Owner Payment"}
-
-            {stay.refund_status === "pending" &&
-              stay.user_approval === "rejected" &&
-              " ⚠️ You Rejected - Owner will review again"}
-
-            {stay.refund_status === "rejected" &&
-              " ❌ Owner Rejected"}
-
-            {stay.refund_status === "paid" &&
-              " 💸 Refund Completed"}
-          </p>
-
-          {stay.refund_amount > 0 && (
-            <p>💰 Refund Amount: ₹{stay.refund_amount}</p>
-          )}
-        </div>
-      )}
-
       {/* Stay Information */}
       <div style={infoGrid}>
         <div style={infoItem}>
@@ -359,7 +285,7 @@ const UserActiveStay = () => {
             />
           </div>
 
-          {/* Content Area - ONLY Stay Details */}
+          {/* Content Area - ONLY Stay Details (Room, Payment, Deposit, Receipt) */}
           <div style={viewContent}>
             <StayDetails 
               stay={currentStay}
