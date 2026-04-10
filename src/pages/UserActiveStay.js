@@ -4,8 +4,6 @@ import { Navigate, useNavigate } from "react-router-dom";
 import api from "../api/api";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import VacateRequestPage from "./VacateRequestPage";
-import RefundRequestPage from "./RefundRequestPage";
 
 /* ================= BRAND COLORS ================= */
 const BRAND_BLUE = "#0B5ED7";
@@ -65,8 +63,8 @@ const ThreeDotMenu = ({ items }) => {
   );
 };
 
-// Stay Details Component
-const StayDetails = ({ stay, onAcceptRefund, onRejectRefund, formatDate, onVacateClick, onRefundClick }) => {
+// Stay Details Component (WITHOUT Vacate/Refund buttons)
+const StayDetails = ({ stay, formatDate }) => {
   return (
     <div style={detailsContainer}>
       {/* Vacate Status Banner */}
@@ -120,7 +118,7 @@ const StayDetails = ({ stay, onAcceptRefund, onRejectRefund, formatDate, onVacat
 
             {stay.refund_status === "approved" &&
               (stay.user_approval === "pending" || !stay.user_approval) &&
-              " ✅ Owner Approved - Please Accept"}
+              " ✅ Owner Approved - Waiting for your acceptance"}
 
             {stay.refund_status === "pending" &&
               stay.user_approval === "accepted" &&
@@ -131,7 +129,7 @@ const StayDetails = ({ stay, onAcceptRefund, onRejectRefund, formatDate, onVacat
               " ⚠️ You Rejected - Owner will review again"}
 
             {stay.refund_status === "rejected" &&
-              " ❌ Owner Rejected (You can request again)"}
+              " ❌ Owner Rejected"}
 
             {stay.refund_status === "paid" &&
               " 💸 Refund Completed"}
@@ -140,47 +138,8 @@ const StayDetails = ({ stay, onAcceptRefund, onRejectRefund, formatDate, onVacat
           {stay.refund_amount > 0 && (
             <p>💰 Refund Amount: ₹{stay.refund_amount}</p>
           )}
-
-          {stay.refund_status === "approved" &&
-            (stay.user_approval === "pending" || !stay.user_approval) && (
-              <div style={{ display: "flex", gap: 8, marginTop: 10, justifyContent: "center" }}>
-                <button
-                  style={{ ...btn, background: "#4CAF50", width: "auto", padding: "10px 20px" }}
-                  onClick={() => onAcceptRefund(stay.id)}
-                >
-                  ✅ Accept Refund
-                </button>
-                <button
-                  style={{ ...btn, background: "#ef4444", width: "auto", padding: "10px 20px" }}
-                  onClick={() => onRejectRefund(stay.id)}
-                >
-                  ❌ Reject Refund
-                </button>
-              </div>
-          )}
         </div>
       )}
-
-      {/* Action Buttons */}
-      <div style={actionButtonsContainer}>
-        {(!stay.vacate_status || stay.vacate_status === null || stay.refund_status === "rejected") && (
-          <button 
-            style={{ ...actionButton, background: BRAND_ORANGE }}
-            onClick={onVacateClick}
-          >
-            🚪 Request Vacate
-          </button>
-        )}
-        
-        {(!stay.refund_status || stay.refund_status === "rejected") && stay.refund_status !== "paid" && (
-          <button 
-            style={{ ...actionButton, background: BRAND_RED }}
-            onClick={onRefundClick}
-          >
-            💰 Request Refund
-          </button>
-        )}
-      </div>
 
       {/* Stay Information */}
       <div style={infoGrid}>
@@ -249,7 +208,6 @@ const UserActiveStay = () => {
   const [stays, setStays] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedStayId, setSelectedStayId] = useState(null);
-  const [currentView, setCurrentView] = useState('details');
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
 
@@ -283,30 +241,6 @@ const UserActiveStay = () => {
   }, [user, loadStay]);
 
   const currentStay = stays.find(s => s.id === selectedStayId);
-
-  // Accept refund
-  const acceptRefund = async (bookingId) => {
-    try {
-      await api.post("/bookings/refunds/accept", { bookingId });
-      alert("✅ Refund accepted");
-      await loadStay(true);
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || "Accept failed");
-    }
-  };
-
-  // Reject refund
-  const rejectRefund = async (bookingId) => {
-    try {
-      await api.post("/bookings/refunds/reject", { bookingId });
-      alert("❌ Refund rejected");
-      await loadStay(true);
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || "Reject failed");
-    }
-  };
 
   const formatDate = (dateString) => {
     if (!dateString) return "Processing...";
@@ -384,10 +318,7 @@ const UserActiveStay = () => {
         <select 
           style={selector}
           value={selectedStayId || ''}
-          onChange={(e) => {
-            setSelectedStayId(Number(e.target.value));
-            setCurrentView('details');
-          }}
+          onChange={(e) => setSelectedStayId(Number(e.target.value))}
         >
           {stays.map((stay) => (
             <option key={stay.id} value={stay.id}>
@@ -428,95 +359,12 @@ const UserActiveStay = () => {
             />
           </div>
 
-          {/* View Navigation Tabs */}
-          <div style={viewNav}>
-            <button
-              style={{ ...navTab, ...(currentView === 'details' ? activeNavTab : {}) }}
-              onClick={() => setCurrentView('details')}
-            >
-              📋 Stay Details
-            </button>
-            <button
-              style={{ 
-                ...navTab, 
-                ...(currentView === 'vacate' ? activeNavTab : {}),
-                ...((currentStay.vacate_status === 'requested' || 
-                    currentStay.vacate_status === 'approved' || 
-                    currentStay.vacate_status === 'completed') ? disabledNavTab : {})
-              }}
-              onClick={() => {
-                if (currentStay.vacate_status !== 'requested' && 
-                    currentStay.vacate_status !== 'approved' && 
-                    currentStay.vacate_status !== 'completed') {
-                  setCurrentView('vacate');
-                }
-              }}
-              disabled={currentStay.vacate_status === 'requested' || 
-                        currentStay.vacate_status === 'approved' || 
-                        currentStay.vacate_status === 'completed'}
-            >
-              🚪 Vacate Room
-              {(currentStay.vacate_status === 'requested' || currentStay.vacate_status === 'approved') && (
-                <span style={statusBadge}>Pending</span>
-              )}
-            </button>
-            <button
-              style={{ 
-                ...navTab, 
-                ...(currentView === 'refund' ? activeNavTab : {}),
-                ...(currentStay.refund_status === 'paid' ? disabledNavTab : {})
-              }}
-              onClick={() => {
-                if (currentStay.refund_status !== 'paid') {
-                  setCurrentView('refund');
-                }
-              }}
-              disabled={currentStay.refund_status === 'paid'}
-            >
-              💰 Request Refund
-              {currentStay.refund_status === 'pending' && (
-                <span style={{...statusBadge, background: BRAND_ORANGE}}>Pending</span>
-              )}
-              {currentStay.refund_status === 'approved' && (
-                <span style={{...statusBadge, background: BRAND_GREEN}}>Approved</span>
-              )}
-            </button>
-          </div>
-
-          {/* Content Area - Renders different components based on currentView */}
+          {/* Content Area - ONLY Stay Details */}
           <div style={viewContent}>
-            {currentView === 'details' && (
-              <StayDetails 
-                stay={currentStay}
-                onAcceptRefund={acceptRefund}
-                onRejectRefund={rejectRefund}
-                formatDate={formatDate}
-                onVacateClick={() => setCurrentView('vacate')}
-                onRefundClick={() => setCurrentView('refund')}
-              />
-            )}
-            
-            {currentView === 'vacate' && (
-              <VacateRequestPage 
-                stay={currentStay}
-                onSuccess={() => {
-                  loadStay(true);
-                  setCurrentView('details');
-                }}
-                onCancel={() => setCurrentView('details')}
-              />
-            )}
-            
-            {currentView === 'refund' && (
-              <RefundRequestPage 
-                stay={currentStay}
-                onSuccess={() => {
-                  loadStay(true);
-                  setCurrentView('details');
-                }}
-                onCancel={() => setCurrentView('details')}
-              />
-            )}
+            <StayDetails 
+              stay={currentStay}
+              formatDate={formatDate}
+            />
           </div>
         </div>
       )}
@@ -714,65 +562,8 @@ const roomInfo = {
   margin: "5px 0 0 0",
 };
 
-const viewNav = {
-  display: "flex",
-  padding: "0 30px",
-  borderBottom: "1px solid #e5e7eb",
-  gap: 8,
-};
-
-const navTab = {
-  padding: "12px 20px",
-  background: "none",
-  border: "none",
-  cursor: "pointer",
-  fontSize: 14,
-  fontWeight: 500,
-  color: "#6b7280",
-  position: "relative",
-  transition: "all 0.2s",
-};
-
-const activeNavTab = {
-  color: BRAND_BLUE,
-  borderBottom: `2px solid ${BRAND_BLUE}`,
-};
-
-const disabledNavTab = {
-  opacity: 0.5,
-  cursor: "not-allowed",
-};
-
 const viewContent = {
   padding: "30px",
-};
-
-const actionButtonsContainer = {
-  display: "flex",
-  gap: 12,
-  marginBottom: 25,
-};
-
-const actionButton = {
-  flex: 1,
-  padding: "12px",
-  border: "none",
-  borderRadius: 8,
-  cursor: "pointer",
-  fontSize: 14,
-  fontWeight: 600,
-  color: "#fff",
-  transition: "all 0.2s",
-};
-
-const statusBadge = {
-  marginLeft: 8,
-  padding: "2px 6px",
-  borderRadius: 10,
-  fontSize: 10,
-  fontWeight: 600,
-  background: BRAND_ORANGE,
-  color: "#fff",
 };
 
 const infoGrid = {

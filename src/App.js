@@ -33,6 +33,8 @@ import AadhaarKyc from "./pages/AadhaarKyc";
 import VisitSchedulePage from "./pages/VisitSchedulePage";
 import PublicAgreementPage from "./pages/PublicAgreementPage";
 import ServicesPage from "./pages/ServicesPage";
+import VacateRequestPage from "./pages/VacateRequestPage";
+import RefundRequestPage from "./pages/RefundRequestPage";
 
 /* DIGILOCKER */
 import DigiLockerVerify from "./pages/DigiLockerVerify";
@@ -135,6 +137,8 @@ function App() {
         <Route path="/agreement/:bookingId" element={<AgreementPage />} />
         <Route path="/agreement-form/:bookingId" element={<AgreementForm />} />
         <Route path="/user/my-stay" element={<UserActiveStay />} />
+        <Route path="/user/vacate" element={<VacateRequestPage />} />
+        <Route path="/user/refunds" element={<RefundRequestPage />} />
         <Route path="/user/notifications" element={<NotificationBell />} />
         <Route path="/user/aadhaar-kyc" element={<AadhaarKyc />} />
         <Route path="/user/digilocker" element={<DigiLockerVerify />} />

@@ -60,6 +60,13 @@ const Sidebar = ({ role, user }) => {
             <Link style={linkStyle(isActive("/user/aadhaar-kyc"))} to="/user/aadhaar-kyc">🛂 Aadhaar KYC</Link>
             <Link style={linkStyle(isActive("/user/digilocker"))} to="/user/digilocker">🔐 DigiLocker KYC</Link>
             <Link style={linkStyle(isActive("/"))} to="/">🔍 Browse Properties</Link>
+            <Link style={linkStyle(isActive("/user/vacate"))} to="/user/vacate">
+  🚪 Vacate Room
+</Link>
+
+<Link style={linkStyle(isActive("/user/refunds"))} to="/user/refunds">
+  💰 Refunds
+</Link>
 
             <hr style={divider} />
 
