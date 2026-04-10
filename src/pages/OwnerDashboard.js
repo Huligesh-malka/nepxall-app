@@ -443,7 +443,7 @@ const OwnerDashboard = () => {
       const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
       const propertyName = property?.pg_name || "PG";
 
-      const url = `https://nepxall.vercel.app/scan/${propertyId}`;
+      const url = `https://nepxall-app.vercel.app/scan/${propertyId}`;
 
       /* QR DESIGN */
       const qr = new QRCodeStyling({
