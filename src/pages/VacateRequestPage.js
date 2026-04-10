@@ -74,11 +74,11 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
       });
       if (res.data.success) {
         alert("✅ Vacate request submitted successfully");
-        loadBookings(); // ✅ FIX: Refresh safely instead of calling onSuccess()
+        loadBookings(); // Refresh safely instead of calling onSuccess()
       }
     } catch (err) {
       console.error(err);
-      // ✅ EXTRA SAFE: Ignore duplicate error
+      // Extra safe: Ignore duplicate error
       if (err.response?.data?.message === "Vacate already requested") {
         return; // ignore duplicate error
       }
@@ -114,9 +114,21 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
     }
   };
 
+  const handleRequestAgain = () => {
+    setFormData({
+      vacateDate: "",
+      vacateReason: "",
+      accountNumber: "",
+      ifscCode: "",
+      upiId: ""
+    });
+    // Optional: Scroll to form
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const selectedStay = stays.find(s => s.id === parseInt(selectedStayId));
 
-  // ✅ BONUS: Show completion screen if refund is paid
+  // Show completion screen if refund is paid
   if (selectedStay?.refund_status === "paid") {
     return (
       <div style={container}>
@@ -124,7 +136,7 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
           <div style={completionIcon}>🎉</div>
           <h2 style={completionTitle}>✅ Refund completed successfully</h2>
           <p style={completionText}>
-            Your security deposit refund has been processed successfully.
+            Your security deposit refund of ₹{selectedStay.refund_amount || 0} has been processed successfully.
             The amount has been credited to your account.
           </p>
           <button style={completionButton} onClick={onCancel}>
@@ -185,7 +197,7 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* Refund Status Section - UPDATED WITH FINAL LOGIC */}
+        {/* Refund Status Section - Updated with amount display */}
         {selectedStay && (
           <div style={{
             marginTop: 15,
@@ -199,7 +211,7 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
                 selectedStay.refund_status === "paid" 
                   ? "✅ Refund Completed Successfully" 
                   : selectedStay.refund_status === "approved" 
-                  ? "💰 Approved - Waiting for your action"
+                  ? `💰 Approved - Amount: ₹${selectedStay.refund_amount || 0}`
                   : selectedStay.refund_status === "pending" && selectedStay.user_approval === "accepted"
                   ? "⏳ Waiting for owner to send payment"
                   : selectedStay.refund_status === "pending"
@@ -210,7 +222,14 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
               }
             </p>
 
-            {/* UPDATED Button Condition with safety check */}
+            {/* Show refund amount if available */}
+            {selectedStay.refund_amount > 0 && (
+              <p style={{ marginTop: 6, fontSize: 13 }}>
+                💵 Refund Amount: <b>₹{selectedStay.refund_amount}</b>
+              </p>
+            )}
+
+            {/* Accept/Reject Buttons for approved refund */}
             {selectedStay.refund_status === "approved" &&
              selectedStay.user_approval === "pending" && (
               <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
@@ -228,7 +247,7 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
                     fontWeight: 500
                   }}
                 >
-                  ✅ Accept Refund
+                  ✅ Accept ₹{selectedStay.refund_amount || 0}
                 </button>
 
                 <button
@@ -249,11 +268,34 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
                 </button>
               </div>
             )}
+
+            {/* Request Again button for rejected refund */}
+            {selectedStay.refund_status === "rejected" && (
+              <button
+                onClick={handleRequestAgain}
+                style={{
+                  marginTop: 10,
+                  width: "100%",
+                  padding: "8px 12px",
+                  background: "#f59e0b",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 6,
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 500
+                }}
+              >
+                🔁 Request Again
+              </button>
+            )}
           </div>
         )}
 
-        {/* Form Fields - Only show if booking selected AND refund not paid */}
-        {selectedStay && selectedStay.refund_status !== "paid" && (
+        {/* Form Fields - Only show if booking selected AND refund not paid AND not pending */}
+        {selectedStay && 
+         selectedStay.refund_status !== "paid" && 
+         selectedStay.refund_status !== "pending" && (
           <>
             <div style={formGroup}>
               <label style={label}>
@@ -348,6 +390,16 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
               </button>
             </div>
           </>
+        )}
+
+        {/* Show message if request is pending */}
+        {selectedStay?.refund_status === "pending" && (
+          <div style={pendingMessage}>
+            <p>⏳ Your vacate request is pending approval from the owner.</p>
+            <p style={{ fontSize: 13, marginTop: 8 }}>
+              You will be notified once the owner reviews your request.
+            </p>
+          </div>
         )}
       </div>
     </div>
@@ -511,7 +563,6 @@ const submitButton = {
   transition: "all 0.2s",
 };
 
-// Bonus: Completion screen styles
 const completionCard = {
   maxWidth: 500,
   margin: "0 auto",
@@ -553,4 +604,14 @@ const completionButton = {
   transition: "all 0.2s",
 };
 
-export default VacateRequestPage;   
+const pendingMessage = {
+  background: "#fef3c7",
+  padding: 16,
+  borderRadius: 8,
+  marginTop: 20,
+  textAlign: "center",
+  color: "#92400e",
+  fontSize: 14,
+};
+
+export default VacateRequestPage;
