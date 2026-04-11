@@ -32,18 +32,23 @@ const AdminRefunds = () => {
   }, [loadRefunds]);
 
   // ✅ FIXED: Update Status with correct API endpoints
-  const updateStatus = async (id, status) => {
+  const updateStatus = async (id, status, bookingId = null) => {
     if (!window.confirm(`Are you sure you want to mark this refund as ${status.toUpperCase()}?`)) return;
 
     setLoadingId(id);
     try {
       // Call appropriate endpoint based on status
       if (status === "approved") {
-        await api.put(`/payments/admin/refunds/${id}/approve`);
+        // For approve, we need to use booking_id
+        const approveId = bookingId || id;
+        await api.post(`/owner/vacate/approve/${approveId}`, {
+          damage_amount: 0,
+          pending_dues: 0
+        });
       } else if (status === "rejected") {
-        await api.put(`/payments/admin/refunds/${id}/reject`);
+        await api.post(`/owner/refund/reject/${id}`);
       } else if (status === "paid") {
-        await api.put(`/payments/admin/refunds/${id}/pay`);
+        await api.post(`/owner/refund/mark-paid/${id}`);
       }
 
       // Refresh list after successful update
@@ -134,7 +139,7 @@ const AdminRefunds = () => {
                 <th style={th}>Reason</th>
                 <th style={th}>Status</th>
                 <th style={th}>Actions</th>
-              </tr>
+               </tr>
             </thead>
             <tbody>
               {refunds.map((r) => (
@@ -146,7 +151,7 @@ const AdminRefunds = () => {
                     <div style={{ fontSize: "0.85rem", color: "#666" }}>
                       {r.phone}
                     </div>
-                  </td>
+                   </td>
                   <td style={td}>{r.pg_name}</td>
                   <td style={td}>
                     <div style={{ fontSize: "0.85rem" }}>
@@ -155,26 +160,26 @@ const AdminRefunds = () => {
                     <div style={{ fontSize: "0.85rem", color: "#666" }}>
                       <b>ORD:</b> {r.order_id || "N/A"}
                     </div>
-                  </td>
+                   </td>
                   <td style={td}>
                     <b>₹{r.amount}</b>
-                  </td>
+                   </td>
                   <td style={td}>
                     <code style={codeText}>{r.upi_id}</code>
-                  </td>
+                   </td>
                   <td style={td}>{r.reason}</td>
                   <td style={td}>
                     <span style={statusBadge(r.status)}>
                       {r.status.toUpperCase()}
                     </span>
-                  </td>
+                   </td>
                   <td style={td}>
                     <div style={actionGroup}>
                       {r.status === "pending" && (
                         <>
                           <button
                             style={approveBtn}
-                            onClick={() => updateStatus(r.id, "approved")}
+                            onClick={() => updateStatus(r.id, "approved", r.booking_id)}
                             disabled={loadingId === r.id}
                           >
                             {loadingId === r.id ? "⏳" : "✅ Approve"}
@@ -214,11 +219,11 @@ const AdminRefunds = () => {
                         </span>
                       )}
                     </div>
-                  </td>
-                </tr>
+                   </td>
+                 </tr>
               ))}
             </tbody>
-           </table>
+          </table>
         </div>
       )}
     </div>
