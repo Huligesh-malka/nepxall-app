@@ -137,7 +137,7 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
   const selectedStay = stays.find(s => s.id === parseInt(selectedStayId));
   const isJoined = selectedStay?.is_joined > 0;
 
-  // ✅ FIX 1 & 4: Show completion screen if refund is COMPLETED (not "paid")
+  // ✅ Show completion screen if refund is COMPLETED
   if (selectedStay?.refund_status === REFUND_STATUS.COMPLETED) {
     return (
       <div style={container}>
@@ -235,7 +235,6 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
           }}>
             <p style={{ margin: 0, fontSize: 14 }}>
               <b>💰 Refund Status:</b> {
-                // ✅ FIX 2: Use "completed" instead of "paid"
                 selectedStay.refund_status === REFUND_STATUS.COMPLETED 
                   ? "✅ Refund Completed Successfully" 
                   : selectedStay.refund_status === REFUND_STATUS.APPROVED 
@@ -255,6 +254,21 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
               <p style={{ marginTop: 6, fontSize: 13 }}>
                 💵 Refund Amount: <b>₹{selectedStay.refund_amount}</b>
               </p>
+            )}
+
+            {/* Show approved message with waiting for payment status */}
+            {selectedStay.refund_status === REFUND_STATUS.APPROVED && (
+              <div style={{
+                marginTop: 10,
+                padding: 8,
+                background: "#dbeafe",
+                borderRadius: 6,
+                textAlign: "center"
+              }}>
+                <p style={{ margin: 0, fontSize: 13, color: "#1e40af" }}>
+                  ⏳ Approved - Waiting for owner to send payment
+                </p>
+              </div>
             )}
 
             {/* Accept/Reject Buttons for approved refund */}
@@ -320,11 +334,11 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* ✅ FIX 3: Form Fields - Show if booking selected AND joined AND refund NOT completed AND NOT pending */}
+        {/* ✅ CRITICAL FIX: Form shows ONLY when refund_status is null/undefined/not requested */}
+        {/* Form will NOT show for: pending, approved, or completed */}
         {selectedStay && 
          isJoined &&
-         selectedStay.refund_status !== REFUND_STATUS.COMPLETED && 
-         selectedStay.refund_status !== REFUND_STATUS.PENDING && (
+         !["pending", "approved", "completed"].includes(selectedStay.refund_status) && (
           <>
             <div style={formGroup}>
               <label style={label}>
@@ -421,12 +435,16 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
           </>
         )}
 
-        {/* Show message if request is pending */}
-        {selectedStay?.refund_status === REFUND_STATUS.PENDING && (
+        {/* ✅ IMPROVED: Show message for pending OR approved (process ongoing) */}
+        {selectedStay && ["pending", "approved"].includes(selectedStay.refund_status) && (
           <div style={pendingMessage}>
-            <p>⏳ Your vacate request is pending approval from the owner.</p>
+            <p>⏳ Your vacate request is {selectedStay.refund_status === "approved" ? "approved" : "pending"}. 
+               {selectedStay.refund_status === "approved" 
+                 ? " Waiting for owner to send payment." 
+                 : " Waiting for owner approval."}
+            </p>
             <p style={{ fontSize: 13, marginTop: 8 }}>
-              You will be notified once the owner reviews your request.
+              You will be notified once the owner processes your request.
             </p>
           </div>
         )}
