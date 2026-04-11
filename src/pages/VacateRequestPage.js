@@ -129,7 +129,7 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
   const selectedStay = stays.find(s => s.id === parseInt(selectedStayId));
   const isJoined = selectedStay?.is_joined > 0;
 
-  // ✅ FIXED: Show completion screen if refund is paid
+  // Show completion screen if refund is paid
   if (selectedStay?.refund_status === "paid") {
     return (
       <div style={container}>
@@ -194,13 +194,6 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
             <div style={infoRow}>
               <span style={infoLabel}>Security Deposit:</span>
               <span style={infoValue}>₹{selectedStay.deposit_amount}</span>
-            </div>
-            {/* ✅ NEW: Add status display */}
-            <div style={infoRow}>
-              <span style={infoLabel}>Status:</span>
-              <span style={infoValue}>
-                {selectedStay.user_status === "LEAVING" ? "🚪 Leaving" : "🏠 Active"}
-              </span>
             </div>
           </div>
         )}
@@ -318,11 +311,11 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* ✅ FIXED: Form Fields - Show only if booking selected AND joined AND vacate_status is NOT requested */}
+        {/* Form Fields - Only show if booking selected AND joined AND refund not paid AND not pending */}
         {selectedStay && 
          isJoined &&
          selectedStay.refund_status !== "paid" && 
-         selectedStay.vacate_status !== "requested" && (
+         selectedStay.refund_status !== "pending" && (
           <>
             <div style={formGroup}>
               <label style={label}>
@@ -419,8 +412,8 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
           </>
         )}
 
-        {/* ✅ FIXED: Show message if vacate request is pending (using vacate_status) */}
-        {selectedStay?.vacate_status === "requested" && (
+        {/* Show message if request is pending */}
+        {selectedStay?.refund_status === "pending" && (
           <div style={pendingMessage}>
             <p>⏳ Your vacate request is pending approval from the owner.</p>
             <p style={{ fontSize: 13, marginTop: 8 }}>

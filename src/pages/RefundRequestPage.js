@@ -15,7 +15,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingStays, setLoadingStays] = useState(true);
-  // ✅ REMOVED isSyncing state (no longer needed)
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const loadBookings = async () => {
     try {
@@ -42,7 +42,27 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
   // Check refund status - with safe lowercase fallback
   const refundStatus = selectedStay?.refund_status?.toLowerCase();
 
-  // ✅ REMOVED: Auto-sync useEffect completely (this was causing the issue)
+  // 🔥 CRITICAL FIX: Auto-sync when refund status is 'paid'
+  useEffect(() => {
+    const syncBookingStatus = async () => {
+      if (selectedStay && refundStatus === "paid" && !isSyncing) {
+        setIsSyncing(true);
+        try {
+          await api.post(`/owner/refund/sync/${selectedStay.id}`);
+          console.log("✅ Synced booking status successfully");
+          
+          // Refresh bookings to get updated status
+          await loadBookings();
+        } catch (err) {
+          console.error("❌ Sync failed:", err);
+        } finally {
+          setIsSyncing(false);
+        }
+      }
+    };
+
+    syncBookingStatus();
+  }, [selectedStay, refundStatus]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -166,7 +186,18 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* ✅ REMOVED: Sync Loading Indicator section */}
+        {/* Sync Loading Indicator */}
+        {isSyncing && (
+          <div style={{
+            background: "#e0f2fe",
+            padding: 12,
+            borderRadius: 8,
+            marginBottom: 20,
+            textAlign: "center"
+          }}>
+            <span>🔄 Syncing your booking status...</span>
+          </div>
+        )}
 
         {/* Status Messages */}
         {selectedStay && refundStatus === "pending" && (
