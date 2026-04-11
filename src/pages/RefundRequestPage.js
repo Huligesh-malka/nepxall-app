@@ -91,8 +91,8 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
   // Check if user has already joined
   const isJoined = selectedStay?.is_joined > 0;
   
-  // Check refund status
-  const refundStatus = selectedStay?.refund_status;
+  // Check refund status - with safe lowercase fallback
+  const refundStatus = selectedStay?.refund_status?.toLowerCase();
 
   return (
     <div style={container}>
@@ -349,28 +349,11 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
           </>
         )}
 
-        {/* 🔥 FIXED: Bottom status text for existing refunds (pending/approved/paid) */}
-        {selectedStay && refundStatus && refundStatus !== "rejected" && !isJoined && (
-          <div style={{
-            background: "#fef3c7",
-            padding: 20,
-            borderRadius: 12,
-            border: "1px solid #f59e0b",
-            marginTop: 20
-          }}>
-            <h4 style={{ color: "#92400e", margin: 0 }}>
-              ⚠️ Refund Request Already Submitted
-            </h4>
-            <p style={{ color: "#92400e", marginTop: 8 }}>
-              You have already requested a refund for this booking. Please wait for admin approval.
-            </p>
-            <p style={{ color: "#92400e", marginTop: 8 }}>
-              Status: {refundStatus === "pending" && "⏳ Pending"}
-              {refundStatus === "approved" && "✅ Approved"}
-              {refundStatus === "paid" && "💰 Completed"}
-            </p>
-          </div>
-        )}
+        {/* 
+          🔥 REMOVED: The duplicate "Already Submitted" block that caused confusion.
+          The status is now clearly shown only through the dedicated status cards above.
+          No duplicate messages for pending, approved, or paid statuses.
+        */}
       </div>
     </div>
   );
