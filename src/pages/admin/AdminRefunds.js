@@ -40,7 +40,7 @@ const AdminRefunds = () => {
       } else if (status === "rejected") {
         await api.post(`/admin/refunds/${id}/reject`);
       } else if (status === "completed") {  // ✅ CHANGED from "paid" to "completed"
-        await api.post(`/admin/refunds/${id}/paid`);
+        await api.post(`/admin/refunds/${id}/complete`);
       }
 
       await loadRefunds();
