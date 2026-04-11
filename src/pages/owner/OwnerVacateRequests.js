@@ -104,19 +104,19 @@ const ActionMenu = ({ item, damage, dues, setDamage, setDues, loadingId, onAppro
       {open && (
         <div style={s.dropdown}>
           {canApprove && (
-            <button style={s.menuItem} onClick={() => { setShowForm(true); setOpen(false); }} disabled={loadingId === item.booking_id}>
+            <button style={s.menuItem} onClick={() => { setShowForm(true); setOpen(false); }} disabled={loadingId === item.id}>
               <span style={{ ...s.menuIcon, background: "#dcfce7", color: "#16a34a" }}>✓</span>
               {item.user_approval === "rejected" ? "Re-Approve" : "Approve"}
             </button>
           )}
           {canMarkPaid && (
-            <button style={s.menuItem} onClick={() => { onMarkPaid(item.booking_id); setOpen(false); }} disabled={loadingId === item.booking_id}>
+            <button style={s.menuItem} onClick={() => { onMarkPaid(item.id); setOpen(false); }} disabled={loadingId === item.id}>
               <span style={{ ...s.menuIcon, background: "#ede9fe", color: "#7c3aed" }}>₹</span>
               Mark Paid
             </button>
           )}
           {canReject && (
-            <button style={{ ...s.menuItem, color: "#ef4444" }} onClick={() => { onReject(item.booking_id); setOpen(false); }} disabled={loadingId === item.booking_id}>
+            <button style={{ ...s.menuItem, color: "#ef4444" }} onClick={() => { onReject(item.id); setOpen(false); }} disabled={loadingId === item.id}>
               <span style={{ ...s.menuIcon, background: "#fee2e2", color: "#dc2626" }}>✕</span>
               Reject
             </button>
@@ -127,12 +127,12 @@ const ActionMenu = ({ item, damage, dues, setDamage, setDues, loadingId, onAppro
         <div style={s.formOverlay}>
           <p style={s.formTitle}>{item.user_approval === "rejected" ? "Re-Approve" : "Approve Vacate"}</p>
           <label style={s.label}>Damage Amount (₹)</label>
-          <input type="number" placeholder="0" value={damage[item.booking_id] || ""} onChange={(e) => setDamage((d) => ({ ...d, [item.booking_id]: e.target.value }))} style={s.input} />
+          <input type="number" placeholder="0" value={damage[item.id] || ""} onChange={(e) => setDamage((d) => ({ ...d, [item.id]: e.target.value }))} style={s.input} />
           <label style={s.label}>Pending Dues (₹)</label>
-          <input type="number" placeholder="0" value={dues[item.booking_id] || ""} onChange={(e) => setDues((d) => ({ ...d, [item.booking_id]: e.target.value }))} style={s.input} />
+          <input type="number" placeholder="0" value={dues[item.id] || ""} onChange={(e) => setDues((d) => ({ ...d, [item.id]: e.target.value }))} style={s.input} />
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-            <button style={s.confirmBtn} onClick={() => { onApprove(item.booking_id); setShowForm(false); }} disabled={loadingId === item.booking_id}>
-              {loadingId === item.booking_id ? "..." : "Confirm"}
+            <button style={s.confirmBtn} onClick={() => { onApprove(item.id); setShowForm(false); }} disabled={loadingId === item.id}>
+              {loadingId === item.id ? "..." : "Confirm"}
             </button>
             <button style={s.cancelBtn} onClick={() => setShowForm(false)}>Cancel</button>
           </div>
@@ -351,7 +351,7 @@ const PGDetailScreen = ({ pgName, requests, pgStats, view, damage, dues, setDama
           </div>
         ) : (
           filtered.map((item) => (
-            <RequestCard key={item.booking_id} item={item} damage={damage} dues={dues} setDamage={setDamage} setDues={setDues} loadingId={loadingId} onApprove={onApprove} onReject={onReject} onMarkPaid={onMarkPaid} />
+            <RequestCard key={item.id} item={item} damage={damage} dues={dues} setDamage={setDamage} setDues={setDues} loadingId={loadingId} onApprove={onApprove} onReject={onReject} onMarkPaid={onMarkPaid} />
           ))
         )}
       </div>
@@ -393,7 +393,7 @@ const OwnerVacateRequests = () => {
     if (user && role === "owner") loadRequests();
   }, [user, role, authLoading, navigate]);
 
-  // ✅ STEP 1: Keep only latest record per booking (no duplicates)
+  // ✅ Keep only latest record per booking (no duplicates)
   const uniqueRequests = useMemo(() => {
     const map = new Map();
     
@@ -407,7 +407,7 @@ const OwnerVacateRequests = () => {
     return Array.from(map.values());
   }, [requests]);
 
-  // ✅ STEP 2: Active requests (LEAVING or not paid/completed)
+  // ✅ Active requests (LEAVING or not paid/completed)
   const activeRequests = useMemo(() => {
     return uniqueRequests.filter(
       (r) =>
@@ -416,7 +416,7 @@ const OwnerVacateRequests = () => {
     );
   }, [uniqueRequests]);
 
-  // ✅ STEP 3: History requests (paid OR completed)
+  // ✅ History requests (paid OR completed)
   const historyRequests = useMemo(() => {
     return uniqueRequests.filter(
       (r) =>
@@ -425,7 +425,7 @@ const OwnerVacateRequests = () => {
     );
   }, [uniqueRequests]);
 
-  // ✅ STEP 4: Display based on view
+  // ✅ Display based on view
   const displayRequests = view === "active" ? activeRequests : historyRequests;
 
   // Group by PG name using display requests
@@ -457,34 +457,52 @@ const OwnerVacateRequests = () => {
 
   const pgList = useMemo(() => Object.keys(pgGroups).map(name => ({ name, totalRequests: pgGroups[name].length })), [pgGroups]);
 
-  const handleApprove = async (bookingId) => {
+  // ✅ FIXED: Now using refund.id instead of booking_id
+  const handleApprove = async (refundId) => {
     try {
-      setLoadingId(bookingId);
+      setLoadingId(refundId);
       const token = await user.getIdToken();
-      const res = await api.post(`/owner/vacate/approve/${bookingId}`, { damage_amount: Number(damage[bookingId]) || 0, pending_dues: Number(dues[bookingId]) || 0 }, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.post(`/owner/vacate/approve/${refundId}`, { 
+        damage_amount: Number(damage[refundId]) || 0, 
+        pending_dues: Number(dues[refundId]) || 0 
+      }, { headers: { Authorization: `Bearer ${token}` } });
       alert(`Approved! Refund: ₹${res.data.refundAmount}`);
       await loadRequests();
-    } catch { alert("Approval failed"); } finally { setLoadingId(null); }
+    } catch { 
+      alert("Approval failed"); 
+    } finally { 
+      setLoadingId(null); 
+    }
   };
 
-  const handleReject = async (bookingId) => {
+  // ✅ FIXED: Now using refund.id instead of booking_id
+  const handleReject = async (refundId) => {
     try {
-      setLoadingId(bookingId);
+      setLoadingId(refundId);
       const token = await user.getIdToken();
-      await api.post(`/owner/refund/reject/${bookingId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      await api.post(`/owner/refund/reject/${refundId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
       alert("Refund Rejected");
       await loadRequests();
-    } catch { alert("Reject failed"); } finally { setLoadingId(null); }
+    } catch { 
+      alert("Reject failed"); 
+    } finally { 
+      setLoadingId(null); 
+    }
   };
 
-  const handleMarkPaid = async (bookingId) => {
+  // ✅ FIXED: Now using refund.id instead of booking_id
+  const handleMarkPaid = async (refundId) => {
     try {
-      setLoadingId(bookingId);
+      setLoadingId(refundId);
       const token = await user.getIdToken();
-      await api.post(`/owner/refund/mark-paid/${bookingId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      await api.post(`/owner/refund/mark-paid/${refundId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
       alert("Payment Completed");
       await loadRequests();
-    } catch { alert("Payment failed"); } finally { setLoadingId(null); }
+    } catch { 
+      alert("Payment failed"); 
+    } finally { 
+      setLoadingId(null); 
+    }
   };
 
   if (authLoading || pageLoading) return <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh"><CircularProgress /></Box>;
