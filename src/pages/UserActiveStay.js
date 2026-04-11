@@ -120,9 +120,9 @@ const StayDetails = ({ stay, formatDate }) => {
           </p>
         )}
         <div style={totalBox}>
-          <span>Total Monthly Paid</span>
+          <span>Total Paid</span>
           <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
-            ₹{stay.monthly_total}
+            ₹{stay.total_paid}
           </span>
         </div>
       </div>
@@ -342,7 +342,7 @@ const UserActiveStay = () => {
                 <div style={statusCircle}>✅</div>
                 <h3 style={{ ...statusText, color: BRAND_GREEN }}>VERIFIED</h3>
                 <p style={dateText}>Payment Mode: Online</p>
-                <div style={amountDisplay}>₹{selectedStay.monthly_total}</div>
+                <div style={amountDisplay}>₹{selectedStay.total_paid}</div>
               </div>
             </div>
 
@@ -372,7 +372,7 @@ const UserActiveStay = () => {
                 }}
               >
                 <span>Total Amount Received</span>
-                <span>₹{selectedStay.monthly_total}</span>
+                <span>₹{selectedStay.total_paid}</span>
               </div>
             </div>
 
