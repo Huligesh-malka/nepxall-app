@@ -299,7 +299,7 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
 
             {/* Accept/Reject Buttons for approved refund */}
             {refundStatus === REFUND_STATUS.APPROVED &&
-             selectedStay.user_approval === "pending" && (
+    selectedStay.deposit_user_approval === "pending" && (
               <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
                 <button
                   onClick={() => handleAcceptRefund(selectedStay.id)}
