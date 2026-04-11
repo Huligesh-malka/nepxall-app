@@ -15,7 +15,6 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingStays, setLoadingStays] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
 
   const loadBookings = async () => {
     try {
@@ -41,28 +40,6 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
   
   // Check refund status - with safe lowercase fallback
   const refundStatus = selectedStay?.refund_status?.toLowerCase();
-
-  // 🔥 CRITICAL FIX: Auto-sync when refund status is 'paid'
-  useEffect(() => {
-    const syncBookingStatus = async () => {
-      if (selectedStay && refundStatus === "paid" && !isSyncing) {
-        setIsSyncing(true);
-        try {
-          await api.post(`/owner/refund/sync/${selectedStay.id}`);
-          console.log("✅ Synced booking status successfully");
-          
-          // Refresh bookings to get updated status
-          await loadBookings();
-        } catch (err) {
-          console.error("❌ Sync failed:", err);
-        } finally {
-          setIsSyncing(false);
-        }
-      }
-    };
-
-    syncBookingStatus();
-  }, [selectedStay, refundStatus]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -165,7 +142,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
               <span style={infoValue}>₹{selectedStay.monthly_total}</span>
             </div>
             
-            {/* Show Refund Amount if approved or paid */}
+            {/* Show Refund Amount if approved or completed */}
             {selectedStay?.refund_amount > 0 && (
               <div style={{
                 ...infoRow,
@@ -186,20 +163,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* Sync Loading Indicator */}
-        {isSyncing && (
-          <div style={{
-            background: "#e0f2fe",
-            padding: 12,
-            borderRadius: 8,
-            marginBottom: 20,
-            textAlign: "center"
-          }}>
-            <span>🔄 Syncing your booking status...</span>
-          </div>
-        )}
-
-        {/* Status Messages */}
+        {/* Status Messages - Using correct status values */}
         {selectedStay && refundStatus === "pending" && (
           <div style={{
             background: "#fef3c7",
@@ -222,17 +186,17 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
 
         {selectedStay && refundStatus === "approved" && (
           <div style={{
-            background: "#dcfce7",
+            background: "#dbeafe",
             padding: 15,
             borderRadius: 8,
             marginBottom: 20,
-            border: "1px solid #22c55e"
+            border: "1px solid #3b82f6"
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 24 }}>✅</span>
+              <span style={{ fontSize: 24 }}>💰</span>
               <div>
-                <h4 style={{ margin: 0, color: "#166534" }}>Refund Approved - Waiting for Payment</h4>
-                <p style={{ margin: "5px 0 0", color: "#166534", fontSize: 13 }}>
+                <h4 style={{ margin: 0, color: "#1e40af" }}>Refund Approved - Waiting for Payment</h4>
+                <p style={{ margin: "5px 0 0", color: "#1e40af", fontSize: 13 }}>
                   Your refund of ₹{selectedStay.refund_amount} has been approved. The amount will be credited to your UPI ID shortly.
                 </p>
               </div>
@@ -240,7 +204,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {selectedStay && refundStatus === "paid" && (
+        {selectedStay && refundStatus === "completed" && (
           <div style={{
             background: "#dcfce7",
             padding: 15,
@@ -547,7 +511,6 @@ const submitButton = {
   color: "#fff",
   border: "none",
   borderRadius: 8,
-  cursor: "pointer",
   fontSize: 14,
   fontWeight: 500,
   transition: "all 0.2s",
