@@ -37,14 +37,25 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
   
   const isJoined = selectedStay?.is_joined > 0;
   
-  // ✅ FIXED: Safe lowercase fallback with empty string default
-  const refundStatus = (selectedStay?.refund_status || "").toLowerCase();
+  // ✅ FIXED STEP 1: Read correct backend fields
+  const fullRefundStatus = (selectedStay?.full_refund_status || "").toLowerCase();
+  const depositRefundStatus = (selectedStay?.deposit_refund_status || "").toLowerCase();
+  
+  // ✅ FIXED STEP 1: Main logic - prefer FULL refund status
+  const refundStatus = fullRefundStatus || depositRefundStatus;
   
   // ✅ FIXED: Check if refund is completed to disable form
   const isCompleted = refundStatus === "completed";
   
-  // ✅ FIXED: Only show FULL refund amount (not deposit)
-  const showFullRefundAmount = selectedStay?.refund_type === "FULL" && selectedStay?.refund_amount > 0;
+  // ✅ FIXED STEP 2: Show refund amount if ANY refund amount exists
+  const showRefundAmount = (selectedStay?.full_refund_amount > 0) || (selectedStay?.deposit_refund_amount > 0);
+  
+  // ✅ FIXED STEP 3: Get the actual refund amount
+  const refundAmount = selectedStay?.full_refund_amount || selectedStay?.deposit_refund_amount || 0;
+  
+  // ✅ Check if this is a full refund or deposit refund
+  const isFullRefund = !!fullRefundStatus;
+  const refundTypeText = isFullRefund ? "Full Refund" : "Deposit Refund";
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -143,8 +154,8 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
               <span style={infoValue}>₹{selectedStay.monthly_total}</span>
             </div>
             
-            {/* ✅ FIXED: Only show for FULL refunds, not deposit */}
-            {showFullRefundAmount && (
+            {/* ✅ FIXED STEP 2 & 3: Show refund amount if exists */}
+            {showRefundAmount && (
               <div style={{
                 ...infoRow,
                 borderBottom: "none",
@@ -152,19 +163,19 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
                 paddingTop: 8,
                 borderTop: "1px solid #e5e7eb"
               }}>
-                <span style={infoLabel}>💵 Refund Amount:</span>
+                <span style={infoLabel}>💵 {refundTypeText}:</span>
                 <span style={{
                   ...infoValue,
                   color: BRAND_GREEN,
                   fontSize: 16,
                   fontWeight: 700
-                }}>₹{selectedStay.refund_amount}</span>
+                }}>₹{refundAmount}</span>
               </div>
             )}
           </div>
         )}
 
-        {/* ✅ FIXED: Status display with correct values */}
+        {/* ✅ FIXED STEP 5: Status display with correct values */}
         {selectedStay && refundStatus === "pending" && (
           <div style={statusPending}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -172,7 +183,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
               <div>
                 <h4 style={{ margin: 0, color: "#92400e" }}>Waiting for Admin Approval</h4>
                 <p style={{ margin: "5px 0 0", color: "#92400e", fontSize: 13 }}>
-                  Your refund request is being reviewed by the admin. You'll be notified once it's approved.
+                  Your {refundTypeText.toLowerCase()} request is being reviewed by the admin. You'll be notified once it's approved.
                 </p>
               </div>
             </div>
@@ -186,7 +197,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
               <div>
                 <h4 style={{ margin: 0, color: "#1e40af" }}>Approved - Waiting for Payment</h4>
                 <p style={{ margin: "5px 0 0", color: "#1e40af", fontSize: 13 }}>
-                  Your refund of ₹{selectedStay.refund_amount} has been approved. The amount will be credited to your UPI ID shortly.
+                  Your {refundTypeText.toLowerCase()} of ₹{refundAmount} has been approved. The amount will be credited to your UPI ID shortly.
                 </p>
               </div>
             </div>
@@ -200,7 +211,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
               <div>
                 <h4 style={{ margin: 0, color: "#166534" }}>Refund Completed</h4>
                 <p style={{ margin: "5px 0 0", color: "#166534", fontSize: 13 }}>
-                  Your refund of ₹{selectedStay.refund_amount} has been successfully credited to your UPI ID.
+                  Your {refundTypeText.toLowerCase()} of ₹{refundAmount} has been successfully credited to your UPI ID.
                 </p>
               </div>
             </div>
@@ -214,15 +225,15 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
               <div>
                 <h4 style={{ margin: 0, color: "#991b1b" }}>Refund Rejected</h4>
                 <p style={{ margin: "5px 0 0", color: "#991b1b", fontSize: 13 }}>
-                  Your refund request has been rejected. You can apply again if eligible.
+                  Your {refundTypeText.toLowerCase()} request has been rejected. You can apply again if eligible.
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* ✅ FIXED: Changed condition from !refundStatus to refundStatus === "" */}
-        {selectedStay && isJoined && refundStatus === "" && (
+        {/* ✅ FIXED STEP 4: Check if user has joined */}
+        {selectedStay && isJoined && !refundStatus && (
           <div style={joinedMessage}>
             <h4 style={{ color: "#166534", margin: 0 }}>
               ✅ You have already joined this PG
@@ -236,8 +247,8 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* ✅ FIXED: Added isCompleted to disabled conditions */}
-        {selectedStay && !isJoined && (!refundStatus || refundStatus === "rejected") && (
+        {/* ✅ FIXED STEP 4: Form visibility condition - only show if NO refund status OR rejected */}
+        {selectedStay && !isJoined && (!fullRefundStatus && !depositRefundStatus || refundStatus === "rejected") && (
           <>
             <div style={formGroup}>
               <label style={label}>
