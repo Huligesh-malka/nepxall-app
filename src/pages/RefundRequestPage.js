@@ -37,25 +37,11 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
   
   const isJoined = selectedStay?.is_joined > 0;
   
-  // ✅ FIXED STEP 1: Read correct backend fields
-  const fullRefundStatus = (selectedStay?.full_refund_status || "").toLowerCase();
-  const depositRefundStatus = (selectedStay?.deposit_refund_status || "").toLowerCase();
-  
-  // ✅ FIXED STEP 1: Main logic - prefer FULL refund status
-  const refundStatus = fullRefundStatus || depositRefundStatus;
-  
-  // ✅ FIXED: Check if refund is completed to disable form
+  // ✅ ONLY FULL REFUND LOGIC - No deposit mixing
+  const refundStatus = (selectedStay?.full_refund_status || "").toLowerCase();
+  const refundAmount = selectedStay?.full_refund_amount || 0;
   const isCompleted = refundStatus === "completed";
-  
-  // ✅ FIXED STEP 2: Show refund amount if ANY refund amount exists
-  const showRefundAmount = (selectedStay?.full_refund_amount > 0) || (selectedStay?.deposit_refund_amount > 0);
-  
-  // ✅ FIXED STEP 3: Get the actual refund amount
-  const refundAmount = selectedStay?.full_refund_amount || selectedStay?.deposit_refund_amount || 0;
-  
-  // ✅ Check if this is a full refund or deposit refund
-  const isFullRefund = !!fullRefundStatus;
-  const refundTypeText = isFullRefund ? "Full Refund" : "Deposit Refund";
+  const showRefundAmount = refundAmount > 0;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -154,7 +140,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
               <span style={infoValue}>₹{selectedStay.monthly_total}</span>
             </div>
             
-            {/* ✅ FIXED STEP 2 & 3: Show refund amount if exists */}
+            {/* ✅ Only show full refund amount */}
             {showRefundAmount && (
               <div style={{
                 ...infoRow,
@@ -163,7 +149,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
                 paddingTop: 8,
                 borderTop: "1px solid #e5e7eb"
               }}>
-                <span style={infoLabel}>💵 {refundTypeText}:</span>
+                <span style={infoLabel}>💵 Full Refund:</span>
                 <span style={{
                   ...infoValue,
                   color: BRAND_GREEN,
@@ -175,7 +161,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* ✅ FIXED STEP 5: Status display with correct values */}
+        {/* ✅ Status display - Only Full Refund */}
         {selectedStay && refundStatus === "pending" && (
           <div style={statusPending}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -183,7 +169,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
               <div>
                 <h4 style={{ margin: 0, color: "#92400e" }}>Waiting for Admin Approval</h4>
                 <p style={{ margin: "5px 0 0", color: "#92400e", fontSize: 13 }}>
-                  Your {refundTypeText.toLowerCase()} request is being reviewed by the admin. You'll be notified once it's approved.
+                  Your full refund request is being reviewed by the admin. You'll be notified once it's approved.
                 </p>
               </div>
             </div>
@@ -197,7 +183,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
               <div>
                 <h4 style={{ margin: 0, color: "#1e40af" }}>Approved - Waiting for Payment</h4>
                 <p style={{ margin: "5px 0 0", color: "#1e40af", fontSize: 13 }}>
-                  Your {refundTypeText.toLowerCase()} of ₹{refundAmount} has been approved. The amount will be credited to your UPI ID shortly.
+                  Your full refund of ₹{refundAmount} has been approved. The amount will be credited to your UPI ID shortly.
                 </p>
               </div>
             </div>
@@ -211,7 +197,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
               <div>
                 <h4 style={{ margin: 0, color: "#166534" }}>Refund Completed</h4>
                 <p style={{ margin: "5px 0 0", color: "#166534", fontSize: 13 }}>
-                  Your {refundTypeText.toLowerCase()} of ₹{refundAmount} has been successfully credited to your UPI ID.
+                  Your full refund of ₹{refundAmount} has been successfully credited to your UPI ID.
                 </p>
               </div>
             </div>
@@ -225,14 +211,14 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
               <div>
                 <h4 style={{ margin: 0, color: "#991b1b" }}>Refund Rejected</h4>
                 <p style={{ margin: "5px 0 0", color: "#991b1b", fontSize: 13 }}>
-                  Your {refundTypeText.toLowerCase()} request has been rejected. You can apply again if eligible.
+                  Your full refund request has been rejected. You can apply again if eligible.
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* ✅ FIXED STEP 4: Check if user has joined */}
+        {/* ✅ Message for users who have already joined */}
         {selectedStay && isJoined && !refundStatus && (
           <div style={joinedMessage}>
             <h4 style={{ color: "#166534", margin: 0 }}>
@@ -247,8 +233,8 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* ✅ FIXED STEP 4: Form visibility condition - only show if NO refund status OR rejected */}
-        {selectedStay && !isJoined && (!fullRefundStatus && !depositRefundStatus || refundStatus === "rejected") && (
+        {/* ✅ Form visibility - Only show if no refund request OR rejected, and user hasn't joined */}
+        {selectedStay && !isJoined && (!refundStatus || refundStatus === "rejected") && (
           <>
             <div style={formGroup}>
               <label style={label}>
