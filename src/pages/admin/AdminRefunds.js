@@ -29,7 +29,6 @@ const AdminRefunds = () => {
     loadRefunds();
   }, [loadRefunds]);
 
-  // ✅ FIXED: Changed "paid" to "completed"
   const updateStatus = async (id, status) => {
     if (!window.confirm(`Are you sure you want to mark this refund as ${status.toUpperCase()}?`)) return;
 
@@ -39,7 +38,7 @@ const AdminRefunds = () => {
         await api.post(`/admin/refunds/${id}/approve`);
       } else if (status === "rejected") {
         await api.post(`/admin/refunds/${id}/reject`);
-      } else if (status === "completed") {  // ✅ CHANGED from "paid" to "completed"
+      } else if (status === "completed") {
         await api.post(`/admin/refunds/${id}/complete`);
       }
 
@@ -128,93 +127,99 @@ const AdminRefunds = () => {
                 <th style={th}>Reason</th>
                 <th style={th}>Status</th>
                 <th style={th}>Actions</th>
-               </tr>
+              </tr>
             </thead>
             <tbody>
-              {refunds.map((r) => (
-                <tr key={r.id} style={rowStyle}>
-                  <td style={td}>
-                    <div>
-                      <b>{r.name}</b>
-                    </div>
-                    <div style={{ fontSize: "0.85rem", color: "#666" }}>
-                      {r.phone}
-                    </div>
-                   </td>
-                  <td style={td}>{r.pg_name}</td>
-                  <td style={td}>
-                    <div style={{ fontSize: "0.85rem" }}>
-                      <b>BK:</b> {r.booking_id}
-                    </div>
-                    <div style={{ fontSize: "0.85rem", color: "#666" }}>
-                      <b>ORD:</b> {r.order_id || "N/A"}
-                    </div>
-                   </td>
-                  <td style={td}>
-                    <b>₹{r.amount}</b>
-                   </td>
-                  <td style={td}>
-                    <code style={codeText}>{r.upi_id}</code>
-                   </td>
-                  <td style={td}>{r.reason}</td>
-                  <td style={td}>
-                    <span style={statusBadge(r.status)}>
-                      {r.status.toUpperCase()}
-                    </span>
-                   </td>
-                  <td style={td}>
-                    <div style={actionGroup}>
-                      {r.status === "pending" && (
-                        <>
+              {refunds.map((r) => {
+                // 🔥 FIX 1 & 2: Normalize status and handle old "paid" data
+                const rawStatus = (r.status || "").toLowerCase();
+                const normalizedStatus = rawStatus === "paid" ? "completed" : rawStatus;
+
+                return (
+                  <tr key={r.id} style={rowStyle}>
+                    <td style={td}>
+                      <div>
+                        <b>{r.name}</b>
+                      </div>
+                      <div style={{ fontSize: "0.85rem", color: "#666" }}>
+                        {r.phone}
+                      </div>
+                    </td>
+                    <td style={td}>{r.pg_name}</td>
+                    <td style={td}>
+                      <div style={{ fontSize: "0.85rem" }}>
+                        <b>BK:</b> {r.booking_id}
+                      </div>
+                      <div style={{ fontSize: "0.85rem", color: "#666" }}>
+                        <b>ORD:</b> {r.order_id || "N/A"}
+                      </div>
+                    </td>
+                    <td style={td}>
+                      <b>₹{r.amount}</b>
+                    </td>
+                    <td style={td}>
+                      <code style={codeText}>{r.upi_id}</code>
+                    </td>
+                    <td style={td}>{r.reason}</td>
+                    <td style={td}>
+                      {/* Use normalized status for consistent display */}
+                      <span style={statusBadge(normalizedStatus)}>
+                        {normalizedStatus.toUpperCase()}
+                      </span>
+                    </td>
+                    <td style={td}>
+                      <div style={actionGroup}>
+                        {normalizedStatus === "pending" && (
+                          <>
+                            <button
+                              style={approveBtn}
+                              onClick={() => updateStatus(r.id, "approved")}
+                              disabled={loadingId === r.id}
+                            >
+                              {loadingId === r.id ? "⏳" : "✅ Approve"}
+                            </button>
+                            <button
+                              style={rejectBtn}
+                              onClick={() => updateStatus(r.id, "rejected")}
+                              disabled={loadingId === r.id}
+                            >
+                              {loadingId === r.id ? "⏳" : "❌ Reject"}
+                            </button>
+                          </>
+                        )}
+                        {/* 🔥 FIX 3: Prevent double click with disabled state */}
+                        {normalizedStatus === "approved" && (
                           <button
-                            style={approveBtn}
-                            onClick={() => updateStatus(r.id, "approved")}
-                            disabled={loadingId === r.id}
+                            style={paidBtn}
+                            onClick={() => updateStatus(r.id, "completed")}
+                            disabled={loadingId === r.id || normalizedStatus === "completed"}
                           >
-                            {loadingId === r.id ? "⏳" : "✅ Approve"}
+                            {loadingId === r.id ? "⏳ Processing..." : "💰 Mark Completed"}
                           </button>
-                          <button
-                            style={rejectBtn}
-                            onClick={() => updateStatus(r.id, "rejected")}
-                            disabled={loadingId === r.id}
+                        )}
+                        {normalizedStatus === "completed" && (
+                          <span
+                            style={{
+                              color: "#16a34a",
+                              fontSize: "0.85rem",
+                              fontWeight: "bold",
+                            }}
                           >
-                            {loadingId === r.id ? "⏳" : "❌ Reject"}
-                          </button>
-                        </>
-                      )}
-                      {/* ✅ FIXED: Changed from "paid" to "completed" */}
-                      {r.status === "approved" && (
-                        <button
-                          style={paidBtn}
-                          onClick={() => updateStatus(r.id, "completed")}
-                          disabled={loadingId === r.id}
-                        >
-                          {loadingId === r.id ? "⏳ Processing..." : "💰 Mark Completed"}
-                        </button>
-                      )}
-                      {/* ✅ FIXED: Changed from "paid" to "completed" */}
-                      {r.status === "completed" && (
-                        <span
-                          style={{
-                            color: "#16a34a",
-                            fontSize: "0.85rem",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          ✅ Completed
-                        </span>
-                      )}
-                      {r.status === "rejected" && (
-                        <span style={{ color: "#dc2626", fontSize: "0.85rem" }}>
-                          ❌ Rejected
-                        </span>
-                      )}
-                    </div>
-                   </td>
-                 </tr>
-              ))}
+                            ✅ Completed
+                          </span>
+                        )}
+                        {normalizedStatus === "rejected" && (
+                          <span style={{ color: "#dc2626", fontSize: "0.85rem" }}>
+                            ❌ Rejected
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
-           </table>
+          </table>
         </div>
       )}
     </div>
@@ -309,7 +314,7 @@ const paidBtn = {
   transition: "opacity 0.2s",
 };
 
-// ✅ FIXED: Updated badge colors for "completed" instead of "paid"
+// Status badge with support for normalized status (including "completed")
 const statusBadge = (status) => ({
   padding: "4px 10px",
   borderRadius: "20px",
@@ -324,7 +329,7 @@ const statusBadge = (status) => ({
       ? "#fef9c3"
       : status === "approved"
       ? "#dcfce7"
-      : status === "completed"  // ✅ CHANGED from "paid" to "completed"
+      : status === "completed"
       ? "#dbeafe"
       : "#fee2e2",
   color:
@@ -332,7 +337,7 @@ const statusBadge = (status) => ({
       ? "#854d0e"
       : status === "approved"
       ? "#166534"
-      : status === "completed"  // ✅ CHANGED from "paid" to "completed"
+      : status === "completed"
       ? "#1e40af"
       : "#991b1b",
 });
