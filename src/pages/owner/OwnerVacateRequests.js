@@ -98,25 +98,46 @@ const ActionMenu = ({ item, damage, dues, setDamage, setDues, loadingId, onAppro
     item.refund_status !== "paid" &&
     item.user_approval !== "accepted";
 
+  // ✅ CRITICAL FIX: Pass the full item (has booking_id) instead of just item.id
+  const handleApproveClick = () => {
+    setShowForm(true);
+    setOpen(false);
+  };
+
+  const handleRejectClick = () => {
+    onReject(item);  // ✅ Pass full item
+    setOpen(false);
+  };
+
+  const handleMarkPaidClick = () => {
+    onMarkPaid(item.id);  // ✅ refund.id
+    setOpen(false);
+  };
+
+  const handleConfirmApprove = () => {
+    onApprove(item);  // ✅ Pass full item
+    setShowForm(false);
+  };
+
   return (
     <div style={{ position: "relative" }} ref={menuRef}>
       <button onClick={() => setOpen((o) => !o)} style={s.actionBtn}>⋮</button>
       {open && (
         <div style={s.dropdown}>
           {canApprove && (
-            <button style={s.menuItem} onClick={() => { setShowForm(true); setOpen(false); }} disabled={loadingId === item.id}>
+            <button style={s.menuItem} onClick={handleApproveClick} disabled={loadingId === item.id}>
               <span style={{ ...s.menuIcon, background: "#dcfce7", color: "#16a34a" }}>✓</span>
               {item.user_approval === "rejected" ? "Re-Approve" : "Approve"}
             </button>
           )}
           {canMarkPaid && (
-            <button style={s.menuItem} onClick={() => { onMarkPaid(item.id); setOpen(false); }} disabled={loadingId === item.id}>
+            <button style={s.menuItem} onClick={handleMarkPaidClick} disabled={loadingId === item.id}>
               <span style={{ ...s.menuIcon, background: "#ede9fe", color: "#7c3aed" }}>₹</span>
               Mark Paid
             </button>
           )}
           {canReject && (
-            <button style={{ ...s.menuItem, color: "#ef4444" }} onClick={() => { onReject(item.id); setOpen(false); }} disabled={loadingId === item.id}>
+            <button style={{ ...s.menuItem, color: "#ef4444" }} onClick={handleRejectClick} disabled={loadingId === item.id}>
               <span style={{ ...s.menuIcon, background: "#fee2e2", color: "#dc2626" }}>✕</span>
               Reject
             </button>
@@ -131,7 +152,7 @@ const ActionMenu = ({ item, damage, dues, setDamage, setDues, loadingId, onAppro
           <label style={s.label}>Pending Dues (₹)</label>
           <input type="number" placeholder="0" value={dues[item.id] || ""} onChange={(e) => setDues((d) => ({ ...d, [item.id]: e.target.value }))} style={s.input} />
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-            <button style={s.confirmBtn} onClick={() => { onApprove(item.id); setShowForm(false); }} disabled={loadingId === item.id}>
+            <button style={s.confirmBtn} onClick={handleConfirmApprove} disabled={loadingId === item.id}>
               {loadingId === item.id ? "..." : "Confirm"}
             </button>
             <button style={s.cancelBtn} onClick={() => setShowForm(false)}>Cancel</button>
@@ -176,7 +197,17 @@ const RequestCard = ({ item, damage, dues, setDamage, setDues, loadingId, onAppr
           <div style={s.bookingId}>Booking #{item.booking_id}</div>
         </div>
         <span style={{ ...s.statusBadge, color: st.color, background: st.bg }}>{st.label}</span>
-        <ActionMenu item={item} damage={damage} dues={dues} setDamage={setDamage} setDues={setDues} loadingId={loadingId} onApprove={onApprove} onReject={onReject} onMarkPaid={onMarkPaid} />
+        <ActionMenu 
+          item={item} 
+          damage={damage} 
+          dues={dues} 
+          setDamage={setDamage} 
+          setDues={setDues} 
+          loadingId={loadingId} 
+          onApprove={onApprove} 
+          onReject={onReject} 
+          onMarkPaid={onMarkPaid} 
+        />
       </div>
 
       <div style={s.detailGrid}>
@@ -351,7 +382,18 @@ const PGDetailScreen = ({ pgName, requests, pgStats, view, damage, dues, setDama
           </div>
         ) : (
           filtered.map((item) => (
-            <RequestCard key={item.id} item={item} damage={damage} dues={dues} setDamage={setDamage} setDues={setDues} loadingId={loadingId} onApprove={onApprove} onReject={onReject} onMarkPaid={onMarkPaid} />
+            <RequestCard 
+              key={item.id} 
+              item={item} 
+              damage={damage} 
+              dues={dues} 
+              setDamage={setDamage} 
+              setDues={setDues} 
+              loadingId={loadingId} 
+              onApprove={onApprove} 
+              onReject={onReject} 
+              onMarkPaid={onMarkPaid} 
+            />
           ))
         )}
       </div>
@@ -372,7 +414,7 @@ const OwnerVacateRequests = () => {
   const [loadingId, setLoadingId] = useState(null);
   const [pageLoading, setPageLoading] = useState(true);
   const [selectedPG, setSelectedPG] = useState(null);
-  const [view, setView] = useState("active"); // active | history
+  const [view, setView] = useState("active");
 
   const loadRequests = async () => {
     if (!user) return;
@@ -393,21 +435,18 @@ const OwnerVacateRequests = () => {
     if (user && role === "owner") loadRequests();
   }, [user, role, authLoading, navigate]);
 
-  // ✅ Keep only latest record per booking (no duplicates)
+  // Keep only latest record per booking
   const uniqueRequests = useMemo(() => {
     const map = new Map();
-    
     requests.forEach((r) => {
-      // Always keep latest row (based on id or created_at)
       if (!map.has(r.booking_id) || map.get(r.booking_id).id < r.id) {
         map.set(r.booking_id, r);
       }
     });
-    
     return Array.from(map.values());
   }, [requests]);
 
-  // ✅ Active requests (LEAVING or not paid/completed)
+  // Active requests (LEAVING or not paid/completed)
   const activeRequests = useMemo(() => {
     return uniqueRequests.filter(
       (r) =>
@@ -416,7 +455,7 @@ const OwnerVacateRequests = () => {
     );
   }, [uniqueRequests]);
 
-  // ✅ History requests (paid OR completed)
+  // History requests (paid OR completed)
   const historyRequests = useMemo(() => {
     return uniqueRequests.filter(
       (r) =>
@@ -425,10 +464,8 @@ const OwnerVacateRequests = () => {
     );
   }, [uniqueRequests]);
 
-  // ✅ Display based on view
   const displayRequests = view === "active" ? activeRequests : historyRequests;
 
-  // Group by PG name using display requests
   const pgGroups = useMemo(() => {
     const groups = {};
     displayRequests.forEach(req => {
@@ -457,49 +494,73 @@ const OwnerVacateRequests = () => {
 
   const pgList = useMemo(() => Object.keys(pgGroups).map(name => ({ name, totalRequests: pgGroups[name].length })), [pgGroups]);
 
-  // ✅ FIXED: Now using refund.id instead of booking_id
-  const handleApprove = async (refundId) => {
+  // ✅ CRITICAL FIX: Approve uses booking_id in URL path
+  const handleApprove = async (item) => {
+    const refundId = item.id;      // For damage/dues storage key
+    const bookingId = item.booking_id;  // For API endpoint
+    
     try {
       setLoadingId(refundId);
       const token = await user.getIdToken();
-      const res = await api.post(`/owner/vacate/approve/${refundId}`, { 
-        damage_amount: Number(damage[refundId]) || 0, 
-        pending_dues: Number(dues[refundId]) || 0 
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.post(
+        `/owner/vacate/approve/${bookingId}`,  // ✅ Uses booking_id (matches backend route)
+        { 
+          damage_amount: Number(damage[refundId]) || 0, 
+          pending_dues: Number(dues[refundId]) || 0 
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       alert(`Approved! Refund: ₹${res.data.refundAmount}`);
       await loadRequests();
-    } catch { 
-      alert("Approval failed"); 
+      // Clear form data for this refund
+      setDamage(prev => { const newState = { ...prev }; delete newState[refundId]; return newState; });
+      setDues(prev => { const newState = { ...prev }; delete newState[refundId]; return newState; });
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Approval failed");
     } finally { 
       setLoadingId(null); 
     }
   };
 
-  // ✅ FIXED: Now using refund.id instead of booking_id
-  const handleReject = async (refundId) => {
+  // ✅ CRITICAL FIX: Reject uses booking_id in URL path
+  const handleReject = async (item) => {
+    const refundId = item.id;
+    const bookingId = item.booking_id;
+    
     try {
       setLoadingId(refundId);
       const token = await user.getIdToken();
-      await api.post(`/owner/refund/reject/${refundId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      await api.post(
+        `/owner/refund/reject/${bookingId}`,  // ✅ Uses booking_id (matches backend route)
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       alert("Refund Rejected");
       await loadRequests();
-    } catch { 
-      alert("Reject failed"); 
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Reject failed");
     } finally { 
       setLoadingId(null); 
     }
   };
 
-  // ✅ FIXED: Now using refund.id instead of booking_id
+  // ✅ CORRECT: Mark Paid uses refund.id (matches backend route)
   const handleMarkPaid = async (refundId) => {
     try {
       setLoadingId(refundId);
       const token = await user.getIdToken();
-      await api.post(`/owner/refund/mark-paid/${refundId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      await api.post(
+        `/owner/refund/mark-paid/${refundId}`,  // ✅ Uses refund.id (matches backend route)
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       alert("Payment Completed");
       await loadRequests();
-    } catch { 
-      alert("Payment failed"); 
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Payment failed");
     } finally { 
       setLoadingId(null); 
     }
@@ -968,4 +1029,4 @@ const s = {
     fontSize: 13,
     color: "#94a3b8",
   },
-};  
+};
