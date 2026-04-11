@@ -1,27 +1,27 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Navigate } from "react-router-dom";
 import api from "../../api/api";
-import { useAuth } from "../../context/AuthContext"; // ✅ Added AuthContext
+import { useAuth } from "../../context/AuthContext";
 
 const AdminRefunds = () => {
   const [refunds, setRefunds] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingId, setLoadingId] = useState(null); // Track which row is updating
 
-  // ✅ 1. Get Auth State
+  // Get Auth State
   const { user, role, loading: authLoading } = useAuth();
 
-  // 🔹 Load data
+  // Load data
   const loadRefunds = useCallback(async () => {
-    // Only fetch if authenticated and admin
     if (authLoading || !user || role !== "admin") return;
 
     try {
       setLoading(true);
-      // Assuming 'api' instance handles tokens via interceptors
       const res = await api.get("/payments/admin/refunds");
       setRefunds(res.data || []);
     } catch (err) {
       console.error("❌ Error loading refunds:", err);
+      alert("Failed to load refunds");
     } finally {
       setLoading(false);
     }
@@ -31,9 +31,39 @@ const AdminRefunds = () => {
     loadRefunds();
   }, [loadRefunds]);
 
-  // ✅ 2. Handle Route Protection Logic
+  // ✅ FIXED: Update Status with correct API endpoints
+  const updateStatus = async (id, status) => {
+    if (!window.confirm(`Are you sure you want to mark this refund as ${status.toUpperCase()}?`)) return;
+
+    setLoadingId(id);
+    try {
+      // Call appropriate endpoint based on status
+      if (status === "approved") {
+        await api.put(`/payments/admin/refunds/${id}/approve`);
+      } else if (status === "rejected") {
+        await api.put(`/payments/admin/refunds/${id}/reject`);
+      } else if (status === "paid") {
+        await api.put(`/payments/admin/refunds/${id}/pay`);
+      }
+
+      // Refresh list after successful update
+      await loadRefunds();
+      alert(`✅ Refund ${status} successfully!`);
+    } catch (err) {
+      console.error("❌ Update failed:", err);
+      alert(err.response?.data?.message || "Failed to update status");
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  // Route Protection Logic
   if (authLoading) {
-    return <p style={{ padding: 20 }}>⏳ Verifying Admin Session...</p>;
+    return (
+      <div style={{ padding: 20, textAlign: "center" }}>
+        <p>⏳ Verifying Admin Session...</p>
+      </div>
+    );
   }
 
   if (!user) {
@@ -44,37 +74,51 @@ const AdminRefunds = () => {
     return <Navigate to="/" replace />;
   }
 
-  // 🔹 Update Status
-  const updateStatus = async (id, status) => {
-    if (!window.confirm(`Are you sure you want to mark this as ${status}?`)) return;
-
-    try {
-      await api.put(`/payments/admin/refunds/${id}`, { status });
-      loadRefunds(); // Refresh list after update
-    } catch (err) {
-      console.error("❌ Update failed:", err);
-      alert("Failed to update status");
-    }
-  };
-
-  /* ================= UI ================= */
-
-  if (loading) return <p style={{ padding: 20 }}>⏳ Loading refunds...</p>;
+  // Loading State
+  if (loading) {
+    return (
+      <div style={{ padding: 20, textAlign: "center" }}>
+        <p>⏳ Loading refunds...</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: 20, maxWidth: "1200px", margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 20,
+        }}
+      >
         <h2 style={{ color: "#333", margin: 0 }}>💸 Refund Management</h2>
-        <button 
+        <button
           onClick={loadRefunds}
-          style={{ background: "#f1f5f9", border: "1px solid #cbd5e1", padding: "5px 12px", borderRadius: "5px", cursor: "pointer", fontSize: "0.85rem" }}
+          style={{
+            background: "#f1f5f9",
+            border: "1px solid #cbd5e1",
+            padding: "5px 12px",
+            borderRadius: "5px",
+            cursor: "pointer",
+            fontSize: "0.85rem",
+          }}
         >
-          Refresh Data
+          🔄 Refresh Data
         </button>
       </div>
 
       {refunds.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "40px", background: "#fff", borderRadius: "10px", boxShadow: "0 4px 6px rgba(0,0,0,0.05)" }}>
+        <div
+          style={{
+            textAlign: "center",
+            padding: "40px",
+            background: "#fff",
+            borderRadius: "10px",
+            boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
+          }}
+        >
           <p style={{ color: "#64748b" }}>No refund requests found.</p>
         </div>
       ) : (
@@ -96,45 +140,85 @@ const AdminRefunds = () => {
               {refunds.map((r) => (
                 <tr key={r.id} style={rowStyle}>
                   <td style={td}>
-                    <div><b>{r.name}</b></div>
-                    <div style={{ fontSize: "0.85rem", color: "#666" }}>{r.phone}</div>
+                    <div>
+                      <b>{r.name}</b>
+                    </div>
+                    <div style={{ fontSize: "0.85rem", color: "#666" }}>
+                      {r.phone}
+                    </div>
                   </td>
                   <td style={td}>{r.pg_name}</td>
                   <td style={td}>
-                    <div style={{ fontSize: "0.85rem" }}><b>BK:</b> {r.booking_id}</div>
-                    <div style={{ fontSize: "0.85rem", color: "#666" }}><b>ORD:</b> {r.order_id || "N/A"}</div>
+                    <div style={{ fontSize: "0.85rem" }}>
+                      <b>BK:</b> {r.booking_id}
+                    </div>
+                    <div style={{ fontSize: "0.85rem", color: "#666" }}>
+                      <b>ORD:</b> {r.order_id || "N/A"}
+                    </div>
                   </td>
-                  <td style={td}><b>₹{r.amount}</b></td>
-                  <td style={td}><code style={codeText}>{r.upi_id}</code></td>
+                  <td style={td}>
+                    <b>₹{r.amount}</b>
+                  </td>
+                  <td style={td}>
+                    <code style={codeText}>{r.upi_id}</code>
+                  </td>
                   <td style={td}>{r.reason}</td>
                   <td style={td}>
-                    <span style={statusBadge(r.status)}>{r.status}</span>
+                    <span style={statusBadge(r.status)}>
+                      {r.status.toUpperCase()}
+                    </span>
                   </td>
                   <td style={td}>
                     <div style={actionGroup}>
                       {r.status === "pending" && (
                         <>
-                          <button style={approveBtn} onClick={() => updateStatus(r.id, "approved")}>
-                            Approve
+                          <button
+                            style={approveBtn}
+                            onClick={() => updateStatus(r.id, "approved")}
+                            disabled={loadingId === r.id}
+                          >
+                            {loadingId === r.id ? "⏳" : "✅ Approve"}
                           </button>
-                          <button style={rejectBtn} onClick={() => updateStatus(r.id, "rejected")}>
-                            Reject
+                          <button
+                            style={rejectBtn}
+                            onClick={() => updateStatus(r.id, "rejected")}
+                            disabled={loadingId === r.id}
+                          >
+                            {loadingId === r.id ? "⏳" : "❌ Reject"}
                           </button>
                         </>
                       )}
                       {r.status === "approved" && (
-                        <button style={paidBtn} onClick={() => updateStatus(r.id, "paid")}>
-                          Mark Paid
+                        <button
+                          style={paidBtn}
+                          onClick={() => updateStatus(r.id, "paid")}
+                          disabled={loadingId === r.id}
+                        >
+                          {loadingId === r.id ? "⏳ Processing..." : "💰 Mark Paid"}
                         </button>
                       )}
-                      {r.status === "paid" && <span style={{ color: "#16a34a", fontSize: "0.85rem", fontWeight: "bold" }}>✅ Completed</span>}
-                      {r.status === "rejected" && <span style={{ color: "#dc2626", fontSize: "0.85rem" }}>Rejected</span>}
+                      {r.status === "paid" && (
+                        <span
+                          style={{
+                            color: "#16a34a",
+                            fontSize: "0.85rem",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          ✅ Completed
+                        </span>
+                      )}
+                      {r.status === "rejected" && (
+                        <span style={{ color: "#dc2626", fontSize: "0.85rem" }}>
+                          ❌ Rejected
+                        </span>
+                      )}
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
+           </table>
         </div>
       )}
     </div>
@@ -143,7 +227,7 @@ const AdminRefunds = () => {
 
 export default AdminRefunds;
 
-/* ===== STYLES (Kept from your original) ===== */
+/* ===== STYLES ===== */
 
 const tableContainer = {
   width: "100%",
@@ -204,6 +288,7 @@ const approveBtn = {
   borderRadius: "5px",
   cursor: "pointer",
   fontSize: "0.85rem",
+  transition: "opacity 0.2s",
 };
 
 const rejectBtn = {
@@ -214,6 +299,7 @@ const rejectBtn = {
   borderRadius: "5px",
   cursor: "pointer",
   fontSize: "0.85rem",
+  transition: "opacity 0.2s",
 };
 
 const paidBtn = {
@@ -224,6 +310,7 @@ const paidBtn = {
   borderRadius: "5px",
   cursor: "pointer",
   fontSize: "0.85rem",
+  transition: "opacity 0.2s",
 };
 
 const statusBadge = (status) => ({
