@@ -90,7 +90,8 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
           confirmUpi: ""
         });
         
-        onSuccess();
+        // 🔥 FIX: Safe check for onSuccess
+        if (onSuccess) onSuccess();
       }
     } catch (err) {
       console.error("Refund Error:", err);
@@ -392,7 +393,12 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
 
             {/* Action Buttons */}
             <div style={styles.buttonGroup}>
-              <button style={styles.cancelButton} onClick={onCancel}>
+              <button 
+                style={styles.cancelButton} 
+                onClick={() => { 
+                  if (onCancel) onCancel(); 
+                }}
+              >
                 Cancel
               </button>
               <button 
