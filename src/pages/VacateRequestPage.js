@@ -22,6 +22,7 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
     try {
       setLoadingStays(true);
       const res = await api.get("/bookings/user/active-stay");
+      // Ensure the response includes pg_user_status and vacate_status
       setStays(res.data || []);
     } catch (err) {
       console.error("Error loading bookings:", err);
@@ -127,17 +128,56 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
   };
 
   const selectedStay = stays.find(s => s.id === parseInt(selectedStayId));
+  
+  // FIXED: Check pg_user_status and vacate_status instead of just is_joined
   const isJoined = selectedStay?.is_joined > 0;
+  const pgUserStatus = selectedStay?.pg_user_status;
+  const vacateStatus = selectedStay?.vacate_status;
+  
+  // Check if user can submit vacate request (joined and not in vacate process)
+  const canSubmitVacate = isJoined && 
+    pgUserStatus !== "LEAVING" && 
+    pgUserStatus !== "LEFT" &&
+    selectedStay?.refund_status !== "paid" &&
+    selectedStay?.refund_status !== "pending";
 
-  // Show completion screen if refund is paid
-  if (selectedStay?.refund_status === "paid") {
+  // Get UI message based on status
+  const getStatusMessage = () => {
+    if (pgUserStatus === "LEAVING" && vacateStatus === "requested") {
+      return {
+        type: "pending",
+        message: "⏳ Vacate request sent. Waiting for owner approval",
+        icon: "⏳"
+      };
+    }
+    if (pgUserStatus === "LEAVING" && vacateStatus === "approved") {
+      return {
+        type: "approved",
+        message: "💰 Vacate request approved! Waiting for refund payment",
+        icon: "💰"
+      };
+    }
+    if (pgUserStatus === "LEFT" && vacateStatus === "completed") {
+      return {
+        type: "completed",
+        message: "✅ Vacate process completed successfully",
+        icon: "✅"
+      };
+    }
+    return null;
+  };
+
+  const statusMessage = getStatusMessage();
+
+  // Show completion screen if refund is paid OR status is LEFT
+  if (selectedStay?.refund_status === "paid" || pgUserStatus === "LEFT") {
     return (
       <div style={container}>
         <div style={completionCard}>
           <div style={completionIcon}>🎉</div>
           <h2 style={completionTitle}>✅ Refund completed successfully</h2>
           <p style={completionText}>
-            Your security deposit refund of ₹{selectedStay.refund_amount || 0} has been processed successfully.
+            Your security deposit refund of ₹{selectedStay?.refund_amount || 0} has been processed successfully.
             The amount has been credited to your account.
           </p>
           <button style={completionButton} onClick={onCancel}>
@@ -195,37 +235,57 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
               <span style={infoLabel}>Security Deposit:</span>
               <span style={infoValue}>₹{selectedStay.deposit_amount}</span>
             </div>
+            {pgUserStatus && (
+              <div style={infoRow}>
+                <span style={infoLabel}>Status:</span>
+                <span style={infoValue}>
+                  {pgUserStatus === "ACTIVE" && "✅ Active"}
+                  {pgUserStatus === "LEAVING" && "⏳ Leaving Process"}
+                  {pgUserStatus === "LEFT" && "📦 Left PG"}
+                </span>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Warning Message - Show if not joined */}
-        {selectedStay && !isJoined && (
-          <div style={{
-            marginTop: 15,
-            padding: 15,
-            background: "#fee2e2",
-            borderRadius: 8,
-            border: "1px solid #ef4444"
-          }}>
-            <p style={{ margin: 0, color: "#991b1b", fontWeight: 500 }}>
+        {/* FIXED: Warning Message - Check pg_user_status instead of just is_joined */}
+        {selectedStay && 
+         isJoined === 0 &&
+         pgUserStatus !== "LEAVING" &&
+         pgUserStatus !== "LEFT" && (
+          <div style={warningCard}>
+            <p style={warningText}>
               ❌ You have not joined this PG yet
             </p>
-            <p style={{ marginTop: 6, fontSize: 13, color: "#991b1b" }}>
+            <p style={warningSubtext}>
               Vacate request is only allowed after check-in.
+            </p>
+          </div>
+        )}
+
+        {/* FIXED: Show status message based on pg_user_status and vacate_status */}
+        {statusMessage && (
+          <div style={{
+            ...statusCard,
+            background: statusMessage.type === "pending" ? "#fef3c7" : 
+                       statusMessage.type === "approved" ? "#dbeafe" : "#d1fae5",
+            borderColor: statusMessage.type === "pending" ? "#f59e0b" :
+                        statusMessage.type === "approved" ? "#3b82f6" : "#10b981"
+          }}>
+            <p style={{
+              ...statusText,
+              color: statusMessage.type === "pending" ? "#92400e" :
+                     statusMessage.type === "approved" ? "#1e40af" : "#065f46"
+            }}>
+              {statusMessage.icon} {statusMessage.message}
             </p>
           </div>
         )}
 
         {/* Refund Status Section - Updated with amount display */}
         {selectedStay && (
-          <div style={{
-            marginTop: 15,
-            padding: 12,
-            background: "#f1f5f9",
-            borderRadius: 8,
-            border: "1px solid #e2e8f0"
-          }}>
-            <p style={{ margin: 0, fontSize: 14 }}>
+          <div style={refundCard}>
+            <p style={refundTitle}>
               <b>💰 Refund Status:</b> {
                 selectedStay.refund_status === "paid" 
                   ? "✅ Refund Completed Successfully" 
@@ -243,7 +303,7 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
 
             {/* Show refund amount if available */}
             {selectedStay.refund_amount > 0 && (
-              <p style={{ marginTop: 6, fontSize: 13 }}>
+              <p style={refundAmount}>
                 💵 Refund Amount: <b>₹{selectedStay.refund_amount}</b>
               </p>
             )}
@@ -251,37 +311,17 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
             {/* Accept/Reject Buttons for approved refund */}
             {selectedStay.refund_status === "approved" &&
              selectedStay.user_approval === "pending" && (
-              <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+              <div style={buttonGroupSmall}>
                 <button
                   onClick={() => handleAcceptRefund(selectedStay.id)}
-                  style={{
-                    flex: 1,
-                    padding: "8px 16px",
-                    background: "#10b981",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    fontSize: 13,
-                    fontWeight: 500
-                  }}
+                  style={acceptButton}
                 >
                   ✅ Accept ₹{selectedStay.refund_amount || 0}
                 </button>
 
                 <button
                   onClick={() => handleRejectRefund(selectedStay.id)}
-                  style={{
-                    flex: 1,
-                    padding: "8px 16px",
-                    background: "#ef4444",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    fontSize: 13,
-                    fontWeight: 500
-                  }}
+                  style={rejectButton}
                 >
                   ❌ Reject Refund
                 </button>
@@ -292,18 +332,7 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
             {selectedStay.refund_status === "rejected" && (
               <button
                 onClick={handleRequestAgain}
-                style={{
-                  marginTop: 10,
-                  width: "100%",
-                  padding: "8px 12px",
-                  background: "#f59e0b",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  fontSize: 13,
-                  fontWeight: 500
-                }}
+                style={requestAgainButton}
               >
                 🔁 Request Again
               </button>
@@ -311,11 +340,8 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* Form Fields - Only show if booking selected AND joined AND refund not paid AND not pending */}
-        {selectedStay && 
-         isJoined &&
-         selectedStay.refund_status !== "paid" && 
-         selectedStay.refund_status !== "pending" && (
+        {/* Form Fields - Only show if can submit vacate */}
+        {selectedStay && canSubmitVacate && (
           <>
             <div style={formGroup}>
               <label style={label}>
@@ -393,39 +419,30 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
             </div>
 
             {/* Action Buttons */}
-            <div style={buttonGroup}>
+            <div style={buttonGroupLarge}>
               <button style={cancelButton} onClick={onCancel}>
                 Cancel
               </button>
               <button 
                 style={{ 
                   ...submitButton, 
-                  opacity: isFormValid() && !isSubmitting && isJoined ? 1 : 0.7,
-                  cursor: isFormValid() && !isSubmitting && isJoined ? "pointer" : "not-allowed"
+                  opacity: isFormValid() && !isSubmitting ? 1 : 0.7,
+                  cursor: isFormValid() && !isSubmitting ? "pointer" : "not-allowed"
                 }}
                 onClick={submitVacateRequest}
-                disabled={!isFormValid() || isSubmitting || !isJoined}
+                disabled={!isFormValid() || isSubmitting}
               >
                 {isSubmitting ? "Submitting..." : "Submit Vacate Request"}
               </button>
             </div>
           </>
         )}
-
-        {/* Show message if request is pending */}
-        {selectedStay?.refund_status === "pending" && (
-          <div style={pendingMessage}>
-            <p>⏳ Your vacate request is pending approval from the owner.</p>
-            <p style={{ fontSize: 13, marginTop: 8 }}>
-              You will be notified once the owner reviews your request.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
 };
 
+// Styles
 const container = {
   animation: "fadeIn 0.3s ease",
 };
@@ -529,6 +546,57 @@ const textarea = {
   boxSizing: "border-box",
 };
 
+const warningCard = {
+  marginTop: 15,
+  padding: 15,
+  background: "#fee2e2",
+  borderRadius: 8,
+  border: "1px solid #ef4444"
+};
+
+const warningText = {
+  margin: 0,
+  color: "#991b1b",
+  fontWeight: 500
+};
+
+const warningSubtext = {
+  marginTop: 6,
+  fontSize: 13,
+  color: "#991b1b"
+};
+
+const statusCard = {
+  marginTop: 15,
+  padding: 15,
+  borderRadius: 8,
+  border: "1px solid",
+};
+
+const statusText = {
+  margin: 0,
+  fontWeight: 500,
+  textAlign: "center"
+};
+
+const refundCard = {
+  marginTop: 15,
+  padding: 12,
+  background: "#f1f5f9",
+  borderRadius: 8,
+  border: "1px solid #e2e8f0"
+};
+
+const refundTitle = {
+  margin: 0,
+  fontSize: 14
+};
+
+const refundAmount = {
+  marginTop: 6,
+  fontSize: 13
+};
+
 const notesCard = {
   background: "#fef3c7",
   padding: 20,
@@ -551,7 +619,13 @@ const notesList = {
   fontSize: 13,
 };
 
-const buttonGroup = {
+const buttonGroupSmall = {
+  display: "flex",
+  gap: 10,
+  marginTop: 10
+};
+
+const buttonGroupLarge = {
   display: "flex",
   gap: 12,
   marginTop: 30,
@@ -581,6 +655,43 @@ const submitButton = {
   fontSize: 14,
   fontWeight: 500,
   transition: "all 0.2s",
+};
+
+const acceptButton = {
+  flex: 1,
+  padding: "8px 16px",
+  background: "#10b981",
+  color: "#fff",
+  border: "none",
+  borderRadius: 6,
+  cursor: "pointer",
+  fontSize: 13,
+  fontWeight: 500
+};
+
+const rejectButton = {
+  flex: 1,
+  padding: "8px 16px",
+  background: "#ef4444",
+  color: "#fff",
+  border: "none",
+  borderRadius: 6,
+  cursor: "pointer",
+  fontSize: 13,
+  fontWeight: 500
+};
+
+const requestAgainButton = {
+  marginTop: 10,
+  width: "100%",
+  padding: "8px 12px",
+  background: "#f59e0b",
+  color: "#fff",
+  border: "none",
+  borderRadius: 6,
+  cursor: "pointer",
+  fontSize: 13,
+  fontWeight: 500
 };
 
 const completionCard = {
@@ -622,16 +733,6 @@ const completionButton = {
   fontSize: 14,
   fontWeight: 500,
   transition: "all 0.2s",
-};
-
-const pendingMessage = {
-  background: "#fef3c7",
-  padding: 16,
-  borderRadius: 8,
-  marginTop: 20,
-  textAlign: "center",
-  color: "#92400e",
-  fontSize: 14,
 };
 
 export default VacateRequestPage;
