@@ -35,11 +35,16 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
 
   const selectedStay = stays.find(s => s.id === parseInt(selectedStayId));
   
-  // Check if user has already joined
   const isJoined = selectedStay?.is_joined > 0;
   
-  // Check refund status - with safe lowercase fallback
-  const refundStatus = selectedStay?.refund_status?.toLowerCase();
+  // ✅ FIXED: Safe lowercase fallback with empty string default
+  const refundStatus = (selectedStay?.refund_status || "").toLowerCase();
+  
+  // ✅ FIXED: Check if refund is completed to disable form
+  const isCompleted = refundStatus === "completed";
+  
+  // ✅ FIXED: Only show FULL refund amount (not deposit)
+  const showFullRefundAmount = selectedStay?.refund_type === "FULL" && selectedStay?.refund_amount > 0;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -74,10 +79,8 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
       if (res.data.success) {
         alert("✅ Refund request submitted successfully.");
         
-        // Refresh data
         await loadBookings();
         
-        // Reset form
         setFormData({
           reason: "",
           upiId: "",
@@ -102,7 +105,6 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
       </div>
 
       <div style={content}>
-        {/* Booking Selection Dropdown */}
         <div style={formGroup}>
           <label style={label}>
             Select Booking <span style={required}>*</span>
@@ -122,7 +124,6 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
           </select>
         </div>
 
-        {/* Stay Info Card - Only show if booking selected */}
         {selectedStay && (
           <div style={infoCard}>
             <div style={infoRow}>
@@ -142,8 +143,8 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
               <span style={infoValue}>₹{selectedStay.monthly_total}</span>
             </div>
             
-            {/* Show Refund Amount if approved or completed */}
-            {selectedStay?.refund_amount > 0 && (
+            {/* ✅ FIXED: Only show for FULL refunds, not deposit */}
+            {showFullRefundAmount && (
               <div style={{
                 ...infoRow,
                 borderBottom: "none",
@@ -163,15 +164,9 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* Status Messages - Using correct status values */}
+        {/* ✅ FIXED: Status display with correct values */}
         {selectedStay && refundStatus === "pending" && (
-          <div style={{
-            background: "#fef3c7",
-            padding: 15,
-            borderRadius: 8,
-            marginBottom: 20,
-            border: "1px solid #f59e0b"
-          }}>
+          <div style={statusPending}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 24 }}>⏳</span>
               <div>
@@ -185,17 +180,11 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
         )}
 
         {selectedStay && refundStatus === "approved" && (
-          <div style={{
-            background: "#dbeafe",
-            padding: 15,
-            borderRadius: 8,
-            marginBottom: 20,
-            border: "1px solid #3b82f6"
-          }}>
+          <div style={statusApproved}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 24 }}>💰</span>
               <div>
-                <h4 style={{ margin: 0, color: "#1e40af" }}>Refund Approved - Waiting for Payment</h4>
+                <h4 style={{ margin: 0, color: "#1e40af" }}>Approved - Waiting for Payment</h4>
                 <p style={{ margin: "5px 0 0", color: "#1e40af", fontSize: 13 }}>
                   Your refund of ₹{selectedStay.refund_amount} has been approved. The amount will be credited to your UPI ID shortly.
                 </p>
@@ -205,13 +194,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
         )}
 
         {selectedStay && refundStatus === "completed" && (
-          <div style={{
-            background: "#dcfce7",
-            padding: 15,
-            borderRadius: 8,
-            marginBottom: 20,
-            border: "1px solid #22c55e"
-          }}>
+          <div style={statusCompleted}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 24 }}>✅</span>
               <div>
@@ -225,13 +208,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
         )}
 
         {selectedStay && refundStatus === "rejected" && (
-          <div style={{
-            background: "#fee2e2",
-            padding: 15,
-            borderRadius: 8,
-            marginBottom: 20,
-            border: "1px solid #ef4444"
-          }}>
+          <div style={statusRejected}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 24 }}>❌</span>
               <div>
@@ -244,15 +221,9 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* Show message when already joined and no refund request */}
-        {selectedStay && isJoined && !refundStatus && (
-          <div style={{
-            background: "#dcfce7",
-            padding: 20,
-            borderRadius: 12,
-            border: "1px solid #22c55e",
-            marginBottom: 20
-          }}>
+        {/* ✅ FIXED: Changed condition from !refundStatus to refundStatus === "" */}
+        {selectedStay && isJoined && refundStatus === "" && (
+          <div style={joinedMessage}>
             <h4 style={{ color: "#166534", margin: 0 }}>
               ✅ You have already joined this PG
             </h4>
@@ -265,7 +236,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* Form Fields - Show when NOT joined AND (no refund OR refund is rejected) */}
+        {/* ✅ FIXED: Added isCompleted to disabled conditions */}
         {selectedStay && !isJoined && (!refundStatus || refundStatus === "rejected") && (
           <>
             <div style={formGroup}>
@@ -279,6 +250,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
                 rows={4}
                 value={formData.reason}
                 onChange={handleChange}
+                disabled={isCompleted || isSubmitting}
               />
             </div>
 
@@ -293,6 +265,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
                 placeholder="e.g. name@bank"
                 value={formData.upiId}
                 onChange={handleChange}
+                disabled={isCompleted || isSubmitting}
               />
             </div>
 
@@ -311,13 +284,13 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
                 placeholder="Re-enter UPI ID"
                 value={formData.confirmUpi}
                 onChange={handleChange}
+                disabled={isCompleted || isSubmitting}
               />
               {formData.confirmUpi && formData.upiId !== formData.confirmUpi && (
                 <span style={errorText}>UPI IDs do not match</span>
               )}
             </div>
 
-            {/* Important Notes */}
             <div style={notesCard}>
               <h4 style={notesTitle}>📋 Refund Policy:</h4>
               <ul style={notesList}>
@@ -328,7 +301,6 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
               </ul>
             </div>
 
-            {/* Action Buttons */}
             <div style={buttonGroup}>
               <button style={cancelButton} onClick={onCancel}>
                 Cancel
@@ -336,12 +308,12 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
               <button 
                 style={{
                   ...submitButton,
-                  background: isFormValid() ? BRAND_RED : "#cca7a7",
-                  cursor: isFormValid() ? "pointer" : "not-allowed",
+                  background: isFormValid() && !isCompleted ? BRAND_RED : "#cca7a7",
+                  cursor: isFormValid() && !isCompleted ? "pointer" : "not-allowed",
                   opacity: isSubmitting ? 0.7 : 1,
                 }}
                 onClick={submitRefundRequest}
-                disabled={!isFormValid() || isSubmitting || isJoined}
+                disabled={!isFormValid() || isSubmitting || isJoined || isCompleted}
               >
                 {isSubmitting ? "Submitting..." : "Submit Refund Request"}
               </button>
@@ -353,6 +325,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
   );
 };
 
+// Styles remain the same
 const container = {
   animation: "fadeIn 0.3s ease",
 };
@@ -514,6 +487,47 @@ const submitButton = {
   fontSize: 14,
   fontWeight: 500,
   transition: "all 0.2s",
+};
+
+// Status style objects
+const statusPending = {
+  background: "#fef3c7",
+  padding: 15,
+  borderRadius: 8,
+  marginBottom: 20,
+  border: "1px solid #f59e0b"
+};
+
+const statusApproved = {
+  background: "#dbeafe",
+  padding: 15,
+  borderRadius: 8,
+  marginBottom: 20,
+  border: "1px solid #3b82f6"
+};
+
+const statusCompleted = {
+  background: "#dcfce7",
+  padding: 15,
+  borderRadius: 8,
+  marginBottom: 20,
+  border: "1px solid #22c55e"
+};
+
+const statusRejected = {
+  background: "#fee2e2",
+  padding: 15,
+  borderRadius: 8,
+  marginBottom: 20,
+  border: "1px solid #ef4444"
+};
+
+const joinedMessage = {
+  background: "#dcfce7",
+  padding: 20,
+  borderRadius: 12,
+  border: "1px solid #22c55e",
+  marginBottom: 20
 };
 
 export default RefundRequestPage;

@@ -6,18 +6,16 @@ import { useAuth } from "../../context/AuthContext";
 const AdminRefunds = () => {
   const [refunds, setRefunds] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadingId, setLoadingId] = useState(null); // Track which row is updating
+  const [loadingId, setLoadingId] = useState(null);
 
-  // Get Auth State
   const { user, role, loading: authLoading } = useAuth();
 
-  // Load data - ✅ FIXED API endpoint
   const loadRefunds = useCallback(async () => {
     if (authLoading || !user || role !== "admin") return;
 
     try {
       setLoading(true);
-      const res = await api.get("/admin/refunds"); // ✅ CHANGED from /payments/admin/refunds
+      const res = await api.get("/admin/refunds");
       setRefunds(res.data || []);
     } catch (err) {
       console.error("❌ Error loading refunds:", err);
@@ -31,22 +29,20 @@ const AdminRefunds = () => {
     loadRefunds();
   }, [loadRefunds]);
 
-  // ✅ FIXED: Update Status with correct API endpoints
+  // ✅ FIXED: Changed "paid" to "completed"
   const updateStatus = async (id, status) => {
     if (!window.confirm(`Are you sure you want to mark this refund as ${status.toUpperCase()}?`)) return;
 
     setLoadingId(id);
     try {
-      // ✅ UPDATED endpoints: POST instead of PUT, correct paths
       if (status === "approved") {
-        await api.post(`/admin/refunds/${id}/approve`); // ✅ CHANGED
+        await api.post(`/admin/refunds/${id}/approve`);
       } else if (status === "rejected") {
-        await api.post(`/admin/refunds/${id}/reject`); // ✅ CHANGED
-      } else if (status === "paid") {
-        await api.post(`/admin/refunds/${id}/paid`); // ✅ CHANGED (was /pay)
+        await api.post(`/admin/refunds/${id}/reject`);
+      } else if (status === "completed") {  // ✅ CHANGED from "paid" to "completed"
+        await api.post(`/admin/refunds/${id}/paid`);
       }
 
-      // Refresh list after successful update
       await loadRefunds();
       alert(`✅ Refund ${status} successfully!`);
     } catch (err) {
@@ -57,7 +53,6 @@ const AdminRefunds = () => {
     }
   };
 
-  // Route Protection Logic
   if (authLoading) {
     return (
       <div style={{ padding: 20, textAlign: "center" }}>
@@ -74,7 +69,6 @@ const AdminRefunds = () => {
     return <Navigate to="/" replace />;
   }
 
-  // Loading State
   if (loading) {
     return (
       <div style={{ padding: 20, textAlign: "center" }}>
@@ -134,7 +128,7 @@ const AdminRefunds = () => {
                 <th style={th}>Reason</th>
                 <th style={th}>Status</th>
                 <th style={th}>Actions</th>
-              </tr>
+               </tr>
             </thead>
             <tbody>
               {refunds.map((r) => (
@@ -146,7 +140,7 @@ const AdminRefunds = () => {
                     <div style={{ fontSize: "0.85rem", color: "#666" }}>
                       {r.phone}
                     </div>
-                  </td>
+                   </td>
                   <td style={td}>{r.pg_name}</td>
                   <td style={td}>
                     <div style={{ fontSize: "0.85rem" }}>
@@ -155,19 +149,19 @@ const AdminRefunds = () => {
                     <div style={{ fontSize: "0.85rem", color: "#666" }}>
                       <b>ORD:</b> {r.order_id || "N/A"}
                     </div>
-                  </td>
+                   </td>
                   <td style={td}>
                     <b>₹{r.amount}</b>
-                  </td>
+                   </td>
                   <td style={td}>
                     <code style={codeText}>{r.upi_id}</code>
-                  </td>
+                   </td>
                   <td style={td}>{r.reason}</td>
                   <td style={td}>
                     <span style={statusBadge(r.status)}>
                       {r.status.toUpperCase()}
                     </span>
-                  </td>
+                   </td>
                   <td style={td}>
                     <div style={actionGroup}>
                       {r.status === "pending" && (
@@ -188,16 +182,18 @@ const AdminRefunds = () => {
                           </button>
                         </>
                       )}
+                      {/* ✅ FIXED: Changed from "paid" to "completed" */}
                       {r.status === "approved" && (
                         <button
                           style={paidBtn}
-                          onClick={() => updateStatus(r.id, "paid")}
+                          onClick={() => updateStatus(r.id, "completed")}
                           disabled={loadingId === r.id}
                         >
-                          {loadingId === r.id ? "⏳ Processing..." : "💰 Mark Paid"}
+                          {loadingId === r.id ? "⏳ Processing..." : "💰 Mark Completed"}
                         </button>
                       )}
-                      {r.status === "paid" && (
+                      {/* ✅ FIXED: Changed from "paid" to "completed" */}
+                      {r.status === "completed" && (
                         <span
                           style={{
                             color: "#16a34a",
@@ -214,11 +210,11 @@ const AdminRefunds = () => {
                         </span>
                       )}
                     </div>
-                  </td>
-                </tr>
+                   </td>
+                 </tr>
               ))}
             </tbody>
-          </table>
+           </table>
         </div>
       )}
     </div>
@@ -313,6 +309,7 @@ const paidBtn = {
   transition: "opacity 0.2s",
 };
 
+// ✅ FIXED: Updated badge colors for "completed" instead of "paid"
 const statusBadge = (status) => ({
   padding: "4px 10px",
   borderRadius: "20px",
@@ -327,7 +324,7 @@ const statusBadge = (status) => ({
       ? "#fef9c3"
       : status === "approved"
       ? "#dcfce7"
-      : status === "paid"
+      : status === "completed"  // ✅ CHANGED from "paid" to "completed"
       ? "#dbeafe"
       : "#fee2e2",
   color:
@@ -335,7 +332,7 @@ const statusBadge = (status) => ({
       ? "#854d0e"
       : status === "approved"
       ? "#166534"
-      : status === "paid"
+      : status === "completed"  // ✅ CHANGED from "paid" to "completed"
       ? "#1e40af"
       : "#991b1b",
 });
