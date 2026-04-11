@@ -224,8 +224,9 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* Refund Status Section - Updated with amount display */}
-        {selectedStay && (
+        {/* ✅ FIXED: Refund Status Section - Only shows when refund_status exists */}
+        {/* No more "Not Requested" showing */}
+        {selectedStay && selectedStay.refund_status && (
           <div style={{
             marginTop: 15,
             padding: 12,
@@ -245,12 +246,12 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
                   ? "⏳ Waiting for owner approval"
                   : selectedStay.refund_status === REFUND_STATUS.REJECTED
                   ? "❌ Rejected"
-                  : "Not Requested"
+                  : null
               }
             </p>
 
-            {/* Show refund amount if available */}
-            {selectedStay.refund_amount > 0 && (
+            {/* Show refund amount only if exists and not completed */}
+            {selectedStay.refund_amount > 0 && selectedStay.refund_status !== REFUND_STATUS.COMPLETED && (
               <p style={{ marginTop: 6, fontSize: 13 }}>
                 💵 Refund Amount: <b>₹{selectedStay.refund_amount}</b>
               </p>
