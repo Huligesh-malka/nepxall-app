@@ -70,6 +70,16 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
       return;
     }
     
+    // ✅ DEBUG: Log the request payload
+    console.log("🚀 VACATE REQUEST:", {
+      bookingId: selectedStayId,
+      vacate_date: formData.vacateDate,
+      reason: formData.vacateReason,
+      upi_id: formData.upiId || "",
+      account_number: formData.accountNumber || "",
+      ifsc_code: formData.ifscCode || ""
+    });
+    
     try {
       setIsSubmitting(true);
       const res = await api.post("/bookings/vacate/request", {
@@ -83,12 +93,21 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
       if (res.data.success) {
         alert("✅ Vacate request submitted successfully");
         loadBookings(); // Refresh safely instead of calling onSuccess()
+        // Reset form
+        setFormData({
+          vacateDate: "",
+          vacateReason: "",
+          accountNumber: "",
+          ifscCode: "",
+          upiId: ""
+        });
       }
     } catch (err) {
       console.error(err);
       // Extra safe: Ignore duplicate error
       if (err.response?.data?.message === "Vacate already requested") {
-        return; // ignore duplicate error
+        alert("⚠️ Vacate request already submitted for this booking");
+        return;
       }
       alert(err.response?.data?.message || "Vacate request failed");
     } finally {
@@ -137,15 +156,22 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
   const selectedStay = stays.find(s => s.id === parseInt(selectedStayId));
   const isJoined = selectedStay?.is_joined > 0;
 
+  // ✅ CRITICAL FIX: Get deposit refund status from backend (NOT refund_status)
+  const depositRefundStatus = (selectedStay?.deposit_refund_status || "").toLowerCase();
+  const fullRefundStatus = (selectedStay?.full_refund_status || "").toLowerCase();
+  
+  // 👉 Vacate page uses DEPOSIT refund status
+  const refundStatus = depositRefundStatus;
+
   // ✅ Show completion screen if refund is COMPLETED
-  if (selectedStay?.refund_status === REFUND_STATUS.COMPLETED) {
+  if (selectedStay && refundStatus === REFUND_STATUS.COMPLETED) {
     return (
       <div style={container}>
         <div style={completionCard}>
           <div style={completionIcon}>🎉</div>
           <h2 style={completionTitle}>✅ Refund Completed Successfully</h2>
           <p style={completionText}>
-            Your security deposit refund of ₹{selectedStay.refund_amount || 0} has been processed successfully.
+            Your security deposit refund of ₹{selectedStay.deposit_amount || selectedStay.refund_amount || 0} has been processed successfully.
             The amount has been credited to your account.
           </p>
           <button style={completionButton} onClick={onCancel}>
@@ -224,9 +250,8 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* ✅ FIXED: Refund Status Section - Only shows when refund_status exists */}
-        {/* No more "Not Requested" showing */}
-        {selectedStay && selectedStay.refund_status && (
+        {/* ✅ FIXED: Refund Status Section - Uses deposit_refund_status */}
+        {selectedStay && refundStatus && (
           <div style={{
             marginTop: 15,
             padding: 12,
@@ -235,30 +260,30 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
             border: "1px solid #e2e8f0"
           }}>
             <p style={{ margin: 0, fontSize: 14 }}>
-              <b>💰 Refund Status:</b> {
-                selectedStay.refund_status === REFUND_STATUS.COMPLETED 
+              <b>💰 Security Deposit Refund Status:</b> {
+                refundStatus === REFUND_STATUS.COMPLETED 
                   ? "✅ Refund Completed Successfully" 
-                  : selectedStay.refund_status === REFUND_STATUS.APPROVED 
-                  ? `💰 Approved - Amount: ₹${selectedStay.refund_amount || 0}`
-                  : selectedStay.refund_status === REFUND_STATUS.PENDING && selectedStay.user_approval === "accepted"
+                  : refundStatus === REFUND_STATUS.APPROVED 
+                  ? `💰 Approved - Amount: ₹${selectedStay.deposit_amount || selectedStay.refund_amount || 0}`
+                  : refundStatus === REFUND_STATUS.PENDING && selectedStay.user_approval === "accepted"
                   ? "⏳ Waiting for owner to send payment"
-                  : selectedStay.refund_status === REFUND_STATUS.PENDING
+                  : refundStatus === REFUND_STATUS.PENDING
                   ? "⏳ Waiting for owner approval"
-                  : selectedStay.refund_status === REFUND_STATUS.REJECTED
+                  : refundStatus === REFUND_STATUS.REJECTED
                   ? "❌ Rejected"
-                  : null
+                  : "Not requested"
               }
             </p>
 
             {/* Show refund amount only if exists and not completed */}
-            {selectedStay.refund_amount > 0 && selectedStay.refund_status !== REFUND_STATUS.COMPLETED && (
+            {(selectedStay.deposit_amount > 0 || selectedStay.refund_amount > 0) && refundStatus !== REFUND_STATUS.COMPLETED && refundStatus !== REFUND_STATUS.REJECTED && (
               <p style={{ marginTop: 6, fontSize: 13 }}>
-                💵 Refund Amount: <b>₹{selectedStay.refund_amount}</b>
+                💵 Refund Amount: <b>₹{selectedStay.deposit_amount || selectedStay.refund_amount}</b>
               </p>
             )}
 
             {/* Show approved message with waiting for payment status */}
-            {selectedStay.refund_status === REFUND_STATUS.APPROVED && (
+            {refundStatus === REFUND_STATUS.APPROVED && (
               <div style={{
                 marginTop: 10,
                 padding: 8,
@@ -273,7 +298,7 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
             )}
 
             {/* Accept/Reject Buttons for approved refund */}
-            {selectedStay.refund_status === REFUND_STATUS.APPROVED &&
+            {refundStatus === REFUND_STATUS.APPROVED &&
              selectedStay.user_approval === "pending" && (
               <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
                 <button
@@ -290,7 +315,7 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
                     fontWeight: 500
                   }}
                 >
-                  ✅ Accept ₹{selectedStay.refund_amount || 0}
+                  ✅ Accept ₹{selectedStay.deposit_amount || selectedStay.refund_amount || 0}
                 </button>
 
                 <button
@@ -313,7 +338,7 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
             )}
 
             {/* Request Again button for rejected refund */}
-            {selectedStay.refund_status === REFUND_STATUS.REJECTED && (
+            {refundStatus === REFUND_STATUS.REJECTED && (
               <button
                 onClick={handleRequestAgain}
                 style={{
@@ -335,11 +360,11 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
           </div>
         )}
 
-        {/* ✅ CRITICAL FIX: Form shows ONLY when refund_status is null/undefined/not requested */}
-        {/* Form will NOT show for: pending, approved, or completed */}
+        {/* ✅ CRITICAL FIX: Form shows ONLY when deposit refund status is null/undefined/not requested */}
+        {/* Form will NOT show for: pending, approved, completed, rejected (unless Request Again clicked) */}
         {selectedStay && 
          isJoined &&
-         !["pending", "approved", "completed"].includes(selectedStay.refund_status) && (
+         !["pending", "approved", "completed"].includes(refundStatus) && (
           <>
             <div style={formGroup}>
               <label style={label}>
@@ -437,10 +462,10 @@ const VacateRequestPage = ({ onSuccess, onCancel }) => {
         )}
 
         {/* ✅ IMPROVED: Show message for pending OR approved (process ongoing) */}
-        {selectedStay && ["pending", "approved"].includes(selectedStay.refund_status) && (
+        {selectedStay && ["pending", "approved"].includes(refundStatus) && (
           <div style={pendingMessage}>
-            <p>⏳ Your vacate request is {selectedStay.refund_status === "approved" ? "approved" : "pending"}. 
-               {selectedStay.refund_status === "approved" 
+            <p>⏳ Your vacate request is {refundStatus === "approved" ? "approved" : "pending"}. 
+               {refundStatus === "approved" 
                  ? " Waiting for owner to send payment." 
                  : " Waiting for owner approval."}
             </p>
