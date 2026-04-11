@@ -407,21 +407,17 @@ const OwnerVacateRequests = () => {
     return Array.from(map.values());
   }, [requests]);
 
-  // ✅ Active requests (LEAVING or not paid/completed)
+  // ✅ FIXED: Active requests - only show when status is LEAVING and vacate_status is requested
   const activeRequests = useMemo(() => {
     return uniqueRequests.filter(
-      (r) =>
-        r.status === "LEAVING" ||
-        (r.refund_status !== "paid" && r.vacate_status !== "completed")
+      (r) => r.status === "LEAVING" && r.vacate_status === "requested"
     );
   }, [uniqueRequests]);
 
-  // ✅ History requests (paid OR completed)
+  // ✅ FIXED: History requests - only show when refund_status is paid
   const historyRequests = useMemo(() => {
     return uniqueRequests.filter(
-      (r) =>
-        r.refund_status === "paid" ||
-        (r.status === "LEFT" && r.vacate_status === "completed")
+      (r) => r.refund_status === "paid"
     );
   }, [uniqueRequests]);
 
