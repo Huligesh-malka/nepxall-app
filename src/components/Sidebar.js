@@ -85,6 +85,12 @@ const Sidebar = ({ role, user }) => {
 
             <Link style={linkStyle(isActive("/owner/dashboard"))} to="/owner/dashboard">📊 Dashboard</Link>
             <Link style={linkStyle(isActive("/owner/bookings"))} to="/owner/bookings">📥 Booking Requests</Link>
+            <Link 
+  style={linkStyle(isActive("/owner/tenants"))} 
+  to="/owner/tenants"
+>
+  👥 Active Tenants
+</Link>
             <Link style={linkStyle(isActive("/owner/vacate"))} to="/owner/vacate">
       🚪 Vacate Requests
     </Link>

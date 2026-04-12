@@ -61,6 +61,7 @@ import OwnerVerificationPage from "./pages/owner/OwnerVerification";
 import OwnerChatList from "./pages/OwnerChatList";
 import CreatePlan from "./pages/CreatePlan";
 import OwnerPayments from "./pages/owner/OwnerPayments";
+import OwnerActiveTenants from "./pages/owner/OwnerActiveTenants";
 import OwnerVacateRequests from "./pages/owner/OwnerVacateRequests";
 import OwnerPremiumPlans from "./pages/owner/OwnerPremiumPlans";
 
@@ -164,6 +165,9 @@ function App() {
         <Route path="vacate" element={<OwnerVacateRequests />} />
         <Route path="premium" element={<OwnerPremiumPlans />} />
         <Route path="bookings" element={<OwnerBookings />} />
+
+  <Route path="tenants" element={<OwnerActiveTenants />} />
+
 
         {/* 🔥 IMPORTANT FIX */}
         <Route path="bank" element={<OwnerBankDetails />} />
