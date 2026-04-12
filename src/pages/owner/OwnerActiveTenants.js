@@ -100,16 +100,28 @@ export default function OwnerActiveTenants() {
                 <div className="space-y-1 text-gray-700 mb-3">
                   <p>🏠 <strong>{t.pg_name}</strong></p>
                   <p>🚪 Room: {t.room_no || "Not Assigned"}</p>
+
+                  {/* ✅ ROOM TYPE (SHARING) */}
+                  <p>
+                    🛏 Type:{" "}
+                    <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-sm">
+                      {t.room_type || "N/A"}
+                    </span>
+                  </p>
                 </div>
 
                 {/* FINANCIAL */}
                 <div className="grid grid-cols-2 gap-2 text-gray-700 mb-3">
                   <p>💰 Rent: <strong>₹{t.rent_amount ?? 0}</strong></p>
                   <p>🔐 Deposit: <strong>₹{t.security_deposit ?? 0}</strong></p>
+
+                  {/* ✅ MAINTENANCE */}
+                  <p>🛠 Maintenance: <strong>₹{t.maintenance_amount ?? 0}</strong></p>
+
                   <p>🧾 Owner Earn: ₹{t.owner_amount ?? 0}</p>
                 </div>
 
-                {/* ✅ ONLY REAL CHECK-IN DATE */}
+                {/* CHECK-IN */}
                 <div className="text-sm text-gray-600 mb-3">
                   <p>
                     📅 Check-in:{" "}
