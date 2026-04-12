@@ -19,7 +19,6 @@ export default function OwnerActiveTenants() {
       const res = await api.get("/owner/tenants/active");
 
       if (res.data.success) {
-        console.log("TENANTS DATA:", res.data.data); // 🔍 debug
         setTenants(res.data.data);
       }
     } catch (err) {
@@ -108,37 +107,14 @@ export default function OwnerActiveTenants() {
                   <p>💰 Rent: <strong>₹{t.rent_amount ?? 0}</strong></p>
                   <p>🔐 Deposit: <strong>₹{t.security_deposit ?? 0}</strong></p>
                   <p>🧾 Owner Earn: ₹{t.owner_amount ?? 0}</p>
-                  <p>💸 Platform Fee: ₹{t.platform_fee ?? 0}</p>
                 </div>
 
-                {/* STATUS */}
-                <div className="flex flex-wrap gap-2 text-xs mb-3">
-                  <span className={`px-2 py-1 rounded ${t.kyc_verified ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                    KYC: {t.kyc_verified ? "Verified" : "Pending"}
-                  </span>
-
-                  <span className={`px-2 py-1 rounded ${t.agreement_signed ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
-                    Agreement: {t.agreement_signed ? "Signed" : "Pending"}
-                  </span>
-
-                  <span className="px-2 py-1 rounded bg-blue-100 text-blue-700">
-                    Booking: {t.booking_status}
-                  </span>
-                </div>
-
-                {/* DATES */}
+                {/* ✅ ONLY REAL CHECK-IN DATE */}
                 <div className="text-sm text-gray-600 mb-3">
                   <p>
-                    📅 Joined:{" "}
-                    {t.join_date
-                      ? new Date(t.join_date).toLocaleDateString()
-                      : "N/A"}
-                  </p>
-
-                  <p>
-                    🏁 Check-in:{" "}
-                    {t.check_in_date
-                      ? new Date(t.check_in_date).toLocaleDateString()
+                    📅 Check-in:{" "}
+                    {t.checkin_time
+                      ? new Date(t.checkin_time).toLocaleDateString()
                       : "N/A"}
                   </p>
                 </div>
