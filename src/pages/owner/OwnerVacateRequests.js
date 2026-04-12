@@ -105,7 +105,7 @@ const GlassModal = ({ isOpen, onClose, onConfirm, title, message, loading }) => 
 };
 
 /* ══════════════════════════════════════════════
-   FLOATING ACTION MENU (Three Dots)
+   FLOATING ACTION MENU
 ══════════════════════════════════════════════ */
 const FloatingActionMenu = ({ item, onApprove, onReject, onMarkPaid, loadingId }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -162,7 +162,7 @@ const FloatingActionMenu = ({ item, onApprove, onReject, onMarkPaid, loadingId }
         onClick={() => setIsOpen(!isOpen)}
         style={s.fabButton}
       >
-        <span style={s.threeDots}>⋮</span>
+        <span style={{ ...s.fabDot, transform: isOpen ? "rotate(45deg)" : "none" }}>+</span>
       </motion.button>
       
       <AnimatePresence>
@@ -196,6 +196,16 @@ const FloatingActionMenu = ({ item, onApprove, onReject, onMarkPaid, loadingId }
       </AnimatePresence>
 
       {/* Approve Modal with Financial Input */}
+      <GlassModal
+        isOpen={showApproveModal}
+        onClose={() => setShowApproveModal(false)}
+        onConfirm={handleConfirmApprove}
+        title="Approve Vacate Request"
+        message="Enter damage charges and pending dues"
+        loading={loadingId === item.id}
+      />
+      
+      {/* Inline Financial Input inside modal overlay (custom) */}
       {showApproveModal && (
         <div style={s.financialOverlay}>
           <div style={s.financialCard}>
@@ -229,10 +239,6 @@ const FloatingActionMenu = ({ item, onApprove, onReject, onMarkPaid, loadingId }
             <div style={s.financialPreview}>
               <span>Refund Amount</span>
               <strong>₹{refundPreview()}</strong>
-            </div>
-            <div style={s.financialActions}>
-              <button onClick={() => setShowApproveModal(false)} style={s.financialCancel}>Cancel</button>
-              <button onClick={handleConfirmApprove} style={s.financialConfirm}>Confirm Approve</button>
             </div>
           </div>
         </div>
@@ -1105,13 +1111,12 @@ const s = {
     boxShadow: "0 4px 12px rgba(79,70,229,0.4)",
     transition: "all 0.2s",
   },
-  threeDots: {
+  fabDot: {
     fontSize: 20,
     fontWeight: 600,
     color: "#fff",
     display: "inline-block",
-    lineHeight: 1,
-    letterSpacing: "2px",
+    transition: "transform 0.2s",
   },
   fabMenu: {
     position: "absolute",
@@ -1222,7 +1227,7 @@ const s = {
     left: 0,
     right: 0,
     bottom: 0,
-    background: "rgba(0,0,0,0.5)",
+    background: "rgba(0,0,0,0.3)",
     backdropFilter: "blur(4px)",
     display: "flex",
     alignItems: "center",
@@ -1273,33 +1278,6 @@ const s = {
     fontSize: 16,
     fontWeight: 600,
     color: "#4f46e5",
-  },
-  financialActions: {
-    display: "flex",
-    gap: 12,
-    marginTop: 20,
-  },
-  financialCancel: {
-    flex: 1,
-    padding: "10px",
-    borderRadius: 30,
-    border: "1px solid #e2e8f0",
-    background: "#f1f5f9",
-    fontSize: 14,
-    fontWeight: 500,
-    color: "#475569",
-    cursor: "pointer",
-  },
-  financialConfirm: {
-    flex: 1,
-    padding: "10px",
-    borderRadius: 30,
-    border: "none",
-    background: "linear-gradient(135deg, #10b981, #059669)",
-    fontSize: 14,
-    fontWeight: 600,
-    color: "#fff",
-    cursor: "pointer",
   },
   emptyState: {
     textAlign: "center",
