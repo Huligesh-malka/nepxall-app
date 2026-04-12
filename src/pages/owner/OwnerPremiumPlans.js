@@ -16,53 +16,33 @@ const plans = [
     photos: 10,
     videos: 1,
     featured: "No Featured",
-    boost: "No Boost",
-    analytics: "Basic Analytics",
     icon: "🎁",
     color: "#64748b"
   },
   {
     id: "basic",
-    name: "Basic Plan",
-    price: "₹299",
+    name: "Basic Plan ⭐",
+    price: "₹199",
     priceSuffix: "/month",
     listingLimit: 3,
     photos: 15,
     videos: 2,
     featured: "7 Days Featured",
-    boost: "1 Boost",
-    analytics: "Basic Analytics",
     icon: "🚀",
-    color: "#3b82f6"
+    color: "#3b82f6",
+    highlight: true // MOST POPULAR
   },
   {
     id: "pro",
-    name: "Pro Plan",
-    price: "₹999",
+    name: "Pro Plan 🚀",
+    price: "₹599",
     priceSuffix: "/month",
     listingLimit: 10,
     photos: 20,
     videos: 3,
     featured: "30 Days Featured",
-    boost: "5 Boosts",
-    analytics: "Advanced Analytics",
-    highlight: true,
     icon: "⭐",
     color: "#8b5cf6"
-  },
-  {
-    id: "business",
-    name: "Business Plan",
-    price: "₹2999",
-    priceSuffix: "/month",
-    listingLimit: "Unlimited",
-    photos: 25,
-    videos: 5,
-    featured: "Priority Featured",
-    boost: "Unlimited Boost",
-    analytics: "Full Dashboard",
-    icon: "💼",
-    color: "#0f172a"
   }
 ];
 
@@ -129,7 +109,6 @@ export default function OwnerPremiumPlans() {
 
   const getSavingsBadge = (planId) => {
     if (planId === "pro") return "Save 20%";
-    if (planId === "business") return "Best Value";
     return null;
   };
 
@@ -222,7 +201,7 @@ export default function OwnerPremiumPlans() {
                 <span style={styles.priceSuffix}>{plan.priceSuffix}</span>
               </div>
 
-              {/* Features */}
+              {/* Features - UPDATED: Only Listing, Photos, Videos, Featured */}
               <div style={styles.features}>
                 <div style={styles.featureItem}>
                   <svg style={styles.featureIcon} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
@@ -247,18 +226,6 @@ export default function OwnerPremiumPlans() {
                     <path d="M20 6L9 17L4 12" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                   <span>{plan.featured}</span>
-                </div>
-                <div style={styles.featureItem}>
-                  <svg style={styles.featureIcon} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
-                    <path d="M20 6L9 17L4 12" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  <span>{plan.boost}</span>
-                </div>
-                <div style={styles.featureItem}>
-                  <svg style={styles.featureIcon} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
-                    <path d="M20 6L9 17L4 12" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  <span>{plan.analytics}</span>
                 </div>
               </div>
 
@@ -527,7 +494,7 @@ const styles = {
     flexDirection: "column",
     gap: 16,
     marginBottom: 32,
-    minHeight: 280
+    minHeight: 240
   },
 
   featureItem: {
