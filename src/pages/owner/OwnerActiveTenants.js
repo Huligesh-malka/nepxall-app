@@ -19,6 +19,7 @@ export default function OwnerActiveTenants() {
       const res = await api.get("/owner/tenants/active");
 
       if (res.data.success) {
+        console.log("TENANTS DATA:", res.data.data); // 🔍 debug
         setTenants(res.data.data);
       }
     } catch (err) {
@@ -80,7 +81,7 @@ export default function OwnerActiveTenants() {
           <div className="grid md:grid-cols-2 gap-6">
             {tenants.map((t) => (
               <div
-                key={t.id}
+                key={t.pg_user_id}
                 className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition"
               >
                 {/* USER */}
@@ -88,6 +89,7 @@ export default function OwnerActiveTenants() {
                   <div>
                     <h2 className="text-xl font-semibold">{t.name}</h2>
                     <p className="text-gray-500">{t.phone}</p>
+                    <p className="text-gray-400 text-sm">{t.email}</p>
                   </div>
 
                   <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm">
@@ -95,16 +97,48 @@ export default function OwnerActiveTenants() {
                   </span>
                 </div>
 
-                {/* DETAILS */}
-                <div className="space-y-2 text-gray-700">
+                {/* PROPERTY */}
+                <div className="space-y-1 text-gray-700 mb-3">
                   <p>🏠 <strong>{t.pg_name}</strong></p>
                   <p>🚪 Room: {t.room_no || "Not Assigned"}</p>
-                  <p>💰 Rent: ₹{t.rent_amount || 0}</p>
-                  <p>🔐 Deposit: ₹{t.security_deposit || 0}</p>
+                </div>
+
+                {/* FINANCIAL */}
+                <div className="grid grid-cols-2 gap-2 text-gray-700 mb-3">
+                  <p>💰 Rent: <strong>₹{t.rent_amount ?? 0}</strong></p>
+                  <p>🔐 Deposit: <strong>₹{t.security_deposit ?? 0}</strong></p>
+                  <p>🧾 Owner Earn: ₹{t.owner_amount ?? 0}</p>
+                  <p>💸 Platform Fee: ₹{t.platform_fee ?? 0}</p>
+                </div>
+
+                {/* STATUS */}
+                <div className="flex flex-wrap gap-2 text-xs mb-3">
+                  <span className={`px-2 py-1 rounded ${t.kyc_verified ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                    KYC: {t.kyc_verified ? "Verified" : "Pending"}
+                  </span>
+
+                  <span className={`px-2 py-1 rounded ${t.agreement_signed ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+                    Agreement: {t.agreement_signed ? "Signed" : "Pending"}
+                  </span>
+
+                  <span className="px-2 py-1 rounded bg-blue-100 text-blue-700">
+                    Booking: {t.booking_status}
+                  </span>
+                </div>
+
+                {/* DATES */}
+                <div className="text-sm text-gray-600 mb-3">
                   <p>
                     📅 Joined:{" "}
                     {t.join_date
                       ? new Date(t.join_date).toLocaleDateString()
+                      : "N/A"}
+                  </p>
+
+                  <p>
+                    🏁 Check-in:{" "}
+                    {t.check_in_date
+                      ? new Date(t.check_in_date).toLocaleDateString()
                       : "N/A"}
                   </p>
                 </div>
