@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Box, CircularProgress } from "@mui/material";
-import userAPI, { pgAPI } from "../api/api";
+import { pgAPI } from "../api/api";
 import { getImageUrl } from "../config";
 
 // Fix for default marker icons in Leaflet
