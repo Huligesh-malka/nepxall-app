@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { pgAPI } from "../api/api";
 import { getImageUrl } from "../config";
 import { motion } from "framer-motion";
-import { Box, CircularProgress, useTheme, alpha, keyframes } from "@mui/material";
+import { Box, useTheme, alpha, keyframes } from "@mui/material";
 import axios from "axios";
 
 import QRCodeStyling from "qr-code-styling";
@@ -80,6 +80,312 @@ const shimmer = keyframes`
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 `;
+
+// ========== PREMIUM AI BRAIN PULSE LOADER ANIMATIONS ==========
+const brainPulse = keyframes`
+  0%, 100% { 
+    transform: scale(1); 
+    opacity: 0.4;
+    box-shadow: 0 0 0px rgba(56, 189, 248, 0);
+  }
+  50% { 
+    transform: scale(1.8); 
+    opacity: 1;
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.8);
+  }
+`;
+
+const neuralLine = keyframes`
+  0% { 
+    stroke-dashoffset: 100;
+    opacity: 0.3;
+  }
+  50% { 
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% { 
+    stroke-dashoffset: -100;
+    opacity: 0.3;
+  }
+`;
+
+const rotateOrbit = keyframes`
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+`;
+
+const rotateReverse = keyframes`
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+`;
+
+const textFade = keyframes`
+  0%, 100% { opacity: 0.5; transform: translateY(5px); }
+  50% { opacity: 1; transform: translateY(0px); }
+`;
+
+const particleFloat = keyframes`
+  0% { transform: translateY(0px) translateX(0px); opacity: 0; }
+  50% { opacity: 0.6; }
+  100% { transform: translateY(-100px) translateX(30px); opacity: 0; }
+`;
+
+const brainGlow = keyframes`
+  0% { filter: drop-shadow(0 0 2px #38bdf8); }
+  50% { filter: drop-shadow(0 0 20px #38bdf8) drop-shadow(0 0 5px #22c55e); }
+  100% { filter: drop-shadow(0 0 2px #38bdf8); }
+`;
+
+// ========== PREMIUM AI BRAIN LOADER COMPONENT ==========
+const PremiumAIBrainLoader = () => {
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  
+  const loadingMessages = [
+    "Analyzing your PG data...",
+    "Matching tenants...",
+    "Optimizing dashboard...",
+    "Calculating revenue...",
+    "Syncing bookings...",
+    "Almost ready..."
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLoadingMessageIndex((prev) => (prev + 1) % loadingMessages.length);
+    }, 1800);
+    return () => clearInterval(interval);
+  }, [loadingMessages.length]);
+
+  return (
+    <Box
+      sx={{
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        background: 'radial-gradient(ellipse at 30% 40%, rgba(11, 94, 215, 0.15), rgba(0, 0, 0, 0.98)), linear-gradient(135deg, #020617 0%, #0a0f1a 50%, #0f1724 100%)',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Animated Background Particles */}
+      {[...Array(30)].map((_, i) => (
+        <Box
+          key={i}
+          sx={{
+            position: 'absolute',
+            width: `${Math.random() * 4 + 1}px`,
+            height: `${Math.random() * 4 + 1}px`,
+            background: `rgba(56, 189, 248, ${Math.random() * 0.5 + 0.1})`,
+            borderRadius: '50%',
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            animation: `${particleFloat} ${Math.random() * 5 + 3}s ease-in-out infinite`,
+            animationDelay: `${Math.random() * 5}s`,
+            filter: 'blur(1px)',
+          }}
+        />
+      ))}
+
+      {/* Orbiting rings background */}
+      <Box
+        sx={{
+          position: 'absolute',
+          width: '300px',
+          height: '300px',
+          borderRadius: '50%',
+          border: '1px dashed rgba(56, 189, 248, 0.15)',
+          animation: `${rotateOrbit} 20s linear infinite`,
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          width: '450px',
+          height: '450px',
+          borderRadius: '50%',
+          border: '1px dashed rgba(34, 197, 94, 0.1)',
+          animation: `${rotateReverse} 25s linear infinite`,
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          width: '600px',
+          height: '600px',
+          borderRadius: '50%',
+          border: '1px dashed rgba(56, 189, 248, 0.08)',
+          animation: `${rotateOrbit} 30s linear infinite`,
+        }}
+      />
+
+      {/* Main Brain Loader */}
+      <Box
+        sx={{
+          position: 'relative',
+          width: '180px',
+          height: '180px',
+          animation: `${brainGlow} 2s ease-in-out infinite`,
+        }}
+      >
+        {/* Neural connection lines (SVG) */}
+        <svg
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '160px',
+            height: '160px',
+            overflow: 'visible',
+          }}
+        >
+          {/* Neural network lines connecting dots */}
+          <line x1="80" y1="20" x2="50" y2="50" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="4" opacity="0.6">
+            <animate attributeName="stroke-dashoffset" from="100" to="0" dur="2s" repeatCount="indefinite" />
+          </line>
+          <line x1="80" y1="20" x2="110" y2="50" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="4" opacity="0.6">
+            <animate attributeName="stroke-dashoffset" from="0" to="100" dur="2s" repeatCount="indefinite" />
+          </line>
+          <line x1="50" y1="50" x2="30" y2="90" stroke="#22c55e" strokeWidth="1.5" strokeDasharray="4" opacity="0.5">
+            <animate attributeName="stroke-dashoffset" from="100" to="0" dur="2.5s" repeatCount="indefinite" />
+          </line>
+          <line x1="110" y1="50" x2="130" y2="90" stroke="#22c55e" strokeWidth="1.5" strokeDasharray="4" opacity="0.5">
+            <animate attributeName="stroke-dashoffset" from="0" to="100" dur="2.5s" repeatCount="indefinite" />
+          </line>
+          <line x1="30" y1="90" x2="50" y2="130" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="4" opacity="0.6">
+            <animate attributeName="stroke-dashoffset" from="100" to="0" dur="3s" repeatCount="indefinite" />
+          </line>
+          <line x1="130" y1="90" x2="110" y2="130" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="4" opacity="0.6">
+            <animate attributeName="stroke-dashoffset" from="0" to="100" dur="3s" repeatCount="indefinite" />
+          </line>
+          <line x1="50" y1="50" x2="80" y2="80" stroke="#8B5CF6" strokeWidth="1" strokeDasharray="3" opacity="0.4">
+            <animate attributeName="stroke-dashoffset" from="100" to="0" dur="1.8s" repeatCount="indefinite" />
+          </line>
+          <line x1="110" y1="50" x2="80" y2="80" stroke="#8B5CF6" strokeWidth="1" strokeDasharray="3" opacity="0.4">
+            <animate attributeName="stroke-dashoffset" from="0" to="100" dur="1.8s" repeatCount="indefinite" />
+          </line>
+          <line x1="80" y1="80" x2="50" y2="130" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="4" opacity="0.5">
+            <animate attributeName="stroke-dashoffset" from="100" to="0" dur="2.2s" repeatCount="indefinite" />
+          </line>
+          <line x1="80" y1="80" x2="110" y2="130" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="4" opacity="0.5">
+            <animate attributeName="stroke-dashoffset" from="0" to="100" dur="2.2s" repeatCount="indefinite" />
+          </line>
+        </svg>
+
+        {/* Brain shape - outer glow ring */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '120px',
+            height: '120px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(56,189,248,0.2), transparent 70%)',
+            animation: `${pulseGlow} 1.5s infinite`,
+          }}
+        />
+
+        {/* Neural dots (8 dots forming brain shape) */}
+        {[
+          { top: '10%', left: '40%', delay: 0 },
+          { top: '15%', left: '60%', delay: 0.2 },
+          { top: '30%', left: '75%', delay: 0.4 },
+          { top: '50%', left: '70%', delay: 0.6 },
+          { top: '70%', left: '60%', delay: 0.8 },
+          { top: '80%', left: '40%', delay: 1.0 },
+          { top: '60%', left: '20%', delay: 1.2 },
+          { top: '40%', left: '25%', delay: 1.4 },
+          { top: '25%', left: '50%', delay: 0.5 },
+          { top: '55%', left: '50%', delay: 0.9 },
+          { top: '75%', left: '50%', delay: 1.1 },
+          { top: '35%', left: '35%', delay: 0.3 },
+          { top: '65%', left: '45%', delay: 0.7 },
+          { top: '45%', left: '65%', delay: 0.1 },
+        ].map((pos, idx) => (
+          <Box
+            key={idx}
+            sx={{
+              position: 'absolute',
+              top: pos.top,
+              left: pos.left,
+              width: '10px',
+              height: '10px',
+              background: idx % 3 === 0 ? '#38bdf8' : (idx % 3 === 1 ? '#22c55e' : '#8B5CF6'),
+              borderRadius: '50%',
+              animation: `${brainPulse} 1.5s infinite ease-in-out`,
+              animationDelay: `${pos.delay}s`,
+              boxShadow: `0 0 10px ${idx % 3 === 0 ? '#38bdf8' : (idx % 3 === 1 ? '#22c55e' : '#8B5CF6')}`,
+            }}
+          />
+        ))}
+      </Box>
+
+      {/* Loading text with dynamic messages */}
+      <Box
+        sx={{
+          mt: 5,
+          textAlign: 'center',
+          animation: `${textFade} 0.5s ease-in-out`,
+        }}
+      >
+        <Typography
+          sx={{
+            fontSize: '1.1rem',
+            fontWeight: 500,
+            background: 'linear-gradient(135deg, #38bdf8, #22c55e)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            letterSpacing: '0.5px',
+          }}
+        >
+          {loadingMessages[loadingMessageIndex]}
+        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mt: 2 }}>
+          {[0, 1, 2].map((i) => (
+            <Box
+              key={i}
+              sx={{
+                width: '6px',
+                height: '6px',
+                background: '#38bdf8',
+                borderRadius: '50%',
+                animation: `${brainPulse} 1s infinite`,
+                animationDelay: `${i * 0.2}s`,
+              }}
+            />
+          ))}
+        </Box>
+      </Box>
+
+      {/* Glass card effect */}
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: '10%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '280px',
+          padding: '12px 24px',
+          borderRadius: '40px',
+          background: 'rgba(255, 255, 255, 0.03)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          textAlign: 'center',
+        }}
+      >
+        <Typography sx={{ color: '#64748b', fontSize: '0.7rem', letterSpacing: '1px' }}>
+          NEPXALL • SMART PG MANAGEMENT
+        </Typography>
+      </Box>
+    </Box>
+  );
+};
 
 /* ---------------- HELPERS ---------------- */
 
@@ -162,7 +468,7 @@ const useCountUp = (endValue, duration = 1000) => {
   return count;
 };
 
-/* ---------------- COMPONENT ---------------- */
+/* ---------------- MAIN COMPONENT ---------------- */
 
 const OwnerDashboard = () => {
 
@@ -750,49 +1056,7 @@ const OwnerDashboard = () => {
 
   /* ================= PROTECTION ================= */
   if (authLoading || pageLoading) {
-    return (
-      <Box 
-        sx={{
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #0a0f1a 0%, #0f1724 100%)',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: 3
-        }}
-      >
-        <Box sx={{ position: 'relative' }}>
-          <CircularProgress size={80} thickness={3} sx={{ color: '#4CAF50' }} />
-          <Box
-            sx={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: 60,
-              height: 60,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
-              animation: `${pulseGlow} 1.5s infinite`,
-            }}
-          />
-        </Box>
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            color: '#fff', 
-            fontWeight: 500,
-            background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent'
-          }}
-        >
-          Loading your dashboard...
-        </Typography>
-      </Box>
-    );
+    return <PremiumAIBrainLoader />;
   }
 
   if (!user) return <Navigate to="/login" replace />;
@@ -1083,6 +1347,7 @@ const OwnerDashboard = () => {
                 height: '100%',
                 transition: 'all 0.3s ease',
                 '&:hover': { transform: 'translateY(-5px)' },
+                position: 'relative',
                 '&::before': {
                   content: '""',
                   position: 'absolute',
@@ -1091,6 +1356,7 @@ const OwnerDashboard = () => {
                   right: 0,
                   height: '3px',
                   background: 'linear-gradient(90deg, #4CAF50, #0B5ED7)',
+                  borderRadius: '28px 28px 0 0',
                 }
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -1115,6 +1381,7 @@ const OwnerDashboard = () => {
                 height: '100%',
                 transition: 'all 0.3s ease',
                 '&:hover': { transform: 'translateY(-5px)' },
+                position: 'relative',
                 '&::before': {
                   content: '""',
                   position: 'absolute',
@@ -1123,6 +1390,7 @@ const OwnerDashboard = () => {
                   right: 0,
                   height: '3px',
                   background: 'linear-gradient(90deg, #0B5ED7, #4CAF50)',
+                  borderRadius: '28px 28px 0 0',
                 }
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -1150,6 +1418,7 @@ const OwnerDashboard = () => {
                 height: '100%',
                 transition: 'all 0.3s ease',
                 '&:hover': { transform: 'translateY(-5px)' },
+                position: 'relative',
                 '&::before': {
                   content: '""',
                   position: 'absolute',
@@ -1158,6 +1427,7 @@ const OwnerDashboard = () => {
                   right: 0,
                   height: '3px',
                   background: 'linear-gradient(90deg, #8B5CF6, #4CAF50)',
+                  borderRadius: '28px 28px 0 0',
                 }
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -1199,6 +1469,7 @@ const OwnerDashboard = () => {
                 height: '100%',
                 transition: 'all 0.3s ease',
                 '&:hover': { transform: 'translateY(-5px)' },
+                position: 'relative',
                 '&::before': {
                   content: '""',
                   position: 'absolute',
@@ -1207,6 +1478,7 @@ const OwnerDashboard = () => {
                   right: 0,
                   height: '3px',
                   background: 'linear-gradient(90deg, #f59e0b, #dc2626)',
+                  borderRadius: '28px 28px 0 0',
                 }
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -1233,7 +1505,18 @@ const OwnerDashboard = () => {
                 p: 2.5,
                 height: '100%',
                 transition: 'all 0.3s ease',
-                '&:hover': { transform: 'translateY(-5px)' }
+                '&:hover': { transform: 'translateY(-5px)' },
+                position: 'relative',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '3px',
+                  background: 'linear-gradient(90deg, #4CAF50, #0B5ED7)',
+                  borderRadius: '28px 28px 0 0',
+                }
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <Box>
@@ -1256,7 +1539,18 @@ const OwnerDashboard = () => {
                 p: 2.5,
                 height: '100%',
                 transition: 'all 0.3s ease',
-                '&:hover': { transform: 'translateY(-5px)' }
+                '&:hover': { transform: 'translateY(-5px)' },
+                position: 'relative',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '3px',
+                  background: 'linear-gradient(90deg, #eab308, #f59e0b)',
+                  borderRadius: '28px 28px 0 0',
+                }
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <Box>
