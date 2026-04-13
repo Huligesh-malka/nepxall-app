@@ -80,6 +80,7 @@ import AdminPayments from "./pages/admin/AdminPayments";
 import AdminServiceBookings from "./pages/admin/AdminServiceBookings";
 import AdminRefunds from "./pages/admin/AdminRefunds";
 import AdminAgreements from "./pages/admin/AdminAgreements";
+import AdminPlanPayments from "./pages/admin/AdminPlanPayments";
 import AdminAgreementDetails from "./pages/admin/AdminAgreementDetails";
 
 /* VENDOR */
@@ -206,6 +207,7 @@ function App() {
         <Route path="services" element={<AdminServiceBookings />} />
         <Route path="refunds" element={<AdminRefunds />} />
         <Route path="agreements" element={<AdminAgreements />} />
+        <Route path="plan-payments" element={<AdminPlanPayments />} />
         <Route path="agreement/:id" element={<AdminAgreementDetails />} />
       </Route>
 

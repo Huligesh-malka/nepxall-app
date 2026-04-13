@@ -88,21 +88,23 @@ export default function OwnerPremiumPlans() {
     }
   }, [user, authLoading, navigate]);
 
-  // 🚀 UPDATED: QR Payment Flow with "I Paid" button (no polling, no admin)
+  // 🔥 REPLACED: QR Payment Flow (not old buy-plan)
   const buyPlan = async (planId) => {
     if (planId === currentPlan) return;
 
     try {
       setPageLoading(true);
       
-      // Call endpoint to create payment order and get QR
+      // Call new endpoint to create payment order and get QR
       const res = await api.post("/plan/create", { plan: planId });
 
       setQr(res.data.qr);
       setOrderId(res.data.orderId);
       setPaymentStatus("pending");
       setShowPaymentModal(true);
-      // ❌ REMOVED: startPaymentPolling
+
+      // Start polling for payment confirmation (every 10 sec)
+      startPaymentPolling(res.data.orderId, planId);
 
     } catch (err) {
       alert("❌ Failed to start payment. Please try again.");
@@ -111,36 +113,41 @@ export default function OwnerPremiumPlans() {
     }
   };
 
-  // 🚀 NEW FUNCTION: confirmPayment - called when user clicks "I Paid"
-  const confirmPayment = async () => {
-    try {
-      setPaymentStatus("waiting");
-
-      const res = await api.post("/plan/auto-verify", {
-        orderId
-      });
-
-      if (res.data.success) {
-        setPaymentStatus("approved");
-
-        // Find the selected plan details
-        const plan = plans.find(p => p.id === selectedPlan);
-        if (plan) {
-          setCurrentPlan(selectedPlan);
+  // 🔥 Polling function to check admin approval
+  const startPaymentPolling = (orderId, planId) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.get(`/plan/status/${orderId}`);
+        
+        if (res.data.status === "approved") {
+          clearInterval(interval);
+          setPaymentStatus("approved");
+          
+          // Update current plan
+          const plan = plans.find(p => p.id === planId);
+          setCurrentPlan(planId);
+          setSelectedPlan(planId);
+          
+          // Show success and close modal after 2 seconds
+          setTimeout(() => {
+            setShowPaymentModal(false);
+            setQr(null);
+            setOrderId(null);
+            setPaymentStatus("pending");
+            showNotification(`✨ ${plan.name} activated successfully!`, "success");
+          }, 2000);
+        } else if (res.data.status === "failed") {
+          clearInterval(interval);
+          setPaymentStatus("failed");
+          showNotification("❌ Payment verification failed. Please contact support.", "error");
         }
-
-        setTimeout(() => {
-          closePaymentModal();
-          alert("🎉 Plan activated successfully!");
-        }, 1500);
-      } else {
-        throw new Error("Verification failed");
+      } catch (err) {
+        console.error("Polling error:", err);
       }
+    }, 10000); // Check every 10 seconds
 
-    } catch (err) {
-      setPaymentStatus("failed");
-      alert("❌ Verification failed. Please try again or contact support.");
-    }
+    // Store interval ID to clear on modal close
+    window.paymentInterval = interval;
   };
 
   const showNotification = (message, type) => {
@@ -153,6 +160,9 @@ export default function OwnerPremiumPlans() {
   };
 
   const closePaymentModal = () => {
+    if (window.paymentInterval) {
+      clearInterval(window.paymentInterval);
+    }
     setShowPaymentModal(false);
     setQr(null);
     setOrderId(null);
@@ -286,10 +296,7 @@ export default function OwnerPremiumPlans() {
                 </button>
               ) : (
                 <button
-                  onClick={() => {
-                    setSelectedPlan(plan.id);
-                    buyPlan(plan.id);
-                  }}
+                  onClick={() => buyPlan(plan.id)}
                   disabled={pageLoading}
                   style={{
                     ...styles.upgradeButton,
@@ -340,7 +347,7 @@ export default function OwnerPremiumPlans() {
         </div>
       </div>
 
-      {/* 🔥 QR PAYMENT MODAL WITH "I PAID" BUTTON */}
+      {/* 🔥 QR PAYMENT MODAL WITH ORDER ID DISPLAY */}
       {showPaymentModal && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
@@ -362,14 +369,6 @@ export default function OwnerPremiumPlans() {
                   Close
                 </button>
               </>
-            ) : paymentStatus === "waiting" ? (
-              <>
-                <div style={styles.waitingContainer}>
-                  <div style={styles.spinnerSmall}></div>
-                  <h2 style={styles.modalTitle}>Verifying Payment...</h2>
-                  <p style={styles.modalText}>Please wait while we confirm your transaction.</p>
-                </div>
-              </>
             ) : (
               <>
                 <h2 style={styles.modalTitle}>💳 Scan & Pay</h2>
@@ -378,7 +377,7 @@ export default function OwnerPremiumPlans() {
                   <img src={qr} alt="Payment QR Code" style={styles.qrImage} />
                 )}
                 
-                {/* Order ID Display */}
+                {/* 🔥 ORDER ID DISPLAY - ADDED HERE */}
                 {orderId && (
                   <div style={{
                     background: "#f1f5f9",
@@ -424,18 +423,19 @@ export default function OwnerPremiumPlans() {
                   </button>
                 </div>
 
-                {/* 🔥 UPDATED: "I Paid" button and new instruction text */}
-                <p style={styles.instructionText}>
-                  💡 After payment, click "I Paid" to activate your plan instantly.
-                </p>
+                {paymentStatus === "waiting" ? (
+                  <div style={styles.waitingContainer}>
+                    <div style={styles.spinnerSmall}></div>
+                    <p style={styles.waitingText}>Waiting for admin approval...</p>
+                  </div>
+                ) : (
+                  <p style={styles.instructionText}>
+                    💡 After payment, enter this Order ID in your UPI app's transaction note.<br/>
+                    Admin will verify and activate your plan automatically.
+                  </p>
+                )}
 
                 <div style={styles.modalActions}>
-                  <button
-                    onClick={confirmPayment}
-                    style={styles.paidButton}
-                  >
-                    ✅ I Paid
-                  </button>
                   <button
                     onClick={closePaymentModal}
                     style={styles.closeButton}
@@ -861,31 +861,18 @@ const styles = {
 
   modalActions: {
     display: "flex",
-    justifyContent: "center",
-    gap: 12,
-    marginTop: 10
+    justifyContent: "center"
   },
 
   closeButton: {
-    padding: "10px 20px",
+    padding: "10px 24px",
     borderRadius: 10,
     border: "none",
-    background: "#94a3b8",
+    background: "#3b82f6",
     color: "#fff",
     cursor: "pointer",
     fontSize: 14,
     fontWeight: 500
-  },
-
-  paidButton: {
-    padding: "10px 20px",
-    borderRadius: 10,
-    border: "none",
-    background: "#10b981",
-    color: "#fff",
-    cursor: "pointer",
-    fontSize: 14,
-    fontWeight: "bold"
   },
 
   modalButton: {
