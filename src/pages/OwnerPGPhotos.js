@@ -19,8 +19,6 @@ const OwnerPGPhotos = () => {
   const [dragIndex, setDragIndex] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState("");
-  
-  // 🔥 NEW: Plan state for premium lock
   const [plan, setPlan] = useState(null);
   const [planLoading, setPlanLoading] = useState(true);
 
@@ -91,9 +89,8 @@ const OwnerPGPhotos = () => {
   const handleFileChange = (e) => {
     const selected = Array.from(e.target.files);
     
-    // 🔥 NEW: Check photo limit against plan
     if (plan && photos.length + selected.length > plan.max_photos_per_pg) {
-      alert(`❌ Your ${plan.name} plan allows only ${plan.max_photos_per_pg} photos per PG. Upgrade to upload more!`);
+      alert(`❌ Your ${plan.name} plan allows only ${plan.max_photos_per_pg} photos per PG. You have ${photos.length}/${plan.max_photos_per_pg}. Upgrade to upload more!`);
       return;
     }
 
@@ -117,7 +114,6 @@ const OwnerPGPhotos = () => {
       return;
     }
 
-    // 🔥 NEW: Double-check limit before upload
     if (plan && photos.length + files.length > plan.max_photos_per_pg) {
       alert(`❌ Cannot upload. Your ${plan.name} plan allows only ${plan.max_photos_per_pg} photos. You have ${photos.length}/${plan.max_photos_per_pg}. Upgrade to upload more!`);
       return;
@@ -152,7 +148,6 @@ const OwnerPGPhotos = () => {
       setFiles([]);
       setUploadProgress(0);
       
-      // Update photos based on response
       let updatedPhotos = [];
       
       if (response.data.photos && Array.isArray(response.data.photos)) {
@@ -251,7 +246,6 @@ const OwnerPGPhotos = () => {
     return `${BACKEND_URL}${normalizedPath}`;
   };
 
-  // Check if limit is reached
   const isLimitReached = plan && photos.length >= plan.max_photos_per_pg;
 
   /* ================= PROTECTION ================= */
@@ -271,7 +265,7 @@ const OwnerPGPhotos = () => {
     <div style={{ maxWidth: 1200, margin: "auto", padding: 20 }}>
       <h2 style={{ marginBottom: 20 }}>📷 Manage PG Photos</h2>
 
-      {/* 🔥 NEW: Plan Info Card */}
+      {/* Plan Info Card */}
       {plan && (
         <div style={{
           background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
@@ -287,7 +281,7 @@ const OwnerPGPhotos = () => {
                 📸 Photos: {photos.length} / {plan.max_photos_per_pg} used
               </p>
               <p style={{ margin: "4px 0", fontSize: 12, opacity: 0.9 }}>
-                📅 Expires: {new Date(plan.expiry_date).toLocaleDateString()}
+                📅 Expires: {plan.expiry_date ? new Date(plan.expiry_date).toLocaleDateString() : "Never"}
               </p>
             </div>
             <button 
@@ -325,7 +319,7 @@ const OwnerPGPhotos = () => {
         </div>
       )}
 
-      {/* 🔥 NEW: Limit reached warning */}
+      {/* Limit reached warning */}
       {isLimitReached && (
         <div style={{
           backgroundColor: "#fff3cd",
