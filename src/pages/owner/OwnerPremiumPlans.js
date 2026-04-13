@@ -347,7 +347,7 @@ export default function OwnerPremiumPlans() {
         </div>
       </div>
 
-      {/* 🔥 QR PAYMENT MODAL */}
+      {/* 🔥 QR PAYMENT MODAL WITH ORDER ID DISPLAY */}
       {showPaymentModal && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
@@ -377,6 +377,41 @@ export default function OwnerPremiumPlans() {
                   <img src={qr} alt="Payment QR Code" style={styles.qrImage} />
                 )}
                 
+                {/* 🔥 ORDER ID DISPLAY - ADDED HERE */}
+                {orderId && (
+                  <div style={{
+                    background: "#f1f5f9",
+                    padding: "10px",
+                    borderRadius: "10px",
+                    marginBottom: "15px"
+                  }}>
+                    <p style={{ fontSize: 12, color: "#64748b" }}>Order ID</p>
+                    <p style={{
+                      fontSize: 16,
+                      fontWeight: "bold",
+                      fontFamily: "monospace",
+                      color: "#1e293b"
+                    }}>
+                      {orderId}
+                    </p>
+
+                    <button
+                      onClick={() => navigator.clipboard.writeText(orderId)}
+                      style={{
+                        marginTop: 6,
+                        padding: "5px 10px",
+                        fontSize: 12,
+                        borderRadius: 6,
+                        border: "none",
+                        background: "#e2e8f0",
+                        cursor: "pointer"
+                      }}
+                    >
+                      📋 Copy Order ID
+                    </button>
+                  </div>
+                )}
+                
                 <div style={styles.upiContainer}>
                   <p style={styles.upiLabel}>UPI ID:</p>
                   <p style={styles.upiId}>huligeshmalka-1@oksbi</p>
@@ -395,7 +430,8 @@ export default function OwnerPremiumPlans() {
                   </div>
                 ) : (
                   <p style={styles.instructionText}>
-                    After payment, admin will verify and activate your plan automatically.
+                    💡 After payment, enter this Order ID in your UPI app's transaction note.<br/>
+                    Admin will verify and activate your plan automatically.
                   </p>
                 )}
 
