@@ -116,6 +116,12 @@ const Sidebar = ({ role, user }) => {
             <Link style={linkStyle(isActive("/admin/finance"))} to="/admin/finance">📊 Finance Dashboard</Link>
             <Link style={linkStyle(isActive("/admin/payments"))} to="/admin/payments">💳 Payment Verification</Link>
             <Link style={linkStyle(isActive("/admin/services"))} to="/admin/services">🛠 Service Requests</Link>
+            <Link 
+  style={linkStyle(isActive("/admin/plan-payments"))} 
+  to="/admin/plan-payments"
+>
+  ⭐ Plan Payments
+</Link>
             <Link style={linkStyle(isActive("/admin/owner-verification"))} to="/admin/owner-verification">🛡️ Verify Owners</Link>
             <Link style={linkStyle(isActive("/admin/settlements"))} to="/admin/settlements">💰 Settlements</Link>
             <Link style={linkStyle(isActive("/admin/settlement-history"))} to="/admin/settlement-history">📜 Settlement History</Link>
