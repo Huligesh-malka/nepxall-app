@@ -19,6 +19,25 @@ const OwnerPGPhotos = () => {
   const [dragIndex, setDragIndex] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState("");
+  
+  // 🔥 NEW: Plan state for premium lock
+  const [plan, setPlan] = useState(null);
+  const [planLoading, setPlanLoading] = useState(true);
+
+  /* ================= LOAD PLAN ================= */
+  const loadUserPlan = useCallback(async () => {
+    try {
+      setPlanLoading(true);
+      const response = await api.get("/user/plan");
+      console.log("📊 User plan loaded:", response.data);
+      setPlan(response.data);
+    } catch (err) {
+      console.error("Failed to load plan:", err);
+      setPlan(null);
+    } finally {
+      setPlanLoading(false);
+    }
+  }, []);
 
   /* ================= LOAD PHOTOS ================= */
   const loadPhotos = useCallback(async () => {
@@ -63,13 +82,20 @@ const OwnerPGPhotos = () => {
     }
 
     if (user && role === "owner") {
+      loadUserPlan();
       loadPhotos();
     }
-  }, [user, role, loading, id, navigate, loadPhotos]);
+  }, [user, role, loading, id, navigate, loadPhotos, loadUserPlan]);
 
   /* ================= FILE SELECT ================= */
   const handleFileChange = (e) => {
     const selected = Array.from(e.target.files);
+    
+    // 🔥 NEW: Check photo limit against plan
+    if (plan && photos.length + selected.length > plan.max_photos_per_pg) {
+      alert(`❌ Your ${plan.name} plan allows only ${plan.max_photos_per_pg} photos per PG. Upgrade to upload more!`);
+      return;
+    }
 
     const valid = selected.filter((file) => {
       const isImage = file.type.startsWith("image/");
@@ -88,6 +114,12 @@ const OwnerPGPhotos = () => {
   const uploadPhotos = async () => {
     if (!files.length) {
       alert("Please select photos to upload");
+      return;
+    }
+
+    // 🔥 NEW: Double-check limit before upload
+    if (plan && photos.length + files.length > plan.max_photos_per_pg) {
+      alert(`❌ Cannot upload. Your ${plan.name} plan allows only ${plan.max_photos_per_pg} photos. You have ${photos.length}/${plan.max_photos_per_pg}. Upgrade to upload more!`);
       return;
     }
 
@@ -120,21 +152,17 @@ const OwnerPGPhotos = () => {
       setFiles([]);
       setUploadProgress(0);
       
-      // FIX: Manually append new photos to existing ones
+      // Update photos based on response
       let updatedPhotos = [];
       
       if (response.data.photos && Array.isArray(response.data.photos)) {
-        // If backend returns only the new photos (which seems to be the case)
         if (response.data.photos.length === files.length) {
-          // Backend returned only new photos, so append them manually
           console.log("⚠️ Backend returned only new photos, appending manually");
           updatedPhotos = [...photos, ...response.data.photos];
         } else {
-          // Backend returned full list
           updatedPhotos = response.data.photos;
         }
       } else {
-        // No photos in response, reload from server
         console.log("📡 Reloading photos from PG details");
         await loadPhotos();
         setUploading(false);
@@ -223,8 +251,11 @@ const OwnerPGPhotos = () => {
     return `${BACKEND_URL}${normalizedPath}`;
   };
 
+  // Check if limit is reached
+  const isLimitReached = plan && photos.length >= plan.max_photos_per_pg;
+
   /* ================= PROTECTION ================= */
-  if (loading || pageLoading) {
+  if (loading || pageLoading || planLoading) {
     return (
       <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
         <CircularProgress />
@@ -239,6 +270,91 @@ const OwnerPGPhotos = () => {
   return (
     <div style={{ maxWidth: 1200, margin: "auto", padding: 20 }}>
       <h2 style={{ marginBottom: 20 }}>📷 Manage PG Photos</h2>
+
+      {/* 🔥 NEW: Plan Info Card */}
+      {plan && (
+        <div style={{
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          borderRadius: 12,
+          padding: 16,
+          marginBottom: 24,
+          color: "white"
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <h3 style={{ margin: "0 0 8px 0", fontSize: 18 }}>💎 Current Plan: {plan.name}</h3>
+              <p style={{ margin: "4px 0", fontSize: 14 }}>
+                📸 Photos: {photos.length} / {plan.max_photos_per_pg} used
+              </p>
+              <p style={{ margin: "4px 0", fontSize: 12, opacity: 0.9 }}>
+                📅 Expires: {new Date(plan.expiry_date).toLocaleDateString()}
+              </p>
+            </div>
+            <button 
+              onClick={() => navigate("/plans")}
+              style={{
+                backgroundColor: "white",
+                color: "#667eea",
+                border: "none",
+                padding: "8px 16px",
+                borderRadius: 8,
+                fontWeight: "bold",
+                cursor: "pointer",
+                fontSize: 14
+              }}
+            >
+              🚀 Upgrade Plan
+            </button>
+          </div>
+          
+          {/* Progress bar */}
+          <div style={{
+            marginTop: 12,
+            height: 6,
+            backgroundColor: "rgba(255,255,255,0.3)",
+            borderRadius: 3,
+            overflow: "hidden"
+          }}>
+            <div style={{
+              width: `${(photos.length / plan.max_photos_per_pg) * 100}%`,
+              height: "100%",
+              backgroundColor: photos.length >= plan.max_photos_per_pg ? "#ef4444" : "#4ade80",
+              borderRadius: 3
+            }} />
+          </div>
+        </div>
+      )}
+
+      {/* 🔥 NEW: Limit reached warning */}
+      {isLimitReached && (
+        <div style={{
+          backgroundColor: "#fff3cd",
+          border: "1px solid #ffc107",
+          borderRadius: 12,
+          padding: 16,
+          marginBottom: 24,
+          textAlign: "center"
+        }}>
+          <p style={{ color: "#856404", marginBottom: 12, fontSize: 16 }}>
+            🚫 Your {plan?.name} plan limit of {plan?.max_photos_per_pg} photos has been reached.
+          </p>
+          <button 
+            onClick={() => navigate("/plans")}
+            style={{
+              backgroundColor: "#ffc107",
+              color: "#333",
+              border: "none",
+              padding: "10px 24px",
+              borderRadius: 8,
+              fontWeight: "bold",
+              cursor: "pointer",
+              fontSize: 14
+            }}
+          >
+            🚀 Upgrade Plan for More Photos
+          </button>
+        </div>
+      )}
 
       {error && (
         <div style={{
@@ -267,21 +383,23 @@ const OwnerPGPhotos = () => {
             type="file"
             multiple
             accept="image/*"
-            disabled={uploading}
+            disabled={uploading || isLimitReached}
             onChange={handleFileChange}
             style={{
               padding: 10,
               border: "1px solid #cbd5e1",
               borderRadius: 6,
               width: "100%",
-              maxWidth: 400
+              maxWidth: 400,
+              cursor: isLimitReached ? "not-allowed" : "pointer"
             }}
           />
         </div>
 
         <p style={{ fontSize: 13, color: "#666", marginBottom: 16 }}>
           • Max size: <b>5MB</b> per image<br />
-          • Supported formats: JPG, PNG, GIF, WEBP
+          • Supported formats: JPG, PNG, GIF, WEBP<br />
+          • Maximum photos: <b>{plan?.max_photos_per_pg || 10}</b> per PG
         </p>
 
         {files.length > 0 && (
@@ -323,26 +441,26 @@ const OwnerPGPhotos = () => {
 
         <button
           onClick={uploadPhotos}
-          disabled={uploading || files.length === 0}
+          disabled={uploading || files.length === 0 || isLimitReached}
           style={{
-            backgroundColor: files.length === 0 ? "#9ca3af" : "#3b82f6",
+            backgroundColor: (files.length === 0 || isLimitReached) ? "#9ca3af" : "#3b82f6",
             color: "white",
             padding: "10px 24px",
             border: "none",
             borderRadius: 8,
             fontSize: 16,
             fontWeight: 500,
-            cursor: files.length === 0 ? "not-allowed" : "pointer",
-            opacity: files.length === 0 ? 0.5 : 1
+            cursor: (files.length === 0 || isLimitReached) ? "not-allowed" : "pointer",
+            opacity: (files.length === 0 || isLimitReached) ? 0.5 : 1
           }}
         >
-          {uploading ? `Uploading (${uploadProgress}%)` : "⬆ Upload Photos"}
+          {isLimitReached ? "⚠️ Limit Reached - Upgrade" : (uploading ? `Uploading (${uploadProgress}%)` : "⬆ Upload Photos")}
         </button>
       </div>
 
       <div>
         <h3 style={{ marginBottom: 16 }}>
-          🖼️ Photo Gallery {photos.length > 0 && `(${photos.length})`}
+          🖼️ Photo Gallery {photos.length > 0 && `(${photos.length}/${plan?.max_photos_per_pg || 10})`}
         </h3>
 
         {photos.length === 0 ? (
@@ -366,17 +484,17 @@ const OwnerPGPhotos = () => {
             {photos.map((photo, index) => (
               <div
                 key={index}
-                draggable
-                onDragStart={() => setDragIndex(index)}
+                draggable={!isLimitReached}
+                onDragStart={() => !isLimitReached && setDragIndex(index)}
                 onDragOver={(e) => e.preventDefault()}
-                onDrop={() => onDrop(index)}
+                onDrop={() => !isLimitReached && onDrop(index)}
                 style={{
                   position: "relative",
                   border: index === 0 ? "3px solid #3b82f6" : "1px solid #e2e8f0",
                   borderRadius: 12,
                   overflow: "hidden",
                   backgroundColor: "#f8fafc",
-                  cursor: "grab",
+                  cursor: isLimitReached ? "default" : "grab",
                   boxShadow: index === 0 ? "0 4px 6px rgba(59, 130, 246, 0.3)" : "0 1px 3px rgba(0,0,0,0.1)"
                 }}
               >
@@ -437,19 +555,21 @@ const OwnerPGPhotos = () => {
                   ×
                 </button>
 
-                <div style={{
-                  position: "absolute",
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  backgroundColor: "rgba(0,0,0,0.5)",
-                  color: "white",
-                  padding: "4px 8px",
-                  fontSize: 12,
-                  textAlign: "center"
-                }}>
-                  Drag to reorder
-                </div>
+                {!isLimitReached && (
+                  <div style={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    backgroundColor: "rgba(0,0,0,0.5)",
+                    color: "white",
+                    padding: "4px 8px",
+                    fontSize: 12,
+                    textAlign: "center"
+                  }}>
+                    Drag to reorder
+                  </div>
+                )}
               </div>
             ))}
           </div>
