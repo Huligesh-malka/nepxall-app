@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Box, CircularProgress } from "@mui/material";
-import { pgAPI } from "../api/api";
+import userAPI, { pgAPI } from "../api/api";
 import { getImageUrl } from "../config";
 
 // Fix for default marker icons in Leaflet
@@ -279,7 +279,7 @@ function OwnerAddPG() {
   const loadUserPlan = async () => {
     try {
       setPlanLoading(true);
-      const response = await api.get("/user/plan");
+      const response = await userAPI.get("/user/plan");
       console.log("📊 User plan loaded:", response.data);
       setPlan(response.data);
     } catch (err) {
