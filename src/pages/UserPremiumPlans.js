@@ -46,7 +46,7 @@ export default function UserPremiumPlans() {
 
   const loadCurrentPlan = async () => {
     try {
-      const res = await api.get("/user/current-plan");
+     const res = await userAPI.get("/user/plan");
       setCurrentPlan(res.data.plan || "free");
     } catch {
       setCurrentPlan("free");
