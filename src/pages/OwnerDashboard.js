@@ -3,39 +3,17 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { pgAPI } from "../api/api";
 import { getImageUrl } from "../config";
-import { Box, CircularProgress } from "@mui/material";
-import { motion, AnimatePresence } from "framer-motion";
+import { Box, CircularProgress, useTheme, alpha, keyframes } from "@mui/material";
+
 import QRCodeStyling from "qr-code-styling";
-import CountUp from "react-countup";
 
 import {
-  Typography,
-  Box as MuiBox,
-  Button,
-  Grid,
-  Alert,
-  Snackbar,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  Avatar,
-  IconButton,
-  Card,
-  CardContent,
-  Divider,
-  Stack,
-  Tooltip,
-  Container,
-  LinearProgress,
-  Fade,
-  Zoom,
-  Slide,
-  Grow
+  Typography, Box as MuiBox, Button, Grid, Alert, Snackbar,
+  Paper, Table, TableBody,
+  TableCell, TableContainer, TableHead, TableRow,
+  Chip, Avatar, IconButton, Card, CardContent,
+  Divider, Stack, Tooltip, Container, LinearProgress, SwipeableDrawer, useMediaQuery,
+  Tabs, Tab, Badge, Menu, MenuItem, ListItemIcon, ListItemText
 } from "@mui/material";
 
 import {
@@ -55,23 +33,51 @@ import {
   Person as PersonIcon,
   People as OccupantsIcon,
   TrendingUp as TrendingUpIcon,
-  QrCodeScanner as QRIcon,
+  QrCodeScanner as QrIcon,
   Edit as EditIcon,
+  VideoCameraBack as VideoIcon,
   PhotoCamera as PhotoIcon,
-  Videocam as VideoIcon,
-  Campaign as AnnounceIcon,
-  Dashboard as DashboardIcon,
-  ChevronRight as ChevronIcon,
+  Campaign as CampaignIcon,
   Close as CloseIcon,
-  HelpOutline as HelpIcon,
+  MoreVert as MoreIcon,
+  Dashboard as DashboardIcon,
+  Receipt as ReceiptIcon,
+  Settings as SettingsIcon,
+  Logout as LogoutIcon,
   Star as StarIcon,
-  TrendingDown as TrendingDownIcon,
-  CheckCircle as CheckIcon,
-  Warning as WarningIcon
+  Warning as WarningIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
+  Download as DownloadIcon,
+  Share as ShareIcon,
+  Print as PrintIcon
 } from "@mui/icons-material";
 
 import StatCard from "../components/owner/StatCard";
 import PropertyCard from "../components/owner/PropertyCard";
+
+/* ---------------- ANIMATIONS ---------------- */
+const float = keyframes`
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+  100% { transform: translateY(0px); }
+`;
+
+const pulseGlow = keyframes`
+  0% { box-shadow: 0 0 0 0 rgba(11, 94, 215, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(11, 94, 215, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(11, 94, 215, 0); }
+`;
+
+const shimmer = keyframes`
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+`;
+
+const slideIn = keyframes`
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+`;
 
 /* ---------------- HELPERS ---------------- */
 
@@ -121,90 +127,67 @@ const getStatusBadgeStyle = (status) => {
   switch(status?.toLowerCase()) {
     case 'approved':
     case 'confirmed':
-      return { bg: 'linear-gradient(135deg, #16a34a, #15803d)', color: '#fff', glow: '0 0 10px rgba(22,163,74,0.5)' };
+      return { bg: '#16a34a', color: '#fff', glow: '#16a34a' };
     case 'pending':
-      return { bg: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', glow: '0 0 10px rgba(245,158,11,0.5)' };
+      return { bg: '#f59e0b', color: '#fff', glow: '#f59e0b' };
     case 'rejected':
     case 'cancelled':
-      return { bg: 'linear-gradient(135deg, #dc2626, #b91c1c)', color: '#fff', glow: '0 0 10px rgba(220,38,38,0.5)' };
+      return { bg: '#dc2626', color: '#fff', glow: '#dc2626' };
     case 'completed':
-      return { bg: 'linear-gradient(135deg, #0284c7, #0369a1)', color: '#fff', glow: '0 0 10px rgba(2,132,199,0.5)' };
+      return { bg: '#0284c7', color: '#fff', glow: '#0284c7' };
     default:
-      return { bg: 'linear-gradient(135deg, #6b7280, #4b5563)', color: '#fff', glow: 'none' };
+      return { bg: '#6b7280', color: '#fff', glow: '#6b7280' };
   }
 };
 
-/* ---------------- ANIMATED COMPONENTS ---------------- */
+// CountUp animation hook
+const useCountUp = (endValue, duration = 1000) => {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let startTime;
+    let animationFrame;
+    const animate = (timestamp) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      setCount(Math.floor(progress * endValue));
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    };
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [endValue, duration]);
+  return count;
+};
 
-const GlowingCard = ({ children, delay = 0, className = "", ...props }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 30 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.6, delay }}
-    whileHover={{ y: -5, transition: { duration: 0.2 } }}
-    className={className}
-    {...props}
-  >
-    {children}
-  </motion.div>
-);
-
-const FloatingIcon = ({ icon, color, delay = 0 }) => (
-  <motion.div
-    animate={{ 
-      y: [0, -10, 0],
-      rotate: [0, 5, -5, 0]
-    }}
-    transition={{ 
-      duration: 3, 
-      repeat: Infinity, 
-      delay,
-      ease: "easeInOut" 
-    }}
-    style={{ 
-      display: 'inline-flex',
-      filter: `drop-shadow(0 0 15px ${color})`
-    }}
-  >
-    {icon}
-  </motion.div>
-);
-
-const AnimatedCounter = ({ value, duration = 2, prefix = "", suffix = "" }) => (
-  <CountUp
-    start={0}
-    end={value}
-    duration={duration}
-    separator=","
-    prefix={prefix}
-    suffix={suffix}
-    useEasing={true}
-    useGrouping={true}
-  >
-    {({ countUpRef }) => <span ref={countUpRef} />}
-  </CountUp>
-);
-
-/* ---------------- MAIN COMPONENT ---------------- */
+/* ---------------- COMPONENT ---------------- */
 
 const OwnerDashboard = () => {
 
   const navigate = useNavigate();
-  const { user, role, loading: authLoading } = useAuth();
-  const [greeting, setGreeting] = useState("");
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const { user, role, loading: authLoading, logout } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
 
   const [pgs, setPGs] = useState([]);
   const [recentBookings, setRecentBookings] = useState([]);
   const [recentEnquiries, setRecentEnquiries] = useState([]);
   const [bookingHistory, setBookingHistory] = useState([]);
   const [pgDetailsMap, setPgDetailsMap] = useState({});
-  const [qrPreviewOpen, setQrPreviewOpen] = useState(false);
-  const [selectedPropertyForQR, setSelectedPropertyForQR] = useState(null);
-  const [qrImageUrl, setQrImageUrl] = useState("");
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const [pageLoading, setPageLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [qrImageUrl, setQrImageUrl] = useState(null);
+  const [activeTab, setActiveTab] = useState(0);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [notificationAnchor, setNotificationAnchor] = useState(null);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [bookingDetailsOpen, setBookingDetailsOpen] = useState(false);
 
   const [stats, setStats] = useState({
     totalProperties: 0,
@@ -220,7 +203,11 @@ const OwnerDashboard = () => {
     totalRent: 0,
     totalDeposit: 0,
     pendingRent: 0,
-    pendingDeposit: 0
+    pendingDeposit: 0,
+    monthlyRevenue: 0,
+    yearlyRevenue: 0,
+    cancelledBookings: 0,
+    completedBookings: 0
   });
 
   const [snackbar, setSnackbar] = useState({
@@ -229,16 +216,14 @@ const OwnerDashboard = () => {
     severity: "success"
   });
 
-  // Update greeting based on time
-  useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) setGreeting("Good Morning");
-    else if (hour < 17) setGreeting("Good Afternoon");
-    else setGreeting("Good Evening");
-    
-    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-    return () => clearInterval(timer);
-  }, []);
+  // Animated stats values
+  const animatedTotalProperties = useCountUp(stats.totalProperties, 800);
+  const animatedTotalRooms = useCountUp(stats.totalRooms, 800);
+  const animatedOccupiedRooms = useCountUp(stats.occupiedRooms, 800);
+  const animatedPendingBookings = useCountUp(stats.pendingBookings, 800);
+  const animatedOccupancyRate = useCountUp(stats.occupancyRate, 800);
+  const animatedTotalEarnings = useCountUp(stats.totalEarnings, 1000);
+  const animatedMonthlyRevenue = useCountUp(stats.monthlyRevenue, 1000);
 
   /* ---------------- HELPER FUNCTION TO GET RENT BY ROOM TYPE ---------------- */
   
@@ -281,16 +266,37 @@ const OwnerDashboard = () => {
     return Number(pg.security_deposit) || Number(pg.deposit_amount) || 0;
   };
 
+  // Load mock notifications (replace with API call)
+  const loadNotifications = useCallback(async () => {
+    try {
+      // Simulate API call
+      const mockNotifications = [
+        { id: 1, message: "New booking request for Sunshine PG", type: "booking", read: false, timestamp: new Date().toISOString() },
+        { id: 2, message: "Payment received of ₹15,000", type: "payment", read: false, timestamp: new Date().toISOString() },
+        { id: 3, message: "Review received: 5 stars", type: "review", read: true, timestamp: new Date().toISOString() }
+      ];
+      setNotifications(mockNotifications);
+      setUnreadCount(mockNotifications.filter(n => !n.read).length);
+    } catch (err) {
+      console.error("Failed to load notifications:", err);
+    }
+  }, []);
+
   /* ---------------- LOAD DATA ---------------- */
 
   const loadAllData = useCallback(async (refresh = false) => {
     try {
-      if (!user) return;
+      if (!user) {
+        console.log("❌ No user");
+        return;
+      }
 
       refresh ? setRefreshing(true) : setPageLoading(true);
       console.log("📡 Loading dashboard data...");
 
       const pgRes = await pgAPI.getOwnerDashboard();
+      console.log("✅ PG Data received:", pgRes.data);
+
       const pgData = Array.isArray(pgRes.data)
         ? pgRes.data
         : pgRes.data?.data || [];
@@ -331,8 +337,11 @@ const OwnerDashboard = () => {
 
       setPGs(properties);
       setPgDetailsMap(pgMap);
+      console.log(`✅ Loaded ${properties.length} properties`);
 
       const bookingsRes = await pgAPI.getOwnerBookings();
+      console.log("✅ Bookings received:", bookingsRes.data);
+
       const bookings = Array.isArray(bookingsRes.data)
         ? bookingsRes.data
         : bookingsRes.data?.bookings || [];
@@ -367,6 +376,7 @@ const OwnerDashboard = () => {
 
       setRecentBookings(sortedBookings);
 
+      /* -------- ADVANCED STATS -------- */
       const totalRooms = properties.reduce((a, b) => a + (b.total_rooms || 0), 0);
       const availableRooms = properties.reduce((a, b) => a + (b.available_rooms || 0), 0);
       const occupiedRooms = totalRooms - availableRooms;
@@ -375,25 +385,38 @@ const OwnerDashboard = () => {
       const ratings = properties.filter(p => p.avg_rating > 0).map(p => p.avg_rating);
       const avgRating = ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : 0;
 
-      const totalRent = enhancedBookings
-        .filter(b => ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase()))
+      // Revenue calculations
+      const confirmedBookings = enhancedBookings.filter(b => ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase()));
+      const pendingBookingsList = enhancedBookings.filter(b => b?.status?.toLowerCase() === "pending");
+      const cancelledBookingsList = enhancedBookings.filter(b => b?.status?.toLowerCase() === "cancelled");
+      const completedBookingsList = enhancedBookings.filter(b => b?.status?.toLowerCase() === "completed");
+
+      const totalRent = confirmedBookings.reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
+      const totalDeposit = confirmedBookings.reduce((a, b) => a + (Number(b.deposit_amount) || 0), 0);
+      const pendingRent = pendingBookingsList.reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
+      const pendingDeposit = pendingBookingsList.reduce((a, b) => a + (Number(b.deposit_amount) || 0), 0);
+      const totalEarnings = confirmedBookings.reduce((a, b) => a + (Number(b.amount) || 0), 0);
+
+      // Monthly revenue (current month)
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      const monthlyRevenue = enhancedBookings
+        .filter(b => {
+          const bookingDate = new Date(b.created_at || b.check_in_date);
+          return bookingDate.getMonth() === currentMonth && 
+                 bookingDate.getFullYear() === currentYear &&
+                 ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase());
+        })
         .reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
 
-      const totalDeposit = enhancedBookings
-        .filter(b => ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase()))
-        .reduce((a, b) => a + (Number(b.deposit_amount) || 0), 0);
-
-      const pendingRent = enhancedBookings
-        .filter(b => b?.status?.toLowerCase() === "pending")
+      // Yearly revenue
+      const yearlyRevenue = enhancedBookings
+        .filter(b => {
+          const bookingDate = new Date(b.created_at || b.check_in_date);
+          return bookingDate.getFullYear() === currentYear &&
+                 ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase());
+        })
         .reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
-
-      const pendingDeposit = enhancedBookings
-        .filter(b => b?.status?.toLowerCase() === "pending")
-        .reduce((a, b) => a + (Number(b.deposit_amount) || 0), 0);
-
-      const totalEarnings = enhancedBookings
-        .filter(b => ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase()))
-        .reduce((a, b) => a + (Number(b.amount) || 0), 0);
 
       const pendingBookings = bookings.filter(b => b?.status?.toLowerCase() === "pending").length;
 
@@ -411,48 +434,149 @@ const OwnerDashboard = () => {
         totalRent,
         totalDeposit,
         pendingRent,
-        pendingDeposit
+        pendingDeposit,
+        monthlyRevenue,
+        yearlyRevenue,
+        cancelledBookings: cancelledBookingsList.length,
+        completedBookings: completedBookingsList.length
+      });
+
+      setSnackbar({
+        open: true,
+        message: "Dashboard loaded successfully",
+        severity: "success"
       });
 
     } catch (err) {
       console.error("❌ Dashboard error:", err?.response?.data || err.message);
+
+      if (err.response?.status === 401) {
+        console.log("🔐 Unauthorized");
+      }
+
       setSnackbar({
         open: true,
         message: err.response?.data?.message || "Failed to load dashboard",
         severity: "error"
       });
+
     } finally {
       setPageLoading(false);
       setRefreshing(false);
     }
   }, [user, recentEnquiries.length]);
 
+  /* ---------------- AUTH + LOAD ================= */
   useEffect(() => {
-    if (!authLoading && !user) navigate("/login");
-    if (user && role === "owner") loadAllData();
-  }, [user, role, authLoading, navigate, loadAllData]);
+    if (!authLoading && !user) {
+      navigate("/login");
+    }
 
-  const handleRefresh = () => loadAllData(true);
-  const handleViewProperty = (propertyId) => navigate(`/pg/${propertyId}`);
-  const handleEditProperty = (propertyId) => navigate(`/owner/edit/${propertyId}`);
-  const handleManageRooms = (propertyId) => navigate(`/owner/rooms/${propertyId}`);
-  const handleManagePhotos = (propertyId) => navigate(`/owner/photos/${propertyId}`);
-  const handleManageVideos = (propertyId) => navigate(`/owner/videos/${propertyId}`);
-  const handleChat = (propertyId) => navigate(`/owner/pg-chat/${propertyId}`);
-  const handleAnnouncement = (propertyId) => navigate(`/owner/pg-chat/${propertyId}?mode=announcement`);
-  const handleCreatePlan = (propertyId) => navigate(`/owner/property/${propertyId}/plans`);
-  const handleViewBooking = (bookingId) => navigate(`/owner/bookings/${bookingId}`);
+    if (user && role === "owner") {
+      loadAllData();
+      loadNotifications();
+    }
+  }, [user, role, authLoading, navigate, loadAllData, loadNotifications]);
 
-  // Enhanced QR Code Generator with Preview
+  /* ---------------- HANDLERS ---------------- */
+
+  const handleRefresh = () => {
+    loadAllData(true);
+  };
+
+  const handleViewProperty = (propertyId) => {
+    navigate(`/pg/${propertyId}`);
+  };
+
+  const handleEditProperty = (propertyId) => {
+    navigate(`/owner/edit/${propertyId}`);
+  };
+
+  const handleManageRooms = (propertyId) => {
+    navigate(`/owner/rooms/${propertyId}`);
+  };
+
+  const handleManagePhotos = (propertyId) => {
+    navigate(`/owner/photos/${propertyId}`);
+  };
+
+  const handleManageVideos = (propertyId) => {
+    navigate(`/owner/videos/${propertyId}`);
+  };
+
+  const handleChat = (propertyId) => {
+    navigate(`/owner/pg-chat/${propertyId}`);
+  };
+
+  const handleAnnouncement = (propertyId) => {
+    navigate(`/owner/pg-chat/${propertyId}?mode=announcement`);
+  };
+
+  const handleCreatePlan = (propertyId) => {
+    navigate(`/owner/property/${propertyId}/plans`);
+  };
+
+  const handleViewBooking = (bookingId) => {
+    navigate(`/owner/bookings/${bookingId}`);
+  };
+
+  const handleViewBookingDetails = (booking) => {
+    setSelectedBooking(booking);
+    setBookingDetailsOpen(true);
+  };
+
   const handleGenerateQR = async (propertyId) => {
     try {
       const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
-      const propertyName = property?.pg_name || "PG";
+      setSelectedProperty(property);
+      
       const url = `https://nepxall-app.vercel.app/scan/${propertyId}`;
 
       const qr = new QRCodeStyling({
         width: 400,
         height: 400,
+        data: url,
+        dotsOptions: {
+          type: "square",
+          color: "#000000"
+        },
+        backgroundOptions: {
+          color: "#ffffff"
+        },
+        cornersSquareOptions: {
+          type: "square",
+          color: "#000000"
+        },
+        cornersDotOptions: {
+          type: "square",
+          color: "#000000"
+        }
+      });
+
+      const qrBlob = await qr.getRawData("png");
+      const qrUrl = URL.createObjectURL(qrBlob);
+      setQrImageUrl(qrUrl);
+      setQrOpen(true);
+      
+    } catch (err) {
+      console.error("QR Generation Error:", err);
+      setSnackbar({ open: true, message: "Failed to generate QR code", severity: "error" });
+    }
+  };
+
+  const handleDownloadQRPoster = async () => {
+    if (!selectedProperty) return;
+    
+    try {
+      const BRAND_BLUE = "#0B5ED7";
+      const BRAND_GREEN = "#4CAF50";
+      const propertyName = selectedProperty?.pg_name || "PG";
+      const propertyId = selectedProperty?.id || selectedProperty?.pg_id;
+      const url = `https://nepxall-app.vercel.app/scan/${propertyId}`;
+
+      const qr = new QRCodeStyling({
+        width: 600,
+        height: 600,
         data: url,
         dotsOptions: { type: "square", color: "#000000" },
         backgroundOptions: { color: "#ffffff" },
@@ -460,90 +584,168 @@ const OwnerDashboard = () => {
         cornersDotOptions: { type: "square", color: "#000000" }
       });
 
-      const qrBlob = await qr.getRawData("png");
-      const qrUrl = URL.createObjectURL(qrBlob);
-      setQrImageUrl(qrUrl);
-      setSelectedPropertyForQR(property);
-      setQrPreviewOpen(true);
+      const canvas = document.createElement("canvas");
+      canvas.width = 900;
+      canvas.height = 1100;
+      const ctx = canvas.getContext("2d");
+
+      ctx.fillStyle = "#F9FAFB";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.textAlign = "center";
+
+      const logo = new Image();
+      logo.crossOrigin = "anonymous";
+      logo.src = "/logo.png";
+
+      logo.onload = async () => {
+        ctx.drawImage(logo, 350, 40, 200, 110);
+        
+        ctx.font = "900 54px Arial";
+        const gradient = ctx.createLinearGradient(360, 210, 540, 210);
+        gradient.addColorStop(0, BRAND_BLUE);
+        gradient.addColorStop(1, BRAND_GREEN);
+        ctx.fillStyle = gradient;
+        ctx.shadowColor = "rgba(0,0,0,0.15)";
+        ctx.shadowBlur = 2;
+        ctx.fillText("Nepxall", 450, 210);
+        ctx.shadowColor = "transparent";
+        
+        ctx.font = "26px Arial";
+        ctx.fillStyle = "#94a3b8";
+        ctx.fillText("Next Places for Living", 450, 250);
+        
+        ctx.font = "bold 36px Arial";
+        ctx.fillStyle = "#111827";
+        ctx.fillText(propertyName.toUpperCase(), 450, 320);
+        
+        ctx.font = "26px Arial";
+        ctx.fillStyle = BRAND_BLUE;
+        ctx.fillText("Scan QR to View Rooms", 450, 380);
+        
+        ctx.font = "24px Arial";
+        ctx.fillStyle = "#6B7280";
+        ctx.fillText("Book Instantly Online", 450, 415);
+        
+        const qrBlob = await qr.getRawData("png");
+        const qrImg = new Image();
+        qrImg.src = URL.createObjectURL(qrBlob);
+        
+        qrImg.onload = () => {
+          ctx.drawImage(qrImg, 150, 450, 600, 600);
+          ctx.font = "22px Arial";
+          ctx.fillStyle = "#6B7280";
+          ctx.fillText("Powered by Nepxall", 450, 1080);
+          
+          const link = document.createElement("a");
+          link.href = canvas.toDataURL("image/png");
+          link.download = `nepxall-${propertyName}-entrance-qr.png`;
+          link.click();
+        };
+      };
     } catch (err) {
-      console.error("QR Generation Error:", err);
+      console.error("Poster Download Error:", err);
     }
   };
 
-  const downloadFullPoster = async () => {
-    if (!selectedPropertyForQR) return;
-    
-    const BRAND_BLUE = "#0B5ED7";
-    const BRAND_GREEN = "#4CAF50";
-    const propertyName = selectedPropertyForQR.pg_name;
-
-    const canvas = document.createElement("canvas");
-    canvas.width = 900;
-    canvas.height = 1100;
-    const ctx = canvas.getContext("2d");
-
-    ctx.fillStyle = "#F9FAFB";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.textAlign = "center";
-
-    const logo = new Image();
-    logo.crossOrigin = "anonymous";
-    logo.src = "/logo.png";
-
-    const qrImg = new Image();
-    qrImg.src = qrImageUrl;
-
-    await Promise.all([
-      new Promise((resolve) => { logo.onload = resolve; logo.onerror = resolve; }),
-      new Promise((resolve) => { qrImg.onload = resolve; qrImg.onerror = resolve; })
+  const handleExportReport = () => {
+    // Generate CSV report
+    const headers = ["Property", "Tenant", "Check-in Date", "Room Type", "Monthly Rent", "Status"];
+    const rows = bookingHistory.map(booking => [
+      booking.pg_name || "N/A",
+      booking.name || booking.tenant_name || "Unknown",
+      formatDate(booking.check_in_date || booking.created_at),
+      booking.room_type || "Not specified",
+      formatCurrency(booking.monthly_rent || 0),
+      booking.status || "Pending"
     ]);
-
-    ctx.drawImage(logo, 350, 40, 200, 110);
     
-    ctx.font = "900 54px 'Inter', Arial";
-    const gradient = ctx.createLinearGradient(360, 210, 540, 210);
-    gradient.addColorStop(0, BRAND_BLUE);
-    gradient.addColorStop(1, BRAND_GREEN);
-    ctx.fillStyle = gradient;
-    ctx.fillText("Nepxall", 450, 210);
+    const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `bookings-report-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
     
-    ctx.font = "26px 'Inter', Arial";
-    ctx.fillStyle = "#94a3b8";
-    ctx.fillText("Next Places for Living", 450, 250);
-    
-    ctx.font = "bold 36px 'Inter', Arial";
-    ctx.fillStyle = "#111827";
-    ctx.fillText(propertyName.toUpperCase(), 450, 320);
-    
-    ctx.font = "26px 'Inter', Arial";
-    ctx.fillStyle = BRAND_BLUE;
-    ctx.fillText("Scan QR to View Rooms", 450, 380);
-    
-    ctx.font = "24px 'Inter', Arial";
-    ctx.fillStyle = "#6B7280";
-    ctx.fillText("Book Instantly Online", 450, 415);
-    
-    ctx.drawImage(qrImg, 150, 450, 600, 600);
-    
-    ctx.font = "22px 'Inter', Arial";
-    ctx.fillStyle = "#6B7280";
-    ctx.fillText("Powered by Nepxall", 450, 1080);
-    
-    const link = document.createElement("a");
-    link.href = canvas.toDataURL("image/png");
-    link.download = `nepxall-${propertyName}-entrance-qr.png`;
-    link.click();
+    setSnackbar({ open: true, message: "Report exported successfully", severity: "success" });
   };
 
+  const handleMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleNotificationOpen = (event) => {
+    setNotificationAnchor(event.currentTarget);
+    setUnreadCount(0);
+  };
+
+  const handleNotificationClose = () => {
+    setNotificationAnchor(null);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 17) return "Good Afternoon";
+    return "Good Evening";
+  };
+
+  const greeting = getGreeting();
+  const ownerName = user?.name?.split(' ')[0] || 'Owner';
+
+  /* ================= PROTECTION ================= */
   if (authLoading || pageLoading) {
     return (
-      <Box minHeight="100vh" display="flex" justifyContent="center" alignItems="center" sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+      <Box 
+        sx={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #0a0f1a 0%, #0f1724 100%)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 3
+        }}
+      >
+        <Box sx={{ position: 'relative' }}>
+          <CircularProgress size={80} thickness={3} sx={{ color: '#4CAF50' }} />
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: 60,
+              height: 60,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
+              animation: `${pulseGlow} 1.5s infinite`,
+            }}
+          />
+        </Box>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            color: '#fff', 
+            fontWeight: 500,
+            background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
+          }}
         >
-          <CircularProgress size={80} thickness={4} sx={{ color: 'white' }} />
-        </motion.div>
+          Loading your dashboard...
+        </Typography>
       </Box>
     );
   }
@@ -551,699 +753,1291 @@ const OwnerDashboard = () => {
   if (!user) return <Navigate to="/login" replace />;
   if (role !== "owner") return <Navigate to="/" replace />;
 
+  /* ---------------- UI ---------------- */
+
   return (
-    <Box sx={{ 
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f0c29, #302b63, #24243e)',
-      position: 'relative',
-      overflowX: 'hidden'
-    }}>
-      {/* Animated Background Elements */}
-      <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-        <motion.div
-          animate={{ 
-            scale: [1, 1.2, 1],
-            x: [0, 100, -100, 0],
-            y: [0, 50, -50, 0]
-          }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          style={{
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: 'radial-gradient(ellipse at 20% 30%, rgba(11, 94, 215, 0.08), rgba(0, 0, 0, 0.95)), linear-gradient(135deg, #0a0f1a 0%, #0f1724 100%)',
+        position: 'relative',
+        overflowX: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundImage: 'radial-gradient(circle at 10% 20%, rgba(76, 175, 80, 0.03) 0%, transparent 50%)',
+          pointerEvents: 'none',
+        }
+      }}
+    >
+      {/* Animated background mesh */}
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          overflow: 'hidden',
+          zIndex: 0,
+          '&::before': {
+            content: '""',
             position: 'absolute',
-            top: '10%',
-            right: '-10%',
-            width: '500px',
-            height: '500px',
-            background: 'radial-gradient(circle, rgba(11,94,215,0.3) 0%, rgba(76,175,80,0.1) 100%)',
-            borderRadius: '50%',
-            filter: 'blur(80px)'
-          }}
-        />
-        <motion.div
-          animate={{ 
-            scale: [1.2, 1, 1.2],
-            x: [0, -50, 50, 0]
-          }}
-          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-          style={{
-            position: 'absolute',
-            bottom: '10%',
-            left: '-10%',
-            width: '400px',
-            height: '400px',
-            background: 'radial-gradient(circle, rgba(139,92,246,0.3) 0%, rgba(11,94,215,0.1) 100%)',
-            borderRadius: '50%',
-            filter: 'blur(80px)'
-          }}
-        />
-      </Box>
+            width: '200%',
+            height: '200%',
+            top: '-50%',
+            left: '-50%',
+            background: 'radial-gradient(circle, rgba(11,94,215,0.15) 0%, transparent 70%)',
+            animation: `${float} 20s ease-in-out infinite`,
+          }
+        }}
+      />
 
-      {/* Main Content */}
-      <Container maxWidth="xl" sx={{ py: 4, position: 'relative', zIndex: 1 }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 2, md: 4 }, position: 'relative', zIndex: 1 }}>
         
-        {/* Hero Header - Futuristic Glass Card */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <Paper elevation={0} sx={{
-            background: 'rgba(255,255,255,0.05)',
+        {/* FLOATING HEADER - Glass morphism */}
+        <Box
+          component={motion ? motion.div : "div"}
+          {...(motion ? { initial: { y: -50, opacity: 0 }, animate: { y: 0, opacity: 1 }, transition: { duration: 0.6, type: "spring", stiffness: 100 } } : {})}
+          sx={{
+            position: 'sticky',
+            top: 16,
+            zIndex: 100,
             backdropFilter: 'blur(20px)',
+            background: 'rgba(15, 23, 36, 0.7)',
             borderRadius: '32px',
-            border: '1px solid rgba(255,255,255,0.1)',
-            p: { xs: 3, md: 5 },
+            border: '1px solid rgba(255, 255, 255, 0.08)',
             mb: 4,
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            {/* Decorative Gradient Bar */}
-            <Box sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '4px',
-              background: 'linear-gradient(90deg, #0B5ED7, #4CAF50, #8B5CF6, #0B5ED7)',
-              backgroundSize: '300% 100%',
-              animation: 'gradientShift 3s ease infinite'
-            }} />
-            
-            <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={3}>
-              <Box>
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  <Typography variant="overline" sx={{ 
-                    color: '#8B5CF6', 
-                    letterSpacing: 2,
-                    fontWeight: 600,
-                    background: 'linear-gradient(135deg, #8B5CF6, #0B5ED7)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent'
-                  }}>
-                    {greeting.toUpperCase()}
-                  </Typography>
-                </motion.div>
-                
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  <Typography variant="h3" sx={{
-                    fontWeight: 800,
-                    background: 'linear-gradient(135deg, #fff, #0B5ED7, #4CAF50)',
-                    backgroundSize: '200% auto',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    mb: 1,
-                    fontSize: { xs: '2rem', md: '3rem' }
-                  }}>
-                    {user?.name || 'Owner'} 👋
-                  </Typography>
-                </motion.div>
-                
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  <Typography sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                    {currentTime.toLocaleDateString('en-US', { 
-                      weekday: 'long', 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })}
-                  </Typography>
-                </motion.div>
-              </Box>
-              
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.5 }}
-                style={{ display: 'flex', gap: '12px' }}
+            p: { xs: 1.5, md: 2 },
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+            <Box>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: '#4CAF50',
+                  fontWeight: 500,
+                  letterSpacing: '0.5px',
+                  textTransform: 'uppercase',
+                  fontSize: '0.75rem'
+                }}
               >
-                <Button
-                  startIcon={<AddIcon />}
-                  onClick={() => navigate("/owner/add")}
-                  sx={{
-                    background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
-                    color: 'white',
-                    borderRadius: '40px',
-                    px: 4,
-                    py: 1.5,
-                    '&:hover': {
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 10px 30px rgba(11,94,215,0.3)'
-                    },
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  Add Property
-                </Button>
-                
-                <IconButton
-                  onClick={handleRefresh}
-                  disabled={refreshing}
-                  sx={{
-                    background: 'rgba(255,255,255,0.1)',
-                    backdropFilter: 'blur(10px)',
-                    '&:hover': { transform: 'rotate(180deg)' },
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  <RefreshIcon sx={{ color: 'white' }} />
-                </IconButton>
-              </motion.div>
+                {greeting}
+              </Typography>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 800,
+                  background: 'linear-gradient(135deg, #fff 0%, #94a3b8 100%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  fontSize: { xs: '1.5rem', md: '2rem' }
+                }}
+              >
+                {ownerName}
+              </Typography>
             </Box>
-          </Paper>
-        </motion.div>
 
-        {/* Smart Stats Cards - Asymmetrical Layout */}
+            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+              {/* Notifications */}
+              <IconButton 
+                onClick={handleNotificationOpen}
+                sx={{
+                  background: 'rgba(255,255,255,0.05)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  color: '#fff',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    background: 'rgba(76, 175, 80, 0.2)',
+                  }
+                }}
+              >
+                <Badge badgeContent={unreadCount} color="error">
+                  <NotificationsIcon />
+                </Badge>
+              </IconButton>
+
+              {/* Refresh */}
+              <IconButton 
+                onClick={handleRefresh} 
+                disabled={refreshing}
+                sx={{
+                  background: 'rgba(255,255,255,0.05)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  color: '#fff',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    background: 'rgba(76, 175, 80, 0.2)',
+                    transform: 'rotate(180deg)'
+                  }
+                }}
+              >
+                <RefreshIcon />
+              </IconButton>
+
+              {/* Export Report */}
+              <Tooltip title="Export Report">
+                <IconButton 
+                  onClick={handleExportReport}
+                  sx={{
+                    background: 'rgba(255,255,255,0.05)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: '16px',
+                    color: '#fff',
+                    '&:hover': {
+                      background: 'rgba(139, 92, 246, 0.2)',
+                    }
+                  }}
+                >
+                  <DownloadIcon />
+                </IconButton>
+              </Tooltip>
+
+              <Button
+                startIcon={<ChatIcon />}
+                onClick={() => navigate("/owner/chats")}
+                sx={{
+                  background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
+                  borderRadius: '24px',
+                  px: 3,
+                  py: 1,
+                  color: '#fff',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  boxShadow: '0 4px 15px rgba(76, 175, 80, 0.3)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 25px rgba(76, 175, 80, 0.4)'
+                  }
+                }}
+              >
+                Chats
+              </Button>
+
+              <Button
+                startIcon={<AddIcon />}
+                onClick={() => navigate("/owner/add")}
+                sx={{
+                  background: 'rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '24px',
+                  px: 3,
+                  py: 1,
+                  color: '#fff',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    background: 'rgba(76, 175, 80, 0.2)',
+                    borderColor: '#4CAF50'
+                  }
+                }}
+              >
+                Add Property
+              </Button>
+
+              {/* User Menu */}
+              <IconButton 
+                onClick={handleMenuOpen}
+                sx={{
+                  background: 'rgba(255,255,255,0.05)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  color: '#fff',
+                  '&:hover': {
+                    background: 'rgba(76, 175, 80, 0.2)',
+                  }
+                }}
+              >
+                <Avatar sx={{ width: 32, height: 32, bgcolor: '#4CAF50' }}>
+                  {ownerName.charAt(0)}
+                </Avatar>
+              </IconButton>
+            </Box>
+          </Box>
+        </Box>
+
+        {/* User Menu Dropdown */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          PaperProps={{
+            sx: {
+              background: 'rgba(15, 23, 36, 0.95)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: '20px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              mt: 1,
+              minWidth: 200
+            }
+          }}
+        >
+          <MenuItem onClick={() => { handleMenuClose(); navigate("/owner/profile"); }}>
+            <ListItemIcon><PersonIcon fontSize="small" sx={{ color: '#4CAF50' }} /></ListItemIcon>
+            <ListItemText>Profile</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={() => { handleMenuClose(); navigate("/owner/settings"); }}>
+            <ListItemIcon><SettingsIcon fontSize="small" sx={{ color: '#0B5ED7' }} /></ListItemIcon>
+            <ListItemText>Settings</ListItemText>
+          </MenuItem>
+          <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
+          <MenuItem onClick={handleLogout}>
+            <ListItemIcon><LogoutIcon fontSize="small" sx={{ color: '#dc2626' }} /></ListItemIcon>
+            <ListItemText>Logout</ListItemText>
+          </MenuItem>
+        </Menu>
+
+        {/* Notifications Dropdown */}
+        <Menu
+          anchorEl={notificationAnchor}
+          open={Boolean(notificationAnchor)}
+          onClose={handleNotificationClose}
+          PaperProps={{
+            sx: {
+              background: 'rgba(15, 23, 36, 0.95)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: '20px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              mt: 1,
+              width: 320,
+              maxHeight: 400
+            }
+          }}
+        >
+          <Box sx={{ p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <Typography sx={{ color: '#fff', fontWeight: 600 }}>Notifications</Typography>
+          </Box>
+          {notifications.length === 0 ? (
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+              <Typography sx={{ color: '#94a3b8' }}>No notifications</Typography>
+            </Box>
+          ) : (
+            notifications.map(notif => (
+              <MenuItem key={notif.id} sx={{ flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+                <Typography sx={{ color: '#fff', fontSize: '0.85rem' }}>{notif.message}</Typography>
+                <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>
+                  {formatDate(notif.timestamp)}
+                </Typography>
+              </MenuItem>
+            ))
+          )}
+        </Menu>
+
+        {/* SMART STATS CARDS - 6 Cards for better overview */}
         <Box sx={{ mb: 5 }}>
           <Grid container spacing={3}>
-            {/* Property Card - Emerald Glow */}
-            <Grid item xs={12} md={3}>
-              <GlowingCard delay={0.1}>
-                <Paper sx={{
-                  background: 'linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4))',
+            {/* Properties Card */}
+            <Grid item xs={12} sm={6} md={4} lg={2}>
+              <Box
+                sx={{
+                  background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.15), rgba(76, 175, 80, 0.05))',
                   backdropFilter: 'blur(10px)',
                   borderRadius: '28px',
-                  border: '1px solid rgba(76,175,80,0.3)',
-                  p: 3,
+                  border: '1px solid rgba(76, 175, 80, 0.3)',
+                  p: 2.5,
+                  height: '100%',
                   position: 'relative',
                   overflow: 'hidden',
                   transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-8px)',
-                    borderColor: '#4CAF50',
-                    boxShadow: '0 20px 40px rgba(76,175,80,0.2)'
+                  '&:hover': { transform: 'translateY(-5px)' },
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '3px',
+                    background: 'linear-gradient(90deg, #4CAF50, #0B5ED7)',
                   }
-                }}>
-                  <Box sx={{ position: 'absolute', top: 20, right: 20 }}>
-                    <FloatingIcon icon={<ApartmentIcon sx={{ fontSize: 48, color: '#4CAF50' }} />} color="#4CAF50" delay={0} />
-                  </Box>
-                  <Typography variant="overline" sx={{ color: '#4CAF50', fontWeight: 600 }}>
-                    Total Properties
-                  </Typography>
-                  <Typography variant="h2" sx={{ fontWeight: 800, color: 'white', mt: 1, mb: 1 }}>
-                    <AnimatedCounter value={stats.totalProperties} duration={2} />
-                  </Typography>
-                  <LinearProgress variant="determinate" value={100} sx={{ bgcolor: 'rgba(76,175,80,0.2)', '& .MuiLinearProgress-bar': { bgcolor: '#4CAF50' } }} />
-                </Paper>
-              </GlowingCard>
-            </Grid>
-
-            {/* Rooms Card - Electric Blue */}
-            <Grid item xs={12} md={3}>
-              <GlowingCard delay={0.2}>
-                <Paper sx={{
-                  background: 'linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4))',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '28px',
-                  border: '1px solid rgba(11,94,215,0.3)',
-                  p: 3,
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-8px)',
-                    borderColor: '#0B5ED7',
-                    boxShadow: '0 20px 40px rgba(11,94,215,0.2)'
-                  }
-                }}>
-                  <Box sx={{ position: 'absolute', top: 20, right: 20 }}>
-                    <FloatingIcon icon={<RoomIcon sx={{ fontSize: 48, color: '#0B5ED7' }} />} color="#0B5ED7" delay={1} />
-                  </Box>
-                  <Typography variant="overline" sx={{ color: '#0B5ED7', fontWeight: 600 }}>
-                    Total Rooms
-                  </Typography>
-                  <Typography variant="h2" sx={{ fontWeight: 800, color: 'white', mt: 1, mb: 1 }}>
-                    <AnimatedCounter value={stats.totalRooms} duration={2} />
-                  </Typography>
-                  <Box display="flex" justifyContent="space-between">
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-                      Occupied: {stats.occupiedRooms}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-                      Available: {stats.availableRooms}
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box>
+                    <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>PROPERTIES</Typography>
+                    <Typography sx={{ fontSize: '2rem', fontWeight: 800, color: '#4CAF50', lineHeight: 1 }}>
+                      {animatedTotalProperties}
                     </Typography>
                   </Box>
-                </Paper>
-              </GlowingCard>
+                  <ApartmentIcon sx={{ fontSize: 36, color: '#4CAF50', opacity: 0.7 }} />
+                </Box>
+              </Box>
             </Grid>
 
-            {/* Occupancy Card - Neon Purple */}
-            <Grid item xs={12} md={3}>
-              <GlowingCard delay={0.3}>
-                <Paper sx={{
-                  background: 'linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4))',
+            {/* Rooms Card */}
+            <Grid item xs={12} sm={6} md={4} lg={2}>
+              <Box
+                sx={{
+                  background: 'linear-gradient(135deg, rgba(11, 94, 215, 0.15), rgba(11, 94, 215, 0.05))',
                   backdropFilter: 'blur(10px)',
                   borderRadius: '28px',
-                  border: '1px solid rgba(139,92,246,0.3)',
-                  p: 3,
+                  border: '1px solid rgba(11, 94, 215, 0.3)',
+                  p: 2.5,
+                  height: '100%',
                   transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-8px)',
-                    borderColor: '#8B5CF6',
-                    boxShadow: '0 20px 40px rgba(139,92,246,0.2)'
+                  '&:hover': { transform: 'translateY(-5px)' },
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '3px',
+                    background: 'linear-gradient(90deg, #0B5ED7, #4CAF50)',
                   }
-                }}>
-                  <Box sx={{ position: 'absolute', top: 20, right: 20 }}>
-                    <FloatingIcon icon={<TrendingUpIcon sx={{ fontSize: 48, color: '#8B5CF6' }} />} color="#8B5CF6" delay={2} />
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box>
+                    <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>TOTAL ROOMS</Typography>
+                    <Typography sx={{ fontSize: '2rem', fontWeight: 800, color: '#0B5ED7', lineHeight: 1 }}>
+                      {animatedTotalRooms}
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.7rem', color: '#4CAF50' }}>
+                      {stats.availableRooms} available
+                    </Typography>
                   </Box>
-                  <Typography variant="overline" sx={{ color: '#8B5CF6', fontWeight: 600 }}>
-                    Occupancy Rate
-                  </Typography>
-                  <Typography variant="h2" sx={{ fontWeight: 800, color: 'white', mt: 1, mb: 1 }}>
-                    <AnimatedCounter value={stats.occupancyRate} duration={2} suffix="%" />
-                  </Typography>
-                  <LinearProgress variant="determinate" value={stats.occupancyRate} sx={{ bgcolor: 'rgba(139,92,246,0.2)', '& .MuiLinearProgress-bar': { bgcolor: '#8B5CF6' } }} />
-                </Paper>
-              </GlowingCard>
+                  <RoomIcon sx={{ fontSize: 36, color: '#0B5ED7', opacity: 0.7 }} />
+                </Box>
+              </Box>
             </Grid>
 
-            {/* Pending Card - Soft Red Pulse */}
-            <Grid item xs={12} md={3}>
-              <GlowingCard delay={0.4}>
-                <Paper sx={{
-                  background: 'linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4))',
+            {/* Occupancy Card */}
+            <Grid item xs={12} sm={6} md={4} lg={2}>
+              <Box
+                sx={{
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05))',
                   backdropFilter: 'blur(10px)',
                   borderRadius: '28px',
-                  border: '1px solid rgba(220,38,38,0.3)',
-                  p: 3,
+                  border: '1px solid rgba(139, 92, 246, 0.3)',
+                  p: 2.5,
+                  height: '100%',
                   transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-8px)',
-                    borderColor: '#dc2626',
-                    boxShadow: '0 20px 40px rgba(220,38,38,0.2)'
+                  '&:hover': { transform: 'translateY(-5px)' },
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '3px',
+                    background: 'linear-gradient(90deg, #8B5CF6, #4CAF50)',
                   }
-                }}>
-                  <Box sx={{ position: 'absolute', top: 20, right: 20 }}>
-                    <FloatingIcon icon={<PendingIcon sx={{ fontSize: 48, color: '#dc2626' }} />} color="#dc2626" delay={3} />
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box>
+                    <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>OCCUPANCY</Typography>
+                    <Typography sx={{ fontSize: '2rem', fontWeight: 800, color: '#8B5CF6', lineHeight: 1 }}>
+                      {animatedOccupancyRate}%
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                      {animatedOccupiedRooms} / {stats.totalRooms} rooms
+                    </Typography>
                   </Box>
-                  <Typography variant="overline" sx={{ color: '#dc2626', fontWeight: 600 }}>
-                    Pending Bookings
-                  </Typography>
-                  <Typography variant="h2" sx={{ fontWeight: 800, color: 'white', mt: 1, mb: 1 }}>
-                    <AnimatedCounter value={stats.pendingBookings} duration={2} />
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-                    Total: {stats.totalBookings}
-                  </Typography>
-                </Paper>
-              </GlowingCard>
+                  <TrendingUpIcon sx={{ fontSize: 36, color: '#8B5CF6', opacity: 0.7 }} />
+                </Box>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={stats.occupancyRate} 
+                  sx={{ 
+                    mt: 1.5, 
+                    borderRadius: '10px', 
+                    height: 4,
+                    bgcolor: 'rgba(255,255,255,0.1)',
+                    '& .MuiLinearProgress-bar': {
+                      background: 'linear-gradient(90deg, #8B5CF6, #4CAF50)',
+                      borderRadius: '10px'
+                    }
+                  }} 
+                />
+              </Box>
+            </Grid>
+
+            {/* Pending Bookings Card */}
+            <Grid item xs={12} sm={6} md={4} lg={2}>
+              <Box
+                sx={{
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05))',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '28px',
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  p: 2.5,
+                  height: '100%',
+                  transition: 'all 0.3s ease',
+                  '&:hover': { transform: 'translateY(-5px)' },
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '3px',
+                    background: 'linear-gradient(90deg, #f59e0b, #dc2626)',
+                  }
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box>
+                    <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>PENDING</Typography>
+                    <Typography sx={{ fontSize: '2rem', fontWeight: 800, color: '#f59e0b', lineHeight: 1 }}>
+                      {animatedPendingBookings}
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                      Awaiting confirmation
+                    </Typography>
+                  </Box>
+                  <PendingIcon sx={{ fontSize: 36, color: '#f59e0b', opacity: 0.7 }} />
+                </Box>
+              </Box>
+            </Grid>
+
+            {/* Monthly Revenue Card */}
+            <Grid item xs={12} sm={6} md={4} lg={2}>
+              <Box
+                sx={{
+                  background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.15), rgba(76, 175, 80, 0.05))',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '28px',
+                  border: '1px solid rgba(76, 175, 80, 0.3)',
+                  p: 2.5,
+                  height: '100%',
+                  transition: 'all 0.3s ease',
+                  '&:hover': { transform: 'translateY(-5px)' }
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box>
+                    <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>MONTHLY REVENUE</Typography>
+                    <Typography sx={{ fontSize: '1.4rem', fontWeight: 800, color: '#4CAF50', lineHeight: 1 }}>
+                      {formatCurrency(animatedMonthlyRevenue)}
+                    </Typography>
+                  </Box>
+                  <MoneyIcon sx={{ fontSize: 36, color: '#4CAF50', opacity: 0.7 }} />
+                </Box>
+              </Box>
+            </Grid>
+
+            {/* Rating Card */}
+            <Grid item xs={12} sm={6} md={4} lg={2}>
+              <Box
+                sx={{
+                  background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(234, 179, 8, 0.05))',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '28px',
+                  border: '1px solid rgba(234, 179, 8, 0.3)',
+                  p: 2.5,
+                  height: '100%',
+                  transition: 'all 0.3s ease',
+                  '&:hover': { transform: 'translateY(-5px)' }
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box>
+                    <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>AVG RATING</Typography>
+                    <Typography sx={{ fontSize: '2rem', fontWeight: 800, color: '#eab308', lineHeight: 1 }}>
+                      {stats.avgRating}
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
+                      {[1,2,3,4,5].map(star => (
+                        <StarIcon key={star} sx={{ fontSize: 12, color: star <= stats.avgRating ? '#eab308' : '#475569' }} />
+                      ))}
+                    </Box>
+                  </Box>
+                  <StarIcon sx={{ fontSize: 36, color: '#eab308', opacity: 0.7 }} />
+                </Box>
+              </Box>
             </Grid>
           </Grid>
         </Box>
 
-        {/* Availability Alert - Glass Toast Style */}
-        <AnimatePresence>
-          {stats.availableRooms > 0 && (
-            <Slide direction="down" in={true}>
-              <Alert 
-                severity="success" 
-                icon={<CommunityIcon />}
-                sx={{ 
-                  mb: 3,
-                  background: 'rgba(76,175,80,0.1)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(76,175,80,0.3)',
-                  borderRadius: '20px',
-                  color: '#4CAF50'
-                }}
-              >
-                <strong>{stats.availableRooms}</strong> rooms available across your properties
-              </Alert>
-            </Slide>
-          )}
-        </AnimatePresence>
-
-        {/* Properties Section - Horizontal Scroll Cards */}
-        {pgs.length > 0 && (
-          <Box sx={{ mb: 5 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="h4" sx={{ fontWeight: 700, color: 'white' }}>
-                Your Properties
-                <Chip 
-                  label={pgs.length} 
-                  size="small" 
-                  sx={{ ml: 2, background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)', color: 'white' }} 
-                />
-              </Typography>
-            </Box>
-
-            <Box sx={{ 
-              display: 'flex', 
-              overflowX: 'auto',
-              gap: 3,
-              pb: 2,
-              '&::-webkit-scrollbar': {
-                height: '8px',
-              },
-              '&::-webkit-scrollbar-track': {
-                background: 'rgba(255,255,255,0.1)',
-                borderRadius: '10px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
-                borderRadius: '10px',
-              }
-            }}>
-              {pgs.map((pg, index) => (
-                <motion.div
-                  key={pg.id || pg.pg_id}
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  whileHover={{ y: -10 }}
-                  style={{ minWidth: '350px', maxWidth: '400px' }}
-                >
-                  <PropertyCard
-                    property={pg}
-                    onView={() => handleViewProperty(pg.id || pg.pg_id)}
-                    onEdit={() => handleEditProperty(pg.id || pg.pg_id)}
-                    onRooms={() => handleManageRooms(pg.id || pg.pg_id)}
-                    onPhotos={() => handleManagePhotos(pg.id || pg.pg_id)}
-                    onVideos={() => handleManageVideos(pg.id || pg.pg_id)}
-                    onChat={() => handleChat(pg.id || pg.pg_id)}
-                    onAnnouncement={() => handleAnnouncement(pg.id || pg.pg_id)}
-                    onGenerateQR={() => handleGenerateQR(pg.id || pg.pg_id)}
-                    onCreatePlan={pg.pg_category === "coliving" ? () => handleCreatePlan(pg.id || pg.pg_id) : null}
-                  />
-                </motion.div>
-              ))}
-            </Box>
-          </Box>
-        )}
-
-        {/* Empty State */}
-        {pgs.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
+        {/* AVAILABILITY ALERT */}
+        {stats.availableRooms > 0 && (
+          <Box
+            sx={{
+              background: 'rgba(76, 175, 80, 0.15)',
+              backdropFilter: 'blur(12px)',
+              borderRadius: '20px',
+              border: '1px solid rgba(76, 175, 80, 0.4)',
+              p: 2,
+              mb: 4,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              flexWrap: 'wrap',
+              animation: `${pulseGlow} 2s infinite`
+            }}
           >
-            <Alert 
-              severity="info" 
-              sx={{ 
-                mb: 3, 
-                py: 3,
-                background: 'rgba(11,94,215,0.1)',
-                backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(11,94,215,0.3)',
-                borderRadius: '24px'
-              }}
-              action={
-                <Button 
-                  color="inherit" 
-                  size="small" 
-                  onClick={() => navigate("/owner/add")}
-                  startIcon={<AddIcon />}
-                  sx={{ color: '#0B5ED7' }}
-                >
-                  Add Now
-                </Button>
-              }
+            <CommunityIcon sx={{ color: '#4CAF50', fontSize: 28 }} />
+            <Typography sx={{ color: '#e2e8f0', flex: 1 }}>
+              <strong style={{ color: '#4CAF50', fontSize: '1.2rem' }}>{stats.availableRooms}</strong> rooms available across your properties
+            </Typography>
+            <Button
+              size="small"
+              onClick={() => navigate("/owner/add")}
+              sx={{ color: '#4CAF50', borderColor: '#4CAF50' }}
+              variant="outlined"
             >
-              <Typography variant="body1" sx={{ color: 'white' }}>
-                <strong>No properties added yet!</strong> Click the button to add your first property.
-              </Typography>
-            </Alert>
-          </motion.div>
+              Manage
+            </Button>
+          </Box>
         )}
 
-        {/* Bookings Section - Reinvented as Timeline Cards */}
-        <Box mt={4}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: 'white' }}>
-              Recent Bookings
-              {stats.totalBookings > 0 && (
-                <Chip 
-                  label={stats.totalBookings} 
-                  size="small" 
-                  sx={{ ml: 2, background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)', color: 'white' }} 
-                />
-              )}
-            </Typography>
-            
-            {stats.totalBookings > 5 && (
-              <Button 
-                onClick={() => navigate("/owner/bookings")}
-                endIcon={<ChevronIcon />}
-                sx={{ color: '#0B5ED7' }}
-              >
-                View All
-              </Button>
-            )}
-          </Box>
+        {/* TABS SECTION */}
+        <Box sx={{ mb: 4 }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={(e, v) => setActiveTab(v)}
+            sx={{
+              '& .MuiTab-root': {
+                color: '#94a3b8',
+                fontWeight: 600,
+                textTransform: 'none',
+                fontSize: '1rem',
+                '&.Mui-selected': {
+                  color: '#4CAF50',
+                }
+              },
+              '& .MuiTabs-indicator': {
+                backgroundColor: '#4CAF50',
+                height: 3,
+                borderRadius: '3px'
+              }
+            }}
+          >
+            <Tab label="Properties" icon={<ApartmentIcon />} iconPosition="start" />
+            <Tab label="Recent Bookings" icon={<ReceiptIcon />} iconPosition="start" />
+            <Tab label="Insights" icon={<TrendingUpIcon />} iconPosition="start" />
+          </Tabs>
 
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {recentBookings.length === 0 ? (
-              <Paper sx={{
-                background: 'rgba(255,255,255,0.05)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '24px',
-                p: 4,
-                textAlign: 'center'
-              }}>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)' }}>
-                  No bookings yet
-                </Typography>
-              </Paper>
-            ) : (
-              recentBookings.map((booking, index) => {
-                const statusStyle = getStatusBadgeStyle(booking.status);
-                const monthlyRent = booking.monthly_rent || 0;
-                
-                return (
-                  <motion.div
-                    key={booking.id}
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    whileHover={{ x: 10 }}
-                  >
-                    <Paper sx={{
-                      background: 'rgba(255,255,255,0.05)',
-                      backdropFilter: 'blur(10px)',
-                      borderRadius: '24px',
+          <Box sx={{ mt: 3 }}>
+            {/* Properties Tab */}
+            {activeTab === 0 && (
+              <>
+                {pgs.length === 0 ? (
+                  <Box
+                    sx={{
+                      background: 'rgba(15, 23, 36, 0.8)',
+                      backdropFilter: 'blur(20px)',
+                      borderRadius: '32px',
                       border: '1px solid rgba(255,255,255,0.1)',
-                      p: 2,
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        borderColor: 'rgba(11,94,215,0.5)',
-                        boxShadow: '0 10px 30px rgba(0,0,0,0.3)'
-                      }
-                    }}>
-                      <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
-                        <Box display="flex" alignItems="center" gap={2}>
-                          <Avatar sx={{ 
-                            width: 56, 
-                            height: 56, 
-                            background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
-                            boxShadow: `0 0 20px ${statusStyle.glow}`
-                          }}>
-                            {booking.tenant_name?.charAt(0) || 'U'}
-                          </Avatar>
-                          <Box>
-                            <Typography variant="h6" sx={{ fontWeight: 600, color: 'white' }}>
-                              {booking.tenant_name}
+                      p: { xs: 3, md: 6 },
+                      textAlign: 'center'
+                    }}
+                  >
+                    <ApartmentIcon sx={{ fontSize: 80, color: '#4CAF50', mb: 2, opacity: 0.7 }} />
+                    <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>
+                      No properties yet
+                    </Typography>
+                    <Typography sx={{ color: '#94a3b8', mb: 3 }}>
+                      Start by adding your first property to begin managing bookings and tenants.
+                    </Typography>
+                    <Button
+                      startIcon={<AddIcon />}
+                      onClick={() => navigate("/owner/add")}
+                      sx={{
+                        background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
+                        borderRadius: '30px',
+                        px: 4,
+                        py: 1.5,
+                        color: '#fff',
+                        fontWeight: 600,
+                        textTransform: 'none',
+                        fontSize: '1rem'
+                      }}
+                    >
+                      Add Your First Property
+                    </Button>
+                  </Box>
+                ) : (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 3
+                    }}
+                  >
+                    {pgs.map((pg, index) => (
+                      <Box
+                        key={pg.id || pg.pg_id}
+                        sx={{
+                          background: 'rgba(15, 23, 36, 0.8)',
+                          backdropFilter: 'blur(20px)',
+                          borderRadius: '28px',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          overflow: 'hidden',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            borderColor: 'rgba(76, 175, 80, 0.5)',
+                            boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
+                          }
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
+                          {/* Property Image */}
+                          <Box
+                            sx={{
+                              width: { xs: '100%', md: 280 },
+                              height: { xs: 200, md: 'auto' },
+                              backgroundImage: pg.image ? `url(${getImageUrl(pg.image)})` : 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                              position: 'relative'
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                top: 16,
+                                right: 16,
+                                background: pg.available_rooms > 0 
+                                  ? 'linear-gradient(135deg, #4CAF50, #2e7d32)'
+                                  : 'linear-gradient(135deg, #f59e0b, #dc2626)',
+                                color: '#fff',
+                                px: 1.5,
+                                py: 0.5,
+                                borderRadius: '20px',
+                                fontSize: '0.7rem',
+                                fontWeight: 600
+                              }}
+                            >
+                              {pg.available_rooms > 0 ? `${pg.available_rooms} AVAILABLE` : 'FULL'}
+                            </Box>
+                          </Box>
+
+                          {/* Property Info */}
+                          <Box sx={{ flex: 1, p: 3 }}>
+                            <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1.3rem', mb: 1 }}>
+                              {pg.pg_name}
                             </Typography>
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <PhoneIcon sx={{ fontSize: 12 }} />
-                              {booking.tenant_phone || <span style={{ color: '#f59e0b' }}>Hidden</span>}
+                            <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', mb: 2 }}>
+                              {pg.location || 'Location not specified'}
                             </Typography>
+
+                            <Grid container spacing={2} sx={{ mb: 2 }}>
+                              <Grid item xs={4}>
+                                <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Total Rooms</Typography>
+                                <Typography sx={{ color: '#fff', fontWeight: 600 }}>{pg.total_rooms || 0}</Typography>
+                              </Grid>
+                              <Grid item xs={4}>
+                                <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Available</Typography>
+                                <Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{pg.available_rooms || 0}</Typography>
+                              </Grid>
+                              <Grid item xs={4}>
+                                <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Starting Rent</Typography>
+                                <Typography sx={{ color: '#8B5CF6', fontWeight: 600 }}>{formatCurrency(pg.rent_amount)}</Typography>
+                              </Grid>
+                            </Grid>
+
+                            {/* Action Buttons */}
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                              <Tooltip title="View Property">
+                                <IconButton 
+                                  size="small"
+                                  onClick={() => handleViewProperty(pg.id || pg.pg_id)}
+                                  sx={{ 
+                                    bgcolor: 'rgba(255,255,255,0.05)',
+                                    borderRadius: '12px',
+                                    color: '#fff',
+                                    '&:hover': { bgcolor: '#0B5ED7' }
+                                  }}
+                                >
+                                  <ViewIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Edit Property">
+                                <IconButton 
+                                  size="small"
+                                  onClick={() => handleEditProperty(pg.id || pg.pg_id)}
+                                  sx={{ 
+                                    bgcolor: 'rgba(255,255,255,0.05)',
+                                    borderRadius: '12px',
+                                    color: '#fff',
+                                    '&:hover': { bgcolor: '#f59e0b' }
+                                  }}
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Manage Rooms">
+                                <IconButton 
+                                  size="small"
+                                  onClick={() => handleManageRooms(pg.id || pg.pg_id)}
+                                  sx={{ 
+                                    bgcolor: 'rgba(255,255,255,0.05)',
+                                    borderRadius: '12px',
+                                    color: '#fff',
+                                    '&:hover': { bgcolor: '#0B5ED7' }
+                                  }}
+                                >
+                                  <RoomIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Manage Photos">
+                                <IconButton 
+                                  size="small"
+                                  onClick={() => handleManagePhotos(pg.id || pg.pg_id)}
+                                  sx={{ 
+                                    bgcolor: 'rgba(255,255,255,0.05)',
+                                    borderRadius: '12px',
+                                    color: '#fff',
+                                    '&:hover': { bgcolor: '#4CAF50' }
+                                  }}
+                                >
+                                  <PhotoIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Manage Videos">
+                                <IconButton 
+                                  size="small"
+                                  onClick={() => handleManageVideos(pg.id || pg.pg_id)}
+                                  sx={{ 
+                                    bgcolor: 'rgba(255,255,255,0.05)',
+                                    borderRadius: '12px',
+                                    color: '#fff',
+                                    '&:hover': { bgcolor: '#dc2626' }
+                                  }}
+                                >
+                                  <VideoIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Generate QR">
+                                <IconButton 
+                                  size="small"
+                                  onClick={() => handleGenerateQR(pg.id || pg.pg_id)}
+                                  sx={{ 
+                                    bgcolor: 'rgba(255,255,255,0.05)',
+                                    borderRadius: '12px',
+                                    color: '#fff',
+                                    '&:hover': { bgcolor: '#8B5CF6' }
+                                  }}
+                                >
+                                  <QrIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Chat">
+                                <IconButton 
+                                  size="small"
+                                  onClick={() => handleChat(pg.id || pg.pg_id)}
+                                  sx={{ 
+                                    bgcolor: 'rgba(255,255,255,0.05)',
+                                    borderRadius: '12px',
+                                    color: '#fff',
+                                    '&:hover': { bgcolor: '#4CAF50' }
+                                  }}
+                                >
+                                  <ChatIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Announcement">
+                                <IconButton 
+                                  size="small"
+                                  onClick={() => handleAnnouncement(pg.id || pg.pg_id)}
+                                  sx={{ 
+                                    bgcolor: 'rgba(255,255,255,0.05)',
+                                    borderRadius: '12px',
+                                    color: '#fff',
+                                    '&:hover': { bgcolor: '#0B5ED7' }
+                                  }}
+                                >
+                                  <CampaignIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
                           </Box>
                         </Box>
-                        
-                        <Box>
-                          <Chip 
-                            label={booking.status?.toUpperCase() || 'PENDING'}
-                            sx={{ 
-                              background: statusStyle.bg,
-                              color: statusStyle.color,
-                              fontWeight: 600,
-                              boxShadow: statusStyle.glow,
-                              animation: statusStyle.glow !== 'none' ? 'pulse 2s infinite' : 'none'
-                            }}
-                          />
-                        </Box>
                       </Box>
+                    ))}
+                  </Box>
+                )}
+              </>
+            )}
+
+            {/* Recent Bookings Tab */}
+            {activeTab === 1 && (
+              <Box>
+                {recentBookings.length === 0 ? (
+                  <Box
+                    sx={{
+                      background: 'rgba(15, 23, 36, 0.6)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '24px',
+                      p: 4,
+                      textAlign: 'center',
+                      border: '1px solid rgba(255,255,255,0.05)'
+                    }}
+                  >
+                    <Typography sx={{ color: '#94a3b8' }}>No bookings yet</Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {recentBookings.map((booking, index) => {
+                      const statusStyle = getStatusBadgeStyle(booking.status);
+                      const monthlyRent = booking.monthly_rent || 0;
                       
-                      <Divider sx={{ my: 2, borderColor: 'rgba(255,255,255,0.1)' }} />
-                      
-                      <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
-                        <Box>
-                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                            Property
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: 'white', fontWeight: 500 }}>
-                            {booking.pg_name}
-                          </Typography>
-                        </Box>
-                        
-                        <Box>
-                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                            Room Type
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: 'white' }}>
-                            {booking.room_type}
-                          </Typography>
-                        </Box>
-                        
-                        <Box>
-                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                            Check-in Date
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: 'white' }}>
-                            {formatDate(booking.check_in_date)}
-                          </Typography>
-                        </Box>
-                        
-                        <Box>
-                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                            Monthly Rent
-                          </Typography>
-                          <Typography variant="h6" sx={{ 
-                            fontWeight: 700,
-                            background: 'linear-gradient(135deg, #8B5CF6, #0B5ED7)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent'
-                          }}>
-                            {formatCurrency(monthlyRent)}
-                          </Typography>
-                        </Box>
-                        
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => handleViewBooking(booking.id)}
+                      return (
+                        <Box
+                          key={booking.id}
                           sx={{
-                            borderColor: '#0B5ED7',
-                            color: '#0B5ED7',
-                            borderRadius: '20px',
+                            background: 'rgba(15, 23, 36, 0.7)',
+                            backdropFilter: 'blur(12px)',
+                            borderRadius: '24px',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            p: 2,
+                            transition: 'all 0.3s ease',
+                            cursor: 'pointer',
                             '&:hover': {
-                              borderColor: '#4CAF50',
-                              color: '#4CAF50'
+                              borderColor: 'rgba(76, 175, 80, 0.3)',
+                              boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
+                              transform: 'translateX(5px)'
                             }
                           }}
+                          onClick={() => handleViewBookingDetails(booking)}
                         >
-                          View Details
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
+                            {/* Avatar + Tenant Info */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 180 }}>
+                              <Avatar 
+                                sx={{ 
+                                  width: 50, 
+                                  height: 50, 
+                                  bgcolor: '#4CAF50',
+                                  background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)'
+                                }}
+                              >
+                                {booking.tenant_name?.charAt(0) || 'U'}
+                              </Avatar>
+                              <Box>
+                                <Typography sx={{ color: '#fff', fontWeight: 600 }}>
+                                  {booking.tenant_name}
+                                </Typography>
+                                <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <PhoneIcon sx={{ fontSize: 12 }} />
+                                  {booking.tenant_phone || 'Hidden'}
+                                </Typography>
+                              </Box>
+                            </Box>
+
+                            {/* Property & Room */}
+                            <Box sx={{ flex: 1, minWidth: 150 }}>
+                              <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Property</Typography>
+                              <Typography sx={{ color: '#fff', fontWeight: 500, fontSize: '0.9rem' }}>
+                                {booking.pg_name}
+                              </Typography>
+                              <Typography sx={{ color: '#8B5CF6', fontSize: '0.75rem' }}>
+                                {booking.room_type}
+                              </Typography>
+                            </Box>
+
+                            {/* Check-in Date */}
+                            <Box sx={{ minWidth: 100 }}>
+                              <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Check-in</Typography>
+                              <Typography sx={{ color: '#fff', fontSize: '0.85rem' }}>
+                                {formatDate(booking.check_in_date)}
+                              </Typography>
+                            </Box>
+
+                            {/* Monthly Rent */}
+                            <Box sx={{ minWidth: 100 }}>
+                              <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Monthly Rent</Typography>
+                              <Typography 
+                                sx={{ 
+                                  fontWeight: 700, 
+                                  fontSize: '1.1rem',
+                                  background: 'linear-gradient(135deg, #8B5CF6, #4CAF50)',
+                                  backgroundClip: 'text',
+                                  WebkitBackgroundClip: 'text',
+                                  WebkitTextFillColor: 'transparent'
+                                }}
+                              >
+                                {formatCurrency(monthlyRent)}
+                              </Typography>
+                            </Box>
+
+                            {/* Status Badge */}
+                            <Box sx={{ minWidth: 100 }}>
+                              <Chip 
+                                label={booking.status?.toUpperCase() || 'PENDING'}
+                                size="small"
+                                sx={{ 
+                                  bgcolor: statusStyle.bg,
+                                  color: statusStyle.color,
+                                  fontWeight: 600,
+                                  fontSize: '0.7rem',
+                                  minWidth: 90,
+                                  animation: statusStyle.glow === '#f59e0b' ? `${pulseGlow} 1.5s infinite` : 'none',
+                                  boxShadow: statusStyle.glow === '#f59e0b' ? `0 0 8px ${statusStyle.glow}` : 'none'
+                                }}
+                              />
+                            </Box>
+
+                            <IconButton
+                              onClick={(e) => { e.stopPropagation(); handleViewBooking(booking.id); }}
+                              sx={{
+                                bgcolor: 'rgba(255,255,255,0.05)',
+                                borderRadius: '14px',
+                                color: '#fff',
+                                '&:hover': { bgcolor: '#0B5ED7' }
+                              }}
+                            >
+                              <ViewIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        </Box>
+                      );
+                    })}
+                    
+                    {stats.totalBookings > 5 && (
+                      <Box sx={{ textAlign: 'center', mt: 2 }}>
+                        <Button 
+                          onClick={() => navigate("/owner/bookings")}
+                          endIcon={<ViewIcon />}
+                          sx={{ color: '#4CAF50' }}
+                        >
+                          View All Bookings
                         </Button>
                       </Box>
-                    </Paper>
-                  </motion.div>
-                );
-              })
+                    )}
+                  </Box>
+                )}
+              </Box>
+            )}
+
+            {/* Insights Tab */}
+            {activeTab === 2 && (
+              <Grid container spacing={3}>
+                {/* Revenue Summary */}
+                <Grid item xs={12} md={6}>
+                  <Box
+                    sx={{
+                      background: 'rgba(15, 23, 36, 0.7)',
+                      backdropFilter: 'blur(12px)',
+                      borderRadius: '24px',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      p: 3
+                    }}
+                  >
+                    <Typography sx={{ color: '#fff', fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <MoneyIcon sx={{ color: '#4CAF50' }} /> Revenue Summary
+                    </Typography>
+                    <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
+                    
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography sx={{ color: '#94a3b8' }}>Total Earnings</Typography>
+                      <Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{formatCurrency(stats.totalEarnings)}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography sx={{ color: '#94a3b8' }}>Monthly Revenue</Typography>
+                      <Typography sx={{ color: '#0B5ED7', fontWeight: 600 }}>{formatCurrency(stats.monthlyRevenue)}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography sx={{ color: '#94a3b8' }}>Yearly Revenue</Typography>
+                      <Typography sx={{ color: '#8B5CF6', fontWeight: 600 }}>{formatCurrency(stats.yearlyRevenue)}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography sx={{ color: '#94a3b8' }}>Total Rent Collected</Typography>
+                      <Typography sx={{ color: '#fff', fontWeight: 600 }}>{formatCurrency(stats.totalRent)}</Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+
+                {/* Booking Stats */}
+                <Grid item xs={12} md={6}>
+                  <Box
+                    sx={{
+                      background: 'rgba(15, 23, 36, 0.7)',
+                      backdropFilter: 'blur(12px)',
+                      borderRadius: '24px',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      p: 3
+                    }}
+                  >
+                    <Typography sx={{ color: '#fff', fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <ReceiptIcon sx={{ color: '#f59e0b' }} /> Booking Summary
+                    </Typography>
+                    <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
+                    
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography sx={{ color: '#94a3b8' }}>Total Bookings</Typography>
+                      <Typography sx={{ color: '#fff', fontWeight: 600 }}>{stats.totalBookings}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography sx={{ color: '#94a3b8' }}>Completed</Typography>
+                      <Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{stats.completedBookings}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography sx={{ color: '#94a3b8' }}>Pending</Typography>
+                      <Typography sx={{ color: '#f59e0b', fontWeight: 600 }}>{stats.pendingBookings}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography sx={{ color: '#94a3b8' }}>Cancelled</Typography>
+                      <Typography sx={{ color: '#dc2626', fontWeight: 600 }}>{stats.cancelledBookings}</Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+
+                {/* Deposit Summary */}
+                <Grid item xs={12}>
+                  <Box
+                    sx={{
+                      background: 'rgba(15, 23, 36, 0.7)',
+                      backdropFilter: 'blur(12px)',
+                      borderRadius: '24px',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      p: 3
+                    }}
+                  >
+                    <Typography sx={{ color: '#fff', fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <MoneyIcon sx={{ color: '#8B5CF6' }} /> Deposit Summary
+                    </Typography>
+                    <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
+                    
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography sx={{ color: '#94a3b8' }}>Total Deposit Collected</Typography>
+                          <Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{formatCurrency(stats.totalDeposit)}</Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography sx={{ color: '#94a3b8' }}>Pending Deposit</Typography>
+                          <Typography sx={{ color: '#f59e0b', fontWeight: 600 }}>{formatCurrency(stats.pendingDeposit)}</Typography>
+                        </Box>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                </Grid>
+              </Grid>
             )}
           </Box>
         </Box>
 
-        {/* Floating Action Buttons */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 1 }}
-          style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1000 }}
-        >
-          <Button
-            variant="contained"
-            startIcon={<ChatIcon />}
-            onClick={() => navigate("/owner/chats")}
-            sx={{
-              background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
-              borderRadius: '40px',
-              px: 3,
-              py: 1.5,
-              mr: 2,
-              '&:hover': {
-                transform: 'scale(1.05)',
-                boxShadow: '0 10px 30px rgba(11,94,215,0.5)'
-              }
-            }}
-          >
-            Chats
-          </Button>
-          
-          <Button
-            variant="contained"
-            startIcon={<HelpIcon />}
-            sx={{
-              background: 'rgba(255,255,255,0.1)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: '40px',
-              px: 3,
-              py: 1.5,
-              '&:hover': {
-                transform: 'scale(1.05)'
-              }
-            }}
-          >
-            Help
-          </Button>
-        </motion.div>
-
-        {/* QR Preview Modal */}
-        <AnimatePresence>
-          {qrPreviewOpen && (
-            <Box sx={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.8)',
+        {/* QR Code Preview Modal */}
+        <SwipeableDrawer
+          anchor="bottom"
+          open={qrOpen}
+          onClose={() => setQrOpen(false)}
+          onOpen={() => {}}
+          disableSwipeToOpen
+          sx={{
+            '& .MuiDrawer-paper': {
+              background: 'rgba(15, 23, 36, 0.95)',
               backdropFilter: 'blur(20px)',
-              zIndex: 2000,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-              >
-                <Paper sx={{
-                  background: 'rgba(255,255,255,0.1)',
-                  backdropFilter: 'blur(20px)',
-                  borderRadius: '32px',
-                  p: 4,
-                  maxWidth: '500px',
-                  textAlign: 'center'
-                }}>
-                  <IconButton
-                    onClick={() => setQrPreviewOpen(false)}
-                    sx={{ position: 'absolute', top: 16, right: 16 }}
-                  >
-                    <CloseIcon sx={{ color: 'white' }} />
-                  </IconButton>
-                  
-                  <Typography variant="h5" sx={{ color: 'white', mb: 2 }}>
-                    {selectedPropertyForQR?.pg_name}
-                  </Typography>
-                  
-                  <img src={qrImageUrl} alt="QR Code" style={{ width: '100%', borderRadius: '20px', marginBottom: '20px' }} />
-                  
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    onClick={downloadFullPoster}
-                    sx={{
-                      background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
-                      borderRadius: '40px',
-                      py: 1.5
+              borderTopLeftRadius: '32px',
+              borderTopRightRadius: '32px',
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              p: 3
+            }
+          }}
+        >
+          <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <IconButton onClick={() => setQrOpen(false)} sx={{ color: '#fff' }}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+            
+            <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>
+              {selectedProperty?.pg_name || 'Property'} QR Code
+            </Typography>
+            
+            {qrImageUrl && (
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                my: 3,
+                animation: `${float} 2s ease-in-out infinite`
+              }}>
+                <img 
+                  src={qrImageUrl} 
+                  alt="QR Code" 
+                  style={{ 
+                    width: 250, 
+                    height: 250, 
+                    borderRadius: '24px',
+                    boxShadow: '0 0 30px rgba(76, 175, 80, 0.3)'
+                  }} 
+                />
+              </Box>
+            )}
+            
+            <Typography sx={{ color: '#94a3b8', mb: 3 }}>
+              Scan to view property details and book instantly
+            </Typography>
+            
+            <Button
+              fullWidth
+              onClick={handleDownloadQRPoster}
+              sx={{
+                background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
+                borderRadius: '30px',
+                py: 1.5,
+                color: '#fff',
+                fontWeight: 600,
+                textTransform: 'none',
+                mb: 2
+              }}
+            >
+              Download Poster
+            </Button>
+            
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => setQrOpen(false)}
+              sx={{
+                borderColor: 'rgba(255,255,255,0.2)',
+                color: '#fff',
+                borderRadius: '30px',
+                py: 1.5,
+                '&:hover': { borderColor: '#4CAF50' }
+              }}
+            >
+              Close
+            </Button>
+          </Box>
+        </SwipeableDrawer>
+
+        {/* Booking Details Dialog */}
+        <SwipeableDrawer
+          anchor="bottom"
+          open={bookingDetailsOpen}
+          onClose={() => setBookingDetailsOpen(false)}
+          onOpen={() => {}}
+          disableSwipeToOpen
+          sx={{
+            '& .MuiDrawer-paper': {
+              background: 'rgba(15, 23, 36, 0.95)',
+              backdropFilter: 'blur(20px)',
+              borderTopLeftRadius: '32px',
+              borderTopRightRadius: '32px',
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              p: 3,
+              maxHeight: '80vh'
+            }
+          }}
+        >
+          {selectedBooking && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>
+                  Booking Details
+                </Typography>
+                <IconButton onClick={() => setBookingDetailsOpen(false)} sx={{ color: '#fff' }}>
+                  <CloseIcon />
+                </IconButton>
+              </Box>
+              
+              <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
+              
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Tenant Name</Typography>
+                  <Typography sx={{ color: '#fff', fontWeight: 500 }}>{selectedBooking.tenant_name}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Phone</Typography>
+                  <Typography sx={{ color: '#fff' }}>{selectedBooking.tenant_phone || 'Hidden'}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Email</Typography>
+                  <Typography sx={{ color: '#fff' }}>{selectedBooking.tenant_email || 'Not provided'}</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Property</Typography>
+                  <Typography sx={{ color: '#fff' }}>{selectedBooking.pg_name}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Room Type</Typography>
+                  <Typography sx={{ color: '#8B5CF6' }}>{selectedBooking.room_type}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Check-in Date</Typography>
+                  <Typography sx={{ color: '#fff' }}>{formatDate(selectedBooking.check_in_date)}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Monthly Rent</Typography>
+                  <Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{formatCurrency(selectedBooking.monthly_rent)}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Deposit Amount</Typography>
+                  <Typography sx={{ color: '#f59e0b', fontWeight: 600 }}>{formatCurrency(selectedBooking.deposit_amount)}</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Status</Typography>
+                  <Chip 
+                    label={selectedBooking.status?.toUpperCase() || 'PENDING'}
+                    sx={{ 
+                      bgcolor: getStatusBadgeStyle(selectedBooking.status).bg,
+                      color: getStatusBadgeStyle(selectedBooking.status).color,
+                      fontWeight: 600,
+                      mt: 0.5
                     }}
-                  >
-                    Download Full Poster
-                  </Button>
-                </Paper>
-              </motion.div>
+                  />
+                </Grid>
+              </Grid>
+              
+              <Button
+                fullWidth
+                onClick={() => {
+                  setBookingDetailsOpen(false);
+                  handleViewBooking(selectedBooking.id);
+                }}
+                sx={{
+                  mt: 3,
+                  background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
+                  borderRadius: '30px',
+                  py: 1.5,
+                  color: '#fff',
+                  fontWeight: 600,
+                  textTransform: 'none'
+                }}
+              >
+                View Full Details
+              </Button>
             </Box>
           )}
-        </AnimatePresence>
+        </SwipeableDrawer>
+
+        {/* Floating Assistant Button */}
+        <Box
+          sx={{ 
+            position: 'fixed', 
+            bottom: 24, 
+            right: 24, 
+            zIndex: 1000,
+            animation: `${float} 3s ease-in-out infinite`
+          }}
+        >
+          <IconButton
+            onClick={() => setSnackbar({ open: true, message: "Need help? Contact support", severity: "info" })}
+            sx={{
+              background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
+              width: 56,
+              height: 56,
+              boxShadow: '0 4px 20px rgba(76, 175, 80, 0.4)',
+              '&:hover': {
+                transform: 'scale(1.1)',
+                boxShadow: '0 8px 30px rgba(76, 175, 80, 0.6)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <ChatIcon sx={{ color: '#fff' }} />
+          </IconButton>
+        </Box>
 
         {/* Snackbar */}
         <Snackbar
@@ -1256,36 +2050,21 @@ const OwnerDashboard = () => {
             severity={snackbar.severity} 
             variant="filled"
             onClose={() => setSnackbar({ ...snackbar, open: false })}
-            sx={{ width: '100%', borderRadius: '20px' }}
+            sx={{ 
+              width: '100%',
+              borderRadius: '20px',
+              background: snackbar.severity === 'success' 
+                ? 'linear-gradient(135deg, #4CAF50, #2e7d32)'
+                : snackbar.severity === 'error'
+                ? 'linear-gradient(135deg, #dc2626, #b91c1c)'
+                : 'linear-gradient(135deg, #0B5ED7, #1e40af)'
+            }}
           >
             {snackbar.message}
           </Alert>
         </Snackbar>
 
       </Container>
-
-      {/* Global Animation Styles */}
-      <style>
-        {`
-          @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-          }
-          
-          @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(245,158,11,0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(245,158,11,0); }
-            100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
-          }
-          
-          @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
-            100% { transform: translateY(0px); }
-          }
-        `}
-      </style>
     </Box>
   );
 };
