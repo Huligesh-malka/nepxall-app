@@ -697,7 +697,7 @@ const OwnerDashboard = () => {
           {[
             { label: "Total Properties", value: stats.totalProperties, icon: <StorefrontIcon />, color: "#22c55e" },
             { label: "Total Rooms", value: stats.totalRooms, icon: <RoomIcon />, color: "#3b82f6" },
-            { label: "Occupied Rooms", value: stats.occupiedRooms, color: "#a855f7", icon: <PeopleIcon /> },
+            { label: "Occupied Rooms", value: stats.occupiedRooms, color: "#a855f7", icon: <OccupantsIcon /> },
             { label: "Pending Bookings", value: stats.pendingBookings, color: "#f59e0b", icon: <PendingIcon /> },
           ].map((item, i) => (
             <Grid item xs={12} sm={6} md={3} key={i}>
