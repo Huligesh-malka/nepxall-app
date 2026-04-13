@@ -20,7 +20,7 @@
     "emoji-picker-react": "^4.18.0",
     "eslint": "^8.57.0",
     "firebase": "^12.9.0",
-    "framer-motion": "^12.34.4",
+    "framer-motion": "^12.38.0",
     "helmet": "^8.1.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",

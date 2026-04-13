@@ -3,6 +3,7 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { pgAPI } from "../api/api";
 import { getImageUrl } from "../config";
+import { motion } from "framer-motion";
 import { Box, CircularProgress, useTheme, alpha, keyframes } from "@mui/material";
 
 import QRCodeStyling from "qr-code-styling";
