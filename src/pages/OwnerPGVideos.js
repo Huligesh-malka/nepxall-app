@@ -17,6 +17,8 @@ export default function OwnerPGVideos() {
   const [uploading, setUploading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState("");
+  
+  // 🔥 NEW: Plan state for premium lock
   const [plan, setPlan] = useState(null);
   const [planLoading, setPlanLoading] = useState(true);
 
@@ -85,8 +87,9 @@ export default function OwnerPGVideos() {
   const handleFileChange = (e) => {
     const selected = Array.from(e.target.files);
     
+    // 🔥 NEW: Check video limit against plan
     if (plan && videos.length + selected.length > plan.max_videos_per_pg) {
-      alert(`❌ Your ${plan.name} plan allows only ${plan.max_videos_per_pg} videos per PG. You have ${videos.length}/${plan.max_videos_per_pg}. Upgrade to upload more!`);
+      alert(`❌ Your ${plan.name} plan allows only ${plan.max_videos_per_pg} videos per PG. Upgrade to upload more!`);
       return;
     }
 
@@ -107,6 +110,7 @@ export default function OwnerPGVideos() {
   const uploadVideos = async () => {
     if (!files.length) return alert("Select at least one video");
     
+    // 🔥 NEW: Double-check limit before upload
     if (plan && videos.length + files.length > plan.max_videos_per_pg) {
       alert(`❌ Cannot upload. Your ${plan.name} plan allows only ${plan.max_videos_per_pg} videos. You have ${videos.length}/${plan.max_videos_per_pg}. Upgrade to upload more!`);
       return;
@@ -125,6 +129,7 @@ export default function OwnerPGVideos() {
 
       setFiles([]);
       
+      // Update videos based on response
       if (response.data.videos && Array.isArray(response.data.videos)) {
         if (response.data.videos.length === files.length) {
           console.log("⚠️ Backend returned only new videos, appending manually");
@@ -139,9 +144,8 @@ export default function OwnerPGVideos() {
       alert("Videos uploaded ✅");
     } catch (err) {
       console.error("Upload error:", err);
-      const errorMsg = err.response?.data?.message || "Upload failed ❌";
-      setError(errorMsg);
-      alert(errorMsg);
+      setError(err.response?.data?.message || "Upload failed ❌");
+      alert(err.response?.data?.message || "Upload failed ❌");
     } finally {
       setUploading(false);
     }
@@ -176,6 +180,7 @@ export default function OwnerPGVideos() {
     return `${BACKEND_URL}${normalizedPath}`;
   };
 
+  // Check if limit is reached
   const isLimitReached = plan && videos.length >= plan.max_videos_per_pg;
 
   /* ================= PROTECTION ================= */
@@ -195,7 +200,7 @@ export default function OwnerPGVideos() {
     <div style={{ maxWidth: 900, margin: "auto", padding: 20 }}>
       <h2>📹 Manage PG Videos</h2>
 
-      {/* Plan Info Card */}
+      {/* 🔥 NEW: Plan Info Card */}
       {plan && (
         <div style={{
           background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
@@ -211,7 +216,7 @@ export default function OwnerPGVideos() {
                 🎬 Videos: {videos.length} / {plan.max_videos_per_pg} used
               </p>
               <p style={{ margin: "4px 0", fontSize: 12, opacity: 0.9 }}>
-                📅 Expires: {plan.expiry_date ? new Date(plan.expiry_date).toLocaleDateString() : "Never"}
+                📅 Expires: {new Date(plan.expiry_date).toLocaleDateString()}
               </p>
             </div>
             <button 
@@ -249,7 +254,7 @@ export default function OwnerPGVideos() {
         </div>
       )}
 
-      {/* Limit reached warning */}
+      {/* 🔥 NEW: Limit reached warning */}
       {isLimitReached && (
         <div style={{
           backgroundColor: "#fff3cd",
