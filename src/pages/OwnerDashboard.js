@@ -1,6 +1,10 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useNavigate, Navigate } default as ReactRouterDom, { motion, AnimatePresence } from "framer-motion";
+
+
+import { useNavigate, Navigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
+
 import { pgAPI } from "../api/api";
 import { getImageUrl } from "../config";
 import { Box, CircularProgress, useTheme, alpha, keyframes } from "@mui/material";
