@@ -14,7 +14,7 @@ const plans = [
     priceSuffix: "forever",
     listingLimit: 1,
     photos: 10,
-    videos: 1,
+    videos: 0,
     featured: "No Featured",
     icon: "🎁",
     color: "#64748b"
@@ -27,7 +27,7 @@ const plans = [
     listingLimit: 3,
     photos: 15,
     videos: 2,
-    featured: "7 Days Featured",
+    featured: "30 Days Featured",
     icon: "🚀",
     color: "#3b82f6",
     highlight: true // MOST POPULAR
@@ -39,7 +39,7 @@ const plans = [
     priceSuffix: "/month",
     listingLimit: 10,
     photos: 20,
-    videos: 3,
+    videos: 5,
     featured: "30 Days Featured",
     icon: "⭐",
     color: "#8b5cf6"
