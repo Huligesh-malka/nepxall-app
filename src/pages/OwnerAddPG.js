@@ -762,7 +762,7 @@ function OwnerAddPG() {
       console.log("Submitting property data with owner UID:", user.uid);
       
       // ✅ USING pgAPI CONVENIENCE METHOD
-      const response = await api.post("/pg/create", formData)
+      const response = await api.post("/pg/add", formData)
 
       if (response.data.success) {
         alert(`✅ ${isToLet ? 'House/Flat' : 'Property'} Created Successfully!`);
