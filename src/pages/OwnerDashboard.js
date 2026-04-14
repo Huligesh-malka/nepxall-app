@@ -6,7 +6,7 @@ import { getImageUrl } from "../config";
 import { motion } from "framer-motion";
 import { Box, CircularProgress, useTheme, alpha, keyframes } from "@mui/material";
 import axios from "axios";
-import Sidebar from "../components/Sidebar";
+
 
 import QRCodeStyling from "qr-code-styling";
 
@@ -55,8 +55,7 @@ import {
   Share as ShareIcon,
   Print as PrintIcon,
   AccountBalance as BankIcon,
-  Security as SecurityIcon,
-  Menu as MenuIcon
+  Security as SecurityIcon
 } from "@mui/icons-material";
 
 import StatCard from "../components/owner/StatCard";
@@ -127,21 +126,20 @@ const getStatusColor = (status) => {
   }
 };
 
-// Updated status badge style with pending label
 const getStatusBadgeStyle = (status) => {
   switch(status?.toLowerCase()) {
     case 'approved':
     case 'confirmed':
-      return { bg: '#16a34a', color: '#fff', glow: '#16a34a', label: 'Approved' };
+      return { bg: '#16a34a', color: '#fff', glow: '#16a34a' };
     case 'pending':
-      return { bg: '#f59e0b', color: '#fff', glow: '#f59e0b', label: '⏳ Waiting for Admin Approval' };
+      return { bg: '#f59e0b', color: '#fff', glow: '#f59e0b' };
     case 'rejected':
     case 'cancelled':
-      return { bg: '#dc2626', color: '#fff', glow: '#dc2626', label: 'Rejected' };
+      return { bg: '#dc2626', color: '#fff', glow: '#dc2626' };
     case 'completed':
-      return { bg: '#0284c7', color: '#fff', glow: '#0284c7', label: 'Completed' };
+      return { bg: '#0284c7', color: '#fff', glow: '#0284c7' };
     default:
-      return { bg: '#6b7280', color: '#fff', glow: '#6b7280', label: 'Active' };
+      return { bg: '#6b7280', color: '#fff', glow: '#6b7280' };
   }
 };
 
@@ -173,7 +171,6 @@ const OwnerDashboard = () => {
   const { user, role, loading: authLoading, logout } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   const [pgs, setPGs] = useState([]);
   const [recentBookings, setRecentBookings] = useState([]);
@@ -183,6 +180,7 @@ const OwnerDashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   
+  // Settlement data from payments API
   const [settlementData, setSettlementData] = useState([]);
   const [settlementStats, setSettlementStats] = useState({
     totalSettled: 0,
@@ -242,26 +240,38 @@ const OwnerDashboard = () => {
   const animatedSettledAmount = useCountUp(settlementStats.settledAmount, 1000);
   const animatedPendingAmount = useCountUp(settlementStats.pendingAmount, 1000);
 
+  /* ---------------- HELPER FUNCTION TO GET RENT BY ROOM TYPE ---------------- */
+  
   const getRentByRoomType = (pg, roomType) => {
     if (!pg) return 0;
+    
     const roomTypeLower = roomType?.toLowerCase() || '';
+    
     if (roomTypeLower.includes('single sharing')) {
       return Number(pg.single_sharing) || Number(pg.single_room) || Number(pg.co_living_single_room) || Number(pg.rent_amount) || 0;
-    } else if (roomTypeLower.includes('double sharing')) {
+    }
+    else if (roomTypeLower.includes('double sharing')) {
       return Number(pg.double_sharing) || Number(pg.double_room) || Number(pg.co_living_double_room) || 0;
-    } else if (roomTypeLower.includes('triple sharing')) {
+    }
+    else if (roomTypeLower.includes('triple sharing')) {
       return Number(pg.triple_sharing) || Number(pg.triple_room) || 0;
-    } else if (roomTypeLower.includes('four sharing')) {
+    }
+    else if (roomTypeLower.includes('four sharing')) {
       return Number(pg.four_sharing) || 0;
-    } else if (roomTypeLower.includes('1bhk') || roomTypeLower.includes('1 bhk')) {
+    }
+    else if (roomTypeLower.includes('1bhk') || roomTypeLower.includes('1 bhk')) {
       return Number(pg.price_1bhk) || 0;
-    } else if (roomTypeLower.includes('2bhk') || roomTypeLower.includes('2 bhk')) {
+    }
+    else if (roomTypeLower.includes('2bhk') || roomTypeLower.includes('2 bhk')) {
       return Number(pg.price_2bhk) || 0;
-    } else if (roomTypeLower.includes('3bhk') || roomTypeLower.includes('3 bhk')) {
+    }
+    else if (roomTypeLower.includes('3bhk') || roomTypeLower.includes('3 bhk')) {
       return Number(pg.price_3bhk) || 0;
-    } else if (roomTypeLower.includes('4bhk') || roomTypeLower.includes('4 bhk')) {
+    }
+    else if (roomTypeLower.includes('4bhk') || roomTypeLower.includes('4 bhk')) {
       return Number(pg.price_4bhk) || 0;
-    } else {
+    }
+    else {
       return Number(pg.rent_amount) || 0;
     }
   };
@@ -271,22 +281,28 @@ const OwnerDashboard = () => {
     return Number(pg.security_deposit) || Number(pg.deposit_amount) || 0;
   };
 
+  // Fetch settlement data from payments API
   const fetchSettlementData = useCallback(async () => {
     if (!user) return;
+    
     try {
       const token = await user.getIdToken();
       const res = await axios.get(`${PAYMENTS_API}/payments`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
       const payments = res.data.data || [];
       setSettlementData(payments);
       
+      // Calculate settlement statistics
       const settled = payments.filter(p => p.owner_settlement === "DONE");
       const pending = payments.filter(p => p.owner_settlement !== "DONE" && p.admin_settlement === "DONE");
+      
       const totalAmount = payments.reduce((sum, p) => sum + (parseFloat(p.amount || p.owner_amount) || 0), 0);
       const settledAmount = settled.reduce((sum, p) => sum + (parseFloat(p.amount || p.owner_amount) || 0), 0);
       const pendingAmount = pending.reduce((sum, p) => sum + (parseFloat(p.amount || p.owner_amount) || 0), 0);
       
+      // Group by PG for breakdown
       const pgMap = new Map();
       payments.forEach(p => {
         const pgName = p.pg_name || "Unknown PG";
@@ -303,7 +319,11 @@ const OwnerDashboard = () => {
         }
       });
       
-      const pgBreakdown = Array.from(pgMap.entries()).map(([name, data]) => ({ name, ...data }));
+      const pgBreakdown = Array.from(pgMap.entries()).map(([name, data]) => ({
+        name,
+        ...data
+      }));
+      
       setSettlementStats({
         totalSettled: settled.length,
         totalPending: pending.length,
@@ -312,11 +332,13 @@ const OwnerDashboard = () => {
         pendingAmount,
         pgBreakdown
       });
+      
     } catch (err) {
       console.error("Failed to fetch settlement data:", err);
     }
   }, [user]);
 
+  // Load mock notifications
   const loadNotifications = useCallback(async () => {
     try {
       const mockNotifications = [
@@ -331,9 +353,12 @@ const OwnerDashboard = () => {
     }
   }, []);
 
+  /* ---------------- LOAD DATA ---------------- */
+
   const loadAllData = useCallback(async (refresh = false) => {
     try {
       if (!user) return;
+
       refresh ? setRefreshing(true) : setPageLoading(true);
       console.log("📡 Loading dashboard data...");
 
@@ -345,9 +370,6 @@ const OwnerDashboard = () => {
         const photos = parseArray(pg.photos);
         pgMap[pg.id] = pg;
         pgMap[pg.pg_id] = pg;
-        const originalStatus = pg.status;
-        console.log(`📊 PG: ${pg.pg_name}, Original Status: ${originalStatus}`);
-        
         return {
           ...pg,
           id: pg.id || pg.pg_id,
@@ -371,8 +393,7 @@ const OwnerDashboard = () => {
           price_4bhk: Number(pg.price_4bhk) || 0,
           co_living_single_room: Number(pg.co_living_single_room) || 0,
           co_living_double_room: Number(pg.co_living_double_room) || 0,
-          triple_room: Number(pg.triple_room) || 0,
-          status: originalStatus || "pending"
+          triple_room: Number(pg.triple_room) || 0
         };
       });
 
@@ -381,6 +402,7 @@ const OwnerDashboard = () => {
 
       const bookingsRes = await pgAPI.getOwnerBookings();
       const bookings = Array.isArray(bookingsRes.data) ? bookingsRes.data : bookingsRes.data?.bookings || [];
+
       setBookingHistory(bookings);
 
       const enhancedBookings = bookings.map(booking => {
@@ -389,6 +411,7 @@ const OwnerDashboard = () => {
         const roomType = booking.room_type || '';
         const monthlyRent = getRentByRoomType(pg, roomType);
         const deposit = getDepositByRoomType(pg, roomType);
+        
         return {
           ...booking,
           tenant_name: booking.name || booking.tenant_name || 'Unknown',
@@ -407,23 +430,29 @@ const OwnerDashboard = () => {
       const sortedBookings = enhancedBookings
         .sort((a, b) => new Date(b.created_at || b.check_in_date || 0) - new Date(a.created_at || a.check_in_date || 0))
         .slice(0, 5);
+
       setRecentBookings(sortedBookings);
 
+      // Calculate stats
       const totalRooms = properties.reduce((a, b) => a + (b.total_rooms || 0), 0);
       const availableRooms = properties.reduce((a, b) => a + (b.available_rooms || 0), 0);
       const occupiedRooms = totalRooms - availableRooms;
       const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
+
       const ratings = properties.filter(p => p.avg_rating > 0).map(p => p.avg_rating);
       const avgRating = ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : 0;
+
       const confirmedBookings = enhancedBookings.filter(b => ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase()));
       const pendingBookingsList = enhancedBookings.filter(b => b?.status?.toLowerCase() === "pending");
       const cancelledBookingsList = enhancedBookings.filter(b => b?.status?.toLowerCase() === "cancelled");
       const completedBookingsList = enhancedBookings.filter(b => b?.status?.toLowerCase() === "completed");
+
       const totalRent = confirmedBookings.reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
       const totalDeposit = confirmedBookings.reduce((a, b) => a + (Number(b.deposit_amount) || 0), 0);
       const pendingRent = pendingBookingsList.reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
       const pendingDeposit = pendingBookingsList.reduce((a, b) => a + (Number(b.deposit_amount) || 0), 0);
       const totalEarnings = confirmedBookings.reduce((a, b) => a + (Number(b.amount) || 0), 0);
+
       const currentMonth = new Date().getMonth();
       const currentYear = new Date().getFullYear();
       const monthlyRevenue = enhancedBookings
@@ -434,6 +463,7 @@ const OwnerDashboard = () => {
                  ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase());
         })
         .reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
+
       const yearlyRevenue = enhancedBookings
         .filter(b => {
           const bookingDate = new Date(b.created_at || b.check_in_date);
@@ -441,6 +471,7 @@ const OwnerDashboard = () => {
                  ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase());
         })
         .reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
+
       const pendingBookings = bookings.filter(b => b?.status?.toLowerCase() === "pending").length;
 
       setStats({
@@ -464,17 +495,29 @@ const OwnerDashboard = () => {
         completedBookings: completedBookingsList.length
       });
 
+      // Fetch settlement data
       await fetchSettlementData();
-      setSnackbar({ open: true, message: "Dashboard loaded successfully", severity: "success" });
+
+      setSnackbar({
+        open: true,
+        message: "Dashboard loaded successfully",
+        severity: "success"
+      });
+
     } catch (err) {
       console.error("❌ Dashboard error:", err?.response?.data || err.message);
-      setSnackbar({ open: true, message: err.response?.data?.message || "Failed to load dashboard", severity: "error" });
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || "Failed to load dashboard",
+        severity: "error"
+      });
     } finally {
       setPageLoading(false);
       setRefreshing(false);
     }
   }, [user, recentEnquiries.length, fetchSettlementData]);
 
+  /* ---------------- AUTH + LOAD ================= */
   useEffect(() => {
     if (!authLoading && !user) {
       navigate("/login");
@@ -485,34 +528,75 @@ const OwnerDashboard = () => {
     }
   }, [user, role, authLoading, navigate, loadAllData, loadNotifications]);
 
-  const handleRefresh = () => loadAllData(true);
-  const handleViewProperty = (propertyId) => navigate(`/pg/${propertyId}`);
-  const handleEditProperty = (propertyId) => navigate(`/owner/edit/${propertyId}`);
-  const handleManageRooms = (propertyId) => navigate(`/owner/rooms/${propertyId}`);
-  const handleManagePhotos = (propertyId) => navigate(`/owner/photos/${propertyId}`);
-  const handleManageVideos = (propertyId) => navigate(`/owner/videos/${propertyId}`);
-  const handleChat = (propertyId) => navigate(`/owner/pg-chat/${propertyId}`);
-  const handleAnnouncement = (propertyId) => navigate(`/owner/pg-chat/${propertyId}?mode=announcement`);
-  const handleViewBooking = (bookingId) => navigate(`/owner/bookings/${bookingId}`);
-  const handleViewBookingDetails = (booking) => { setSelectedBooking(booking); setBookingDetailsOpen(true); };
-  const handleViewSettlements = () => navigate("/owner/payments");
+  /* ---------------- HANDLERS ---------------- */
+
+  const handleRefresh = () => {
+    loadAllData(true);
+  };
+
+  const handleViewProperty = (propertyId) => {
+    navigate(`/pg/${propertyId}`);
+  };
+
+  const handleEditProperty = (propertyId) => {
+    navigate(`/owner/edit/${propertyId}`);
+  };
+
+  const handleManageRooms = (propertyId) => {
+    navigate(`/owner/rooms/${propertyId}`);
+  };
+
+  const handleManagePhotos = (propertyId) => {
+    navigate(`/owner/photos/${propertyId}`);
+  };
+
+  const handleManageVideos = (propertyId) => {
+    navigate(`/owner/videos/${propertyId}`);
+  };
+
+  const handleChat = (propertyId) => {
+    navigate(`/owner/pg-chat/${propertyId}`);
+  };
+
+  const handleAnnouncement = (propertyId) => {
+    navigate(`/owner/pg-chat/${propertyId}?mode=announcement`);
+  };
+
+  const handleCreatePlan = (propertyId) => {
+    navigate(`/owner/property/${propertyId}/plans`);
+  };
+
+  const handleViewBooking = (bookingId) => {
+    navigate(`/owner/bookings/${bookingId}`);
+  };
+
+  const handleViewBookingDetails = (booking) => {
+    setSelectedBooking(booking);
+    setBookingDetailsOpen(true);
+  };
 
   const handleGenerateQR = async (propertyId) => {
     try {
       const property = pgs.find(p => (p.id === propertyId || p.pg_id === propertyId));
       setSelectedProperty(property);
+      
       const url = `https://nepxall-app.vercel.app/scan/${propertyId}`;
+
       const qr = new QRCodeStyling({
-        width: 400, height: 400, data: url,
+        width: 400,
+        height: 400,
+        data: url,
         dotsOptions: { type: "square", color: "#000000" },
         backgroundOptions: { color: "#ffffff" },
         cornersSquareOptions: { type: "square", color: "#000000" },
         cornersDotOptions: { type: "square", color: "#000000" }
       });
+
       const qrBlob = await qr.getRawData("png");
       const qrUrl = URL.createObjectURL(qrBlob);
       setQrImageUrl(qrUrl);
       setQrOpen(true);
+      
     } catch (err) {
       console.error("QR Generation Error:", err);
       setSnackbar({ open: true, message: "Failed to generate QR code", severity: "error" });
@@ -521,31 +605,40 @@ const OwnerDashboard = () => {
 
   const handleDownloadQRPoster = async () => {
     if (!selectedProperty) return;
+    
     try {
       const BRAND_BLUE = "#0B5ED7";
       const BRAND_GREEN = "#4CAF50";
       const propertyName = selectedProperty?.pg_name || "PG";
       const propertyId = selectedProperty?.id || selectedProperty?.pg_id;
       const url = `https://nepxall-app.vercel.app/scan/${propertyId}`;
+
       const qr = new QRCodeStyling({
-        width: 600, height: 600, data: url,
+        width: 600,
+        height: 600,
+        data: url,
         dotsOptions: { type: "square", color: "#000000" },
         backgroundOptions: { color: "#ffffff" },
         cornersSquareOptions: { type: "square", color: "#000000" },
         cornersDotOptions: { type: "square", color: "#000000" }
       });
+
       const canvas = document.createElement("canvas");
       canvas.width = 900;
       canvas.height = 1100;
       const ctx = canvas.getContext("2d");
+
       ctx.fillStyle = "#F9FAFB";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.textAlign = "center";
+
       const logo = new Image();
       logo.crossOrigin = "anonymous";
       logo.src = "/logo.png";
+
       logo.onload = async () => {
         ctx.drawImage(logo, 350, 40, 200, 110);
+        
         ctx.font = "900 54px Arial";
         const gradient = ctx.createLinearGradient(360, 210, 540, 210);
         gradient.addColorStop(0, BRAND_BLUE);
@@ -555,26 +648,33 @@ const OwnerDashboard = () => {
         ctx.shadowBlur = 2;
         ctx.fillText("Nepxall", 450, 210);
         ctx.shadowColor = "transparent";
+        
         ctx.font = "26px Arial";
         ctx.fillStyle = "#94a3b8";
         ctx.fillText("Next Places for Living", 450, 250);
+        
         ctx.font = "bold 36px Arial";
         ctx.fillStyle = "#111827";
         ctx.fillText(propertyName.toUpperCase(), 450, 320);
+        
         ctx.font = "26px Arial";
         ctx.fillStyle = BRAND_BLUE;
         ctx.fillText("Scan QR to View Rooms", 450, 380);
+        
         ctx.font = "24px Arial";
         ctx.fillStyle = "#6B7280";
         ctx.fillText("Book Instantly Online", 450, 415);
+        
         const qrBlob = await qr.getRawData("png");
         const qrImg = new Image();
         qrImg.src = URL.createObjectURL(qrBlob);
+        
         qrImg.onload = () => {
           ctx.drawImage(qrImg, 150, 450, 600, 600);
           ctx.font = "22px Arial";
           ctx.fillStyle = "#6B7280";
           ctx.fillText("Powered by Nepxall", 450, 1080);
+          
           const link = document.createElement("a");
           link.href = canvas.toDataURL("image/png");
           link.download = `nepxall-${propertyName}-entrance-qr.png`;
@@ -600,6 +700,7 @@ const OwnerDashboard = () => {
         settlement?.owner_settlement === "DONE" ? "Settled" : (settlement?.admin_settlement === "DONE" ? "Pending Settlement" : "Not Processed")
       ];
     });
+    
     const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -608,14 +709,31 @@ const OwnerDashboard = () => {
     a.download = `dashboard-report-${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+    
     setSnackbar({ open: true, message: "Report exported successfully", severity: "success" });
   };
 
-  const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
-  const handleMenuClose = () => setAnchorEl(null);
-  const handleNotificationOpen = (event) => { setNotificationAnchor(event.currentTarget); setUnreadCount(0); };
-  const handleNotificationClose = () => setNotificationAnchor(null);
-  const handleLogout = async () => { await logout(); navigate("/login"); };
+  const handleMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleNotificationOpen = (event) => {
+    setNotificationAnchor(event.currentTarget);
+    setUnreadCount(0);
+  };
+
+  const handleNotificationClose = () => {
+    setNotificationAnchor(null);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -623,17 +741,57 @@ const OwnerDashboard = () => {
     if (hour < 17) return "Good Afternoon";
     return "Good Evening";
   };
+
   const greeting = getGreeting();
   const ownerName = user?.name?.split(' ')[0] || 'Owner';
 
+  const handleViewSettlements = () => {
+    navigate("/owner/payments");
+  };
+
+  /* ================= PROTECTION ================= */
   if (authLoading || pageLoading) {
     return (
-      <Box sx={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0a0f1a 0%, #0f1724 100%)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 3 }}>
+      <Box 
+        sx={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #0a0f1a 0%, #0f1724 100%)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 3
+        }}
+      >
         <Box sx={{ position: 'relative' }}>
           <CircularProgress size={80} thickness={3} sx={{ color: '#4CAF50' }} />
-          <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 60, height: 60, borderRadius: '50%', background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)', animation: `${pulseGlow} 1.5s infinite` }} />
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: 60,
+              height: 60,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
+              animation: `${pulseGlow} 1.5s infinite`,
+            }}
+          />
         </Box>
-        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 500, background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)', backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Loading your dashboard...</Typography>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            color: '#fff', 
+            fontWeight: 500,
+            background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
+          }}
+        >
+          Loading your dashboard...
+        </Typography>
       </Box>
     );
   }
@@ -641,252 +799,955 @@ const OwnerDashboard = () => {
   if (!user) return <Navigate to="/login" replace />;
   if (role !== "owner") return <Navigate to="/" replace />;
 
+  /* ---------------- UI ---------------- */
+
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar role={role} user={user} />
-      
-      {isMobile && (
-        <IconButton
-          onClick={() => setMobileOpen(!mobileOpen)}
-          sx={{ position: 'fixed', top: 16, left: 16, zIndex: 1200, background: 'rgba(0,0,0,0.5)', color: '#fff', '&:hover': { background: 'rgba(0,0,0,0.7)' } }}
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: 'radial-gradient(ellipse at 20% 30%, rgba(11, 94, 215, 0.08), rgba(0, 0, 0, 0.95)), linear-gradient(135deg, #0a0f1a 0%, #0f1724 100%)',
+        position: 'relative',
+        overflowX: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundImage: 'radial-gradient(circle at 10% 20%, rgba(76, 175, 80, 0.03) 0%, transparent 50%)',
+          pointerEvents: 'none',
+        }
+      }}
+    >
+      {/* Animated background mesh */}
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          overflow: 'hidden',
+          zIndex: 0,
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            width: '200%',
+            height: '200%',
+            top: '-50%',
+            left: '-50%',
+            background: 'radial-gradient(circle, rgba(11,94,215,0.15) 0%, transparent 70%)',
+            animation: `${float} 20s ease-in-out infinite`,
+          }
+        }}
+      />
+
+      <Container maxWidth="xl" sx={{ py: { xs: 2, md: 4 }, position: 'relative', zIndex: 1 }}>
+        
+        {/* FLOATING HEADER */}
+        <Box
+          component={motion ? motion.div : "div"}
+          {...(motion ? { initial: { y: -50, opacity: 0 }, animate: { y: 0, opacity: 1 }, transition: { duration: 0.6, type: "spring", stiffness: 100 } } : {})}
+          sx={{
+            position: 'sticky',
+            top: 16,
+            zIndex: 100,
+            backdropFilter: 'blur(20px)',
+            background: 'rgba(15, 23, 36, 0.7)',
+            borderRadius: '32px',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            mb: 4,
+            p: { xs: 1.5, md: 2 },
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+          }}
         >
-          <MenuIcon />
-        </IconButton>
-      )}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+            <Box>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: '#4CAF50',
+                  fontWeight: 500,
+                  letterSpacing: '0.5px',
+                  textTransform: 'uppercase',
+                  fontSize: '0.75rem'
+                }}
+              >
+                {greeting}
+              </Typography>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 800,
+                  background: 'linear-gradient(135deg, #fff 0%, #94a3b8 100%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  fontSize: { xs: '1.5rem', md: '2rem' }
+                }}
+              >
+                {ownerName}
+              </Typography>
+            </Box>
 
-      <Box component="main" sx={{ flexGrow: 1, ml: { xs: 0, md: '250px' }, width: { xs: '100%', md: 'calc(100% - 250px)' }, background: 'radial-gradient(ellipse at 20% 30%, rgba(11, 94, 215, 0.08), rgba(0, 0, 0, 0.95)), linear-gradient(135deg, #0a0f1a 0%, #0f1724 100%)', position: 'relative', overflowX: 'hidden', minHeight: '100vh', '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'radial-gradient(circle at 10% 20%, rgba(76, 175, 80, 0.03) 0%, transparent 50%)', pointerEvents: 'none' } }}>
-        <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden', zIndex: 0, '&::before': { content: '""', position: 'absolute', width: '200%', height: '200%', top: '-50%', left: '-50%', background: 'radial-gradient(circle, rgba(11,94,215,0.15) 0%, transparent 70%)', animation: `${float} 20s ease-in-out infinite` } }} />
+            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+              <IconButton 
+                onClick={handleNotificationOpen}
+                sx={{
+                  background: 'rgba(255,255,255,0.05)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  color: '#fff',
+                  '&:hover': { background: 'rgba(76, 175, 80, 0.2)' }
+                }}
+              >
+                <Badge badgeContent={unreadCount} color="error">
+                  <NotificationsIcon />
+                </Badge>
+              </IconButton>
 
-        <Container maxWidth="xl" sx={{ py: { xs: 2, md: 4 }, position: 'relative', zIndex: 1 }}>
-          
-          <Box component={motion?.div || "div"} {...(motion ? { initial: { y: -50, opacity: 0 }, animate: { y: 0, opacity: 1 }, transition: { duration: 0.6, type: "spring", stiffness: 100 } } : {})} sx={{ position: 'sticky', top: 16, zIndex: 100, backdropFilter: 'blur(20px)', background: 'rgba(15, 23, 36, 0.7)', borderRadius: '32px', border: '1px solid rgba(255, 255, 255, 0.08)', mb: 4, p: { xs: 1.5, md: 2 }, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-              <Box>
-                <Typography variant="body2" sx={{ color: '#4CAF50', fontWeight: 500, letterSpacing: '0.5px', textTransform: 'uppercase', fontSize: '0.75rem' }}>{greeting}</Typography>
-                <Typography variant="h4" sx={{ fontWeight: 800, background: 'linear-gradient(135deg, #fff 0%, #94a3b8 100%)', backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: { xs: '1.5rem', md: '2rem' } }}>{ownerName}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-                <IconButton onClick={handleNotificationOpen} sx={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', borderRadius: '16px', color: '#fff', '&:hover': { background: 'rgba(76, 175, 80, 0.2)' } }}>
-                  <Badge badgeContent={unreadCount} color="error"><NotificationsIcon /></Badge>
+              <IconButton 
+                onClick={handleRefresh} 
+                disabled={refreshing}
+                sx={{
+                  background: 'rgba(255,255,255,0.05)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  color: '#fff',
+                  '&:hover': {
+                    background: 'rgba(76, 175, 80, 0.2)',
+                    transform: 'rotate(180deg)'
+                  }
+                }}
+              >
+                <RefreshIcon />
+              </IconButton>
+
+              <Tooltip title="Export Report">
+                <IconButton 
+                  onClick={handleExportReport}
+                  sx={{
+                    background: 'rgba(255,255,255,0.05)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: '16px',
+                    color: '#fff',
+                    '&:hover': { background: 'rgba(139, 92, 246, 0.2)' }
+                  }}
+                >
+                  <DownloadIcon />
                 </IconButton>
-                <IconButton onClick={handleRefresh} disabled={refreshing} sx={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', borderRadius: '16px', color: '#fff', '&:hover': { background: 'rgba(76, 175, 80, 0.2)', transform: 'rotate(180deg)' } }}><RefreshIcon /></IconButton>
-                <Tooltip title="Export Report"><IconButton onClick={handleExportReport} sx={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', borderRadius: '16px', color: '#fff', '&:hover': { background: 'rgba(139, 92, 246, 0.2)' } }}><DownloadIcon /></IconButton></Tooltip>
-                <Button startIcon={<ChatIcon />} onClick={() => navigate("/owner/chats")} sx={{ background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)', borderRadius: '24px', px: 3, py: 1, color: '#fff', fontWeight: 600, textTransform: 'none', boxShadow: '0 4px 15px rgba(76, 175, 80, 0.3)', '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(76, 175, 80, 0.4)' } }}>Chats</Button>
-                <Button startIcon={<AddIcon />} onClick={() => navigate("/owner/add")} sx={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', borderRadius: '24px', px: 3, py: 1, color: '#fff', fontWeight: 600, textTransform: 'none', border: '1px solid rgba(255,255,255,0.2)', '&:hover': { background: 'rgba(76, 175, 80, 0.2)', borderColor: '#4CAF50' } }}>Add Property</Button>
-                <IconButton onClick={handleMenuOpen} sx={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', borderRadius: '16px', color: '#fff', '&:hover': { background: 'rgba(76, 175, 80, 0.2)' } }}><Avatar sx={{ width: 32, height: 32, bgcolor: '#4CAF50' }}>{ownerName.charAt(0)}</Avatar></IconButton>
-              </Box>
+              </Tooltip>
+
+              <Button
+                startIcon={<ChatIcon />}
+                onClick={() => navigate("/owner/chats")}
+                sx={{
+                  background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
+                  borderRadius: '24px',
+                  px: 3,
+                  py: 1,
+                  color: '#fff',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  boxShadow: '0 4px 15px rgba(76, 175, 80, 0.3)',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 25px rgba(76, 175, 80, 0.4)'
+                  }
+                }}
+              >
+                Chats
+              </Button>
+
+              <Button
+                startIcon={<AddIcon />}
+                onClick={() => navigate("/owner/add")}
+                sx={{
+                  background: 'rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '24px',
+                  px: 3,
+                  py: 1,
+                  color: '#fff',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  '&:hover': {
+                    background: 'rgba(76, 175, 80, 0.2)',
+                    borderColor: '#4CAF50'
+                  }
+                }}
+              >
+                Add Property
+              </Button>
+
+              <IconButton 
+                onClick={handleMenuOpen}
+                sx={{
+                  background: 'rgba(255,255,255,0.05)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  color: '#fff',
+                  '&:hover': { background: 'rgba(76, 175, 80, 0.2)' }
+                }}
+              >
+                <Avatar sx={{ width: 32, height: 32, bgcolor: '#4CAF50' }}>
+                  {ownerName.charAt(0)}
+                </Avatar>
+              </IconButton>
             </Box>
           </Box>
+        </Box>
 
-          <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose} PaperProps={{ sx: { background: 'rgba(15, 23, 36, 0.95)', backdropFilter: 'blur(20px)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)', mt: 1, minWidth: 200 } }}>
-            <MenuItem onClick={() => { handleMenuClose(); navigate("/owner/profile"); }}><ListItemIcon><PersonIcon fontSize="small" sx={{ color: '#4CAF50' }} /></ListItemIcon><ListItemText>Profile</ListItemText></MenuItem>
-            <MenuItem onClick={() => { handleMenuClose(); navigate("/owner/settings"); }}><ListItemIcon><SettingsIcon fontSize="small" sx={{ color: '#0B5ED7' }} /></ListItemIcon><ListItemText>Settings</ListItemText></MenuItem>
-            <MenuItem onClick={() => { handleMenuClose(); navigate("/owner/payments"); }}><ListItemIcon><ReceiptIcon fontSize="small" sx={{ color: '#8B5CF6' }} /></ListItemIcon><ListItemText>Settlements</ListItemText></MenuItem>
-            <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
-            <MenuItem onClick={handleLogout}><ListItemIcon><LogoutIcon fontSize="small" sx={{ color: '#dc2626' }} /></ListItemIcon><ListItemText>Logout</ListItemText></MenuItem>
-          </Menu>
+        {/* User Menu Dropdown */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          PaperProps={{
+            sx: {
+              background: 'rgba(15, 23, 36, 0.95)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: '20px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              mt: 1,
+              minWidth: 200
+            }
+          }}
+        >
+          <MenuItem onClick={() => { handleMenuClose(); navigate("/owner/profile"); }}>
+            <ListItemIcon><PersonIcon fontSize="small" sx={{ color: '#4CAF50' }} /></ListItemIcon>
+            <ListItemText>Profile</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={() => { handleMenuClose(); navigate("/owner/settings"); }}>
+            <ListItemIcon><SettingsIcon fontSize="small" sx={{ color: '#0B5ED7' }} /></ListItemIcon>
+            <ListItemText>Settings</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={() => { handleMenuClose(); navigate("/owner/payments"); }}>
+            <ListItemIcon><ReceiptIcon fontSize="small" sx={{ color: '#8B5CF6' }} /></ListItemIcon>
+            <ListItemText>Settlements</ListItemText>
+          </MenuItem>
+          <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
+          <MenuItem onClick={handleLogout}>
+            <ListItemIcon><LogoutIcon fontSize="small" sx={{ color: '#dc2626' }} /></ListItemIcon>
+            <ListItemText>Logout</ListItemText>
+          </MenuItem>
+        </Menu>
 
-          <Menu anchorEl={notificationAnchor} open={Boolean(notificationAnchor)} onClose={handleNotificationClose} PaperProps={{ sx: { background: 'rgba(15, 23, 36, 0.95)', backdropFilter: 'blur(20px)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)', mt: 1, width: 320, maxHeight: 400 } }}>
-            <Box sx={{ p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' }}><Typography sx={{ color: '#fff', fontWeight: 600 }}>Notifications</Typography></Box>
-            {notifications.length === 0 ? (<Box sx={{ p: 3, textAlign: 'center' }}><Typography sx={{ color: '#94a3b8' }}>No notifications</Typography></Box>) : (notifications.map(notif => (<MenuItem key={notif.id} sx={{ flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}><Typography sx={{ color: '#fff', fontSize: '0.85rem' }}>{notif.message}</Typography><Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>{formatDate(notif.timestamp)}</Typography></MenuItem>)))}
-          </Menu>
-
-          <Box sx={{ mb: 5 }}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6} md={4} lg={2}>
-                <Box sx={{ background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.15), rgba(76, 175, 80, 0.05))', backdropFilter: 'blur(10px)', borderRadius: '28px', border: '1px solid rgba(76, 175, 80, 0.3)', p: 2.5, height: '100%', transition: 'all 0.3s ease', '&:hover': { transform: 'translateY(-5px)' }, '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(90deg, #4CAF50, #0B5ED7)' } }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}><Box><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>PROPERTIES</Typography><Typography sx={{ fontSize: '2rem', fontWeight: 800, color: '#4CAF50', lineHeight: 1 }}>{animatedTotalProperties}</Typography></Box><ApartmentIcon sx={{ fontSize: 36, color: '#4CAF50', opacity: 0.7 }} /></Box>
-                </Box>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4} lg={2}>
-                <Box sx={{ background: 'linear-gradient(135deg, rgba(11, 94, 215, 0.15), rgba(11, 94, 215, 0.05))', backdropFilter: 'blur(10px)', borderRadius: '28px', border: '1px solid rgba(11, 94, 215, 0.3)', p: 2.5, height: '100%', transition: 'all 0.3s ease', '&:hover': { transform: 'translateY(-5px)' }, '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(90deg, #0B5ED7, #4CAF50)' } }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}><Box><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>TOTAL ROOMS</Typography><Typography sx={{ fontSize: '2rem', fontWeight: 800, color: '#0B5ED7', lineHeight: 1 }}>{animatedTotalRooms}</Typography><Typography sx={{ fontSize: '0.7rem', color: '#4CAF50' }}>{stats.availableRooms} available</Typography></Box><RoomIcon sx={{ fontSize: 36, color: '#0B5ED7', opacity: 0.7 }} /></Box>
-                </Box>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4} lg={2}>
-                <Box sx={{ background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05))', backdropFilter: 'blur(10px)', borderRadius: '28px', border: '1px solid rgba(139, 92, 246, 0.3)', p: 2.5, height: '100%', transition: 'all 0.3s ease', '&:hover': { transform: 'translateY(-5px)' }, '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(90deg, #8B5CF6, #4CAF50)' } }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}><Box><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>OCCUPANCY</Typography><Typography sx={{ fontSize: '2rem', fontWeight: 800, color: '#8B5CF6', lineHeight: 1 }}>{animatedOccupancyRate}%</Typography><Typography sx={{ fontSize: '0.7rem', color: '#94a3b8' }}>{animatedOccupiedRooms} / {stats.totalRooms} rooms</Typography></Box><TrendingUpIcon sx={{ fontSize: 36, color: '#8B5CF6', opacity: 0.7 }} /></Box>
-                  <LinearProgress variant="determinate" value={stats.occupancyRate} sx={{ mt: 1.5, borderRadius: '10px', height: 4, bgcolor: 'rgba(255,255,255,0.1)', '& .MuiLinearProgress-bar': { background: 'linear-gradient(90deg, #8B5CF6, #4CAF50)', borderRadius: '10px' } }} />
-                </Box>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4} lg={2}>
-                <Box sx={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05))', backdropFilter: 'blur(10px)', borderRadius: '28px', border: '1px solid rgba(245, 158, 11, 0.3)', p: 2.5, height: '100%', transition: 'all 0.3s ease', '&:hover': { transform: 'translateY(-5px)' }, '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(90deg, #f59e0b, #dc2626)' } }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}><Box><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>PENDING</Typography><Typography sx={{ fontSize: '2rem', fontWeight: 800, color: '#f59e0b', lineHeight: 1 }}>{animatedPendingBookings}</Typography><Typography sx={{ fontSize: '0.7rem', color: '#94a3b8' }}>Awaiting confirmation</Typography></Box><PendingIcon sx={{ fontSize: 36, color: '#f59e0b', opacity: 0.7 }} /></Box>
-                </Box>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4} lg={2}>
-                <Box sx={{ background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.15), rgba(76, 175, 80, 0.05))', backdropFilter: 'blur(10px)', borderRadius: '28px', border: '1px solid rgba(76, 175, 80, 0.3)', p: 2.5, height: '100%', transition: 'all 0.3s ease', '&:hover': { transform: 'translateY(-5px)' } }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}><Box><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>MONTHLY REVENUE</Typography><Typography sx={{ fontSize: '1.4rem', fontWeight: 800, color: '#4CAF50', lineHeight: 1 }}>{formatCurrency(animatedMonthlyRevenue)}</Typography></Box><MoneyIcon sx={{ fontSize: 36, color: '#4CAF50', opacity: 0.7 }} /></Box>
-                </Box>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4} lg={2}>
-                <Box sx={{ background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(234, 179, 8, 0.05))', backdropFilter: 'blur(10px)', borderRadius: '28px', border: '1px solid rgba(234, 179, 8, 0.3)', p: 2.5, height: '100%', transition: 'all 0.3s ease', '&:hover': { transform: 'translateY(-5px)' } }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}><Box><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>AVG RATING</Typography><Typography sx={{ fontSize: '2rem', fontWeight: 800, color: '#eab308', lineHeight: 1 }}>{stats.avgRating}</Typography><Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>{[1,2,3,4,5].map(star => (<StarIcon key={star} sx={{ fontSize: 12, color: star <= stats.avgRating ? '#eab308' : '#475569' }} />))}</Box></Box><StarIcon sx={{ fontSize: 36, color: '#eab308', opacity: 0.7 }} /></Box>
-                </Box>
-              </Grid>
-            </Grid>
+        {/* Notifications Dropdown */}
+        <Menu
+          anchorEl={notificationAnchor}
+          open={Boolean(notificationAnchor)}
+          onClose={handleNotificationClose}
+          PaperProps={{
+            sx: {
+              background: 'rgba(15, 23, 36, 0.95)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: '20px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              mt: 1,
+              width: 320,
+              maxHeight: 400
+            }
+          }}
+        >
+          <Box sx={{ p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <Typography sx={{ color: '#fff', fontWeight: 600 }}>Notifications</Typography>
           </Box>
+          {notifications.length === 0 ? (
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+              <Typography sx={{ color: '#94a3b8' }}>No notifications</Typography>
+            </Box>
+          ) : (
+            notifications.map(notif => (
+              <MenuItem key={notif.id} sx={{ flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+                <Typography sx={{ color: '#fff', fontSize: '0.85rem' }}>{notif.message}</Typography>
+                <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>
+                  {formatDate(notif.timestamp)}
+                </Typography>
+              </MenuItem>
+            ))
+          )}
+        </Menu>
 
-          {stats.availableRooms > 0 && (
-            <Box sx={{ background: 'rgba(76, 175, 80, 0.15)', backdropFilter: 'blur(12px)', borderRadius: '20px', border: '1px solid rgba(76, 175, 80, 0.4)', p: 2, mb: 4, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', animation: `${pulseGlow} 2s infinite` }}>
-              <CommunityIcon sx={{ color: '#4CAF50', fontSize: 28 }} />
-              <Typography sx={{ color: '#e2e8f0', flex: 1 }}><strong style={{ color: '#4CAF50', fontSize: '1.2rem' }}>{stats.availableRooms}</strong> rooms available across your properties</Typography>
-              <Button size="small" onClick={() => navigate("/owner/add")} sx={{ color: '#4CAF50', borderColor: '#4CAF50' }} variant="outlined">Manage</Button>
+        {/* STATS CARDS - 6 Cards */}
+        <Box sx={{ mb: 5 }}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6} md={4} lg={2}>
+              <Box sx={{
+                background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.15), rgba(76, 175, 80, 0.05))',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '28px',
+                border: '1px solid rgba(76, 175, 80, 0.3)',
+                p: 2.5,
+                height: '100%',
+                transition: 'all 0.3s ease',
+                '&:hover': { transform: 'translateY(-5px)' },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '3px',
+                  background: 'linear-gradient(90deg, #4CAF50, #0B5ED7)',
+                }
+              }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box>
+                    <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>PROPERTIES</Typography>
+                    <Typography sx={{ fontSize: '2rem', fontWeight: 800, color: '#4CAF50', lineHeight: 1 }}>
+                      {animatedTotalProperties}
+                    </Typography>
+                  </Box>
+                  <ApartmentIcon sx={{ fontSize: 36, color: '#4CAF50', opacity: 0.7 }} />
+                </Box>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={4} lg={2}>
+              <Box sx={{
+                background: 'linear-gradient(135deg, rgba(11, 94, 215, 0.15), rgba(11, 94, 215, 0.05))',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '28px',
+                border: '1px solid rgba(11, 94, 215, 0.3)',
+                p: 2.5,
+                height: '100%',
+                transition: 'all 0.3s ease',
+                '&:hover': { transform: 'translateY(-5px)' },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '3px',
+                  background: 'linear-gradient(90deg, #0B5ED7, #4CAF50)',
+                }
+              }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box>
+                    <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>TOTAL ROOMS</Typography>
+                    <Typography sx={{ fontSize: '2rem', fontWeight: 800, color: '#0B5ED7', lineHeight: 1 }}>
+                      {animatedTotalRooms}
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.7rem', color: '#4CAF50' }}>
+                      {stats.availableRooms} available
+                    </Typography>
+                  </Box>
+                  <RoomIcon sx={{ fontSize: 36, color: '#0B5ED7', opacity: 0.7 }} />
+                </Box>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={4} lg={2}>
+              <Box sx={{
+                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05))',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '28px',
+                border: '1px solid rgba(139, 92, 246, 0.3)',
+                p: 2.5,
+                height: '100%',
+                transition: 'all 0.3s ease',
+                '&:hover': { transform: 'translateY(-5px)' },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '3px',
+                  background: 'linear-gradient(90deg, #8B5CF6, #4CAF50)',
+                }
+              }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box>
+                    <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>OCCUPANCY</Typography>
+                    <Typography sx={{ fontSize: '2rem', fontWeight: 800, color: '#8B5CF6', lineHeight: 1 }}>
+                      {animatedOccupancyRate}%
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                      {animatedOccupiedRooms} / {stats.totalRooms} rooms
+                    </Typography>
+                  </Box>
+                  <TrendingUpIcon sx={{ fontSize: 36, color: '#8B5CF6', opacity: 0.7 }} />
+                </Box>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={stats.occupancyRate} 
+                  sx={{ 
+                    mt: 1.5, 
+                    borderRadius: '10px', 
+                    height: 4,
+                    bgcolor: 'rgba(255,255,255,0.1)',
+                    '& .MuiLinearProgress-bar': {
+                      background: 'linear-gradient(90deg, #8B5CF6, #4CAF50)',
+                      borderRadius: '10px'
+                    }
+                  }} 
+                />
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={4} lg={2}>
+              <Box sx={{
+                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05))',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '28px',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                p: 2.5,
+                height: '100%',
+                transition: 'all 0.3s ease',
+                '&:hover': { transform: 'translateY(-5px)' },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '3px',
+                  background: 'linear-gradient(90deg, #f59e0b, #dc2626)',
+                }
+              }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box>
+                    <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>PENDING</Typography>
+                    <Typography sx={{ fontSize: '2rem', fontWeight: 800, color: '#f59e0b', lineHeight: 1 }}>
+                      {animatedPendingBookings}
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                      Awaiting confirmation
+                    </Typography>
+                  </Box>
+                  <PendingIcon sx={{ fontSize: 36, color: '#f59e0b', opacity: 0.7 }} />
+                </Box>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={4} lg={2}>
+              <Box sx={{
+                background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.15), rgba(76, 175, 80, 0.05))',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '28px',
+                border: '1px solid rgba(76, 175, 80, 0.3)',
+                p: 2.5,
+                height: '100%',
+                transition: 'all 0.3s ease',
+                '&:hover': { transform: 'translateY(-5px)' }
+              }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box>
+                    <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>MONTHLY REVENUE</Typography>
+                    <Typography sx={{ fontSize: '1.4rem', fontWeight: 800, color: '#4CAF50', lineHeight: 1 }}>
+                      {formatCurrency(animatedMonthlyRevenue)}
+                    </Typography>
+                  </Box>
+                  <MoneyIcon sx={{ fontSize: 36, color: '#4CAF50', opacity: 0.7 }} />
+                </Box>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={4} lg={2}>
+              <Box sx={{
+                background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(234, 179, 8, 0.05))',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '28px',
+                border: '1px solid rgba(234, 179, 8, 0.3)',
+                p: 2.5,
+                height: '100%',
+                transition: 'all 0.3s ease',
+                '&:hover': { transform: 'translateY(-5px)' }
+              }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box>
+                    <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>AVG RATING</Typography>
+                    <Typography sx={{ fontSize: '2rem', fontWeight: 800, color: '#eab308', lineHeight: 1 }}>
+                      {stats.avgRating}
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
+                      {[1,2,3,4,5].map(star => (
+                        <StarIcon key={star} sx={{ fontSize: 12, color: star <= stats.avgRating ? '#eab308' : '#475569' }} />
+                      ))}
+                    </Box>
+                  </Box>
+                  <StarIcon sx={{ fontSize: 36, color: '#eab308', opacity: 0.7 }} />
+                </Box>
+              </Box>
+            </Grid>
+          </Grid>
+        </Box>
+
+        {/* AVAILABILITY ALERT */}
+        {stats.availableRooms > 0 && (
+          <Box sx={{
+            background: 'rgba(76, 175, 80, 0.15)',
+            backdropFilter: 'blur(12px)',
+            borderRadius: '20px',
+            border: '1px solid rgba(76, 175, 80, 0.4)',
+            p: 2,
+            mb: 4,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            flexWrap: 'wrap',
+            animation: `${pulseGlow} 2s infinite`
+          }}>
+            <CommunityIcon sx={{ color: '#4CAF50', fontSize: 28 }} />
+            <Typography sx={{ color: '#e2e8f0', flex: 1 }}>
+              <strong style={{ color: '#4CAF50', fontSize: '1.2rem' }}>{stats.availableRooms}</strong> rooms available across your properties
+            </Typography>
+            <Button size="small" onClick={() => navigate("/owner/add")} sx={{ color: '#4CAF50', borderColor: '#4CAF50' }} variant="outlined">
+              Manage
+            </Button>
+          </Box>
+        )}
+
+        {/* TABS SECTION */}
+        <Box sx={{ mb: 4 }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={(e, v) => setActiveTab(v)}
+            sx={{
+              '& .MuiTab-root': {
+                color: '#94a3b8',
+                fontWeight: 600,
+                textTransform: 'none',
+                fontSize: '1rem',
+                '&.Mui-selected': { color: '#4CAF50' }
+              },
+              '& .MuiTabs-indicator': {
+                backgroundColor: '#4CAF50',
+                height: 3,
+                borderRadius: '3px'
+              }
+            }}
+          >
+            <Tab label="Properties" icon={<ApartmentIcon />} iconPosition="start" />
+            <Tab label="Recent Bookings" icon={<ReceiptIcon />} iconPosition="start" />
+            <Tab label="Insights" icon={<TrendingUpIcon />} iconPosition="start" />
+          </Tabs>
+
+          <Box sx={{ mt: 3 }}>
+            {/* Properties Tab */}
+            {activeTab === 0 && (
+              <>
+                {pgs.length === 0 ? (
+                  <Box sx={{
+                    background: 'rgba(15, 23, 36, 0.8)',
+                    backdropFilter: 'blur(20px)',
+                    borderRadius: '32px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    p: { xs: 3, md: 6 },
+                    textAlign: 'center'
+                  }}>
+                    <ApartmentIcon sx={{ fontSize: 80, color: '#4CAF50', mb: 2, opacity: 0.7 }} />
+                    <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>No properties yet</Typography>
+                    <Typography sx={{ color: '#94a3b8', mb: 3 }}>Start by adding your first property to begin managing bookings and tenants.</Typography>
+                    <Button startIcon={<AddIcon />} onClick={() => navigate("/owner/add")} sx={{
+                      background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
+                      borderRadius: '30px',
+                      px: 4,
+                      py: 1.5,
+                      color: '#fff',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontSize: '1rem'
+                    }}>Add Your First Property</Button>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {pgs.map((pg) => (
+                      <Box key={pg.id || pg.pg_id} sx={{
+                        background: 'rgba(15, 23, 36, 0.8)',
+                        backdropFilter: 'blur(20px)',
+                        borderRadius: '28px',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        overflow: 'hidden',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          borderColor: 'rgba(76, 175, 80, 0.5)',
+                          boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
+                        }
+                      }}>
+                        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
+                          <Box sx={{
+                            width: { xs: '100%', md: 280 },
+                            height: { xs: 200, md: 'auto' },
+                            backgroundImage: pg.image ? `url(${getImageUrl(pg.image)})` : 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            position: 'relative'
+                          }}>
+                            <Box sx={{
+                              position: 'absolute',
+                              top: 16,
+                              right: 16,
+                              background: pg.available_rooms > 0 ? 'linear-gradient(135deg, #4CAF50, #2e7d32)' : 'linear-gradient(135deg, #f59e0b, #dc2626)',
+                              color: '#fff',
+                              px: 1.5,
+                              py: 0.5,
+                              borderRadius: '20px',
+                              fontSize: '0.7rem',
+                              fontWeight: 600
+                            }}>
+                              {pg.available_rooms > 0 ? `${pg.available_rooms} AVAILABLE` : 'FULL'}
+                            </Box>
+                          </Box>
+                          <Box sx={{ flex: 1, p: 3 }}>
+                            <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1.3rem', mb: 1 }}>{pg.pg_name}</Typography>
+                            <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', mb: 2 }}>{pg.location || 'Location not specified'}</Typography>
+                            <Grid container spacing={2} sx={{ mb: 2 }}>
+                              <Grid item xs={4}>
+                                <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Total Rooms</Typography>
+                                <Typography sx={{ color: '#fff', fontWeight: 600 }}>{pg.total_rooms || 0}</Typography>
+                              </Grid>
+                              <Grid item xs={4}>
+                                <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Available</Typography>
+                                <Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{pg.available_rooms || 0}</Typography>
+                              </Grid>
+                              <Grid item xs={4}>
+                                <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Starting Rent</Typography>
+                                <Typography sx={{ color: '#8B5CF6', fontWeight: 600 }}>{formatCurrency(pg.rent_amount)}</Typography>
+                              </Grid>
+                            </Grid>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                              <Tooltip title="View Property"><IconButton size="small" onClick={() => handleViewProperty(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}><ViewIcon fontSize="small" /></IconButton></Tooltip>
+                              <Tooltip title="Edit Property"><IconButton size="small" onClick={() => handleEditProperty(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#f59e0b' } }}><EditIcon fontSize="small" /></IconButton></Tooltip>
+                              <Tooltip title="Manage Rooms"><IconButton size="small" onClick={() => handleManageRooms(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}><RoomIcon fontSize="small" /></IconButton></Tooltip>
+                              <Tooltip title="Manage Photos"><IconButton size="small" onClick={() => handleManagePhotos(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#4CAF50' } }}><PhotoIcon fontSize="small" /></IconButton></Tooltip>
+                              <Tooltip title="Manage Videos"><IconButton size="small" onClick={() => handleManageVideos(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#dc2626' } }}><VideoIcon fontSize="small" /></IconButton></Tooltip>
+                              <Tooltip title="Generate QR"><IconButton size="small" onClick={() => handleGenerateQR(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#8B5CF6' } }}><QrIcon fontSize="small" /></IconButton></Tooltip>
+                              <Tooltip title="Chat"><IconButton size="small" onClick={() => handleChat(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#4CAF50' } }}><ChatIcon fontSize="small" /></IconButton></Tooltip>
+                              <Tooltip title="Announcement"><IconButton size="small" onClick={() => handleAnnouncement(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}><CampaignIcon fontSize="small" /></IconButton></Tooltip>
+                            </Box>
+                          </Box>
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </>
+            )}
+
+            {/* Recent Bookings Tab */}
+            {activeTab === 1 && (
+              <Box>
+                {recentBookings.length === 0 ? (
+                  <Box sx={{ background: 'rgba(15, 23, 36, 0.6)', backdropFilter: 'blur(10px)', borderRadius: '24px', p: 4, textAlign: 'center', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <Typography sx={{ color: '#94a3b8' }}>No bookings yet</Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {recentBookings.map((booking) => {
+                      const statusStyle = getStatusBadgeStyle(booking.status);
+                      const monthlyRent = booking.monthly_rent || 0;
+                      return (
+                        <Box key={booking.id} sx={{
+                          background: 'rgba(15, 23, 36, 0.7)',
+                          backdropFilter: 'blur(12px)',
+                          borderRadius: '24px',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          p: 2,
+                          transition: 'all 0.3s ease',
+                          cursor: 'pointer',
+                          '&:hover': {
+                            borderColor: 'rgba(76, 175, 80, 0.3)',
+                            boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
+                            transform: 'translateX(5px)'
+                          }
+                        }} onClick={() => handleViewBookingDetails(booking)}>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 180 }}>
+                              <Avatar sx={{ width: 50, height: 50, bgcolor: '#4CAF50', background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)' }}>{booking.tenant_name?.charAt(0) || 'U'}</Avatar>
+                              <Box>
+                                <Typography sx={{ color: '#fff', fontWeight: 600 }}>{booking.tenant_name}</Typography>
+                                <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: 0.5 }}><PhoneIcon sx={{ fontSize: 12 }} />{booking.tenant_phone || 'Hidden'}</Typography>
+                              </Box>
+                            </Box>
+                            <Box sx={{ flex: 1, minWidth: 150 }}>
+                              <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Property</Typography>
+                              <Typography sx={{ color: '#fff', fontWeight: 500, fontSize: '0.9rem' }}>{booking.pg_name}</Typography>
+                              <Typography sx={{ color: '#8B5CF6', fontSize: '0.75rem' }}>{booking.room_type}</Typography>
+                            </Box>
+                            <Box sx={{ minWidth: 100 }}>
+                              <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Check-in</Typography>
+                              <Typography sx={{ color: '#fff', fontSize: '0.85rem' }}>{formatDate(booking.check_in_date)}</Typography>
+                            </Box>
+                            <Box sx={{ minWidth: 100 }}>
+                              <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Monthly Rent</Typography>
+                              <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', background: 'linear-gradient(135deg, #8B5CF6, #4CAF50)', backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{formatCurrency(monthlyRent)}</Typography>
+                            </Box>
+                            <Box sx={{ minWidth: 100 }}>
+                              <Chip label={booking.status?.toUpperCase() || 'PENDING'} size="small" sx={{ bgcolor: statusStyle.bg, color: statusStyle.color, fontWeight: 600, fontSize: '0.7rem', minWidth: 90, animation: statusStyle.glow === '#f59e0b' ? `${pulseGlow} 1.5s infinite` : 'none', boxShadow: statusStyle.glow === '#f59e0b' ? `0 0 8px ${statusStyle.glow}` : 'none' }} />
+                            </Box>
+                            <IconButton onClick={(e) => { e.stopPropagation(); handleViewBooking(booking.id); }} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '14px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}><ViewIcon fontSize="small" /></IconButton>
+                          </Box>
+                        </Box>
+                      );
+                    })}
+                    {stats.totalBookings > 5 && (
+                      <Box sx={{ textAlign: 'center', mt: 2 }}>
+                        <Button onClick={() => navigate("/owner/bookings")} endIcon={<ViewIcon />} sx={{ color: '#4CAF50' }}>View All Bookings</Button>
+                      </Box>
+                    )}
+                  </Box>
+                )}
+              </Box>
+            )}
+
+            {/* Insights Tab - Enhanced with Settlement Data */}
+            {activeTab === 2 && (
+              <Grid container spacing={3}>
+                {/* Revenue Summary */}
+                <Grid item xs={12} md={6}>
+                  <Box sx={{
+                    background: 'rgba(15, 23, 36, 0.7)',
+                    backdropFilter: 'blur(12px)',
+                    borderRadius: '24px',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    p: 3
+                  }}>
+                    <Typography sx={{ color: '#fff', fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <MoneyIcon sx={{ color: '#4CAF50' }} /> Revenue Summary
+                    </Typography>
+                    <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography sx={{ color: '#94a3b8' }}>Total Earnings</Typography>
+                      <Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{formatCurrency(stats.totalEarnings)}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography sx={{ color: '#94a3b8' }}>Monthly Revenue</Typography>
+                      <Typography sx={{ color: '#0B5ED7', fontWeight: 600 }}>{formatCurrency(stats.monthlyRevenue)}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography sx={{ color: '#94a3b8' }}>Yearly Revenue</Typography>
+                      <Typography sx={{ color: '#8B5CF6', fontWeight: 600 }}>{formatCurrency(stats.yearlyRevenue)}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography sx={{ color: '#94a3b8' }}>Total Rent Collected</Typography>
+                      <Typography sx={{ color: '#fff', fontWeight: 600 }}>{formatCurrency(stats.totalRent)}</Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+
+                {/* Booking Stats */}
+                <Grid item xs={12} md={6}>
+                  <Box sx={{
+                    background: 'rgba(15, 23, 36, 0.7)',
+                    backdropFilter: 'blur(12px)',
+                    borderRadius: '24px',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    p: 3
+                  }}>
+                    <Typography sx={{ color: '#fff', fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <ReceiptIcon sx={{ color: '#f59e0b' }} /> Booking Summary
+                    </Typography>
+                    <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography sx={{ color: '#94a3b8' }}>Total Bookings</Typography>
+                      <Typography sx={{ color: '#fff', fontWeight: 600 }}>{stats.totalBookings}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography sx={{ color: '#94a3b8' }}>Completed</Typography>
+                      <Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{stats.completedBookings}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography sx={{ color: '#94a3b8' }}>Pending</Typography>
+                      <Typography sx={{ color: '#f59e0b', fontWeight: 600 }}>{stats.pendingBookings}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography sx={{ color: '#94a3b8' }}>Cancelled</Typography>
+                      <Typography sx={{ color: '#dc2626', fontWeight: 600 }}>{stats.cancelledBookings}</Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+
+                {/* Settlement Summary - New Section */}
+                <Grid item xs={12}>
+                  <Box sx={{
+                    background: 'rgba(15, 23, 36, 0.7)',
+                    backdropFilter: 'blur(12px)',
+                    borderRadius: '24px',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    p: 3
+                  }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography sx={{ color: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <BankIcon sx={{ color: '#8B5CF6' }} /> Settlement Summary
+                      </Typography>
+                      <Button size="small" onClick={handleViewSettlements} sx={{ color: '#4CAF50' }}>View Details →</Button>
+                    </Box>
+                    <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
+                    
+                    <Grid container spacing={3}>
+                      <Grid item xs={12} sm={4}>
+                        <Box sx={{ textAlign: 'center', p: 2, background: 'rgba(76, 175, 80, 0.1)', borderRadius: '16px' }}>
+                          <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Total Settlement Amount</Typography>
+                          <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#4CAF50' }}>{formatCurrency(settlementStats.totalAmount)}</Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={12} sm={4}>
+                        <Box sx={{ textAlign: 'center', p: 2, background: 'rgba(11, 94, 215, 0.1)', borderRadius: '16px' }}>
+                          <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Settled Amount</Typography>
+                          <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#0B5ED7' }}>{formatCurrency(animatedSettledAmount)}</Typography>
+                          <Typography sx={{ fontSize: '0.7rem', color: '#4CAF50' }}>{settlementStats.totalSettled} transactions</Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={12} sm={4}>
+                        <Box sx={{ textAlign: 'center', p: 2, background: 'rgba(245, 158, 11, 0.1)', borderRadius: '16px' }}>
+                          <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Pending Settlement</Typography>
+                          <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#f59e0b' }}>{formatCurrency(animatedPendingAmount)}</Typography>
+                          <Typography sx={{ fontSize: '0.7rem', color: '#f59e0b' }}>{settlementStats.totalPending} pending</Typography>
+                        </Box>
+                      </Grid>
+                    </Grid>
+
+                    {/* PG-wise Breakdown */}
+                    {settlementStats.pgBreakdown.length > 0 && (
+                      <Box sx={{ mt: 3 }}>
+                        <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', mb: 2 }}>PG-wise Breakdown</Typography>
+                        <Stack spacing={1}>
+                          {settlementStats.pgBreakdown.map((pg) => (
+                            <Box key={pg.name} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1.5, background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <ApartmentIcon sx={{ fontSize: 16, color: '#4CAF50' }} />
+                                <Typography sx={{ color: '#fff', fontSize: '0.85rem' }}>{pg.name}</Typography>
+                              </Box>
+                              <Box sx={{ display: 'flex', gap: 2 }}>
+                                <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Total: {formatCurrency(pg.total)}</Typography>
+                                {pg.settled > 0 && <Typography sx={{ color: '#4CAF50', fontSize: '0.75rem' }}>Settled: {formatCurrency(pg.settled)}</Typography>}
+                                {pg.pending > 0 && <Typography sx={{ color: '#f59e0b', fontSize: '0.75rem' }}>Pending: {formatCurrency(pg.pending)}</Typography>}
+                              </Box>
+                            </Box>
+                          ))}
+                        </Stack>
+                      </Box>
+                    )}
+                  </Box>
+                </Grid>
+
+                {/* Deposit Summary */}
+                <Grid item xs={12}>
+                  <Box sx={{
+                    background: 'rgba(15, 23, 36, 0.7)',
+                    backdropFilter: 'blur(12px)',
+                    borderRadius: '24px',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    p: 3
+                  }}>
+                    <Typography sx={{ color: '#fff', fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <SecurityIcon sx={{ color: '#8B5CF6' }} /> Deposit Summary
+                    </Typography>
+                    <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography sx={{ color: '#94a3b8' }}>Total Deposit Collected</Typography>
+                          <Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{formatCurrency(stats.totalDeposit)}</Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography sx={{ color: '#94a3b8' }}>Pending Deposit</Typography>
+                          <Typography sx={{ color: '#f59e0b', fontWeight: 600 }}>{formatCurrency(stats.pendingDeposit)}</Typography>
+                        </Box>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                </Grid>
+              </Grid>
+            )}
+          </Box>
+        </Box>
+
+        {/* QR Code Preview Modal */}
+        <SwipeableDrawer
+          anchor="bottom"
+          open={qrOpen}
+          onClose={() => setQrOpen(false)}
+          onOpen={() => {}}
+          disableSwipeToOpen
+          sx={{
+            '& .MuiDrawer-paper': {
+              background: 'rgba(15, 23, 36, 0.95)',
+              backdropFilter: 'blur(20px)',
+              borderTopLeftRadius: '32px',
+              borderTopRightRadius: '32px',
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              p: 3
+            }
+          }}
+        >
+          <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <IconButton onClick={() => setQrOpen(false)} sx={{ color: '#fff' }}><CloseIcon /></IconButton>
+            </Box>
+            <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>{selectedProperty?.pg_name || 'Property'} QR Code</Typography>
+            {qrImageUrl && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', my: 3, animation: `${float} 2s ease-in-out infinite` }}>
+                <img src={qrImageUrl} alt="QR Code" style={{ width: 250, height: 250, borderRadius: '24px', boxShadow: '0 0 30px rgba(76, 175, 80, 0.3)' }} />
+              </Box>
+            )}
+            <Typography sx={{ color: '#94a3b8', mb: 3 }}>Scan to view property details and book instantly</Typography>
+            <Button fullWidth onClick={handleDownloadQRPoster} sx={{ background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)', borderRadius: '30px', py: 1.5, color: '#fff', fontWeight: 600, textTransform: 'none', mb: 2 }}>Download Poster</Button>
+            <Button fullWidth variant="outlined" onClick={() => setQrOpen(false)} sx={{ borderColor: 'rgba(255,255,255,0.2)', color: '#fff', borderRadius: '30px', py: 1.5, '&:hover': { borderColor: '#4CAF50' } }}>Close</Button>
+          </Box>
+        </SwipeableDrawer>
+
+        {/* Booking Details Dialog */}
+        <SwipeableDrawer
+          anchor="bottom"
+          open={bookingDetailsOpen}
+          onClose={() => setBookingDetailsOpen(false)}
+          onOpen={() => {}}
+          disableSwipeToOpen
+          sx={{
+            '& .MuiDrawer-paper': {
+              background: 'rgba(15, 23, 36, 0.95)',
+              backdropFilter: 'blur(20px)',
+              borderTopLeftRadius: '32px',
+              borderTopRightRadius: '32px',
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              p: 3,
+              maxHeight: '80vh'
+            }
+          }}
+        >
+          {selectedBooking && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>Booking Details</Typography>
+                <IconButton onClick={() => setBookingDetailsOpen(false)} sx={{ color: '#fff' }}><CloseIcon /></IconButton>
+              </Box>
+              <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
+              <Grid container spacing={2}>
+                <Grid item xs={12}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Tenant Name</Typography><Typography sx={{ color: '#fff', fontWeight: 500 }}>{selectedBooking.tenant_name}</Typography></Grid>
+                <Grid item xs={6}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Phone</Typography><Typography sx={{ color: '#fff' }}>{selectedBooking.tenant_phone || 'Hidden'}</Typography></Grid>
+                <Grid item xs={6}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Email</Typography><Typography sx={{ color: '#fff' }}>{selectedBooking.tenant_email || 'Not provided'}</Typography></Grid>
+                <Grid item xs={12}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Property</Typography><Typography sx={{ color: '#fff' }}>{selectedBooking.pg_name}</Typography></Grid>
+                <Grid item xs={6}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Room Type</Typography><Typography sx={{ color: '#8B5CF6' }}>{selectedBooking.room_type}</Typography></Grid>
+                <Grid item xs={6}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Check-in Date</Typography><Typography sx={{ color: '#fff' }}>{formatDate(selectedBooking.check_in_date)}</Typography></Grid>
+                <Grid item xs={6}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Monthly Rent</Typography><Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{formatCurrency(selectedBooking.monthly_rent)}</Typography></Grid>
+                <Grid item xs={6}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Deposit Amount</Typography><Typography sx={{ color: '#f59e0b', fontWeight: 600 }}>{formatCurrency(selectedBooking.deposit_amount)}</Typography></Grid>
+                <Grid item xs={12}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Status</Typography><Chip label={selectedBooking.status?.toUpperCase() || 'PENDING'} sx={{ bgcolor: getStatusBadgeStyle(selectedBooking.status).bg, color: getStatusBadgeStyle(selectedBooking.status).color, fontWeight: 600, mt: 0.5 }} /></Grid>
+              </Grid>
+              <Button fullWidth onClick={() => { setBookingDetailsOpen(false); handleViewBooking(selectedBooking.id); }} sx={{ mt: 3, background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)', borderRadius: '30px', py: 1.5, color: '#fff', fontWeight: 600, textTransform: 'none' }}>View Full Details</Button>
             </Box>
           )}
+        </SwipeableDrawer>
 
-          <Box sx={{ mb: 4 }}>
-            <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} sx={{ '& .MuiTab-root': { color: '#94a3b8', fontWeight: 600, textTransform: 'none', fontSize: '1rem', '&.Mui-selected': { color: '#4CAF50' } }, '& .MuiTabs-indicator': { backgroundColor: '#4CAF50', height: 3, borderRadius: '3px' } }}>
-              <Tab label="Properties" icon={<ApartmentIcon />} iconPosition="start" />
-              <Tab label="Recent Bookings" icon={<ReceiptIcon />} iconPosition="start" />
-              <Tab label="Insights" icon={<TrendingUpIcon />} iconPosition="start" />
-            </Tabs>
+        {/* Floating Assistant Button */}
+        <Box sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1000, animation: `${float} 3s ease-in-out infinite` }}>
+          <IconButton onClick={() => setSnackbar({ open: true, message: "Need help? Contact support", severity: "info" })} sx={{ background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)', width: 56, height: 56, boxShadow: '0 4px 20px rgba(76, 175, 80, 0.4)', '&:hover': { transform: 'scale(1.1)', boxShadow: '0 8px 30px rgba(76, 175, 80, 0.6)' }, transition: 'all 0.3s ease' }}><ChatIcon sx={{ color: '#fff' }} /></IconButton>
+        </Box>
 
-            <Box sx={{ mt: 3 }}>
-              {activeTab === 0 && (
-                <>
-                  {pgs.length === 0 ? (
-                    <Box sx={{ background: 'rgba(15, 23, 36, 0.8)', backdropFilter: 'blur(20px)', borderRadius: '32px', border: '1px solid rgba(255,255,255,0.1)', p: { xs: 3, md: 6 }, textAlign: 'center' }}>
-                      <ApartmentIcon sx={{ fontSize: 80, color: '#4CAF50', mb: 2, opacity: 0.7 }} />
-                      <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>No properties yet</Typography>
-                      <Typography sx={{ color: '#94a3b8', mb: 3 }}>Start by adding your first property to begin managing bookings and tenants.</Typography>
-                      <Button startIcon={<AddIcon />} onClick={() => navigate("/owner/add")} sx={{ background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)', borderRadius: '30px', px: 4, py: 1.5, color: '#fff', fontWeight: 600, textTransform: 'none', fontSize: '1rem' }}>Add Your First Property</Button>
-                    </Box>
-                  ) : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                      {pgs.map((pg) => {
-                        console.log(`🏠 PG: ${pg.pg_name}, Status: ${pg.status}`);
-                        return (
-                          <Box key={pg.id || pg.pg_id} sx={{ background: 'rgba(15, 23, 36, 0.8)', backdropFilter: 'blur(20px)', borderRadius: '28px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', transition: 'all 0.3s ease', '&:hover': { borderColor: 'rgba(76, 175, 80, 0.5)', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' } }}>
-                            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
-                              <Box sx={{ width: { xs: '100%', md: 280 }, height: { xs: 200, md: 'auto' }, backgroundImage: pg.image ? `url(${getImageUrl(pg.image)})` : 'linear-gradient(135deg, #0B5ED7, #4CAF50)', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
-                                <Box sx={{ position: 'absolute', top: 16, right: 16, background: pg.available_rooms > 0 ? 'linear-gradient(135deg, #4CAF50, #2e7d32)' : 'linear-gradient(135deg, #f59e0b, #dc2626)', color: '#fff', px: 1.5, py: 0.5, borderRadius: '20px', fontSize: '0.7rem', fontWeight: 600 }}>{pg.available_rooms > 0 ? `${pg.available_rooms} AVAILABLE` : 'FULL'}</Box>
-                              </Box>
-                              <Box sx={{ flex: 1, p: 3 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 1 }}>
-                                  <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1.3rem', mb: 1 }}>{pg.pg_name}</Typography>
-                                  {pg.status === "pending" && (<Chip icon={<PendingIcon sx={{ fontSize: 14 }} />} label="⏳ Waiting for Admin Approval" size="small" sx={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', fontWeight: 600, fontSize: '0.7rem', borderRadius: '20px', border: '1px solid rgba(245, 158, 11, 0.3)', animation: `${pulseGlow} 1.5s infinite` }} />)}
-                                  {pg.status === "approved" && (<Chip icon={<CheckCircleIcon sx={{ fontSize: 14 }} />} label="Approved" size="small" sx={{ background: 'rgba(76, 175, 80, 0.15)', color: '#4CAF50', fontWeight: 600, fontSize: '0.7rem', borderRadius: '20px', border: '1px solid rgba(76, 175, 80, 0.3)' }} />)}
-                                  {pg.status === "rejected" && (<Chip icon={<CancelIcon sx={{ fontSize: 14 }} />} label="Rejected" size="small" sx={{ background: 'rgba(220, 38, 38, 0.15)', color: '#dc2626', fontWeight: 600, fontSize: '0.7rem', borderRadius: '20px', border: '1px solid rgba(220, 38, 38, 0.3)' }} />)}
-                                </Box>
-                                <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', mb: 2 }}>{pg.location || 'Location not specified'}</Typography>
-                                <Grid container spacing={2} sx={{ mb: 2 }}>
-                                  <Grid item xs={4}><Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Total Rooms</Typography><Typography sx={{ color: '#fff', fontWeight: 600 }}>{pg.total_rooms || 0}</Typography></Grid>
-                                  <Grid item xs={4}><Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Available</Typography><Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{pg.available_rooms || 0}</Typography></Grid>
-                                  <Grid item xs={4}><Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Starting Rent</Typography><Typography sx={{ color: '#8B5CF6', fontWeight: 600 }}>{formatCurrency(pg.rent_amount)}</Typography></Grid>
-                                </Grid>
-                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                  <Tooltip title="View Property"><IconButton size="small" onClick={() => handleViewProperty(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}><ViewIcon fontSize="small" /></IconButton></Tooltip>
-                                  <Tooltip title="Edit Property"><IconButton size="small" onClick={() => handleEditProperty(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#f59e0b' } }}><EditIcon fontSize="small" /></IconButton></Tooltip>
-                                  <Tooltip title="Manage Rooms"><IconButton size="small" onClick={() => handleManageRooms(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}><RoomIcon fontSize="small" /></IconButton></Tooltip>
-                                  <Tooltip title="Manage Photos"><IconButton size="small" onClick={() => handleManagePhotos(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#4CAF50' } }}><PhotoIcon fontSize="small" /></IconButton></Tooltip>
-                                  <Tooltip title="Manage Videos"><IconButton size="small" onClick={() => handleManageVideos(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#dc2626' } }}><VideoIcon fontSize="small" /></IconButton></Tooltip>
-                                  <Tooltip title="Generate QR"><IconButton size="small" onClick={() => handleGenerateQR(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#8B5CF6' } }}><QrIcon fontSize="small" /></IconButton></Tooltip>
-                                  <Tooltip title="Chat"><IconButton size="small" onClick={() => handleChat(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#4CAF50' } }}><ChatIcon fontSize="small" /></IconButton></Tooltip>
-                                  <Tooltip title="Announcement"><IconButton size="small" onClick={() => handleAnnouncement(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}><CampaignIcon fontSize="small" /></IconButton></Tooltip>
-                                </Box>
-                              </Box>
-                            </Box>
-                          </Box>
-                        );
-                      })}
-                    </Box>
-                  )}
-                </>
-              )}
+        {/* Snackbar */}
+        <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+          <Alert severity={snackbar.severity} variant="filled" onClose={() => setSnackbar({ ...snackbar, open: false })} sx={{ width: '100%', borderRadius: '20px', background: snackbar.severity === 'success' ? 'linear-gradient(135deg, #4CAF50, #2e7d32)' : snackbar.severity === 'error' ? 'linear-gradient(135deg, #dc2626, #b91c1c)' : 'linear-gradient(135deg, #0B5ED7, #1e40af)' }}>{snackbar.message}</Alert>
+        </Snackbar>
 
-              {activeTab === 1 && (
-                <Box>
-                  {recentBookings.length === 0 ? (
-                    <Box sx={{ background: 'rgba(15, 23, 36, 0.6)', backdropFilter: 'blur(10px)', borderRadius: '24px', p: 4, textAlign: 'center', border: '1px solid rgba(255,255,255,0.05)' }}><Typography sx={{ color: '#94a3b8' }}>No bookings yet</Typography></Box>
-                  ) : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {recentBookings.map((booking) => {
-                        const statusStyle = getStatusBadgeStyle(booking.status);
-                        const monthlyRent = booking.monthly_rent || 0;
-                        return (
-                          <Box key={booking.id} sx={{ background: 'rgba(15, 23, 36, 0.7)', backdropFilter: 'blur(12px)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.08)', p: 2, transition: 'all 0.3s ease', cursor: 'pointer', '&:hover': { borderColor: 'rgba(76, 175, 80, 0.3)', boxShadow: '0 8px 25px rgba(0,0,0,0.2)', transform: 'translateX(5px)' } }} onClick={() => handleViewBookingDetails(booking)}>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 180 }}><Avatar sx={{ width: 50, height: 50, bgcolor: '#4CAF50', background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)' }}>{booking.tenant_name?.charAt(0) || 'U'}</Avatar><Box><Typography sx={{ color: '#fff', fontWeight: 600 }}>{booking.tenant_name}</Typography><Typography sx={{ color: '#94a3b8', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: 0.5 }}><PhoneIcon sx={{ fontSize: 12 }} />{booking.tenant_phone || 'Hidden'}</Typography></Box></Box>
-                              <Box sx={{ flex: 1, minWidth: 150 }}><Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Property</Typography><Typography sx={{ color: '#fff', fontWeight: 500, fontSize: '0.9rem' }}>{booking.pg_name}</Typography><Typography sx={{ color: '#8B5CF6', fontSize: '0.75rem' }}>{booking.room_type}</Typography></Box>
-                              <Box sx={{ minWidth: 100 }}><Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Check-in</Typography><Typography sx={{ color: '#fff', fontSize: '0.85rem' }}>{formatDate(booking.check_in_date)}</Typography></Box>
-                              <Box sx={{ minWidth: 100 }}><Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Monthly Rent</Typography><Typography sx={{ fontWeight: 700, fontSize: '1.1rem', background: 'linear-gradient(135deg, #8B5CF6, #4CAF50)', backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{formatCurrency(monthlyRent)}</Typography></Box>
-                              <Box sx={{ minWidth: 100 }}><Chip label={booking.status?.toUpperCase() || 'PENDING'} size="small" sx={{ bgcolor: statusStyle.bg, color: statusStyle.color, fontWeight: 600, fontSize: '0.7rem', minWidth: 90, animation: statusStyle.glow === '#f59e0b' ? `${pulseGlow} 1.5s infinite` : 'none', boxShadow: statusStyle.glow === '#f59e0b' ? `0 0 8px ${statusStyle.glow}` : 'none' }} /></Box>
-                              <IconButton onClick={(e) => { e.stopPropagation(); handleViewBooking(booking.id); }} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '14px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}><ViewIcon fontSize="small" /></IconButton>
-                            </Box>
-                          </Box>
-                        );
-                      })}
-                      {stats.totalBookings > 5 && (<Box sx={{ textAlign: 'center', mt: 2 }}><Button onClick={() => navigate("/owner/bookings")} endIcon={<ViewIcon />} sx={{ color: '#4CAF50' }}>View All Bookings</Button></Box>)}
-                    </Box>
-                  )}
-                </Box>
-              )}
-
-              {activeTab === 2 && (
-                <Grid container spacing={3}>
-                  <Grid item xs={12} md={6}>
-                    <Box sx={{ background: 'rgba(15, 23, 36, 0.7)', backdropFilter: 'blur(12px)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.08)', p: 3 }}>
-                      <Typography sx={{ color: '#fff', fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}><MoneyIcon sx={{ color: '#4CAF50' }} /> Revenue Summary</Typography>
-                      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}><Typography sx={{ color: '#94a3b8' }}>Total Earnings</Typography><Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{formatCurrency(stats.totalEarnings)}</Typography></Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}><Typography sx={{ color: '#94a3b8' }}>Monthly Revenue</Typography><Typography sx={{ color: '#0B5ED7', fontWeight: 600 }}>{formatCurrency(stats.monthlyRevenue)}</Typography></Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}><Typography sx={{ color: '#94a3b8' }}>Yearly Revenue</Typography><Typography sx={{ color: '#8B5CF6', fontWeight: 600 }}>{formatCurrency(stats.yearlyRevenue)}</Typography></Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography sx={{ color: '#94a3b8' }}>Total Rent Collected</Typography><Typography sx={{ color: '#fff', fontWeight: 600 }}>{formatCurrency(stats.totalRent)}</Typography></Box>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Box sx={{ background: 'rgba(15, 23, 36, 0.7)', backdropFilter: 'blur(12px)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.08)', p: 3 }}>
-                      <Typography sx={{ color: '#fff', fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}><ReceiptIcon sx={{ color: '#f59e0b' }} /> Booking Summary</Typography>
-                      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}><Typography sx={{ color: '#94a3b8' }}>Total Bookings</Typography><Typography sx={{ color: '#fff', fontWeight: 600 }}>{stats.totalBookings}</Typography></Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}><Typography sx={{ color: '#94a3b8' }}>Completed</Typography><Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{stats.completedBookings}</Typography></Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}><Typography sx={{ color: '#94a3b8' }}>Pending</Typography><Typography sx={{ color: '#f59e0b', fontWeight: 600 }}>{stats.pendingBookings}</Typography></Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography sx={{ color: '#94a3b8' }}>Cancelled</Typography><Typography sx={{ color: '#dc2626', fontWeight: 600 }}>{stats.cancelledBookings}</Typography></Box>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Box sx={{ background: 'rgba(15, 23, 36, 0.7)', backdropFilter: 'blur(12px)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.08)', p: 3 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}><Typography sx={{ color: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}><BankIcon sx={{ color: '#8B5CF6' }} /> Settlement Summary</Typography><Button size="small" onClick={handleViewSettlements} sx={{ color: '#4CAF50' }}>View Details →</Button></Box>
-                      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
-                      <Grid container spacing={3}>
-                        <Grid item xs={12} sm={4}><Box sx={{ textAlign: 'center', p: 2, background: 'rgba(76, 175, 80, 0.1)', borderRadius: '16px' }}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Total Settlement Amount</Typography><Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#4CAF50' }}>{formatCurrency(settlementStats.totalAmount)}</Typography></Box></Grid>
-                        <Grid item xs={12} sm={4}><Box sx={{ textAlign: 'center', p: 2, background: 'rgba(11, 94, 215, 0.1)', borderRadius: '16px' }}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Settled Amount</Typography><Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#0B5ED7' }}>{formatCurrency(animatedSettledAmount)}</Typography><Typography sx={{ fontSize: '0.7rem', color: '#4CAF50' }}>{settlementStats.totalSettled} transactions</Typography></Box></Grid>
-                        <Grid item xs={12} sm={4}><Box sx={{ textAlign: 'center', p: 2, background: 'rgba(245, 158, 11, 0.1)', borderRadius: '16px' }}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Pending Settlement</Typography><Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#f59e0b' }}>{formatCurrency(animatedPendingAmount)}</Typography><Typography sx={{ fontSize: '0.7rem', color: '#f59e0b' }}>{settlementStats.totalPending} pending</Typography></Box></Grid>
-                      </Grid>
-                      {settlementStats.pgBreakdown.length > 0 && (<Box sx={{ mt: 3 }}><Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', mb: 2 }}>PG-wise Breakdown</Typography><Stack spacing={1}>{settlementStats.pgBreakdown.map((pg) => (<Box key={pg.name} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1.5, background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><ApartmentIcon sx={{ fontSize: 16, color: '#4CAF50' }} /><Typography sx={{ color: '#fff', fontSize: '0.85rem' }}>{pg.name}</Typography></Box><Box sx={{ display: 'flex', gap: 2 }}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Total: {formatCurrency(pg.total)}</Typography>{pg.settled > 0 && <Typography sx={{ color: '#4CAF50', fontSize: '0.75rem' }}>Settled: {formatCurrency(pg.settled)}</Typography>}{pg.pending > 0 && <Typography sx={{ color: '#f59e0b', fontSize: '0.75rem' }}>Pending: {formatCurrency(pg.pending)}</Typography>}</Box></Box>))}</Stack></Box>)}
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Box sx={{ background: 'rgba(15, 23, 36, 0.7)', backdropFilter: 'blur(12px)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.08)', p: 3 }}>
-                      <Typography sx={{ color: '#fff', fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}><SecurityIcon sx={{ color: '#8B5CF6' }} /> Deposit Summary</Typography>
-                      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
-                      <Grid container spacing={2}><Grid item xs={12} sm={6}><Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography sx={{ color: '#94a3b8' }}>Total Deposit Collected</Typography><Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{formatCurrency(stats.totalDeposit)}</Typography></Box></Grid><Grid item xs={12} sm={6}><Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography sx={{ color: '#94a3b8' }}>Pending Deposit</Typography><Typography sx={{ color: '#f59e0b', fontWeight: 600 }}>{formatCurrency(stats.pendingDeposit)}</Typography></Box></Grid></Grid>
-                    </Box>
-                  </Grid>
-                </Grid>
-              )}
-            </Box>
-          </Box>
-
-          <SwipeableDrawer anchor="bottom" open={qrOpen} onClose={() => setQrOpen(false)} onOpen={() => {}} disableSwipeToOpen sx={{ '& .MuiDrawer-paper': { background: 'rgba(15, 23, 36, 0.95)', backdropFilter: 'blur(20px)', borderTopLeftRadius: '32px', borderTopRightRadius: '32px', borderTop: '1px solid rgba(255,255,255,0.1)', p: 3 } }}>
-            <Box sx={{ textAlign: 'center' }}><Box sx={{ display: 'flex', justifyContent: 'flex-end' }}><IconButton onClick={() => setQrOpen(false)} sx={{ color: '#fff' }}><CloseIcon /></IconButton></Box><Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>{selectedProperty?.pg_name || 'Property'} QR Code</Typography>{qrImageUrl && (<Box sx={{ display: 'flex', justifyContent: 'center', my: 3, animation: `${float} 2s ease-in-out infinite` }}><img src={qrImageUrl} alt="QR Code" style={{ width: 250, height: 250, borderRadius: '24px', boxShadow: '0 0 30px rgba(76, 175, 80, 0.3)' }} /></Box>)}<Typography sx={{ color: '#94a3b8', mb: 3 }}>Scan to view property details and book instantly</Typography><Button fullWidth onClick={handleDownloadQRPoster} sx={{ background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)', borderRadius: '30px', py: 1.5, color: '#fff', fontWeight: 600, textTransform: 'none', mb: 2 }}>Download Poster</Button><Button fullWidth variant="outlined" onClick={() => setQrOpen(false)} sx={{ borderColor: 'rgba(255,255,255,0.2)', color: '#fff', borderRadius: '30px', py: 1.5, '&:hover': { borderColor: '#4CAF50' } }}>Close</Button></Box>
-          </SwipeableDrawer>
-
-          <SwipeableDrawer anchor="bottom" open={bookingDetailsOpen} onClose={() => setBookingDetailsOpen(false)} onOpen={() => {}} disableSwipeToOpen sx={{ '& .MuiDrawer-paper': { background: 'rgba(15, 23, 36, 0.95)', backdropFilter: 'blur(20px)', borderTopLeftRadius: '32px', borderTopRightRadius: '32px', borderTop: '1px solid rgba(255,255,255,0.1)', p: 3, maxHeight: '80vh' } }}>
-            {selectedBooking && (<Box><Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}><Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>Booking Details</Typography><IconButton onClick={() => setBookingDetailsOpen(false)} sx={{ color: '#fff' }}><CloseIcon /></IconButton></Box><Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} /><Grid container spacing={2}><Grid item xs={12}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Tenant Name</Typography><Typography sx={{ color: '#fff', fontWeight: 500 }}>{selectedBooking.tenant_name}</Typography></Grid><Grid item xs={6}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Phone</Typography><Typography sx={{ color: '#fff' }}>{selectedBooking.tenant_phone || 'Hidden'}</Typography></Grid><Grid item xs={6}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Email</Typography><Typography sx={{ color: '#fff' }}>{selectedBooking.tenant_email || 'Not provided'}</Typography></Grid><Grid item xs={12}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Property</Typography><Typography sx={{ color: '#fff' }}>{selectedBooking.pg_name}</Typography></Grid><Grid item xs={6}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Room Type</Typography><Typography sx={{ color: '#8B5CF6' }}>{selectedBooking.room_type}</Typography></Grid><Grid item xs={6}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Check-in Date</Typography><Typography sx={{ color: '#fff' }}>{formatDate(selectedBooking.check_in_date)}</Typography></Grid><Grid item xs={6}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Monthly Rent</Typography><Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{formatCurrency(selectedBooking.monthly_rent)}</Typography></Grid><Grid item xs={6}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Deposit Amount</Typography><Typography sx={{ color: '#f59e0b', fontWeight: 600 }}>{formatCurrency(selectedBooking.deposit_amount)}</Typography></Grid><Grid item xs={12}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Status</Typography><Chip label={selectedBooking.status?.toUpperCase() || 'PENDING'} sx={{ bgcolor: getStatusBadgeStyle(selectedBooking.status).bg, color: getStatusBadgeStyle(selectedBooking.status).color, fontWeight: 600, mt: 0.5 }} /></Grid></Grid><Button fullWidth onClick={() => { setBookingDetailsOpen(false); handleViewBooking(selectedBooking.id); }} sx={{ mt: 3, background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)', borderRadius: '30px', py: 1.5, color: '#fff', fontWeight: 600, textTransform: 'none' }}>View Full Details</Button></Box>)}
-          </SwipeableDrawer>
-
-          <Box sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1000, animation: `${float} 3s ease-in-out infinite` }}>
-            <IconButton onClick={() => setSnackbar({ open: true, message: "Need help? Contact support", severity: "info" })} sx={{ background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)', width: 56, height: 56, boxShadow: '0 4px 20px rgba(76, 175, 80, 0.4)', '&:hover': { transform: 'scale(1.1)', boxShadow: '0 8px 30px rgba(76, 175, 80, 0.6)' }, transition: 'all 0.3s ease' }}><ChatIcon sx={{ color: '#fff' }} /></IconButton>
-          </Box>
-
-          <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-            <Alert severity={snackbar.severity} variant="filled" onClose={() => setSnackbar({ ...snackbar, open: false })} sx={{ width: '100%', borderRadius: '20px', background: snackbar.severity === 'success' ? 'linear-gradient(135deg, #4CAF50, #2e7d32)' : snackbar.severity === 'error' ? 'linear-gradient(135deg, #dc2626, #b91c1c)' : 'linear-gradient(135deg, #0B5ED7, #1e40af)' }}>{snackbar.message}</Alert>
-          </Snackbar>
-
-        </Container>
-      </Box>
+      </Container>
     </Box>
   );
 };
