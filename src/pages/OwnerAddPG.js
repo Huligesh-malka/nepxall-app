@@ -279,7 +279,7 @@ function OwnerAddPG() {
   const loadUserPlan = async () => {
     try {
       setPlanLoading(true);
-      const response = await userapi.get("/pg/plan");
+      const response = await userAPI.get("/pg/plan");
       console.log("📊 User plan loaded:", response.data);
       setPlan(response.data);
     } catch (err) {
