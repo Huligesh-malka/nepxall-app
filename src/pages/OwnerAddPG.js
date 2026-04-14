@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Box, CircularProgress } from "@mui/material";
-import api from "../api/api";
+import api, { pgAPI } from "../api/api";
 import { getImageUrl } from "../config";
 
 // Fix for default marker icons in Leaflet
@@ -762,7 +762,7 @@ function OwnerAddPG() {
       console.log("Submitting property data with owner UID:", user.uid);
       
       // ✅ USING pgAPI CONVENIENCE METHOD
-      const response = await pgAPI.createProperty(formData);
+      const response = await api.post("/pg/create", formData)
 
       if (response.data.success) {
         alert(`✅ ${isToLet ? 'House/Flat' : 'Property'} Created Successfully!`);
