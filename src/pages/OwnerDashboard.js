@@ -6,6 +6,7 @@ import { getImageUrl } from "../config";
 import { motion } from "framer-motion";
 import { Box, CircularProgress, useTheme, alpha, keyframes } from "@mui/material";
 import axios from "axios";
+import Sidebar from "../components/Sidebar"
 
 import QRCodeStyling from "qr-code-styling";
 
