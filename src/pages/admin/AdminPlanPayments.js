@@ -28,8 +28,8 @@ export default function AdminPlanPayments() {
       await api.post(`/plan/verify/${orderId}`);
       alert("✅ Plan Activated");
       loadPayments();
-    } catch {
-      alert("❌ Failed to approve");
+    } catch (err) {
+      alert(err?.response?.data?.message || "❌ Failed to approve");
     }
   };
 
@@ -42,6 +42,13 @@ export default function AdminPlanPayments() {
       return <span style={{ color: "red", fontWeight: "bold" }}>❌ Expired</span>;
     }
     return <span style={{ color: "orange", fontWeight: "bold" }}>⏳ Pending</span>;
+  };
+
+  // 🔥 NEW: CHECK IF USER HAS ACTIVE PLAN
+  const hasActivePlan = (p) => {
+    // you must return plan_expiry from backend
+    if (!p.plan_expiry) return false;
+    return new Date(p.plan_expiry) > new Date();
   };
 
   return (
@@ -81,38 +88,49 @@ export default function AdminPlanPayments() {
                 </td>
               </tr>
             ) : (
-              payments.map((p) => (
-                <tr key={p.id} style={{ borderBottom: "1px solid #eee" }}>
-                  <td style={tdStyle}>{p.name}</td>
-                  <td style={tdStyle}>{p.phone}</td>
-                  <td style={tdStyle}>{p.plan.toUpperCase()}</td>
-                  <td style={tdStyle}>₹{p.amount}</td>
-                  <td style={tdStyle}>{p.order_id}</td>
+              payments.map((p) => {
+                const active = hasActivePlan(p);
 
-                  {/* ✅ STATUS FIX */}
-                  <td style={tdStyle}>{getStatus(p.status)}</td>
+                return (
+                  <tr key={p.id} style={{ borderBottom: "1px solid #eee" }}>
+                    <td style={tdStyle}>{p.name}</td>
+                    <td style={tdStyle}>{p.phone}</td>
+                    <td style={tdStyle}>{p.plan.toUpperCase()}</td>
+                    <td style={tdStyle}>₹{p.amount}</td>
+                    <td style={tdStyle}>{p.order_id}</td>
 
-                  {/* ✅ ACTION FIX */}
-                  <td style={tdStyle}>
-                    {p.status === "pending" && (
-                      <button
-                        onClick={() => approvePayment(p.order_id)}
-                        style={{
-                          background: "#10b981",
-                          color: "#fff",
-                          border: "none",
-                          padding: "6px 14px",
-                          borderRadius: 6,
-                          cursor: "pointer",
-                          fontWeight: "bold"
-                        }}
-                      >
-                        Approve
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))
+                    {/* STATUS */}
+                    <td style={tdStyle}>{getStatus(p.status)}</td>
+
+                    {/* ACTION */}
+                    <td style={tdStyle}>
+                      {p.status === "pending" && !active && (
+                        <button
+                          onClick={() => approvePayment(p.order_id)}
+                          style={{
+                            background: "#10b981",
+                            color: "#fff",
+                            border: "none",
+                            padding: "6px 14px",
+                            borderRadius: 6,
+                            cursor: "pointer",
+                            fontWeight: "bold"
+                          }}
+                        >
+                          Approve
+                        </button>
+                      )}
+
+                      {/* 🔥 SHOW MESSAGE IF ACTIVE */}
+                      {p.status === "pending" && active && (
+                        <span style={{ color: "gray", fontSize: 12 }}>
+                          🚫 Active Plan Exists
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
