@@ -72,8 +72,8 @@ export default function OwnerPremiumPlans() {
       setPageLoading(true);
       const res = await api.get("/pg/plan");
 
-      setCurrentPlan(res.data.plan || "free");
-      setSelectedPlan(res.data.plan || "free");
+      setCurrentPlan(res.data.name || "free");
+setSelectedPlan(res.data.name || "free");
     } catch {
       setCurrentPlan("free");
       setSelectedPlan("free");
