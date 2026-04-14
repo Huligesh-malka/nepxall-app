@@ -216,11 +216,11 @@ export default function OwnerPGVideos() {
                 🎬 Videos: {videos.length} / {plan.max_videos_per_pg} used
               </p>
               <p style={{ margin: "4px 0", fontSize: 12, opacity: 0.9 }}>
-                📅 Expires: {new Date(plan.expiry_date).toLocaleDateString()}
+                📅 Expires: {new Date(plan.expiry_date).toLocaleDateString("en-IN")}
               </p>
             </div>
             <button 
-              onClick={() => navigate("/plans")}
+              onClick={() => navigate("/owner/premium")}
               style={{
                 backgroundColor: "white",
                 color: "#667eea",
@@ -268,7 +268,7 @@ export default function OwnerPGVideos() {
             🚫 Your {plan?.name} plan limit of {plan?.max_videos_per_pg} videos has been reached.
           </p>
           <button 
-            onClick={() => navigate("/plans")}
+            onClick={() => navigate("/owner/premium")}
             style={{
               backgroundColor: "#ffc107",
               color: "#333",
