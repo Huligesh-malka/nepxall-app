@@ -44,11 +44,44 @@ export default function AdminPlanPayments() {
     return <span style={{ color: "orange", fontWeight: "bold" }}>⏳ Pending</span>;
   };
 
-  // 🔥 NEW: CHECK IF USER HAS ACTIVE PLAN
+  // 🔥 CHECK ACTIVE PLAN
   const hasActivePlan = (p) => {
-    // you must return plan_expiry from backend
     if (!p.plan_expiry) return false;
     return new Date(p.plan_expiry) > new Date();
+  };
+
+  // 🔥 NEW: EXPIRY TEXT
+  const getExpiryText = (expiryDate) => {
+    if (!expiryDate) return null;
+
+    const now = new Date();
+    const expiry = new Date(expiryDate);
+
+    const diffTime = expiry - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays > 0) {
+      // 🔥 WARNING if <=3 days
+      if (diffDays <= 3) {
+        return (
+          <div style={{ color: "orange", fontSize: 12 }}>
+            ⚠️ Expires in {diffDays} day{diffDays > 1 ? "s" : ""}
+          </div>
+        );
+      }
+
+      return (
+        <div style={{ color: "blue", fontSize: 12 }}>
+          ⏳ Expires in {diffDays} day{diffDays > 1 ? "s" : ""}
+        </div>
+      );
+    } else {
+      return (
+        <div style={{ color: "red", fontSize: 12 }}>
+          ❌ Expired {Math.abs(diffDays)} day{Math.abs(diffDays) > 1 ? "s" : ""} ago
+        </div>
+      );
+    }
   };
 
   return (
@@ -95,7 +128,13 @@ export default function AdminPlanPayments() {
                   <tr key={p.id} style={{ borderBottom: "1px solid #eee" }}>
                     <td style={tdStyle}>{p.name}</td>
                     <td style={tdStyle}>{p.phone}</td>
-                    <td style={tdStyle}>{p.plan.toUpperCase()}</td>
+
+                    {/* 🔥 PLAN + EXPIRY */}
+                    <td style={tdStyle}>
+                      {p.plan.toUpperCase()}
+                      {p.status === "paid" && getExpiryText(p.plan_expiry)}
+                    </td>
+
                     <td style={tdStyle}>₹{p.amount}</td>
                     <td style={tdStyle}>{p.order_id}</td>
 
@@ -121,7 +160,6 @@ export default function AdminPlanPayments() {
                         </button>
                       )}
 
-                      {/* 🔥 SHOW MESSAGE IF ACTIVE */}
                       {p.status === "pending" && active && (
                         <span style={{ color: "gray", fontSize: 12 }}>
                           🚫 Active Plan Exists
