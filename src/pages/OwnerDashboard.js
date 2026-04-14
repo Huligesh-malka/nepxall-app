@@ -130,16 +130,16 @@ const getStatusBadgeStyle = (status) => {
   switch(status?.toLowerCase()) {
     case 'approved':
     case 'confirmed':
-      return { bg: '#16a34a', color: '#fff', glow: '#16a34a', label: '✓ Approved' };
+      return { bg: '#16a34a', color: '#fff', glow: '#16a34a' };
     case 'pending':
-      return { bg: '#f59e0b', color: '#fff', glow: '#f59e0b', label: '⏳ Waiting for Admin Approval' };
+      return { bg: '#f59e0b', color: '#fff', glow: '#f59e0b' };
     case 'rejected':
     case 'cancelled':
-      return { bg: '#dc2626', color: '#fff', glow: '#dc2626', label: '✗ Rejected' };
+      return { bg: '#dc2626', color: '#fff', glow: '#dc2626' };
     case 'completed':
-      return { bg: '#0284c7', color: '#fff', glow: '#0284c7', label: '✓ Completed' };
+      return { bg: '#0284c7', color: '#fff', glow: '#0284c7' };
     default:
-      return { bg: '#6b7280', color: '#fff', glow: '#6b7280', label: 'Active' };
+      return { bg: '#6b7280', color: '#fff', glow: '#6b7280' };
   }
 };
 
@@ -370,10 +370,6 @@ const OwnerDashboard = () => {
         const photos = parseArray(pg.photos);
         pgMap[pg.id] = pg;
         pgMap[pg.pg_id] = pg;
-        
-        // ✅ DEBUG: Log status from backend
-        console.log(`📊 PG: ${pg.pg_name || pg.name}, Status: ${pg.status}`);
-        
         return {
           ...pg,
           id: pg.id || pg.pg_id,
@@ -397,8 +393,7 @@ const OwnerDashboard = () => {
           price_4bhk: Number(pg.price_4bhk) || 0,
           co_living_single_room: Number(pg.co_living_single_room) || 0,
           co_living_double_room: Number(pg.co_living_double_room) || 0,
-          triple_room: Number(pg.triple_room) || 0,
-          status: pg.status || "pending" // Keep original status, default to pending if missing
+          triple_room: Number(pg.triple_room) || 0
         };
       });
 
@@ -1362,9 +1357,7 @@ const OwnerDashboard = () => {
                   </Box>
                 ) : (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    {pgs.map((pg) => {
-                      const statusStyle = getStatusBadgeStyle(pg.status);
-                      return (
+                    {pgs.map((pg) => (
                       <Box key={pg.id || pg.pg_id} sx={{
                         background: 'rgba(15, 23, 36, 0.8)',
                         backdropFilter: 'blur(20px)',
@@ -1400,87 +1393,10 @@ const OwnerDashboard = () => {
                             }}>
                               {pg.available_rooms > 0 ? `${pg.available_rooms} AVAILABLE` : 'FULL'}
                             </Box>
-                            
-                            {/* ✅ STATUS OVERLAY BADGE on image */}
-                            {pg.status === "pending" && (
-                              <Box sx={{
-                                position: 'absolute',
-                                top: 16,
-                                left: 16,
-                                background: 'rgba(245, 158, 11, 0.9)',
-                                backdropFilter: 'blur(4px)',
-                                color: '#fff',
-                                px: 1.5,
-                                py: 0.5,
-                                borderRadius: '20px',
-                                fontSize: '0.7rem',
-                                fontWeight: 600,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 0.5
-                              }}>
-                                <PendingIcon sx={{ fontSize: 12 }} />
-                                PENDING
-                              </Box>
-                            )}
                           </Box>
                           <Box sx={{ flex: 1, p: 3 }}>
-                            <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1.3rem', mb: 1 }}>
-                              {pg.pg_name}
-                            </Typography>
-                            
-                            {/* ✅ STATUS BADGE - WAITING FOR APPROVAL */}
-                            {pg.status === "pending" && (
-                              <Box sx={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 1,
-                                mb: 1.5,
-                                px: 2,
-                                py: 0.75,
-                                borderRadius: "24px",
-                                background: "rgba(245, 158, 11, 0.15)",
-                                border: "1px solid rgba(245, 158, 11, 0.4)",
-                                width: 'fit-content',
-                                animation: `${pulseGlow} 2s infinite`
-                              }}>
-                                <PendingIcon sx={{ fontSize: 16, color: "#f59e0b" }} />
-                                <Typography sx={{ 
-                                  color: "#f59e0b", 
-                                  fontSize: "0.75rem", 
-                                  fontWeight: 600,
-                                  letterSpacing: '0.5px'
-                                }}>
-                                  ⏳ Waiting for Admin Approval
-                                </Typography>
-                              </Box>
-                            )}
-                            
-                            {/* ✅ APPROVED STATUS BADGE */}
-                            {pg.status === "approved" && (
-                              <Box sx={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 0.5,
-                                mb: 1.5,
-                                px: 1.5,
-                                py: 0.5,
-                                borderRadius: "20px",
-                                background: "rgba(22, 163, 74, 0.15)",
-                                border: "1px solid rgba(22, 163, 74, 0.3)",
-                                color: "#16a34a",
-                                fontSize: "0.7rem",
-                                fontWeight: 600,
-                                width: 'fit-content'
-                              }}>
-                                <CheckCircleIcon sx={{ fontSize: 14 }} />
-                                ✓ Approved
-                              </Box>
-                            )}
-                            
-                            <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', mb: 2 }}>
-                              {pg.location || 'Location not specified'}
-                            </Typography>
+                            <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1.3rem', mb: 1 }}>{pg.pg_name}</Typography>
+                            <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', mb: 2 }}>{pg.location || 'Location not specified'}</Typography>
                             <Grid container spacing={2} sx={{ mb: 2 }}>
                               <Grid item xs={4}>
                                 <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Total Rooms</Typography>
@@ -1508,8 +1424,7 @@ const OwnerDashboard = () => {
                           </Box>
                         </Box>
                       </Box>
-                    );
-                    })}
+                    ))}
                   </Box>
                 )}
               </>
@@ -1564,7 +1479,7 @@ const OwnerDashboard = () => {
                               <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', background: 'linear-gradient(135deg, #8B5CF6, #4CAF50)', backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{formatCurrency(monthlyRent)}</Typography>
                             </Box>
                             <Box sx={{ minWidth: 100 }}>
-                              <Chip label={statusStyle.label || booking.status?.toUpperCase() || 'PENDING'} size="small" sx={{ bgcolor: statusStyle.bg, color: statusStyle.color, fontWeight: 600, fontSize: '0.7rem', minWidth: 90, animation: statusStyle.glow === '#f59e0b' ? `${pulseGlow} 1.5s infinite` : 'none', boxShadow: statusStyle.glow === '#f59e0b' ? `0 0 8px ${statusStyle.glow}` : 'none' }} />
+                              <Chip label={booking.status?.toUpperCase() || 'PENDING'} size="small" sx={{ bgcolor: statusStyle.bg, color: statusStyle.color, fontWeight: 600, fontSize: '0.7rem', minWidth: 90, animation: statusStyle.glow === '#f59e0b' ? `${pulseGlow} 1.5s infinite` : 'none', boxShadow: statusStyle.glow === '#f59e0b' ? `0 0 8px ${statusStyle.glow}` : 'none' }} />
                             </Box>
                             <IconButton onClick={(e) => { e.stopPropagation(); handleViewBooking(booking.id); }} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '14px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}><ViewIcon fontSize="small" /></IconButton>
                           </Box>
