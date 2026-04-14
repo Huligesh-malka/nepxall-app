@@ -23,16 +23,28 @@ export default function AdminPlanPayments() {
   };
 
   const approvePayment = async (orderId) => {
-    if (!window.confirm("Approve this payment?")) return;
+  if (!window.confirm("Approve this payment?")) return;
 
-    try {
-      await api.post(`/plan/verify/${orderId}`);
+  try {
+    const res = await api.post(`/plan/verify/${orderId}`);
+
+    console.log("API Response:", res.data); // 🔍 DEBUG
+
+    if (res.data && res.data.success) {
       alert("✅ Plan Activated");
-      loadPayments(); // refresh
-    } catch {
-      alert("❌ Failed to approve");
+      loadPayments(); // refresh table
+    } else {
+      alert("❌ " + (res.data.message || "Approval failed"));
     }
-  };
+
+  } catch (err) {
+    console.error("Approve Error:", err); // 🔥 VERY IMPORTANT
+
+    alert(
+      err?.response?.data?.message || "❌ Failed to approve"
+    );
+  }
+};
 
   return (
     <div style={{ padding: 30 }}>
