@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Box, CircularProgress } from "@mui/material";
-import api from "../api/api";
+import api, { pgAPI } from "../api/api";
 
 const BACKEND_URL = import.meta.env.VITE_API_URL?.replace("/api", "") ||
   "http://localhost:5000";
