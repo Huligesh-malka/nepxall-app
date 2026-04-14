@@ -91,17 +91,9 @@ const OwnerPGPhotos = () => {
   const handleFileChange = (e) => {
     const selected = Array.from(e.target.files);
     
-    // 🔥 FIX 1: Block if plan not loaded yet
-    if (!plan) {
-      alert("⚠️ Plan not loaded yet. Please wait...");
-      e.target.value = ""; // Clear the input
-      return;
-    }
-    
     // Check photo limit against plan
-    if (photos.length + selected.length > plan.max_photos_per_pg) {
+    if (plan && photos.length + selected.length > plan.max_photos_per_pg) {
       alert(`❌ Your ${plan.name} plan allows only ${plan.max_photos_per_pg} photos per PG. Upgrade to upload more!`);
-      e.target.value = ""; // Clear the input
       return;
     }
 
@@ -120,19 +112,13 @@ const OwnerPGPhotos = () => {
 
   /* ================= UPLOAD ================= */
   const uploadPhotos = async () => {
-    // 🔥 FIX 2: Block if plan not loaded yet
-    if (!plan) {
-      alert("⚠️ Plan not loaded yet. Please wait...");
-      return;
-    }
-    
     if (!files.length) {
       alert("Please select photos to upload");
       return;
     }
 
     // Double-check limit before upload
-    if (photos.length + files.length > plan.max_photos_per_pg) {
+    if (plan && photos.length + files.length > plan.max_photos_per_pg) {
       alert(`❌ Cannot upload. Your ${plan.name} plan allows only ${plan.max_photos_per_pg} photos. You have ${photos.length}/${plan.max_photos_per_pg}. Upgrade to upload more!`);
       return;
     }
@@ -332,36 +318,6 @@ const OwnerPGPhotos = () => {
         </div>
       )}
 
-      {/* No Plan Loaded Warning */}
-      {!plan && !planLoading && (
-        <div style={{
-          backgroundColor: "#fef3c7",
-          border: "1px solid #f59e0b",
-          borderRadius: 12,
-          padding: 16,
-          marginBottom: 24,
-          textAlign: "center"
-        }}>
-          <p style={{ color: "#92400e", marginBottom: 12, fontSize: 16 }}>
-            ⚠️ Unable to load your plan information. Please refresh the page.
-          </p>
-          <button 
-            onClick={() => loadUserPlan()}
-            style={{
-              backgroundColor: "#f59e0b",
-              color: "white",
-              border: "none",
-              padding: "8px 16px",
-              borderRadius: 8,
-              fontWeight: "bold",
-              cursor: "pointer"
-            }}
-          >
-            🔄 Retry
-          </button>
-        </div>
-      )}
-
       {/* Limit reached warning */}
       {isLimitReached && (
         <div style={{
@@ -420,8 +376,7 @@ const OwnerPGPhotos = () => {
             type="file"
             multiple
             accept="image/*"
-            // 🔥 FIX 3: Disable input until plan is loaded
-            disabled={uploading || isLimitReached || !plan}
+            disabled={uploading || isLimitReached}
             onChange={handleFileChange}
             style={{
               padding: 10,
@@ -429,20 +384,15 @@ const OwnerPGPhotos = () => {
               borderRadius: 6,
               width: "100%",
               maxWidth: 400,
-              cursor: (!plan || isLimitReached) ? "not-allowed" : "pointer"
+              cursor: isLimitReached ? "not-allowed" : "pointer"
             }}
           />
-          {!plan && !planLoading && (
-            <p style={{ fontSize: 12, color: "#f59e0b", marginTop: 8 }}>
-              ⚠️ Waiting for plan information...
-            </p>
-          )}
         </div>
 
         <p style={{ fontSize: 13, color: "#666", marginBottom: 16 }}>
           • Max size: <b>5MB</b> per image<br />
           • Supported formats: JPG, PNG, GIF, WEBP<br />
-          • Maximum photos: <b>{plan?.max_photos_per_pg || "loading..."}</b> per PG
+          • Maximum photos: <b>{plan?.max_photos_per_pg || 10}</b> per PG
         </p>
 
         {files.length > 0 && (
@@ -484,24 +434,20 @@ const OwnerPGPhotos = () => {
 
         <button
           onClick={uploadPhotos}
-          // 🔥 FIX 4: Disable button until plan is loaded
-          disabled={uploading || files.length === 0 || isLimitReached || !plan}
+          disabled={uploading || files.length === 0 || isLimitReached}
           style={{
-            backgroundColor: (files.length === 0 || isLimitReached || !plan) ? "#9ca3af" : "#3b82f6",
+            backgroundColor: (files.length === 0 || isLimitReached) ? "#9ca3af" : "#3b82f6",
             color: "white",
             padding: "10px 24px",
             border: "none",
             borderRadius: 8,
             fontSize: 16,
             fontWeight: 500,
-            cursor: (files.length === 0 || isLimitReached || !plan) ? "not-allowed" : "pointer",
-            opacity: (files.length === 0 || isLimitReached || !plan) ? 0.5 : 1
+            cursor: (files.length === 0 || isLimitReached) ? "not-allowed" : "pointer",
+            opacity: (files.length === 0 || isLimitReached) ? 0.5 : 1
           }}
         >
-          {!plan ? "⏳ Loading plan..." : 
-           isLimitReached ? "⚠️ Limit Reached - Upgrade" : 
-           uploading ? `Uploading (${uploadProgress}%)` : 
-           "⬆ Upload Photos"}
+          {isLimitReached ? "⚠️ Limit Reached - Upgrade" : (uploading ? `Uploading (${uploadProgress}%)` : "⬆ Upload Photos")}
         </button>
       </div>
 
