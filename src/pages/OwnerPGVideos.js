@@ -26,7 +26,7 @@ export default function OwnerPGVideos() {
   const loadUserPlan = useCallback(async () => {
     try {
       setPlanLoading(true);
-     const response = await userAPI.get("/pg/plan");
+     const response = await api.get("/pg/plan");
       console.log("📊 User plan loaded:", response.data);
       setPlan(response.data);
     } catch (err) {
