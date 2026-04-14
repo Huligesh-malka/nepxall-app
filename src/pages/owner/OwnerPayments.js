@@ -559,12 +559,14 @@ export default function OwnerPayments() {
               <TableCell align="center" sx={{ fontWeight: 700 }}>Sharing</TableCell>
               <TableCell align="center" sx={{ fontWeight: 700 }}>Agreement Status</TableCell>
               <TableCell align="center" sx={{ fontWeight: 700 }}>Payment Status</TableCell>
+              {/* ✅ NEW JOIN STATUS COLUMN - HEADER */}
+              <TableCell align="center" sx={{ fontWeight: 700 }}>Join Status</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
                   No active settlements found.
                 </TableCell>
               </TableRow>
@@ -587,7 +589,7 @@ export default function OwnerPayments() {
                       <TableCell sx={{ p: 1, width: '40px' }}>
                         {isExpanded ? <ExpandLess sx={{ color: BRAND_BLUE }} /> : <ExpandMore sx={{ color: BRAND_BLUE }} />}
                       </TableCell>
-                      <TableCell colSpan={6} sx={{ fontWeight: "bold", py: 1.5 }}>
+                      <TableCell colSpan={7} sx={{ fontWeight: "bold", py: 1.5 }}>
                         <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
                           <Box display="flex" alignItems="center" gap={1}>
                             <span style={{ fontSize: '20px' }}>🏠</span>
@@ -625,7 +627,7 @@ export default function OwnerPayments() {
 
                     {/* 🔥 BOOKINGS ROWS WITH COLLAPSE */}
                     <TableRow>
-                      <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
+                      <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
                         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                           <Box sx={{ margin: 0 }}>
                             {groupedData[pgName].map(item => {
@@ -698,58 +700,73 @@ export default function OwnerPayments() {
 
                                   <TableCell align="center">
                                     {item.owner_settlement === "DONE" ? (
-  // 🟢 FINAL STATE → Paid + Receipt
-  <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
-    <Chip
-      label="✅ Paid"
-      color="success"
-      size="small"
-      sx={{ fontWeight: "bold" }}
-    />
+                                      // 🟢 FINAL STATE → Paid + Receipt
+                                      <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                                        <Chip
+                                          label="✅ Paid"
+                                          color="success"
+                                          size="small"
+                                          sx={{ fontWeight: "bold" }}
+                                        />
+                                        <Button
+                                          variant="contained"
+                                          color="primary"
+                                          size="small"
+                                          startIcon={<Receipt />}
+                                          onClick={() => handleDirectDownload(item.booking_id)}
+                                          disabled={isSubmitting}
+                                          sx={{ borderRadius: 2, textTransform: 'none' }}
+                                        >
+                                          Receipt
+                                        </Button>
+                                      </Stack>
+                                    ) : item.admin_settlement === "DONE" ? (
+                                      // 🟡 ADMIN DONE → SHOW BUTTON
+                                      <Stack direction="row" spacing={1} justifyContent="center">
+                                        <Chip
+                                          label="💰 Settled"
+                                          color="info"
+                                          size="small"
+                                          sx={{ fontWeight: "bold" }}
+                                        />
+                                        <Button
+                                          variant="contained"
+                                          color="success"
+                                          size="small"
+                                          onClick={() => handleMarkPaid(item.booking_id)}
+                                          sx={{ borderRadius: 2, textTransform: 'none' }}
+                                        >
+                                          Mark as Paid
+                                        </Button>
+                                      </Stack>
+                                    ) : (
+                                      // 🔴 WAITING ADMIN
+                                      <Chip
+                                        label="⏳ Waiting Admin"
+                                        color="warning"
+                                        size="small"
+                                        sx={{ fontWeight: "bold" }}
+                                      />
+                                    )}
+                                  </TableCell>
 
-    <Button
-      variant="contained"
-      color="primary"
-      size="small"
-      startIcon={<Receipt />}
-      onClick={() => handleDirectDownload(item.booking_id)}
-      disabled={isSubmitting}
-      sx={{ borderRadius: 2, textTransform: 'none' }}
-    >
-      Receipt
-    </Button>
-  </Stack>
-
-) : item.admin_settlement === "DONE" ? (
-  // 🟡 ADMIN DONE → SHOW BUTTON
-  <Stack direction="row" spacing={1} justifyContent="center">
-    <Chip
-      label="💰 Settled"
-      color="info"
-      size="small"
-      sx={{ fontWeight: "bold" }}
-    />
-
-    <Button
-      variant="contained"
-      color="success"
-      size="small"
-      onClick={() => handleMarkPaid(item.booking_id)}
-      sx={{ borderRadius: 2, textTransform: 'none' }}
-    >
-      Mark as Paid
-    </Button>
-  </Stack>
-
-) : (
-  // 🔴 WAITING ADMIN
-  <Chip
-    label="⏳ Waiting Admin"
-    color="warning"
-    size="small"
-    sx={{ fontWeight: "bold" }}
-  />
-)}
+                                  {/* ✅ NEW JOIN STATUS COLUMN - ROW DATA */}
+                                  <TableCell align="center">
+                                    {item.join_status === "JOINED" ? (
+                                      <Chip 
+                                        label="✅ Joined" 
+                                        color="success" 
+                                        size="small"
+                                        sx={{ fontWeight: "bold" }}
+                                      />
+                                    ) : (
+                                      <Chip 
+                                        label="⏳ Not Joined" 
+                                        color="warning" 
+                                        size="small"
+                                        sx={{ fontWeight: "bold" }}
+                                      />
+                                    )}
                                   </TableCell>
                                 </TableRow>
                               );
