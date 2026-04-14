@@ -185,6 +185,9 @@ export const pgAPI = {
 
   searchProperties: (params) =>
     userAPI.get("/pg/search", { params }),
+
+  getPlan: () => userAPI.get("/pg/plan"),
+
 };
 
 /* =====================================================
