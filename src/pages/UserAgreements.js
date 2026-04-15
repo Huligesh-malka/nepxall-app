@@ -13,17 +13,34 @@ const UserAgreements = () => {
     try {
       setLoading(true);
 
-      // ✅ FIXED API PATH
       const res = await api.get("/agreements-form/user/agreements");
 
       if (res.data.success) {
         setAgreements(res.data.data || []);
       }
-
     } catch (err) {
       console.error("Fetch Agreements Error:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ FORCE DOWNLOAD FUNCTION (BEST METHOD)
+  const handleDownload = async (url, bookingId) => {
+    try {
+      // 🔥 Force download using fetch
+      const response = await fetch(url + "?fl_attachment=true");
+      const blob = await response.blob();
+
+      const link = document.createElement("a");
+      link.href = window.URL.createObjectURL(blob);
+      link.download = `Agreement_${bookingId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+    } catch (err) {
+      console.error("Download error:", err);
     }
   };
 
@@ -53,7 +70,7 @@ const UserAgreements = () => {
               <p><b>Booking ID:</b> #{a.booking_id}</p>
               <p><b>Status:</b> ✅ Completed</p>
 
-              {/* 📄 View PDF */}
+              {/* 👁 VIEW */}
               <button
                 onClick={() => window.open(a.signed_pdf, "_blank")}
                 style={{
@@ -69,16 +86,9 @@ const UserAgreements = () => {
                 👁 View Agreement
               </button>
 
-              {/* ⬇ Download PDF */}
+              {/* ⬇ DOWNLOAD */}
               <button
-                onClick={() => {
-                  const link = document.createElement("a");
-                  link.href = a.signed_pdf;
-                  link.download = `agreement-${a.booking_id}.pdf`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                }}
+                onClick={() => handleDownload(a.signed_pdf, a.booking_id)}
                 style={{
                   marginTop: 10,
                   marginLeft: 10,
