@@ -1793,7 +1793,7 @@ const OwnerDashboard = () => {
                             {formatCurrency(animatedNotJoinedAmount)}
                           </Typography>
                           <Typography sx={{ fontSize: '0.65rem', color: '#f59e0b', mt: 0.5 }}>
-                            ⚠️ Risk / Refund
+                            
                           </Typography>
                         </Box>
                       </Grid>
