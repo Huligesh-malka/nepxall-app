@@ -589,7 +589,7 @@ export default function OwnerPayments() {
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ borderRadius: 3, bgcolor: "#fff7ed" }}>
             <CardContent>
-              <Typography variant="caption" sx={{ color: BRAND_GRAY }}>Not Joined (Refund Risk)</Typography>
+              <Typography variant="caption" sx={{ color: BRAND_GRAY }}>Not Joined</Typography>
               <Typography variant="h6" fontWeight="bold" sx={{ color: "#ea580c" }}>
                 ₹{notJoinedAmount.toLocaleString()}
               </Typography>

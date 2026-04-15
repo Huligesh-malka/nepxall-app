@@ -217,6 +217,7 @@ const OwnerDashboard = () => {
     totalAmount: 0,
     settledAmount: 0,
     pendingAmount: 0,
+    notJoinedAmount: 0,
     pgBreakdown: []
   });
 
@@ -268,6 +269,7 @@ const OwnerDashboard = () => {
   const animatedMonthlyRevenue = useCountUp(stats.monthlyRevenue, 1000);
   const animatedSettledAmount = useCountUp(settlementStats.settledAmount, 1000);
   const animatedPendingAmount = useCountUp(settlementStats.pendingAmount, 1000);
+  const animatedNotJoinedAmount = useCountUp(settlementStats.notJoinedAmount, 1000);
 
   /* ---------------- HELPER FUNCTION TO GET RENT BY ROOM TYPE ---------------- */
   
@@ -310,7 +312,7 @@ const OwnerDashboard = () => {
     return Number(pg.security_deposit) || Number(pg.deposit_amount) || 0;
   };
 
-  // Fetch settlement data from payments API
+  // 🔥 UPDATED: Fetch settlement data from payments API with new logic
   const fetchSettlementData = useCallback(async () => {
     if (!user) return;
     
@@ -323,27 +325,46 @@ const OwnerDashboard = () => {
       const payments = res.data.data || [];
       setSettlementData(payments);
       
-      // Calculate settlement statistics
+      // 🔥 NEW SETTLEMENT LOGIC (MATCH PAYMENTS PAGE)
       const settled = payments.filter(p => p.owner_settlement === "DONE");
-      const pending = payments.filter(p => p.owner_settlement !== "DONE" && p.admin_settlement === "DONE");
+      const pending = payments.filter(p => p.owner_settlement !== "DONE");
       
-      const totalAmount = payments.reduce((sum, p) => sum + (parseFloat(p.owner_amount) || 0), 0);
-      const settledAmount = settled.reduce((sum, p) => sum + (parseFloat(p.owner_amount) || 0), 0);
-      const pendingAmount = pending.reduce((sum, p) => sum + (parseFloat(p.owner_amount) || 0), 0);
+      // ✅ Joined (REAL MONEY)
+      const joinedAmount = payments
+        .filter(p => p.owner_settlement === "DONE" && p.join_status === "JOINED")
+        .reduce((sum, p) => sum + (parseFloat(p.owner_amount) || 0), 0);
       
-      // Group by PG for breakdown
+      // ⚠️ Not Joined (RISK)
+      const notJoinedAmount = payments
+        .filter(p => p.owner_settlement === "DONE" && p.join_status !== "JOINED")
+        .reduce((sum, p) => sum + (parseFloat(p.owner_amount) || 0), 0);
+      
+      // 💰 Total
+      const totalAmount = payments
+        .reduce((sum, p) => sum + (parseFloat(p.owner_amount) || 0), 0);
+      
+      // ⏳ Pending
+      const pendingAmount = payments
+        .filter(p => p.owner_settlement !== "DONE")
+        .reduce((sum, p) => sum + (parseFloat(p.owner_amount) || 0), 0);
+      
+      // 🔥 UPDATED: Group by PG with join_status logic
       const pgMap = new Map();
       payments.forEach(p => {
         const pgName = p.pg_name || "Unknown PG";
         if (!pgMap.has(pgName)) {
-          pgMap.set(pgName, { total: 0, settled: 0, pending: 0 });
+          pgMap.set(pgName, { total: 0, settled: 0, pending: 0, notJoined: 0 });
         }
         const pg = pgMap.get(pgName);
         const amount = parseFloat(p.owner_amount) || 0;
         pg.total += amount;
-        if (p.owner_settlement === "DONE") {
+        
+        // 🔥 UPDATED: Only count as settled if owner_settlement === "DONE" AND join_status === "JOINED"
+        if (p.owner_settlement === "DONE" && p.join_status === "JOINED") {
           pg.settled += amount;
-        } else if (p.admin_settlement === "DONE") {
+        } else if (p.owner_settlement === "DONE" && p.join_status !== "JOINED") {
+          pg.notJoined = (pg.notJoined || 0) + amount;
+        } else if (p.owner_settlement !== "DONE") {
           pg.pending += amount;
         }
       });
@@ -353,12 +374,14 @@ const OwnerDashboard = () => {
         ...data
       }));
       
+      // 🔥 UPDATED: Set settlement stats with new fields
       setSettlementStats({
         totalSettled: settled.length,
         totalPending: pending.length,
         totalAmount,
-        settledAmount,
+        settledAmount: joinedAmount,
         pendingAmount,
+        notJoinedAmount,
         pgBreakdown
       });
       
@@ -1560,7 +1583,7 @@ const OwnerDashboard = () => {
                       const statusStyle = getStatusBadgeStyle(booking.status);
                       const monthlyRent = booking.monthly_rent || 0;
                       const ownerAmount = booking.owner_amount || 0;
-                      const isSettled = booking.owner_settlement === "DONE" || booking.payment_status === "DONE";
+                      const isSettled = booking.owner_settlement === "DONE";
                       return (
                         <Box key={booking.id} sx={{
                           background: 'rgba(15, 23, 36, 0.7)',
@@ -1627,7 +1650,7 @@ const OwnerDashboard = () => {
               </Box>
             )}
 
-            {/* Insights Tab - Enhanced with proper Revenue and Booking Summary */}
+            {/* Insights Tab - Updated with new Settlement Summary UI */}
             {activeTab === 2 && (
               <Grid container spacing={3}>
                 {/* Revenue Summary */}
@@ -1706,7 +1729,7 @@ const OwnerDashboard = () => {
                   </Box>
                 </Grid>
 
-                {/* Settlement Summary - Keeping your existing working section */}
+                {/* 🔥 UPDATED: Settlement Summary with new PRO UI */}
                 <Grid item xs={12}>
                   <Box sx={{
                     background: 'rgba(15, 23, 36, 0.7)',
@@ -1723,44 +1746,113 @@ const OwnerDashboard = () => {
                     </Box>
                     <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
                     
+                    {/* 🔥 NEW PRO UI CARDS */}
                     <Grid container spacing={2}>
+                      {/* ✅ Joined (REAL MONEY) */}
                       <Grid item xs={12} sm={4}>
-                        <Box sx={{ textAlign: 'center', p: { xs: 1.5, sm: 2 }, background: 'rgba(76, 175, 80, 0.1)', borderRadius: '16px' }}>
-                          <Typography sx={{ color: '#94a3b8', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>Total Settlement Amount</Typography>
-                          <Typography sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' }, fontWeight: 700, color: '#4CAF50' }}>{formatCurrency(settlementStats.totalAmount)}</Typography>
+                        <Box sx={{ 
+                          bgcolor: "#052e16", 
+                          p: { xs: 1.5, sm: 2 }, 
+                          borderRadius: 3,
+                          textAlign: 'center',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            transform: 'translateY(-4px)',
+                            boxShadow: '0 8px 25px rgba(76, 175, 80, 0.2)'
+                          }
+                        }}>
+                          <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mb: 0.5 }}>
+                            Joined Earnings
+                          </Typography>
+                          <Typography variant="h6" sx={{ color: '#4CAF50', fontWeight: 'bold', fontSize: { xs: '1.1rem', sm: '1.3rem' } }}>
+                            {formatCurrency(animatedSettledAmount)}
+                          </Typography>
+                          <Typography sx={{ fontSize: '0.65rem', color: '#4CAF50', mt: 0.5 }}>
+                            ✅ Real profit
+                          </Typography>
                         </Box>
                       </Grid>
+                      
+                      {/* ⚠️ Not Joined (RISK) */}
                       <Grid item xs={12} sm={4}>
-                        <Box sx={{ textAlign: 'center', p: { xs: 1.5, sm: 2 }, background: 'rgba(11, 94, 215, 0.1)', borderRadius: '16px' }}>
-                          <Typography sx={{ color: '#94a3b8', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>Settled Amount</Typography>
-                          <Typography sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' }, fontWeight: 700, color: '#0B5ED7' }}>{formatCurrency(animatedSettledAmount)}</Typography>
-                          <Typography sx={{ fontSize: '0.7rem', color: '#4CAF50' }}>{settlementStats.totalSettled} transactions</Typography>
+                        <Box sx={{ 
+                          bgcolor: "#3f1d02", 
+                          p: { xs: 1.5, sm: 2 }, 
+                          borderRadius: 3,
+                          textAlign: 'center',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            transform: 'translateY(-4px)',
+                            boxShadow: '0 8px 25px rgba(245, 158, 11, 0.2)'
+                          }
+                        }}>
+                          <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mb: 0.5 }}>
+                            Not Joined
+                          </Typography>
+                          <Typography variant="h6" sx={{ color: '#f59e0b', fontWeight: 'bold', fontSize: { xs: '1.1rem', sm: '1.3rem' } }}>
+                            {formatCurrency(animatedNotJoinedAmount)}
+                          </Typography>
+                          <Typography sx={{ fontSize: '0.65rem', color: '#f59e0b', mt: 0.5 }}>
+                            ⚠️ Risk / Refund
+                          </Typography>
                         </Box>
                       </Grid>
+                      
+                      {/* ⏳ Pending Settlement */}
                       <Grid item xs={12} sm={4}>
-                        <Box sx={{ textAlign: 'center', p: { xs: 1.5, sm: 2 }, background: 'rgba(245, 158, 11, 0.1)', borderRadius: '16px' }}>
-                          <Typography sx={{ color: '#94a3b8', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>Pending Settlement</Typography>
-                          <Typography sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' }, fontWeight: 700, color: '#f59e0b' }}>{formatCurrency(animatedPendingAmount)}</Typography>
-                          <Typography sx={{ fontSize: '0.7rem', color: '#f59e0b' }}>{settlementStats.totalPending} pending</Typography>
+                        <Box sx={{ 
+                          bgcolor: "#1e293b", 
+                          p: { xs: 1.5, sm: 2 }, 
+                          borderRadius: 3,
+                          textAlign: 'center',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            transform: 'translateY(-4px)',
+                            boxShadow: '0 8px 25px rgba(245, 158, 11, 0.15)'
+                          }
+                        }}>
+                          <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mb: 0.5 }}>
+                            Pending
+                          </Typography>
+                          <Typography variant="h6" sx={{ color: '#eab308', fontWeight: 'bold', fontSize: { xs: '1.1rem', sm: '1.3rem' } }}>
+                            {formatCurrency(animatedPendingAmount)}
+                          </Typography>
+                          <Typography sx={{ fontSize: '0.65rem', color: '#eab308', mt: 0.5 }}>
+                            ⏳ Coming soon
+                          </Typography>
                         </Box>
                       </Grid>
                     </Grid>
 
-                    {/* PG-wise Breakdown */}
+                    {/* PG-wise Breakdown with updated logic */}
                     {settlementStats.pgBreakdown.length > 0 && (
                       <Box sx={{ mt: 3 }}>
                         <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', mb: 2 }}>PG-wise Breakdown</Typography>
                         <Stack spacing={1}>
                           {settlementStats.pgBreakdown.map((pg) => (
-                            <Box key={pg.name} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1.5, background: 'rgba(255,255,255,0.03)', borderRadius: '12px', flexWrap: 'wrap', gap: 1 }}>
+                            <Box key={pg.name} sx={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between', 
+                              alignItems: 'center', 
+                              p: 1.5, 
+                              background: 'rgba(255,255,255,0.03)', 
+                              borderRadius: '12px', 
+                              flexWrap: 'wrap', 
+                              gap: 1,
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                background: 'rgba(255,255,255,0.06)'
+                              }
+                            }}>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <ApartmentIcon sx={{ fontSize: 16, color: '#4CAF50' }} />
                                 <Typography sx={{ color: '#fff', fontSize: { xs: '0.8rem', sm: '0.85rem' } }}>{pg.name}</Typography>
                               </Box>
                               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                                 <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Total: {formatCurrency(pg.total)}</Typography>
-                                {pg.settled > 0 && <Typography sx={{ color: '#4CAF50', fontSize: '0.75rem' }}>Settled: {formatCurrency(pg.settled)}</Typography>}
-                                {pg.pending > 0 && <Typography sx={{ color: '#f59e0b', fontSize: '0.75rem' }}>Pending: {formatCurrency(pg.pending)}</Typography>}
+                                {pg.settled > 0 && <Typography sx={{ color: '#4CAF50', fontSize: '0.75rem' }}>✅ Joined: {formatCurrency(pg.settled)}</Typography>}
+                                {pg.notJoined > 0 && <Typography sx={{ color: '#f59e0b', fontSize: '0.75rem' }}>⚠️ Not Joined: {formatCurrency(pg.notJoined)}</Typography>}
+                                {pg.pending > 0 && <Typography sx={{ color: '#eab308', fontSize: '0.75rem' }}>⏳ Pending: {formatCurrency(pg.pending)}</Typography>}
                               </Box>
                             </Box>
                           ))}
