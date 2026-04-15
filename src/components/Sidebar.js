@@ -57,8 +57,7 @@ const Sidebar = ({ role, user }) => {
 
             <Link style={linkStyle(isActive("/user/my-stay"))} to="/user/my-stay">🏠 My Stay</Link>
             <Link style={linkStyle(isActive("/user/bookings"))} to="/user/bookings">📜 My Bookings</Link>
-            <Link style={linkStyle(isActive("/user/aadhaar-kyc"))} to="/user/aadhaar-kyc">🛂 Aadhaar KYC</Link>
-            <Link style={linkStyle(isActive("/user/digilocker"))} to="/user/digilocker">🔐 DigiLocker KYC</Link>
+  
             <Link style={linkStyle(isActive("/"))} to="/">🔍 Browse Properties</Link>
             <Link style={linkStyle(isActive("/user/vacate"))} to="/user/vacate">
   🚪 Vacate Room
