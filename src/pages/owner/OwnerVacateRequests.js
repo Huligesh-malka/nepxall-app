@@ -678,7 +678,7 @@ const OwnerVacateRequests = () => {
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert("Payment Completed");
+      alert("Payment sent to tenant successfully!");
       await loadRequests();
     } catch (err) {
       console.error(err);
