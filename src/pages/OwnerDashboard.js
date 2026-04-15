@@ -447,7 +447,7 @@ const OwnerDashboard = () => {
         const pgId = booking.pg_id || booking.property_id;
         const pg = pgMap[pgId];
         const roomType = booking.room_type || '';
-        const monthlyRent = getRentByRoomType(pg, roomType);
+        const monthlyRent = Number(booking.rent_amount) || 0;
         const deposit = getDepositByRoomType(pg, roomType);
         
         // 🔥 IMPORTANT FIX: Use owner_amount from payment data or fallback to calculated rent
@@ -519,7 +519,7 @@ const OwnerDashboard = () => {
       // 🔥 REVENUE CALCULATION: Use owner_amount from paid bookings only
       const totalEarnings = paidBookings.reduce((a, b) => a + (Number(b.owner_amount) || 0), 0);
       
-      const totalRent = paidBookings.reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
+      const totalRent = paidBookings.reduce((a, b) => a + (Number(b.rent_amount) || 0), 0);
       const totalDeposit = paidBookings.reduce((a, b) => a + (Number(b.deposit_amount) || 0), 0);
       const pendingRent = pendingBookingsList.reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
       const pendingDeposit = pendingBookingsList.reduce((a, b) => a + (Number(b.deposit_amount) || 0), 0);
