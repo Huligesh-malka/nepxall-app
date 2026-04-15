@@ -54,10 +54,7 @@ import {
   Share as ShareIcon,
   Print as PrintIcon,
   AccountBalance as BankIcon,
-  Security as SecurityIcon,
-  TrendingDown as TrendingDownIcon,
-  Timeline as TimelineIcon,
-  Analytics as AnalyticsIcon
+  Security as SecurityIcon
 } from "@mui/icons-material";
 
 import StatCard from "../components/owner/StatCard";
@@ -100,7 +97,7 @@ const parseArray = (v) => {
 const formatCurrency = (amt) => {
   if (!amt && amt !== 0) return "₹0";
   const num = Number(amt);
-  return isNaN(num) ? "₹0" : `₹${num.toLocaleString('en-IN')}`;
+  return isNaN(num) ? "₹0" : `₹${num.toLocaleString()}`;
 };
 
 const formatDate = (dateStr) => {
@@ -151,7 +148,7 @@ const getStatusBadgeStyle = (status) => {
 };
 
 // Row component for insights display
-const Row = ({ label, value, color, icon, subtext }) => (
+const Row = ({ label, value, color, icon }) => (
   <Box sx={{
     display: "flex",
     justifyContent: "space-between",
@@ -170,10 +167,7 @@ const Row = ({ label, value, color, icon, subtext }) => (
       {icon && <Box component="span" sx={{ fontSize: "1rem" }}>{icon}</Box>}
       {label}
     </Typography>
-    <Box sx={{ textAlign: 'right' }}>
-      <Typography sx={{ color, fontWeight: "bold", fontSize: "1rem" }}>{value}</Typography>
-      {subtext && <Typography sx={{ color: '#475569', fontSize: "0.7rem" }}>{subtext}</Typography>}
-    </Box>
+    <Typography sx={{ color, fontWeight: "bold", fontSize: "1rem" }}>{value}</Typography>
   </Box>
 );
 
@@ -197,7 +191,7 @@ const useCountUp = (endValue, duration = 1000) => {
   return count;
 };
 
-/* ---------------- MAIN COMPONENT ---------------- */
+/* ---------------- COMPONENT ---------------- */
 
 const OwnerDashboard = () => {
 
@@ -215,7 +209,7 @@ const OwnerDashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   
-  // Settlement data from payments API (REAL REVENUE SOURCE)
+  // Settlement data from payments API
   const [settlementData, setSettlementData] = useState([]);
   const [settlementStats, setSettlementStats] = useState({
     totalSettled: 0,
@@ -224,20 +218,6 @@ const OwnerDashboard = () => {
     settledAmount: 0,
     pendingAmount: 0,
     pgBreakdown: []
-  });
-
-  // REVENUE METRICS (FROM PAYMENTS API)
-  const [revenueMetrics, setRevenueMetrics] = useState({
-    totalRevenue: 0,
-    monthlyRevenue: 0,
-    yearlyRevenue: 0,
-    lastMonthRevenue: 0,
-    growthRate: 0,
-    averagePerBooking: 0,
-    pendingSettlement: 0,
-    totalTransactions: 0,
-    revenueByMonth: [],
-    revenueByPG: []
   });
 
   const [pageLoading, setPageLoading] = useState(true);
@@ -284,9 +264,8 @@ const OwnerDashboard = () => {
   const animatedOccupiedRooms = useCountUp(stats.occupiedRooms, 800);
   const animatedPendingBookings = useCountUp(stats.pendingBookings, 800);
   const animatedOccupancyRate = useCountUp(stats.occupancyRate, 800);
-  const animatedTotalRevenue = useCountUp(revenueMetrics.totalRevenue, 1000);
-  const animatedMonthlyRevenue = useCountUp(revenueMetrics.monthlyRevenue, 1000);
-  const animatedGrowthRate = useCountUp(Math.abs(revenueMetrics.growthRate), 800);
+  const animatedTotalEarnings = useCountUp(stats.totalEarnings, 1000);
+  const animatedMonthlyRevenue = useCountUp(stats.monthlyRevenue, 1000);
   const animatedSettledAmount = useCountUp(settlementStats.settledAmount, 1000);
   const animatedPendingAmount = useCountUp(settlementStats.pendingAmount, 1000);
 
@@ -331,7 +310,7 @@ const OwnerDashboard = () => {
     return Number(pg.security_deposit) || Number(pg.deposit_amount) || 0;
   };
 
-  // Fetch settlement data from payments API and calculate REAL revenue metrics
+  // Fetch settlement data from payments API
   const fetchSettlementData = useCallback(async () => {
     if (!user) return;
     
@@ -344,138 +323,13 @@ const OwnerDashboard = () => {
       const payments = res.data.data || [];
       setSettlementData(payments);
       
-      // ========== REAL REVENUE CALCULATION FROM PAYMENTS API ==========
-      // This is the CORRECT source for money-related metrics
-      
-      // Calculate total revenue from all successful payments
-      const totalRevenue = payments.reduce((sum, p) => {
-        const amount = parseFloat(p.amount || p.owner_amount || p.total_amount || 0);
-        return sum + (isNaN(amount) ? 0 : amount);
-      }, 0);
-      
-      // Calculate total transactions
-      const totalTransactions = payments.length;
-      
-      // Calculate average per booking
-      const averagePerBooking = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
-      
-      // Current date info
-      const currentDate = new Date();
-      const currentMonth = currentDate.getMonth();
-      const currentYear = currentDate.getFullYear();
-      const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-      const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-      
-      // Calculate monthly revenue
-      const monthlyRevenue = payments
-        .filter(p => {
-          const date = new Date(p.created_at || p.payment_date || p.date);
-          return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-        })
-        .reduce((sum, p) => {
-          const amount = parseFloat(p.amount || p.owner_amount || p.total_amount || 0);
-          return sum + (isNaN(amount) ? 0 : amount);
-        }, 0);
-      
-      // Calculate last month revenue for growth
-      const lastMonthRevenue = payments
-        .filter(p => {
-          const date = new Date(p.created_at || p.payment_date || p.date);
-          return date.getMonth() === lastMonth && date.getFullYear() === lastMonthYear;
-        })
-        .reduce((sum, p) => {
-          const amount = parseFloat(p.amount || p.owner_amount || p.total_amount || 0);
-          return sum + (isNaN(amount) ? 0 : amount);
-        }, 0);
-      
-      // Calculate growth rate
-      const growthRate = lastMonthRevenue > 0 
-        ? ((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
-        : monthlyRevenue > 0 ? 100 : 0;
-      
-      // Calculate yearly revenue
-      const yearlyRevenue = payments
-        .filter(p => {
-          const date = new Date(p.created_at || p.payment_date || p.date);
-          return date.getFullYear() === currentYear;
-        })
-        .reduce((sum, p) => {
-          const amount = parseFloat(p.amount || p.owner_amount || p.total_amount || 0);
-          return sum + (isNaN(amount) ? 0 : amount);
-        }, 0);
-      
-      // Calculate pending settlement (payments approved by admin but not settled to owner)
-      const pendingSettlement = payments
-        .filter(p => p.admin_settlement === "DONE" && p.owner_settlement !== "DONE")
-        .reduce((sum, p) => {
-          const amount = parseFloat(p.amount || p.owner_amount || p.total_amount || 0);
-          return sum + (isNaN(amount) ? 0 : amount);
-        }, 0);
-      
-      // Revenue by month (last 6 months for trend)
-      const revenueByMonth = [];
-      for (let i = 5; i >= 0; i--) {
-        const monthDate = new Date();
-        monthDate.setMonth(currentMonth - i);
-        const month = monthDate.getMonth();
-        const year = monthDate.getFullYear();
-        const monthName = monthDate.toLocaleString('default', { month: 'short' });
-        
-        const monthRevenue = payments
-          .filter(p => {
-            const date = new Date(p.created_at || p.payment_date || p.date);
-            return date.getMonth() === month && date.getFullYear() === year;
-          })
-          .reduce((sum, p) => {
-            const amount = parseFloat(p.amount || p.owner_amount || p.total_amount || 0);
-            return sum + (isNaN(amount) ? 0 : amount);
-          }, 0);
-        
-        revenueByMonth.push({
-          month: `${monthName} ${year}`,
-          revenue: monthRevenue,
-          shortMonth: monthName
-        });
-      }
-      
-      // Revenue by PG
-      const pgRevenueMap = new Map();
-      payments.forEach(p => {
-        const pgName = p.pg_name || "Unknown PG";
-        const amount = parseFloat(p.amount || p.owner_amount || p.total_amount || 0);
-        if (!isNaN(amount)) {
-          pgRevenueMap.set(pgName, (pgRevenueMap.get(pgName) || 0) + amount);
-        }
-      });
-      
-      const revenueByPG = Array.from(pgRevenueMap.entries())
-        .map(([name, revenue]) => ({ name, revenue }))
-        .sort((a, b) => b.revenue - a.revenue);
-      
-      // Update revenue metrics state
-      setRevenueMetrics({
-        totalRevenue,
-        monthlyRevenue,
-        yearlyRevenue,
-        lastMonthRevenue,
-        growthRate: Math.round(growthRate * 10) / 10,
-        averagePerBooking: Math.round(averagePerBooking),
-        pendingSettlement,
-        totalTransactions,
-        revenueByMonth,
-        revenueByPG
-      });
-      
-      // ========== SETTLEMENT STATISTICS (for admin/owner settlement tracking) ==========
+      // Calculate settlement statistics
       const settled = payments.filter(p => p.owner_settlement === "DONE");
-      const pending = payments.filter(p => p.admin_settlement === "DONE" && p.owner_settlement !== "DONE");
+      const pending = payments.filter(p => p.owner_settlement !== "DONE" && p.admin_settlement === "DONE");
       
-      const totalAmount = totalRevenue;
-      const settledAmount = settled.reduce((sum, p) => {
-        const amount = parseFloat(p.amount || p.owner_amount || p.total_amount || 0);
-        return sum + (isNaN(amount) ? 0 : amount);
-      }, 0);
-      const pendingAmount = pendingSettlement;
+      const totalAmount = payments.reduce((sum, p) => sum + (parseFloat(p.amount || p.owner_amount) || 0), 0);
+      const settledAmount = settled.reduce((sum, p) => sum + (parseFloat(p.amount || p.owner_amount) || 0), 0);
+      const pendingAmount = pending.reduce((sum, p) => sum + (parseFloat(p.amount || p.owner_amount) || 0), 0);
       
       // Group by PG for breakdown
       const pgMap = new Map();
@@ -485,7 +339,7 @@ const OwnerDashboard = () => {
           pgMap.set(pgName, { total: 0, settled: 0, pending: 0 });
         }
         const pg = pgMap.get(pgName);
-        const amount = parseFloat(p.amount || p.owner_amount || p.total_amount) || 0;
+        const amount = parseFloat(p.amount || p.owner_amount) || 0;
         pg.total += amount;
         if (p.owner_settlement === "DONE") {
           pg.settled += amount;
@@ -536,9 +390,6 @@ const OwnerDashboard = () => {
 
       refresh ? setRefreshing(true) : setPageLoading(true);
       console.log("📡 Loading dashboard data...");
-
-      // First fetch settlement/revenue data (REAL MONEY)
-      await fetchSettlementData();
 
       const pgRes = await pgAPI.getOwnerDashboard();
       const pgData = Array.isArray(pgRes.data) ? pgRes.data : pgRes.data?.data || [];
@@ -611,7 +462,7 @@ const OwnerDashboard = () => {
 
       setRecentBookings(sortedBookings);
 
-      // Calculate stats (excluding revenue which comes from payments API)
+      // Calculate stats
       const totalRooms = properties.reduce((a, b) => a + (b.total_rooms || 0), 0);
       const availableRooms = properties.reduce((a, b) => a + (b.available_rooms || 0), 0);
       const occupiedRooms = totalRooms - availableRooms;
@@ -629,6 +480,26 @@ const OwnerDashboard = () => {
       const totalDeposit = confirmedBookings.reduce((a, b) => a + (Number(b.deposit_amount) || 0), 0);
       const pendingRent = pendingBookingsList.reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
       const pendingDeposit = pendingBookingsList.reduce((a, b) => a + (Number(b.deposit_amount) || 0), 0);
+      const totalEarnings = confirmedBookings.reduce((a, b) => a + (Number(b.amount) || 0), 0);
+
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      const monthlyRevenue = enhancedBookings
+        .filter(b => {
+          const bookingDate = new Date(b.created_at || b.check_in_date);
+          return bookingDate.getMonth() === currentMonth && 
+                 bookingDate.getFullYear() === currentYear &&
+                 ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase());
+        })
+        .reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
+
+      const yearlyRevenue = enhancedBookings
+        .filter(b => {
+          const bookingDate = new Date(b.created_at || b.check_in_date);
+          return bookingDate.getFullYear() === currentYear &&
+                 ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase());
+        })
+        .reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
 
       const pendingBookings = bookings.filter(b => b?.status?.toLowerCase() === "pending").length;
 
@@ -638,7 +509,7 @@ const OwnerDashboard = () => {
         availableRooms,
         occupiedRooms,
         occupancyRate,
-        totalEarnings: revenueMetrics.totalRevenue, // Use REAL revenue from payments
+        totalEarnings,
         pendingBookings,
         totalBookings: bookings.length,
         avgRating,
@@ -647,11 +518,14 @@ const OwnerDashboard = () => {
         totalDeposit,
         pendingRent,
         pendingDeposit,
-        monthlyRevenue: revenueMetrics.monthlyRevenue, // Use REAL monthly revenue
-        yearlyRevenue: revenueMetrics.yearlyRevenue, // Use REAL yearly revenue
+        monthlyRevenue,
+        yearlyRevenue,
         cancelledBookings: cancelledBookingsList.length,
         completedBookings: completedBookingsList.length
       });
+
+      // Fetch settlement data
+      await fetchSettlementData();
 
       setSnackbar({
         open: true,
@@ -670,17 +544,7 @@ const OwnerDashboard = () => {
       setPageLoading(false);
       setRefreshing(false);
     }
-  }, [user, recentEnquiries.length, fetchSettlementData, revenueMetrics.totalRevenue, revenueMetrics.monthlyRevenue, revenueMetrics.yearlyRevenue]);
-
-  // Update stats when revenueMetrics changes
-  useEffect(() => {
-    setStats(prev => ({
-      ...prev,
-      totalEarnings: revenueMetrics.totalRevenue,
-      monthlyRevenue: revenueMetrics.monthlyRevenue,
-      yearlyRevenue: revenueMetrics.yearlyRevenue
-    }));
-  }, [revenueMetrics]);
+  }, [user, recentEnquiries.length, fetchSettlementData]);
 
   /* ---------------- AUTH + LOAD ================= */
   useEffect(() => {
@@ -852,10 +716,9 @@ const OwnerDashboard = () => {
   };
 
   const handleExportReport = () => {
-    const headers = ["Property", "Tenant", "Check-in Date", "Room Type", "Monthly Rent", "Status", "Payment Amount", "Settlement Status"];
+    const headers = ["Property", "Tenant", "Check-in Date", "Room Type", "Monthly Rent", "Status", "Settlement Status"];
     const rows = bookingHistory.map(booking => {
-      const payment = settlementData.find(s => s.booking_id === booking.id);
-      const paymentAmount = payment ? (parseFloat(payment.amount || payment.owner_amount) || 0) : 0;
+      const settlement = settlementData.find(s => s.booking_id === booking.id);
       return [
         booking.pg_name || "N/A",
         booking.name || booking.tenant_name || "Unknown",
@@ -863,8 +726,7 @@ const OwnerDashboard = () => {
         booking.room_type || "Not specified",
         formatCurrency(booking.monthly_rent || 0),
         booking.status || "Pending",
-        formatCurrency(paymentAmount),
-        payment?.owner_settlement === "DONE" ? "Settled" : (payment?.admin_settlement === "DONE" ? "Pending Settlement" : "Not Processed")
+        settlement?.owner_settlement === "DONE" ? "Settled" : (settlement?.admin_settlement === "DONE" ? "Pending Settlement" : "Not Processed")
       ];
     });
     
@@ -902,10 +764,6 @@ const OwnerDashboard = () => {
     navigate("/login");
   };
 
-  const handleViewSettlements = () => {
-    navigate("/owner/payments");
-  };
-
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good Morning";
@@ -915,6 +773,10 @@ const OwnerDashboard = () => {
 
   const greeting = getGreeting();
   const ownerName = user?.name?.split(' ')[0] || 'Owner';
+
+  const handleViewSettlements = () => {
+    navigate("/owner/payments");
+  };
 
   /* ================= PROTECTION ================= */
   if (authLoading || pageLoading) {
@@ -993,40 +855,6 @@ const OwnerDashboard = () => {
     alignItems: "center",
     gap: 1,
     fontSize: isMobile ? "1rem" : "1.1rem"
-  };
-
-  // Mini chart component for revenue trend
-  const RevenueTrendChart = ({ data }) => {
-    const maxRevenue = Math.max(...data.map(d => d.revenue), 1);
-    const height = 60;
-    
-    return (
-      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.5, height: height, mt: 2 }}>
-        {data.map((item, idx) => {
-          const barHeight = (item.revenue / maxRevenue) * height;
-          return (
-            <Tooltip key={idx} title={`${item.shortMonth}: ${formatCurrency(item.revenue)}`}>
-              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <Box 
-                  sx={{ 
-                    width: '100%', 
-                    height: barHeight, 
-                    bgcolor: '#4CAF50',
-                    borderRadius: '4px 4px 0 0',
-                    opacity: 0.7 + (item.revenue / maxRevenue) * 0.3,
-                    transition: 'all 0.3s ease',
-                    '&:hover': { opacity: 1 }
-                  }}
-                />
-                <Typography sx={{ fontSize: '0.6rem', color: '#94a3b8', mt: 0.5 }}>
-                  {item.shortMonth}
-                </Typography>
-              </Box>
-            </Tooltip>
-          );
-        })}
-      </Box>
-    );
   };
 
   return (
@@ -1303,110 +1131,6 @@ const OwnerDashboard = () => {
           )}
         </Menu>
 
-        {/* REVENUE HERO SECTION - NEW */}
-        <Box sx={{ mb: 4 }}>
-          <Grid container spacing={3}>
-            {/* Main Revenue Card */}
-            <Grid item xs={12} md={6}>
-              <Box sx={{
-                background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(11, 94, 215, 0.1))',
-                backdropFilter: 'blur(20px)',
-                borderRadius: '32px',
-                border: '1px solid rgba(76, 175, 80, 0.3)',
-                p: { xs: 2, sm: 3 },
-                position: 'relative',
-                overflow: 'hidden'
-              }}>
-                <Box sx={{ position: 'absolute', top: -20, right: -20, opacity: 0.1 }}>
-                  <MoneyIcon sx={{ fontSize: 120, color: '#4CAF50' }} />
-                </Box>
-                <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', mb: 1 }}>
-                  Total Revenue
-                </Typography>
-                <Typography sx={{ 
-                  fontSize: { xs: '2rem', sm: '3rem', md: '3.5rem' }, 
-                  fontWeight: 800, 
-                  background: 'linear-gradient(135deg, #4CAF50, #8B5CF6)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  lineHeight: 1
-                }}>
-                  {formatCurrency(animatedTotalRevenue)}
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 2, mt: 2, flexWrap: 'wrap' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <TrendingUpIcon sx={{ color: revenueMetrics.growthRate >= 0 ? '#4CAF50' : '#dc2626', fontSize: 20 }} />
-                    <Typography sx={{ color: revenueMetrics.growthRate >= 0 ? '#4CAF50' : '#dc2626', fontWeight: 600 }}>
-                      {revenueMetrics.growthRate >= 0 ? '+' : ''}{animatedGrowthRate}%
-                    </Typography>
-                    <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>vs last month</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <ReceiptIcon sx={{ color: '#0B5ED7', fontSize: 20 }} />
-                    <Typography sx={{ color: '#fff', fontWeight: 500 }}>{revenueMetrics.totalTransactions}</Typography>
-                    <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>transactions</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <TrendingUpIcon sx={{ color: '#8B5CF6', fontSize: 20 }} />
-                    <Typography sx={{ color: '#fff', fontWeight: 500 }}>{formatCurrency(revenueMetrics.averagePerBooking)}</Typography>
-                    <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>avg/booking</Typography>
-                  </Box>
-                </Box>
-              </Box>
-            </Grid>
-
-            {/* Revenue Breakdown */}
-            <Grid item xs={12} md={6}>
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Box sx={{
-                    background: 'rgba(15, 23, 36, 0.7)',
-                    backdropFilter: 'blur(12px)',
-                    borderRadius: '24px',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    p: 2,
-                    textAlign: 'center'
-                  }}>
-                    <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem', mb: 0.5 }}>This Month</Typography>
-                    <Typography sx={{ fontSize: '1.3rem', fontWeight: 700, color: '#0B5ED7' }}>{formatCurrency(animatedMonthlyRevenue)}</Typography>
-                    {revenueMetrics.growthRate !== 0 && (
-                      <Typography sx={{ fontSize: '0.7rem', color: revenueMetrics.growthRate >= 0 ? '#4CAF50' : '#dc2626' }}>
-                        {revenueMetrics.growthRate >= 0 ? '↑' : '↓'} {Math.abs(revenueMetrics.growthRate)}%
-                      </Typography>
-                    )}
-                  </Box>
-                </Grid>
-                <Grid item xs={6}>
-                  <Box sx={{
-                    background: 'rgba(15, 23, 36, 0.7)',
-                    backdropFilter: 'blur(12px)',
-                    borderRadius: '24px',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    p: 2,
-                    textAlign: 'center'
-                  }}>
-                    <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem', mb: 0.5 }}>This Year</Typography>
-                    <Typography sx={{ fontSize: '1.3rem', fontWeight: 700, color: '#8B5CF6' }}>{formatCurrency(revenueMetrics.yearlyRevenue)}</Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12}>
-                  <Box sx={{
-                    background: 'rgba(15, 23, 36, 0.7)',
-                    backdropFilter: 'blur(12px)',
-                    borderRadius: '24px',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    p: 2
-                  }}>
-                    <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem', mb: 1 }}>Revenue Trend (Last 6 Months)</Typography>
-                    <RevenueTrendChart data={revenueMetrics.revenueByMonth} />
-                  </Box>
-                </Grid>
-              </Grid>
-            </Grid>
-          </Grid>
-        </Box>
-
         {/* STATS CARDS - Responsive Grid */}
         <Box sx={{ mb: 5 }}>
           <Grid container spacing={2}>
@@ -1420,7 +1144,6 @@ const OwnerDashboard = () => {
                 height: '100%',
                 transition: 'all 0.3s ease',
                 '&:hover': { transform: 'translateY(-5px)' },
-                position: 'relative',
                 '&::before': {
                   content: '""',
                   position: 'absolute',
@@ -1454,7 +1177,6 @@ const OwnerDashboard = () => {
                 height: '100%',
                 transition: 'all 0.3s ease',
                 '&:hover': { transform: 'translateY(-5px)' },
-                position: 'relative',
                 '&::before': {
                   content: '""',
                   position: 'absolute',
@@ -1491,7 +1213,6 @@ const OwnerDashboard = () => {
                 height: '100%',
                 transition: 'all 0.3s ease',
                 '&:hover': { transform: 'translateY(-5px)' },
-                position: 'relative',
                 '&::before': {
                   content: '""',
                   position: 'absolute',
@@ -1539,7 +1260,6 @@ const OwnerDashboard = () => {
                 height: '100%',
                 transition: 'all 0.3s ease',
                 '&:hover': { transform: 'translateY(-5px)' },
-                position: 'relative',
                 '&::before': {
                   content: '""',
                   position: 'absolute',
@@ -1565,6 +1285,29 @@ const OwnerDashboard = () => {
 
             <Grid item xs={6} sm={6} md={4} lg={2}>
               <Box sx={{
+                background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.15), rgba(76, 175, 80, 0.05))',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '28px',
+                border: '1px solid rgba(76, 175, 80, 0.3)',
+                p: { xs: 2, sm: 2.5 },
+                height: '100%',
+                transition: 'all 0.3s ease',
+                '&:hover': { transform: 'translateY(-5px)' }
+              }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box>
+                    <Typography sx={{ color: '#94a3b8', fontSize: { xs: '0.65rem', sm: '0.75rem' }, fontWeight: 500 }}>MONTHLY REVENUE</Typography>
+                    <Typography sx={{ fontSize: { xs: '1rem', sm: '1.4rem' }, fontWeight: 800, color: '#4CAF50', lineHeight: 1 }}>
+                      {formatCurrency(animatedMonthlyRevenue)}
+                    </Typography>
+                  </Box>
+                  <MoneyIcon sx={{ fontSize: { xs: 28, sm: 36 }, color: '#4CAF50', opacity: 0.7 }} />
+                </Box>
+              </Box>
+            </Grid>
+
+            <Grid item xs={6} sm={6} md={4} lg={2}>
+              <Box sx={{
                 background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(234, 179, 8, 0.05))',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '28px',
@@ -1572,18 +1315,7 @@ const OwnerDashboard = () => {
                 p: { xs: 2, sm: 2.5 },
                 height: '100%',
                 transition: 'all 0.3s ease',
-                '&:hover': { transform: 'translateY(-5px)' },
-                position: 'relative',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: '3px',
-                  background: 'linear-gradient(90deg, #eab308, #8B5CF6)',
-                  borderRadius: '28px 28px 0 0',
-                }
+                '&:hover': { transform: 'translateY(-5px)' }
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <Box>
@@ -1598,41 +1330,6 @@ const OwnerDashboard = () => {
                     </Box>
                   </Box>
                   <StarIcon sx={{ fontSize: { xs: 28, sm: 36 }, color: '#eab308', opacity: 0.7 }} />
-                </Box>
-              </Box>
-            </Grid>
-
-            {/* New: Pending Settlement Card */}
-            <Grid item xs={6} sm={6} md={4} lg={2}>
-              <Box sx={{
-                background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.15), rgba(220, 38, 38, 0.05))',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '28px',
-                border: '1px solid rgba(220, 38, 38, 0.3)',
-                p: { xs: 2, sm: 2.5 },
-                height: '100%',
-                transition: 'all 0.3s ease',
-                '&:hover': { transform: 'translateY(-5px)' },
-                position: 'relative',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: '3px',
-                  background: 'linear-gradient(90deg, #dc2626, #f59e0b)',
-                  borderRadius: '28px 28px 0 0',
-                }
-              }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <Box>
-                    <Typography sx={{ color: '#94a3b8', fontSize: { xs: '0.65rem', sm: '0.75rem' }, fontWeight: 500 }}>PENDING SETTLEMENT</Typography>
-                    <Typography sx={{ fontSize: { xs: '1rem', sm: '1.3rem' }, fontWeight: 700, color: '#dc2626', lineHeight: 1 }}>
-                      {formatCurrency(revenueMetrics.pendingSettlement)}
-                    </Typography>
-                  </Box>
-                  <BankIcon sx={{ fontSize: { xs: 28, sm: 36 }, color: '#dc2626', opacity: 0.7 }} />
                 </Box>
               </Box>
             </Grid>
@@ -1690,7 +1387,7 @@ const OwnerDashboard = () => {
           >
             <Tab label="Properties" icon={<ApartmentIcon />} iconPosition="start" />
             <Tab label="Recent Bookings" icon={<ReceiptIcon />} iconPosition="start" />
-            <Tab label="Insights" icon={<AnalyticsIcon />} iconPosition="start" />
+            <Tab label="Insights" icon={<TrendingUpIcon />} iconPosition="start" />
           </Tabs>
 
           <Box sx={{ mt: 3 }}>
@@ -1807,9 +1504,6 @@ const OwnerDashboard = () => {
                     {recentBookings.map((booking) => {
                       const statusStyle = getStatusBadgeStyle(booking.status);
                       const monthlyRent = booking.monthly_rent || 0;
-                      // Find payment for this booking
-                      const payment = settlementData.find(p => p.booking_id === booking.id);
-                      const paymentAmount = payment ? (parseFloat(payment.amount || payment.owner_amount) || 0) : 0;
                       return (
                         <Box key={booking.id} sx={{
                           background: 'rgba(15, 23, 36, 0.7)',
@@ -1843,8 +1537,8 @@ const OwnerDashboard = () => {
                               <Typography sx={{ color: '#fff', fontSize: '0.85rem' }}>{formatDate(booking.check_in_date)}</Typography>
                             </Box>
                             <Box sx={{ minWidth: { xs: '100%', sm: 100 } }}>
-                              <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Amount</Typography>
-                              <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#4CAF50' }}>{formatCurrency(paymentAmount || monthlyRent)}</Typography>
+                              <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Monthly Rent</Typography>
+                              <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', background: 'linear-gradient(135deg, #8B5CF6, #4CAF50)', backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{formatCurrency(monthlyRent)}</Typography>
                             </Box>
                             <Box sx={{ minWidth: { xs: '100%', sm: 100 } }}>
                               <Chip label={booking.status?.toUpperCase() || 'PENDING'} size="small" sx={{ bgcolor: statusStyle.bg, color: statusStyle.color, fontWeight: 600, fontSize: '0.7rem', minWidth: 90 }} />
@@ -1864,91 +1558,41 @@ const OwnerDashboard = () => {
               </Box>
             )}
 
-            {/* Insights Tab - Enhanced with REAL Revenue Analytics */}
+            {/* Insights Tab - Enhanced with proper Revenue and Booking Summary */}
             {activeTab === 2 && (
               <Grid container spacing={3}>
-                {/* Revenue Summary - Now from REAL payments */}
+                {/* Revenue Summary */}
                 <Grid item xs={12} md={6}>
                   <Box sx={insightCardStyle}>
                     <Typography sx={insightTitleStyle}>
-                      <MoneyIcon sx={{ color: '#4CAF50' }} /> Revenue Analytics (Real)
+                      <MoneyIcon sx={{ color: '#4CAF50' }} /> Revenue Summary
                     </Typography>
                     <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
                     
                     <Row 
-                      label="Total Revenue" 
-                      value={formatCurrency(revenueMetrics.totalRevenue)} 
+                      label="Total Earnings" 
+                      value={formatCurrency(stats.totalEarnings)} 
                       color="#4CAF50"
                       icon="💰"
-                      subtext={`${revenueMetrics.totalTransactions} transactions`}
                     />
                     <Row 
                       label="Monthly Revenue" 
-                      value={formatCurrency(revenueMetrics.monthlyRevenue)} 
+                      value={formatCurrency(stats.monthlyRevenue)} 
                       color="#0B5ED7"
                       icon="📅"
-                      subtext={revenueMetrics.growthRate !== 0 ? `${revenueMetrics.growthRate >= 0 ? '+' : ''}${revenueMetrics.growthRate}% vs last month` : ''}
                     />
                     <Row 
                       label="Yearly Revenue" 
-                      value={formatCurrency(revenueMetrics.yearlyRevenue)} 
+                      value={formatCurrency(stats.yearlyRevenue)} 
                       color="#8B5CF6"
                       icon="📊"
                     />
                     <Row 
-                      label="Average per Booking" 
-                      value={formatCurrency(revenueMetrics.averagePerBooking)} 
-                      color="#eab308"
-                      icon="⭐"
+                      label="Total Rent Collected" 
+                      value={formatCurrency(stats.totalRent)} 
+                      color="#fff"
+                      icon="🏠"
                     />
-                    <Row 
-                      label="Pending Settlement" 
-                      value={formatCurrency(revenueMetrics.pendingSettlement)} 
-                      color="#dc2626"
-                      icon="⏳"
-                    />
-                  </Box>
-                </Grid>
-
-                {/* Revenue by PG */}
-                <Grid item xs={12} md={6}>
-                  <Box sx={insightCardStyle}>
-                    <Typography sx={insightTitleStyle}>
-                      <ApartmentIcon sx={{ color: '#0B5ED7' }} /> Revenue by Property
-                    </Typography>
-                    <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
-                    
-                    {revenueMetrics.revenueByPG.length === 0 ? (
-                      <Typography sx={{ color: '#94a3b8', textAlign: 'center', py: 3 }}>No revenue data yet</Typography>
-                    ) : (
-                      <Stack spacing={1}>
-                        {revenueMetrics.revenueByPG.slice(0, 5).map((pg, idx) => {
-                          const percentage = (pg.revenue / revenueMetrics.totalRevenue) * 100;
-                          return (
-                            <Box key={pg.name}>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                                <Typography sx={{ color: '#fff', fontSize: '0.85rem' }}>{pg.name}</Typography>
-                                <Typography sx={{ color: '#4CAF50', fontWeight: 600, fontSize: '0.85rem' }}>{formatCurrency(pg.revenue)}</Typography>
-                              </Box>
-                              <LinearProgress 
-                                variant="determinate" 
-                                value={percentage} 
-                                sx={{ 
-                                  height: 6, 
-                                  borderRadius: 3,
-                                  bgcolor: 'rgba(255,255,255,0.1)',
-                                  '& .MuiLinearProgress-bar': {
-                                    background: 'linear-gradient(90deg, #0B5ED7, #4CAF50)',
-                                    borderRadius: 3
-                                  }
-                                }} 
-                              />
-                              <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem', mt: 0.5 }}>{percentage.toFixed(1)}% of total</Typography>
-                            </Box>
-                          );
-                        })}
-                      </Stack>
-                    )}
                   </Box>
                 </Grid>
 
@@ -1987,47 +1631,67 @@ const OwnerDashboard = () => {
                   </Box>
                 </Grid>
 
-                {/* Monthly Revenue Trend */}
-                <Grid item xs={12} md={6}>
-                  <Box sx={insightCardStyle}>
-                    <Typography sx={insightTitleStyle}>
-                      <TimelineIcon sx={{ color: '#8B5CF6' }} /> Revenue Trend
-                    </Typography>
+                {/* Settlement Summary - Keeping your existing working section */}
+                <Grid item xs={12}>
+                  <Box sx={{
+                    background: 'rgba(15, 23, 36, 0.7)',
+                    backdropFilter: 'blur(12px)',
+                    borderRadius: '24px',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    p: { xs: 2, sm: 3 }
+                  }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+                      <Typography sx={{ color: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <BankIcon sx={{ color: '#8B5CF6' }} /> Settlement Summary
+                      </Typography>
+                      <Button size="small" onClick={handleViewSettlements} sx={{ color: '#4CAF50' }}>View Details →</Button>
+                    </Box>
                     <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
                     
-                    <Box sx={{ height: 200, display: 'flex', alignItems: 'flex-end', gap: 1, mb: 2 }}>
-                      {revenueMetrics.revenueByMonth.map((item, idx) => {
-                        const maxRevenue = Math.max(...revenueMetrics.revenueByMonth.map(d => d.revenue), 1);
-                        const barHeight = (item.revenue / maxRevenue) * 160;
-                        return (
-                          <Tooltip key={idx} title={`${item.month}: ${formatCurrency(item.revenue)}`}>
-                            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                              <Box 
-                                sx={{ 
-                                  width: '100%', 
-                                  height: barHeight, 
-                                  bgcolor: '#4CAF50',
-                                  borderRadius: '8px 8px 0 0',
-                                  opacity: 0.7 + (item.revenue / maxRevenue) * 0.3,
-                                  transition: 'all 0.3s ease',
-                                  '&:hover': { opacity: 1 }
-                                }}
-                              />
-                              <Typography sx={{ fontSize: '0.7rem', color: '#94a3b8', mt: 1 }}>
-                                {item.shortMonth}
-                              </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={4}>
+                        <Box sx={{ textAlign: 'center', p: { xs: 1.5, sm: 2 }, background: 'rgba(76, 175, 80, 0.1)', borderRadius: '16px' }}>
+                          <Typography sx={{ color: '#94a3b8', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>Total Settlement Amount</Typography>
+                          <Typography sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' }, fontWeight: 700, color: '#4CAF50' }}>{formatCurrency(settlementStats.totalAmount)}</Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={12} sm={4}>
+                        <Box sx={{ textAlign: 'center', p: { xs: 1.5, sm: 2 }, background: 'rgba(11, 94, 215, 0.1)', borderRadius: '16px' }}>
+                          <Typography sx={{ color: '#94a3b8', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>Settled Amount</Typography>
+                          <Typography sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' }, fontWeight: 700, color: '#0B5ED7' }}>{formatCurrency(animatedSettledAmount)}</Typography>
+                          <Typography sx={{ fontSize: '0.7rem', color: '#4CAF50' }}>{settlementStats.totalSettled} transactions</Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={12} sm={4}>
+                        <Box sx={{ textAlign: 'center', p: { xs: 1.5, sm: 2 }, background: 'rgba(245, 158, 11, 0.1)', borderRadius: '16px' }}>
+                          <Typography sx={{ color: '#94a3b8', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>Pending Settlement</Typography>
+                          <Typography sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' }, fontWeight: 700, color: '#f59e0b' }}>{formatCurrency(animatedPendingAmount)}</Typography>
+                          <Typography sx={{ fontSize: '0.7rem', color: '#f59e0b' }}>{settlementStats.totalPending} pending</Typography>
+                        </Box>
+                      </Grid>
+                    </Grid>
+
+                    {/* PG-wise Breakdown */}
+                    {settlementStats.pgBreakdown.length > 0 && (
+                      <Box sx={{ mt: 3 }}>
+                        <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', mb: 2 }}>PG-wise Breakdown</Typography>
+                        <Stack spacing={1}>
+                          {settlementStats.pgBreakdown.map((pg) => (
+                            <Box key={pg.name} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1.5, background: 'rgba(255,255,255,0.03)', borderRadius: '12px', flexWrap: 'wrap', gap: 1 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <ApartmentIcon sx={{ fontSize: 16, color: '#4CAF50' }} />
+                                <Typography sx={{ color: '#fff', fontSize: { xs: '0.8rem', sm: '0.85rem' } }}>{pg.name}</Typography>
+                              </Box>
+                              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                                <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Total: {formatCurrency(pg.total)}</Typography>
+                                {pg.settled > 0 && <Typography sx={{ color: '#4CAF50', fontSize: '0.75rem' }}>Settled: {formatCurrency(pg.settled)}</Typography>}
+                                {pg.pending > 0 && <Typography sx={{ color: '#f59e0b', fontSize: '0.75rem' }}>Pending: {formatCurrency(pg.pending)}</Typography>}
+                              </Box>
                             </Box>
-                          </Tooltip>
-                        );
-                      })}
-                    </Box>
-                    
-                    <Row 
-                      label="Best Month" 
-                      value={revenueMetrics.revenueByMonth.reduce((best, curr) => curr.revenue > best.revenue ? curr : best, { revenue: 0, month: 'N/A' }).month}
-                      color="#4CAF50"
-                      icon="🏆"
-                    />
+                          ))}
+                        </Stack>
+                      </Box>
+                    )}
                   </Box>
                 </Grid>
 
