@@ -9,6 +9,7 @@ const OwnerBookings = () => {
   const { user, role, loading } = useAuth();
 
   const [bookings, setBookings] = useState([]);
+  const [filter, setFilter] = useState("all");
   const [pageLoading, setPageLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
   const [error, setError] = useState("");
@@ -21,7 +22,7 @@ const OwnerBookings = () => {
       const res = await api.get("/owner/bookings", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setBookings(res.data.data || []);
+      setBookings(Array.isArray(res.data.data) ? res.data.data : []);
     } catch (err) {
       console.error(err);
       setError("Failed to load booking history");
@@ -39,9 +40,7 @@ const OwnerBookings = () => {
   }, [user, role, loadOwnerBookings]);
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate("/login");
-    }
+    if (!loading && !user) navigate("/login");
   }, [user, loading, navigate]);
 
   const updateStatus = async (bookingId, status) => {
@@ -60,7 +59,6 @@ const OwnerBookings = () => {
       loadOwnerBookings();
       setTimeout(() => setSuccess(""), 2500);
     } catch (err) {
-      console.error(err);
       alert(err.response?.data?.message || "Action failed");
     } finally {
       setActionLoading(null);
@@ -69,14 +67,23 @@ const OwnerBookings = () => {
 
   const getRemainingTime = (createdAt) => {
     const created = new Date(createdAt);
-    const expiry = new Date(created.getTime() + 24 * 60 * 60 * 1000);
+    const expiry = new Date(created.getTime() + 86400000);
     const now = new Date();
     const diff = expiry - now;
     if (diff <= 0) return "Expired";
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff / (1000 * 60)) % 60);
-    return `${hours}h ${minutes}m left`;
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    return `${h}h ${m}m left`;
   };
+
+  const filteredBookings = bookings.filter((b) => {
+    if (filter === "all") return true;
+    if (filter === "pending") return b.status === "pending";
+    if (filter === "active") return b.status === "confirmed";
+    if (filter === "expired") return b.status === "expired";
+    if (filter === "history") return b.status === "left";
+    return true;
+  });
 
   if (loading || pageLoading) {
     return (
@@ -93,13 +100,21 @@ const OwnerBookings = () => {
     <div style={container}>
       <h2>🏠 Owner Booking Requests</h2>
 
+      <div style={filterBar}>
+        <button onClick={() => setFilter("all")} style={filterBtn}>All</button>
+        <button onClick={() => setFilter("pending")} style={filterBtn}>Pending</button>
+        <button onClick={() => setFilter("active")} style={filterBtn}>Active</button>
+        <button onClick={() => setFilter("expired")} style={filterBtn}>Expired</button>
+        <button onClick={() => setFilter("history")} style={filterBtn}>History</button>
+      </div>
+
       {success && <div style={successBox}>{success}</div>}
       {error && <div style={errorBox}>{error}</div>}
 
-      {bookings.length === 0 ? (
-        <div style={emptyBox}>No booking requests</div>
+      {filteredBookings.length === 0 ? (
+        <div style={emptyBox}>No bookings</div>
       ) : (
-        bookings.map((b) => {
+        filteredBookings.map((b) => {
           const isExpired = b.status === "expired";
           const isPending = b.status === "pending";
 
@@ -108,14 +123,7 @@ const OwnerBookings = () => {
               <p><b>PG:</b> {b.pg_name}</p>
               <p><b>Tenant:</b> {b.tenant_name}</p>
               <p><b>Phone:</b> {b.tenant_phone || "🔒 Hidden"}</p>
-
-              <p>
-                <b>Check-in:</b>{" "}
-                {b.check_in_date
-                  ? new Date(b.check_in_date).toDateString()
-                  : "N/A"}
-              </p>
-
+              <p><b>Check-in:</b> {b.check_in_date ? new Date(b.check_in_date).toDateString() : "N/A"}</p>
               <p><b>Room:</b> {b.room_type}</p>
 
               <p>
@@ -130,50 +138,29 @@ const OwnerBookings = () => {
                   <p style={{ color: "#2563eb" }}>
                     ⏳ {getRemainingTime(b.created_at)}
                   </p>
-
                   <div style={{ marginTop: 12 }}>
                     <button
                       style={approveBtn}
                       disabled={actionLoading === b.id}
                       onClick={() => updateStatus(b.id, "approved")}
                     >
-                      {actionLoading === b.id ? "Processing..." : "✅ Approve"}
+                      {actionLoading === b.id ? "..." : "Approve"}
                     </button>
-
                     <button
                       style={rejectBtn}
                       disabled={actionLoading === b.id}
                       onClick={() => updateStatus(b.id, "rejected")}
                     >
-                      {actionLoading === b.id ? "Processing..." : "❌ Reject"}
+                      {actionLoading === b.id ? "..." : "Reject"}
                     </button>
                   </div>
                 </>
               )}
 
-              {b.status === "approved" && (
-                <p style={{ color: "#2563eb", fontWeight: "bold" }}>
-                  💳 Waiting for user payment
-                </p>
-              )}
-
-              {b.status === "confirmed" && (
-                <p style={{ color: "#16a34a", fontWeight: "bold" }}>
-                  ✅ Payment done - Booking Active
-                </p>
-              )}
-
-              {b.status === "left" && (
-                <p style={{ color: "#6b7280", fontWeight: "bold" }}>
-                  🚪 User vacated - Room available
-                </p>
-              )}
-
-              {isExpired && (
-                <p style={{ color: "red", fontWeight: "bold" }}>
-                  ❌ Booking expired
-                </p>
-              )}
+              {b.status === "approved" && <p style={{ color: "#2563eb" }}>Waiting for payment</p>}
+              {b.status === "confirmed" && <p style={{ color: "#16a34a" }}>Active</p>}
+              {b.status === "left" && <p style={{ color: "#6b7280" }}>Vacated</p>}
+              {isExpired && <p style={{ color: "red" }}>Expired</p>}
             </div>
           );
         })
@@ -185,6 +172,22 @@ const OwnerBookings = () => {
 export default OwnerBookings;
 
 const container = { maxWidth: 900, margin: "auto", padding: 20 };
+
+const filterBar = {
+  display: "flex",
+  gap: 10,
+  marginBottom: 20,
+  flexWrap: "wrap",
+};
+
+const filterBtn = {
+  padding: "8px 14px",
+  border: "none",
+  borderRadius: 20,
+  background: "#111827",
+  color: "#fff",
+  cursor: "pointer",
+};
 
 const card = {
   border: "1px solid #e5e7eb",
@@ -203,11 +206,9 @@ const emptyBox = {
 
 const errorBox = {
   padding: 20,
-  margin: 20,
   background: "#fee2e2",
   color: "#b91c1c",
   borderRadius: 8,
-  fontWeight: "bold",
 };
 
 const successBox = {
@@ -215,8 +216,6 @@ const successBox = {
   color: "#166534",
   padding: 12,
   borderRadius: 8,
-  marginBottom: 15,
-  fontWeight: "bold",
 };
 
 const statusBadge = (status) => ({
@@ -240,20 +239,18 @@ const statusBadge = (status) => ({
 });
 
 const approveBtn = {
-  padding: "10px 16px",
+  padding: "8px 14px",
   background: "#16a34a",
   color: "#fff",
   border: "none",
   borderRadius: 6,
-  cursor: "pointer",
-  marginRight: 10,
+  marginRight: 8,
 };
 
 const rejectBtn = {
-  padding: "10px 16px",
+  padding: "8px 14px",
   background: "#dc2626",
   color: "#fff",
   border: "none",
   borderRadius: 6,
-  cursor: "pointer",
 };
