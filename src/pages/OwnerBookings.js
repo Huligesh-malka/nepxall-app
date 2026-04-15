@@ -85,7 +85,7 @@ const OwnerBookings = () => {
   };
 
   //////////////////////////////////////////////////////
-  // TIME LEFT
+  // TIME LEFT (ONLY FOR DISPLAY)
   //////////////////////////////////////////////////////
   const getRemainingTime = (createdAt) => {
     const created = new Date(createdAt);
@@ -129,7 +129,9 @@ const OwnerBookings = () => {
         <div style={emptyBox}>No booking requests</div>
       ) : (
         bookings.map((b) => {
-          const isExpired = getRemainingTime(b.created_at) === "Expired";
+          // ✅ FIXED LOGIC
+          const isExpired = b.status === "expired";
+          const isPending = b.status === "pending";
 
           return (
             <div key={b.id} style={card}>
@@ -155,9 +157,9 @@ const OwnerBookings = () => {
               </p>
 
               //////////////////////////////////////////////////////
-              // PENDING → APPROVE / REJECT
+              // ✅ PENDING → APPROVE / REJECT
               //////////////////////////////////////////////////////
-              {b.status === "pending" && !isExpired && (
+              {isPending && !isExpired && (
                 <>
                   <p style={{ color: "#2563eb" }}>
                     ⏳ {getRemainingTime(b.created_at)}
@@ -183,28 +185,36 @@ const OwnerBookings = () => {
                 </>
               )}
 
-             
+              //////////////////////////////////////////////////////
+              // ✅ APPROVED
+              //////////////////////////////////////////////////////
               {b.status === "approved" && (
                 <p style={{ color: "#2563eb", fontWeight: "bold" }}>
                   💳 Waiting for user payment
                 </p>
               )}
 
-           
+              //////////////////////////////////////////////////////
+              // ✅ CONFIRMED
+              //////////////////////////////////////////////////////
               {b.status === "confirmed" && (
                 <p style={{ color: "#16a34a", fontWeight: "bold" }}>
                   ✅ Payment done - Booking Active
                 </p>
               )}
 
-             
+              //////////////////////////////////////////////////////
+              // ✅ LEFT
+              //////////////////////////////////////////////////////
               {b.status === "left" && (
                 <p style={{ color: "#6b7280", fontWeight: "bold" }}>
                   🚪 User vacated - Room available
                 </p>
               )}
 
-           
+              //////////////////////////////////////////////////////
+              // ❌ EXPIRED (ONLY FROM STATUS)
+              //////////////////////////////////////////////////////
               {isExpired && (
                 <p style={{ color: "red", fontWeight: "bold" }}>
                   ❌ Booking expired
@@ -274,6 +284,8 @@ const statusBadge = (status) => ({
       ? "#dc2626"
       : status === "left"
       ? "#6b7280"
+      : status === "expired"
+      ? "#dc2626"
       : "#f59e0b",
 });
 
