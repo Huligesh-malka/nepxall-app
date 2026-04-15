@@ -117,7 +117,10 @@ const FloatingActionMenu = ({ item, onApprove, onReject, onMarkPaid, loadingId }
   useOutsideClick(menuRef, () => setIsOpen(false));
 
   const canApprove = item.refund_status !== "completed" && item.user_approval !== "accepted";
-  const canMarkPaid = item.refund_status === "pending" && item.user_approval === "accepted";
+ 
+  const canMarkPaid =
+  item.refund_status === "approved" &&
+  item.user_approval?.toLowerCase() === "accepted";
   const canReject = item.refund_status !== "completed" && item.user_approval !== "accepted";
 
   const handleApproveClick = () => {
