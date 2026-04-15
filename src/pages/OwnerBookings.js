@@ -14,20 +14,14 @@ const OwnerBookings = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  //////////////////////////////////////////////////////
-  // LOAD BOOKINGS
-  //////////////////////////////////////////////////////
   const loadOwnerBookings = useCallback(async () => {
     try {
       setError("");
-
       const token = await user.getIdToken(true);
-
       const res = await api.get("/owner/bookings", {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      setBookings(res.data || []);
+      setBookings(res.data.data || []);
     } catch (err) {
       console.error(err);
       setError("Failed to load booking history");
@@ -36,9 +30,6 @@ const OwnerBookings = () => {
     }
   }, [user]);
 
-  //////////////////////////////////////////////////////
-  // AUTO REFRESH
-  //////////////////////////////////////////////////////
   useEffect(() => {
     if (user && role === "owner") {
       loadOwnerBookings();
@@ -47,23 +38,16 @@ const OwnerBookings = () => {
     }
   }, [user, role, loadOwnerBookings]);
 
-  //////////////////////////////////////////////////////
-  // AUTH CHECK
-  //////////////////////////////////////////////////////
   useEffect(() => {
     if (!loading && !user) {
       navigate("/login");
     }
   }, [user, loading, navigate]);
 
-  //////////////////////////////////////////////////////
-  // UPDATE STATUS
-  //////////////////////////////////////////////////////
   const updateStatus = async (bookingId, status) => {
     try {
       setActionLoading(bookingId);
       setSuccess("");
-
       const token = await user.getIdToken(true);
 
       await api.put(
@@ -75,7 +59,6 @@ const OwnerBookings = () => {
       setSuccess(`Booking ${status.toUpperCase()} successfully`);
       loadOwnerBookings();
       setTimeout(() => setSuccess(""), 2500);
-
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || "Action failed");
@@ -84,26 +67,17 @@ const OwnerBookings = () => {
     }
   };
 
-  //////////////////////////////////////////////////////
-  // TIME LEFT (ONLY FOR DISPLAY)
-  //////////////////////////////////////////////////////
   const getRemainingTime = (createdAt) => {
     const created = new Date(createdAt);
     const expiry = new Date(created.getTime() + 24 * 60 * 60 * 1000);
     const now = new Date();
-
     const diff = expiry - now;
     if (diff <= 0) return "Expired";
-
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff / (1000 * 60)) % 60);
-
     return `${hours}h ${minutes}m left`;
   };
 
-  //////////////////////////////////////////////////////
-  // LOADING
-  //////////////////////////////////////////////////////
   if (loading || pageLoading) {
     return (
       <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
@@ -115,9 +89,6 @@ const OwnerBookings = () => {
   if (!user) return <Navigate to="/login" replace />;
   if (role !== "owner") return <Navigate to="/" replace />;
 
-  //////////////////////////////////////////////////////
-  // UI
-  //////////////////////////////////////////////////////
   return (
     <div style={container}>
       <h2>🏠 Owner Booking Requests</h2>
@@ -129,7 +100,6 @@ const OwnerBookings = () => {
         <div style={emptyBox}>No booking requests</div>
       ) : (
         bookings.map((b) => {
-          // ✅ FIXED LOGIC
           const isExpired = b.status === "expired";
           const isPending = b.status === "pending";
 
@@ -137,7 +107,6 @@ const OwnerBookings = () => {
             <div key={b.id} style={card}>
               <p><b>PG:</b> {b.pg_name}</p>
               <p><b>Tenant:</b> {b.tenant_name}</p>
-
               <p><b>Phone:</b> {b.tenant_phone || "🔒 Hidden"}</p>
 
               <p>
@@ -156,10 +125,7 @@ const OwnerBookings = () => {
                 </span>
               </p>
 
-              //////////////////////////////////////////////////////
-              // ✅ PENDING → APPROVE / REJECT
-              //////////////////////////////////////////////////////
-              {isPending && !isExpired && (
+              {isPending && (
                 <>
                   <p style={{ color: "#2563eb" }}>
                     ⏳ {getRemainingTime(b.created_at)}
@@ -185,36 +151,24 @@ const OwnerBookings = () => {
                 </>
               )}
 
-              //////////////////////////////////////////////////////
-              // ✅ APPROVED
-              //////////////////////////////////////////////////////
               {b.status === "approved" && (
                 <p style={{ color: "#2563eb", fontWeight: "bold" }}>
                   💳 Waiting for user payment
                 </p>
               )}
 
-              //////////////////////////////////////////////////////
-              // ✅ CONFIRMED
-              //////////////////////////////////////////////////////
               {b.status === "confirmed" && (
                 <p style={{ color: "#16a34a", fontWeight: "bold" }}>
                   ✅ Payment done - Booking Active
                 </p>
               )}
 
-              //////////////////////////////////////////////////////
-              // ✅ LEFT
-              //////////////////////////////////////////////////////
               {b.status === "left" && (
                 <p style={{ color: "#6b7280", fontWeight: "bold" }}>
                   🚪 User vacated - Room available
                 </p>
               )}
 
-              //////////////////////////////////////////////////////
-              // ❌ EXPIRED (ONLY FROM STATUS)
-              //////////////////////////////////////////////////////
               {isExpired && (
                 <p style={{ color: "red", fontWeight: "bold" }}>
                   ❌ Booking expired
@@ -229,10 +183,6 @@ const OwnerBookings = () => {
 };
 
 export default OwnerBookings;
-
-//////////////////////////////////////////////////////
-// STYLES
-//////////////////////////////////////////////////////
 
 const container = { maxWidth: 900, margin: "auto", padding: 20 };
 
