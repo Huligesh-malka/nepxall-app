@@ -327,9 +327,9 @@ const OwnerDashboard = () => {
       const settled = payments.filter(p => p.owner_settlement === "DONE");
       const pending = payments.filter(p => p.owner_settlement !== "DONE" && p.admin_settlement === "DONE");
       
-      const totalAmount = payments.reduce((sum, p) => sum + (parseFloat(p.amount || p.owner_amount) || 0), 0);
-      const settledAmount = settled.reduce((sum, p) => sum + (parseFloat(p.amount || p.owner_amount) || 0), 0);
-      const pendingAmount = pending.reduce((sum, p) => sum + (parseFloat(p.amount || p.owner_amount) || 0), 0);
+      const totalAmount = payments.reduce((sum, p) => sum + (parseFloat(p.owner_amount) || 0), 0);
+      const settledAmount = settled.reduce((sum, p) => sum + (parseFloat(p.owner_amount) || 0), 0);
+      const pendingAmount = pending.reduce((sum, p) => sum + (parseFloat(p.owner_amount) || 0), 0);
       
       // Group by PG for breakdown
       const pgMap = new Map();
@@ -339,7 +339,7 @@ const OwnerDashboard = () => {
           pgMap.set(pgName, { total: 0, settled: 0, pending: 0 });
         }
         const pg = pgMap.get(pgName);
-        const amount = parseFloat(p.amount || p.owner_amount) || 0;
+        const amount = parseFloat(p.owner_amount) || 0;
         pg.total += amount;
         if (p.owner_settlement === "DONE") {
           pg.settled += amount;
@@ -441,6 +441,10 @@ const OwnerDashboard = () => {
         const monthlyRent = getRentByRoomType(pg, roomType);
         const deposit = getDepositByRoomType(pg, roomType);
         
+        // 🔥 IMPORTANT FIX: Use owner_amount from payment data or fallback to calculated rent
+        // Get owner_amount from payment if available, otherwise use monthlyRent
+        const ownerAmount = Number(booking.owner_amount) || Number(booking.amount) || monthlyRent || 0;
+        
         return {
           ...booking,
           tenant_name: booking.name || booking.tenant_name || 'Unknown',
@@ -448,7 +452,8 @@ const OwnerDashboard = () => {
           tenant_email: booking.email || booking.tenant_email,
           room_type: booking.room_type || 'Not specified',
           check_in_date: booking.check_in_date || booking.created_at,
-          amount: Number(booking.amount) || monthlyRent || 0,
+          owner_amount: ownerAmount, // 🔥 CRITICAL: Store the correct amount
+          amount: ownerAmount, // For backward compatibility
           monthly_rent: monthlyRent,
           deposit_amount: deposit,
           pg_name: booking.pg_name || pg?.pg_name || 'N/A',
@@ -462,7 +467,7 @@ const OwnerDashboard = () => {
 
       setRecentBookings(sortedBookings);
 
-      // Calculate stats
+      // 🔥 FIXED: Calculate stats using owner_amount and owner_settlement = "DONE"
       const totalRooms = properties.reduce((a, b) => a + (b.total_rooms || 0), 0);
       const availableRooms = properties.reduce((a, b) => a + (b.available_rooms || 0), 0);
       const occupiedRooms = totalRooms - availableRooms;
@@ -471,35 +476,48 @@ const OwnerDashboard = () => {
       const ratings = properties.filter(p => p.avg_rating > 0).map(p => p.avg_rating);
       const avgRating = ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : 0;
 
-      const confirmedBookings = enhancedBookings.filter(b => ["confirmed", "completed", "approved", "active", "left"].includes(b?.status?.toLowerCase()));
+      // 🔥 CRITICAL FIX: Only count bookings where owner_settlement = "DONE"
+      // This matches your business rule: revenue = owner_amount WHERE owner_settlement = DONE
+      const paidBookings = enhancedBookings.filter(b => 
+        b.owner_settlement === "DONE" || 
+        b.payment_status === "DONE" ||
+        b.settlement_status === "DONE"
+      );
+      
+      const confirmedBookings = enhancedBookings.filter(b => 
+        ["confirmed", "completed", "approved", "active", "left"].includes(b?.status?.toLowerCase())
+      );
+      
       const pendingBookingsList = enhancedBookings.filter(b => b?.status?.toLowerCase() === "pending");
       const cancelledBookingsList = enhancedBookings.filter(b => b?.status?.toLowerCase() === "cancelled");
       const completedBookingsList = enhancedBookings.filter(b => b?.status?.toLowerCase() === "completed");
 
-      const totalRent = confirmedBookings.reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
-      const totalDeposit = confirmedBookings.reduce((a, b) => a + (Number(b.deposit_amount) || 0), 0);
+      // 🔥 REVENUE CALCULATION: Use owner_amount from paid bookings only
+      const totalEarnings = paidBookings.reduce((a, b) => a + (Number(b.owner_amount) || 0), 0);
+      
+      const totalRent = paidBookings.reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
+      const totalDeposit = paidBookings.reduce((a, b) => a + (Number(b.deposit_amount) || 0), 0);
       const pendingRent = pendingBookingsList.reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
       const pendingDeposit = pendingBookingsList.reduce((a, b) => a + (Number(b.deposit_amount) || 0), 0);
-      const totalEarnings = confirmedBookings.reduce((a, b) => a + (Number(b.amount) || 0), 0);
 
+      // 🔥 MONTHLY REVENUE: Only paid bookings in current month
       const currentMonth = new Date().getMonth();
       const currentYear = new Date().getFullYear();
-      const monthlyRevenue = enhancedBookings
+      const monthlyRevenue = paidBookings
         .filter(b => {
           const bookingDate = new Date(b.created_at || b.check_in_date);
           return bookingDate.getMonth() === currentMonth && 
-                 bookingDate.getFullYear() === currentYear &&
-                 ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase());
+                 bookingDate.getFullYear() === currentYear;
         })
-        .reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
+        .reduce((a, b) => a + (Number(b.owner_amount) || 0), 0);
 
-      const yearlyRevenue = enhancedBookings
+      // 🔥 YEARLY REVENUE: Only paid bookings in current year
+      const yearlyRevenue = paidBookings
         .filter(b => {
           const bookingDate = new Date(b.created_at || b.check_in_date);
-          return bookingDate.getFullYear() === currentYear &&
-                 ["confirmed", "completed", "approved"].includes(b?.status?.toLowerCase());
+          return bookingDate.getFullYear() === currentYear;
         })
-        .reduce((a, b) => a + (Number(b.monthly_rent) || 0), 0);
+        .reduce((a, b) => a + (Number(b.owner_amount) || 0), 0);
 
       const pendingBookings = bookings.filter(b => b?.status?.toLowerCase() === "pending").length;
 
@@ -716,7 +734,7 @@ const OwnerDashboard = () => {
   };
 
   const handleExportReport = () => {
-    const headers = ["Property", "Tenant", "Check-in Date", "Room Type", "Monthly Rent", "Status", "Settlement Status"];
+    const headers = ["Property", "Tenant", "Check-in Date", "Room Type", "Monthly Rent", "Owner Amount", "Status", "Settlement Status"];
     const rows = bookingHistory.map(booking => {
       const settlement = settlementData.find(s => s.booking_id === booking.id);
       return [
@@ -725,6 +743,7 @@ const OwnerDashboard = () => {
         formatDate(booking.check_in_date || booking.created_at),
         booking.room_type || "Not specified",
         formatCurrency(booking.monthly_rent || 0),
+        formatCurrency(booking.owner_amount || 0),
         booking.status || "Pending",
         settlement?.owner_settlement === "DONE" ? "Settled" : (settlement?.admin_settlement === "DONE" ? "Pending Settlement" : "Not Processed")
       ];
@@ -1504,6 +1523,8 @@ const OwnerDashboard = () => {
                     {recentBookings.map((booking) => {
                       const statusStyle = getStatusBadgeStyle(booking.status);
                       const monthlyRent = booking.monthly_rent || 0;
+                      const ownerAmount = booking.owner_amount || 0;
+                      const isSettled = booking.owner_settlement === "DONE" || booking.payment_status === "DONE";
                       return (
                         <Box key={booking.id} sx={{
                           background: 'rgba(15, 23, 36, 0.7)',
@@ -1537,11 +1558,23 @@ const OwnerDashboard = () => {
                               <Typography sx={{ color: '#fff', fontSize: '0.85rem' }}>{formatDate(booking.check_in_date)}</Typography>
                             </Box>
                             <Box sx={{ minWidth: { xs: '100%', sm: 100 } }}>
-                              <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Monthly Rent</Typography>
-                              <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', background: 'linear-gradient(135deg, #8B5CF6, #4CAF50)', backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{formatCurrency(monthlyRent)}</Typography>
+                              <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Owner Amount</Typography>
+                              <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: isSettled ? '#4CAF50' : '#f59e0b' }}>
+                                {formatCurrency(ownerAmount)}
+                              </Typography>
                             </Box>
                             <Box sx={{ minWidth: { xs: '100%', sm: 100 } }}>
-                              <Chip label={booking.status?.toUpperCase() || 'PENDING'} size="small" sx={{ bgcolor: statusStyle.bg, color: statusStyle.color, fontWeight: 600, fontSize: '0.7rem', minWidth: 90 }} />
+                              <Chip 
+                                label={isSettled ? "SETTLED" : (booking.owner_settlement === "PENDING" ? "PENDING" : (booking.status?.toUpperCase() || 'PENDING'))} 
+                                size="small" 
+                                sx={{ 
+                                  bgcolor: isSettled ? '#4CAF50' : (booking.owner_settlement === "PENDING" ? '#f59e0b' : statusStyle.bg), 
+                                  color: '#fff', 
+                                  fontWeight: 600, 
+                                  fontSize: '0.7rem', 
+                                  minWidth: 90 
+                                }} 
+                              />
                             </Box>
                             <IconButton onClick={(e) => { e.stopPropagation(); handleViewBooking(booking.id); }} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '14px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}><ViewIcon fontSize="small" /></IconButton>
                           </Box>
@@ -1592,6 +1625,12 @@ const OwnerDashboard = () => {
                       value={formatCurrency(stats.totalRent)} 
                       color="#fff"
                       icon="🏠"
+                    />
+                    <Row 
+                      label="Total Deposit Collected" 
+                      value={formatCurrency(stats.totalDeposit)} 
+                      color="#4CAF50"
+                      icon="🏦"
                     />
                   </Box>
                 </Grid>
@@ -1694,34 +1733,6 @@ const OwnerDashboard = () => {
                     )}
                   </Box>
                 </Grid>
-
-                {/* Deposit Summary */}
-                <Grid item xs={12}>
-                  <Box sx={insightCardStyle}>
-                    <Typography sx={insightTitleStyle}>
-                      <SecurityIcon sx={{ color: '#8B5CF6' }} /> Deposit Summary
-                    </Typography>
-                    <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} sm={6}>
-                        <Row 
-                          label="Total Deposit Collected" 
-                          value={formatCurrency(stats.totalDeposit)} 
-                          color="#4CAF50"
-                          icon="🏦"
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Row 
-                          label="Pending Deposit" 
-                          value={formatCurrency(stats.pendingDeposit)} 
-                          color="#f59e0b"
-                          icon="⏰"
-                        />
-                      </Grid>
-                    </Grid>
-                  </Box>
-                </Grid>
               </Grid>
             )}
           </Box>
@@ -1794,9 +1805,20 @@ const OwnerDashboard = () => {
                 <Grid item xs={12}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Property</Typography><Typography sx={{ color: '#fff' }}>{selectedBooking.pg_name}</Typography></Grid>
                 <Grid item xs={6}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Room Type</Typography><Typography sx={{ color: '#8B5CF6' }}>{selectedBooking.room_type}</Typography></Grid>
                 <Grid item xs={6}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Check-in Date</Typography><Typography sx={{ color: '#fff' }}>{formatDate(selectedBooking.check_in_date)}</Typography></Grid>
-                <Grid item xs={6}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Monthly Rent</Typography><Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{formatCurrency(selectedBooking.monthly_rent)}</Typography></Grid>
+                <Grid item xs={6}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Owner Amount</Typography><Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{formatCurrency(selectedBooking.owner_amount)}</Typography></Grid>
+                <Grid item xs={6}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Monthly Rent</Typography><Typography sx={{ color: '#8B5CF6', fontWeight: 600 }}>{formatCurrency(selectedBooking.monthly_rent)}</Typography></Grid>
                 <Grid item xs={6}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Deposit Amount</Typography><Typography sx={{ color: '#f59e0b', fontWeight: 600 }}>{formatCurrency(selectedBooking.deposit_amount)}</Typography></Grid>
-                <Grid item xs={12}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Status</Typography><Chip label={selectedBooking.status?.toUpperCase() || 'PENDING'} sx={{ bgcolor: getStatusBadgeStyle(selectedBooking.status).bg, color: getStatusBadgeStyle(selectedBooking.status).color, fontWeight: 600, mt: 0.5 }} /></Grid>
+                <Grid item xs={12}><Typography sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>Settlement Status</Typography>
+                  <Chip 
+                    label={selectedBooking.owner_settlement === "DONE" ? "SETTLED" : (selectedBooking.owner_settlement === "PENDING" ? "PENDING SETTLEMENT" : "NOT PROCESSED")} 
+                    sx={{ 
+                      bgcolor: selectedBooking.owner_settlement === "DONE" ? '#4CAF50' : '#f59e0b', 
+                      color: '#fff', 
+                      fontWeight: 600, 
+                      mt: 0.5 
+                    }} 
+                  />
+                </Grid>
               </Grid>
               <Button fullWidth onClick={() => { setBookingDetailsOpen(false); handleViewBooking(selectedBooking.id); }} sx={{ mt: 3, background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)', borderRadius: '30px', py: 1.5, color: '#fff', fontWeight: 600, textTransform: 'none' }}>View Full Details</Button>
             </Box>
