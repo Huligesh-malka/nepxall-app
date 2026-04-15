@@ -57,7 +57,7 @@ import {
   Security as SecurityIcon
 } from "@mui/icons-material";
 
-import StatCard from "../components/owner/StatCard";
+import StatCard from "../components/owner/statcard";
 import PropertyCard from "../components/owner/PropertyCard";
 
 // API endpoint for owner payments
