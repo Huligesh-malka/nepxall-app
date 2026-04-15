@@ -430,7 +430,16 @@ const OwnerDashboard = () => {
       setPgDetailsMap(pgMap);
 
       const bookingsRes = await pgAPI.getOwnerBookings();
-      const bookings = Array.isArray(bookingsRes.data) ? bookingsRes.data : bookingsRes.data?.bookings || [];
+      
+      // 🔥🔥🔥 CRITICAL FIX - THE ONLY LINE THAT WAS BROKEN 🔥🔥🔥
+      // Backend response: { success: true, count: 10, data: [...] }
+      // So we need bookingsRes.data.data (not bookingsRes.data.bookings)
+      const bookings = bookingsRes.data?.data || [];
+      
+      // 🧪 DEBUG LOGS - Add these to verify fix
+      console.log("🔍 API RESPONSE:", bookingsRes.data);
+      console.log("🔍 BOOKINGS ARRAY (raw):", bookings);
+      console.log("🔍 BOOKINGS COUNT:", bookings.length);
 
       setBookingHistory(bookings);
 
@@ -545,6 +554,8 @@ const OwnerDashboard = () => {
       console.log("📊 Pending Bookings:", pendingBookingsCount);
       console.log("📊 Cancelled/Rejected Bookings:", cancelledBookingsList.length);
       console.log("📊 Completed/Confirmed Bookings:", completedBookingsList.length);
+      console.log("📊 Total Earnings:", totalEarnings);
+      console.log("📊 Monthly Revenue:", monthlyRevenue);
 
       setStats({
         totalProperties: properties.length,
