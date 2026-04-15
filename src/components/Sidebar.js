@@ -68,6 +68,11 @@ const Sidebar = ({ role, user }) => {
   💰 Refunds
 </Link>
 
+<Link style={linkStyle(isActive("/user/agreements"))} to="/user/agreements">
+  📄 My Agreements
+</Link>
+
+
             <hr style={divider} />
 
             <Link style={linkStyle(isActive("/contact"))} to="/contact">📞 Contact Us</Link>

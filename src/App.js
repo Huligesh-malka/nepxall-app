@@ -23,6 +23,7 @@ import UserPGSearch from "./pages/UserPGSearch";
 import PGDetails from "./pages/PGDetails";
 import BookingForm from "./pages/BookingForm";
 import UserBookingHistory from "./pages/UserBookingHistory";   
+import UserAgreements from "./pages/UserAgreements";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentPage from "./pages/PaymentPage";
 import NotificationBell from "./pages/NotificationBell";
@@ -133,6 +134,7 @@ function App() {
       <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
         <Route path="/booking/:pgId" element={<BookingForm />} />
         <Route path="/user/bookings" element={<UserBookingHistory />} />
+        <Route path="/user/agreements" element={<UserAgreements />} />
         <Route path="/user/services/:bookingId" element={<ServicesPage />} />
         <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/payment/:bookingId" element={<PaymentPage />} />
