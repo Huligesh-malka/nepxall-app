@@ -341,12 +341,10 @@ const RequestCard = ({ item, loadingId, onApprove, onReject, onMarkPaid }) => {
           <span style={{ fontWeight: 500 }}>📝 Reason:</span> {item.reason}
         </div>
       )}
-    </motion.div>
-  );
-};
 
 
-{item.user_approval === "rejected" && (
+
+      {(item.user_approval === "rejected" || item.refund_status === "rejected") && (
   <div style={{
     marginTop: 10,
     padding: "10px 14px",
@@ -356,9 +354,16 @@ const RequestCard = ({ item, loadingId, onApprove, onReject, onMarkPaid }) => {
     color: "#b91c1c",
     borderLeft: "4px solid #ef4444"
   }}>
-    ❌ User rejected the refund request
+    ❌ {item.user_approval === "rejected"
+        ? "User rejected the refund request"
+        : "Owner rejected the refund request"}
   </div>
 )}
+    </motion.div>
+  );
+};
+
+
 
 /* ══════════════════════════════════════════════
    PG SELECTION SCREEN (Dashboard)
