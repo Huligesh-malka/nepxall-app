@@ -283,6 +283,21 @@ const BankDetails = ({ item }) => {
   );
 };
 
+
+{item.user_approval === "rejected" && (
+  <div style={{
+    marginTop: 10,
+    padding: "10px 14px",
+    background: "rgba(239,68,68,0.08)",
+    borderRadius: 12,
+    fontSize: 12,
+    color: "#b91c1c",
+    borderLeft: "4px solid #ef4444"
+  }}>
+    ❌ User rejected the refund request
+  </div>
+)}
+
 /* ══════════════════════════════════════════════
    REQUEST CARD
 ══════════════════════════════════════════════ */
