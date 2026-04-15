@@ -57,8 +57,33 @@ const AdminAgreementDetails = () => {
     return `${BACKEND_URL}/${path.replace(/\\/g, "/")}`;
   };
 
+  // Helper function to check if file is PDF based on URL
+  const isPDFFile = (url) => {
+    if (!url) return false;
+    return url.toLowerCase().includes(".pdf") || url.toLowerCase().includes(".PDF");
+  };
+
+  // Helper function to get download URL for PDFs
+  const getDownloadUrl = (url) => {
+    if (!url) return "#";
+    // Add fl_attachment flag for Cloudinary to force download
+    if (url.includes("cloudinary")) {
+      return url.replace("/upload/", "/upload/fl_attachment/");
+    }
+    return url;
+  };
+
   const handleFileChange = (e) => {
-    setSelectedFile(e.target.files[0]);
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+      if (!validTypes.includes(file.type)) {
+        alert("Please upload a valid file (PDF, PNG, or JPG)");
+        return;
+      }
+      setSelectedFile(file);
+    }
   };
 
   const handleUploadImage = async () => {
@@ -108,8 +133,7 @@ const AdminAgreementDetails = () => {
     <div style={container}>
       <div style={topNav}>
         <button onClick={() => navigate(-1)} style={backBtn}>
-          {" "}
-          ← Back{" "}
+          ← Back
         </button>
       </div>
 
@@ -134,7 +158,12 @@ const AdminAgreementDetails = () => {
           </p>
 
           <div style={actionRow}>
-            <input type="file" accept="image/*" onChange={handleFileChange} style={fileInput} />
+            <input 
+              type="file" 
+              accept="image/*,application/pdf"  // ✅ FIXED: Allow both images and PDFs
+              onChange={handleFileChange} 
+              style={fileInput} 
+            />
             <button
               onClick={handleUploadImage}
               disabled={uploading || !selectedFile}
@@ -148,17 +177,53 @@ const AdminAgreementDetails = () => {
             {data.final_pdf && (
               <div style={previewBox}>
                 <p style={previewLabel}>Current Unsigned Draft:</p>
-                <img src={formatUrl(data.final_pdf)} alt="Draft" style={previewImg} />
+                {(() => {
+                  const fileUrl = formatUrl(data.final_pdf);
+                  const isPDF = isPDFFile(fileUrl);
+                  return isPDF ? (
+                    <div style={pdfContainer}>
+                      <a
+                        href={getDownloadUrl(fileUrl)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={downloadLink}
+                      >
+                        📄 Download Agreement PDF
+                      </a>
+                      <p style={pdfHint}>Click to view or download the PDF document</p>
+                    </div>
+                  ) : (
+                    <img src={fileUrl} alt="Draft" style={previewImg} />
+                  );
+                })()}
               </div>
             )}
             {data.signed_pdf && (
               <div style={previewBox}>
                 <p style={previewLabel}>Latest Signed Version:</p>
-                <img
-                  src={formatUrl(data.signed_pdf)}
-                  alt="Signed"
-                  style={{ ...previewImg, borderColor: "#059669" }}
-                />
+                {(() => {
+                  const fileUrl = formatUrl(data.signed_pdf);
+                  const isPDF = isPDFFile(fileUrl);
+                  return isPDF ? (
+                    <div style={pdfContainer}>
+                      <a
+                        href={getDownloadUrl(fileUrl)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ ...downloadLink, backgroundColor: "#059669" }}
+                      >
+                        📄 Download Signed Agreement PDF
+                      </a>
+                      <p style={pdfHint}>Click to view or download the signed PDF document</p>
+                    </div>
+                  ) : (
+                    <img
+                      src={fileUrl}
+                      alt="Signed"
+                      style={{ ...previewImg, borderColor: "#059669" }}
+                    />
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -218,31 +283,46 @@ const DataField = ({ label, value, highlight, isMoney }) => (
   </div>
 );
 
-const DocItem = ({ title, url, isSig }) => (
-  <div style={card}>
-    <h3 style={cardTitle}>{title}</h3>
-    <div style={{ padding: "15px", textAlign: "center", backgroundColor: isSig ? "#fdfdfd" : "#fff" }}>
-      {url ? (
-        <a href={url} target="_blank" rel="noreferrer">
-          <img
-            src={url}
-            alt={title}
-            style={{
-              maxWidth: "100%",
-              borderRadius: "8px",
-              maxHeight: isSig ? "100px" : "200px",
-              border: "1px solid #f1f5f9",
-            }}
-          />
-        </a>
-      ) : (
-        <div style={{ padding: "40px 0", color: "#94a3b8", fontSize: "12px", fontStyle: "italic" }}>
-          Missing Document
-        </div>
-      )}
+const DocItem = ({ title, url, isSig }) => {
+  const isPDF = url?.toLowerCase().includes(".pdf");
+  
+  return (
+    <div style={card}>
+      <h3 style={cardTitle}>{title}</h3>
+      <div style={{ padding: "15px", textAlign: "center", backgroundColor: isSig ? "#fdfdfd" : "#fff" }}>
+        {url ? (
+          isPDF ? (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={smallDownloadLink}
+            >
+              📄 View PDF Document
+            </a>
+          ) : (
+            <a href={url} target="_blank" rel="noreferrer">
+              <img
+                src={url}
+                alt={title}
+                style={{
+                  maxWidth: "100%",
+                  borderRadius: "8px",
+                  maxHeight: isSig ? "100px" : "200px",
+                  border: "1px solid #f1f5f9",
+                }}
+              />
+            </a>
+          )
+        ) : (
+          <div style={{ padding: "40px 0", color: "#94a3b8", fontSize: "12px", fontStyle: "italic" }}>
+            Missing Document
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /* --- STYLES --- */
 const container = { padding: "40px", maxWidth: "1200px", margin: "0 auto", backgroundColor: "#f8fafc", minHeight: "100vh", fontFamily: "'Inter', sans-serif" };
@@ -255,7 +335,7 @@ const uploadCard = { background: "#eff6ff", borderRadius: "16px", border: "2px d
 const uploadCardTitle = { fontSize: "18px", fontWeight: "700", color: "#1e40af", marginBottom: "8px" };
 const uploadSubtitle = { fontSize: "13px", color: "#60a5fa", marginBottom: "20px" };
 const cardContent = { padding: "24px" };
-const actionRow = { display: "flex", gap: "12px", alignItems: "center" };
+const actionRow = { display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" };
 const fileInput = { background: "#fff", border: "1px solid #cbd5e1", padding: "10px", borderRadius: "8px", flex: 1, fontSize: "13px" };
 const uploadBtn = { backgroundColor: "#2563eb", color: "#fff", border: "none", padding: "12px 24px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" };
 
@@ -270,10 +350,47 @@ const fieldValue = { fontSize: "14px" };
 const backBtn = { background: "#fff", border: "1px solid #e2e8f0", padding: "10px 18px", borderRadius: "10px", cursor: "pointer", fontSize: "14px", fontWeight: "600", color: "#475569" };
 const loaderWrap = { display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", color: "#64748b" };
 
-const previewGrid = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginTop: "20px" };
+const previewGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px", marginTop: "20px" };
 const previewBox = { display: "flex", flexDirection: "column" };
 const previewLabel = { fontWeight: "700", fontSize: "13px", color: "#1e40af", marginBottom: "8px" };
 const previewImg = { width: "100%", borderRadius: "12px", border: "2px solid #dbeafe", boxShadow: "0 4px 10px rgba(0,0,0,0.05)" };
+
+const pdfContainer = {
+  padding: "40px 20px",
+  textAlign: "center",
+  backgroundColor: "#f8fafc",
+  borderRadius: "12px",
+  border: "2px solid #dbeafe",
+};
+
+const downloadLink = {
+  display: "inline-block",
+  backgroundColor: "#2563eb",
+  color: "#fff",
+  padding: "12px 24px",
+  borderRadius: "8px",
+  textDecoration: "none",
+  fontWeight: "600",
+  fontSize: "14px",
+  marginBottom: "10px",
+};
+
+const smallDownloadLink = {
+  display: "inline-block",
+  backgroundColor: "#3b82f6",
+  color: "#fff",
+  padding: "8px 16px",
+  borderRadius: "6px",
+  textDecoration: "none",
+  fontWeight: "500",
+  fontSize: "12px",
+};
+
+const pdfHint = {
+  fontSize: "12px",
+  color: "#64748b",
+  marginTop: "8px",
+};
 
 const statusBadge = (status) => {
   const s = status?.toLowerCase();
