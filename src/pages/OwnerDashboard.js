@@ -488,9 +488,24 @@ const OwnerDashboard = () => {
         ["confirmed", "completed", "approved", "active", "left"].includes(b?.status?.toLowerCase())
       );
       
-      const pendingBookingsList = enhancedBookings.filter(b => b?.status?.toLowerCase() === "pending");
-      const cancelledBookingsList = enhancedBookings.filter(b => b?.status?.toLowerCase() === "cancelled");
-      const completedBookingsList = enhancedBookings.filter(b => b?.status?.toLowerCase() === "completed");
+      // ✅ FIX 2: CORRECT STATUS MAPPING FOR BOOKING COUNTS
+      // Using 'rejected' for cancelled bookings (matches your DB)
+      const pendingBookingsList = enhancedBookings.filter(b => 
+        b?.status?.toLowerCase() === "pending" || 
+        b?.status?.toLowerCase() === "approved"
+      );
+      
+      // ✅ FIX 3: CANCELLED = 'rejected' from your DB
+      const cancelledBookingsList = enhancedBookings.filter(b => 
+        b?.status?.toLowerCase() === "rejected" || 
+        b?.status?.toLowerCase() === "cancelled"
+      );
+      
+      // ✅ FIX 4: COMPLETED = 'confirmed' or 'left' from your DB
+      const completedBookingsList = enhancedBookings.filter(b =>
+        b?.status?.toLowerCase() === "confirmed" ||
+        b?.status?.toLowerCase() === "left"
+      );
 
       // 🔥 REVENUE CALCULATION: Use owner_amount from paid bookings only
       const totalEarnings = paidBookings.reduce((a, b) => a + (Number(b.owner_amount) || 0), 0);
@@ -519,7 +534,17 @@ const OwnerDashboard = () => {
         })
         .reduce((a, b) => a + (Number(b.owner_amount) || 0), 0);
 
-      const pendingBookings = bookings.filter(b => b?.status?.toLowerCase() === "pending").length;
+      // ✅ FIX 1: Use enhancedBookings.length for total bookings (NOT raw bookings)
+      const totalBookings = enhancedBookings.length;
+      const pendingBookingsCount = pendingBookingsList.length;
+
+      // 🧪 DEBUG LOGS - Add these to verify data
+      console.log("📊 RAW BOOKINGS (from API):", bookings.length);
+      console.log("📊 ENHANCED BOOKINGS:", enhancedBookings.length);
+      console.log("📊 Total Bookings Count:", totalBookings);
+      console.log("📊 Pending Bookings:", pendingBookingsCount);
+      console.log("📊 Cancelled/Rejected Bookings:", cancelledBookingsList.length);
+      console.log("📊 Completed/Confirmed Bookings:", completedBookingsList.length);
 
       setStats({
         totalProperties: properties.length,
@@ -528,8 +553,8 @@ const OwnerDashboard = () => {
         occupiedRooms,
         occupancyRate,
         totalEarnings,
-        pendingBookings,
-        totalBookings: bookings.length,
+        pendingBookings: pendingBookingsCount,
+        totalBookings: totalBookings, // ✅ FIX 1 APPLIED
         avgRating,
         totalEnquiries: recentEnquiries.length,
         totalRent,
@@ -538,8 +563,8 @@ const OwnerDashboard = () => {
         pendingDeposit,
         monthlyRevenue,
         yearlyRevenue,
-        cancelledBookings: cancelledBookingsList.length,
-        completedBookings: completedBookingsList.length
+        cancelledBookings: cancelledBookingsList.length, // ✅ FIX 2 & 3 APPLIED
+        completedBookings: completedBookingsList.length // ✅ FIX 4 APPLIED
       });
 
       // Fetch settlement data
