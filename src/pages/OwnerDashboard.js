@@ -1469,106 +1469,57 @@ const OwnerDashboard = () => {
           </Tabs>
 
           <Box sx={{ mt: 3 }}>
-            {/* Properties Tab */}
-            {activeTab === 0 && (
-              <>
-                {pgs.length === 0 ? (
-                  <Box sx={{
-                    background: 'rgba(15, 23, 36, 0.8)',
-                    backdropFilter: 'blur(20px)',
-                    borderRadius: '32px',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    p: { xs: 3, md: 6 },
-                    textAlign: 'center'
-                  }}>
-                    <ApartmentIcon sx={{ fontSize: 80, color: '#4CAF50', mb: 2, opacity: 0.7 }} />
-                    <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>No properties yet</Typography>
-                    <Typography sx={{ color: '#94a3b8', mb: 3 }}>Start by adding your first property to begin managing bookings and tenants.</Typography>
-                    <Button startIcon={<AddIcon />} onClick={() => navigate("/owner/add")} sx={{
-                      background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
-                      borderRadius: '30px',
-                      px: 4,
-                      py: 1.5,
-                      color: '#fff',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      fontSize: '1rem'
-                    }}>Add Your First Property</Button>
-                  </Box>
-                ) : (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    {pgs.map((pg) => (
-                      <Box key={pg.id || pg.pg_id} sx={{
-                        background: 'rgba(15, 23, 36, 0.8)',
-                        backdropFilter: 'blur(20px)',
-                        borderRadius: '28px',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        overflow: 'hidden',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          borderColor: 'rgba(76, 175, 80, 0.5)',
-                          boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
-                        }
-                      }}>
-                        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
-                          <Box sx={{
-                            width: { xs: '100%', md: 280 },
-                            height: { xs: 200, md: 'auto' },
-                            backgroundImage: pg.image ? `url(${getImageUrl(pg.image)})` : 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            position: 'relative'
-                          }}>
-                            <Box sx={{
-                              position: 'absolute',
-                              top: 16,
-                              right: 16,
-                              background: pg.available_rooms > 0 ? 'linear-gradient(135deg, #4CAF50, #2e7d32)' : 'linear-gradient(135deg, #f59e0b, #dc2626)',
-                              color: '#fff',
-                              px: 1.5,
-                              py: 0.5,
-                              borderRadius: '20px',
-                              fontSize: '0.7rem',
-                              fontWeight: 600
-                            }}>
-                              {pg.available_rooms > 0 ? `${pg.available_rooms} AVAILABLE` : 'FULL'}
-                            </Box>
-                          </Box>
-                          <Box sx={{ flex: 1, p: { xs: 2, sm: 3 } }}>
-                            <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: { xs: '1.1rem', sm: '1.3rem' }, mb: 1 }}>{pg.pg_name}</Typography>
-                            <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', mb: 2 }}>{pg.location || 'Location not specified'}</Typography>
-                            <Grid container spacing={2} sx={{ mb: 2 }}>
-                              <Grid item xs={4}>
-                                <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Total Rooms</Typography>
-                                <Typography sx={{ color: '#fff', fontWeight: 600 }}>{pg.total_rooms || 0}</Typography>
-                              </Grid>
-                              <Grid item xs={4}>
-                                <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Available</Typography>
-                                <Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{pg.available_rooms || 0}</Typography>
-                              </Grid>
-                              <Grid item xs={4}>
-                                <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Starting Rent</Typography>
-                                <Typography sx={{ color: '#8B5CF6', fontWeight: 600 }}>{formatCurrency(pg.rent_amount)}</Typography>
-                              </Grid>
-                            </Grid>
-                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                              <Tooltip title="View Property"><IconButton size="small" onClick={() => handleViewProperty(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}><ViewIcon fontSize="small" /></IconButton></Tooltip>
-                              <Tooltip title="Edit Property"><IconButton size="small" onClick={() => handleEditProperty(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#f59e0b' } }}><EditIcon fontSize="small" /></IconButton></Tooltip>
-                              <Tooltip title="Manage Rooms"><IconButton size="small" onClick={() => handleManageRooms(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}><RoomIcon fontSize="small" /></IconButton></Tooltip>
-                              <Tooltip title="Manage Photos"><IconButton size="small" onClick={() => handleManagePhotos(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#4CAF50' } }}><PhotoIcon fontSize="small" /></IconButton></Tooltip>
-                              <Tooltip title="Manage Videos"><IconButton size="small" onClick={() => handleManageVideos(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#dc2626' } }}><VideoIcon fontSize="small" /></IconButton></Tooltip>
-                              <Tooltip title="Generate QR"><IconButton size="small" onClick={() => handleGenerateQR(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#8B5CF6' } }}><QrIcon fontSize="small" /></IconButton></Tooltip>
-                              <Tooltip title="Chat"><IconButton size="small" onClick={() => handleChat(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#4CAF50' } }}><ChatIcon fontSize="small" /></IconButton></Tooltip>
-                              <Tooltip title="Announcement"><IconButton size="small" onClick={() => handleAnnouncement(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}><CampaignIcon fontSize="small" /></IconButton></Tooltip>
-                            </Box>
-                          </Box>
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-              </>
-            )}
+           {/* Properties Tab */}
+{activeTab === 0 && (
+  <>
+    {pgs.length === 0 ? (
+      <Box sx={{
+        background: 'rgba(15, 23, 36, 0.8)',
+        backdropFilter: 'blur(20px)',
+        borderRadius: '32px',
+        border: '1px solid rgba(255,255,255,0.1)',
+        p: { xs: 3, md: 6 },
+        textAlign: 'center'
+      }}>
+        <ApartmentIcon sx={{ fontSize: 80, color: '#4CAF50', mb: 2, opacity: 0.7 }} />
+        <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>No properties yet</Typography>
+        <Typography sx={{ color: '#94a3b8', mb: 3 }}>Start by adding your first property to begin managing bookings and tenants.</Typography>
+        <Button startIcon={<AddIcon />} onClick={() => navigate("/owner/add")} sx={{
+          background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
+          borderRadius: '30px',
+          px: 4,
+          py: 1.5,
+          color: '#fff',
+          fontWeight: 600,
+          textTransform: 'none',
+          fontSize: '1rem'
+        }}>Add Your First Property</Button>
+      </Box>
+    ) : (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {pgs.map((pg) => (
+          <PropertyCard
+            key={pg.id || pg.pg_id}
+            property={pg}
+            onView={() => handleViewProperty(pg.id || pg.pg_id)}
+            onEdit={() => handleEditProperty(pg.id || pg.pg_id)}
+            onRooms={() => handleManageRooms(pg.id || pg.pg_id)}
+            onPhotos={() => handleManagePhotos(pg.id || pg.pg_id)}
+            onVideos={() => handleManageVideos(pg.id || pg.pg_id)}
+            onChat={() => handleChat(pg.id || pg.pg_id)}
+            onAnnouncement={() => handleAnnouncement(pg.id || pg.pg_id)}
+            onCreatePlan={pg.pg_category === "coliving" ? () => handleCreatePlan(pg.id || pg.pg_id) : null}
+            onGenerateQR={() => handleGenerateQR(pg.id || pg.pg_id)}
+            onToggleStatus={() => {
+              // Optional: Add toggle status functionality
+              console.log("Toggle status for:", pg.id);
+            }}
+          />
+        ))}
+      </Box>
+    )}
+  </>
+)}
 
             {/* Recent Bookings Tab */}
             {activeTab === 1 && (
