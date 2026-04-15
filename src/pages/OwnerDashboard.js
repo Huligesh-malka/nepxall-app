@@ -58,7 +58,7 @@ import {
 } from "@mui/icons-material";
 
 import StatCard from "../components/owner/StatCard";
-import PropertyCard from "../components/owner/PropertyCard";
+
 
 // API endpoint for owner payments
 const PAYMENTS_API = "https://nepxall-backend.onrender.com/api/owner";
@@ -1470,105 +1470,307 @@ const OwnerDashboard = () => {
 
           <Box sx={{ mt: 3 }}>
             {/* Properties Tab */}
-            {activeTab === 0 && (
-              <>
-                {pgs.length === 0 ? (
+            {/* Properties Tab */}
+{activeTab === 0 && (
+  <>
+    {pgs.length === 0 ? (
+      <Box sx={{
+        background: 'rgba(15, 23, 36, 0.8)',
+        backdropFilter: 'blur(20px)',
+        borderRadius: '32px',
+        border: '1px solid rgba(255,255,255,0.1)',
+        p: { xs: 3, md: 6 },
+        textAlign: 'center'
+      }}>
+        <ApartmentIcon sx={{ fontSize: 80, color: '#4CAF50', mb: 2, opacity: 0.7 }} />
+        <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>No properties yet</Typography>
+        <Typography sx={{ color: '#94a3b8', mb: 3 }}>Start by adding your first property to begin managing bookings and tenants.</Typography>
+        <Button startIcon={<AddIcon />} onClick={() => navigate("/owner/add")} sx={{
+          background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
+          borderRadius: '30px',
+          px: 4,
+          py: 1.5,
+          color: '#fff',
+          fontWeight: 600,
+          textTransform: 'none',
+          fontSize: '1rem'
+        }}>Add Your First Property</Button>
+      </Box>
+    ) : (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {pgs.map((pg) => {
+          // Status configuration
+          const isPending = pg.status === "pending";
+          const isActive = pg.status === "active";
+          const isRejected = pg.status === "rejected";
+          
+          const statusConfig = {
+            pending: { label: "⏳ WAITING FOR ADMIN", bg: "#fef3c7", color: "#92400e", borderColor: "#f59e0b" },
+            active: { label: "✅ ACTIVE", bg: "#d1fae5", color: "#065f46", borderColor: "#4CAF50" },
+            rejected: { label: "❌ REJECTED", bg: "#fee2e2", color: "#991b1b", borderColor: "#dc2626" },
+            default: { label: pg.status?.toUpperCase() || "PENDING", bg: "#f1f5f9", color: "#475569", borderColor: "#94a3b8" }
+          };
+          
+          const statusInfo = statusConfig[pg.status] || statusConfig.default;
+          
+          return (
+            <Box key={pg.id || pg.pg_id} sx={{
+              background: 'rgba(15, 23, 36, 0.8)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: '28px',
+              border: `1px solid ${statusInfo.borderColor}40`,
+              overflow: 'hidden',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                borderColor: `${statusInfo.borderColor}80`,
+                boxShadow: `0 20px 40px rgba(0,0,0,0.3)`
+              }
+            }}>
+              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
+                {/* Image Section */}
+                <Box sx={{
+                  width: { xs: '100%', md: 280 },
+                  height: { xs: 200, md: 'auto' },
+                  backgroundImage: pg.image ? `url(${getImageUrl(pg.image)})` : 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  position: 'relative'
+                }}>
+                  {/* Status Badge on Image */}
                   <Box sx={{
-                    background: 'rgba(15, 23, 36, 0.8)',
-                    backdropFilter: 'blur(20px)',
-                    borderRadius: '32px',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    p: { xs: 3, md: 6 },
-                    textAlign: 'center'
+                    position: 'absolute',
+                    top: 16,
+                    left: 16,
+                    background: statusInfo.bg,
+                    color: statusInfo.color,
+                    px: 1.5,
+                    py: 0.5,
+                    borderRadius: '20px',
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    zIndex: 1
                   }}>
-                    <ApartmentIcon sx={{ fontSize: 80, color: '#4CAF50', mb: 2, opacity: 0.7 }} />
-                    <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>No properties yet</Typography>
-                    <Typography sx={{ color: '#94a3b8', mb: 3 }}>Start by adding your first property to begin managing bookings and tenants.</Typography>
-                    <Button startIcon={<AddIcon />} onClick={() => navigate("/owner/add")} sx={{
-                      background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
-                      borderRadius: '30px',
-                      px: 4,
-                      py: 1.5,
-                      color: '#fff',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      fontSize: '1rem'
-                    }}>Add Your First Property</Button>
+                    {isPending && "⏳"}
+                    {isActive && "✅"}
+                    {isRejected && "❌"}
+                    {statusInfo.label}
                   </Box>
-                ) : (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    {pgs.map((pg) => (
-                      <Box key={pg.id || pg.pg_id} sx={{
-                        background: 'rgba(15, 23, 36, 0.8)',
-                        backdropFilter: 'blur(20px)',
-                        borderRadius: '28px',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        overflow: 'hidden',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          borderColor: 'rgba(76, 175, 80, 0.5)',
-                          boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
-                        }
-                      }}>
-                        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
-                          <Box sx={{
-                            width: { xs: '100%', md: 280 },
-                            height: { xs: 200, md: 'auto' },
-                            backgroundImage: pg.image ? `url(${getImageUrl(pg.image)})` : 'linear-gradient(135deg, #0B5ED7, #4CAF50)',
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            position: 'relative'
-                          }}>
-                            <Box sx={{
-                              position: 'absolute',
-                              top: 16,
-                              right: 16,
-                              background: pg.available_rooms > 0 ? 'linear-gradient(135deg, #4CAF50, #2e7d32)' : 'linear-gradient(135deg, #f59e0b, #dc2626)',
-                              color: '#fff',
-                              px: 1.5,
-                              py: 0.5,
-                              borderRadius: '20px',
-                              fontSize: '0.7rem',
-                              fontWeight: 600
-                            }}>
-                              {pg.available_rooms > 0 ? `${pg.available_rooms} AVAILABLE` : 'FULL'}
-                            </Box>
-                          </Box>
-                          <Box sx={{ flex: 1, p: { xs: 2, sm: 3 } }}>
-                            <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: { xs: '1.1rem', sm: '1.3rem' }, mb: 1 }}>{pg.pg_name}</Typography>
-                            <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', mb: 2 }}>{pg.location || 'Location not specified'}</Typography>
-                            <Grid container spacing={2} sx={{ mb: 2 }}>
-                              <Grid item xs={4}>
-                                <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Total Rooms</Typography>
-                                <Typography sx={{ color: '#fff', fontWeight: 600 }}>{pg.total_rooms || 0}</Typography>
-                              </Grid>
-                              <Grid item xs={4}>
-                                <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Available</Typography>
-                                <Typography sx={{ color: '#4CAF50', fontWeight: 600 }}>{pg.available_rooms || 0}</Typography>
-                              </Grid>
-                              <Grid item xs={4}>
-                                <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Starting Rent</Typography>
-                                <Typography sx={{ color: '#8B5CF6', fontWeight: 600 }}>{formatCurrency(pg.rent_amount)}</Typography>
-                              </Grid>
-                            </Grid>
-                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                              <Tooltip title="View Property"><IconButton size="small" onClick={() => handleViewProperty(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}><ViewIcon fontSize="small" /></IconButton></Tooltip>
-                              <Tooltip title="Edit Property"><IconButton size="small" onClick={() => handleEditProperty(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#f59e0b' } }}><EditIcon fontSize="small" /></IconButton></Tooltip>
-                              <Tooltip title="Manage Rooms"><IconButton size="small" onClick={() => handleManageRooms(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}><RoomIcon fontSize="small" /></IconButton></Tooltip>
-                              <Tooltip title="Manage Photos"><IconButton size="small" onClick={() => handleManagePhotos(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#4CAF50' } }}><PhotoIcon fontSize="small" /></IconButton></Tooltip>
-                              <Tooltip title="Manage Videos"><IconButton size="small" onClick={() => handleManageVideos(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#dc2626' } }}><VideoIcon fontSize="small" /></IconButton></Tooltip>
-                              <Tooltip title="Generate QR"><IconButton size="small" onClick={() => handleGenerateQR(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#8B5CF6' } }}><QrIcon fontSize="small" /></IconButton></Tooltip>
-                              <Tooltip title="Chat"><IconButton size="small" onClick={() => handleChat(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#4CAF50' } }}><ChatIcon fontSize="small" /></IconButton></Tooltip>
-                              <Tooltip title="Announcement"><IconButton size="small" onClick={() => handleAnnouncement(pg.id || pg.pg_id)} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}><CampaignIcon fontSize="small" /></IconButton></Tooltip>
-                            </Box>
-                          </Box>
-                        </Box>
-                      </Box>
-                    ))}
+                  
+                  {/* Availability Badge */}
+                  <Box sx={{
+                    position: 'absolute',
+                    top: 16,
+                    right: 16,
+                    background: pg.available_rooms > 0 ? 'linear-gradient(135deg, #4CAF50, #2e7d32)' : 'linear-gradient(135deg, #f59e0b, #dc2626)',
+                    color: '#fff',
+                    px: 1.5,
+                    py: 0.5,
+                    borderRadius: '20px',
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    zIndex: 1
+                  }}>
+                    {pg.available_rooms > 0 ? `${pg.available_rooms} AVAILABLE` : 'FULL'}
                   </Box>
-                )}
-              </>
-            )}
+                </Box>
+                
+                {/* Content Section */}
+                <Box sx={{ flex: 1, p: { xs: 2, sm: 3 } }}>
+                  <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: { xs: '1.1rem', sm: '1.3rem' }, mb: 1 }}>
+                    {pg.pg_name}
+                  </Typography>
+                  <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem', mb: 2 }}>
+                    {pg.location || 'Location not specified'}
+                  </Typography>
+                  
+                  {/* Stats Grid */}
+                  <Grid container spacing={2} sx={{ mb: 2 }}>
+                    <Grid item xs={4}>
+                      <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Total Rooms</Typography>
+                      <Typography sx={{ color: '#fff', fontWeight: 600 }}>{pg.total_rooms || 0}</Typography>
+                    </Grid>
+                    <Grid item xs={4}>
+                      <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Available</Typography>
+                      <Typography sx={{ color: isActive ? '#4CAF50' : '#94a3b8', fontWeight: 600 }}>
+                        {pg.available_rooms || 0}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={4}>
+                      <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Starting Rent</Typography>
+                      <Typography sx={{ color: '#8B5CF6', fontWeight: 600 }}>
+                        {formatCurrency(pg.rent_amount)}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                  
+                  {/* 🔥 BIG ALERT FOR PENDING STATUS */}
+                  {isPending && (
+                    <Alert 
+                      severity="warning" 
+                      icon={<WarningIcon />}
+                      sx={{ 
+                        mb: 2, 
+                        borderRadius: '16px',
+                        background: 'rgba(245, 158, 11, 0.1)',
+                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                        '& .MuiAlert-icon': { color: '#f59e0b' }
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#f59e0b' }}>
+                        ⏳ Waiting for Admin Approval
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mt: 0.5 }}>
+                        Your PG has been submitted and is under admin verification. 
+                        This usually takes 24-48 hours. You'll be notified once approved.
+                      </Typography>
+                    </Alert>
+                  )}
+                  
+                  {/* 🔥 ALERT FOR REJECTED STATUS */}
+                  {isRejected && (
+                    <Alert 
+                      severity="error" 
+                      sx={{ 
+                        mb: 2, 
+                        borderRadius: '16px',
+                        background: 'rgba(220, 38, 38, 0.1)',
+                        border: '1px solid rgba(220, 38, 38, 0.3)'
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#dc2626' }}>
+                        ❌ Property Rejected
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mt: 0.5 }}>
+                        Your property has been rejected. Please check your email for details.
+                      </Typography>
+                    </Alert>
+                  )}
+                  
+                  {/* Action Buttons - Disabled for non-active */}
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Tooltip title="View Property">
+                      <IconButton 
+                        size="small" 
+                        onClick={() => handleViewProperty(pg.id || pg.pg_id)} 
+                        sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}
+                      >
+                        <ViewIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    
+                    <Tooltip title={!isActive ? "Available after admin approval" : "Edit Property"}>
+                      <span>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleEditProperty(pg.id || pg.pg_id)} 
+                          disabled={!isActive}
+                          sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#f59e0b' } }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    
+                    <Tooltip title={!isActive ? "Available after admin approval" : "Manage Rooms"}>
+                      <span>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleManageRooms(pg.id || pg.pg_id)} 
+                          disabled={!isActive}
+                          sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}
+                        >
+                          <RoomIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    
+                    <Tooltip title={!isActive ? "Available after admin approval" : "Manage Photos"}>
+                      <span>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleManagePhotos(pg.id || pg.pg_id)} 
+                          disabled={!isActive}
+                          sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#4CAF50' } }}
+                        >
+                          <PhotoIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    
+                    <Tooltip title={!isActive ? "Available after admin approval" : "Manage Videos"}>
+                      <span>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleManageVideos(pg.id || pg.pg_id)} 
+                          disabled={!isActive}
+                          sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#dc2626' } }}
+                        >
+                          <VideoIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    
+                    <Tooltip title={!isActive ? "Available after admin approval" : "Generate QR"}>
+                      <span>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleGenerateQR(pg.id || pg.pg_id)} 
+                          disabled={!isActive}
+                          sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#8B5CF6' } }}
+                        >
+                          <QrIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    
+                    <Tooltip title={!isActive ? "Available after admin approval" : "Chat"}>
+                      <span>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleChat(pg.id || pg.pg_id)} 
+                          disabled={!isActive}
+                          sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#4CAF50' } }}
+                        >
+                          <ChatIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    
+                    <Tooltip title={!isActive ? "Available after admin approval" : "Announcement"}>
+                      <span>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleAnnouncement(pg.id || pg.pg_id)} 
+                          disabled={!isActive}
+                          sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', '&:hover': { bgcolor: '#0B5ED7' } }}
+                        >
+                          <CampaignIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </Box>
+                  
+                  {/* Pending Info Box */}
+                  {isPending && (
+                    <Box sx={{ mt: 2, p: 1.5, bgcolor: 'rgba(245, 158, 11, 0.05)', borderRadius: '12px' }}>
+                      <Typography variant="caption" sx={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <PendingIcon sx={{ fontSize: 14 }} />
+                        Property under review. Management features will be available after admin approval.
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            </Box>
+          );
+        })}
+      </Box>
+    )}
+  </>
+)}
 
             {/* Recent Bookings Tab */}
             {activeTab === 1 && (
