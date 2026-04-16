@@ -43,6 +43,19 @@ export default function OwnerChatList() {
 
       setMe(meRes.data);
       setUsers(listRes.data || []);
+      
+      // After loading users, join all their rooms
+      if (meRes.data && listRes.data.length > 0 && socketRef.current) {
+        console.log("Joining rooms for all chats...");
+        listRes.data.forEach((u) => {
+          socketRef.current.emit("join_private_room", {
+            userA: meRes.data.id,
+            userB: u.id,
+            pg_id: u.pg_id,
+          });
+          console.log(`📥 Joining room: private_${meRes.data.id}_${u.id}_pg${u.pg_id}`);
+        });
+      }
     } catch (err) {
       console.error("Chat list error:", err);
     } finally {
@@ -52,59 +65,55 @@ export default function OwnerChatList() {
 
   /* ================= SOCKET SETUP ================= */
   useEffect(() => {
-    if (!user || !me) return;
+    if (!user) return;
 
     if (!socketRef.current) {
       socketRef.current = io(SOCKET_URL, {
         transports: ["websocket"],
       });
 
-      socketRef.current.on("connect", () => setConnected(true));
-      socketRef.current.on("disconnect", () => setConnected(false));
+      socketRef.current.on("connect", () => {
+        console.log("Socket connected");
+        setConnected(true);
+      });
+      
+      socketRef.current.on("disconnect", () => {
+        console.log("Socket disconnected");
+        setConnected(false);
+      });
     }
 
     const socket = socketRef.current;
 
-    // Register owner with their Firebase UID
+    // Register with Firebase UID
+    console.log("Registering with UID:", user.uid);
     socket.emit("register", user.uid);
 
-    // ✅ CRITICAL FIX: JOIN ALL PRIVATE ROOMS FOR EACH CHAT
-    users.forEach((u) => {
-      const room = `${me.id}_${u.id}_${u.pg_id}`;
-      const roomReverse = `${u.id}_${me.id}_${u.pg_id}`;
-      
-      socket.emit("join_private_room", {
-        userA: me.id,
-        userB: u.id,
-        pg_id: u.pg_id,
-      });
-      
-      console.log(`Joined room: ${room} and ${roomReverse}`);
-    });
-
-    // Socket event listeners
+    // Remove old listeners to avoid duplicates
     socket.off("receive_private_message");
     socket.off("message_sent_confirmation");
     socket.off("chat_list_update");
+    socket.off("user_online");
+    socket.off("user_offline");
 
-    // ✅ IMPROVED: Handle new messages with better logging
+    // Improved message handler with console log
     socket.on("receive_private_message", (msg) => {
       console.log("📨 Owner received new message:", msg);
-      loadChats(); // Refresh the chat list
+      loadChats(); // Reload to update the list
     });
     
     socket.on("message_sent_confirmation", (data) => {
-      console.log("✅ Message sent confirmation:", data);
+      console.log("✅ Message confirmation:", data);
       loadChats();
     });
     
     socket.on("chat_list_update", () => {
-      console.log("🔄 Chat list update received");
+      console.log("🔄 Chat list update requested");
       loadChats();
     });
 
-    // Online/Offline status handlers
     socket.on("user_online", (firebase_uid) => {
+      console.log("User online:", firebase_uid);
       setUsers(prev =>
         prev.map(u =>
           u.firebase_uid === firebase_uid
@@ -115,6 +124,7 @@ export default function OwnerChatList() {
     });
 
     socket.on("user_offline", (firebase_uid) => {
+      console.log("User offline:", firebase_uid);
       setUsers(prev =>
         prev.map(u =>
           u.firebase_uid === firebase_uid
@@ -124,14 +134,35 @@ export default function OwnerChatList() {
       );
     });
 
+    // Listen for room join confirmation (if your backend sends it)
+    socket.on("room_joined", (data) => {
+      console.log("✅ Successfully joined room:", data);
+    });
+
     return () => {
       socket.off("receive_private_message");
       socket.off("message_sent_confirmation");
       socket.off("chat_list_update");
       socket.off("user_online");
       socket.off("user_offline");
+      socket.off("room_joined");
     };
-  }, [user, me, users, loadChats]); // ✅ Added users dependency to rejoin rooms when list changes
+  }, [user, loadChats]);
+
+  /* ================= RE-JOIN ROOMS WHEN USERS CHANGE ================= */
+  useEffect(() => {
+    // When users list updates or me changes, re-join rooms
+    if (me && users.length > 0 && socketRef.current && connected) {
+      console.log("Re-joining rooms after user list update...");
+      users.forEach((u) => {
+        socketRef.current.emit("join_private_room", {
+          userA: me.id,
+          userB: u.id,
+          pg_id: u.pg_id,
+        });
+      });
+    }
+  }, [me, users, connected]);
 
   /* ================= AUTH + LOAD ================= */
   useEffect(() => {
@@ -173,19 +204,26 @@ export default function OwnerChatList() {
   return (
     <Box sx={mainContainer}>
       <Container maxWidth="sm">
-        <Box display="flex" justifyContent="space-between">
+        <Box display="flex" justifyContent="space-between" alignItems="center">
           <Typography sx={headerTitle}>
             Messages
           </Typography>
-          <Typography
-            sx={{ fontSize: 12, color: connected ? "#4caf50" : "#ff4d4f" }}
-          >
-            {connected ? "● Online" : "● Offline"}
-          </Typography>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Typography
+              sx={{ fontSize: 12, color: connected ? "#4caf50" : "#ff4d4f" }}
+            >
+              {connected ? "● Online" : "● Offline"}
+            </Typography>
+            {connected && (
+              <Typography sx={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
+                Real-time
+              </Typography>
+            )}
+          </Box>
         </Box>
 
         <Typography sx={subTitle}>
-          {users.length} Active Conversations
+          {users.length} Active {users.length === 1 ? 'Conversation' : 'Conversations'}
         </Typography>
 
         <Box sx={{ mt: 4 }}>
@@ -207,10 +245,14 @@ export default function OwnerChatList() {
                       <Badge
                         overlap="circular"
                         variant="dot"
+                        anchorOrigin={{
+                          vertical: 'bottom',
+                          horizontal: 'right',
+                        }}
                         sx={u.online ? onlineBadge : offlineBadge}
                       >
                         <Avatar sx={avatarStyle}>
-                          {title?.charAt(0)}
+                          {title?.charAt(0).toUpperCase()}
                         </Avatar>
                       </Badge>
 
@@ -226,17 +268,17 @@ export default function OwnerChatList() {
 
                         <Typography sx={msgText} noWrap>
                           {u.last_sender === "me" && (
-                            <span style={{ color: "#00d2ff" }}>
-                              You:
+                            <span style={{ color: "#00d2ff", fontWeight: 600 }}>
+                              You: 
                             </span>
                           )}
-                          {" "}{u.last_message}
+                          {u.last_message || "No messages yet"}
                         </Typography>
                       </Box>
 
                       {u.unread > 0 && (
                         <Box sx={unreadBadge}>
-                          {u.unread}
+                          {u.unread > 99 ? '99+' : u.unread}
                         </Box>
                       )}
                     </Box>
@@ -246,6 +288,10 @@ export default function OwnerChatList() {
             ) : (
               <Typography sx={emptyState}>
                 No conversations yet.
+                <br />
+                <span style={{ fontSize: "0.8rem", opacity: 0.7 }}>
+                  When users message you, they'll appear here
+                </span>
               </Typography>
             )}
           </AnimatePresence>
@@ -260,6 +306,7 @@ const mainContainer = {
   minHeight: "100vh",
   background: "radial-gradient(circle at top left, #1a2a6c, #b21f1f, #fdbb2d)",
   pt: 6,
+  pb: 4,
 };
 
 const loaderContainer = {
@@ -274,11 +321,13 @@ const headerTitle = {
   fontSize: "2.2rem",
   fontWeight: 800,
   color: "#fff",
+  letterSpacing: "-0.5px",
 };
 
 const subTitle = {
   fontSize: "0.9rem",
   color: "rgba(255,255,255,0.6)",
+  mt: 1,
 };
 
 const chatCard = {
@@ -295,6 +344,7 @@ const chatCard = {
   "&:hover": {
     transform: "translateY(-4px)",
     background: "rgba(255,255,255,0.12)",
+    boxShadow: "0 8px 20px rgba(0,0,0,0.2)",
   },
 };
 
@@ -333,18 +383,25 @@ const unreadBadge = {
   fontSize: "0.7rem",
   fontWeight: 800,
   color: "#fff",
+  padding: "0 6px",
 };
 
 const onlineBadge = {
-  "& .MuiBadge-badge": { backgroundColor: "#44b700" },
+  "& .MuiBadge-badge": { 
+    backgroundColor: "#44b700",
+    boxShadow: "0 0 0 2px rgba(68, 183, 0, 0.2)",
+  },
 };
 
 const offlineBadge = {
-  "& .MuiBadge-badge": { backgroundColor: "#999" },
+  "& .MuiBadge-badge": { 
+    backgroundColor: "#999",
+  },
 };
 
 const emptyState = {
   textAlign: "center",
   color: "#fff",
   mt: 10,
+  opacity: 0.8,
 };
