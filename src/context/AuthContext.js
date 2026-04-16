@@ -10,9 +10,11 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(localStorage.getItem("role") || null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false); // 🔥 IMPROVEMENT 1
 
-  // 🔥 NEW: prevent multiple sync calls
+  // 🔥 prevent multiple sync calls
   const isSyncing = useRef(false);
+  const logoutTimer = useRef(null); // 🔥 ISSUE 1 FIX
 
   ////////////////////////////////////////////////////////
   // 🔁 RETRY FUNCTION (IMPROVED)
@@ -33,7 +35,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   ////////////////////////////////////////////////////////
-  // 🔐 CLEAN LOGOUT (NEW - CENTRALIZED)
+  // 🔐 CLEAN LOGOUT (CENTRALIZED)
   ////////////////////////////////////////////////////////
   const clearSession = () => {
     setUser(null);
@@ -52,7 +54,8 @@ export const AuthProvider = ({ children }) => {
     isSyncing.current = true;
 
     try {
-      const idToken = await firebaseUser.getIdToken(true);
+      // 🔥 ISSUE 2 FIX: Don't force refresh every time
+      const idToken = await firebaseUser.getIdToken();
 
       const res = await retryRequest(() =>
         userAPI.post("/auth/firebase", { idToken })
@@ -73,36 +76,30 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.error("❌ Auth Sync Failed:", err);
 
-      ////////////////////////////////////////////////////////
       // ✅ NETWORK ERROR → KEEP USER
-      ////////////////////////////////////////////////////////
       if (!err.response) {
         console.log("🌐 Backend unreachable → keep session");
         setUser(firebaseUser);
         return;
       }
 
-      ////////////////////////////////////////////////////////
       // 🔐 ONLY LOGOUT ON 401
-      ////////////////////////////////////////////////////////
       if (err.response.status === 401) {
         console.log("🔒 Unauthorized → clearing session");
         clearSession();
       } else {
-        ////////////////////////////////////////////////////////
         // ⚠️ SERVER ERROR → KEEP USER
-        ////////////////////////////////////////////////////////
         console.log("⚠️ Server error → keep session");
         setUser(firebaseUser);
       }
     } finally {
       isSyncing.current = false;
-      setLoading(false);
+      setLoading(false); // ✅ ensure loading stops
     }
   };
 
   ////////////////////////////////////////////////////////
-  // 🔥 FIREBASE SESSION (AUTO LOGIN)
+  // 🔥 FIREBASE SESSION (AUTO LOGIN - FIXED)
   ////////////////////////////////////////////////////////
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -111,13 +108,35 @@ export const AuthProvider = ({ children }) => {
       if (firebaseUser) {
         setLoading(true);
         await syncUser(firebaseUser);
+        setInitialized(true); // 🔥 IMPROVEMENT 1
       } else {
-        clearSession();
-        setLoading(false);
+        // 🔥 ISSUE 1 FIX: Clear existing timer
+        if (logoutTimer.current) {
+          clearTimeout(logoutTimer.current);
+        }
+        
+        console.log("⚠️ Firebase null → wait before logout");
+        
+        logoutTimer.current = setTimeout(() => {
+          if (!auth.currentUser) {
+            console.log("🔒 Confirm logout");
+            clearSession();
+          }
+          setLoading(false);
+          setInitialized(true); // 🔥 IMPROVEMENT 1
+        }, 2000);
+        
+        return;
       }
     });
 
-    return () => unsub();
+    return () => {
+      unsub();
+      // 🔥 Cleanup timer on unmount
+      if (logoutTimer.current) {
+        clearTimeout(logoutTimer.current);
+      }
+    };
   }, []);
 
   ////////////////////////////////////////////////////////
@@ -131,7 +150,7 @@ export const AuthProvider = ({ children }) => {
         console.log("🔄 Re-syncing user...");
         await syncUser(user);
       }
-    }, 10000);
+    }, 20000); // 🔥 IMPROVEMENT 2: Reduced from 10s to 20s
 
     return () => clearInterval(interval);
   }, [user]);
@@ -142,8 +161,8 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     role,
-    loading,
-    isAuthenticated: !!user, // 🔥 NEW
+    loading: loading || !initialized, // 🔥 IMPROVEMENT 1: Prevent flicker
+    isAuthenticated: !!user && !!localStorage.getItem("token"), // ✅ FIXED
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

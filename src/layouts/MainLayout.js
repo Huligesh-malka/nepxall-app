@@ -22,11 +22,14 @@ const MainLayout = () => {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  /* ================= LOGOUT ================= */
+  /* ================= LOGOUT (FIXED) ================= */
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      localStorage.clear();
+      // ✅ FIX: Only remove auth-related items
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("user_id");
 
       // ✅ Smooth navigation (no reload)
       navigate("/login", { replace: true });
@@ -35,7 +38,7 @@ const MainLayout = () => {
     }
   };
 
-  /* ================= LOADING ================= */
+  /* ================= LOADING (MUST BE FIRST) ================= */
   if (loading) {
     return (
       <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
@@ -44,8 +47,8 @@ const MainLayout = () => {
     );
   }
 
-  /* ================= AUTH PROTECTION ================= */
-  if (!user && location.pathname !== "/login" && location.pathname !== "/register") {
+  /* ================= AUTH PROTECTION (AFTER LOADING) ================= */
+  if (!user && !loading && location.pathname !== "/login" && location.pathname !== "/register") {
     return <Navigate to="/login" replace />;
   }
 
@@ -66,12 +69,12 @@ const MainLayout = () => {
       {/* 🔥 MAIN CONTENT - FIXED MARGIN FOR MOBILE */}
       <div
         style={{
-          marginLeft: isMobile ? 0 : 250, // ✅ FIX: No margin on mobile
+          marginLeft: isMobile ? 0 : 250,
           padding: "24px",
           width: "100%",
           minHeight: "100vh",
           background: "#f8fafc",
-          overflowX: "hidden", // 🔥 IMPORTANT: Prevents horizontal scroll
+          overflowX: "hidden",
         }}
       >
         {/* HEADER */}
