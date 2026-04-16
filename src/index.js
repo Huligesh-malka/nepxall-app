@@ -6,6 +6,9 @@ import reportWebVitals from "./reportWebVitals";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 
+// 🔥 ADD THIS
+import { register } from "./serviceWorkerRegistration";
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
 root.render(
@@ -16,12 +19,14 @@ root.render(
         v7_relativeSplatPath: true,
       }}
     >
-      {/* 🔥 GLOBAL AUTH SYSTEM */}
       <AuthProvider>
         <App />
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>
 );
+
+// 🔥 ADD THIS LINE
+register();
 
 reportWebVitals();
