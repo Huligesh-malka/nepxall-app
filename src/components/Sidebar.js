@@ -207,7 +207,7 @@ export default Sidebar;
 // Desktop sidebar - always visible, static positioning
 const desktopSidebar = {
   width: 250,
-  background: "#0f172a",
+  background: "#020617", // 🔥 premium dark navy
   color: "#fff",
   minHeight: "100vh",
   padding: 20,
@@ -223,7 +223,7 @@ const desktopSidebar = {
 // Mobile drawer sidebar - slides in from left
 const drawerSidebar = (isOpen) => ({
   width: 280,
-  background: "#0f172a",
+  background: "#020617", // 🔥 premium dark navy
   color: "#fff",
   minHeight: "100vh",
   padding: 20,
@@ -246,7 +246,7 @@ const menuButton = {
   left: 15,
   zIndex: 1100,
   fontSize: 22,
-  background: BRAND_BLUE,
+  background: "#2563eb", // 🔥 upgraded blue
   color: "#fff",
   border: "none",
   padding: "8px 14px",
@@ -315,7 +315,7 @@ const nav = {
 };
 
 const divider = {
-  borderTop: "1px solid #334155",
+  borderTop: "1px solid #1e293b", // 🔥 improved divider color
   margin: "12px 0",
 };
 
@@ -335,10 +335,12 @@ const linkStyle = (active) => ({
   padding: "10px 14px",
   borderRadius: 8,
   background: active
-    ? `linear-gradient(90deg, ${BRAND_BLUE}, ${BRAND_GREEN})`
+    ? "linear-gradient(90deg,#2563eb,#10b981)" // 🔥 premium gradient active tab
     : "transparent",
+  borderLeft: active ? "4px solid #10b981" : "4px solid transparent", // 🔥 left border indicator
   fontWeight: active ? "600" : "normal",
   transition: "0.3s",
   display: "block",
   fontSize: 14,
+  cursor: "pointer", // 🔥 added hover cursor
 });
