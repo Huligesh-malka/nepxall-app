@@ -153,17 +153,17 @@ const Sidebar = ({ role, user }) => {
       {isLoggedIn && (
         <div style={userInfoStyle}>
           <hr style={divider} />
-          <p style={{ color: "#94a3b8", fontSize: 12, margin: 0 }}>
+          <p style={{ color: "#64748b", fontSize: 12, margin: 0 }}>
             Logged in as
             <span style={{
-              color: "#fff",
+              color: "#1e293b",
               fontWeight: "bold",
               textTransform: "capitalize",
             }}>
               {" "}{safeRole}
             </span>
           </p>
-          <p style={{ color: "#4CAF50", fontSize: 11 }}>
+          <p style={{ color: "#4CAF50", fontSize: 11, fontWeight: 500 }}>
             {user?.email?.split("@")[0] || "User"}
           </p>
         </div>
@@ -202,15 +202,17 @@ const Sidebar = ({ role, user }) => {
 
 export default Sidebar;
 
-/* ================= STYLES ================= */
+/* ================= STYLES - MODERN GLASS LIGHT THEME ================= */
 
-// Desktop sidebar - always visible, static positioning
+// Desktop sidebar - glass morphism effect
 const desktopSidebar = {
-  width: 250,
-  background: "#020617", // 🔥 premium dark navy
-  color: "#fff",
+  width: 260,
+  background: "rgba(255, 255, 255, 0.85)",
+  backdropFilter: "blur(12px)",
+  borderRight: "1px solid rgba(229, 231, 235, 0.6)",
+  color: "#1e293b",
   minHeight: "100vh",
-  padding: 20,
+  padding: "24px 20px",
   position: "fixed",
   left: 0,
   top: 0,
@@ -218,15 +220,18 @@ const desktopSidebar = {
   flexDirection: "column",
   overflowY: "auto",
   zIndex: 100,
+  boxShadow: "0 0 20px rgba(0, 0, 0, 0.05)",
 };
 
-// Mobile drawer sidebar - slides in from left
+// Mobile drawer sidebar - glass effect with slide animation
 const drawerSidebar = (isOpen) => ({
   width: 280,
-  background: "#020617", // 🔥 premium dark navy
-  color: "#fff",
+  background: "rgba(255, 255, 255, 0.95)",
+  backdropFilter: "blur(16px)",
+  borderRight: "1px solid rgba(229, 231, 235, 0.8)",
+  color: "#1e293b",
   minHeight: "100vh",
-  padding: 20,
+  padding: "24px 20px",
   position: "fixed",
   left: 0,
   top: 0,
@@ -235,40 +240,47 @@ const drawerSidebar = (isOpen) => ({
   overflowY: "auto",
   zIndex: 1000,
   transform: isOpen ? "translateX(0)" : "translateX(-100%)",
-  transition: "transform 0.3s ease-in-out",
-  boxShadow: isOpen ? "2px 0 20px rgba(0,0,0,0.3)" : "none",
+  transition: "transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1)",
+  boxShadow: isOpen ? "4px 0 25px rgba(0, 0, 0, 0.15)" : "none",
 });
 
-// Mobile menu button (hamburger)
+// Mobile menu button (hamburger) - modern style
 const menuButton = {
   position: "fixed",
-  top: 15,
-  left: 15,
+  top: 16,
+  left: 16,
   zIndex: 1100,
   fontSize: 22,
-  background: "#2563eb", // 🔥 upgraded blue
+  background: "linear-gradient(135deg, #2563eb, #10b981)",
   color: "#fff",
   border: "none",
-  padding: "8px 14px",
-  borderRadius: 8,
+  padding: "10px 16px",
+  borderRadius: 12,
   cursor: "pointer",
-  boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-  transition: "all 0.2s",
+  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+  transition: "all 0.2s ease",
+  backdropFilter: "blur(4px)",
 };
 
 // Close button inside mobile sidebar
 const closeBtn = {
-  background: "transparent",
+  background: "rgba(0, 0, 0, 0.05)",
   border: "none",
-  color: "#fff",
-  fontSize: 20,
+  color: "#64748b",
+  fontSize: 18,
   position: "absolute",
-  right: 15,
-  top: 15,
+  right: 16,
+  top: 20,
   cursor: "pointer",
-  padding: 5,
-  borderRadius: 4,
+  padding: 8,
+  borderRadius: 40,
+  width: 32,
+  height: 32,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
   zIndex: 1001,
+  transition: "background 0.2s",
 };
 
 // Overlay when mobile sidebar is open
@@ -278,7 +290,8 @@ const overlay = {
   left: 0,
   width: "100%",
   height: "100%",
-  background: "rgba(0,0,0,0.5)",
+  background: "rgba(0, 0, 0, 0.3)",
+  backdropFilter: "blur(2px)",
   zIndex: 999,
   transition: "all 0.3s ease",
 };
@@ -287,60 +300,74 @@ const companyHeader = {
   display: "flex",
   alignItems: "center",
   gap: 12,
-  marginBottom: 20,
+  marginBottom: 24,
+  paddingBottom: 8,
+  borderBottom: "1px solid #e2e8f0",
 };
 
 const logoImage = {
-  width: 48,
-  height: 48,
-  borderRadius: 8,
+  width: 44,
+  height: 44,
+  borderRadius: 12,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
 };
 
 const companyName = {
   fontSize: 20,
   fontWeight: "bold",
   margin: 0,
+  letterSpacing: "-0.3px",
 };
 
 const companyTagline = {
-  fontSize: 11,
-  color: "#94a3b8",
+  fontSize: 10,
+  color: "#64748b",
+  marginTop: 2,
+  letterSpacing: "0.2px",
 };
 
 const nav = {
   display: "flex",
   flexDirection: "column",
-  gap: 10,
+  gap: 6,
   flex: 1,
 };
 
 const divider = {
-  borderTop: "1px solid #1e293b", // 🔥 improved divider color
-  margin: "12px 0",
+  borderTop: "1px solid #e2e8f0",
+  margin: "16px 0",
 };
 
 const sectionLabel = {
   fontSize: 11,
-  color: "#94a3b8",
+  color: "#64748b",
   letterSpacing: 1,
+  fontWeight: 600,
+  marginTop: 4,
+  marginBottom: 4,
+  paddingLeft: 8,
 };
 
 const userInfoStyle = {
   marginTop: "auto",
+  paddingTop: 16,
 };
 
 const linkStyle = (active) => ({
-  color: "#e5e7eb",
+  color: "#1e293b",
   textDecoration: "none",
   padding: "10px 14px",
-  borderRadius: 8,
+  borderRadius: 12,
   background: active
-    ? "linear-gradient(90deg,#2563eb,#10b981)" // 🔥 premium gradient active tab
+    ? "linear-gradient(95deg, #2563eb15, #10b98110)"
     : "transparent",
-  borderLeft: active ? "4px solid #10b981" : "4px solid transparent", // 🔥 left border indicator
-  fontWeight: active ? "600" : "normal",
-  transition: "0.3s",
+  fontWeight: active ? "600" : "500",
+  transition: "all 0.2s ease",
   display: "block",
   fontSize: 14,
-  cursor: "pointer", // 🔥 added hover cursor
+  cursor: "pointer",
+  borderLeft: active ? `3px solid ${BRAND_GREEN}` : "3px solid transparent",
+  ":hover": {
+    background: "#f1f5f9",
+  },
 });
