@@ -11,6 +11,9 @@ const UserBookingHistory = () => {
   // ✅ USE ONLY THIS - No localStorage.getItem("user_id")
   const { user, role, loading: authLoading } = useAuth();
 
+  // ✅ ADDED: Store MySQL user from backend
+  const [me, setMe] = useState(null);
+
   // State management
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,6 +27,23 @@ const UserBookingHistory = () => {
   
   // Track submitted payments to prevent multiple submissions
   const [submittedPayments, setSubmittedPayments] = useState({});
+
+  // ✅ ADDED: Load user from backend (converts Firebase UID to MySQL ID)
+  useEffect(() => {
+    const loadMe = async () => {
+      try {
+        const res = await api.get("/private-chat/me");
+        setMe(res.data); // ✅ contains MySQL id
+        console.log("✅ User loaded from backend:", res.data);
+      } catch (err) {
+        console.error("Failed to load user from backend:", err);
+      }
+    };
+
+    if (user?.uid) {
+      loadMe();
+    }
+  }, [user?.uid]);
 
   // Filter bookings based on active tab
   const filteredBookings = useMemo(() => {
@@ -301,31 +321,40 @@ const UserBookingHistory = () => {
     navigate(`/agreement-form/${bookingId}`);
   }, [navigate]);
 
-  // ✅ ADDED: Handle chat navigation - NO ALERT, silent return
+  // ✅ FIXED: Handle chat navigation - Uses MySQL ID from backend
   const handleChatNavigation = useCallback(async (booking) => {
-  try {
-    if (!booking.pg_id) return;
+    try {
+      if (!booking.pg_id) {
+        console.log("No pg_id for this booking");
+        return;
+      }
 
-    // ✅ ONLY use MySQL user id
-    if (!user?.id) {
-      console.log("User not loaded yet");
-      return;
+      // ✅ ONLY use MySQL user id from backend (NOT Firebase UID)
+      if (!me?.id) {
+        console.log("User MySQL ID not loaded yet");
+        return;
+      }
+
+      console.log("Chat navigation - Using MySQL ID:", me.id);
+      console.log("PG ID:", booking.pg_id);
+
+      const res = await api.get(
+        `/private-chat/user/${me.id}?pg_id=${booking.pg_id}`
+      );
+
+      const ownerId = res.data?.id;
+
+      if (!ownerId) {
+        console.log("No owner found");
+        return;
+      }
+
+      navigate(`/chat/private/${ownerId}/${booking.pg_id}`);
+
+    } catch (err) {
+      console.error("Chat error:", err);
     }
-
-    const res = await api.get(
-      `/private-chat/user/${user.id}?pg_id=${booking.pg_id}`
-    );
-
-    const ownerId = res.data?.id;
-
-    if (!ownerId) return;
-
-    navigate(`/chat/private/${ownerId}/${booking.pg_id}`);
-
-  } catch (err) {
-    console.error("Chat error:", err);
-  }
-}, [navigate, user]);
+  }, [navigate, me]);
 
   // ✅ PROTECTION - MOVED AFTER ALL HOOKS
   if (authLoading) {
@@ -602,22 +631,22 @@ For any queries, please contact support.
                         <span style={styles.buttonIcon}>🏠</span>
                         <span>View</span>
                       </button>
-                      {/* ✅ UPDATED: Disabled until user is loaded + Better UX */}
+                      {/* ✅ FIXED: Disabled until MySQL ID is loaded */}
                       <button
                         style={{
                           ...styles.iconButton,
-                          opacity: !user?.id ? 0.5 : 1,
-                          cursor: !user?.id ? "not-allowed" : "pointer"
+                          opacity: !me?.id ? 0.5 : 1,
+                          cursor: !me?.id ? "not-allowed" : "pointer"
                         }}
                         onClick={() => handleChatNavigation(booking)}
-                        disabled={!user?.id && !user?.uid}
+                        disabled={!me?.id}
                         title="Chat with Owner"
                       >
                         <span style={styles.buttonIcon}>
-                          {!user?.id ? "⏳" : "💬"}
+                          {!me?.id ? "⏳" : "💬"}
                         </span>
                         <span>
-                          {!(user?.id || user?.uid) ? "Loading..." : "Chat"}
+                          {!me?.id ? "Loading..." : "Chat"}
                         </span>
                       </button>
                       <button
@@ -1031,7 +1060,6 @@ const styles = {
     padding: "6px 12px",
     borderRadius: 30,
     fontSize: 12,
-    fontWeight: 600,
     background: "#fff",
   },
   
