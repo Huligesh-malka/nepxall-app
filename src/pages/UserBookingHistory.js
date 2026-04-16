@@ -310,10 +310,12 @@ const UserBookingHistory = () => {
       }
 
       // ✅ Silent return - no alert
-      if (!user?.id) return;
+     const userId = user?.id || user?.uid;
+
+if (!userId) return;
 
       const res = await api.get(
-        `/private-chat/user/${user.id}?pg_id=${booking.pg_id}`
+        `/private-chat/user/${userId}?pg_id=${booking.pg_id}`
       );
 
       const ownerId = res.data?.id;
@@ -614,7 +616,7 @@ For any queries, please contact support.
                           cursor: !user?.id ? "not-allowed" : "pointer"
                         }}
                         onClick={() => handleChatNavigation(booking)}
-                        disabled={!user?.id}
+                        disabled={!user?.id && !user?.uid}
                         title="Chat with Owner"
                       >
                         <span style={styles.buttonIcon}>
