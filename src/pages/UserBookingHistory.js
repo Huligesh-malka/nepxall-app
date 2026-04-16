@@ -338,12 +338,46 @@ const UserBookingHistory = () => {
     );
   }
 
+  // KPI Data
+  const totalBookings = bookings.length;
+  const approvedBookings = bookings.filter(b => b.status === "approved").length;
+  const totalSpent = bookings.reduce((sum, b) => sum + (Number(b.total_amount) || Number(b.rent_amount) || 0), 0);
+
   return (
     <div style={styles.container}>
+      {/* Animated Background Elements */}
+      <div style={styles.bgGlow1}></div>
+      <div style={styles.bgGlow2}></div>
+      
       {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.title}>My Bookings</h1>
         <p style={styles.subtitle}>Manage your property bookings and payments</p>
+      </div>
+
+      {/* KPI Section - Startup Style */}
+      <div style={styles.kpiRow}>
+        <div style={styles.kpiCard}>
+          <div style={styles.kpiIcon}>🏠</div>
+          <div>
+            <h3 style={styles.kpiValue}>{totalBookings}</h3>
+            <p style={styles.kpiLabel}>Total Bookings</p>
+          </div>
+        </div>
+        <div style={styles.kpiCard}>
+          <div style={styles.kpiIcon}>✅</div>
+          <div>
+            <h3 style={styles.kpiValue}>{approvedBookings}</h3>
+            <p style={styles.kpiLabel}>Approved</p>
+          </div>
+        </div>
+        <div style={styles.kpiCard}>
+          <div style={styles.kpiIcon}>💰</div>
+          <div>
+            <h3 style={styles.kpiValue}>₹{totalSpent.toLocaleString()}</h3>
+            <p style={styles.kpiLabel}>Total Spent</p>
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -382,7 +416,7 @@ const UserBookingHistory = () => {
         </div>
       ) : (
         <div style={styles.bookingsGrid}>
-          {filteredBookings.map((booking) => {
+          {filteredBookings.map((booking, idx) => {
             const rent = Number(booking.rent_amount || booking.rent || 0);
             const deposit = Number(booking.security_deposit || 0);
             const maintenance = Number(booking.maintenance_amount || 0);
@@ -399,7 +433,7 @@ const UserBookingHistory = () => {
               paymentStatus !== "submitted";
 
             return (
-              <div key={booking.id} style={styles.card}>
+              <div key={booking.id} style={{...styles.card, animationDelay: `${idx * 0.05}s`}}>
                 {/* Card Header */}
                 <div style={styles.cardHeader}>
                   <div>
@@ -584,16 +618,7 @@ const UserBookingHistory = () => {
 
                   {/* LEFT STATUS UI */}
                   {booking.status === "left" && (
-                    <div style={{
-                      marginTop: 16,
-                      padding: "12px",
-                      background: "#6b7280",
-                      color: "#fff",
-                      borderRadius: 12,
-                      fontSize: 14,
-                      fontWeight: 600,
-                      textAlign: "center"
-                    }}>
+                    <div style={styles.leftStatusBox}>
                       🚪 You have vacated - You can book again
                     </div>
                   )}
@@ -612,7 +637,7 @@ const UserBookingHistory = () => {
         </div>
       )}
 
-      {/* Payment Modal - Simplified (No Screenshot Upload) */}
+      {/* Payment Modal - Premium Redesign */}
       {paymentData && (
         <div style={styles.modalOverlay} onClick={closeModal}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -751,7 +776,7 @@ const UserBookingHistory = () => {
         </div>
       )}
 
-      {/* Add keyframe animations */}
+      {/* Keyframe Animations */}
       <style>
         {`
           @keyframes spin {
@@ -761,7 +786,7 @@ const UserBookingHistory = () => {
           @keyframes slideIn {
             from {
               opacity: 0;
-              transform: translateY(20px);
+              transform: translateY(30px);
             }
             to {
               opacity: 1;
@@ -776,57 +801,158 @@ const UserBookingHistory = () => {
               opacity: 1;
             }
           }
+          @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+          }
+          @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+          }
+          @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+          }
         `}
       </style>
     </div>
   );
 };
 
-// Modern Styles
+// Premium Startup-Level Styles
 const styles = {
   container: {
-    maxWidth: 1200,
+    maxWidth: 1400,
     margin: "0 auto",
     padding: "40px 24px",
     minHeight: "100vh",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    animation: "slideIn 0.5s ease-out",
+    background: "radial-gradient(circle at 20% 30%, rgba(99,102,241,0.15), transparent 40%), radial-gradient(circle at 80% 70%, rgba(168,85,247,0.15), transparent 40%), linear-gradient(135deg, #0a0a0f, #13131f)",
+    position: "relative",
+    overflowX: "hidden",
+  },
+  
+  bgGlow1: {
+    position: "fixed",
+    top: "10%",
+    left: "-20%",
+    width: "60%",
+    height: "60%",
+    background: "radial-gradient(circle, rgba(99,102,241,0.3), transparent 70%)",
+    borderRadius: "50%",
+    filter: "blur(80px)",
+    zIndex: 0,
+    pointerEvents: "none",
+  },
+  
+  bgGlow2: {
+    position: "fixed",
+    bottom: "10%",
+    right: "-20%",
+    width: "60%",
+    height: "60%",
+    background: "radial-gradient(circle, rgba(168,85,247,0.3), transparent 70%)",
+    borderRadius: "50%",
+    filter: "blur(80px)",
+    zIndex: 0,
+    pointerEvents: "none",
   },
   
   header: {
     textAlign: "center",
-    marginBottom: 40,
+    marginBottom: 48,
+    position: "relative",
+    zIndex: 2,
   },
   
   title: {
-    fontSize: "clamp(32px, 6vw, 48px)",
-    fontWeight: 800,
-    color: "#fff",
-    marginBottom: 8,
-    textShadow: "0 2px 4px rgba(0,0,0,0.1)",
-    letterSpacing: "-0.5px",
+    fontSize: "clamp(36px, 6vw, 56px)",
+    fontWeight: 900,
+    background: "linear-gradient(135deg, #ffffff, #a5b4fc, #c084fc)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    backgroundClip: "text",
+    marginBottom: 12,
+    letterSpacing: "-0.02em",
   },
   
   subtitle: {
     fontSize: 16,
-    color: "rgba(255,255,255,0.9)",
+    color: "rgba(255,255,255,0.7)",
     fontWeight: 400,
+  },
+  
+  // KPI Row Styles
+  kpiRow: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+    gap: 20,
+    marginBottom: 40,
+    position: "relative",
+    zIndex: 2,
+  },
+  
+  kpiCard: {
+    background: "rgba(255,255,255,0.05)",
+    backdropFilter: "blur(20px)",
+    borderRadius: 28,
+    padding: "20px 24px",
+    display: "flex",
+    alignItems: "center",
+    gap: 16,
+    border: "1px solid rgba(255,255,255,0.1)",
+    transition: "all 0.3s ease",
+    ":hover": {
+      transform: "translateY(-4px)",
+      background: "rgba(255,255,255,0.08)",
+      borderColor: "rgba(255,255,255,0.2)",
+    }
+  },
+  
+  kpiIcon: {
+    width: 48,
+    height: 48,
+    background: "rgba(99,102,241,0.2)",
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 24,
+  },
+  
+  kpiValue: {
+    fontSize: "clamp(24px, 4vw, 32px)",
+    fontWeight: 800,
+    color: "#fff",
+    margin: 0,
+    lineHeight: 1.2,
+  },
+  
+  kpiLabel: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.6)",
+    margin: 0,
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
   },
   
   tabsContainer: {
     display: "flex",
     gap: 12,
-    marginBottom: 32,
+    marginBottom: 40,
     flexWrap: "wrap",
     justifyContent: "center",
+    position: "relative",
+    zIndex: 2,
   },
   
   tab: {
-    padding: "12px 24px",
-    background: "rgba(255,255,255,0.1)",
-    border: "1px solid rgba(255,255,255,0.2)",
-    borderRadius: 40,
-    color: "#fff",
+    padding: "10px 24px",
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 999,
+    color: "rgba(255,255,255,0.8)",
     fontSize: 14,
     fontWeight: 500,
     cursor: "pointer",
@@ -836,51 +962,58 @@ const styles = {
     alignItems: "center",
     gap: 8,
     ":hover": {
-      background: "rgba(255,255,255,0.2)",
+      background: "rgba(255,255,255,0.1)",
       transform: "translateY(-2px)",
+      borderColor: "rgba(255,255,255,0.3)",
     }
   },
   
   activeTab: {
     background: "#fff",
-    color: "#667eea",
+    color: "#1f2937",
     borderColor: "#fff",
-    boxShadow: "0 4px 15px rgba(0,0,0,0.2)",
+    boxShadow: "0 8px 25px rgba(255,255,255,0.15)",
   },
   
   tabCount: {
     background: "rgba(0,0,0,0.1)",
     padding: "2px 8px",
     borderRadius: 20,
-    fontSize: 12,
+    fontSize: 11,
     marginLeft: 4,
   },
   
   bookingsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
-    gap: 24,
+    gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))",
+    gap: 28,
+    position: "relative",
+    zIndex: 2,
   },
   
   card: {
-    background: "rgba(255,255,255,0.95)",
-    backdropFilter: "blur(10px)",
-    borderRadius: 24,
+    background: "rgba(255,255,255,0.06)",
+    backdropFilter: "blur(20px)",
+    borderRadius: 32,
     overflow: "hidden",
-    boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
-    transition: "all 0.3s ease",
-    animation: "slideIn 0.5s ease-out",
-    border: "1px solid rgba(255,255,255,0.2)",
+    boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)",
+    transition: "all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    animation: "slideIn 0.5s ease-out forwards",
+    opacity: 0,
+    animationFillMode: "forwards",
     ":hover": {
-      transform: "translateY(-4px)",
-      boxShadow: "0 30px 60px rgba(0,0,0,0.15)",
+      transform: "translateY(-8px) scale(1.02)",
+      boxShadow: "0 30px 60px -12px rgba(0,0,0,0.7)",
+      borderColor: "rgba(255,255,255,0.2)",
     }
   },
   
   cardHeader: {
-    padding: "20px 24px",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    color: "#fff",
+    padding: "24px 24px",
+    background: "linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.2))",
+    backdropFilter: "blur(10px)",
+    borderBottom: "1px solid rgba(255,255,255,0.1)",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
@@ -890,15 +1023,16 @@ const styles = {
   
   pgName: {
     margin: 0,
-    fontSize: 18,
-    fontWeight: 600,
+    fontSize: 20,
+    fontWeight: 700,
+    color: "#fff",
     marginBottom: 4,
   },
   
   pgLocation: {
     margin: 0,
     fontSize: 13,
-    opacity: 0.9,
+    color: "rgba(255,255,255,0.7)",
   },
   
   badgeGroup: {
@@ -908,8 +1042,8 @@ const styles = {
   },
   
   statusBadge: {
-    padding: "6px 12px",
-    borderRadius: 30,
+    padding: "6px 14px",
+    borderRadius: 40,
     fontSize: 12,
     fontWeight: 600,
     textTransform: "uppercase",
@@ -917,51 +1051,58 @@ const styles = {
   },
   
   statusConfirmed: {
-    background: "#10b981",
-    color: "#fff",
+    background: "rgba(16,185,129,0.2)",
+    color: "#34d399",
+    border: "1px solid rgba(16,185,129,0.3)",
   },
   
   statusApproved: {
-    background: "#3b82f6",
-    color: "#fff",
+    background: "rgba(59,130,246,0.2)",
+    color: "#60a5fa",
+    border: "1px solid rgba(59,130,246,0.3)",
   },
   
   statusPending: {
-    background: "#f59e0b",
-    color: "#fff",
+    background: "rgba(245,158,11,0.2)",
+    color: "#fbbf24",
+    border: "1px solid rgba(245,158,11,0.3)",
   },
   
   statusLeft: {
-    background: "#6b7280",
-    color: "#fff",
+    background: "rgba(107,114,128,0.2)",
+    color: "#9ca3af",
+    border: "1px solid rgba(107,114,128,0.3)",
   },
   
   paymentBadge: {
-    padding: "6px 12px",
-    borderRadius: 30,
+    padding: "6px 14px",
+    borderRadius: 40,
     fontSize: 12,
     fontWeight: 600,
-    background: "#fff",
   },
   
   paymentBadgepaid: {
-    background: "#10b981",
-    color: "#fff",
+    background: "rgba(16,185,129,0.2)",
+    color: "#34d399",
+    border: "1px solid rgba(16,185,129,0.3)",
   },
   
   paymentBadgesubmitted: {
-    background: "#f59e0b",
-    color: "#fff",
+    background: "rgba(245,158,11,0.2)",
+    color: "#fbbf24",
+    border: "1px solid rgba(245,158,11,0.3)",
   },
   
   paymentBadgerejected: {
-    background: "#ef4444",
-    color: "#fff",
+    background: "rgba(239,68,68,0.2)",
+    color: "#f87171",
+    border: "1px solid rgba(239,68,68,0.3)",
   },
   
   paymentBadgepending: {
-    background: "#6b7280",
-    color: "#fff",
+    background: "rgba(107,114,128,0.2)",
+    color: "#9ca3af",
+    border: "1px solid rgba(107,114,128,0.3)",
   },
   
   cardContent: {
@@ -972,7 +1113,7 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "repeat(2, 1fr)",
     gap: 16,
-    marginBottom: 20,
+    marginBottom: 24,
   },
   
   detailItem: {
@@ -982,10 +1123,10 @@ const styles = {
   },
   
   detailIcon: {
-    fontSize: 24,
-    background: "#f3f4f6",
-    width: 40,
-    height: 40,
+    fontSize: 20,
+    background: "rgba(255,255,255,0.05)",
+    width: 36,
+    height: 36,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -994,8 +1135,8 @@ const styles = {
   
   detailLabel: {
     display: "block",
-    fontSize: 11,
-    color: "#6b7280",
+    fontSize: 10,
+    color: "rgba(255,255,255,0.5)",
     textTransform: "uppercase",
     letterSpacing: "0.5px",
     marginBottom: 2,
@@ -1005,12 +1146,12 @@ const styles = {
     display: "block",
     fontSize: 14,
     fontWeight: 600,
-    color: "#1f2937",
+    color: "#fff",
   },
   
   priceSection: {
-    background: "#f9fafb",
-    borderRadius: 16,
+    background: "rgba(0,0,0,0.3)",
+    borderRadius: 20,
     padding: 16,
     marginBottom: 20,
   },
@@ -1019,9 +1160,9 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     padding: "8px 0",
-    color: "#4b5563",
-    fontSize: 14,
-    borderBottom: "1px dashed #e5e7eb",
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 13,
+    borderBottom: "1px solid rgba(255,255,255,0.05)",
   },
   
   totalPrice: {
@@ -1029,36 +1170,36 @@ const styles = {
     justifyContent: "space-between",
     marginTop: 8,
     paddingTop: 8,
-    borderTop: "2px solid #e5e7eb",
+    borderTop: "1px solid rgba(255,255,255,0.1)",
     fontSize: 16,
     fontWeight: 700,
-    color: "#1f2937",
+    color: "#fff",
   },
   
   messageBox: {
     padding: "12px 16px",
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 16,
     fontSize: 13,
     fontWeight: 500,
   },
   
   messageBoxrejected: {
-    background: "#fee2e2",
-    color: "#991b1b",
-    border: "1px solid #fecaca",
+    background: "rgba(239,68,68,0.15)",
+    color: "#f87171",
+    border: "1px solid rgba(239,68,68,0.3)",
   },
   
   messageBoxsubmitted: {
-    background: "#fef3c7",
-    color: "#92400e",
-    border: "1px solid #fde68a",
+    background: "rgba(245,158,11,0.15)",
+    color: "#fbbf24",
+    border: "1px solid rgba(245,158,11,0.3)",
   },
   
   messageBoxpaid: {
-    background: "#d1fae5",
-    color: "#065f46",
-    border: "1px solid #a7f3d0",
+    background: "rgba(16,185,129,0.15)",
+    color: "#34d399",
+    border: "1px solid rgba(16,185,129,0.3)",
   },
   
   actionGroup: {
@@ -1080,13 +1221,13 @@ const styles = {
   },
   
   iconButton: {
-    padding: "10px",
-    background: "#f3f4f6",
-    border: "none",
-    borderRadius: 12,
-    fontSize: 12,
+    padding: "10px 8px",
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 14,
+    fontSize: 11,
     fontWeight: 500,
-    color: "#4b5563",
+    color: "rgba(255,255,255,0.8)",
     cursor: "pointer",
     transition: "all 0.2s ease",
     display: "flex",
@@ -1094,8 +1235,9 @@ const styles = {
     alignItems: "center",
     gap: 4,
     ":hover": {
-      background: "#e5e7eb",
+      background: "rgba(255,255,255,0.1)",
       transform: "translateY(-2px)",
+      borderColor: "rgba(255,255,255,0.3)",
     }
   },
   
@@ -1106,11 +1248,11 @@ const styles = {
   payButton: {
     flex: 1,
     padding: "14px",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
     border: "none",
-    borderRadius: 14,
+    borderRadius: 18,
     color: "#fff",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 600,
     cursor: "pointer",
     transition: "all 0.3s ease",
@@ -1118,9 +1260,10 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+    boxShadow: "0 10px 25px -5px rgba(99,102,241,0.4)",
     ":hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 10px 20px rgba(102,126,234,0.3)",
+      transform: "scale(1.02)",
+      boxShadow: "0 15px 30px -5px rgba(99,102,241,0.5)",
     },
     ":disabled": {
       opacity: 0.5,
@@ -1132,11 +1275,11 @@ const styles = {
   agreementButton: {
     flex: 1,
     padding: "14px",
-    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    background: "linear-gradient(135deg, #10b981, #059669)",
     border: "none",
-    borderRadius: 14,
+    borderRadius: 18,
     color: "#fff",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 600,
     cursor: "pointer",
     transition: "all 0.3s ease",
@@ -1144,66 +1287,84 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+    boxShadow: "0 10px 25px -5px rgba(16,185,129,0.4)",
     ":hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 10px 20px rgba(16,185,129,0.3)",
+      transform: "scale(1.02)",
+      boxShadow: "0 15px 30px -5px rgba(16,185,129,0.5)",
     }
+  },
+  
+  leftStatusBox: {
+    marginTop: 16,
+    padding: "12px",
+    background: "rgba(107,114,128,0.2)",
+    color: "#9ca3af",
+    borderRadius: 14,
+    fontSize: 13,
+    fontWeight: 500,
+    textAlign: "center",
+    border: "1px solid rgba(107,114,128,0.3)",
   },
   
   confirmedBadge: {
     marginTop: 16,
     padding: "12px",
-    background: "#10b981",
-    color: "#fff",
-    borderRadius: 12,
-    fontSize: 14,
+    background: "rgba(16,185,129,0.15)",
+    color: "#34d399",
+    borderRadius: 14,
+    fontSize: 13,
     fontWeight: 600,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+    border: "1px solid rgba(16,185,129,0.3)",
   },
   
   emptyState: {
     textAlign: "center",
     padding: "60px 20px",
-    background: "rgba(255,255,255,0.95)",
-    backdropFilter: "blur(10px)",
-    borderRadius: 32,
-    border: "1px solid rgba(255,255,255,0.2)",
+    background: "rgba(255,255,255,0.05)",
+    backdropFilter: "blur(20px)",
+    borderRadius: 48,
+    border: "1px solid rgba(255,255,255,0.1)",
+    position: "relative",
+    zIndex: 2,
   },
   
   emptyIcon: {
     fontSize: 64,
     marginBottom: 16,
+    opacity: 0.7,
   },
   
   emptyTitle: {
     fontSize: 24,
     fontWeight: 700,
-    color: "#1f2937",
+    color: "#fff",
     marginBottom: 8,
   },
   
   emptyText: {
-    fontSize: 16,
-    color: "#6b7280",
+    fontSize: 15,
+    color: "rgba(255,255,255,0.6)",
     marginBottom: 24,
   },
   
   browseBtn: {
     padding: "14px 32px",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
     border: "none",
-    borderRadius: 40,
+    borderRadius: 999,
     color: "#fff",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 600,
     cursor: "pointer",
     transition: "all 0.3s ease",
+    boxShadow: "0 10px 25px -5px rgba(99,102,241,0.4)",
     ":hover": {
       transform: "translateY(-2px)",
-      boxShadow: "0 10px 20px rgba(102,126,234,0.3)",
+      boxShadow: "0 15px 30px -5px rgba(99,102,241,0.5)",
     }
   },
   
@@ -1213,32 +1374,33 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     minHeight: "100vh",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    background: "radial-gradient(circle at 20% 30%, rgba(99,102,241,0.15), transparent 40%), radial-gradient(circle at 80% 70%, rgba(168,85,247,0.15), transparent 40%), linear-gradient(135deg, #0a0a0f, #13131f)",
   },
   
   loadingSpinner: {
     width: 50,
     height: 50,
-    border: "3px solid rgba(255,255,255,0.3)",
-    borderTop: "3px solid #fff",
+    border: "3px solid rgba(255,255,255,0.1)",
+    borderTop: "3px solid #6366f1",
     borderRadius: "50%",
     animation: "spin 1s linear infinite",
     marginBottom: 16,
   },
   
   loadingText: {
-    color: "#fff",
-    fontSize: 16,
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 15,
   },
   
   errorContainer: {
     textAlign: "center",
     padding: "60px 20px",
-    background: "rgba(255,255,255,0.95)",
-    backdropFilter: "blur(10px)",
-    borderRadius: 32,
+    background: "rgba(255,255,255,0.05)",
+    backdropFilter: "blur(20px)",
+    borderRadius: 48,
     margin: "40px auto",
     maxWidth: 400,
+    border: "1px solid rgba(255,255,255,0.1)",
   },
   
   errorIcon: {
@@ -1247,23 +1409,23 @@ const styles = {
   },
   
   errorText: {
-    fontSize: 16,
-    color: "#ef4444",
+    fontSize: 15,
+    color: "#f87171",
     marginBottom: 24,
   },
   
   retryBtn: {
     padding: "12px 24px",
-    background: "#3b82f6",
-    border: "none",
-    borderRadius: 40,
-    color: "#fff",
+    background: "rgba(59,130,246,0.2)",
+    border: "1px solid rgba(59,130,246,0.3)",
+    borderRadius: 999,
+    color: "#60a5fa",
     fontSize: 14,
     fontWeight: 600,
     cursor: "pointer",
     transition: "all 0.2s ease",
     ":hover": {
-      background: "#2563eb",
+      background: "rgba(59,130,246,0.3)",
     }
   },
   
@@ -1273,8 +1435,8 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    background: "rgba(0,0,0,0.7)",
-    backdropFilter: "blur(8px)",
+    background: "rgba(0,0,0,0.8)",
+    backdropFilter: "blur(12px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -1284,18 +1446,21 @@ const styles = {
   },
   
   modalContent: {
-    background: "#fff",
-    borderRadius: 32,
+    background: "rgba(20,20,35,0.95)",
+    backdropFilter: "blur(20px)",
+    borderRadius: 40,
     width: "100%",
     maxWidth: 480,
     maxHeight: "90vh",
     overflow: "auto",
     position: "relative",
     animation: "slideIn 0.3s ease",
+    border: "1px solid rgba(255,255,255,0.1)",
+    boxShadow: "0 30px 60px rgba(0,0,0,0.5)",
   },
   
   modalHeader: {
-    padding: "24px 24px 0",
+    padding: "28px 28px 0",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
@@ -1303,34 +1468,34 @@ const styles = {
   },
   
   modalTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: 700,
-    color: "#1f2937",
+    color: "#fff",
     margin: 0,
   },
   
   modalClose: {
     width: 40,
     height: 40,
-    background: "#f3f4f6",
-    border: "none",
+    background: "rgba(255,255,255,0.1)",
+    border: "1px solid rgba(255,255,255,0.1)",
     borderRadius: "50%",
     fontSize: 20,
     cursor: "pointer",
-    color: "#6b7280",
+    color: "rgba(255,255,255,0.8)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     transition: "all 0.2s ease",
     ":hover": {
-      background: "#e5e7eb",
-      color: "#1f2937",
+      background: "rgba(255,255,255,0.2)",
+      color: "#fff",
     }
   },
   
   modalAmountSection: {
-    padding: "0 24px 20px",
-    borderBottom: "1px solid #e5e7eb",
+    padding: "0 28px 20px",
+    borderBottom: "1px solid rgba(255,255,255,0.1)",
   },
   
   modalAmount: {
@@ -1340,72 +1505,71 @@ const styles = {
   
   modalAmountLabel: {
     fontSize: 12,
-    color: "#6b7280",
+    color: "rgba(255,255,255,0.5)",
     textTransform: "uppercase",
     letterSpacing: "0.5px",
     marginBottom: 4,
   },
   
   modalAmountValue: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: 800,
-    color: "#1f2937",
+    color: "#fff",
     lineHeight: 1,
   },
   
   orderIdSection: {
-    padding: "16px 24px",
-    background: "#f9fafb",
+    padding: "16px 28px",
+    background: "rgba(0,0,0,0.3)",
     display: "flex",
     alignItems: "center",
     gap: 12,
-    borderBottom: "1px solid #e5e7eb",
+    borderBottom: "1px solid rgba(255,255,255,0.1)",
   },
   
   orderIdLabel: {
-    fontSize: 14,
-    color: "#6b7280",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.6)",
   },
   
   orderIdValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 600,
-    color: "#1f2937",
-    background: "#fff",
+    color: "#fff",
+    background: "rgba(0,0,0,0.5)",
     padding: "6px 12px",
-    borderRadius: 8,
-    border: "1px solid #e5e7eb",
+    borderRadius: 10,
+    border: "1px solid rgba(255,255,255,0.1)",
     fontFamily: "monospace",
     flex: 1,
   },
   
   copyButton: {
-    background: "#fff",
-    border: "1px solid #e5e7eb",
-    borderRadius: 8,
-    padding: "6px 10px",
+    background: "rgba(255,255,255,0.1)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 10,
+    padding: "6px 12px",
     fontSize: 16,
     cursor: "pointer",
     transition: "all 0.2s ease",
     ":hover": {
-      background: "#f3f4f6",
-      borderColor: "#d1d5db",
+      background: "rgba(255,255,255,0.2)",
     }
   },
   
   accountDetails: {
-    padding: "20px 24px",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    color: "#fff",
+    padding: "20px 28px",
+    background: "linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.2))",
     display: "flex",
     alignItems: "center",
     gap: 16,
+    borderBottom: "1px solid rgba(255,255,255,0.1)",
   },
   
   accountIcon: {
     width: 48,
     height: 48,
-    background: "rgba(255,255,255,0.2)",
+    background: "rgba(255,255,255,0.1)",
     borderRadius: "50%",
     display: "flex",
     alignItems: "center",
@@ -1420,12 +1584,13 @@ const styles = {
   accountRow: {
     display: "flex",
     justifyContent: "space-between",
-    fontSize: 14,
-    marginBottom: 8,
+    fontSize: 13,
+    marginBottom: 6,
+    color: "rgba(255,255,255,0.8)",
   },
   
   qrSection: {
-    padding: "24px",
+    padding: "28px",
     textAlign: "center",
   },
   
@@ -1433,41 +1598,44 @@ const styles = {
     width: "min(200px, 50vw)",
     height: "auto",
     aspectRatio: "1",
-    marginBottom: 16,
-    borderRadius: 16,
-    boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
+    marginBottom: 20,
+    borderRadius: 20,
+    boxShadow: "0 15px 35px rgba(0,0,0,0.3)",
+    background: "#fff",
+    padding: 8,
   },
   
   upiButton: {
     display: "inline-flex",
     alignItems: "center",
     gap: 8,
-    padding: "12px 24px",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    padding: "12px 28px",
+    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
     color: "#fff",
     textDecoration: "none",
-    borderRadius: 40,
+    borderRadius: 999,
     fontSize: 14,
     fontWeight: 600,
     transition: "all 0.3s ease",
+    boxShadow: "0 10px 25px -5px rgba(99,102,241,0.4)",
     ":hover": {
       transform: "translateY(-2px)",
-      boxShadow: "0 10px 20px rgba(102,126,234,0.3)",
+      boxShadow: "0 15px 30px -5px rgba(99,102,241,0.5)",
     }
   },
   
   modalActions: {
-    padding: "0 24px 20px",
+    padding: "0 28px 20px",
   },
   
   submitButton: {
     width: "100%",
     padding: "16px",
-    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    background: "linear-gradient(135deg, #10b981, #059669)",
     border: "none",
-    borderRadius: 16,
+    borderRadius: 20,
     color: "#fff",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 600,
     cursor: "pointer",
     transition: "all 0.3s ease",
@@ -1475,9 +1643,10 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+    boxShadow: "0 10px 25px -5px rgba(16,185,129,0.4)",
     ":hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 10px 20px rgba(16,185,129,0.3)",
+      transform: "scale(1.02)",
+      boxShadow: "0 15px 30px -5px rgba(16,185,129,0.5)",
     },
     ":disabled": {
       opacity: 0.5,
@@ -1487,30 +1656,30 @@ const styles = {
   },
   
   waitMessageBox: {
-    margin: "0 24px 20px",
-    padding: "12px 16px",
-    background: "#eff6ff",
-    borderRadius: 12,
+    margin: "0 28px 20px",
+    padding: "14px 16px",
+    background: "rgba(59,130,246,0.1)",
+    borderRadius: 18,
     display: "flex",
     alignItems: "flex-start",
-    gap: 10,
+    gap: 12,
     fontSize: 13,
-    color: "#1e40af",
-    border: "1px solid #bfdbfe",
+    color: "#60a5fa",
+    border: "1px solid rgba(59,130,246,0.2)",
   },
   
   refreshSection: {
-    padding: "0 24px 20px",
+    padding: "0 28px 20px",
   },
   
   refreshButton: {
     width: "100%",
     padding: "12px",
-    background: "#f3f4f6",
-    border: "1px solid #e5e7eb",
-    borderRadius: 16,
-    color: "#4b5563",
-    fontSize: 14,
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 18,
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 13,
     fontWeight: 500,
     cursor: "pointer",
     transition: "all 0.2s ease",
@@ -1519,7 +1688,7 @@ const styles = {
     justifyContent: "center",
     gap: 8,
     ":hover": {
-      background: "#e5e7eb",
+      background: "rgba(255,255,255,0.1)",
     },
     ":disabled": {
       opacity: 0.5,
@@ -1538,27 +1707,27 @@ const styles = {
   },
   
   warningBox: {
-    margin: "0 24px 24px",
+    margin: "0 28px 24px",
     padding: "12px 16px",
-    background: "#fef3c7",
-    borderRadius: 12,
+    background: "rgba(245,158,11,0.1)",
+    borderRadius: 16,
     display: "flex",
     alignItems: "center",
     gap: 10,
-    fontSize: 13,
-    color: "#92400e",
-    border: "1px solid #fde68a",
+    fontSize: 12,
+    color: "#fbbf24",
+    border: "1px solid rgba(245,158,11,0.2)",
   },
   
   errorBox: {
-    margin: "0 24px 24px",
+    margin: "0 28px 28px",
     padding: "12px 16px",
-    background: "#fee2e2",
-    borderRadius: 12,
-    color: "#991b1b",
-    fontSize: 14,
+    background: "rgba(239,68,68,0.1)",
+    borderRadius: 16,
+    color: "#f87171",
+    fontSize: 13,
     textAlign: "center",
-    border: "1px solid #fecaca",
+    border: "1px solid rgba(239,68,68,0.2)",
   },
 };
 
