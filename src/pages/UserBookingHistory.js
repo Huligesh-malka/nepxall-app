@@ -301,6 +301,38 @@ const UserBookingHistory = () => {
     navigate(`/agreement-form/${bookingId}`);
   }, [navigate]);
 
+  // ✅ ADDED: Handle chat navigation
+  const handleChatNavigation = useCallback(async (booking) => {
+    try {
+      if (!booking.pg_id) {
+        alert("Invalid property");
+        return;
+      }
+
+      if (!user?.id) {
+        alert("User not loaded");
+        return;
+      }
+
+      const res = await api.get(
+        `/private-chat/user/${user.id}?pg_id=${booking.pg_id}`
+      );
+
+      const ownerId = res.data?.id;
+
+      if (!ownerId) {
+        alert("Owner not found");
+        return;
+      }
+
+      navigate(`/chat/private/${ownerId}/${booking.pg_id}`);
+
+    } catch (err) {
+      console.error("Chat error:", err);
+      alert("Failed to open chat");
+    }
+  }, [navigate, user]);
+
   // ✅ PROTECTION - MOVED AFTER ALL HOOKS
   if (authLoading) {
     return (
