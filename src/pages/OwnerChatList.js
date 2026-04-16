@@ -52,7 +52,7 @@ export default function OwnerChatList() {
 
   /* ================= SOCKET SETUP ================= */
   useEffect(() => {
-    if (!user) return;
+    if (!user || !me) return;
 
     if (!socketRef.current) {
       socketRef.current = io(SOCKET_URL, {
@@ -65,16 +65,45 @@ export default function OwnerChatList() {
 
     const socket = socketRef.current;
 
+    // Register owner with their Firebase UID
     socket.emit("register", user.uid);
 
+    // ✅ CRITICAL FIX: JOIN ALL PRIVATE ROOMS FOR EACH CHAT
+    users.forEach((u) => {
+      const room = `${me.id}_${u.id}_${u.pg_id}`;
+      const roomReverse = `${u.id}_${me.id}_${u.pg_id}`;
+      
+      socket.emit("join_private_room", {
+        userA: me.id,
+        userB: u.id,
+        pg_id: u.pg_id,
+      });
+      
+      console.log(`Joined room: ${room} and ${roomReverse}`);
+    });
+
+    // Socket event listeners
     socket.off("receive_private_message");
     socket.off("message_sent_confirmation");
     socket.off("chat_list_update");
 
-    socket.on("receive_private_message", loadChats);
-    socket.on("message_sent_confirmation", loadChats);
-    socket.on("chat_list_update", loadChats);
+    // ✅ IMPROVED: Handle new messages with better logging
+    socket.on("receive_private_message", (msg) => {
+      console.log("📨 Owner received new message:", msg);
+      loadChats(); // Refresh the chat list
+    });
+    
+    socket.on("message_sent_confirmation", (data) => {
+      console.log("✅ Message sent confirmation:", data);
+      loadChats();
+    });
+    
+    socket.on("chat_list_update", () => {
+      console.log("🔄 Chat list update received");
+      loadChats();
+    });
 
+    // Online/Offline status handlers
     socket.on("user_online", (firebase_uid) => {
       setUsers(prev =>
         prev.map(u =>
@@ -102,7 +131,7 @@ export default function OwnerChatList() {
       socket.off("user_online");
       socket.off("user_offline");
     };
-  }, [user, loadChats]);
+  }, [user, me, users, loadChats]); // ✅ Added users dependency to rejoin rooms when list changes
 
   /* ================= AUTH + LOAD ================= */
   useEffect(() => {
