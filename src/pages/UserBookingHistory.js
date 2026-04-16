@@ -21,6 +21,7 @@ const UserBookingHistory = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const [submittingPayment, setSubmittingPayment] = useState(false); // New state for payment submission loading
+  const [chatLoading, setChatLoading] = useState(false); // 🔥 NEW: Chat loading state
   
   // Track submitted payments to prevent multiple submissions
   const [submittedPayments, setSubmittedPayments] = useState({});
@@ -76,6 +77,36 @@ const UserBookingHistory = () => {
       console.error("Error checking payment statuses:", err);
     }
   }, [paymentStatuses]);
+
+  // 🔥 NEW: Handle chat navigation with owner ID fetch
+  const handleChatNavigation = useCallback(async (booking) => {
+    try {
+      setChatLoading(true);
+      
+      if (!booking.pg_id) {
+        alert("Invalid property");
+        return;
+      }
+
+      // 🔥 Call backend to get owner/user info
+      const res = await api.get(`/private-chat/user/${booking.user_id}?pg_id=${booking.pg_id}`);
+
+      const ownerId = res.data?.id;
+
+      if (!ownerId) {
+        alert("Owner not found");
+        return;
+      }
+
+      navigate(`/chat/private/${ownerId}/${booking.pg_id}`);
+
+    } catch (err) {
+      console.error("Chat error:", err);
+      alert("Failed to open chat");
+    } finally {
+      setChatLoading(false);
+    }
+  }, [navigate]);
 
   // 🔥 AUTO REFRESH PAYMENT STATUS - Added as requested
   useEffect(() => {
@@ -576,14 +607,20 @@ For any queries, please contact support.
                         <span style={styles.buttonIcon}>🏠</span>
                         <span>View</span>
                       </button>
+                      
+                      {/* 🔥 FIXED CHAT BUTTON - FETCHES OWNER ID FIRST */}
                       <button
                         style={styles.iconButton}
-                        onClick={() => navigate(`/chat/private/${booking.owner_id}/${booking.pg_id}`)}
+                        onClick={() => handleChatNavigation(booking)}
+                        disabled={chatLoading}
                         title="Chat with Owner"
                       >
-                        <span style={styles.buttonIcon}>💬</span>
-                        <span>Chat</span>
+                        <span style={styles.buttonIcon}>
+                          {chatLoading ? "⏳" : "💬"}
+                        </span>
+                        <span>{chatLoading ? "Loading..." : "Chat"}</span>
                       </button>
+                      
                       <button
                         style={styles.iconButton}
                         onClick={() => navigate(`/agreement/${booking.id}`)}
@@ -1151,6 +1188,10 @@ const styles = {
     ":hover": {
       background: "#e5e7eb",
       transform: "translateY(-2px)",
+    },
+    ":disabled": {
+      opacity: 0.6,
+      cursor: "not-allowed",
     }
   },
   
