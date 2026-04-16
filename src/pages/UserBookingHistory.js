@@ -547,7 +547,11 @@ const UserBookingHistory = () => {
                       fontWeight: 600,
                       marginBottom: 16
                     }}>
-                      ✅ Payment completed — Do not pay again
+                      ✅ Payment completed 
+
+If you are not interested in joining the PG after making the payment, you can request a refund (only if you have not completed check-in/joining).
+
+For any queries, please contact support.
                     </div>
                   )}
 
@@ -702,12 +706,12 @@ const UserBookingHistory = () => {
               <div style={styles.accountIcon}>🏦</div>
               <div style={styles.accountInfo}>
                 <div style={styles.accountRow}>
-                  <span>UPI ID:</span>
-                  <strong>huligeshmalka-1@oksbi</strong>
+                  <span></span>
+                  <strong></strong>
                 </div>
                 <div style={styles.accountRow}>
-                  <span>Account:</span>
-                  <strong>Huligesh Malka</strong>
+                  <span></span>
+                  <strong></strong>
                 </div>
               </div>
             </div>
