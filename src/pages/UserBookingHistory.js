@@ -623,7 +623,7 @@ For any queries, please contact support.
                           {!user?.id ? "⏳" : "💬"}
                         </span>
                         <span>
-                          {!user?.id ? "Loading..." : "Chat"}
+                          {!(user?.id || user?.uid) ? "Loading..." : "Chat"}
                         </span>
                       </button>
                       <button
