@@ -280,7 +280,7 @@ const UserBookingHistory = () => {
         return {
           showPayButton: true,
           showAgreementButton: false,
-          message: "Payment completed. No need to pay again. Your status will be updated within 5–10 minutes after admin verification.",
+          message: "Once payment is completed, do not pay again. Your status will be updated within 5–10 minutes",
           badge: { text: "Payment Pending", style: "pending" },
           canPay: true
         };
@@ -547,7 +547,7 @@ const UserBookingHistory = () => {
                       fontWeight: 600,
                       marginBottom: 16
                     }}>
-                      ✅ Payment completed 
+                      Payment completed 
 
 If you are not interested in joining the PG after making the payment, you can request a refund (only if you have not completed check-in/joining).
 
