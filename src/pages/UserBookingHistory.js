@@ -303,35 +303,29 @@ const UserBookingHistory = () => {
 
   // ✅ ADDED: Handle chat navigation - NO ALERT, silent return
   const handleChatNavigation = useCallback(async (booking) => {
-    try {
-      if (!booking.pg_id) {
-        alert("Invalid property");
-        return;
-      }
+  try {
+    if (!booking.pg_id) return;
 
-      // ✅ Silent return - no alert
-     const userId = user?.id || user?.uid;
-
-if (!userId) return;
-
-      const res = await api.get(
-        `/private-chat/user/${userId}?pg_id=${booking.pg_id}`
-      );
-
-      const ownerId = res.data?.id;
-
-      if (!ownerId) {
-        alert("Owner not found");
-        return;
-      }
-
-      navigate(`/chat/private/${ownerId}/${booking.pg_id}`);
-
-    } catch (err) {
-      console.error("Chat error:", err);
-      alert("Failed to open chat");
+    // ✅ ONLY use MySQL user id
+    if (!user?.id) {
+      console.log("User not loaded yet");
+      return;
     }
-  }, [navigate, user]);
+
+    const res = await api.get(
+      `/private-chat/user/${user.id}?pg_id=${booking.pg_id}`
+    );
+
+    const ownerId = res.data?.id;
+
+    if (!ownerId) return;
+
+    navigate(`/chat/private/${ownerId}/${booking.pg_id}`);
+
+  } catch (err) {
+    console.error("Chat error:", err);
+  }
+}, [navigate, user]);
 
   // ✅ PROTECTION - MOVED AFTER ALL HOOKS
   if (authLoading) {
