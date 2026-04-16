@@ -5,7 +5,7 @@ import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import { Button, Box, CircularProgress, Typography } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
-
+import { useInstallPrompt } from "../hooks/useInstallPrompt";
 const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -97,6 +97,31 @@ const MainLayout = () => {
               Logout
             </Button>
           )}
+          {user && (
+  <div style={{ display: "flex", gap: "10px" }}>
+
+    {installable && (
+      <button
+        onClick={installApp}
+        style={{
+          background: "#2563eb",
+          color: "white",
+          padding: "10px 16px",
+          borderRadius: "8px",
+          border: "none",
+          cursor: "pointer"
+        }}
+      >
+        📲 Install App
+      </button>
+    )}
+
+    <Button variant="contained" color="error" onClick={handleLogout}>
+      Logout
+    </Button>
+
+  </div>
+)}
         </Box>
 
         {/* PAGE CONTENT */}

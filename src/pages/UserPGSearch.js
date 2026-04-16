@@ -78,6 +78,9 @@ import {
 } from "lucide-react";
 import api from "../api/api";
 
+
+import { useInstallPrompt } from "../hooks/useInstallPrompt";
+
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://nepxall-backend.onrender.com";
 
 /* ================= HELPERS ================= */
