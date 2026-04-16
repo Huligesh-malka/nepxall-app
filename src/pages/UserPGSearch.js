@@ -969,15 +969,19 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   const [showShareOptions, setShowShareOptions] = useState(false);
 
   const getImages = () => {
-    const images = [];
-    if (Array.isArray(pg.photos) && pg.photos.length) {
-      images.push(...pg.photos.map(photo => getCorrectImageUrl(photo)));
-    }
-    if (images.length === 0) {
-      images.push("https://via.placeholder.com/600x400?text=No+Images+Available");
-    }
-    return images;
-  };
+  const images = [];
+
+  if (Array.isArray(pg.photos) && pg.photos.length) {
+    images.push(...pg.photos.map(photo => getCorrectImageUrl(photo)));
+  }
+
+  // ✅ fallback local image
+  if (images.length === 0) {
+    images.push("/no-image.png");
+  }
+
+  return images;
+};
 
   const images = getImages();
 
@@ -1446,10 +1450,9 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
               objectFit: "cover" 
             }}
             onError={(e) => {
-              console.error("Image failed to load:", images[currentImageIndex]);
-              e.target.onerror = null;
-              e.target.src = "https://via.placeholder.com/600x400?text=Image+Not+Found";
-            }}
+  e.target.onerror = null; // 🔥 stop infinite loop
+  e.target.src = "/no-image.png"; // ✅ local image
+}}
           />
           
           {images.length > 1 && (
@@ -2130,7 +2133,7 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
                           style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 8 }}
                           onError={(e) => {
                             e.target.onerror = null;
-                            e.target.src = "";
+                            e.target.src = "/no-image.png";
                           }}
                         />
                       )}
@@ -2471,7 +2474,7 @@ function UserPGSearch() {
     if (Array.isArray(pg.photos) && pg.photos.length) {
       return getCorrectImageUrl(pg.photos[0]);
     }
-    return "";
+    return "/no-image.png";
   };
 
   /* ================= INTERACTION HANDLERS ================= */
@@ -3599,7 +3602,7 @@ function UserPGSearch() {
                     style={{ width: "100%", height: 200, objectFit: "cover" }}
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = "";
+                      e.target.src = "/no-image.png";
                     }}
                   />
                   <div style={{
