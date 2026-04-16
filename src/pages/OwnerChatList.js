@@ -25,7 +25,7 @@ export default function OwnerChatList() {
   const socketRef = useRef(null);
   const { user, loading } = useAuth();
 
-  /* ================= JOIN ROOM FUNCTION ================= */
+  /* ================= JOIN ROOM FUNCTION WITH SELF-CHAT BLOCK ================= */
   const joinAllRooms = useCallback(() => {
     if (!me || !socketRef.current || !connected) {
       console.log("Cannot join rooms - missing:", { me: !!me, socket: !!socketRef.current, connected });
@@ -34,12 +34,18 @@ export default function OwnerChatList() {
     
     console.log("Joining rooms for all chats...");
     users.forEach((u) => {
+      // 🔥 CRITICAL FIX: Skip if trying to chat with self
+      if (u.id === me.id) {
+        console.warn("⚠️ Skipping self room - user ID matches owner:", { userId: u.id, ownerId: me.id, userName: u.name });
+        return;
+      }
+      
       const roomData = {
         userA: me.id,
         userB: u.id,
         pg_id: u.pg_id,
       };
-      console.log(`📥 Emitting join_private_room:`, roomData);
+      console.log(`✅ Joining room with data:`, roomData);
       socketRef.current.emit("join_private_room", roomData);
     });
   }, [me, users, connected]);
@@ -61,9 +67,25 @@ export default function OwnerChatList() {
       ]);
 
       setMe(meRes.data);
-      setUsers(listRes.data || []);
       
-      console.log("✅ Loaded user data:", { me: meRes.data.id, usersCount: listRes.data.length });
+      // 🔥 DEBUG: Log the API response to verify data
+      console.log("📊 API Response - /private-chat/list:", listRes.data);
+      console.log("📊 Current user (me):", meRes.data);
+      
+      // 🔥 Filter out self from the list just in case API returns it
+      const filteredUsers = (listRes.data || []).filter(u => u.id !== meRes.data.id);
+      
+      if (filteredUsers.length !== (listRes.data || []).length) {
+        console.warn("⚠️ Filtered out self from user list");
+      }
+      
+      setUsers(filteredUsers);
+      
+      console.log("✅ Loaded user data:", { 
+        me: meRes.data.id, 
+        usersCount: filteredUsers.length,
+        users: filteredUsers.map(u => ({ id: u.id, name: u.name, pg_id: u.pg_id }))
+      });
     } catch (err) {
       console.error("Chat list error:", err);
     } finally {
@@ -83,15 +105,12 @@ export default function OwnerChatList() {
         reconnectionDelay: 1000,
       });
 
-      // FIX 1: Join rooms immediately after socket connects
       socketRef.current.on("connect", () => {
         console.log("✅ Socket connected → registering and joining rooms");
         setConnected(true);
         
-        // Register with Firebase UID
         socketRef.current.emit("register", user.uid);
         
-        // Join rooms after connection
         setTimeout(() => {
           joinAllRooms();
         }, 100);
@@ -114,7 +133,6 @@ export default function OwnerChatList() {
 
     const socket = socketRef.current;
 
-    // Remove old listeners to avoid duplicates
     socket.off("receive_private_message");
     socket.off("message_sent_confirmation");
     socket.off("chat_list_update");
@@ -122,11 +140,9 @@ export default function OwnerChatList() {
     socket.off("user_offline");
     socket.off("room_joined");
 
-    // FIX 3: Debug message receiver
     socket.on("receive_private_message", (msg) => {
       console.log("🔥 MESSAGE RECEIVED in OwnerChatList:", msg);
-      console.log("📨 Owner received new message:", msg);
-      loadChats(); // Reload to update the list
+      loadChats();
     });
     
     socket.on("message_sent_confirmation", (data) => {
@@ -175,7 +191,6 @@ export default function OwnerChatList() {
     };
   }, [user, loadChats, joinAllRooms]);
 
-  // FIX 2: Force join after data load
   useEffect(() => {
     if (me && users.length > 0 && socketRef.current && connected) {
       console.log("🔄 Data loaded, forcing room joins...");
@@ -183,7 +198,6 @@ export default function OwnerChatList() {
     }
   }, [me, users, connected, joinAllRooms]);
 
-  /* ================= AUTH + LOAD ================= */
   useEffect(() => {
     if (!loading && !user) {
       navigate("/login");
@@ -194,7 +208,6 @@ export default function OwnerChatList() {
     }
   }, [user, loading, navigate, loadChats]);
 
-  /* ================= TIME FORMAT ================= */
   const formatTime = (time) => {
     if (!time) return "";
 
@@ -208,7 +221,6 @@ export default function OwnerChatList() {
       : date.toLocaleDateString();
   };
 
-  /* ================= PROTECTION ================= */
   if (loading || pageLoading) {
     return (
       <Box sx={loaderContainer}>
@@ -219,7 +231,6 @@ export default function OwnerChatList() {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  /* ================= UI ================= */
   return (
     <Box sx={mainContainer}>
       <Container maxWidth="sm">
@@ -259,7 +270,14 @@ export default function OwnerChatList() {
                   >
                     <Box
                       sx={chatCard}
-                      onClick={() => navigate(`/chat/private/${u.id}/${u.pg_id}`)}
+                      onClick={() => {
+                        // 🔥 FIX: Block self-chat navigation
+                        if (u.id === me?.id) {
+                          console.error("❌ Self chat blocked - cannot chat with yourself");
+                          return;
+                        }
+                        navigate(`/chat/private/${u.id}/${u.pg_id}`);
+                      }}
                     >
                       <Badge
                         overlap="circular"
@@ -320,7 +338,6 @@ export default function OwnerChatList() {
   );
 }
 
-/* ================= STYLES ================= */
 const mainContainer = {
   minHeight: "100vh",
   background: "radial-gradient(circle at top left, #1a2a6c, #b21f1f, #fdbb2d)",
