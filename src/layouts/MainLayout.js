@@ -7,6 +7,7 @@ import { Button, Box, CircularProgress, Typography } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
 const MainLayout = () => {
+  const { installable, installApp } = useInstallPrompt();
   const location = useLocation();
   const navigate = useNavigate();
   const { user, role, loading } = useAuth();
