@@ -301,7 +301,7 @@ const UserBookingHistory = () => {
     navigate(`/agreement-form/${bookingId}`);
   }, [navigate]);
 
-  // ✅ ADDED: Handle chat navigation
+  // ✅ ADDED: Handle chat navigation - NO ALERT, silent return
   const handleChatNavigation = useCallback(async (booking) => {
     try {
       if (!booking.pg_id) {
@@ -309,10 +309,8 @@ const UserBookingHistory = () => {
         return;
       }
 
-      if (!user?.id) {
-        alert("User not loaded");
-        return;
-      }
+      // ✅ Silent return - no alert
+      if (!user?.id) return;
 
       const res = await api.get(
         `/private-chat/user/${user.id}?pg_id=${booking.pg_id}`
@@ -608,13 +606,23 @@ For any queries, please contact support.
                         <span style={styles.buttonIcon}>🏠</span>
                         <span>View</span>
                       </button>
+                      {/* ✅ UPDATED: Disabled until user is loaded + Better UX */}
                       <button
-                        style={styles.iconButton}
+                        style={{
+                          ...styles.iconButton,
+                          opacity: !user?.id ? 0.5 : 1,
+                          cursor: !user?.id ? "not-allowed" : "pointer"
+                        }}
                         onClick={() => handleChatNavigation(booking)}
+                        disabled={!user?.id}
                         title="Chat with Owner"
                       >
-                        <span style={styles.buttonIcon}>💬</span>
-                        <span>Chat</span>
+                        <span style={styles.buttonIcon}>
+                          {!user?.id ? "⏳" : "💬"}
+                        </span>
+                        <span>
+                          {!user?.id ? "Loading..." : "Chat"}
+                        </span>
                       </button>
                       <button
                         style={styles.iconButton}
