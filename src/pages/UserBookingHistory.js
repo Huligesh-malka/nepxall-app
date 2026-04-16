@@ -578,7 +578,7 @@ For any queries, please contact support.
                       </button>
                       <button
                         style={styles.iconButton}
-                        onClick={() => navigate(`/chat/private/${booking.owner_id}/${booking.pg_id}`)}
+                        onClick={() => handleChatNavigation(booking)}
                         title="Chat with Owner"
                       >
                         <span style={styles.buttonIcon}>💬</span>
