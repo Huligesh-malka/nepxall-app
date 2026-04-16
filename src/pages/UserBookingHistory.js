@@ -280,7 +280,7 @@ const UserBookingHistory = () => {
         return {
           showPayButton: true,
           showAgreementButton: false,
-          message: "💳 Payment pending. Click 'Pay Now' to complete payment.",
+          message: "Once payment is completed, do not pay again. Your status will be updated within 5–10 minutes",
           badge: { text: "Payment Pending", style: "pending" },
           canPay: true
         };
@@ -431,11 +431,30 @@ const UserBookingHistory = () => {
                 <div style={styles.cardContent}>
                   {/* Details Grid */}
                   <div style={styles.detailsGrid}>
+                    {/* 🔥 STEP 1: REPLACE NUMBER WITH CALL BUTTON */}
                     <div style={styles.detailItem}>
                       <span style={styles.detailIcon}>📞</span>
                       <div>
                         <span style={styles.detailLabel}>Contact</span>
-                        <span style={styles.detailValue}>{booking.phone || "N/A"}</span>
+                        {booking.status !== "pending" && booking.phone ? (
+                          <a
+                            href={`tel:${booking.phone}`}
+                            style={{
+                              display: "inline-block",
+                              padding: "6px 12px",
+                              background: "#10b981",
+                              color: "#fff",
+                              borderRadius: 8,
+                              fontSize: 13,
+                              fontWeight: 600,
+                              textDecoration: "none"
+                            }}
+                          >
+                          Call Owner
+                          </a>
+                        ) : (
+                          <span style={{ color: "#9ca3af" }}>Not available</span>
+                        )}
                       </div>
                     </div>
                     <div style={styles.detailItem}>
@@ -471,6 +490,22 @@ const UserBookingHistory = () => {
                     )}
                   </div>
 
+                  {/* 🔥 STEP 3: WAITING FOR APPROVAL MESSAGE */}
+                  {booking.status === "pending" && (
+                    <div style={{
+                      background: "#fef3c7",
+                      color: "#92400e",
+                      padding: "10px",
+                      borderRadius: 10,
+                      fontSize: 13,
+                      textAlign: "center",
+                      fontWeight: 600,
+                      marginBottom: 20
+                    }}>
+                      ⏳ Booking requested — Waiting for owner approval
+                    </div>
+                  )}
+
                   {/* Price Breakdown */}
                   <div style={styles.priceSection}>
                     {rent > 0 && (
@@ -500,8 +535,28 @@ const UserBookingHistory = () => {
                     </div>
                   </div>
 
+                  {/* 🔥 STEP 2: PREVENT MULTIPLE PAYMENTS MESSAGE */}
+                  {paymentStatus === "paid" && (
+                    <div style={{
+                      background: "#d1fae5",
+                      color: "#065f46",
+                      padding: "10px",
+                      borderRadius: 10,
+                      fontSize: 13,
+                      textAlign: "center",
+                      fontWeight: 600,
+                      marginBottom: 16
+                    }}>
+                      Payment completed 
+
+If you are not interested in joining the PG after making the payment, you can request a refund (only if you have not completed check-in/joining).
+
+For any queries, please contact support.
+                    </div>
+                  )}
+
                   {/* Message if any */}
-                  {paymentDisplay.message && (
+                  {paymentDisplay.message && paymentStatus !== "paid" && (
                     <div style={{
                       ...styles.messageBox,
                       ...styles[`messageBox${paymentDisplay.badge?.style}`]
@@ -651,12 +706,12 @@ const UserBookingHistory = () => {
               <div style={styles.accountIcon}>🏦</div>
               <div style={styles.accountInfo}>
                 <div style={styles.accountRow}>
-                  <span>UPI ID:</span>
-                  <strong>huligeshmalka-1@oksbi</strong>
+                  <span></span>
+                  <strong></strong>
                 </div>
                 <div style={styles.accountRow}>
-                  <span>Account:</span>
-                  <strong>Huligesh Malka</strong>
+                  <span></span>
+                  <strong></strong>
                 </div>
               </div>
             </div>
