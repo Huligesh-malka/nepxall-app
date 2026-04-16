@@ -336,10 +336,18 @@ export default function PrivateChat() {
     }, 80);
   };
 
-  // FIX: Join room function
+  // 🔥 FIX 1: Join room function with self-chat prevention
   const joinRoom = useCallback(() => {
     if (!me || !userId || !pgId || !socketConnected) {
       console.log("Cannot join room - missing:", { me: !!me, userId, pgId, socketConnected });
+      return;
+    }
+    
+    // 🔥 CRITICAL: Prevent joining self room
+    if (Number(userId) === me.id) {
+      console.error("❌ SELF CHAT BLOCKED - Cannot join room with yourself");
+      console.error(`UserA: ${me.id}, UserB: ${userId} (same user)`);
+      navigate("/owner/chats");
       return;
     }
     
@@ -349,9 +357,9 @@ export default function PrivateChat() {
       pg_id: Number(pgId),
     };
     
-    console.log("🔗 Joining room with data:", roomData);
+    console.log("✅ Joining room with data:", roomData);
     socket.emit("join_private_room", roomData);
-  }, [me, userId, pgId, socketConnected]);
+  }, [me, userId, pgId, socketConnected, navigate]);
 
   // Mark messages as read when they come into view
   const markMessagesAsRead = useCallback(() => {
@@ -388,6 +396,15 @@ export default function PrivateChat() {
   useEffect(() => {
     if (!userId || !pgId) navigate(-1);
   }, [userId, pgId]);
+
+  // 🔥 FIX 2: Self-chat detection on component mount
+  useEffect(() => {
+    if (me && Number(userId) === me.id) {
+      console.error("❌ SELF CHAT DETECTED - Cannot chat with yourself");
+      console.error(`Redirecting from /chat/private/${userId}/${pgId}`);
+      navigate("/owner/chats");
+    }
+  }, [me, userId, pgId, navigate]);
 
   /* ── socket lifecycle ── */
   useEffect(() => {
@@ -427,6 +444,14 @@ export default function PrivateChat() {
         const token = await fbUser.getIdToken();
         const cfg = { headers: { Authorization: `Bearer ${token}` } };
         const meRes = await api.get("/private-chat/me", cfg);
+        
+        // 🔥 FIX 3: Check for self-chat before loading other data
+        if (Number(userId) === meRes.data.id) {
+          console.error("❌ SELF CHAT BLOCKED - Redirecting to chat list");
+          navigate("/owner/chats");
+          return;
+        }
+        
         const urRes = await api.get(
           `/private-chat/user/${userId}?pg_id=${pgId}`,
           cfg
@@ -453,7 +478,6 @@ export default function PrivateChat() {
             socket.emit("get_online_status", urRes.data.firebase_uid);
           }
           
-          // FIX 1: Join room after data load
           setTimeout(() => {
             joinRoom();
           }, 100);
@@ -473,19 +497,24 @@ export default function PrivateChat() {
       }
       unsub?.();
     };
-  }, [userId, pgId, joinRoom]);
+  }, [userId, pgId, joinRoom, navigate]);
 
-  // FIX 2: Force join after data load and socket connection
+  // Force join after data load and socket connection
   useEffect(() => {
     if (me && userId && pgId && socketConnected) {
+      // 🔥 FIX 4: Double-check self-chat before joining
+      if (Number(userId) === me.id) {
+        console.error("❌ SELF CHAT BLOCKED - Will not join room");
+        navigate("/owner/chats");
+        return;
+      }
       console.log("✅ Force joining room after data load");
       joinRoom();
     }
-  }, [me, userId, pgId, socketConnected, joinRoom]);
+  }, [me, userId, pgId, socketConnected, joinRoom, navigate]);
 
   /* ── socket events ── */
   useEffect(() => {
-    // FIX 3: Debug message receiver
     const onMsg = (m) => {
       console.log("🔥 MESSAGE RECEIVED in PrivateChat:", m);
       if (m.pg_id !== Number(pgId)) {
@@ -589,6 +618,8 @@ export default function PrivateChat() {
   const emitTyping = useCallback(
     (val) => {
       if (!me) return;
+      // 🔥 FIX 5: Don't emit typing for self-chat
+      if (Number(userId) === me.id) return;
       socket.emit("typing", {
         userA: me.id,
         userB: Number(userId),
@@ -615,6 +646,13 @@ export default function PrivateChat() {
   /* ── send ── */
   const sendMessage = async () => {
     if (!text.trim() || sending) return;
+    
+    // 🔥 FIX 6: Prevent sending messages to self
+    if (Number(userId) === me?.id) {
+      console.error("❌ Cannot send message to yourself");
+      return;
+    }
+    
     setSending(true);
     try {
       const token = await auth.currentUser.getIdToken();
