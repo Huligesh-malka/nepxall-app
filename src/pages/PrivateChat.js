@@ -325,6 +325,7 @@ export default function PrivateChat() {
   const [msgToDel, setMsgToDel] = useState(null);
   const [connStatus, setConnStatus] = useState("connected");
   const typingTimer = useRef();
+  const [socketConnected, setSocketConnected] = useState(false);
 
   const scrollBottom = (smooth = true) => {
     setTimeout(() => {
@@ -334,6 +335,23 @@ export default function PrivateChat() {
       });
     }, 80);
   };
+
+  // FIX: Join room function
+  const joinRoom = useCallback(() => {
+    if (!me || !userId || !pgId || !socketConnected) {
+      console.log("Cannot join room - missing:", { me: !!me, userId, pgId, socketConnected });
+      return;
+    }
+    
+    const roomData = {
+      userA: me.id,
+      userB: Number(userId),
+      pg_id: Number(pgId),
+    };
+    
+    console.log("🔗 Joining room with data:", roomData);
+    socket.emit("join_private_room", roomData);
+  }, [me, userId, pgId, socketConnected]);
 
   // Mark messages as read when they come into view
   const markMessagesAsRead = useCallback(() => {
@@ -373,9 +391,24 @@ export default function PrivateChat() {
 
   /* ── socket lifecycle ── */
   useEffect(() => {
-    socket.on("connect", () => setConnStatus("connected"));
-    socket.on("disconnect", () => setConnStatus("disconnected"));
-    socket.on("connect_error", () => setConnStatus("error"));
+    socket.on("connect", () => {
+      console.log("✅ Socket connected in PrivateChat");
+      setConnStatus("connected");
+      setSocketConnected(true);
+    });
+    
+    socket.on("disconnect", () => {
+      console.log("Socket disconnected in PrivateChat");
+      setConnStatus("disconnected");
+      setSocketConnected(false);
+    });
+    
+    socket.on("connect_error", () => {
+      console.log("Socket connection error");
+      setConnStatus("error");
+      setSocketConnected(false);
+    });
+    
     return () => {
       socket.off("connect");
       socket.off("disconnect");
@@ -408,54 +441,79 @@ export default function PrivateChat() {
         setLoading(false);
         scrollBottom(false);
         
-        if (!socket.connected) socket.connect();
-        
-        socket.emit("register", fbUser.uid);
-        
-        // Request online status for the other user
-        if (urRes.data?.firebase_uid) {
-          socket.emit("get_online_status", urRes.data.firebase_uid);
+        if (!socket.connected) {
+          console.log("Connecting socket...");
+          socket.connect();
+        } else {
+          console.log("Socket already connected, registering...");
+          socket.emit("register", fbUser.uid);
+          
+          // Request online status for the other user
+          if (urRes.data?.firebase_uid) {
+            socket.emit("get_online_status", urRes.data.firebase_uid);
+          }
+          
+          // FIX 1: Join room after data load
+          setTimeout(() => {
+            joinRoom();
+          }, 100);
         }
-        
-        socket.emit("join_private_room", {
-          userA: meRes.data.id,
-          userB: Number(userId),
-          pg_id: Number(pgId),
-        });
       } catch (e) {
         console.error(e);
         setLoading(false);
       }
     });
     return () => {
-      if (socket.connected && me?.id)
+      if (socket.connected && me?.id) {
         socket.emit("leave_private_room", {
           userA: me.id,
           userB: Number(userId),
           pg_id: Number(pgId),
         });
+      }
       unsub?.();
     };
-  }, [userId, pgId]);
+  }, [userId, pgId, joinRoom]);
+
+  // FIX 2: Force join after data load and socket connection
+  useEffect(() => {
+    if (me && userId && pgId && socketConnected) {
+      console.log("✅ Force joining room after data load");
+      joinRoom();
+    }
+  }, [me, userId, pgId, socketConnected, joinRoom]);
 
   /* ── socket events ── */
   useEffect(() => {
+    // FIX 3: Debug message receiver
     const onMsg = (m) => {
-      if (m.pg_id !== Number(pgId)) return;
+      console.log("🔥 MESSAGE RECEIVED in PrivateChat:", m);
+      if (m.pg_id !== Number(pgId)) {
+        console.log("Message pg_id mismatch, ignoring:", m.pg_id, "!=", Number(pgId));
+        return;
+      }
       setMessages((p) => (p.some((x) => x.id === m.id) ? p : [...p, m]));
       scrollBottom();
     };
-    const onSent = (m) =>
+    
+    const onSent = (m) => {
+      console.log("Message sent confirmation:", m);
       setMessages((p) =>
         p.map((x) =>
           x.message_hash === m.message_hash ? { ...x, ...m } : x
         )
       );
-    const onDel = ({ messageId }) =>
+    };
+    
+    const onDel = ({ messageId }) => {
+      console.log("Message deleted:", messageId);
       setMessages((p) => p.filter((x) => x.id !== messageId));
+    };
+    
     const onType = ({ userId: uid, isTyping }) => {
       if (uid === Number(userId)) setOtherTyping(isTyping);
     };
+    
     const onRead = ({ readerId, messageIds }) => {
       if (readerId === Number(userId)) {
         setMessages((p) =>
@@ -465,6 +523,7 @@ export default function PrivateChat() {
         );
       }
     };
+    
     const onOn = (uid) => {
       console.log("Received user_online event for:", uid, "Current other user UID:", otherUser?.firebase_uid);
       if (uid === otherUser?.firebase_uid) {
@@ -472,6 +531,7 @@ export default function PrivateChat() {
         setOnline(true);
       }
     };
+    
     const onOff = (uid) => {
       console.log("Received user_offline event for:", uid, "Current other user UID:", otherUser?.firebase_uid);
       if (uid === otherUser?.firebase_uid) {
@@ -479,18 +539,25 @@ export default function PrivateChat() {
         setOnline(false);
       }
     };
+    
     const onEdit = ({ messageId, newMessage }) => {
+      console.log("Message edited:", messageId, newMessage);
       setMessages((p) =>
         p.map((x) =>
           x.id === messageId ? { ...x, message: newMessage, edited: true } : x
         )
       );
     };
+    
     const onOnlineStatus = ({ firebase_uid, isOnline }) => {
       console.log("Received online status for:", firebase_uid, "isOnline:", isOnline);
       if (firebase_uid === otherUser?.firebase_uid) {
         setOnline(isOnline);
       }
+    };
+
+    const onRoomJoined = (data) => {
+      console.log("✅ Successfully joined room:", data);
     };
 
     socket.on("receive_private_message", onMsg);
@@ -502,6 +569,7 @@ export default function PrivateChat() {
     socket.on("user_offline", onOff);
     socket.on("message_edited", onEdit);
     socket.on("user_online_status", onOnlineStatus);
+    socket.on("room_joined", onRoomJoined);
     
     return () => {
       socket.off("receive_private_message", onMsg);
@@ -513,6 +581,7 @@ export default function PrivateChat() {
       socket.off("user_offline", onOff);
       socket.off("message_edited", onEdit);
       socket.off("user_online_status", onOnlineStatus);
+      socket.off("room_joined", onRoomJoined);
     };
   }, [pgId, me?.id, userId, otherUser?.firebase_uid]);
 
@@ -700,7 +769,7 @@ export default function PrivateChat() {
           </span>
           <span style={s.hdrStatus}>
             <span style={{ ...s.statusDot, background: online ? "#22c55e" : "#94a3b8" }} />
-            {online ? "" : ""}
+            {online ? "Online" : "Offline"}
           </span>
         </div>
       </div>

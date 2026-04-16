@@ -25,6 +25,25 @@ export default function OwnerChatList() {
   const socketRef = useRef(null);
   const { user, loading } = useAuth();
 
+  /* ================= JOIN ROOM FUNCTION ================= */
+  const joinAllRooms = useCallback(() => {
+    if (!me || !socketRef.current || !connected) {
+      console.log("Cannot join rooms - missing:", { me: !!me, socket: !!socketRef.current, connected });
+      return;
+    }
+    
+    console.log("Joining rooms for all chats...");
+    users.forEach((u) => {
+      const roomData = {
+        userA: me.id,
+        userB: u.id,
+        pg_id: u.pg_id,
+      };
+      console.log(`📥 Emitting join_private_room:`, roomData);
+      socketRef.current.emit("join_private_room", roomData);
+    });
+  }, [me, users, connected]);
+
   /* ================= LOAD CHATS ================= */
   const loadChats = useCallback(async () => {
     try {
@@ -44,18 +63,7 @@ export default function OwnerChatList() {
       setMe(meRes.data);
       setUsers(listRes.data || []);
       
-      // After loading users, join all their rooms
-      if (meRes.data && listRes.data.length > 0 && socketRef.current) {
-        console.log("Joining rooms for all chats...");
-        listRes.data.forEach((u) => {
-          socketRef.current.emit("join_private_room", {
-            userA: meRes.data.id,
-            userB: u.id,
-            pg_id: u.pg_id,
-          });
-          console.log(`📥 Joining room: private_${meRes.data.id}_${u.id}_pg${u.pg_id}`);
-        });
-      }
+      console.log("✅ Loaded user data:", { me: meRes.data.id, usersCount: listRes.data.length });
     } catch (err) {
       console.error("Chat list error:", err);
     } finally {
@@ -70,24 +78,41 @@ export default function OwnerChatList() {
     if (!socketRef.current) {
       socketRef.current = io(SOCKET_URL, {
         transports: ["websocket"],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
       });
 
+      // FIX 1: Join rooms immediately after socket connects
       socketRef.current.on("connect", () => {
-        console.log("Socket connected");
+        console.log("✅ Socket connected → registering and joining rooms");
         setConnected(true);
+        
+        // Register with Firebase UID
+        socketRef.current.emit("register", user.uid);
+        
+        // Join rooms after connection
+        setTimeout(() => {
+          joinAllRooms();
+        }, 100);
       });
       
       socketRef.current.on("disconnect", () => {
         console.log("Socket disconnected");
         setConnected(false);
       });
+      
+      socketRef.current.on("reconnect", () => {
+        console.log("Socket reconnected → rejoining rooms");
+        setConnected(true);
+        socketRef.current.emit("register", user.uid);
+        setTimeout(() => {
+          joinAllRooms();
+        }, 100);
+      });
     }
 
     const socket = socketRef.current;
-
-    // Register with Firebase UID
-    console.log("Registering with UID:", user.uid);
-    socket.emit("register", user.uid);
 
     // Remove old listeners to avoid duplicates
     socket.off("receive_private_message");
@@ -95,9 +120,11 @@ export default function OwnerChatList() {
     socket.off("chat_list_update");
     socket.off("user_online");
     socket.off("user_offline");
+    socket.off("room_joined");
 
-    // Improved message handler with console log
+    // FIX 3: Debug message receiver
     socket.on("receive_private_message", (msg) => {
+      console.log("🔥 MESSAGE RECEIVED in OwnerChatList:", msg);
       console.log("📨 Owner received new message:", msg);
       loadChats(); // Reload to update the list
     });
@@ -134,7 +161,6 @@ export default function OwnerChatList() {
       );
     });
 
-    // Listen for room join confirmation (if your backend sends it)
     socket.on("room_joined", (data) => {
       console.log("✅ Successfully joined room:", data);
     });
@@ -147,22 +173,15 @@ export default function OwnerChatList() {
       socket.off("user_offline");
       socket.off("room_joined");
     };
-  }, [user, loadChats]);
+  }, [user, loadChats, joinAllRooms]);
 
-  /* ================= RE-JOIN ROOMS WHEN USERS CHANGE ================= */
+  // FIX 2: Force join after data load
   useEffect(() => {
-    // When users list updates or me changes, re-join rooms
     if (me && users.length > 0 && socketRef.current && connected) {
-      console.log("Re-joining rooms after user list update...");
-      users.forEach((u) => {
-        socketRef.current.emit("join_private_room", {
-          userA: me.id,
-          userB: u.id,
-          pg_id: u.pg_id,
-        });
-      });
+      console.log("🔄 Data loaded, forcing room joins...");
+      joinAllRooms();
     }
-  }, [me, users, connected]);
+  }, [me, users, connected, joinAllRooms]);
 
   /* ================= AUTH + LOAD ================= */
   useEffect(() => {
