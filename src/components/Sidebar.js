@@ -353,21 +353,17 @@ const userInfoStyle = {
   paddingTop: 16,
 };
 
+
+
+
 const linkStyle = (active) => ({
-  color: "#1e293b",
+  color: "#e5e7eb",
   textDecoration: "none",
   padding: "10px 14px",
-  borderRadius: 12,
+  borderRadius: 8,
   background: active
-    ? "linear-gradient(95deg, #2563eb15, #10b98110)"
+    ? "linear-gradient(90deg,#0B5ED7,#4CAF50)"
     : "transparent",
-  fontWeight: active ? "600" : "500",
-  transition: "all 0.2s ease",
-  display: "block",
-  fontSize: 14,
-  cursor: "pointer",
-  borderLeft: active ? `3px solid ${BRAND_GREEN}` : "3px solid transparent",
-  ":hover": {
-    background: "#f1f5f9",
-  },
+  fontWeight: active ? "600" : "normal",
+  transition: "0.3s",
 });
