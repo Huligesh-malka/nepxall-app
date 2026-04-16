@@ -280,7 +280,7 @@ const UserBookingHistory = () => {
         return {
           showPayButton: true,
           showAgreementButton: false,
-          message: "💳 Payment pending. Click 'Pay Now' to complete payment.",
+          message: "Payment completed. No need to pay again. Your status will be updated within 5–10 minutes after admin verification.",
           badge: { text: "Payment Pending", style: "pending" },
           canPay: true
         };
@@ -450,7 +450,7 @@ const UserBookingHistory = () => {
                               textDecoration: "none"
                             }}
                           >
-                            📞 Call Owner
+                          Call Owner
                           </a>
                         ) : (
                           <span style={{ color: "#9ca3af" }}>Not available</span>
