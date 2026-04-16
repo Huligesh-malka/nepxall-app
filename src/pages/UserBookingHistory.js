@@ -89,7 +89,7 @@ const UserBookingHistory = () => {
       }
 
       // 🔥 Call backend to get owner/user info
-      const res = await api.get(`/private-chat/user/${booking.user_id}?pg_id=${booking.pg_id}`);
+   const res = await api.get(`/private-chat/user/${user.id}?pg_id=${booking.pg_id}`);
 
       const ownerId = res.data?.id;
 
