@@ -2130,7 +2130,7 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
                           style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 8 }}
                           onError={(e) => {
                             e.target.onerror = null;
-                            e.target.src = "https://via.placeholder.com/400x200/6b7280/ffffff?text=No+Image";
+                            e.target.src = "";
                           }}
                         />
                       )}
@@ -2471,7 +2471,7 @@ function UserPGSearch() {
     if (Array.isArray(pg.photos) && pg.photos.length) {
       return getCorrectImageUrl(pg.photos[0]);
     }
-    return "https://via.placeholder.com/400x200/6b7280/ffffff?text=No+Image";
+    return "";
   };
 
   /* ================= INTERACTION HANDLERS ================= */
@@ -3599,7 +3599,7 @@ function UserPGSearch() {
                     style={{ width: "100%", height: 200, objectFit: "cover" }}
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = "https://via.placeholder.com/400x200/6b7280/ffffff?text=No+Image";
+                      e.target.src = "";
                     }}
                   />
                   <div style={{
