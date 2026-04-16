@@ -95,42 +95,55 @@ const UserBookingHistory = () => {
 
   // Create payment
   const handlePayNow = useCallback(async (booking) => {
-    try {
-      setPayingId(booking.id);
-      setError("");
+  try {
+    setPayingId(booking.id);
+    setError("");
 
-      const rent = Number(booking.rent_amount || booking.rent || 0);
-      const deposit = Number(booking.security_deposit || 0);
-      const maintenance = Number(booking.maintenance_amount || 0);
-      const total = Number(booking.total_amount) || rent + deposit + maintenance;
+    // 👉 ASK USER (Agreement Optional)
+    const includeAgreement = window.confirm(
+      "Do you want to include Agreement?\n\n₹500 extra will be added."
+    );
 
-      if (!total || total <= 0) {
-        throw new Error("Invalid payment amount");
-      }
+    const rent = Number(booking.rent_amount || 0);
+    const deposit = Number(booking.security_deposit || 0);
+    const maintenance = Number(booking.maintenance_amount || 0);
 
-      const res = await api.post("/payments/create-payment", {
-        bookingId: booking.id
-      });
+    let total = rent + deposit + maintenance;
 
-      if (!res.data.success) {
-        throw new Error(res.data.message || "Payment initialization failed");
-      }
-
-      setPaymentData({
-        qr: res.data.qr,
-        upiLink: res.data.upiLink,
-        orderId: res.data.orderId,
-        amount: res.data.amount,
-        bookingId: booking.id
-      });
-
-    } catch (err) {
-      console.error("PAYMENT ERROR:", err);
-      setError(err.message || "Payment initialization failed");
-    } finally {
-      setPayingId(null);
+    if (includeAgreement) {
+      total += 500; // 👉 Agreement fee
     }
-  }, []);
+
+    if (!total || total <= 0) {
+      throw new Error("Invalid payment amount");
+    }
+
+    // 🔥 SEND agreement flag to backend
+    const res = await api.post("/payments/create-payment", {
+      bookingId: booking.id,
+      includeAgreement // 👈 IMPORTANT
+    });
+
+    if (!res.data.success) {
+      throw new Error(res.data.message || "Payment initialization failed");
+    }
+
+    setPaymentData({
+      qr: res.data.qr,
+      upiLink: res.data.upiLink,
+      orderId: res.data.orderId,
+      amount: total, // 👈 UPDATED AMOUNT
+      bookingId: booking.id,
+      agreement: includeAgreement
+    });
+
+  } catch (err) {
+    console.error("PAYMENT ERROR:", err);
+    setError(err.message || "Payment initialization failed");
+  } finally {
+    setPayingId(null);
+  }
+}, []);
 
   // Submit payment - I HAVE PAID button
   const submitPayment = useCallback(async () => {
