@@ -1,41 +1,20 @@
 {
-  "id": "/",
-  "name": "Nepxall – Smart PG Booking",
-  "short_name": "Nepxall",
-  "description": "Find PG, Coliving & Rooms. Book instantly with secure payments.",
-  "start_url": "/",
-  "scope": "/",
-  "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#f8fafc",
-  "theme_color": "#0f172a",
-
-  "icons": [
+  "routes": [
+    {
+      "src": "/manifest.json",
+      "dest": "/manifest.json"
+    },
     {
       "src": "/logo192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "dest": "/logo192.png"
     },
     {
       "src": "/logo512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-
-  "screenshots": [
-    {
-      "src": "/screenshot-mobile.png",
-      "sizes": "540x720",
-      "type": "image/png"
+      "dest": "/logo512.png"
     },
     {
-      "src": "/screenshot-desktop.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide"
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
