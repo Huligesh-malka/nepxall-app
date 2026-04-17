@@ -121,12 +121,9 @@ const PhoneLogin = () => {
     else navigate("/");
   };
 
-  /* ================= CHECK IF USER NEEDS NAME (FIXED WITH DELAY TO AVOID RACE CONDITION) ================= */
   const checkIfNeedsName = async (firebaseUserObj) => {
   try {
     const idToken = await firebaseUserObj.getIdToken(true);
-
-    console.log("🔥 TOKEN:", idToken); // ADD THIS
 
     const res = await userAPI.post("/auth/firebase", {
       idToken,
@@ -134,11 +131,15 @@ const PhoneLogin = () => {
       phone: phone
     });
 
-    console.log("✅ FULL RESPONSE:", res.data); // ADD THIS
+    console.log("✅ FULL RESPONSE:", res.data);
 
-    if (res.data.needsName === true) {
+    // 🔥 IMPORTANT FIX
+    if (res.data.needsName === true || !res.data.name) {
+      console.log("🚀 Redirecting to Name Step");
+
       setNeedsNameFlow(true);
 
+      // 🔥 FORCE UI UPDATE
       setTimeout(() => {
         setStep(3);
         setActiveStep(2);
@@ -150,11 +151,16 @@ const PhoneLogin = () => {
     return false;
 
   } catch (err) {
-    console.error("❌ NEEDS NAME ERROR:", err?.response?.data || err);
-    return false;
+    console.error("❌ ERROR:", err);
+
+    // 🔥 FALLBACK (VERY IMPORTANT)
+    setNeedsNameFlow(true);
+    setStep(3);
+    setActiveStep(2);
+
+    return true;
   }
 };
-
   /* ================= SEND OTP ================= */
   const sendOtp = async () => {
     const cleanPhone = phone.replace(/\D/g, "");
