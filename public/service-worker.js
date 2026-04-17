@@ -1,50 +1,25 @@
-const CACHE_NAME = "nepxall-cache-v2"; // 🔥 change version
+const CACHE_NAME = "nepxall-cache-v3";
 
-const urlsToCache = [
-  "/",
-  "/index.html",
-  "/manifest.json",
-  "/logo192.png",
-  "/logo512.png"
-];
-
-// INSTALL
 self.addEventListener("install", (event) => {
-  console.log("✅ SW Installing...");
-  self.skipWaiting(); // 🔥 important
-
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
-  );
+  self.skipWaiting();
 });
 
-// ACTIVATE
 self.addEventListener("activate", (event) => {
-  console.log("✅ SW Activated");
-
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
-            console.log("🗑️ Removing old cache:", key);
             return caches.delete(key);
           }
         })
       )
     )
   );
-
-  self.clients.claim(); // 🔥 important
+  self.clients.claim();
 });
 
-// FETCH (Network first strategy)
+// ✅ ONLY NETWORK FIRST (no broken cache)
 self.addEventListener("fetch", (event) => {
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        return response;
-      })
-      .catch(() => caches.match(event.request))
-  );
+  event.respondWith(fetch(event.request));
 });
