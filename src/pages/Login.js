@@ -37,6 +37,7 @@ const PhoneLogin = () => {
   const [name, setName] = useState("");
   const [confirmObj, setConfirmObj] = useState(null);
   const [firebaseUser, setFirebaseUser] = useState(null);
+  const [otpVerified, setOtpVerified] = useState(false);
 
   // UI states
   const [loading, setLoading] = useState(false);
@@ -66,17 +67,16 @@ const PhoneLogin = () => {
 
   /* ================= AUTO REDIRECT (FIXED - BLOCKS WHEN NAME FLOW ACTIVE) ================= */
 useEffect(() => {
+  if (otpVerified) return; // 🔥 BLOCK DURING OTP FLOW
+
   if (!authLoading && user && authRole) {
 
-    // ✅ BLOCK redirect if name is missing
     if (!user.name) return;
-
-    // ✅ ALSO block if name flow active
     if (needsNameFlow) return;
 
     redirect(authRole);
   }
-}, [user, authRole, authLoading, needsNameFlow]);
+}, [user, authRole, authLoading, needsNameFlow, otpVerified]);
 
   /* ================= LANGUAGE ================= */
   useEffect(() => {
@@ -205,11 +205,17 @@ return false;
       setError("");
 
       const result = await confirmObj.confirm(otp);
-      setFirebaseUser(result.user);
+
+// 🔥 LOCK FLOW IMMEDIATELY
+setOtpVerified(true);
+
+setFirebaseUser(result.user);
+
+await checkIfNeedsName(result.user);
       
       // 🔥 CRITICAL FIX: Wait for checkIfNeedsName to complete before anything else
       // This ensures needsNameFlow is set BEFORE any auto-redirect can happen
-      await checkIfNeedsName(result.user);
+      
 
     } catch (err) {
       console.error("Verify OTP error:", err);
