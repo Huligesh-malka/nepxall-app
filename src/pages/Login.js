@@ -48,6 +48,7 @@ const PhoneLogin = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [isResending, setIsResending] = useState(false);
+  const [needsNameFlow, setNeedsNameFlow] = useState(false); // 🔥 NEW STATE
 
   const navigate = useNavigate();
 
@@ -63,13 +64,13 @@ const PhoneLogin = () => {
     tap: { scale: 0.98 }
   };
 
-  /* ================= AUTO REDIRECT ================= */
+  /* ================= AUTO REDIRECT (FIXED) ================= */
   useEffect(() => {
-    // Only redirect if user is fully authenticated and doesn't need name
-    if (!authLoading && user && authRole && step !== 3) {
+    // ✅ Only redirect if user is fully authenticated and NOT in name collection flow
+    if (!authLoading && user && authRole && !needsNameFlow) {
       redirect(authRole);
     }
-  }, [user, authRole, authLoading, step]);
+  }, [user, authRole, authLoading, needsNameFlow]);
 
   /* ================= LANGUAGE ================= */
   useEffect(() => {
@@ -126,6 +127,8 @@ const PhoneLogin = () => {
       console.log("Check needs name response:", res.data);
       
       if (res.data.needsName === true) {
+        // 🔥 Set needsNameFlow flag to block auto-redirect
+        setNeedsNameFlow(true);
         // User needs to provide name
         setStep(3);
         setActiveStep(2);
@@ -227,6 +230,8 @@ const PhoneLogin = () => {
       console.log("Registration complete response:", res.data);
 
       if (res.data.success) {
+        // 🔥 Reset needsNameFlow flag after successful registration
+        setNeedsNameFlow(false);
         setSnackbarMessage(`Welcome ${name.trim()}! Your account has been created.`);
         setSnackbarOpen(true);
         
@@ -259,6 +264,7 @@ const PhoneLogin = () => {
     setOtp("");
     setError("");
     setActiveStep(0);
+    setNeedsNameFlow(false); // Reset name flow flag
   };
 
   // Steps for stepper
