@@ -1,20 +1,21 @@
 {
-  "routes": [
-    {
-      "src": "/manifest.json",
-      "dest": "/manifest.json"
-    },
+  "id": "/",
+  "name": "Nepxall – Smart PG Booking",
+  "short_name": "Nepxall",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f172a",
+  "icons": [
     {
       "src": "/logo192.png",
-      "dest": "/logo192.png"
+      "sizes": "192x192",
+      "type": "image/png"
     },
     {
       "src": "/logo512.png",
-      "dest": "/logo512.png"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "sizes": "512x512",
+      "type": "image/png"
     }
   ]
 }
