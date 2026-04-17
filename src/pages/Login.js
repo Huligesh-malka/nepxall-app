@@ -65,19 +65,18 @@ const PhoneLogin = () => {
   };
 
   /* ================= AUTO REDIRECT (FIXED - BLOCKS WHEN NAME FLOW ACTIVE) ================= */
-  useEffect(() => {
-    // ✅ CRITICAL FIX: Only redirect if user is fully authenticated 
-    // AND not in name collection flow AND step is not 3 (name step)
-    if (!authLoading && user && authRole) {
-      // ❌ STOP redirect if step 3 (name step) - prevents race condition
-      if (step === 3) return;
-      
-      // Only redirect if name flow is not active
-      if (!needsNameFlow) {
-        redirect(authRole);
-      }
-    }
-  }, [user, authRole, authLoading, needsNameFlow, step]);
+useEffect(() => {
+  if (!authLoading && user && authRole) {
+
+    // ✅ BLOCK redirect if name is missing
+    if (!user.name) return;
+
+    // ✅ ALSO block if name flow active
+    if (needsNameFlow) return;
+
+    redirect(authRole);
+  }
+}, [user, authRole, authLoading, needsNameFlow]);
 
   /* ================= LANGUAGE ================= */
   useEffect(() => {
