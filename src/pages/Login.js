@@ -231,28 +231,35 @@ const PhoneLogin = () => {
       setLoading(true);
       setError("");
 
-      const idToken = await firebaseUser.getIdToken(true);
-      
-      const res = await userAPI.post("/auth/firebase", {
-        idToken,
-        role: "tenant",
-        name: name.trim(),
-        phone: phone
-      });
+      const token = localStorage.getItem("token");
 
-      console.log("Registration complete response:", res.data);
+const res = await userAPI.post(
+  "/auth/register",
+  {
+    name: name.trim(),
+    phone: phone
+  },
+  {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  }
+);
 
-      if (res.data.success) {
-        // 🔥 Reset needsNameFlow flag after successful registration
-        setNeedsNameFlow(false);
-        setSnackbarMessage(`Welcome ${name.trim()}! Your account has been created.`);
-        setSnackbarOpen(true);
-        
-        // Redirect after successful registration
-        setTimeout(() => redirect(res.data.user?.role || "tenant"), 1500);
-      } else {
-        setError(res.data.message || "Registration failed");
-      }
+console.log("Registration complete response:", res.data);
+
+if (res.data.success) {
+  setNeedsNameFlow(false);
+
+  setSnackbarMessage(`Welcome ${name.trim()}! Your account has been created.`);
+  setSnackbarOpen(true);
+
+  setTimeout(() => {
+    navigate("/"); // or redirect based on role
+  }, 1500);
+} else {
+  setError(res.data.message || "Registration failed");
+}
 
     } catch (err) {
       console.error("Complete registration error:", err);
