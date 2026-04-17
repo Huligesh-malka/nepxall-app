@@ -38,6 +38,7 @@ const PhoneLogin = () => {
   const [confirmObj, setConfirmObj] = useState(null);
   const [firebaseUser, setFirebaseUser] = useState(null);
   const [otpVerified, setOtpVerified] = useState(false);
+  const [loginCompleted, setLoginCompleted] = useState(false);
 
   // UI states
   const [loading, setLoading] = useState(false);
@@ -69,8 +70,8 @@ const PhoneLogin = () => {
 useEffect(() => {
   if (!authLoading && user && authRole) {
 
-    // 🔥 HARD BLOCK DURING LOGIN FLOW
-    if (otpVerified || needsNameFlow) return;
+    // 🔥 HARD BLOCK → prevents second OTP flow
+    if (loginCompleted) return;
 
     if (!user.name) return;
 
@@ -202,18 +203,20 @@ return false;
     setLoading(true);
     setError("");
 
-    setOtpVerified(true); // 🔥 FIRST LOCK UI
-
     const result = await confirmObj.confirm(otp);
 
     setFirebaseUser(result.user);
+
+    setOtpVerified(true);
+    setLoginCompleted(true); // 🔥 MAIN LOCK
 
     await checkIfNeedsName(result.user);
 
   } catch (err) {
     console.error("Verify OTP error:", err);
     setError("Invalid OTP. Please try again.");
-    setOtpVerified(false); // 🔥 reset if failed
+    setOtpVerified(false);
+    setLoginCompleted(false);
   } finally {
     setLoading(false);
   }
@@ -256,6 +259,7 @@ console.log("Registration complete response:", res.data);
 if (res.data.success) {
   setNeedsNameFlow(false);
   setOtpVerified(false); 
+  setLoginCompleted(false);
 
   setSnackbarMessage(`Welcome ${name.trim()}! Your account has been created.`);
   setSnackbarOpen(true);
