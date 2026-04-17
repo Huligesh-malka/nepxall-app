@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   Box, TextField, Button, Typography, Paper,
   CircularProgress, Alert, Fade, Grow, Zoom,
-  InputAdornment, IconButton, alpha, useTheme,
+  InputAdornment, alpha, useTheme,
   Stepper, Step, StepLabel,
   Avatar, Chip, Backdrop, Snackbar
 } from "@mui/material";
@@ -43,7 +43,6 @@ const PhoneLogin = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [otpTimer, setOtpTimer] = useState(0);
-  const [needsName, setNeedsName] = useState(false);
   const [step, setStep] = useState(1); // 1: Phone, 2: OTP, 3: Name
   const [activeStep, setActiveStep] = useState(0);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -66,10 +65,11 @@ const PhoneLogin = () => {
 
   /* ================= AUTO REDIRECT ================= */
   useEffect(() => {
-    if (!authLoading && user && authRole && !needsName) {
+    // Only redirect if user is fully authenticated and doesn't need name
+    if (!authLoading && user && authRole && step !== 3) {
       redirect(authRole);
     }
-  }, [user, authRole, authLoading, needsName]);
+  }, [user, authRole, authLoading, step]);
 
   /* ================= LANGUAGE ================= */
   useEffect(() => {
@@ -113,51 +113,40 @@ const PhoneLogin = () => {
     else navigate("/");
   };
 
-  /* ================= BACKEND SYNC ================= */
-  const syncUser = async (firebaseUserObj, userName = null) => {
+  /* ================= CHECK IF USER NEEDS NAME ================= */
+  const checkIfNeedsName = async (firebaseUserObj) => {
     try {
-      setLoading(true);
-      setError("");
-
       const idToken = await firebaseUserObj.getIdToken(true);
-
       const res = await userAPI.post("/auth/firebase", {
         idToken,
         role: "tenant",
-        name: userName,
         phone: phone
       });
-
-      if (res.data.success) {
-        console.log("Sync response:", res.data); // Debug log
-        
-        if (res.data.needsName === true) {
-          // User needs to provide name
-          setNeedsName(true);
-          setStep(3);
-          setActiveStep(2);
-          setSnackbarMessage("Please complete your profile!");
-          setSnackbarOpen(true);
-        } else {
-          // User is complete, redirect
-          setSnackbarMessage(`Welcome ${res.data.user?.name || userName || "User"}!`);
-          setSnackbarOpen(true);
-          setTimeout(() => redirect(res.data.user?.role || "tenant"), 1500);
-        }
+      
+      console.log("Check needs name response:", res.data);
+      
+      if (res.data.needsName === true) {
+        // User needs to provide name
+        setStep(3);
+        setActiveStep(2);
+        return true;
+      } else {
+        // User already has name, redirect
+        setSnackbarMessage(`Welcome back ${res.data.user?.name || "User"}!`);
+        setSnackbarOpen(true);
+        setTimeout(() => redirect(res.data.user?.role || "tenant"), 1500);
+        return false;
       }
-
     } catch (err) {
-      console.error("Sync error:", err);
-      setError(err?.response?.data?.message || "Server error");
-      await auth.signOut();
-    } finally {
-      setLoading(false);
+      console.error("Check needs name error:", err);
+      return false;
     }
   };
 
   /* ================= SEND OTP ================= */
   const sendOtp = async () => {
-    if (phone.length !== 10) {
+    const cleanPhone = phone.replace(/\D/g, "");
+    if (cleanPhone.length !== 10) {
       return setError("Enter a valid 10-digit mobile number");
     }
 
@@ -169,7 +158,7 @@ const PhoneLogin = () => {
 
       const confirmation = await signInWithPhoneNumber(
         auth,
-        `+91${phone}`,
+        `+91${cleanPhone}`,
         window.recaptchaVerifier
       );
 
@@ -199,26 +188,7 @@ const PhoneLogin = () => {
       setFirebaseUser(result.user);
       
       // After OTP verification, check if user needs name
-      const idToken = await result.user.getIdToken(true);
-      const checkRes = await userAPI.post("/auth/firebase", {
-        idToken,
-        role: "tenant",
-        phone: phone
-      });
-
-      console.log("Verification check response:", checkRes.data); // Debug log
-
-      if (checkRes.data.needsName === true) {
-        // New user or user without name - show name collection
-        setNeedsName(true);
-        setStep(3);
-        setActiveStep(2);
-      } else {
-        // Existing user with name - redirect directly
-        setSnackbarMessage(`Welcome back ${checkRes.data.user?.name || "User"}!`);
-        setSnackbarOpen(true);
-        setTimeout(() => redirect(checkRes.data.user?.role || "tenant"), 1500);
-      }
+      await checkIfNeedsName(result.user);
 
     } catch (err) {
       console.error("Verify OTP error:", err);
@@ -236,11 +206,42 @@ const PhoneLogin = () => {
       setActiveStep(0);
       return;
     }
+    
     if (!name.trim()) {
       return setError("Please enter your full name");
     }
     
-    await syncUser(firebaseUser, name.trim());
+    try {
+      setLoading(true);
+      setError("");
+
+      const idToken = await firebaseUser.getIdToken(true);
+      
+      const res = await userAPI.post("/auth/firebase", {
+        idToken,
+        role: "tenant",
+        name: name.trim(),
+        phone: phone
+      });
+
+      console.log("Registration complete response:", res.data);
+
+      if (res.data.success) {
+        setSnackbarMessage(`Welcome ${name.trim()}! Your account has been created.`);
+        setSnackbarOpen(true);
+        
+        // Redirect after successful registration
+        setTimeout(() => redirect(res.data.user?.role || "tenant"), 1500);
+      } else {
+        setError(res.data.message || "Registration failed");
+      }
+
+    } catch (err) {
+      console.error("Complete registration error:", err);
+      setError(err?.response?.data?.message || "Server error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   /* ================= RESEND OTP ================= */
@@ -317,19 +318,6 @@ const PhoneLogin = () => {
             bottom: "-100px",
             left: "-100px",
             animation: "float2 10s ease-in-out infinite reverse",
-          }}
-        />
-        <Box
-          sx={{
-            position: "absolute",
-            width: "200px",
-            height: "200px",
-            borderRadius: "50%",
-            background: `radial-gradient(circle, ${alpha(theme.palette.success.main, 0.08)} 0%, transparent 70%)`,
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            animation: "pulse 4s ease-in-out infinite",
           }}
         />
         
@@ -455,7 +443,7 @@ const PhoneLogin = () => {
               >
                 {step === 1 && "Welcome Back!"}
                 {step === 2 && "Verify Your Number"}
-                {step === 3 && "Almost There!"}
+                {step === 3 && "Complete Your Profile"}
               </Typography>
               <Typography
                 variant="body2"
@@ -467,7 +455,7 @@ const PhoneLogin = () => {
               >
                 {step === 1 && "Enter your mobile number to get started"}
                 {step === 2 && `We've sent a 6-digit code to +91 ${phone}`}
-                {step === 3 && "Just one more step to complete your profile"}
+                {step === 3 && "Please tell us your name to continue"}
               </Typography>
             </Box>
 
@@ -592,7 +580,7 @@ const PhoneLogin = () => {
                       <Button
                         fullWidth
                         onClick={sendOtp}
-                        disabled={loading || phone.length !== 10}
+                        disabled={loading || phone.replace(/\D/g, "").length !== 10}
                         variant="contained"
                         size="large"
                         endIcon={!loading && <SendIcon />}
@@ -717,7 +705,7 @@ const PhoneLogin = () => {
                   </motion.div>
                 )}
 
-                {/* Step 3: Name Collection (Only for new users) */}
+                {/* Step 3: Name Collection (For new users only) */}
                 {step === 3 && (
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
@@ -725,7 +713,7 @@ const PhoneLogin = () => {
                     exit={{ opacity: 0, x: 20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <Box sx={{ textAlign: "center", mb: 2 }}>
+                    <Box sx={{ textAlign: "center", mb: 3 }}>
                       <Avatar
                         sx={{
                           width: 80,
@@ -739,7 +727,10 @@ const PhoneLogin = () => {
                       >
                         <EmojiEmotionsIcon sx={{ fontSize: 45 }} />
                       </Avatar>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+                        Welcome to our platform!
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
                         Please tell us your name to personalize your experience
                       </Typography>
                     </Box>
