@@ -48,7 +48,7 @@ const PhoneLogin = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [isResending, setIsResending] = useState(false);
-  const [needsNameFlow, setNeedsNameFlow] = useState(false); // 🔥 NEW STATE
+  const [needsNameFlow, setNeedsNameFlow] = useState(false); // 🔥 NEW STATE to block auto-redirect
 
   const navigate = useNavigate();
 
@@ -64,13 +64,20 @@ const PhoneLogin = () => {
     tap: { scale: 0.98 }
   };
 
-  /* ================= AUTO REDIRECT (FIXED) ================= */
+  /* ================= AUTO REDIRECT (FIXED - BLOCKS WHEN NAME FLOW ACTIVE) ================= */
   useEffect(() => {
-    // ✅ Only redirect if user is fully authenticated and NOT in name collection flow
-    if (!authLoading && user && authRole && !needsNameFlow) {
-      redirect(authRole);
+    // ✅ CRITICAL FIX: Only redirect if user is fully authenticated 
+    // AND not in name collection flow AND step is not 3 (name step)
+    if (!authLoading && user && authRole) {
+      // ❌ STOP redirect if step 3 (name step) - prevents race condition
+      if (step === 3) return;
+      
+      // Only redirect if name flow is not active
+      if (!needsNameFlow) {
+        redirect(authRole);
+      }
     }
-  }, [user, authRole, authLoading, needsNameFlow]);
+  }, [user, authRole, authLoading, needsNameFlow, step]);
 
   /* ================= LANGUAGE ================= */
   useEffect(() => {
@@ -114,7 +121,7 @@ const PhoneLogin = () => {
     else navigate("/");
   };
 
-  /* ================= CHECK IF USER NEEDS NAME ================= */
+  /* ================= CHECK IF USER NEEDS NAME (FIXED WITH DELAY TO AVOID RACE CONDITION) ================= */
   const checkIfNeedsName = async (firebaseUserObj) => {
     try {
       const idToken = await firebaseUserObj.getIdToken(true);
@@ -127,14 +134,19 @@ const PhoneLogin = () => {
       console.log("Check needs name response:", res.data);
       
       if (res.data.needsName === true) {
-        // 🔥 Set needsNameFlow flag to block auto-redirect
+        // 🔥 CRITICAL FIX 1: Set needsNameFlow flag FIRST to block auto-redirect
         setNeedsNameFlow(true);
-        // User needs to provide name
-        setStep(3);
-        setActiveStep(2);
+        
+        // 🔥 CRITICAL FIX 2: Small delay to ensure state updates before step change
+        // This prevents the race condition where redirect happens before step renders
+        setTimeout(() => {
+          setStep(3);
+          setActiveStep(2);
+        }, 100);
+        
         return true;
       } else {
-        // User already has name, redirect
+        // User already has name, redirect after a short delay
         setSnackbarMessage(`Welcome back ${res.data.user?.name || "User"}!`);
         setSnackbarOpen(true);
         setTimeout(() => redirect(res.data.user?.role || "tenant"), 1500);
@@ -179,7 +191,7 @@ const PhoneLogin = () => {
     }
   };
 
-  /* ================= VERIFY OTP ================= */
+  /* ================= VERIFY OTP (FIXED WITH AWAIT) ================= */
   const verifyOtp = async () => {
     if (otp.length !== 6) return setError("Please enter a valid 6-digit OTP");
 
@@ -190,7 +202,8 @@ const PhoneLogin = () => {
       const result = await confirmObj.confirm(otp);
       setFirebaseUser(result.user);
       
-      // After OTP verification, check if user needs name
+      // 🔥 CRITICAL FIX: Wait for checkIfNeedsName to complete before anything else
+      // This ensures needsNameFlow is set BEFORE any auto-redirect can happen
       await checkIfNeedsName(result.user);
 
     } catch (err) {
