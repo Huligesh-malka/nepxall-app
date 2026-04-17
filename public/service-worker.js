@@ -1,25 +1,18 @@
-const CACHE_NAME = "nepxall-cache-v3";
+const CACHE_NAME = "nepxall-cache-v4";
 
 self.addEventListener("install", (event) => {
+  console.log("SW Installed");
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
-      )
-    )
-  );
-  self.clients.claim();
+  console.log("SW Activated");
+  event.waitUntil(self.clients.claim());
 });
 
-// ✅ ONLY NETWORK FIRST (no broken cache)
+// ✅ REQUIRED: proper fetch handling
 self.addEventListener("fetch", (event) => {
-  event.respondWith(fetch(event.request));
+  event.respondWith(
+    fetch(event.request).catch(() => caches.match(event.request))
+  );
 });
