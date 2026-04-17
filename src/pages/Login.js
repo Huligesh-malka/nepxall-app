@@ -67,12 +67,12 @@ const PhoneLogin = () => {
 
   /* ================= AUTO REDIRECT (FIXED - BLOCKS WHEN NAME FLOW ACTIVE) ================= */
 useEffect(() => {
-  if (otpVerified) return; // 🔥 BLOCK DURING OTP FLOW
-
   if (!authLoading && user && authRole) {
 
+    // 🔥 BLOCK ALL redirect during OTP + NAME FLOW
+    if (otpVerified || needsNameFlow) return;
+
     if (!user.name) return;
-    if (needsNameFlow) return;
 
     redirect(authRole);
   }
@@ -136,10 +136,8 @@ useEffect(() => {
    if (res.data.needsName === true || !res.data.name) {
   setNeedsNameFlow(true);
 
-  setTimeout(() => {
-    setStep(3);
-    setActiveStep(2);
-  }, 100);
+  setStep(3);
+setActiveStep(2);
 
   return true;
 }
@@ -261,6 +259,7 @@ console.log("Registration complete response:", res.data);
 
 if (res.data.success) {
   setNeedsNameFlow(false);
+  setOtpVerified(false); 
 
   setSnackbarMessage(`Welcome ${name.trim()}! Your account has been created.`);
   setSnackbarOpen(true);
