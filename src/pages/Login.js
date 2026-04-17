@@ -69,14 +69,14 @@ const PhoneLogin = () => {
 useEffect(() => {
   if (!authLoading && user && authRole) {
 
-    // 🔥 BLOCK ALL redirect during OTP + NAME FLOW
+    // 🔥 HARD BLOCK DURING LOGIN FLOW
     if (otpVerified || needsNameFlow) return;
 
     if (!user.name) return;
 
     redirect(authRole);
   }
-}, [user, authRole, authLoading, needsNameFlow, otpVerified]);
+}, [user, authRole, authLoading]);
 
   /* ================= LANGUAGE ================= */
   useEffect(() => {
@@ -195,33 +195,29 @@ return false;
   };
 
   /* ================= VERIFY OTP (FIXED WITH AWAIT) ================= */
-  const verifyOtp = async () => {
-    if (otp.length !== 6) return setError("Please enter a valid 6-digit OTP");
+ const verifyOtp = async () => {
+  if (otp.length !== 6) return setError("Please enter a valid 6-digit OTP");
 
-    try {
-      setLoading(true);
-      setError("");
+  try {
+    setLoading(true);
+    setError("");
 
-      const result = await confirmObj.confirm(otp);
+    setOtpVerified(true); // 🔥 FIRST LOCK UI
 
-// 🔥 LOCK FLOW IMMEDIATELY
-setOtpVerified(true);
+    const result = await confirmObj.confirm(otp);
 
-setFirebaseUser(result.user);
+    setFirebaseUser(result.user);
 
-await checkIfNeedsName(result.user);
-      
-      // 🔥 CRITICAL FIX: Wait for checkIfNeedsName to complete before anything else
-      // This ensures needsNameFlow is set BEFORE any auto-redirect can happen
-      
+    await checkIfNeedsName(result.user);
 
-    } catch (err) {
-      console.error("Verify OTP error:", err);
-      setError("Invalid OTP. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  } catch (err) {
+    console.error("Verify OTP error:", err);
+    setError("Invalid OTP. Please try again.");
+    setOtpVerified(false); // 🔥 reset if failed
+  } finally {
+    setLoading(false);
+  }
+};
 
   /* ================= COMPLETE REGISTRATION ================= */
   const completeRegistration = async () => {
