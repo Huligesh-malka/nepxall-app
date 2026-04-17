@@ -19,7 +19,7 @@ import {
 import { Phone, CheckCircle, PersonAdd, ArrowBack } from "@mui/icons-material";
 import { signInWithPhoneNumber, RecaptchaVerifier } from "firebase/auth";
 import { auth } from "../firebase";
-import api from "../api/api";
+import { userAPI } from "../api/api";
 import { useNavigate } from "react-router-dom";
 
 const steps = ["Phone Number", "Verify OTP", "Complete Profile"];
