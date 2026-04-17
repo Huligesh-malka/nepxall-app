@@ -1,4 +1,5 @@
-const CACHE_NAME = "nepxall-cache-v1";
+const CACHE_NAME = "nepxall-cache-v2"; // 🔥 change version
+
 const urlsToCache = [
   "/",
   "/index.html",
@@ -9,36 +10,41 @@ const urlsToCache = [
 
 // INSTALL
 self.addEventListener("install", (event) => {
-  console.log("✅ Service Worker installing...");
+  console.log("✅ SW Installing...");
+  self.skipWaiting(); // 🔥 important
+
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(urlsToCache);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
   );
 });
 
 // ACTIVATE
 self.addEventListener("activate", (event) => {
-  console.log("✅ Service Worker activated");
+  console.log("✅ SW Activated");
+
   event.waitUntil(
-    caches.keys().then((cacheNames) =>
+    caches.keys().then((keys) =>
       Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            console.log("🗑️ Deleting old cache:", cache);
-            return caches.delete(cache);
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            console.log("🗑️ Removing old cache:", key);
+            return caches.delete(key);
           }
         })
       )
     )
   );
+
+  self.clients.claim(); // 🔥 important
 });
 
-// FETCH
+// FETCH (Network first strategy)
 self.addEventListener("fetch", (event) => {
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
+    fetch(event.request)
+      .then((response) => {
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
