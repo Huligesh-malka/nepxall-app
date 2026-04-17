@@ -97,21 +97,23 @@ const MainLayout = () => {
           {/* SINGLE LOGOUT + INSTALL BUTTON (NO DUPLICATE) */}
           {user && (
             <div style={{ display: "flex", gap: "10px" }}>
+              {/* INSTALL BUTTON */}
               {installable && (
-                <button
+                <Button
+                  variant="contained"
                   onClick={installApp}
-                  style={{
+                  sx={{
                     background: "#2563eb",
-                    color: "white",
-                    padding: "10px 16px",
+                    "&:hover": { background: "#1d4ed8" },
                     borderRadius: "8px",
-                    border: "none",
-                    cursor: "pointer"
+                    fontWeight: 600
                   }}
                 >
                   📲 Install App
-                </button>
+                </Button>
               )}
+
+              {/* LOGOUT */}
               <Button variant="contained" color="error" onClick={handleLogout}>
                 Logout
               </Button>

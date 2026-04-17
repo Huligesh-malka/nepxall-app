@@ -1,35 +1,35 @@
 import { useEffect, useState } from "react";
 
 export const useInstallPrompt = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [installable, setInstallable] = useState(false);
+  const [promptEvent, setPromptEvent] = useState(null);
 
   useEffect(() => {
     const handler = (e) => {
       e.preventDefault(); // stop auto popup
-      console.log("🔥 Install available");
+      console.log("✅ Install prompt captured");
 
-      setDeferredPrompt(e);
+      setPromptEvent(e);
       setInstallable(true);
     };
 
     window.addEventListener("beforeinstallprompt", handler);
 
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+    };
   }, []);
 
   const installApp = async () => {
-    if (!deferredPrompt) return;
+    if (!promptEvent) return;
 
-    deferredPrompt.prompt();
+    promptEvent.prompt();
 
-    const choice = await deferredPrompt.userChoice;
+    const choice = await promptEvent.userChoice;
+    console.log("User choice:", choice.outcome);
 
-    if (choice.outcome === "accepted") {
-      console.log("✅ User installed app");
-    } else {
-      console.log("❌ User dismissed install");
-    }
+    setPromptEvent(null);
+    setInstallable(false);
   };
 
   return { installable, installApp };
