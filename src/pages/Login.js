@@ -123,40 +123,37 @@ const PhoneLogin = () => {
 
   /* ================= CHECK IF USER NEEDS NAME (FIXED WITH DELAY TO AVOID RACE CONDITION) ================= */
   const checkIfNeedsName = async (firebaseUserObj) => {
-    try {
-      const idToken = await firebaseUserObj.getIdToken(true);
-      const res = await userAPI.post("/auth/firebase", {
-        idToken,
-        role: "tenant",
-        phone: phone
-      });
-      
-      console.log("Check needs name response:", res.data);
-      
-      if (res.data.needsName === true) {
-        // 🔥 CRITICAL FIX 1: Set needsNameFlow flag FIRST to block auto-redirect
-        setNeedsNameFlow(true);
-        
-        // 🔥 CRITICAL FIX 2: Small delay to ensure state updates before step change
-        // This prevents the race condition where redirect happens before step renders
-        setTimeout(() => {
-          setStep(3);
-          setActiveStep(2);
-        }, 100);
-        
-        return true;
-      } else {
-        // User already has name, redirect after a short delay
-        setSnackbarMessage(`Welcome back ${res.data.user?.name || "User"}!`);
-        setSnackbarOpen(true);
-        setTimeout(() => redirect(res.data.user?.role || "tenant"), 1500);
-        return false;
-      }
-    } catch (err) {
-      console.error("Check needs name error:", err);
-      return false;
+  try {
+    const idToken = await firebaseUserObj.getIdToken(true);
+
+    console.log("🔥 TOKEN:", idToken); // ADD THIS
+
+    const res = await userAPI.post("/auth/firebase", {
+      idToken,
+      role: "tenant",
+      phone: phone
+    });
+
+    console.log("✅ FULL RESPONSE:", res.data); // ADD THIS
+
+    if (res.data.needsName === true) {
+      setNeedsNameFlow(true);
+
+      setTimeout(() => {
+        setStep(3);
+        setActiveStep(2);
+      }, 100);
+
+      return true;
     }
-  };
+
+    return false;
+
+  } catch (err) {
+    console.error("❌ NEEDS NAME ERROR:", err?.response?.data || err);
+    return false;
+  }
+};
 
   /* ================= SEND OTP ================= */
   const sendOtp = async () => {
