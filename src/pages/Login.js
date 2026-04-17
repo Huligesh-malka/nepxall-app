@@ -1,4 +1,4 @@
-// Login.jsx - Production Ready with All Improvements
+// Login.jsx - Production Ready with All Improvements ✅
 import React, { useState, useEffect, useRef } from "react";
 import {
   Container,
@@ -16,7 +16,7 @@ import {
   Grow,
   Zoom,
 } from "@mui/material";
-import { Phone, CheckCircle, PersonAdd, ArrowBack } from "@mui/icons-material";
+import { Phone, PersonAdd, ArrowBack } from "@mui/icons-material";
 import { signInWithPhoneNumber, RecaptchaVerifier } from "firebase/auth";
 import { auth } from "../firebase";
 import { userAPI } from "../api/api";
@@ -123,13 +123,14 @@ const Login = () => {
       // Get fresh ID token
       const idToken = await user.getIdToken(true);
 
-      // ALWAYS CHECK BACKEND FOR USER STATUS
+      // ✅ Backend check (name is optional here)
       const checkResponse = await userAPI.post("/auth/firebase", {
         idToken,
-        // Role is NOT sent from frontend - backend decides!
+        // No name sent here - backend handles this correctly
       });
 
-      // If user has no name → ask for name
+      // ✅ If user has no name → ask for name (Step 2)
+      // ✅ If user has name → redirect immediately
       if (!checkResponse.data.user?.name) {
         setActiveStep(2);
       } else {
@@ -158,7 +159,7 @@ const Login = () => {
     try {
       const idToken = await firebaseUser.getIdToken(true);
 
-      // Create user with name (role is set by backend)
+      // ✅ Send name to backend - backend will update or create
       const response = await userAPI.post("/auth/firebase", {
         idToken,
         name: userName.trim(),
@@ -404,7 +405,7 @@ const Login = () => {
           {activeStep === 2 && (
             <Zoom in timeout={300}>
               <Box>
-                {/* Phone Preview - User remembers which number they used */}
+                {/* Phone Preview */}
                 <Paper
                   variant="outlined"
                   sx={{
@@ -467,7 +468,7 @@ const Login = () => {
             </Fade>
           )}
 
-          {/* reCAPTCHA Container (invisible) */}
+          {/* reCAPTCHA Container */}
           <div id="recaptcha-container" />
 
           {/* Terms Note */}
