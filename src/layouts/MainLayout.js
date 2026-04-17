@@ -24,10 +24,10 @@ const MainLayout = () => {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  /* ================= APP INSTALLED EVENT ================= */
+  /* ================= INSTALL SUCCESS ================= */
   useEffect(() => {
     window.addEventListener("appinstalled", () => {
-      console.log("🎉 App installed");
+      console.log("🎉 App installed successfully");
     });
   }, []);
 
@@ -38,7 +38,6 @@ const MainLayout = () => {
       localStorage.removeItem("token");
       localStorage.removeItem("role");
       localStorage.removeItem("user_id");
-
       navigate("/login", { replace: true });
     } catch (err) {
       console.error("Logout error:", err);
@@ -54,7 +53,7 @@ const MainLayout = () => {
     );
   }
 
-  /* ================= AUTH PROTECTION ================= */
+  /* ================= AUTH ================= */
   if (!user && location.pathname !== "/login" && location.pathname !== "/register") {
     return <Navigate to="/login" replace />;
   }
@@ -66,12 +65,13 @@ const MainLayout = () => {
     return path ? path.replace("-", " ").toUpperCase() : "PAGE";
   };
 
-  /* ================= INSTALL HANDLER ================= */
-  const handleInstallClick = () => {
+  /* ================= INSTALL CLICK ================= */
+  const handleInstallClick = async () => {
     if (installable) {
-      installApp();
+      await installApp();
     } else {
-      alert("👉 Tap browser menu (⋮) → 'Add to Home screen'");
+      // ❌ NO ALERT — CLEAN UX
+      console.log("Install not ready yet");
     }
   };
 
@@ -81,7 +81,7 @@ const MainLayout = () => {
       {/* SIDEBAR */}
       <Sidebar role={role} user={user} />
 
-      {/* MAIN CONTENT */}
+      {/* MAIN */}
       <div
         style={{
           marginLeft: isMobile ? 0 : 250,
@@ -89,7 +89,6 @@ const MainLayout = () => {
           width: "100%",
           minHeight: "100vh",
           background: "#f8fafc",
-          overflowX: "hidden",
         }}
       >
 
@@ -111,19 +110,19 @@ const MainLayout = () => {
           {user && (
             <div style={{ display: "flex", gap: "10px" }}>
 
-              {/* ✅ ALWAYS SHOW INSTALL BUTTON */}
+              {/* ✅ ALWAYS VISIBLE INSTALL BUTTON */}
               <button
                 onClick={handleInstallClick}
                 style={{
-                  background: "#2563eb",
+                  background: installable ? "#2563eb" : "#94a3b8",
                   color: "white",
                   padding: "10px 16px",
                   borderRadius: "8px",
                   border: "none",
-                  cursor: "pointer"
+                  cursor: installable ? "pointer" : "not-allowed"
                 }}
               >
-                📲 Install App
+                📲 {installable ? "Install App" : "Preparing..."}
               </button>
 
               {/* LOGOUT */}
@@ -135,7 +134,7 @@ const MainLayout = () => {
           )}
         </Box>
 
-        {/* PAGE CONTENT */}
+        {/* CONTENT */}
         <Outlet />
       </div>
     </div>
