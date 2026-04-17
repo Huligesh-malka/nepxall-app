@@ -18,7 +18,7 @@ import {
 } from "@mui/material";
 import { Phone, CheckCircle, PersonAdd, ArrowBack } from "@mui/icons-material";
 import { signInWithPhoneNumber, RecaptchaVerifier } from "firebase/auth";
-import { auth } from "../firebase/config";
+import { auth } from "../firebase";
 import userAPI from "../services/userAPI";
 import { useNavigate } from "react-router-dom";
 
