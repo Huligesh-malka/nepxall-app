@@ -133,21 +133,24 @@ useEffect(() => {
     console.log("✅ FULL RESPONSE:", res.data);
 
     // 🔥 IMPORTANT FIX
-    if (res.data.needsName === true || !res.data.name) {
-      console.log("🚀 Redirecting to Name Step");
+   if (res.data.needsName === true || !res.data.name) {
+  setNeedsNameFlow(true);
 
-      setNeedsNameFlow(true);
+  setTimeout(() => {
+    setStep(3);
+    setActiveStep(2);
+  }, 100);
 
-      // 🔥 FORCE UI UPDATE
-      setTimeout(() => {
-        setStep(3);
-        setActiveStep(2);
-      }, 100);
+  return true;
+}
 
-      return true;
-    }
+// ✅ ADD THIS (MAIN FIX)
+setNeedsNameFlow(false);
 
-    return false;
+// 🔥 REDIRECT EXISTING USER
+redirect(res.data.role);
+
+return false;
 
   } catch (err) {
     console.error("❌ ERROR:", err);
