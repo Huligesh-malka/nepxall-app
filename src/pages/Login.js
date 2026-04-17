@@ -3,20 +3,18 @@ import {
   Box, TextField, Button, Typography, Paper,
   CircularProgress, Alert, Fade, Grow, Zoom,
   InputAdornment, IconButton, alpha, useTheme,
-  Stepper, Step, StepLabel, StepContent,
+  Stepper, Step, StepLabel,
   Avatar, Chip, Backdrop, Snackbar
 } from "@mui/material";
 import {
   Phone as PhoneIcon,
   Lock as LockIcon,
   Person as PersonIcon,
-  ArrowForward as ArrowForwardIcon,
   CheckCircle as CheckCircleIcon,
   Smartphone as SmartphoneIcon,
   Send as SendIcon,
   VerifiedUser as VerifiedUserIcon,
   EmojiEmotions as EmojiEmotionsIcon,
-  Edit as EditIcon,
   Security as SecurityIcon,
   Speed as SpeedIcon,
   Stars as StarsIcon,
@@ -50,6 +48,7 @@ const PhoneLogin = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [isResending, setIsResending] = useState(false);
 
   const navigate = useNavigate();
 
@@ -74,7 +73,9 @@ const PhoneLogin = () => {
 
   /* ================= LANGUAGE ================= */
   useEffect(() => {
-    auth.useDeviceLanguage();
+    if (auth) {
+      auth.useDeviceLanguage();
+    }
   }, []);
 
   /* ================= OTP TIMER ================= */
@@ -128,19 +129,25 @@ const PhoneLogin = () => {
       });
 
       if (res.data.success) {
-        setSnackbarMessage(`Welcome ${res.data.user?.name || userName || "User"}!`);
-        setSnackbarOpen(true);
+        console.log("Sync response:", res.data); // Debug log
         
-        if (res.data.needsName) {
+        if (res.data.needsName === true) {
+          // User needs to provide name
           setNeedsName(true);
           setStep(3);
           setActiveStep(2);
+          setSnackbarMessage("Please complete your profile!");
+          setSnackbarOpen(true);
         } else {
+          // User is complete, redirect
+          setSnackbarMessage(`Welcome ${res.data.user?.name || userName || "User"}!`);
+          setSnackbarOpen(true);
           setTimeout(() => redirect(res.data.user?.role || "tenant"), 1500);
         }
       }
 
     } catch (err) {
+      console.error("Sync error:", err);
       setError(err?.response?.data?.message || "Server error");
       await auth.signOut();
     } finally {
@@ -173,6 +180,7 @@ const PhoneLogin = () => {
       setActiveStep(1);
 
     } catch (err) {
+      console.error("Send OTP error:", err);
       setError("Failed to send OTP. Please check your internet connection and try again.");
     } finally {
       setLoading(false);
@@ -187,26 +195,33 @@ const PhoneLogin = () => {
       setLoading(true);
       setError("");
 
-      const res = await confirmObj.confirm(otp);
-      setFirebaseUser(res.user);
+      const result = await confirmObj.confirm(otp);
+      setFirebaseUser(result.user);
       
-      // Check if user needs name from backend
-      const idToken = await res.user.getIdToken(true);
+      // After OTP verification, check if user needs name
+      const idToken = await result.user.getIdToken(true);
       const checkRes = await userAPI.post("/auth/firebase", {
         idToken,
         role: "tenant",
         phone: phone
       });
 
-      if (checkRes.data.needsName) {
+      console.log("Verification check response:", checkRes.data); // Debug log
+
+      if (checkRes.data.needsName === true) {
+        // New user or user without name - show name collection
         setNeedsName(true);
         setStep(3);
         setActiveStep(2);
       } else {
-        await syncUser(res.user);
+        // Existing user with name - redirect directly
+        setSnackbarMessage(`Welcome back ${checkRes.data.user?.name || "User"}!`);
+        setSnackbarOpen(true);
+        setTimeout(() => redirect(checkRes.data.user?.role || "tenant"), 1500);
       }
 
-    } catch {
+    } catch (err) {
+      console.error("Verify OTP error:", err);
       setError("Invalid OTP. Please try again.");
     } finally {
       setLoading(false);
@@ -215,8 +230,15 @@ const PhoneLogin = () => {
 
   /* ================= COMPLETE REGISTRATION ================= */
   const completeRegistration = async () => {
-    if (!firebaseUser) return;
-    if (!name.trim()) return setError("Please enter your full name");
+    if (!firebaseUser) {
+      setError("Session expired. Please try again.");
+      setStep(1);
+      setActiveStep(0);
+      return;
+    }
+    if (!name.trim()) {
+      return setError("Please enter your full name");
+    }
     
     await syncUser(firebaseUser, name.trim());
   };
@@ -237,8 +259,6 @@ const PhoneLogin = () => {
     setError("");
     setActiveStep(0);
   };
-
-  const [isResending, setIsResending] = useState(false);
 
   // Steps for stepper
   const steps = ['Mobile Number', 'Verify OTP', 'Complete Profile'];
@@ -349,9 +369,6 @@ const PhoneLogin = () => {
               0%, 100% { transform: translateX(0); }
               25% { transform: translateX(-5px); }
               75% { transform: translateX(5px); }
-            }
-            .shake-animation {
-              animation: shake 0.3s ease-in-out;
             }
           `}
         </style>
@@ -700,7 +717,7 @@ const PhoneLogin = () => {
                   </motion.div>
                 )}
 
-                {/* Step 3: Name Collection (Only when needed) */}
+                {/* Step 3: Name Collection (Only for new users) */}
                 {step === 3 && (
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
