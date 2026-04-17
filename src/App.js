@@ -23,6 +23,7 @@ import UserPGSearch from "./pages/UserPGSearch";
 import PGDetails from "./pages/PGDetails";
 import BookingForm from "./pages/BookingForm";
 import UserBookingHistory from "./pages/UserBookingHistory";   
+import BecomeOwner from "./pages/BecomeOwner"; // 🔥 top import
 import UserAgreements from "./pages/UserAgreements";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentPage from "./pages/PaymentPage";
@@ -54,6 +55,7 @@ import EditPG from "./pages/EditPG";
 import OwnerRooms from "./pages/OwnerRooms";
 import OwnerBookings from "./pages/OwnerBookings";
 import OwnerPGPhotos from "./pages/OwnerPGPhotos";
+
 import OwnerPGVideos from "./pages/OwnerPGVideos";
 import OwnerReviewReply from "./pages/OwnerReviewReply";
 import OwnerNotifications from "./pages/OwnerNotifications";
@@ -134,6 +136,8 @@ function App() {
       <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
         <Route path="/booking/:pgId" element={<BookingForm />} />
         <Route path="/user/bookings" element={<UserBookingHistory />} />
+        <Route path="/become-owner" element={<BecomeOwner />} />
+
         <Route path="/user/agreements" element={<UserAgreements />} />
         <Route path="/user/services/:bookingId" element={<ServicesPage />} />
         <Route path="/payment-success" element={<PaymentSuccess />} />
