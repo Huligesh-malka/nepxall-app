@@ -211,17 +211,10 @@ const AdminPayments = () => {
                 const displayName = p.reg_name || "Guest User";
                 const displayPhone = p.reg_phone || "N/A";
                 
-                // ✅ FIX 1: CORRECT BUTTON LOGIC
                 const isApproved = p.status === "paid" || p.status === "confirmed";
                 const isRejected = p.status === "rejected";
                 const isProcessing = processing === p.order_id;
-                
-                // ✅ Approve disabled only if already approved OR processing
-                // (Allows re-approve after reject)
                 const isApproveDisabled = isApproved || isProcessing;
-                
-                // ✅ Reject disabled only if already rejected OR processing
-                // (Allows reject after approve/paid)
                 const isRejectDisabled = isRejected || isProcessing;
                 
                 return (
@@ -250,15 +243,19 @@ const AdminPayments = () => {
                       />
                     </TableCell>
                     
-                    {/* ✅ UPDATED AMOUNT CELL WITH AGREEMENT BADGE */}
+                    {/* ✅ UPDATED AMOUNT CELL WITH IMPROVED AGREEMENT BADGE */}
                     <TableCell>
                       <Typography fontWeight="800" color={DARK_TEXT}>
                         ₹{p.total_amount || p.amount}
                       </Typography>
 
-                      {/* ✅ AGREEMENT BADGE */}
+                      {/* ✅ IMPROVED AGREEMENT BADGE - CLEAR WHO PAID */}
                       <Chip
-                        label={p.agreement_paid === 1 ? "Agreement Paid" : "Agreement Not Paid"}
+                        label={
+                          p.agreement_paid === 1
+                            ? "✅ Agreement Paid by User"
+                            : "❌ Agreement Not Paid"
+                        }
                         size="small"
                         sx={{
                           mt: 0.5,
@@ -268,10 +265,10 @@ const AdminPayments = () => {
                         }}
                       />
 
-                      {/* ✅ OPTIONAL: show +500 if paid */}
+                      {/* ✅ Show agreement amount if paid */}
                       {p.agreement_paid === 1 && (
                         <Typography variant="caption" sx={{ display: "block", color: "#16a34a", mt: 0.5 }}>
-                          + ₹500 Agreement
+                          + ₹500 Agreement Fee (Paid by User)
                         </Typography>
                       )}
                     </TableCell>
@@ -349,7 +346,6 @@ const AdminPayments = () => {
                           </Tooltip>
                         )}
 
-                        {/* ✅ FIX 2: DYNAMIC BUTTON TEXT */}
                         <Button
                           variant="contained"
                           color="success"
@@ -366,7 +362,6 @@ const AdminPayments = () => {
                           }
                         </Button>
                         
-                        {/* Reject Button - Disabled only if already rejected */}
                         <Button
                           variant="outlined"
                           color="error"
@@ -414,7 +409,7 @@ const AdminPayments = () => {
         </Table>
       </Paper>
 
-      {/* HIDDEN RECEIPT COMPONENT FOR PDF GENERATION */}
+      {/* HIDDEN RECEIPT COMPONENT FOR PDF GENERATION - UPDATED WITH FULL BREAKDOWN */}
       {selectedPayment && (
         <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
           <div ref={receiptRef} style={modernReceiptContainer}>
@@ -457,36 +452,104 @@ const AdminPayments = () => {
               </div>
             </div>
 
+            {/* 🔥 UPDATED TABLE CONTAINER WITH FULL BREAKDOWN */}
             <div style={tableContainer}>
               <div style={{ ...tableHeader, background: BRAND_BLUE }}>
                 <span>DESCRIPTION</span>
-                <span>TOTAL</span>
+                <span>AMOUNT (₹)</span>
               </div>
 
-              {selectedPayment.rent_amount > 0 && (
+              {/* RENT */}
+              {(selectedPayment.rent_amount > 0 || selectedPayment.rent_amount) && (
                 <div style={tableRow}>
-                  <span>Room Rent ({selectedPayment.sharing})</span>
-                  <span>₹{selectedPayment.rent_amount}</span>
+                  <span>Room Rent ({selectedPayment.sharing || 'N/A'} Sharing)</span>
+                  <span>₹{selectedPayment.rent_amount || 0}</span>
                 </div>
               )}
 
-              {selectedPayment.maintenance_amount > 0 && (
+              {/* MAINTENANCE */}
+              {(selectedPayment.maintenance_amount > 0 || selectedPayment.maintenance_amount) && (
                 <div style={tableRow}>
                   <span>Maintenance Charges</span>
-                  <span>₹{selectedPayment.maintenance_amount}</span>
+                  <span>₹{selectedPayment.maintenance_amount || 0}</span>
                 </div>
               )}
 
-              {selectedPayment.security_deposit > 0 && (
+              {/* SECURITY DEPOSIT */}
+              {(selectedPayment.security_deposit > 0 || selectedPayment.security_deposit) && (
                 <div style={tableRow}>
                   <span>Security Deposit</span>
-                  <span>₹{selectedPayment.security_deposit}</span>
+                  <span>₹{selectedPayment.security_deposit || 0}</span>
                 </div>
               )}
 
-              <div style={{ ...tableRow, borderBottom: `2px solid ${BRAND_BLUE}`, fontWeight: "bold", background: "#f8fafc" }}>
-                <span>NET AMOUNT RECEIVED</span>
+              {/* 🔥 AGREEMENT CHARGES - ONLY IF PAID BY USER */}
+              {selectedPayment.agreement_paid === 1 && (
+                <div style={{ ...tableRow, backgroundColor: "#f0fdf4", borderLeft: `3px solid ${BRAND_GREEN}` }}>
+                  <span>
+                    <strong>📄 Agreement Charges</strong>
+                    <span style={{ fontSize: "11px", color: "#16a34a", display: "block" }}>(Paid by User)</span>
+                  </span>
+                  <span><strong>₹500</strong></span>
+                </div>
+              )}
+
+              {/* PLATFORM FEE (if you have it) */}
+              {selectedPayment.platform_fee > 0 && (
+                <div style={tableRow}>
+                  <span>Platform Fee</span>
+                  <span>₹{selectedPayment.platform_fee}</span>
+                </div>
+              )}
+
+              {/* DIVIDER */}
+              <div style={{ height: "1px", backgroundColor: "#e5e7eb", margin: "10px 0" }}></div>
+
+              {/* TOTAL PAID BY USER */}
+              <div style={{
+                ...tableRow,
+                fontWeight: "bold",
+                fontSize: "16px",
+                background: "#f8fafc"
+              }}>
+                <span>TOTAL PAID BY USER</span>
                 <span>₹{selectedPayment.total_amount || selectedPayment.amount}</span>
+              </div>
+
+              {/* 🔥 OWNER VS ADMIN SPLIT (POWERFUL) */}
+              <div style={{ marginTop: "20px", padding: "16px", background: "#f8fafc", borderRadius: "8px" }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1, color: DARK_TEXT }}>
+                  💰 PAYMENT DISTRIBUTION
+                </Typography>
+                
+                <div style={{ fontSize: "14px", color: "#4b5563", borderBottom: "1px solid #e5e7eb", paddingBottom: "8px", marginBottom: "8px" }}>
+                  <span>Owner Receives:</span>
+                  <span style={{ float: "right", fontWeight: "bold" }}>
+                    ₹{(selectedPayment.rent_amount || 0) + 
+                       (selectedPayment.security_deposit || 0) + 
+                       (selectedPayment.maintenance_amount || 0)}
+                  </span>
+                </div>
+                
+                {selectedPayment.agreement_paid === 1 && (
+                  <div style={{ fontSize: "14px", color: "#16a34a", fontWeight: "bold" }}>
+                    <span>🏢 Admin Earnings (Agreement Fee):</span>
+                    <span style={{ float: "right" }}>₹500</span>
+                  </div>
+                )}
+                
+                {selectedPayment.platform_fee > 0 && (
+                  <div style={{ fontSize: "14px", color: "#6b7280" }}>
+                    <span>Platform Fee:</span>
+                    <span style={{ float: "right" }}>₹{selectedPayment.platform_fee}</span>
+                  </div>
+                )}
+
+                {!selectedPayment.agreement_paid !== 1 && (
+                  <div style={{ fontSize: "13px", color: "#dc2626", marginTop: "8px", fontStyle: "italic" }}>
+                    ⚠️ Note: Agreement fee not collected from user
+                  </div>
+                )}
               </div>
             </div>
 
@@ -531,7 +594,7 @@ const dateText = { fontSize: "13px", color: "#6b7280", margin: "5px 0" };
 const amountDisplay = { fontSize: "32px", fontWeight: "900", color: "#111827", marginTop: "10px" };
 const tableContainer = { marginTop: "20px" };
 const tableHeader = { display: "flex", justifyContent: "space-between", padding: "16px", color: "#fff", borderRadius: "10px 10px 0 0", fontWeight: "bold", fontSize: "14px" };
-const tableRow = { display: "flex", justifyContent: "space-between", padding: "18px 16px", borderBottom: "1px solid #e5e7eb", fontSize: "15px" };
+const tableRow = { display: "flex", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid #e5e7eb", fontSize: "14px" };
 const footerNote = { marginTop: "80px", textAlign: "center", color: "#9ca3af", fontSize: "13px" };
 
 export default AdminPayments;
