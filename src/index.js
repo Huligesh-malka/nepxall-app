@@ -24,7 +24,7 @@ root.render(
   </React.StrictMode>
 );
 
-// ✅ ENABLE SERVICE WORKER
-serviceWorkerRegistration.unregister();
+
+
 
 reportWebVitals();
