@@ -8,7 +8,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import api from "../api/api";
 
-// Import icons from lucide-react for consistency with search page
+// Import icons from lucide-react
 import {
   X,
   MapPin,
@@ -65,19 +65,17 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
-// Base URL for images (from env, remove /api suffix)
+// Base URL for images
 const BASE_URL = process.env.REACT_APP_API_URL?.replace("/api", "") || "https://nepxall-backend.onrender.com";
 
-// FIXED: Helper function to get correct image URL
+// Helper function to get correct image URL
 const getCorrectImageUrl = (photo) => {
   if (!photo) return null;
   
-  // If it's already a full URL
   if (photo.startsWith('http')) {
     return photo;
   }
   
-  // If it's a path containing /uploads/
   if (photo.includes('/uploads/')) {
     const uploadsIndex = photo.indexOf('/uploads/');
     if (uploadsIndex !== -1) {
@@ -86,7 +84,6 @@ const getCorrectImageUrl = (photo) => {
     }
   }
   
-  // If it's a path starting with /opt/render
   if (photo.includes('/opt/render/')) {
     const uploadsMatch = photo.match(/\/uploads\/.*/);
     if (uploadsMatch) {
@@ -94,7 +91,6 @@ const getCorrectImageUrl = (photo) => {
     }
   }
   
-  // Default: prepend base URL
   const normalizedPath = photo.startsWith('/') ? photo : `/${photo}`;
   return `${BASE_URL}${normalizedPath}`;
 };
@@ -120,14 +116,59 @@ const formatPrice = (price) => {
 
 const getPGCode = (id) => `PG-${String(id).padStart(5, "0")}`;
 
-/* ================= BOOKING MODAL COMPONENT ================= */
+// Get tomorrow's date for check-in
+const getTomorrowDate = () => {
+  const today = new Date();
+  today.setDate(today.getDate() + 1);
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getMaxDate = () => {
+  const max = new Date();
+  max.setMonth(max.getMonth() + 6);
+  const year = max.getFullYear();
+  const month = String(max.getMonth() + 1).padStart(2, '0');
+  const day = String(max.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/* ================= BOOKING MODAL COMPONENT (FIXED - same as search page) ================= */
 const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
   const [bookingData, setBookingData] = useState({
-    name: "",
-    phone: "",
     checkInDate: "",
-    roomType: pg?.single_sharing ? "Single Sharing" : "Single Room"
+    roomType: ""
   });
+
+  useEffect(() => {
+    const defaultRoomType = getDefaultRoomType();
+    setBookingData({
+      checkInDate: "",
+      roomType: defaultRoomType || ""
+    });
+  }, [pg]);
+
+  const getDefaultRoomType = () => {
+    if (pg?.pg_category === "pg") {
+      if (pg.single_sharing) return "Single Sharing";
+      if (pg.double_sharing) return "Double Sharing";
+      if (pg.triple_sharing) return "Triple Sharing";
+      if (pg.four_sharing) return "Four Sharing";
+      if (pg.single_room) return "Single Room";
+      if (pg.double_room) return "Double Room";
+    } else if (pg?.pg_category === "coliving") {
+      if (pg.co_living_single_room) return "Single Room";
+      if (pg.co_living_double_room) return "Double Room";
+    } else if (pg?.pg_category === "to_let") {
+      if (pg.price_1bhk) return "1BHK";
+      if (pg.price_2bhk) return "2BHK";
+      if (pg.price_3bhk) return "3BHK";
+      if (pg.price_4bhk) return "4BHK";
+    }
+    return "";
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -138,10 +179,6 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
     e.preventDefault();
     onBook(bookingData);
   };
-
-
-
-  console.log("deploy trigger");
 
   const getRoomTypes = () => {
     const types = [];
@@ -173,34 +210,58 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
       });
     } else if (pg?.pg_category === "coliving") {
       if (pg.co_living_single_room && Number(pg.co_living_single_room) > 0) types.push({ 
-        value: "Co-Living Single Room", 
+        value: "Single Room", 
         label: `Co-Living Single Room - ₹${formatPrice(pg.co_living_single_room)}` 
       });
       if (pg.co_living_double_room && Number(pg.co_living_double_room) > 0) types.push({ 
-        value: "Co-Living Double Room", 
+        value: "Double Room", 
         label: `Co-Living Double Room - ₹${formatPrice(pg.co_living_double_room)}` 
       });
     } else if (pg?.pg_category === "to_let") {
       if (pg.price_1bhk && Number(pg.price_1bhk) > 0) types.push({ 
-        value: "1 BHK", 
+        value: "1BHK", 
         label: `1 BHK - ₹${formatPrice(pg.price_1bhk)}` 
       });
       if (pg.price_2bhk && Number(pg.price_2bhk) > 0) types.push({ 
-        value: "2 BHK", 
+        value: "2BHK", 
         label: `2 BHK - ₹${formatPrice(pg.price_2bhk)}` 
       });
       if (pg.price_3bhk && Number(pg.price_3bhk) > 0) types.push({ 
-        value: "3 BHK", 
+        value: "3BHK", 
         label: `3 BHK - ₹${formatPrice(pg.price_3bhk)}` 
       });
       if (pg.price_4bhk && Number(pg.price_4bhk) > 0) types.push({ 
-        value: "4 BHK", 
+        value: "4BHK", 
         label: `4 BHK - ₹${formatPrice(pg.price_4bhk)}` 
       });
     }
     
     return types;
   };
+
+  const getSelectedPrice = () => {
+    if (!bookingData.roomType) return null;
+    
+    if (pg?.pg_category === "pg") {
+      if (bookingData.roomType === "Single Sharing") return pg.single_sharing;
+      if (bookingData.roomType === "Double Sharing") return pg.double_sharing;
+      if (bookingData.roomType === "Triple Sharing") return pg.triple_sharing;
+      if (bookingData.roomType === "Four Sharing") return pg.four_sharing;
+      if (bookingData.roomType === "Single Room") return pg.single_room;
+      if (bookingData.roomType === "Double Room") return pg.double_room;
+    } else if (pg?.pg_category === "coliving") {
+      if (bookingData.roomType === "Single Room") return pg.co_living_single_room;
+      if (bookingData.roomType === "Double Room") return pg.co_living_double_room;
+    } else if (pg?.pg_category === "to_let") {
+      if (bookingData.roomType === "1BHK") return pg.price_1bhk;
+      if (bookingData.roomType === "2BHK") return pg.price_2bhk;
+      if (bookingData.roomType === "3BHK") return pg.price_3bhk;
+      if (bookingData.roomType === "4BHK") return pg.price_4bhk;
+    }
+    return null;
+  };
+
+  const selectedPrice = getSelectedPrice();
 
   return (
     <div style={{
@@ -244,8 +305,7 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
             justifyContent: "center",
             cursor: bookingLoading ? "not-allowed" : "pointer",
             zIndex: 100,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            opacity: bookingLoading ? 0.5 : 1
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
           }}
         >
           <X size={24} />
@@ -265,74 +325,24 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
             color: "#6b7280",
             marginBottom: 24 
           }}>
-            Fill in your details to book this property
+            Your details will be auto-filled from your profile
           </p>
 
+          {/* 24h warning box */}
+          <div style={{
+            background: "#fff7ed",
+            padding: 12,
+            borderRadius: 8,
+            marginBottom: 15,
+            fontSize: 13,
+            color: "#9a3412",
+            border: "1px solid #fed7aa"
+          }}>
+            ⚠️ You can only request this PG once every 24 hours
+          </div>
+
           <form onSubmit={handleSubmit}>
-            {/* Full Name */}
-            <div style={{ marginBottom: 20 }}>
-              <label style={{
-                display: "block",
-                marginBottom: 8,
-                fontSize: 14,
-                fontWeight: 500,
-                color: "#374151"
-              }}>
-                Full Name *
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={bookingData.name}
-                onChange={handleInputChange}
-                required
-                disabled={bookingLoading}
-                style={{
-                  width: "100%",
-                  padding: "12px 16px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 10,
-                  fontSize: 14,
-                  background: bookingLoading ? "#f3f4f6" : "#f9fafb",
-                  cursor: bookingLoading ? "not-allowed" : "text"
-                }}
-                placeholder="Enter your full name"
-              />
-            </div>
-
-            {/* Phone Number */}
-            <div style={{ marginBottom: 20 }}>
-              <label style={{
-                display: "block",
-                marginBottom: 8,
-                fontSize: 14,
-                fontWeight: 500,
-                color: "#374151"
-              }}>
-                Phone Number *
-              </label>
-              <input
-                type="tel"
-                name="phone"
-                value={bookingData.phone}
-                onChange={handleInputChange}
-                required
-                disabled={bookingLoading}
-                style={{
-                  width: "100%",
-                  padding: "12px 16px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 10,
-                  fontSize: 14,
-                  background: bookingLoading ? "#f3f4f6" : "#f9fafb",
-                  cursor: bookingLoading ? "not-allowed" : "text"
-                }}
-                placeholder="Enter your phone number"
-              />
-            </div>
-
-            {/* Check-in Date */}
-            <div style={{ marginBottom: 20 }}>
+            <div style={{ marginBottom: 24 }}>
               <label style={{
                 display: "block",
                 marginBottom: 8,
@@ -349,20 +359,26 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
                 onChange={handleInputChange}
                 required
                 disabled={bookingLoading}
+                min={getTomorrowDate()}
+                max={getMaxDate()}
                 style={{
                   width: "100%",
                   padding: "12px 16px",
                   border: "1px solid #d1d5db",
                   borderRadius: 10,
                   fontSize: 14,
-                  background: bookingLoading ? "#f3f4f6" : "#f9fafb",
-                  cursor: bookingLoading ? "not-allowed" : "text"
+                  background: bookingLoading ? "#f3f4f6" : "#f9fafb"
                 }}
-                min={new Date().toISOString().split('T')[0]}
               />
+              <p style={{
+                fontSize: 12,
+                color: "#6b7280",
+                marginTop: 4
+              }}>
+                Earliest check-in: tomorrow (24h notice required)
+              </p>
             </div>
 
-            {/* Room Type */}
             <div style={{ marginBottom: 24 }}>
               <label style={{
                 display: "block",
@@ -385,17 +401,43 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
                   border: "1px solid #d1d5db",
                   borderRadius: 10,
                   fontSize: 14,
-                  background: bookingLoading ? "#f3f4f6" : "#f9fafb",
-                  cursor: bookingLoading ? "not-allowed" : "pointer"
+                  background: bookingLoading ? "#f3f4f6" : "#f9fafb"
                 }}
               >
+                <option value="">Select {pg?.pg_category === "to_let" ? "BHK Type" : "Room Type"}</option>
                 {getRoomTypes().map((type, index) => (
                   <option key={index} value={type.value}>{type.label}</option>
                 ))}
               </select>
+              
+              {selectedPrice !== null && selectedPrice > 0 && (
+                <p style={{ marginTop: 8, fontWeight: 600, color: "#10b981", fontSize: 14 }}>
+                  Selected: {bookingData.roomType} - ₹{formatPrice(selectedPrice)}/month
+                </p>
+              )}
             </div>
 
-            {/* Action Buttons */}
+            <div style={{
+              background: "#f0fdf4",
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 24,
+              border: "1px solid #bbf7d0"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <Info size={16} color="#10b981" />
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#065f46" }}>
+                  Booking Information
+                </span>
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 20, color: "#065f46", fontSize: 13 }}>
+                <li>Your name and contact info will be auto-filled from your profile</li>
+                <li>Register number will be automatically generated</li>
+                <li>You'll receive confirmation via email/SMS</li>
+                <li>Owner will contact you within 24 hours</li>
+              </ul>
+            </div>
+
             <div style={{ display: "flex", gap: 12 }}>
               <button
                 type="button"
@@ -410,8 +452,7 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
                   borderRadius: 10,
                   fontSize: 14,
                   fontWeight: 600,
-                  cursor: bookingLoading ? "not-allowed" : "pointer",
-                  opacity: bookingLoading ? 0.5 : 1
+                  cursor: bookingLoading ? "not-allowed" : "pointer"
                 }}
               >
                 Cancel
@@ -422,7 +463,7 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
                 style={{
                   flex: 2,
                   padding: "14px",
-                  background: "#10b981",
+                  background: bookingLoading ? "#9ca3af" : "#10b981",
                   color: "white",
                   border: "none",
                   borderRadius: 10,
@@ -432,26 +473,25 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: 8,
-                  opacity: bookingLoading ? 0.7 : 1
+                  gap: 8
                 }}
               >
                 {bookingLoading ? (
                   <>
-                    <div className="spinner-small" style={{
+                    <div style={{
                       width: 18,
                       height: 18,
-                      border: "2px solid rgba(255,255,255,0.3)",
-                      borderTop: "2px solid white",
+                      border: "2px solid white",
+                      borderTop: "2px solid transparent",
                       borderRadius: "50%",
-                      animation: "spin 1s linear infinite"
-                    }}></div>
-                    Sending...
+                      animation: "spin 0.8s linear infinite"
+                    }} />
+                    Processing...
                   </>
                 ) : (
                   <>
                     <BookOpen size={18} />
-                    Submit Booking
+                    Confirm Booking
                   </>
                 )}
               </button>
@@ -586,7 +626,7 @@ const PriceDetails = ({ pg }) => {
   const isCoLiving = pg?.pg_category === "coliving";
   const isPG = !isToLet && !isCoLiving;
 
-  const formatPrice = (price) => {
+  const formatPriceLocal = (price) => {
     if (!price || price === "" || price === "0") return "—";
     return `₹${parseInt(price).toLocaleString('en-IN')}`;
   };
@@ -626,11 +666,11 @@ const PriceDetails = ({ pg }) => {
               <div style={styles.priceItem}>
                 <div style={styles.priceType}>1 BHK</div>
                 <div style={styles.priceValue}>
-                  {formatPrice(pg.price_1bhk)}/month
+                  {formatPriceLocal(pg.price_1bhk)}/month
                 </div>
                 {pg.security_deposit_1bhk && pg.security_deposit_1bhk !== "0" && pg.security_deposit_1bhk !== "" && (
                   <div style={styles.depositAmount}>
-                    Security: {formatPrice(pg.security_deposit_1bhk)}
+                    Security: {formatPriceLocal(pg.security_deposit_1bhk)}
                   </div>
                 )}
               </div>
@@ -639,11 +679,11 @@ const PriceDetails = ({ pg }) => {
               <div style={styles.priceItem}>
                 <div style={styles.priceType}>2 BHK</div>
                 <div style={styles.priceValue}>
-                  {formatPrice(pg.price_2bhk)}/month
+                  {formatPriceLocal(pg.price_2bhk)}/month
                 </div>
                 {pg.security_deposit_2bhk && pg.security_deposit_2bhk !== "0" && pg.security_deposit_2bhk !== "" && (
                   <div style={styles.depositAmount}>
-                    Security: {formatPrice(pg.security_deposit_2bhk)}
+                    Security: {formatPriceLocal(pg.security_deposit_2bhk)}
                   </div>
                 )}
               </div>
@@ -652,11 +692,11 @@ const PriceDetails = ({ pg }) => {
               <div style={styles.priceItem}>
                 <div style={styles.priceType}>3 BHK</div>
                 <div style={styles.priceValue}>
-                  {formatPrice(pg.price_3bhk)}/month
+                  {formatPriceLocal(pg.price_3bhk)}/month
                 </div>
                 {pg.security_deposit_3bhk && pg.security_deposit_3bhk !== "0" && pg.security_deposit_3bhk !== "" && (
                   <div style={styles.depositAmount}>
-                    Security: {formatPrice(pg.security_deposit_3bhk)}
+                    Security: {formatPriceLocal(pg.security_deposit_3bhk)}
                   </div>
                 )}
               </div>
@@ -665,11 +705,11 @@ const PriceDetails = ({ pg }) => {
               <div style={styles.priceItem}>
                 <div style={styles.priceType}>4 BHK</div>
                 <div style={styles.priceValue}>
-                  {formatPrice(pg.price_4bhk)}/month
+                  {formatPriceLocal(pg.price_4bhk)}/month
                 </div>
                 {pg.security_deposit_4bhk && pg.security_deposit_4bhk !== "0" && pg.security_deposit_4bhk !== "" && (
                   <div style={styles.depositAmount}>
-                    Security: {formatPrice(pg.security_deposit_4bhk)}
+                    Security: {formatPriceLocal(pg.security_deposit_4bhk)}
                   </div>
                 )}
               </div>
@@ -694,11 +734,11 @@ const PriceDetails = ({ pg }) => {
               <div style={styles.priceItem}>
                 <div style={styles.priceType}>Single Room</div>
                 <div style={styles.priceValue}>
-                  {formatPrice(pg.co_living_single_room)}/month
+                  {formatPriceLocal(pg.co_living_single_room)}/month
                 </div>
                 {pg.co_living_security_deposit && pg.co_living_security_deposit !== "0" && pg.co_living_security_deposit !== "" && (
                   <div style={styles.depositAmount}>
-                    Security: {formatPrice(pg.co_living_security_deposit)}
+                    Security: {formatPriceLocal(pg.co_living_security_deposit)}
                   </div>
                 )}
               </div>
@@ -707,11 +747,11 @@ const PriceDetails = ({ pg }) => {
               <div style={styles.priceItem}>
                 <div style={styles.priceType}>Double Room</div>
                 <div style={styles.priceValue}>
-                  {formatPrice(pg.co_living_double_room)}/month
+                  {formatPriceLocal(pg.co_living_double_room)}/month
                 </div>
                 {pg.co_living_security_deposit && pg.co_living_security_deposit !== "0" && pg.co_living_security_deposit !== "" && (
                   <div style={styles.depositAmount}>
-                    Security: {formatPrice(pg.co_living_security_deposit)}
+                    Security: {formatPriceLocal(pg.co_living_security_deposit)}
                   </div>
                 )}
               </div>
@@ -740,7 +780,7 @@ const PriceDetails = ({ pg }) => {
                   <div style={styles.priceItem}>
                     <div style={styles.priceType}>Single Sharing</div>
                     <div style={styles.priceValue}>
-                      {formatPrice(pg.single_sharing)}/month
+                      {formatPriceLocal(pg.single_sharing)}/month
                     </div>
                   </div>
                 )}
@@ -748,7 +788,7 @@ const PriceDetails = ({ pg }) => {
                   <div style={styles.priceItem}>
                     <div style={styles.priceType}>Double Sharing</div>
                     <div style={styles.priceValue}>
-                      {formatPrice(pg.double_sharing)}/month
+                      {formatPriceLocal(pg.double_sharing)}/month
                     </div>
                   </div>
                 )}
@@ -756,7 +796,7 @@ const PriceDetails = ({ pg }) => {
                   <div style={styles.priceItem}>
                     <div style={styles.priceType}>Triple Sharing</div>
                     <div style={styles.priceValue}>
-                      {formatPrice(pg.triple_sharing)}/month
+                      {formatPriceLocal(pg.triple_sharing)}/month
                     </div>
                   </div>
                 )}
@@ -764,7 +804,7 @@ const PriceDetails = ({ pg }) => {
                   <div style={styles.priceItem}>
                     <div style={styles.priceType}>Four Sharing</div>
                     <div style={styles.priceValue}>
-                      {formatPrice(pg.four_sharing)}/month
+                      {formatPriceLocal(pg.four_sharing)}/month
                     </div>
                   </div>
                 )}
@@ -780,7 +820,7 @@ const PriceDetails = ({ pg }) => {
                   <div style={styles.priceItem}>
                     <div style={styles.priceType}>Single Room</div>
                     <div style={styles.priceValue}>
-                      {formatPrice(pg.single_room)}/month
+                      {formatPriceLocal(pg.single_room)}/month
                     </div>
                   </div>
                 )}
@@ -788,7 +828,7 @@ const PriceDetails = ({ pg }) => {
                   <div style={styles.priceItem}>
                     <div style={styles.priceType}>Double Room</div>
                     <div style={styles.priceValue}>
-                      {formatPrice(pg.double_room)}/month
+                      {formatPriceLocal(pg.double_room)}/month
                     </div>
                   </div>
                 )}
@@ -796,7 +836,7 @@ const PriceDetails = ({ pg }) => {
                   <div style={styles.priceItem}>
                     <div style={styles.priceType}>Triple Room</div>
                     <div style={styles.priceValue}>
-                      {formatPrice(pg.triple_room)}/month
+                      {formatPriceLocal(pg.triple_room)}/month
                     </div>
                   </div>
                 )}
@@ -811,13 +851,13 @@ const PriceDetails = ({ pg }) => {
                 {pg.security_deposit && pg.security_deposit !== "0" && pg.security_deposit !== "" && (
                   <div style={styles.chargeItem}>
                     <span style={styles.chargeLabel}>Security Deposit:</span>
-                    <span style={styles.chargeValue}>{formatPrice(pg.security_deposit)}</span>
+                    <span style={styles.chargeValue}>{formatPriceLocal(pg.security_deposit)}</span>
                   </div>
                 )}
                 {pg.maintenance_charges && pg.maintenance_charges !== "0" && pg.maintenance_charges !== "" && (
                   <div style={styles.chargeItem}>
                     <span style={styles.chargeLabel}>Maintenance:</span>
-                    <span style={styles.chargeValue}>{formatPrice(pg.maintenance_charges)}/month</span>
+                    <span style={styles.chargeValue}>{formatPriceLocal(pg.maintenance_charges)}/month</span>
                   </div>
                 )}
                 {pg.advance_rent && pg.advance_rent !== "0" && pg.advance_rent !== "" && (
@@ -843,7 +883,7 @@ const PriceDetails = ({ pg }) => {
           <span style={styles.foodChargesIcon}>🍽️</span>
           <div>
             <div style={styles.foodChargesLabel}>Food Charges (Optional)</div>
-            <div style={styles.foodChargesValue}>{formatPrice(pg.food_charges)}/month</div>
+            <div style={styles.foodChargesValue}>{formatPriceLocal(pg.food_charges)}/month</div>
           </div>
         </div>
       )}
@@ -950,7 +990,6 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
     }
   };
 
-  // Get image URL using helper
   const getImageUrl = () => {
     if (pg.photos && pg.photos.length > 0) {
       return getCorrectImageUrl(pg.photos[0]);
@@ -1035,10 +1074,6 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
       </div>
     </div>
   );
-};
-
-const showNotification = (message) => {
-  alert(message);
 };
 
 const calculateDistance = (coordinates) => {
@@ -1293,7 +1328,7 @@ export default function PGDetails() {
     setTimeout(() => setNotification(null), 3000);
   };
 
-  // ✅ MOVED ALL HOOKS BEFORE CONDITIONAL RETURNS
+  // ✅ FETCH PG DETAILS
   useEffect(() => {
     const fetchPGDetails = async () => {
       try {
@@ -1352,6 +1387,7 @@ export default function PGDetails() {
     }
   }, [id]);
 
+  // ✅ FETCH NEARBY HIGHLIGHTS AND PGS
   useEffect(() => {
     if (!pg?.latitude || !pg?.longitude) return;
 
@@ -1580,7 +1616,7 @@ export default function PGDetails() {
     setShowBookingModal(true);
   };
 
-  // ✅ BOOKING SUBMIT - Using user from auth context
+  // ✅ BOOKING SUBMIT - Using user from auth context (same as search page)
   const handleBookingSubmit = async (bookingData) => {
     try {
       if (bookingLoading) return;
@@ -1595,8 +1631,6 @@ export default function PGDetails() {
       const token = await user.getIdToken(true);
 
       const payload = {
-        name: bookingData.name,
-        phone: bookingData.phone,
         check_in_date: bookingData.checkInDate,
         room_type: bookingData.roomType
       };
@@ -1610,6 +1644,12 @@ export default function PGDetails() {
           }
         }
       );
+
+      if (res.data?.alreadyBooked) {
+        showNotificationMessage(res.data.message);
+        setShowBookingModal(false);
+        return;
+      }
 
       showNotificationMessage(res.data?.message || "✅ Booking request sent to owner");
       setShowBookingModal(false);
@@ -2557,24 +2597,10 @@ export default function PGDetails() {
           border-radius: 50%;
           animation: spin 1s linear infinite;
         }
-        .spinner-small {
-          width: 18px;
-          height: 18px;
-          border: 2px solid rgba(255,255,255,0.3);
-          border-top: 2px solid white;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
       `}</style>
     </div>
   );
 }
-
-// Styles remain the same as in the original file (too long to repeat, but they are included in the original code)
-// For brevity, I've omitted the styles object here, but it should be included from the original file
-
-
-
 
 /* ================= STYLES ================= */
 const styles = {
