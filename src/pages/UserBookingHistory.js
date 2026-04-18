@@ -23,9 +23,11 @@ const UserBookingHistory = () => {
   const [paymentData, setPaymentData] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
-  const [submittingPayment, setSubmittingPayment] = useState(false);
   const [showAgreementDialog, setShowAgreementDialog] = useState(false);
   const [selectedBookingForPayment, setSelectedBookingForPayment] = useState(null);
+  
+  // Track which bookings had agreement paid
+  const [agreementPaidBookings, setAgreementPaidBookings] = useState({});
   
   // Track submitted payments to prevent multiple submissions
   const [submittedPayments, setSubmittedPayments] = useState({});
@@ -68,6 +70,7 @@ const UserBookingHistory = () => {
       
       if (res.data && res.data.length > 0) {
         await checkAllPaymentStatuses([...res.data]);
+        await checkAgreementStatus([...res.data]);
       }
     } catch (err) {
       console.error("Error loading bookings:", err);
@@ -99,16 +102,39 @@ const UserBookingHistory = () => {
     }
   }, [paymentStatuses]);
 
+  // Check which bookings had agreement included in payment
+  const checkAgreementStatus = useCallback(async (bookingsList) => {
+    try {
+      const agreementMap = { ...agreementPaidBookings };
+      
+      await Promise.all(bookingsList.map(async (booking) => {
+        try {
+          const res = await api.get(`/payments/agreement-status/${booking.id}`);
+          if (res.data.success) {
+            agreementMap[booking.id] = res.data.hasAgreement;
+          }
+        } catch (err) {
+          console.log(`No agreement info for booking ${booking.id}`);
+        }
+      }));
+      
+      setAgreementPaidBookings({ ...agreementMap });
+    } catch (err) {
+      console.error("Error checking agreement status:", err);
+    }
+  }, [agreementPaidBookings]);
+
   // 🔥 AUTO REFRESH PAYMENT STATUS
   useEffect(() => {
     if (!bookings.length) return;
 
     const interval = setInterval(() => {
       checkAllPaymentStatuses(bookings);
+      checkAgreementStatus(bookings);
     }, 5000); // every 5 seconds
 
     return () => clearInterval(interval);
-  }, [bookings, checkAllPaymentStatuses]);
+  }, [bookings, checkAllPaymentStatuses, checkAgreementStatus]);
 
   // Initial load
   useEffect(() => {
@@ -149,7 +175,7 @@ const UserBookingHistory = () => {
       // 🔥 SEND agreement flag to backend
       const res = await api.post("/payments/create-payment", {
         bookingId: booking.id,
-        includeAgreement: includeAgreement // 👈 IMPORTANT
+        includeAgreement: includeAgreement
       });
 
       if (!res.data.success) {
@@ -169,6 +195,9 @@ const UserBookingHistory = () => {
         agreementFee: includeAgreement ? 500 : 0
       });
 
+      // Auto-submit after QR is shown (payment is done via QR scan)
+      // The backend will handle payment verification automatically
+      
     } catch (err) {
       console.error("PAYMENT ERROR:", err);
       setError(err.message || "Payment initialization failed");
@@ -177,69 +206,6 @@ const UserBookingHistory = () => {
       setSelectedBookingForPayment(null);
     }
   }, [selectedBookingForPayment]);
-
-  // Submit payment - I HAVE PAID button
-  const submitPayment = useCallback(async () => {
-    if (!paymentData) return;
-    
-    // Check if already submitted
-    if (submittedPayments[paymentData.bookingId]) {
-      alert("Payment already submitted for this booking. Please wait for verification.");
-      return;
-    }
-
-    try {
-      setSubmittingPayment(true);
-      setError("");
-
-      // Mark as submitted immediately
-      setSubmittedPayments(prev => ({
-        ...prev,
-        [paymentData.bookingId]: true
-      }));
-
-      // Submit payment to backend
-      const submitRes = await api.post("/payments/submit-payment", {
-        bookingId: paymentData.bookingId,
-        orderId: paymentData.orderId,
-        amount: paymentData.amount,
-        agreement: paymentData.agreement
-      });
-
-      if (!submitRes.data.success) {
-        throw new Error(submitRes.data.message || "Payment submission failed");
-      }
-
-      // Update payment status locally
-      setPaymentStatuses(prev => ({
-        ...prev,
-        [paymentData.bookingId]: "submitted"
-      }));
-
-      // Close modal
-      setPaymentData(null);
-      
-      // Show success message
-      alert("✅ Payment submitted successfully!\n\n⏳ Please wait 5 minutes for admin verification.\nThe status will update automatically.");
-      
-      // Refresh bookings to get latest status
-      setTimeout(() => {
-        loadBookings(false);
-      }, 1000);
-      
-    } catch (err) {
-      console.error("Submit error:", err);
-      setError(err.message || "Failed to submit payment");
-      // Remove submitted flag on error
-      setSubmittedPayments(prev => {
-        const newState = { ...prev };
-        delete newState[paymentData.bookingId];
-        return newState;
-      });
-    } finally {
-      setSubmittingPayment(false);
-    }
-  }, [paymentData, submittedPayments, loadBookings]);
 
   // Refresh QR
   const refreshQR = useCallback(async () => {
@@ -288,6 +254,7 @@ const UserBookingHistory = () => {
   // Get payment status
   const getPaymentStatusDisplay = useCallback((bookingId, bookingStatus) => {
     const status = paymentStatuses[bookingId];
+    const hasAgreement = agreementPaidBookings[bookingId];
     
     if (!status) {
       return {
@@ -303,8 +270,9 @@ const UserBookingHistory = () => {
       case "paid":
         return {
           showPayButton: false,
-          showAgreementButton: true,
-          message: "✅ Payment verified! You can now fill the agreement form.",
+          // Only show agreement button if user paid WITH agreement
+          showAgreementButton: hasAgreement === true,
+          message: "✅ Payment verified!",
           badge: { text: "Payment Verified", style: "paid" },
           canPay: false
         };
@@ -331,7 +299,7 @@ const UserBookingHistory = () => {
         return {
           showPayButton: true,
           showAgreementButton: false,
-          message: "Once payment is completed, do not pay again. Your status will be updated within 5–10 minutes",
+          message: "Scan the QR code to complete payment. Status will update automatically.",
           badge: { text: "Payment Pending", style: "pending" },
           canPay: true
         };
@@ -345,7 +313,7 @@ const UserBookingHistory = () => {
           canPay: bookingStatus === "approved"
         };
     }
-  }, [paymentStatuses]);
+  }, [paymentStatuses, agreementPaidBookings]);
 
   // Handle agreement form navigation
   const handleFillAgreement = useCallback((bookingId) => {
@@ -716,7 +684,7 @@ For any queries, please contact support.
                         </button>
                       )}
 
-                      {/* Fill Agreement Button - Shows only when payment is verified */}
+                      {/* Fill Agreement Button - Shows only when payment is verified AND user paid WITH agreement */}
                       {paymentDisplay.showAgreementButton && (
                         <button
                           style={styles.agreementButton}
@@ -796,7 +764,7 @@ For any queries, please contact support.
         </div>
       )}
 
-      {/* Payment Modal */}
+      {/* Payment Modal - QR Code Only (No Bank Details, No I HAVE PAID Button) */}
       {paymentData && (
         <div style={styles.modalOverlay} onClick={closeModal}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -806,125 +774,109 @@ For any queries, please contact support.
               <button style={styles.modalClose} onClick={closeModal}>×</button>
             </div>
 
-            {/* Amount Breakdown */}
-            <div style={styles.modalAmountSection}>
-              <div style={styles.modalAmount}>
-                <span style={styles.modalAmountLabel}>Amount to Pay</span>
-                <span style={styles.modalAmountValue}>₹{paymentData.amount.toLocaleString()}</span>
-              </div>
-              
-              {/* Detailed breakdown */}
-              <div style={styles.breakdownSection}>
-                <div style={styles.breakdownRow}>
-                  <span>Rent:</span>
-                  <span>₹{paymentData.rent.toLocaleString()}</span>
-                </div>
-                <div style={styles.breakdownRow}>
-                  <span>Security Deposit:</span>
-                  <span>₹{paymentData.deposit.toLocaleString()}</span>
-                </div>
-                <div style={styles.breakdownRow}>
-                  <span>Maintenance:</span>
-                  <span>₹{paymentData.maintenance.toLocaleString()}</span>
-                </div>
-                {paymentData.agreementFee > 0 && (
-                  <div style={styles.breakdownRow}>
-                    <span>Agreement Fee:</span>
-                    <span>₹{paymentData.agreementFee.toLocaleString()}</span>
+            {/* Two Column Layout - Left: Amount & Order ID, Right: QR Code */}
+            <div style={styles.paymentTwoColumn}>
+              {/* Left Column - Payment Info */}
+              <div style={styles.paymentLeftColumn}>
+                {/* Amount */}
+                <div style={styles.modalAmountSection}>
+                  <div style={styles.modalAmount}>
+                    <span style={styles.modalAmountLabel}>Amount to Pay</span>
+                    <span style={styles.modalAmountValue}>₹{paymentData.amount.toLocaleString()}</span>
                   </div>
-                )}
-                <div style={styles.breakdownTotal}>
-                  <span>Total:</span>
-                  <span>₹{paymentData.amount.toLocaleString()}</span>
+                  
+                  {/* Detailed breakdown */}
+                  <div style={styles.breakdownSection}>
+                    <div style={styles.breakdownRow}>
+                      <span>Rent:</span>
+                      <span>₹{paymentData.rent.toLocaleString()}</span>
+                    </div>
+                    <div style={styles.breakdownRow}>
+                      <span>Security Deposit:</span>
+                      <span>₹{paymentData.deposit.toLocaleString()}</span>
+                    </div>
+                    <div style={styles.breakdownRow}>
+                      <span>Maintenance:</span>
+                      <span>₹{paymentData.maintenance.toLocaleString()}</span>
+                    </div>
+                    {paymentData.agreementFee > 0 && (
+                      <div style={styles.breakdownRow}>
+                        <span>Agreement Fee:</span>
+                        <span>₹{paymentData.agreementFee.toLocaleString()}</span>
+                      </div>
+                    )}
+                    <div style={styles.breakdownTotal}>
+                      <span>Total:</span>
+                      <span>₹{paymentData.amount.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Order ID */}
+                <div style={styles.orderIdSection}>
+                  <span style={styles.orderIdLabel}>Order ID:</span>
+                  <code style={styles.orderIdValue}>{paymentData.orderId}</code>
+                  <button 
+                    style={styles.copyButton}
+                    onClick={() => {
+                      navigator.clipboard.writeText(paymentData.orderId);
+                      alert("Order ID copied!");
+                    }}
+                    title="Copy Order ID"
+                  >
+                    📋
+                  </button>
+                </div>
+
+                {/* Refresh QR Button */}
+                <div style={styles.refreshSection}>
+                  <button
+                    style={styles.refreshButton}
+                    onClick={refreshQR}
+                    disabled={refreshing}
+                  >
+                    {refreshing ? (
+                      <>
+                        <span style={styles.buttonSpinner}></span>
+                        Refreshing...
+                      </>
+                    ) : (
+                      <>
+                        <span>⟳</span>
+                        Refresh QR Code
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Column - QR Code */}
+              <div style={styles.paymentRightColumn}>
+                <div style={styles.qrSection}>
+                  <img 
+                    src={paymentData.qr} 
+                    alt="Payment QR Code" 
+                    style={styles.qrImage}
+                  />
+                  <a
+                    href={paymentData.upiLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={styles.upiButton}
+                  >
+                    <span>📱</span>
+                    Open in UPI App
+                  </a>
                 </div>
               </div>
             </div>
 
-            {/* Order ID */}
-            <div style={styles.orderIdSection}>
-              <span style={styles.orderIdLabel}>Order ID:</span>
-              <code style={styles.orderIdValue}>{paymentData.orderId}</code>
-              <button 
-                style={styles.copyButton}
-                onClick={() => {
-                  navigator.clipboard.writeText(paymentData.orderId);
-                  alert("Order ID copied!");
-                }}
-                title="Copy Order ID"
-              >
-                📋
-              </button>
-            </div>
-
-            {/* Account Details */}
-            <div style={styles.accountDetails}>
-              <div style={styles.accountIcon}>🏦</div>
-              <div style={styles.accountInfo}>
-                <div style={styles.accountRow}>
-                  <span>Bank:</span>
-                  <strong>Your Bank Name</strong>
-                </div>
-                <div style={styles.accountRow}>
-                  <span>Account:</span>
-                  <strong>Your Account Number</strong>
-                </div>
-                <div style={styles.accountRow}>
-                  <span>UPI ID:</span>
-                  <strong>your-upi@bank</strong>
-                </div>
-              </div>
-            </div>
-
-            {/* QR Code */}
-            <div style={styles.qrSection}>
-              <img 
-                src={paymentData.qr} 
-                alt="Payment QR Code" 
-                style={styles.qrImage}
-              />
-              <a
-                href={paymentData.upiLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={styles.upiButton}
-              >
-                <span>📱</span>
-                Open in UPI App
-              </a>
-            </div>
-
-            {/* I HAVE PAID Button */}
-            <div style={styles.modalActions}>
-              <button
-                style={styles.submitButton}
-                onClick={submitPayment}
-                disabled={submittedPayments[paymentData.bookingId] || submittingPayment}
-              >
-                {submittingPayment ? (
-                  <>
-                    <span style={styles.buttonSpinner}></span>
-                    Submitting...
-                  </>
-                ) : submittedPayments[paymentData.bookingId] ? (
-                  <>
-                    <span>⏳</span>
-                    Payment Submitted - Waiting for Verification
-                  </>
-                ) : (
-                  <>
-                    <span>✅</span>
-                    I HAVE PAID
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Wait Message */}
+            {/* Wait Message - Payment will be auto-verified */}
             <div style={styles.waitMessageBox}>
               <span>⏰</span>
               <div>
                 <strong>After payment:</strong>
-                <p>Click "I HAVE PAID" and wait 5 minutes for admin verification. Status will update automatically.</p>
+                <p>Scan the QR code and complete payment. Status will update automatically within 5-10 minutes.</p>
               </div>
             </div>
 
@@ -932,27 +884,6 @@ For any queries, please contact support.
             <div style={styles.warningBox}>
               <span>⚠️</span>
               <span>Pay only once! Multiple payments will be rejected.</span>
-            </div>
-
-            {/* Refresh QR Button */}
-            <div style={styles.refreshSection}>
-              <button
-                style={styles.refreshButton}
-                onClick={refreshQR}
-                disabled={refreshing}
-              >
-                {refreshing ? (
-                  <>
-                    <span style={styles.buttonSpinner}></span>
-                    Refreshing...
-                  </>
-                ) : (
-                  <>
-                    <span>⟳</span>
-                    Refresh QR Code
-                  </>
-                )}
-              </button>
             </div>
 
             {/* Error Message */}
@@ -1500,11 +1431,29 @@ const styles = {
     background: "#fff",
     borderRadius: 32,
     width: "100%",
-    maxWidth: 480,
+    maxWidth: 680,
     maxHeight: "90vh",
     overflow: "auto",
     position: "relative",
     animation: "slideIn 0.3s ease",
+  },
+  
+  paymentTwoColumn: {
+    display: "flex",
+    flexDirection: "row",
+    gap: 24,
+    padding: "0 24px",
+    flexWrap: "wrap",
+  },
+  
+  paymentLeftColumn: {
+    flex: 1,
+    minWidth: 200,
+  },
+  
+  paymentRightColumn: {
+    flex: 1,
+    minWidth: 200,
   },
   
   agreementDialogContent: {
@@ -1613,7 +1562,7 @@ const styles = {
   },
   
   modalAmountSection: {
-    padding: "0 24px 20px",
+    padding: "0 0 20px 0",
     borderBottom: "1px solid #e5e7eb",
   },
   
@@ -1665,8 +1614,7 @@ const styles = {
   },
   
   orderIdSection: {
-    padding: "16px 24px",
-    background: "#f9fafb",
+    padding: "16px 0",
     display: "flex",
     alignItems: "center",
     gap: 12,
@@ -1682,7 +1630,7 @@ const styles = {
     fontSize: 14,
     fontWeight: 600,
     color: "#1f2937",
-    background: "#fff",
+    background: "#f9fafb",
     padding: "6px 12px",
     borderRadius: 8,
     border: "1px solid #e5e7eb",
@@ -1704,44 +1652,12 @@ const styles = {
     }
   },
   
-  accountDetails: {
-    padding: "20px 24px",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    color: "#fff",
-    display: "flex",
-    alignItems: "center",
-    gap: 16,
-  },
-  
-  accountIcon: {
-    width: 48,
-    height: 48,
-    background: "rgba(255,255,255,0.2)",
-    borderRadius: "50%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 24,
-  },
-  
-  accountInfo: {
-    flex: 1,
-  },
-  
-  accountRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  
   qrSection: {
-    padding: "24px",
     textAlign: "center",
   },
   
   qrImage: {
-    width: "min(200px, 50vw)",
+    width: "min(180px, 40vw)",
     height: "auto",
     aspectRatio: "1",
     marginBottom: 16,
@@ -1753,7 +1669,7 @@ const styles = {
     display: "inline-flex",
     alignItems: "center",
     gap: 8,
-    padding: "12px 24px",
+    padding: "10px 20px",
     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     color: "#fff",
     textDecoration: "none",
@@ -1767,51 +1683,8 @@ const styles = {
     }
   },
   
-  modalActions: {
-    padding: "0 24px 20px",
-  },
-  
-  submitButton: {
-    width: "100%",
-    padding: "16px",
-    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-    border: "none",
-    borderRadius: 16,
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: 600,
-    cursor: "pointer",
-    transition: "all 0.3s ease",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    ":hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 10px 20px rgba(16,185,129,0.3)",
-    },
-    ":disabled": {
-      opacity: 0.5,
-      cursor: "not-allowed",
-      transform: "none",
-    }
-  },
-  
-  waitMessageBox: {
-    margin: "0 24px 20px",
-    padding: "12px 16px",
-    background: "#eff6ff",
-    borderRadius: 12,
-    display: "flex",
-    alignItems: "flex-start",
-    gap: 10,
-    fontSize: 13,
-    color: "#1e40af",
-    border: "1px solid #bfdbfe",
-  },
-  
   refreshSection: {
-    padding: "0 24px 20px",
+    padding: "16px 0",
   },
   
   refreshButton: {
@@ -1836,6 +1709,19 @@ const styles = {
       opacity: 0.5,
       cursor: "not-allowed",
     }
+  },
+  
+  waitMessageBox: {
+    margin: "20px 24px",
+    padding: "12px 16px",
+    background: "#eff6ff",
+    borderRadius: 12,
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 10,
+    fontSize: 13,
+    color: "#1e40af",
+    border: "1px solid #bfdbfe",
   },
   
   buttonSpinner: {
