@@ -276,7 +276,6 @@ const OwnerDashboard = () => {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [qrImageUrl, setQrImageUrl] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
-  const [notificationAnchor, setNotificationAnchor] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [bookingDetailsOpen, setBookingDetailsOpen] = useState(false);
 
@@ -680,18 +679,6 @@ const OwnerDashboard = () => {
     navigate(`/owner/videos/${propertyId}`);
   };
 
-  const handleChat = (propertyId) => {
-    navigate(`/owner/pg-chat/${propertyId}`);
-  };
-
-  const handleAnnouncement = (propertyId) => {
-    navigate(`/owner/pg-chat/${propertyId}?mode=announcement`);
-  };
-
-  const handleCreatePlan = (propertyId) => {
-    navigate(`/owner/property/${propertyId}/plans`);
-  };
-
   const handleViewBooking = (bookingId) => {
     navigate(`/owner/bookings/${bookingId}`);
   };
@@ -840,15 +827,6 @@ const OwnerDashboard = () => {
     setSnackbar({ open: true, message: "Report exported successfully", severity: "success" });
   };
 
-  const handleNotificationOpen = (event) => {
-    setNotificationAnchor(event.currentTarget);
-    setUnreadCount(0);
-  };
-
-  const handleNotificationClose = () => {
-    setNotificationAnchor(null);
-  };
-
   const handleLogout = async () => {
     await logout();
     navigate("/login");
@@ -860,9 +838,6 @@ const OwnerDashboard = () => {
     if (hour < 17) return "Good Afternoon";
     return "Good Evening";
   };
-
-  const greeting = getGreeting();
-  const ownerName = user?.name?.split(' ')[0] || 'Owner';
 
   const handleViewSettlements = () => {
     navigate("/owner/payments");
@@ -995,21 +970,6 @@ const OwnerDashboard = () => {
 
             <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
               <IconButton 
-                onClick={handleNotificationOpen}
-                sx={{
-                  background: 'rgba(0,0,0,0.03)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '16px',
-                  color: '#475569',
-                  '&:hover': { background: 'rgba(76, 175, 80, 0.1)', color: '#4CAF50' }
-                }}
-              >
-                <Badge badgeContent={unreadCount} color="error">
-                  <NotificationsIcon />
-                </Badge>
-              </IconButton>
-
-              <IconButton 
                 onClick={handleRefresh} 
                 disabled={refreshing}
                 sx={{
@@ -1091,42 +1051,6 @@ const OwnerDashboard = () => {
             </Box>
           </Box>
         </Box>
-
-        {/* Notifications Dropdown */}
-        <Menu
-          anchorEl={notificationAnchor}
-          open={Boolean(notificationAnchor)}
-          onClose={handleNotificationClose}
-          PaperProps={{
-            sx: {
-              background: '#ffffff',
-              borderRadius: '20px',
-              border: '1px solid #e2e8f0',
-              mt: 1,
-              width: 320,
-              maxHeight: 400,
-              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-            }
-          }}
-        >
-          <Box sx={{ p: 2, borderBottom: '1px solid #e2e8f0' }}>
-            <Typography sx={{ color: '#1e293b', fontWeight: 600 }}>Notifications</Typography>
-          </Box>
-          {notifications.length === 0 ? (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-              <Typography sx={{ color: '#64748b' }}>No notifications</Typography>
-            </Box>
-          ) : (
-            notifications.map(notif => (
-              <MenuItem key={notif.id} sx={{ flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
-                <Typography sx={{ color: '#1e293b', fontSize: '0.85rem' }}>{notif.message}</Typography>
-                <Typography sx={{ color: '#64748b', fontSize: '0.7rem' }}>
-                  {formatDate(notif.timestamp)}
-                </Typography>
-              </MenuItem>
-            ))
-          )}
-        </Menu>
 
         {/* STATS CARDS - Responsive Grid */}
         <Box sx={{ mb: 5 }}>
@@ -1660,7 +1584,7 @@ const OwnerDashboard = () => {
               </>
             )}
 
-            {/* Recent Bookings Tab */}
+            {/* Recent Bookings Tab - Removed View Button */}
             {activeTab === 1 && (
               <Box>
                 {recentBookings.length === 0 ? (
@@ -1671,24 +1595,27 @@ const OwnerDashboard = () => {
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {recentBookings.map((booking) => {
                       const statusStyle = getStatusBadgeStyle(booking.status);
-                      const monthlyRent = booking.monthly_rent || 0;
                       const ownerAmount = booking.owner_amount || 0;
                       const isSettled = booking.owner_settlement === "DONE";
                       return (
-                        <Box key={booking.id} sx={{
-                          background: '#ffffff',
-                          borderRadius: '24px',
-                          border: '1px solid #e2e8f0',
-                          p: { xs: 1.5, sm: 2 },
-                          transition: 'all 0.3s ease',
-                          cursor: 'pointer',
-                          boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-                          '&:hover': {
-                            borderColor: '#4CAF50',
-                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                            transform: 'translateX(5px)'
-                          }
-                        }} onClick={() => handleViewBookingDetails(booking)}>
+                        <Box 
+                          key={booking.id} 
+                          sx={{
+                            background: '#ffffff',
+                            borderRadius: '24px',
+                            border: '1px solid #e2e8f0',
+                            p: { xs: 1.5, sm: 2 },
+                            transition: 'all 0.3s ease',
+                            cursor: 'pointer',
+                            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                            '&:hover': {
+                              borderColor: '#4CAF50',
+                              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                              transform: 'translateX(5px)'
+                            }
+                          }} 
+                          onClick={() => handleViewBookingDetails(booking)}
+                        >
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: { xs: '100%', sm: 180 } }}>
                               <Avatar sx={{ width: 50, height: 50, bgcolor: '#4CAF50', background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)' }}>{booking.tenant_name?.charAt(0) || 'U'}</Avatar>
@@ -1725,7 +1652,6 @@ const OwnerDashboard = () => {
                                 }} 
                               />
                             </Box>
-                            <IconButton onClick={(e) => { e.stopPropagation(); handleViewBooking(booking.id); }} sx={iconStyle("#0B5ED7")}><ViewIcon fontSize="small" /></IconButton>
                           </Box>
                         </Box>
                       );
