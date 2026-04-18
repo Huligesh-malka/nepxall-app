@@ -6,35 +6,34 @@ const Terms = () => {
       <div style={headerSection}>
         <h1 style={mainHeading}>Terms & Conditions</h1>
         <p style={subHeading}>
-          Nepxall is a PG, Coliving & Rental (ToLet) platform that connects tenants and property owners.
+          Nepxall is a PG, Coliving & Rental (ToLet) platform connecting tenants and property owners.
         </p>
-        <p style={version}>Version 2.1 - Updated {new Date().toLocaleDateString('en-IN')}</p>
+        <p style={version}>Version 2.2 - Updated {new Date().toLocaleDateString('en-IN')}</p>
       </div>
 
       <div style={contentSection}>
 
-        {/* CRITICAL REFUND RULE */}
+        {/* UPDATED: CRITICAL REFUND RULE (STRICT) */}
         <div style={criticalCard}>
           <div style={criticalIcon}>🚫</div>
-          <h3 style={criticalTitle}>⚠️ NO FULL REFUND AFTER CHECK-IN ⚠️</h3>
+          <h3 style={criticalTitle}>⚠️ NO REFUND AFTER CHECK-IN ⚠️</h3>
           <p style={criticalText}>
             Once you have scanned the PG QR code or physically checked into the property, 
-            you are NOT eligible for a full refund. Only partial refunds based on stay duration apply.
+            the booking is considered <strong>FINAL and NON-REFUNDABLE</strong>. 
+            No partial or full refunds will be issued under any circumstances after check-in.
           </p>
         </div>
 
-        {/* REFUND POLICY SECTION */}
+        {/* UPDATED: SIMPLIFIED REFUND POLICY */}
         <div style={card}>
           <div style={iconWrapper}>💰</div>
           <h3 style={cardTitle}>Refund & Cancellation Rules</h3>
           <ul style={list}>
-            <li style={listItem}>• <strong>Before check-in:</strong> 100% refund available</li>
-            <li style={listItem}>• <strong>After check-in (1-3 days):</strong> Rent deducted from deposit</li>
-            <li style={listItem}>• <strong>After check-in (4-7 days):</strong> 50% of deposit refunded</li>
-            <li style={listItem}>• <strong>After check-in (8-15 days):</strong> 25% of deposit refunded</li>
-            <li style={listItem}>• <strong>After check-in (16-30 days):</strong> 10% of deposit refunded</li>
-            <li style={listItem}>• <strong>After check-in (30+ days):</strong> NO REFUND</li>
-            <li style={listItem}>• Refunds processed within 5-7 business days</li>
+            <li style={listItem}>• <strong>Before Check-in / QR Scan:</strong> 100% refund available.</li>
+            <li style={listItem}>• <strong>After Check-in / QR Scan:</strong> Strictly NO REFUND.</li>
+            <li style={listItem}>• Check-in is defined as scanning the property QR or physical occupancy.</li>
+            <li style={listItem}>• Eligible refunds are processed within 5-7 business days to the original source.</li>
+            <li style={listItem}>• Users are advised to inspect properties before scanning the QR code.</li>
           </ul>
         </div>
 
@@ -58,7 +57,6 @@ const Terms = () => {
             <li style={listItem}>Booking is confirmed only after successful payment.</li>
             <li style={listItem}>Payments are processed securely via third-party gateways.</li>
             <li style={listItem}>Bank details are stored in encrypted format (AES-256).</li>
-            <li style={listItem}>Only authorized admins can access decrypted bank data.</li>
             <li style={listItem}>All access to financial data is logged and monitored.</li>
             <li style={listItem}>All prices are in INR (₹).</li>
           </ul>
@@ -102,30 +100,6 @@ const Terms = () => {
           </ul>
         </div>
 
-        {/* OWNER RESPONSIBILITY */}
-        <div style={card}>
-          <div style={iconWrapper}>🏠</div>
-          <h3 style={cardTitle}>Owner Responsibilities</h3>
-          <ul style={list}>
-            <li style={listItem}>Owner must be legal property holder.</li>
-            <li style={listItem}>Property must be free from legal disputes.</li>
-            <li style={listItem}>Owner responsible for property condition.</li>
-            <li style={listItem}>Deposit must be refunded as per agreement rules.</li>
-          </ul>
-        </div>
-
-        {/* TENANT RESPONSIBILITY */}
-        <div style={card}>
-          <div style={iconWrapper}>👤</div>
-          <h3 style={cardTitle}>Tenant Responsibilities</h3>
-          <ul style={list}>
-            <li style={listItem}>Tenant must pay rent on time.</li>
-            <li style={listItem}>Maintain property condition.</li>
-            <li style={listItem}>Follow society and legal rules.</li>
-            <li style={listItem}>No subletting without permission.</li>
-          </ul>
-        </div>
-
         {/* DATA RETENTION */}
         <div style={card}>
           <div style={iconWrapper}>📁</div>
@@ -155,8 +129,11 @@ const Terms = () => {
 
       {/* FINAL NOTE */}
       <div style={footerNote}>
+        <p style={acceptanceText}>
+          <strong>Final Acceptance:</strong> By using this platform, you agree that this booking becomes 
+          strictly <strong>non-refundable</strong> after check-in.
+        </p>
         <p>
-          By using this platform, you agree to all terms and conditions including the refund rules stated above.
           This service is governed under Indian laws.
         </p>
         <p style={footerSmall}>Last updated: {new Date().toLocaleDateString('en-IN')}</p>
@@ -273,6 +250,12 @@ const footerNote = {
   padding: "20px",
   background: "rgba(0,0,0,0.2)",
   borderRadius: "15px",
+};
+
+const acceptanceText = {
+    fontSize: "1.1rem",
+    marginBottom: "10px",
+    color: "#fbbf24", // Gold color to draw attention
 };
 
 const footerSmall = {
