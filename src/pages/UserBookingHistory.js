@@ -103,26 +103,31 @@ const UserBookingHistory = () => {
   }, [paymentStatuses]);
 
   // Check which bookings had agreement included in payment
-  const checkAgreementStatus = useCallback(async (bookingsList) => {
-    try {
-      const agreementMap = { ...agreementPaidBookings };
-      
-      await Promise.all(bookingsList.map(async (booking) => {
+ const checkAgreementStatus = useCallback(async (bookingsList) => {
+  try {
+    const agreementMap = { ...agreementPaidBookings };
+
+    await Promise.all(
+      bookingsList.map(async (booking) => {
         try {
-          api.get(`/payments/agreement-status/${booking.id}`)
+          const res = await api.get(
+            `/payments/agreement-status/${booking.id}`
+          );
+
           if (res.data.success) {
             agreementMap[booking.id] = res.data.hasAgreement;
           }
         } catch (err) {
           console.log(`No agreement info for booking ${booking.id}`);
         }
-      }));
-      
-      setAgreementPaidBookings({ ...agreementMap });
-    } catch (err) {
-      console.error("Error checking agreement status:", err);
-    }
-  }, [agreementPaidBookings]);
+      })
+    );
+
+    setAgreementPaidBookings({ ...agreementMap });
+  } catch (err) {
+    console.error("Error checking agreement status:", err);
+  }
+}, [agreementPaidBookings]);
 
   // 🔥 AUTO REFRESH PAYMENT STATUS
   useEffect(() => {
