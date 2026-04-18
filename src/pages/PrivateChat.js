@@ -803,11 +803,9 @@ export default function PrivateChat() {
 
         <div style={s.hdrMeta}>
           <span style={s.hdrName}>
-            {me?.role === "tenant"
-  ? otherUser?.pg_name || "PG"
-  : (otherUser?.name && !otherUser.name.startsWith("+91")
-      ? otherUser.name
-      : "Tenant")}
+            <span style={s.hdrName}>
+  {me?.role === "owner" ? "Tenant" : otherUser?.pg_name || "PG"}
+</span>
           </span>
           <span style={s.hdrStatus}>
             <span style={{ ...s.statusDot, background: online ? "#22c55e" : "#94a3b8" }} />
