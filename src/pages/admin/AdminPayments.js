@@ -504,41 +504,6 @@ const AdminPayments = () => {
                 <span>TOTAL PAID BY USER</span>
                 <span>₹{selectedPayment.total_amount || selectedPayment.amount}</span>
               </div>
-
-              <div style={{ marginTop: "20px", padding: "16px", background: "#f8fafc", borderRadius: "8px" }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1, color: DARK_TEXT }}>
-                  💰 PAYMENT DISTRIBUTION
-                </Typography>
-                
-                <div style={{ fontSize: "14px", color: "#4b5563", borderBottom: "1px solid #e5e7eb", paddingBottom: "8px", marginBottom: "8px" }}>
-                  <span>Owner Receives:</span>
-                  <span style={{ float: "right", fontWeight: "bold" }}>
-                    ₹{(selectedPayment.rent_amount || 0) + 
-                       (selectedPayment.security_deposit || 0) + 
-                       (selectedPayment.maintenance_amount || 0)}
-                  </span>
-                </div>
-                
-                {selectedPayment.agreement_paid === 1 && (
-                  <div style={{ fontSize: "14px", color: "#16a34a", fontWeight: "bold" }}>
-                    <span>🏢 Admin Earnings (Agreement Fee):</span>
-                    <span style={{ float: "right" }}>₹500</span>
-                  </div>
-                )}
-                
-                {selectedPayment.platform_fee > 0 && (
-                  <div style={{ fontSize: "14px", color: "#6b7280" }}>
-                    <span>Platform Fee:</span>
-                    <span style={{ float: "right" }}>₹{selectedPayment.platform_fee}</span>
-                  </div>
-                )}
-
-                {selectedPayment.agreement_paid !== 1 && (
-                  <div style={{ fontSize: "13px", color: "#dc2626", marginTop: "8px", fontStyle: "italic" }}>
-                    ⚠️ Note: Agreement fee not collected from user
-                  </div>
-                )}
-              </div>
             </div>
 
             <div style={footerNote}>
@@ -548,7 +513,7 @@ const AdminPayments = () => {
                 <p>• Payment timestamp: {formatDate(selectedPayment.submitted_at || selectedPayment.created_at)}</p>
               </div>
               <p style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>This is a computer-generated document. It does not require a physical signature.</p>
-              <p style={{ fontWeight: "bold", marginTop: 10, color: BRAND_BLUE, fontSize: '16px' }}>NEPXALL - MAKING LIVING EASIER</p>
+              <p style={{ fontWeight: "bold", marginTop: 10, color: BRAND_BLUE, fontSize: '16px' }}>Thank you for choosing Nepxall!</p>
             </div>
           </div>
         </div>
