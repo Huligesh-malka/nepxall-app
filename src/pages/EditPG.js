@@ -90,7 +90,7 @@ const initialLocation = {
   lng: null
 };
 
-// Initial state for room rates
+// Initial state for room rates - triple_room removed
 const initialRoomRates = {
   single_sharing: "",
   double_sharing: "",
@@ -98,7 +98,7 @@ const initialRoomRates = {
   four_sharing: "",
   single_room: "",
   double_room: "",
-  triple_room: "",
+  // triple_room removed
   price_1bhk: "",
   price_2bhk: "",
   price_3bhk: "",
@@ -351,7 +351,7 @@ function EditPG() {
             lng: data.longitude || null
           });
           
-          // Update room rates
+          // Update room rates (triple_room removed)
           setRoomRates(prev => ({
             ...prev,
             single_sharing: data.single_sharing || "",
@@ -360,7 +360,7 @@ function EditPG() {
             four_sharing: data.four_sharing || "",
             single_room: data.single_room || "",
             double_room: data.double_room || "",
-            triple_room: data.triple_room || "",
+            // triple_room removed
             price_1bhk: data.price_1bhk || "",
             price_2bhk: data.price_2bhk || "",
             price_3bhk: data.price_3bhk || "",
@@ -747,7 +747,7 @@ function EditPG() {
         appendIfValue(formData, "bathrooms_4bhk", bhkConfig.bathrooms_4bhk);
       }
       
-      // Standard PG Room Rates
+      // Standard PG Room Rates (triple_room removed)
       if (isPG) {
         Object.keys(roomRates).forEach(key => {
           if (key.startsWith("single_") || key.startsWith("double_") || key.startsWith("triple_") || key.startsWith("four_")) {
@@ -1370,7 +1370,7 @@ function EditPG() {
     );
   };
 
-  // Render rates
+  // Render rates - triple_room removed from PG section
   const renderRates = () => {
     return (
       <div style={styles.section}>
@@ -1477,7 +1477,7 @@ function EditPG() {
                 { key: "four_sharing", label: "Four Sharing" },
                 { key: "single_room", label: "Single Room" },
                 { key: "double_room", label: "Double Room" },
-                { key: "triple_room", label: "Triple Room" },
+                // triple_room removed
               ].map((room) => (
                 <div key={room.key} style={styles.rateInputGroup}>
                   <label>{room.label}</label>
