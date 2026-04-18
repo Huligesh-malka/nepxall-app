@@ -64,7 +64,13 @@ export const AuthProvider = ({ children }) => {
       if (res.data.success) {
         const backendRole = res.data.role?.toLowerCase().trim();
 
-        setUser(firebaseUser);
+        // 🔥🔥🔥 ONLY CHANGE - ADD NAME AND ID FROM BACKEND 🔥🔥🔥
+        setUser({
+          ...firebaseUser,
+          name: res.data.name,
+          id: res.data.userId
+        });
+        
         setRole(backendRole);
 
         localStorage.setItem("token", res.data.token);
