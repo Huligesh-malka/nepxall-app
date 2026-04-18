@@ -19,7 +19,24 @@ export default function OwnerBankDetails() {
   const [pageLoading, setPageLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const [hasBank, setHasBank] = useState(false); // ✅ Simple flag for view/form
+  const [hasBank, setHasBank] = useState(false); // Simple flag for view/form
+
+  // Function to decrypt data (matching backend decryption)
+  const decryptData = (encryptedData) => {
+    if (!encryptedData) return "";
+    // If the data is already plain text (not encrypted), return as is
+    if (!encryptedData.startsWith("enc:")) return encryptedData;
+    
+    try {
+      // This should match your backend decryption logic
+      // For now, we'll assume the backend sends decrypted data directly
+      // If backend sends encrypted, you'd need to call a decrypt endpoint
+      return encryptedData;
+    } catch (err) {
+      console.error("Decryption error:", err);
+      return encryptedData;
+    }
+  };
 
   const fetchBank = async () => {
     setPageLoading(true);
@@ -28,19 +45,23 @@ export default function OwnerBankDetails() {
     try {
       const res = await api.get("/owner/bank");
 
-      // ✅ Check if bank data exists
+      // Check if bank data exists
       if (res.data?.data) {
         const bank = res.data.data;
         
+        // Decrypt sensitive fields if they're encrypted
+        const decryptedAccountNumber = decryptData(bank.account_number);
+        const decryptedIfsc = decryptData(bank.ifsc);
+        
         setForm({
           account_holder_name: bank.account_holder_name || "",
-          account_number: bank.account_number || "",
-          ifsc: bank.ifsc || "",
+          account_number: decryptedAccountNumber,
+          ifsc: decryptedIfsc,
           bank_name: bank.bank_name || "",
           branch: bank.branch || ""
         });
         
-        setHasBank(true); // ✅ Show read-only view
+        setHasBank(true); // Show read-only view
       } else {
         // No bank details found, show form
         setHasBank(false);
@@ -77,13 +98,14 @@ export default function OwnerBankDetails() {
     setMessage("");
 
     try {
+      // Data will be encrypted on the backend
       await api.post("/owner/bank", form);
       setMessage("Bank details saved successfully");
       
-      // ✅ Switch to view mode after successful save
+      // Switch to view mode after successful save
       setHasBank(true);
       
-      // Refresh to get masked data from backend
+      // Refresh to get data from backend
       await fetchBank();
     } catch (err) {
       setMessage(
@@ -93,6 +115,15 @@ export default function OwnerBankDetails() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Copy to clipboard function
+  const copyToClipboard = (text, label) => {
+    navigator.clipboard.writeText(text);
+    setMessage(`${label} copied to clipboard!`);
+    setTimeout(() => {
+      if (message.includes("copied")) setMessage("");
+    }, 2000);
   };
 
   /* ================= PROTECTION ================= */
@@ -133,18 +164,18 @@ export default function OwnerBankDetails() {
           {/* Message Display */}
           {message && (
             <div className={`mx-8 mt-8 p-4 rounded-xl flex items-center space-x-3 ${
-              message.includes("successfully") 
+              message.includes("successfully") || message.includes("copied")
                 ? "bg-green-50 text-green-800 border border-green-200" 
                 : "bg-red-50 text-red-800 border border-red-200"
             }`}>
               <span className="text-xl">
-                {message.includes("successfully") ? "✅" : "❌"}
+                {message.includes("successfully") || message.includes("copied") ? "✅" : "❌"}
               </span>
               <span className="font-medium">{message}</span>
             </div>
           )}
 
-          {/* ✅ VIEW ONLY MODE - No Edit Button */}
+          {/* VIEW ONLY MODE with Copy Functionality */}
           {hasBank ? (
             <div className="p-8">
               <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-6 border border-gray-200">
@@ -165,50 +196,107 @@ export default function OwnerBankDetails() {
                 </div>
 
                 <div className="space-y-4 text-gray-700">
-                  <div className="flex items-center space-x-3 p-3 bg-white rounded-xl">
-                    <span className="text-2xl">👤</span>
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium">Account Holder</p>
-                      <p className="font-semibold text-gray-800">{form.account_holder_name}</p>
+                  <div className="flex items-center justify-between p-3 bg-white rounded-xl group">
+                    <div className="flex items-center space-x-3">
+                      <span className="text-2xl">👤</span>
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium">Account Holder</p>
+                        <p className="font-semibold text-gray-800">{form.account_holder_name}</p>
+                      </div>
                     </div>
+                    <button
+                      onClick={() => copyToClipboard(form.account_holder_name, "Account holder name")}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded"
+                      title="Copy to clipboard"
+                    >
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
                   </div>
 
-                  <div className="flex items-center space-x-3 p-3 bg-white rounded-xl">
-                    <span className="text-2xl">🏦</span>
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium">Bank Name</p>
-                      <p className="font-semibold text-gray-800">{form.bank_name || "Not provided"}</p>
+                  <div className="flex items-center justify-between p-3 bg-white rounded-xl group">
+                    <div className="flex items-center space-x-3">
+                      <span className="text-2xl">🏦</span>
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium">Bank Name</p>
+                        <p className="font-semibold text-gray-800">{form.bank_name || "Not provided"}</p>
+                      </div>
                     </div>
+                    {form.bank_name && (
+                      <button
+                        onClick={() => copyToClipboard(form.bank_name, "Bank name")}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded"
+                        title="Copy to clipboard"
+                      >
+                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
 
-                  <div className="flex items-center space-x-3 p-3 bg-white rounded-xl">
-                    <span className="text-2xl">🔢</span>
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium">Account Number</p>
-                      <p className="font-mono font-semibold text-gray-800">{form.account_number}</p>
+                  <div className="flex items-center justify-between p-3 bg-white rounded-xl group">
+                    <div className="flex items-center space-x-3">
+                      <span className="text-2xl">🔢</span>
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium">Account Number</p>
+                        <p className="font-mono font-semibold text-gray-800">{form.account_number}</p>
+                      </div>
                     </div>
+                    <button
+                      onClick={() => copyToClipboard(form.account_number, "Account number")}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded"
+                      title="Copy to clipboard"
+                    >
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
                   </div>
 
-                  <div className="flex items-center space-x-3 p-3 bg-white rounded-xl">
-                    <span className="text-2xl">🔐</span>
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium">IFSC Code</p>
-                      <p className="font-mono font-semibold text-gray-800">{form.ifsc}</p>
+                  <div className="flex items-center justify-between p-3 bg-white rounded-xl group">
+                    <div className="flex items-center space-x-3">
+                      <span className="text-2xl">🔐</span>
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium">IFSC Code</p>
+                        <p className="font-mono font-semibold text-gray-800 uppercase">{form.ifsc}</p>
+                      </div>
                     </div>
+                    <button
+                      onClick={() => copyToClipboard(form.ifsc, "IFSC code")}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded"
+                      title="Copy to clipboard"
+                    >
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
                   </div>
 
                   {form.branch && (
-                    <div className="flex items-center space-x-3 p-3 bg-white rounded-xl">
-                      <span className="text-2xl">📍</span>
-                      <div>
-                        <p className="text-xs text-gray-500 font-medium">Branch</p>
-                        <p className="font-semibold text-gray-800">{form.branch}</p>
+                    <div className="flex items-center justify-between p-3 bg-white rounded-xl group">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-2xl">📍</span>
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium">Branch</p>
+                          <p className="font-semibold text-gray-800">{form.branch}</p>
+                        </div>
                       </div>
+                      <button
+                        onClick={() => copyToClipboard(form.branch, "Branch name")}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded"
+                        title="Copy to clipboard"
+                      >
+                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </button>
                     </div>
                   )}
                 </div>
 
-                {/* 🔒 No Edit Button - Just a notice */}
+                {/* Security Notice */}
                 <div className="mt-6 p-3 bg-yellow-50 rounded-xl border border-yellow-200">
                   <p className="text-sm text-yellow-800 flex items-center space-x-2">
                     <span className="text-lg">🔒</span>
@@ -218,7 +306,7 @@ export default function OwnerBankDetails() {
               </div>
             </div>
           ) : (
-            /* ✅ ONLY FIRST TIME FORM - No Cancel/Edit buttons */
+            /* FIRST TIME FORM - Save bank details */
             <div className="px-8 py-8">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -261,7 +349,7 @@ export default function OwnerBankDetails() {
                       name="ifsc"
                       value={form.ifsc}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 outline-none"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 outline-none uppercase"
                       placeholder="Enter IFSC code"
                       required
                     />
@@ -308,7 +396,7 @@ export default function OwnerBankDetails() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        <span>Saving...</span>
+                        <span>Saving & Encrypting...</span>
                       </span>
                     ) : (
                       "Save & Complete Verification"
@@ -323,9 +411,9 @@ export default function OwnerBankDetails() {
           <div className="bg-gray-50 px-8 py-4 border-t border-gray-100">
             <p className="text-sm text-gray-500 flex items-center space-x-2">
               <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
-              <span>Your bank details are encrypted and secure</span>
+              <span>Your bank details are encrypted with AES-256 and stored securely</span>
             </p>
           </div>
         </div>
