@@ -234,12 +234,14 @@ function OwnerAddPG() {
   const [bhkConfig, setBhkConfig] = useState(initialBhkConfig);
   const [form, setForm] = useState(initialForm);
   const [manualEditMode, setManualEditMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   
-  // 🔥 NEW: Plan state for premium lock
+  // Plan state for premium lock
   const [plan, setPlan] = useState(null);
   const [planLoading, setPlanLoading] = useState(true);
   
   const mapRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   const isToLet = form.pg_category === "to_let";
   const isPG = form.pg_category === "pg";
@@ -252,6 +254,14 @@ function OwnerAddPG() {
       @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
+      }
+      input, textarea, select {
+        cursor: text !important;
+      }
+      input:focus, textarea:focus, select:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
       }
     `;
     document.head.appendChild(style);
@@ -275,7 +285,7 @@ function OwnerAddPG() {
     }
   }, [user, role, authLoading, navigate]);
 
-  // 🔥 NEW: Load user plan for premium lock
+  // Load user plan for premium lock
   const loadUserPlan = async () => {
     try {
       setPlanLoading(true);
@@ -383,12 +393,13 @@ function OwnerAddPG() {
     );
   };
 
-  // Fetch address from coordinates using OpenStreetMap Nominatim
+  // Fetch address from coordinates using OpenStreetMap Nominatim (English only)
   const fetchAddressFromCoordinates = async (lat, lng) => {
     try {
       setMapLoading(true);
+      // Force English language response
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=en`
       );
       
       const data = await response.json();
@@ -433,14 +444,15 @@ function OwnerAddPG() {
     }));
   };
 
-  // Search location by address
-  const searchLocation = async (searchQuery) => {
+  // Search location by address (English only)
+  const searchLocation = async () => {
     if (!searchQuery.trim()) return;
     
     try {
       setMapLoading(true);
+      // Force English language search results
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5&accept-language=en`
       );
       
       const data = await response.json();
@@ -461,12 +473,22 @@ function OwnerAddPG() {
         if (mapRef.current) {
           mapRef.current.setView([lat, lng], 16);
         }
+      } else {
+        alert("Location not found. Please try a different search term.");
       }
     } catch (error) {
       console.error("Error searching location:", error);
-      alert("Location not found. Please try a different search.");
+      alert("Location search failed. Please try again.");
     } finally {
       setMapLoading(false);
+    }
+  };
+
+  // Handle Enter key press for search
+  const handleSearchKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      searchLocation();
     }
   };
 
@@ -539,7 +561,7 @@ function OwnerAddPG() {
   const handlePhotoUpload = (e) => {
     const files = Array.from(e.target.files);
     
-    // 🔥 NEW: Check photo limit against plan
+    // Check photo limit against plan
     if (plan && photos.length + files.length > plan.max_photos_per_pg) {
       alert(`❌ Your ${plan.name} plan allows only ${plan.max_photos_per_pg} photos per PG. Upgrade to upload more!`);
       return;
@@ -589,7 +611,7 @@ function OwnerAddPG() {
     }
   };
 
-  // 🔥 NEW: Check if user reached listing limit
+  // Check if user reached listing limit
   const isLimitReached = plan && plan.current_usage?.total_pgs >= plan.max_listings;
 
   // Handle form submission using pgAPI convenience method
@@ -600,7 +622,7 @@ function OwnerAddPG() {
       return;
     }
 
-    // 🔥 NEW: Check limit before submission
+    // Check limit before submission
     if (isLimitReached) {
       alert(`🚫 Your ${plan?.name} plan limit of ${plan?.max_listings} ${isToLet ? 'properties' : 'listings'} has been reached. Please upgrade to add more.`);
       return;
@@ -761,7 +783,7 @@ function OwnerAddPG() {
 
       console.log("Submitting property data with owner UID:", user.uid);
       
-      // ✅ USING pgAPI CONVENIENCE METHOD
+      // USING pgAPI CONVENIENCE METHOD
       const response = await api.post("/pg/add", formData)
 
       if (response.data.success) {
@@ -822,23 +844,17 @@ function OwnerAddPG() {
               </button>
               <div style={styles.mapSearch}>
                 <input
+                  ref={searchInputRef}
                   type="text"
-                  placeholder="Search for area, landmark, or address..."
-                  id="location-search"
+                  placeholder="Search for area, landmark, or address (English only)..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={handleSearchKeyPress}
                   style={styles.searchInput}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      searchLocation(e.target.value);
-                    }
-                  }}
+                  disabled={mapLoading}
                 />
                 <button 
-                  onClick={() => {
-                    const searchInput = document.getElementById('location-search');
-                    if (searchInput.value) {
-                      searchLocation(searchInput.value);
-                    }
-                  }}
+                  onClick={searchLocation}
                   style={styles.searchButton}
                   disabled={mapLoading}
                 >
@@ -1409,7 +1425,7 @@ function OwnerAddPG() {
   if (!user) return <Navigate to="/login" replace />;
   if (role !== "owner") return <Navigate to="/" replace />;
 
-  // 🔥 NEW: Enhanced submit disabled check with plan limit
+  // Enhanced submit disabled check with plan limit
   const isSubmitDisabled = loading || 
     !selectedLocation.address || 
     photos.length === 0 ||
@@ -1423,7 +1439,7 @@ function OwnerAddPG() {
       <div style={styles.card}>
         <h2 style={styles.title}>➕ Add New Property</h2>
         
-        {/* 🔥 NEW: Plan Info Card */}
+        {/* Plan Info Card */}
         {plan && (
           <div style={{
             background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
@@ -1477,7 +1493,7 @@ function OwnerAddPG() {
           </div>
         )}
         
-        {/* 🔥 NEW: Limit reached warning */}
+        {/* Limit reached warning */}
         {isLimitReached && (
           <div style={{
             backgroundColor: "#fff3cd",
@@ -1932,7 +1948,7 @@ function OwnerAddPG() {
           <h3 style={styles.sectionTitle}>📷 Property Photos *</h3>
           <p style={styles.note}>Upload at least 1 photo. Maximum {plan?.max_photos_per_pg || 10} photos allowed per PG.</p>
           
-          {/* 🔥 NEW: Photo usage info */}
+          {/* Photo usage info */}
           {plan && (
             <div style={{
               backgroundColor: "#e0f2fe",
@@ -1999,7 +2015,7 @@ function OwnerAddPG() {
   );
 }
 
-// Styles (unchanged - keeping original styles)
+// Styles
 const styles = {
   container: {
     minHeight: "100vh",
