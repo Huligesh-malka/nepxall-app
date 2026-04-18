@@ -276,7 +276,6 @@ const OwnerDashboard = () => {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [qrImageUrl, setQrImageUrl] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
-  const [anchorEl, setAnchorEl] = useState(null);
   const [notificationAnchor, setNotificationAnchor] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [bookingDetailsOpen, setBookingDetailsOpen] = useState(false);
@@ -841,14 +840,6 @@ const OwnerDashboard = () => {
     setSnackbar({ open: true, message: "Report exported successfully", severity: "success" });
   };
 
-  const handleMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
   const handleNotificationOpen = (event) => {
     setNotificationAnchor(event.currentTarget);
     setUnreadCount(0);
@@ -988,18 +979,6 @@ const OwnerDashboard = () => {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
             <Box>
               <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: '#4CAF50',
-                  fontWeight: 500,
-                  letterSpacing: '0.5px',
-                  textTransform: 'uppercase',
-                  fontSize: '0.75rem'
-                }}
-              >
-                {greeting}
-              </Typography>
-              <Typography 
                 variant="h4" 
                 sx={{ 
                   fontWeight: 800,
@@ -1010,7 +989,7 @@ const OwnerDashboard = () => {
                   fontSize: { xs: '1.5rem', md: '2rem' }
                 }}
               >
-                {ownerName}
+                Dashboard
               </Typography>
             </Box>
 
@@ -1109,59 +1088,9 @@ const OwnerDashboard = () => {
                   </Button>
                 </>
               )}
-
-              <IconButton 
-                onClick={handleMenuOpen}
-                sx={{
-                  background: 'rgba(0,0,0,0.03)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '16px',
-                  color: '#475569',
-                  '&:hover': { background: 'rgba(76, 175, 80, 0.1)' }
-                }}
-              >
-                <Avatar sx={{ width: 32, height: 32, bgcolor: '#4CAF50' }}>
-                  {ownerName.charAt(0)}
-                </Avatar>
-              </IconButton>
             </Box>
           </Box>
         </Box>
-
-        {/* User Menu Dropdown */}
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={handleMenuClose}
-          PaperProps={{
-            sx: {
-              background: '#ffffff',
-              borderRadius: '20px',
-              border: '1px solid #e2e8f0',
-              mt: 1,
-              minWidth: 200,
-              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-            }
-          }}
-        >
-          <MenuItem onClick={() => { handleMenuClose(); navigate("/owner/profile"); }}>
-            <ListItemIcon><PersonIcon fontSize="small" sx={{ color: '#4CAF50' }} /></ListItemIcon>
-            <ListItemText>Profile</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={() => { handleMenuClose(); navigate("/owner/settings"); }}>
-            <ListItemIcon><SettingsIcon fontSize="small" sx={{ color: '#0B5ED7' }} /></ListItemIcon>
-            <ListItemText>Settings</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={() => { handleMenuClose(); navigate("/owner/payments"); }}>
-            <ListItemIcon><ReceiptIcon fontSize="small" sx={{ color: '#8B5CF6' }} /></ListItemIcon>
-            <ListItemText>Settlements</ListItemText>
-          </MenuItem>
-          <Divider sx={{ borderColor: '#e2e8f0' }} />
-          <MenuItem onClick={handleLogout}>
-            <ListItemIcon><LogoutIcon fontSize="small" sx={{ color: '#dc2626' }} /></ListItemIcon>
-            <ListItemText>Logout</ListItemText>
-          </MenuItem>
-        </Menu>
 
         {/* Notifications Dropdown */}
         <Menu
@@ -1662,7 +1591,7 @@ const OwnerDashboard = () => {
                                 </Alert>
                               )}
                               
-                              {/* Modern Action Buttons with text labels */}
+                              {/* Modern Action Buttons with text labels - Removed Chat and Announce */}
                               <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 2 }}>
                                 <ActionButton 
                                   icon={<ViewIcon fontSize="small" />}
@@ -1709,22 +1638,6 @@ const OwnerDashboard = () => {
                                   onClick={() => handleGenerateQR(pg.id || pg.pg_id)}
                                   disabled={!isActive}
                                   color="#10b981"
-                                />
-                                
-                                <ActionButton 
-                                  icon={<ChatIcon fontSize="small" />}
-                                  text="Chat"
-                                  onClick={() => handleChat(pg.id || pg.pg_id)}
-                                  disabled={!isActive}
-                                  color="#4CAF50"
-                                />
-                                
-                                <ActionButton 
-                                  icon={<CampaignIcon fontSize="small" />}
-                                  text="Announce"
-                                  onClick={() => handleAnnouncement(pg.id || pg.pg_id)}
-                                  disabled={!isActive}
-                                  color="#0B5ED7"
                                 />
                               </Box>
                               
@@ -2130,11 +2043,6 @@ const OwnerDashboard = () => {
             </Box>
           )}
         </SwipeableDrawer>
-
-        {/* Floating Assistant Button */}
-        <Box sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1000, animation: `${float} 3s ease-in-out infinite` }}>
-          <IconButton onClick={() => setSnackbar({ open: true, message: "Need help? Contact support", severity: "info" })} sx={{ background: 'linear-gradient(135deg, #0B5ED7, #4CAF50)', width: 56, height: 56, boxShadow: '0 4px 20px rgba(76, 175, 80, 0.4)', '&:hover': { transform: 'scale(1.1)', boxShadow: '0 8px 30px rgba(76, 175, 80, 0.6)' }, transition: 'all 0.3s ease' }}><ChatIcon sx={{ color: '#fff' }} /></IconButton>
-        </Box>
 
         {/* Snackbar */}
         <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
