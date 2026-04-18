@@ -19,7 +19,7 @@ export default function OwnerBankDetails() {
   const [pageLoading, setPageLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const [isEdit, setIsEdit] = useState(true); // 👈 View/Edit mode state
+  const [hasBank, setHasBank] = useState(false); // ✅ Simple flag for view/form
 
   const fetchBank = async () => {
     setPageLoading(true);
@@ -28,7 +28,7 @@ export default function OwnerBankDetails() {
     try {
       const res = await api.get("/owner/bank");
 
-      // ✅ FIXED: Access data from res.data.data
+      // ✅ Check if bank data exists
       if (res.data?.data) {
         const bank = res.data.data;
         
@@ -40,16 +40,16 @@ export default function OwnerBankDetails() {
           branch: bank.branch || ""
         });
         
-        setIsEdit(false); // 👈 Switch to VIEW MODE since data exists
+        setHasBank(true); // ✅ Show read-only view
       } else {
         // No bank details found, show form
-        setIsEdit(true);
+        setHasBank(false);
       }
     } catch (err) {
       if (err.response?.status !== 404) {
         setMessage("Failed to load bank details");
       }
-      setIsEdit(true); // Show form on error/no data
+      setHasBank(false); // Show form on error/no data
       console.log("GET BANK ERROR:", err.response?.data || err.message);
     } finally {
       setPageLoading(false);
@@ -81,9 +81,9 @@ export default function OwnerBankDetails() {
       setMessage("Bank details saved successfully");
       
       // ✅ Switch to view mode after successful save
-      setIsEdit(false);
+      setHasBank(true);
       
-      // Refresh to get masked data
+      // Refresh to get masked data from backend
       await fetchBank();
     } catch (err) {
       setMessage(
@@ -93,11 +93,6 @@ export default function OwnerBankDetails() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleEdit = () => {
-    setIsEdit(true);
-    setMessage("");
   };
 
   /* ================= PROTECTION ================= */
@@ -127,7 +122,7 @@ export default function OwnerBankDetails() {
               <div>
                 <h1 className="text-3xl font-bold text-white">Bank Verification</h1>
                 <p className="text-blue-100 mt-2">
-                  {isEdit 
+                  {!hasBank 
                     ? "Complete this step to start approving bookings and receive payments"
                     : "Your bank details are verified and secure"}
                 </p>
@@ -149,9 +144,9 @@ export default function OwnerBankDetails() {
             </div>
           )}
 
-          {/* View Mode - Show Bank Details Card */}
-          {!isEdit ? (
-            <div className="p-8 animate-fadeIn">
+          {/* ✅ VIEW ONLY MODE - No Edit Button */}
+          {hasBank ? (
+            <div className="p-8">
               <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-6 border border-gray-200">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center space-x-3">
@@ -213,16 +208,17 @@ export default function OwnerBankDetails() {
                   )}
                 </div>
 
-                <button
-                  onClick={handleEdit}
-                  className="mt-6 w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-all duration-200 transform hover:scale-[1.02] shadow-md hover:shadow-lg"
-                >
-                  ✏️ Edit Details
-                </button>
+                {/* 🔒 No Edit Button - Just a notice */}
+                <div className="mt-6 p-3 bg-yellow-50 rounded-xl border border-yellow-200">
+                  <p className="text-sm text-yellow-800 flex items-center space-x-2">
+                    <span className="text-lg">🔒</span>
+                    <span>Bank details are encrypted and cannot be modified after verification</span>
+                  </p>
+                </div>
               </div>
             </div>
           ) : (
-            /* Form Section - Edit Mode */
+            /* ✅ ONLY FIRST TIME FORM - No Cancel/Edit buttons */
             <div className="px-8 py-8">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -300,20 +296,11 @@ export default function OwnerBankDetails() {
                   </div>
                 </div>
 
-                <div className="pt-4 flex gap-4">
-                  {!isEdit && (
-                    <button
-                      type="button"
-                      onClick={() => setIsEdit(false)}
-                      className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-all"
-                    >
-                      Cancel
-                    </button>
-                  )}
+                <div className="pt-4">
                   <button 
                     type="submit" 
                     disabled={saving}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-6 rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-indigo-700 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-6 rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-indigo-700 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
                     {saving ? (
                       <span className="flex items-center justify-center space-x-3">
@@ -343,23 +330,6 @@ export default function OwnerBankDetails() {
           </div>
         </div>
       </div>
-
-      {/* Animation CSS */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-      `}</style>
     </div>
   );
 }
