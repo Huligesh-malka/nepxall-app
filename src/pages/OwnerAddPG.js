@@ -161,7 +161,7 @@ const initialRoomRates = {
   four_sharing: "",
   single_room: "",
   double_room: "",
-  triple_room: "",
+  // triple_room removed
   price_1bhk: "",
   price_2bhk: "",
   price_3bhk: "",
@@ -489,7 +489,7 @@ function OwnerAddPG() {
         Object.entries(bhkConfig).forEach(([k, v]) => appendIfValue(formData, k, v));
       }
       
-      // PG room rates
+      // PG room rates (triple_room removed)
       if (isPG) {
         Object.entries(roomRates).forEach(([k, v]) => {
           if (k.startsWith("single_") || k.startsWith("double_") || k.startsWith("triple_") || k.startsWith("four_")) {
@@ -722,7 +722,7 @@ function OwnerAddPG() {
           </div>
         )}
 
-        {/* Room Rates */}
+        {/* Room Rates - Triple Room Removed */}
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>{isToLet ? "💰 Rental Amount (₹/Month)" : isCoLiving ? "💰 Co-Living Rates (₹/Month)" : "💰 Room Rates (₹/Month)"}</h3>
           {isToLet ? (
@@ -739,12 +739,30 @@ function OwnerAddPG() {
             </div>
           ) : (
             <div style={styles.ratesGrid}>
-              {["single_sharing","double_sharing","triple_sharing","four_sharing","single_room","double_room","triple_room"].map(key => (
-                <div key={key} style={styles.inputGroup}>
-                  <label>{key.replace(/_/g," ").replace(/\b\w/g,l=>l.toUpperCase())}</label>
-                  <input type="number" name={key} placeholder="₹" value={roomRates[key]} onChange={handleRateChange} style={styles.input} min="0" />
-                </div>
-              ))}
+              <div style={styles.inputGroup}>
+                <label>Single Sharing</label>
+                <input type="number" name="single_sharing" placeholder="₹" value={roomRates.single_sharing} onChange={handleRateChange} style={styles.input} min="0" />
+              </div>
+              <div style={styles.inputGroup}>
+                <label>Double Sharing</label>
+                <input type="number" name="double_sharing" placeholder="₹" value={roomRates.double_sharing} onChange={handleRateChange} style={styles.input} min="0" />
+              </div>
+              <div style={styles.inputGroup}>
+                <label>Triple Sharing</label>
+                <input type="number" name="triple_sharing" placeholder="₹" value={roomRates.triple_sharing} onChange={handleRateChange} style={styles.input} min="0" />
+              </div>
+              <div style={styles.inputGroup}>
+                <label>Four Sharing</label>
+                <input type="number" name="four_sharing" placeholder="₹" value={roomRates.four_sharing} onChange={handleRateChange} style={styles.input} min="0" />
+              </div>
+              <div style={styles.inputGroup}>
+                <label>Single Room</label>
+                <input type="number" name="single_room" placeholder="₹" value={roomRates.single_room} onChange={handleRateChange} style={styles.input} min="0" />
+              </div>
+              <div style={styles.inputGroup}>
+                <label>Double Room</label>
+                <input type="number" name="double_room" placeholder="₹" value={roomRates.double_room} onChange={handleRateChange} style={styles.input} min="0" />
+              </div>
             </div>
           )}
         </div>
@@ -1011,7 +1029,7 @@ function OwnerAddPG() {
   );
 }
 
-// Styles (unchanged – keep the same as original)
+// Styles
 const styles = {
   container: { minHeight: "100vh", background: "linear-gradient(135deg, #667eea, #764ba2)", padding: "20px", display: "flex", justifyContent: "center", alignItems: "flex-start" },
   card: { background: "#ffffff", width: "100%", maxWidth: "1200px", padding: "30px", borderRadius: "20px", boxShadow: "0 25px 50px rgba(0, 0, 0, 0.2)", margin: "20px 0" },

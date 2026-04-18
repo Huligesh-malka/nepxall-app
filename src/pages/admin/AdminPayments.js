@@ -243,13 +243,11 @@ const AdminPayments = () => {
                       />
                     </TableCell>
                     
-                    {/* ✅ UPDATED AMOUNT CELL WITH IMPROVED AGREEMENT BADGE */}
                     <TableCell>
                       <Typography fontWeight="800" color={DARK_TEXT}>
                         ₹{p.total_amount || p.amount}
                       </Typography>
 
-                      {/* ✅ IMPROVED AGREEMENT BADGE - CLEAR WHO PAID */}
                       <Chip
                         label={
                           p.agreement_paid === 1
@@ -265,7 +263,6 @@ const AdminPayments = () => {
                         }}
                       />
 
-                      {/* ✅ Show agreement amount if paid */}
                       {p.agreement_paid === 1 && (
                         <Typography variant="caption" sx={{ display: "block", color: "#16a34a", mt: 0.5 }}>
                           + ₹500 Agreement Fee (Paid by User)
@@ -409,7 +406,7 @@ const AdminPayments = () => {
         </Table>
       </Paper>
 
-      {/* HIDDEN RECEIPT COMPONENT FOR PDF GENERATION - UPDATED WITH FULL BREAKDOWN */}
+      {/* HIDDEN RECEIPT COMPONENT FOR PDF GENERATION */}
       {selectedPayment && (
         <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
           <div ref={receiptRef} style={modernReceiptContainer}>
@@ -452,14 +449,12 @@ const AdminPayments = () => {
               </div>
             </div>
 
-            {/* 🔥 UPDATED TABLE CONTAINER WITH FULL BREAKDOWN */}
             <div style={tableContainer}>
               <div style={{ ...tableHeader, background: BRAND_BLUE }}>
                 <span>DESCRIPTION</span>
                 <span>AMOUNT (₹)</span>
               </div>
 
-              {/* RENT */}
               {(selectedPayment.rent_amount > 0 || selectedPayment.rent_amount) && (
                 <div style={tableRow}>
                   <span>Room Rent ({selectedPayment.sharing || 'N/A'} Sharing)</span>
@@ -467,7 +462,6 @@ const AdminPayments = () => {
                 </div>
               )}
 
-              {/* MAINTENANCE */}
               {(selectedPayment.maintenance_amount > 0 || selectedPayment.maintenance_amount) && (
                 <div style={tableRow}>
                   <span>Maintenance Charges</span>
@@ -475,7 +469,6 @@ const AdminPayments = () => {
                 </div>
               )}
 
-              {/* SECURITY DEPOSIT */}
               {(selectedPayment.security_deposit > 0 || selectedPayment.security_deposit) && (
                 <div style={tableRow}>
                   <span>Security Deposit</span>
@@ -483,7 +476,6 @@ const AdminPayments = () => {
                 </div>
               )}
 
-              {/* 🔥 AGREEMENT CHARGES - ONLY IF PAID BY USER */}
               {selectedPayment.agreement_paid === 1 && (
                 <div style={{ ...tableRow, backgroundColor: "#f0fdf4", borderLeft: `3px solid ${BRAND_GREEN}` }}>
                   <span>
@@ -494,7 +486,6 @@ const AdminPayments = () => {
                 </div>
               )}
 
-              {/* PLATFORM FEE (if you have it) */}
               {selectedPayment.platform_fee > 0 && (
                 <div style={tableRow}>
                   <span>Platform Fee</span>
@@ -502,10 +493,8 @@ const AdminPayments = () => {
                 </div>
               )}
 
-              {/* DIVIDER */}
               <div style={{ height: "1px", backgroundColor: "#e5e7eb", margin: "10px 0" }}></div>
 
-              {/* TOTAL PAID BY USER */}
               <div style={{
                 ...tableRow,
                 fontWeight: "bold",
@@ -516,7 +505,6 @@ const AdminPayments = () => {
                 <span>₹{selectedPayment.total_amount || selectedPayment.amount}</span>
               </div>
 
-              {/* 🔥 OWNER VS ADMIN SPLIT (POWERFUL) */}
               <div style={{ marginTop: "20px", padding: "16px", background: "#f8fafc", borderRadius: "8px" }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1, color: DARK_TEXT }}>
                   💰 PAYMENT DISTRIBUTION
@@ -545,7 +533,7 @@ const AdminPayments = () => {
                   </div>
                 )}
 
-                {!selectedPayment.agreement_paid !== 1 && (
+                {selectedPayment.agreement_paid !== 1 && (
                   <div style={{ fontSize: "13px", color: "#dc2626", marginTop: "8px", fontStyle: "italic" }}>
                     ⚠️ Note: Agreement fee not collected from user
                   </div>
