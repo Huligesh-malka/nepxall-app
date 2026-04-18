@@ -537,7 +537,7 @@ function EditPG() {
     await fetchAddressFromCoordinates(lat, lng);
   };
 
-  // Search location by address - FIXED: Using useCallback to prevent re-renders
+  // Search location by address
   const searchLocation = useCallback(async (searchQuery) => {
     if (!searchQuery.trim()) return;
     
@@ -877,8 +877,8 @@ function EditPG() {
     }
   };
 
-  // OpenStreetMap Modal Component - FIXED: Wrapped with useCallback to prevent re-renders
-  const OpenStreetMapModal = useCallback(() => {
+  // OpenStreetMap Modal Component - FIXED: Using local state to prevent re-renders
+  const OpenStreetMapModal = () => {
     const displayLat = formatCoordinate(selectedLocation.lat);
     const displayLng = formatCoordinate(selectedLocation.lng);
     const mapLat = parseCoordinate(selectedLocation.lat) || 12.9716;
@@ -997,12 +997,44 @@ function EditPG() {
         </div>
       </div>
     );
-  }, [selectedLocation, userLocation, gettingLocation, mapLoading, getUserCurrentLocation, searchLocation, handleLocationSelect]);
+  };
 
-  // Manual Address Entry Form - FIXED: Wrapped with useCallback to prevent re-renders
-  const ManualAddressForm = useCallback(() => {
-    const displayLat = selectedLocation.lat || "";
-    const displayLng = selectedLocation.lng || "";
+  // Manual Address Entry Form - FIXED: Using local state to prevent cursor jumps
+  const ManualAddressForm = () => {
+    // Keep local state for the form to prevent cursor jumps
+    const [localLocation, setLocalLocation] = useState(selectedLocation);
+    const [isSaving, setIsSaving] = useState(false);
+    
+    // Update local state when selectedLocation changes from outside
+    useEffect(() => {
+      setLocalLocation(selectedLocation);
+    }, [selectedLocation]);
+    
+    const handleLocalChange = (e) => {
+      const { name, value } = e.target;
+      setLocalLocation(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    };
+    
+    const handleSave = () => {
+      if (!localLocation.address || !localLocation.area || !localLocation.city || !localLocation.state || !localLocation.pincode || !localLocation.country) {
+        alert("Please fill all required fields (marked with *)");
+        return;
+      }
+      
+      setIsSaving(true);
+      // Update the main state with all values at once
+      setSelectedLocation(localLocation);
+      setIsSaving(false);
+      setManualEditMode(false);
+    };
+    
+    const handleBackToMap = () => {
+      setManualEditMode(false);
+      setShowMap(true);
+    };
     
     return (
       <div style={styles.manualModalOverlay}>
@@ -1018,8 +1050,8 @@ function EditPG() {
                 <label>Full Address *</label>
                 <textarea
                   name="address"
-                  value={selectedLocation.address}
-                  onChange={handleLocationChange}
+                  value={localLocation.address}
+                  onChange={handleLocalChange}
                   placeholder="Complete address including floor, building, street"
                   style={styles.textarea}
                   rows="3"
@@ -1032,8 +1064,8 @@ function EditPG() {
                 <input
                   type="text"
                   name="area"
-                  value={selectedLocation.area}
-                  onChange={handleLocationChange}
+                  value={localLocation.area}
+                  onChange={handleLocalChange}
                   placeholder="e.g., Koramangala, Whitefield"
                   style={styles.input}
                   required
@@ -1045,8 +1077,8 @@ function EditPG() {
                 <input
                   type="text"
                   name="road"
-                  value={selectedLocation.road}
-                  onChange={handleLocationChange}
+                  value={localLocation.road}
+                  onChange={handleLocalChange}
                   placeholder="e.g., MG Road, 100 Feet Road"
                   style={styles.input}
                 />
@@ -1057,8 +1089,8 @@ function EditPG() {
                 <input
                   type="text"
                   name="landmark"
-                  value={selectedLocation.landmark}
-                  onChange={handleLocationChange}
+                  value={localLocation.landmark}
+                  onChange={handleLocalChange}
                   placeholder="e.g., Near Forum Mall, Opposite Metro Station"
                   style={styles.input}
                 />
@@ -1069,8 +1101,8 @@ function EditPG() {
                 <input
                   type="text"
                   name="city"
-                  value={selectedLocation.city}
-                  onChange={handleLocationChange}
+                  value={localLocation.city}
+                  onChange={handleLocalChange}
                   placeholder="e.g., Bangalore"
                   style={styles.input}
                   required
@@ -1082,8 +1114,8 @@ function EditPG() {
                 <input
                   type="text"
                   name="state"
-                  value={selectedLocation.state}
-                  onChange={handleLocationChange}
+                  value={localLocation.state}
+                  onChange={handleLocalChange}
                   placeholder="e.g., Karnataka"
                   style={styles.input}
                   required
@@ -1095,8 +1127,8 @@ function EditPG() {
                 <input
                   type="text"
                   name="pincode"
-                  value={selectedLocation.pincode}
-                  onChange={handleLocationChange}
+                  value={localLocation.pincode}
+                  onChange={handleLocalChange}
                   placeholder="e.g., 560034"
                   style={styles.input}
                   required
@@ -1109,8 +1141,8 @@ function EditPG() {
                 <input
                   type="text"
                   name="country"
-                  value={selectedLocation.country}
-                  onChange={handleLocationChange}
+                  value={localLocation.country}
+                  onChange={handleLocalChange}
                   placeholder="e.g., India"
                   style={styles.input}
                   required
@@ -1120,10 +1152,10 @@ function EditPG() {
               <div style={styles.inputGroup}>
                 <label>Latitude (optional)</label>
                 <input
-                  type="number"
+                  type="text"
                   name="lat"
-                  value={displayLat}
-                  onChange={handleLocationChange}
+                  value={localLocation.lat === null ? "" : localLocation.lat}
+                  onChange={handleLocalChange}
                   placeholder="e.g., 12.9716"
                   style={styles.input}
                   step="any"
@@ -1133,10 +1165,10 @@ function EditPG() {
               <div style={styles.inputGroup}>
                 <label>Longitude (optional)</label>
                 <input
-                  type="number"
+                  type="text"
                   name="lng"
-                  value={displayLng}
-                  onChange={handleLocationChange}
+                  value={localLocation.lng === null ? "" : localLocation.lng}
+                  onChange={handleLocalChange}
                   placeholder="e.g., 77.5946"
                   style={styles.input}
                   step="any"
@@ -1146,22 +1178,14 @@ function EditPG() {
             
             <div style={styles.manualFooter}>
               <button 
-                onClick={() => {
-                  if (!selectedLocation.address || !selectedLocation.area || !selectedLocation.city || !selectedLocation.state || !selectedLocation.pincode || !selectedLocation.country) {
-                    alert("Please fill all required fields (marked with *)");
-                    return;
-                  }
-                  setManualEditMode(false);
-                }}
+                onClick={handleSave}
                 style={styles.saveButton}
+                disabled={isSaving}
               >
-                💾 Save Address
+                {isSaving ? "Saving..." : "💾 Save Address"}
               </button>
               <button 
-                onClick={() => {
-                  setManualEditMode(false);
-                  setShowMap(true);
-                }}
+                onClick={handleBackToMap}
                 style={styles.backToMapButton}
               >
                 🗺️ Back to Map
@@ -1171,7 +1195,7 @@ function EditPG() {
         </div>
       </div>
     );
-  }, [selectedLocation, handleLocationChange]);
+  };
 
   // Render location preview
   const renderLocationPreview = () => {
@@ -2025,7 +2049,7 @@ function EditPG() {
   );
 }
 
-// Styles (same as before - keeping original styles)
+// Styles
 const styles = {
   container: {
     minHeight: "100vh",
