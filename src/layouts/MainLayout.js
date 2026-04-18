@@ -97,6 +97,10 @@ const MainLayout = () => {
     return user?.name || user?.email?.split('@')[0] || "User";
   };
 
+  // ✅ Define userName variable to use in JSX (cleaner approach)
+  const userName = getUserName();
+  const userInitial = getUserInitial();
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f0f2f5" }}>
       {/* SIDEBAR */}
@@ -215,7 +219,7 @@ const MainLayout = () => {
                       boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
                     }}
                   >
-                    {getUserInitial()}
+                    {userInitial}
                   </Avatar>
                 </Box>
 
@@ -259,7 +263,7 @@ const MainLayout = () => {
                         fontSize: "20px"
                       }}
                     >
-                      {getUserInitial()}
+                      {userInitial}
                     </Avatar>
                     <Typography sx={{ fontWeight: 700, color: "#1e293b" }}>
                       {userName}
