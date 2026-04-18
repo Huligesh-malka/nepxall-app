@@ -134,7 +134,7 @@ const getMaxDate = () => {
   return `${year}-${month}-${day}`;
 };
 
-/* ================= BOOKING MODAL COMPONENT (FIXED - same as search page) ================= */
+/* ================= BOOKING MODAL COMPONENT (UPDATED MODERN DESIGN) ================= */
 const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
   const [bookingData, setBookingData] = useState({
     checkInDate: "",
@@ -263,94 +263,25 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
   const selectedPrice = getSelectedPrice();
 
   return (
-    <div style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.8)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 3000,
-      padding: 20,
-      animation: "fadeIn 0.3s ease"
-    }}>
-      <div style={{
-        background: "#ffffff",
-        borderRadius: 20,
-        width: "100%",
-        maxWidth: 500,
-        maxHeight: "90vh",
-        overflowY: "auto",
-        position: "relative",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
-      }}>
-        <button
-          onClick={onClose}
-          disabled={bookingLoading}
-          style={{
-            position: "absolute",
-            top: 16,
-            right: 16,
-            background: "rgba(255,255,255,0.9)",
-            border: "none",
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: bookingLoading ? "not-allowed" : "pointer",
-            zIndex: 100,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
-          }}
-        >
+    <div style={modernStyles.modalOverlay}>
+      <div style={modernStyles.modalContainer}>
+        <button onClick={onClose} disabled={bookingLoading} style={modernStyles.modalCloseBtn}>
           <X size={24} />
         </button>
 
-        <div style={{ padding: 30 }}>
-          <h2 style={{ 
-            fontSize: 24, 
-            fontWeight: 700, 
-            color: "#111827",
-            marginBottom: 8 
-          }}>
-            🏠 Book {pg?.pg_name}
-          </h2>
-          <p style={{ 
-            fontSize: 14, 
-            color: "#6b7280",
-            marginBottom: 24 
-          }}>
-            Your details will be auto-filled from your profile
-          </p>
+        <div style={modernStyles.modalContent}>
+          <div style={modernStyles.modalHeader}>
+            <h2 style={modernStyles.modalTitle}>🏠 Reserve {pg?.pg_name}</h2>
+            <p style={modernStyles.modalSubtitle}>Your details will be auto-filled from your profile</p>
+          </div>
 
-          {/* 24h warning box */}
-          <div style={{
-            background: "#fff7ed",
-            padding: 12,
-            borderRadius: 8,
-            marginBottom: 15,
-            fontSize: 13,
-            color: "#9a3412",
-            border: "1px solid #fed7aa"
-          }}>
+          <div style={modernStyles.modalWarning}>
             ⚠️ You can only request this PG once every 24 hours
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: 24 }}>
-              <label style={{
-                display: "block",
-                marginBottom: 8,
-                fontSize: 14,
-                fontWeight: 500,
-                color: "#374151"
-              }}>
-                Check-in Date *
-              </label>
+            <div style={modernStyles.formGroup}>
+              <label style={modernStyles.formLabel}>Check-in Date *</label>
               <input
                 type="date"
                 name="checkInDate"
@@ -360,32 +291,13 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
                 disabled={bookingLoading}
                 min={getTomorrowDate()}
                 max={getMaxDate()}
-                style={{
-                  width: "100%",
-                  padding: "12px 16px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 10,
-                  fontSize: 14,
-                  background: bookingLoading ? "#f3f4f6" : "#f9fafb"
-                }}
+                style={modernStyles.formInput}
               />
-              <p style={{
-                fontSize: 12,
-                color: "#6b7280",
-                marginTop: 4
-              }}>
-                Earliest check-in: tomorrow (24h notice required)
-              </p>
+              <p style={modernStyles.formHint}>Earliest check-in: tomorrow (24h notice required)</p>
             </div>
 
-            <div style={{ marginBottom: 24 }}>
-              <label style={{
-                display: "block",
-                marginBottom: 8,
-                fontSize: 14,
-                fontWeight: 500,
-                color: "#374151"
-              }}>
+            <div style={modernStyles.formGroup}>
+              <label style={modernStyles.formLabel}>
                 {pg?.pg_category === "to_let" ? "BHK Type *" : "Room Type *"}
               </label>
               <select
@@ -394,14 +306,7 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
                 onChange={handleInputChange}
                 required
                 disabled={bookingLoading}
-                style={{
-                  width: "100%",
-                  padding: "12px 16px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 10,
-                  fontSize: 14,
-                  background: bookingLoading ? "#f3f4f6" : "#f9fafb"
-                }}
+                style={modernStyles.formSelect}
               >
                 <option value="">Select {pg?.pg_category === "to_let" ? "BHK Type" : "Room Type"}</option>
                 {getRoomTypes().map((type, index) => (
@@ -410,26 +315,18 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
               </select>
               
               {selectedPrice !== null && selectedPrice > 0 && (
-                <p style={{ marginTop: 8, fontWeight: 600, color: "#10b981", fontSize: 14 }}>
+                <p style={modernStyles.selectedPrice}>
                   Selected: {bookingData.roomType} - ₹{formatPrice(selectedPrice)}/month
                 </p>
               )}
             </div>
 
-            <div style={{
-              background: "#f0fdf4",
-              borderRadius: 12,
-              padding: 16,
-              marginBottom: 24,
-              border: "1px solid #bbf7d0"
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <Info size={16} color="#10b981" />
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#065f46" }}>
-                  Booking Information
-                </span>
+            <div style={modernStyles.infoBox}>
+              <div style={modernStyles.infoBoxHeader}>
+                <Info size={16} />
+                <span>Booking Information</span>
               </div>
-              <ul style={{ margin: 0, paddingLeft: 20, color: "#065f46", fontSize: 13 }}>
+              <ul style={modernStyles.infoList}>
                 <li>Your name and contact info will be auto-filled from your profile</li>
                 <li>Register number will be automatically generated</li>
                 <li>You'll receive confirmation via email/SMS</li>
@@ -437,54 +334,14 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
               </ul>
             </div>
 
-            <div style={{ display: "flex", gap: 12 }}>
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={bookingLoading}
-                style={{
-                  flex: 1,
-                  padding: "14px",
-                  background: "#f3f4f6",
-                  color: "#374151",
-                  border: "none",
-                  borderRadius: 10,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: bookingLoading ? "not-allowed" : "pointer"
-                }}
-              >
+            <div style={modernStyles.modalActions}>
+              <button type="button" onClick={onClose} disabled={bookingLoading} style={modernStyles.cancelBtn}>
                 Cancel
               </button>
-              <button
-                type="submit"
-                disabled={bookingLoading}
-                style={{
-                  flex: 2,
-                  padding: "14px",
-                  background: bookingLoading ? "#9ca3af" : "#10b981",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 10,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: bookingLoading ? "not-allowed" : "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8
-                }}
-              >
+              <button type="submit" disabled={bookingLoading} style={modernStyles.confirmBtn}>
                 {bookingLoading ? (
                   <>
-                    <div style={{
-                      width: 18,
-                      height: 18,
-                      border: "2px solid white",
-                      borderTop: "2px solid transparent",
-                      borderRadius: "50%",
-                      animation: "spin 0.8s linear infinite"
-                    }} />
+                    <div style={modernStyles.spinnerSmall} />
                     Processing...
                   </>
                 ) : (
@@ -544,14 +401,14 @@ const getHighlightIcon = (category, type) => {
   return categoryIcons[category] || "📍";
 };
 
-// Helper Components
+// Helper Components with modern styling
 const Section = ({ title, children, hasContent = true, badgeCount }) => 
   hasContent ? (
-    <div style={styles.section}>
-      <div style={styles.sectionHeader}>
-        <h3 style={styles.sectionTitle}>{title}</h3>
+    <div style={modernStyles.section}>
+      <div style={modernStyles.sectionHeader}>
+        <h3 style={modernStyles.sectionTitle}>{title}</h3>
         {badgeCount !== undefined && badgeCount > 0 && (
-          <span style={styles.sectionBadge}>{badgeCount}</span>
+          <span style={modernStyles.sectionBadge}>{badgeCount}</span>
         )}
       </div>
       {children}
@@ -561,46 +418,46 @@ const Section = ({ title, children, hasContent = true, badgeCount }) =>
 const FacilityItem = ({ icon, label, active = true, onClick, categoryColor }) => (
   <div 
     style={{
-      ...styles.facilityItem,
+      ...modernStyles.facilityItem,
       background: active 
-        ? `linear-gradient(135deg, ${categoryColor || '#f0f9ff'}, white)` 
+        ? `linear-gradient(135deg, ${categoryColor || '#f0f9ff'}10, white)` 
         : '#f9fafb',
       borderLeft: `4px solid ${categoryColor || '#667eea'}`,
-      ...(active ? styles.facilityItemActive : styles.facilityItemInactive)
+      ...(active ? modernStyles.facilityItemActive : modernStyles.facilityItemInactive)
     }}
     onClick={onClick}
     title={label}
   >
-    <span style={styles.facilityIcon}>{icon}</span>
-    <span style={styles.facilityLabel}>{label}</span>
-    {active && <span style={styles.checkmark}>✓</span>}
+    <span style={modernStyles.facilityIcon}>{icon}</span>
+    <span style={modernStyles.facilityLabel}>{label}</span>
+    {active && <span style={modernStyles.checkmark}>✓</span>}
   </div>
 );
 
 const RuleItem = ({ icon, label, allowed, description }) => (
   <div style={{
-    ...styles.ruleItem,
+    ...modernStyles.ruleItem,
     background: allowed 
       ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' 
       : 'linear-gradient(135deg, #fef2f2, #fee2e2)'
   }}>
-    <div style={styles.ruleIconContainer}>
+    <div style={modernStyles.ruleIconContainer}>
       <span style={{
-        ...styles.ruleIcon,
+        ...modernStyles.ruleIcon,
         background: allowed ? '#10b981' : '#ef4444'
       }}>{icon}</span>
     </div>
-    <div style={styles.ruleContent}>
+    <div style={modernStyles.ruleContent}>
       <div style={{
-        ...styles.ruleLabel,
+        ...modernStyles.ruleLabel,
         color: allowed ? '#065f46' : '#7f1d1d'
       }}>{label}</div>
       {description && (
-        <div style={styles.ruleDescription}>{description}</div>
+        <div style={modernStyles.ruleDescription}>{description}</div>
       )}
-      <div style={styles.ruleStatus}>
+      <div style={modernStyles.ruleStatus}>
         <span style={{
-          ...styles.ruleStatusBadge,
+          ...modernStyles.ruleStatusBadge,
           background: allowed ? '#10b981' : '#ef4444'
         }}>
           {allowed ? '✅ Allowed' : '❌ Not Allowed'}
@@ -613,13 +470,13 @@ const RuleItem = ({ icon, label, allowed, description }) => (
 const InfoRow = ({ label, value }) => {
   if (!value || value === "false" || value === false || value === "") return null;
   return (
-    <div style={styles.infoRow}>
+    <div style={modernStyles.infoRow}>
       <strong>{label}:</strong> {value}
     </div>
   );
 };
 
-// Price Component for different property types
+// Price Component for different property types (updated design)
 const PriceDetails = ({ pg }) => {
   const isToLet = pg?.pg_category === "to_let";
   const isCoLiving = pg?.pg_category === "coliving";
@@ -645,69 +502,69 @@ const PriceDetails = ({ pg }) => {
 
   if (!hasAnyPrice()) {
     return (
-      <div style={styles.noPriceContainer}>
-        <span style={styles.noPriceIcon}>💰</span>
-        <p style={styles.noPriceText}>Price details not available</p>
+      <div style={modernStyles.noPriceContainer}>
+        <span style={modernStyles.noPriceIcon}>💰</span>
+        <p style={modernStyles.noPriceText}>Price details not available</p>
       </div>
     );
   }
 
   return (
-    <div style={styles.priceDetailsContainer}>
+    <div style={modernStyles.priceDetailsContainer}>
       {isToLet && (
-        <div style={styles.priceSection}>
-          <h4 style={styles.priceSectionTitle}>
-            <span style={styles.priceSectionIcon}>🏠</span>
+        <div style={modernStyles.priceSection}>
+          <h4 style={modernStyles.priceSectionTitle}>
+            <span style={modernStyles.priceSectionIcon}>🏠</span>
             House/Flat Rental Prices
           </h4>
-          <div style={styles.priceGrid}>
+          <div style={modernStyles.priceGrid}>
             {pg.price_1bhk && pg.price_1bhk !== "0" && pg.price_1bhk !== "" && (
-              <div style={styles.priceItem}>
-                <div style={styles.priceType}>1 BHK</div>
-                <div style={styles.priceValue}>
+              <div style={modernStyles.priceItem}>
+                <div style={modernStyles.priceType}>1 BHK</div>
+                <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.price_1bhk)}/month
                 </div>
                 {pg.security_deposit_1bhk && pg.security_deposit_1bhk !== "0" && pg.security_deposit_1bhk !== "" && (
-                  <div style={styles.depositAmount}>
+                  <div style={modernStyles.depositAmount}>
                     Security: {formatPriceLocal(pg.security_deposit_1bhk)}
                   </div>
                 )}
               </div>
             )}
             {pg.price_2bhk && pg.price_2bhk !== "0" && pg.price_2bhk !== "" && (
-              <div style={styles.priceItem}>
-                <div style={styles.priceType}>2 BHK</div>
-                <div style={styles.priceValue}>
+              <div style={modernStyles.priceItem}>
+                <div style={modernStyles.priceType}>2 BHK</div>
+                <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.price_2bhk)}/month
                 </div>
                 {pg.security_deposit_2bhk && pg.security_deposit_2bhk !== "0" && pg.security_deposit_2bhk !== "" && (
-                  <div style={styles.depositAmount}>
+                  <div style={modernStyles.depositAmount}>
                     Security: {formatPriceLocal(pg.security_deposit_2bhk)}
                   </div>
                 )}
               </div>
             )}
             {pg.price_3bhk && pg.price_3bhk !== "0" && pg.price_3bhk !== "" && (
-              <div style={styles.priceItem}>
-                <div style={styles.priceType}>3 BHK</div>
-                <div style={styles.priceValue}>
+              <div style={modernStyles.priceItem}>
+                <div style={modernStyles.priceType}>3 BHK</div>
+                <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.price_3bhk)}/month
                 </div>
                 {pg.security_deposit_3bhk && pg.security_deposit_3bhk !== "0" && pg.security_deposit_3bhk !== "" && (
-                  <div style={styles.depositAmount}>
+                  <div style={modernStyles.depositAmount}>
                     Security: {formatPriceLocal(pg.security_deposit_3bhk)}
                   </div>
                 )}
               </div>
             )}
             {pg.price_4bhk && pg.price_4bhk !== "0" && pg.price_4bhk !== "" && (
-              <div style={styles.priceItem}>
-                <div style={styles.priceType}>4 BHK</div>
-                <div style={styles.priceValue}>
+              <div style={modernStyles.priceItem}>
+                <div style={modernStyles.priceType}>4 BHK</div>
+                <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.price_4bhk)}/month
                 </div>
                 {pg.security_deposit_4bhk && pg.security_deposit_4bhk !== "0" && pg.security_deposit_4bhk !== "" && (
-                  <div style={styles.depositAmount}>
+                  <div style={modernStyles.depositAmount}>
                     Security: {formatPriceLocal(pg.security_deposit_4bhk)}
                   </div>
                 )}
@@ -715,7 +572,7 @@ const PriceDetails = ({ pg }) => {
             )}
           </div>
           {pg.bhk_type && (
-            <div style={styles.bhkInfo}>
+            <div style={modernStyles.bhkInfo}>
               Available: {pg.bhk_type === "4+" ? "4+ BHK" : `${pg.bhk_type} BHK`}
             </div>
           )}
@@ -723,33 +580,33 @@ const PriceDetails = ({ pg }) => {
       )}
 
       {isCoLiving && (
-        <div style={styles.priceSection}>
-          <h4 style={styles.priceSectionTitle}>
-            <span style={styles.priceSectionIcon}>🤝</span>
+        <div style={modernStyles.priceSection}>
+          <h4 style={modernStyles.priceSectionTitle}>
+            <span style={modernStyles.priceSectionIcon}>🤝</span>
             Co-Living Prices
           </h4>
-          <div style={styles.priceGrid}>
+          <div style={modernStyles.priceGrid}>
             {pg.co_living_single_room && pg.co_living_single_room !== "0" && pg.co_living_single_room !== "" && (
-              <div style={styles.priceItem}>
-                <div style={styles.priceType}>Single Room</div>
-                <div style={styles.priceValue}>
+              <div style={modernStyles.priceItem}>
+                <div style={modernStyles.priceType}>Single Room</div>
+                <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.co_living_single_room)}/month
                 </div>
                 {pg.co_living_security_deposit && pg.co_living_security_deposit !== "0" && pg.co_living_security_deposit !== "" && (
-                  <div style={styles.depositAmount}>
+                  <div style={modernStyles.depositAmount}>
                     Security: {formatPriceLocal(pg.co_living_security_deposit)}
                   </div>
                 )}
               </div>
             )}
             {pg.co_living_double_room && pg.co_living_double_room !== "0" && pg.co_living_double_room !== "" && (
-              <div style={styles.priceItem}>
-                <div style={styles.priceType}>Double Room</div>
-                <div style={styles.priceValue}>
+              <div style={modernStyles.priceItem}>
+                <div style={modernStyles.priceType}>Double Room</div>
+                <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.co_living_double_room)}/month
                 </div>
                 {pg.co_living_security_deposit && pg.co_living_security_deposit !== "0" && pg.co_living_security_deposit !== "" && (
-                  <div style={styles.depositAmount}>
+                  <div style={modernStyles.depositAmount}>
                     Security: {formatPriceLocal(pg.co_living_security_deposit)}
                   </div>
                 )}
@@ -757,7 +614,7 @@ const PriceDetails = ({ pg }) => {
             )}
           </div>
           {pg.co_living_includes && (
-            <div style={styles.includesInfo}>
+            <div style={modernStyles.includesInfo}>
               Includes: {pg.co_living_includes}
             </div>
           )}
@@ -765,44 +622,44 @@ const PriceDetails = ({ pg }) => {
       )}
 
       {isPG && (
-        <div style={styles.priceSection}>
-          <h4 style={styles.priceSectionTitle}>
-            <span style={styles.priceSectionIcon}>🏢</span>
+        <div style={modernStyles.priceSection}>
+          <h4 style={modernStyles.priceSectionTitle}>
+            <span style={modernStyles.priceSectionIcon}>🏢</span>
             PG/Hostel Room Prices
           </h4>
           
           {(pg.single_sharing || pg.double_sharing || pg.triple_sharing || pg.four_sharing) && (
-            <div style={styles.priceCategory}>
-              <div style={styles.priceCategoryTitle}>Sharing Rooms</div>
-              <div style={styles.priceGrid}>
+            <div style={modernStyles.priceCategory}>
+              <div style={modernStyles.priceCategoryTitle}>Sharing Rooms</div>
+              <div style={modernStyles.priceGrid}>
                 {pg.single_sharing && pg.single_sharing !== "0" && pg.single_sharing !== "" && (
-                  <div style={styles.priceItem}>
-                    <div style={styles.priceType}>Single Sharing</div>
-                    <div style={styles.priceValue}>
+                  <div style={modernStyles.priceItem}>
+                    <div style={modernStyles.priceType}>Single Sharing</div>
+                    <div style={modernStyles.priceValue}>
                       {formatPriceLocal(pg.single_sharing)}/month
                     </div>
                   </div>
                 )}
                 {pg.double_sharing && pg.double_sharing !== "0" && pg.double_sharing !== "" && (
-                  <div style={styles.priceItem}>
-                    <div style={styles.priceType}>Double Sharing</div>
-                    <div style={styles.priceValue}>
+                  <div style={modernStyles.priceItem}>
+                    <div style={modernStyles.priceType}>Double Sharing</div>
+                    <div style={modernStyles.priceValue}>
                       {formatPriceLocal(pg.double_sharing)}/month
                     </div>
                   </div>
                 )}
                 {pg.triple_sharing && pg.triple_sharing !== "0" && pg.triple_sharing !== "" && (
-                  <div style={styles.priceItem}>
-                    <div style={styles.priceType}>Triple Sharing</div>
-                    <div style={styles.priceValue}>
+                  <div style={modernStyles.priceItem}>
+                    <div style={modernStyles.priceType}>Triple Sharing</div>
+                    <div style={modernStyles.priceValue}>
                       {formatPriceLocal(pg.triple_sharing)}/month
                     </div>
                   </div>
                 )}
                 {pg.four_sharing && pg.four_sharing !== "0" && pg.four_sharing !== "" && (
-                  <div style={styles.priceItem}>
-                    <div style={styles.priceType}>Four Sharing</div>
-                    <div style={styles.priceValue}>
+                  <div style={modernStyles.priceItem}>
+                    <div style={modernStyles.priceType}>Four Sharing</div>
+                    <div style={modernStyles.priceValue}>
                       {formatPriceLocal(pg.four_sharing)}/month
                     </div>
                   </div>
@@ -812,29 +669,29 @@ const PriceDetails = ({ pg }) => {
           )}
 
           {(pg.single_room || pg.double_room || pg.triple_room) && (
-            <div style={styles.priceCategory}>
-              <div style={styles.priceCategoryTitle}>Private Rooms</div>
-              <div style={styles.priceGrid}>
+            <div style={modernStyles.priceCategory}>
+              <div style={modernStyles.priceCategoryTitle}>Private Rooms</div>
+              <div style={modernStyles.priceGrid}>
                 {pg.single_room && pg.single_room !== "0" && pg.single_room !== "" && (
-                  <div style={styles.priceItem}>
-                    <div style={styles.priceType}>Single Room</div>
-                    <div style={styles.priceValue}>
+                  <div style={modernStyles.priceItem}>
+                    <div style={modernStyles.priceType}>Single Room</div>
+                    <div style={modernStyles.priceValue}>
                       {formatPriceLocal(pg.single_room)}/month
                     </div>
                   </div>
                 )}
                 {pg.double_room && pg.double_room !== "0" && pg.double_room !== "" && (
-                  <div style={styles.priceItem}>
-                    <div style={styles.priceType}>Double Room</div>
-                    <div style={styles.priceValue}>
+                  <div style={modernStyles.priceItem}>
+                    <div style={modernStyles.priceType}>Double Room</div>
+                    <div style={modernStyles.priceValue}>
                       {formatPriceLocal(pg.double_room)}/month
                     </div>
                   </div>
                 )}
                 {pg.triple_room && pg.triple_room !== "0" && pg.triple_room !== "" && (
-                  <div style={styles.priceItem}>
-                    <div style={styles.priceType}>Triple Room</div>
-                    <div style={styles.priceValue}>
+                  <div style={modernStyles.priceItem}>
+                    <div style={modernStyles.priceType}>Triple Room</div>
+                    <div style={modernStyles.priceValue}>
                       {formatPriceLocal(pg.triple_room)}/month
                     </div>
                   </div>
@@ -844,31 +701,31 @@ const PriceDetails = ({ pg }) => {
           )}
 
           {(pg.security_deposit || pg.maintenance_charges || pg.advance_rent) && (
-            <div style={styles.additionalCharges}>
-              <h5 style={styles.additionalChargesTitle}>Additional Charges</h5>
-              <div style={styles.chargesGrid}>
+            <div style={modernStyles.additionalCharges}>
+              <h5 style={modernStyles.additionalChargesTitle}>Additional Charges</h5>
+              <div style={modernStyles.chargesGrid}>
                 {pg.security_deposit && pg.security_deposit !== "0" && pg.security_deposit !== "" && (
-                  <div style={styles.chargeItem}>
-                    <span style={styles.chargeLabel}>Security Deposit:</span>
-                    <span style={styles.chargeValue}>{formatPriceLocal(pg.security_deposit)}</span>
+                  <div style={modernStyles.chargeItem}>
+                    <span style={modernStyles.chargeLabel}>Security Deposit:</span>
+                    <span style={modernStyles.chargeValue}>{formatPriceLocal(pg.security_deposit)}</span>
                   </div>
                 )}
                 {pg.maintenance_charges && pg.maintenance_charges !== "0" && pg.maintenance_charges !== "" && (
-                  <div style={styles.chargeItem}>
-                    <span style={styles.chargeLabel}>Maintenance:</span>
-                    <span style={styles.chargeValue}>{formatPriceLocal(pg.maintenance_charges)}/month</span>
+                  <div style={modernStyles.chargeItem}>
+                    <span style={modernStyles.chargeLabel}>Maintenance:</span>
+                    <span style={modernStyles.chargeValue}>{formatPriceLocal(pg.maintenance_charges)}/month</span>
                   </div>
                 )}
                 {pg.advance_rent && pg.advance_rent !== "0" && pg.advance_rent !== "" && (
-                  <div style={styles.chargeItem}>
-                    <span style={styles.chargeLabel}>Advance Rent:</span>
-                    <span style={styles.chargeValue}>{pg.advance_rent} months</span>
+                  <div style={modernStyles.chargeItem}>
+                    <span style={modernStyles.chargeLabel}>Advance Rent:</span>
+                    <span style={modernStyles.chargeValue}>{pg.advance_rent} months</span>
                   </div>
                 )}
                 {pg.lock_in_period && pg.lock_in_period !== "0" && pg.lock_in_period !== "" && (
-                  <div style={styles.chargeItem}>
-                    <span style={styles.chargeLabel}>Lock-in Period:</span>
-                    <span style={styles.chargeValue}>{pg.lock_in_period} months</span>
+                  <div style={modernStyles.chargeItem}>
+                    <span style={modernStyles.chargeLabel}>Lock-in Period:</span>
+                    <span style={modernStyles.chargeValue}>{pg.lock_in_period} months</span>
                   </div>
                 )}
               </div>
@@ -878,11 +735,11 @@ const PriceDetails = ({ pg }) => {
       )}
 
       {pg.food_available && pg.food_charges && pg.food_charges !== "0" && pg.food_charges !== "" && (
-        <div style={styles.foodCharges}>
-          <span style={styles.foodChargesIcon}>🍽️</span>
+        <div style={modernStyles.foodCharges}>
+          <span style={modernStyles.foodChargesIcon}>🍽️</span>
           <div>
-            <div style={styles.foodChargesLabel}>Food Charges (Optional)</div>
-            <div style={styles.foodChargesValue}>{formatPriceLocal(pg.food_charges)}/month</div>
+            <div style={modernStyles.foodChargesLabel}>Food Charges (Optional)</div>
+            <div style={modernStyles.foodChargesValue}>{formatPriceLocal(pg.food_charges)}/month</div>
           </div>
         </div>
       )}
@@ -890,7 +747,7 @@ const PriceDetails = ({ pg }) => {
   );
 };
 
-// Highlight Category Button
+// Highlight Category Button (modern)
 const HighlightCategoryButton = ({ 
   category, 
   icon, 
@@ -902,51 +759,51 @@ const HighlightCategoryButton = ({
 }) => (
   <button
     style={{
-      ...styles.highlightCategoryBtn,
+      ...modernStyles.highlightCategoryBtn,
       background: isActive 
         ? `linear-gradient(135deg, ${color}, ${color}dd)` 
         : 'white',
       color: isActive ? 'white' : '#374151',
       boxShadow: isActive ? `0 4px 15px ${color}40` : '0 2px 10px rgba(0,0,0,0.05)',
-      ...(count === 0 ? styles.highlightCategoryBtnEmpty : {})
+      ...(count === 0 ? modernStyles.highlightCategoryBtnEmpty : {})
     }}
     onClick={onClick}
     disabled={count === 0}
   >
-    <span style={styles.highlightCategoryIcon}>{icon}</span>
-    <span style={styles.highlightCategoryLabel}>
-      {label} {count > 0 && <span style={styles.highlightCategoryCount}>{count}</span>}
+    <span style={modernStyles.highlightCategoryIcon}>{icon}</span>
+    <span style={modernStyles.highlightCategoryLabel}>
+      {label} {count > 0 && <span style={modernStyles.highlightCategoryCount}>{count}</span>}
     </span>
   </button>
 );
 
-// Highlight Item Component
+// Highlight Item Component (modern)
 const HighlightItem = ({ name, type, category, icon, onMapView, coordinates, color }) => (
   <div 
     style={{
-      ...styles.highlightItem,
+      ...modernStyles.highlightItem,
       borderLeft: `4px solid ${color}`
     }}
     onClick={onMapView}
   >
     <div style={{
-      ...styles.highlightIconContainer,
+      ...modernStyles.highlightIconContainer,
       background: `linear-gradient(135deg, ${color}, ${color}dd)`
     }}>
-      <span style={styles.highlightIcon}>{icon}</span>
+      <span style={modernStyles.highlightIcon}>{icon}</span>
     </div>
-    <div style={styles.highlightContent}>
-      <div style={styles.highlightName}>{name}</div>
-      <div style={styles.highlightType}>{type.replace(/_/g, ' ').replace('nearby ', '')}</div>
+    <div style={modernStyles.highlightContent}>
+      <div style={modernStyles.highlightName}>{name}</div>
+      <div style={modernStyles.highlightType}>{type.replace(/_/g, ' ').replace('nearby ', '')}</div>
       {coordinates && (
-        <div style={styles.highlightDistance}>
+        <div style={modernStyles.highlightDistance}>
           📏 {calculateDistance(coordinates).toFixed(1)} km away
         </div>
       )}
     </div>
     <button 
       style={{
-        ...styles.viewOnMapButton,
+        ...modernStyles.viewOnMapButton,
         background: `linear-gradient(135deg, ${color}, ${color}dd)`
       }} 
       onClick={(e) => {
@@ -959,7 +816,7 @@ const HighlightItem = ({ name, type, category, icon, onMapView, coordinates, col
   </div>
 );
 
-// Nearby PG Card Component
+// Nearby PG Card Component (modern)
 const NearbyPGCard = ({ pg, onClick, distance }) => {
   const getStartingPrice = () => {
     if (!pg) return "—";
@@ -999,14 +856,14 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
   const imageUrl = getImageUrl();
 
   return (
-    <div style={styles.nearbyPgCard} onClick={onClick}>
-      <div style={styles.nearbyPgImageContainer}>
-        <div style={styles.nearbyPgImagePlaceholder}>
+    <div style={modernStyles.nearbyPgCard} onClick={onClick}>
+      <div style={modernStyles.nearbyPgImageContainer}>
+        <div style={modernStyles.nearbyPgImagePlaceholder}>
           {imageUrl ? (
             <img 
               src={imageUrl} 
               alt={pg.pg_name} 
-              style={styles.nearbyPgImage}
+              style={modernStyles.nearbyPgImage}
               onError={(e) => {
                 e.target.onerror = null;
                 e.target.style.display = 'none';
@@ -1014,55 +871,55 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
               }}
             />
           ) : (
-            <div style={styles.nearbyPgNoImage}>🏠</div>
+            <div style={modernStyles.nearbyPgNoImage}>🏠</div>
           )}
         </div>
-        <div style={styles.nearbyPgBadges}>
-          <span style={styles.nearbyPgTypeBadge}>
+        <div style={modernStyles.nearbyPgBadges}>
+          <span style={modernStyles.nearbyPgTypeBadge}>
             {pg.pg_category === "to_let" ? "🏠 House" : 
              pg.pg_category === "coliving" ? "🤝 Co-Living" : 
              "🏢 PG"}
           </span>
           {distance && (
-            <span style={styles.nearbyPgDistanceBadge}>
+            <span style={modernStyles.nearbyPgDistanceBadge}>
               📏 {distance.toFixed(1)} km
             </span>
           )}
         </div>
       </div>
       
-      <div style={styles.nearbyPgContent}>
-        <h4 style={styles.nearbyPgTitle}>{pg.pg_name}</h4>
-        <p style={styles.nearbyPgAddress}>
+      <div style={modernStyles.nearbyPgContent}>
+        <h4 style={modernStyles.nearbyPgTitle}>{pg.pg_name}</h4>
+        <p style={modernStyles.nearbyPgAddress}>
           📍 {pg.address ? `${pg.address.substring(0, 40)}...` : pg.area || pg.city}
         </p>
         
-        <div style={styles.nearbyPgStats}>
-          <div style={styles.nearbyPgStat}>
-            <span style={styles.nearbyPgStatIcon}>💰</span>
-            <span style={styles.nearbyPgStatText}>
+        <div style={modernStyles.nearbyPgStats}>
+          <div style={modernStyles.nearbyPgStat}>
+            <span style={modernStyles.nearbyPgStatIcon}>💰</span>
+            <span style={modernStyles.nearbyPgStatText}>
               ₹{getStartingPrice()}/month
             </span>
           </div>
-          <div style={styles.nearbyPgStat}>
-            <span style={styles.nearbyPgStatIcon}>🏠</span>
-            <span style={styles.nearbyPgStatText}>
+          <div style={modernStyles.nearbyPgStat}>
+            <span style={modernStyles.nearbyPgStatIcon}>🏠</span>
+            <span style={modernStyles.nearbyPgStatText}>
               {pg.available_rooms || pg.total_rooms || 0} rooms
             </span>
           </div>
         </div>
         
-        <div style={styles.nearbyPgFacilities}>
-          {pg.ac_available && <span style={styles.nearbyPgFacility}>❄️</span>}
-          {pg.wifi_available && <span style={styles.nearbyPgFacility}>📶</span>}
-          {pg.food_available && <span style={styles.nearbyPgFacility}>🍽️</span>}
-          {pg.parking_available && <span style={styles.nearbyPgFacility}>🚗</span>}
-          {pg.cctv && <span style={styles.nearbyPgFacility}>📹</span>}
-          {pg.laundry_available && <span style={styles.nearbyPgFacility}>🧺</span>}
+        <div style={modernStyles.nearbyPgFacilities}>
+          {pg.ac_available && <span style={modernStyles.nearbyPgFacility}>❄️</span>}
+          {pg.wifi_available && <span style={modernStyles.nearbyPgFacility}>📶</span>}
+          {pg.food_available && <span style={modernStyles.nearbyPgFacility}>🍽️</span>}
+          {pg.parking_available && <span style={modernStyles.nearbyPgFacility}>🚗</span>}
+          {pg.cctv && <span style={modernStyles.nearbyPgFacility}>📹</span>}
+          {pg.laundry_available && <span style={modernStyles.nearbyPgFacility}>🧺</span>}
         </div>
         
         <button 
-          style={styles.nearbyPgViewButton}
+          style={modernStyles.nearbyPgViewButton}
           onClick={(e) => {
             e.stopPropagation();
             onClick();
@@ -1091,7 +948,7 @@ const calculateDistanceBetweenCoords = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
-// Interactive Nearby Highlights Panel
+// Interactive Nearby Highlights Panel (modern)
 const NearbyHighlightsPanel = ({ 
   highlights, 
   selectedCategory, 
@@ -1102,7 +959,7 @@ const NearbyHighlightsPanel = ({
 }) => {
   if (isLoading) {
     return (
-      <div style={styles.loadingHighlightsPanel}>
+      <div style={modernStyles.loadingHighlightsPanel}>
         <div className="spinner"></div>
         <p>Finding nearby places...</p>
       </div>
@@ -1111,10 +968,10 @@ const NearbyHighlightsPanel = ({
 
   if (highlights.length === 0) {
     return (
-      <div style={styles.noHighlightsPanel}>
-        <div style={styles.noHighlightsIcon}>📍</div>
-        <h4 style={styles.noHighlightsTitle}>No Nearby Places Found</h4>
-        <p style={styles.noHighlightsText}>
+      <div style={modernStyles.noHighlightsPanel}>
+        <div style={modernStyles.noHighlightsIcon}>📍</div>
+        <h4 style={modernStyles.noHighlightsTitle}>No Nearby Places Found</h4>
+        <p style={modernStyles.noHighlightsText}>
           We couldn't find any nearby places in our database for this location.
         </p>
       </div>
@@ -1128,8 +985,8 @@ const NearbyHighlightsPanel = ({
   const selectedColor = highlightCategories.find(c => c.id === selectedCategory)?.color || '#667eea';
 
   return (
-    <div style={styles.highlightsPanel}>
-      <div style={styles.categoriesPills}>
+    <div style={modernStyles.highlightsPanel}>
+      <div style={modernStyles.categoriesPills}>
         {highlightCategories.map(category => {
           const count = category.id === "all" 
             ? highlights.length 
@@ -1152,11 +1009,11 @@ const NearbyHighlightsPanel = ({
         })}
       </div>
 
-      <div style={styles.highlightsList}>
-        <div style={styles.highlightsListHeader}>
-          <h4 style={styles.highlightsListTitle}>
+      <div style={modernStyles.highlightsList}>
+        <div style={modernStyles.highlightsListHeader}>
+          <h4 style={modernStyles.highlightsListTitle}>
             <span style={{
-              ...styles.categoryIndicator,
+              ...modernStyles.categoryIndicator,
               background: selectedColor
             }}></span>
             {selectedCategory === "all" 
@@ -1164,10 +1021,10 @@ const NearbyHighlightsPanel = ({
               : `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)}`
             }
           </h4>
-          <span style={styles.highlightsCount}>{filteredHighlights.length} places</span>
+          <span style={modernStyles.highlightsCount}>{filteredHighlights.length} places</span>
         </div>
         
-        <div style={styles.highlightsItemsContainer}>
+        <div style={modernStyles.highlightsItemsContainer}>
           {filteredHighlights.map((highlight, index) => (
             <HighlightItem
               key={index}
@@ -1186,11 +1043,11 @@ const NearbyHighlightsPanel = ({
   );
 };
 
-// Nearby PGs Panel Component
+// Nearby PGs Panel Component (modern)
 const NearbyPGsPanel = ({ nearbyPGs, isLoading, onViewPG }) => {
   if (isLoading) {
     return (
-      <div style={styles.loadingNearbyPGs}>
+      <div style={modernStyles.loadingNearbyPGs}>
         <div className="spinner"></div>
         <p>Finding nearby properties...</p>
       </div>
@@ -1199,10 +1056,10 @@ const NearbyPGsPanel = ({ nearbyPGs, isLoading, onViewPG }) => {
 
   if (nearbyPGs.length === 0) {
     return (
-      <div style={styles.noNearbyPGs}>
-        <div style={styles.noNearbyPGsIcon}>🏠</div>
-        <h4 style={styles.noNearbyPGsTitle}>No Nearby Properties</h4>
-        <p style={styles.noNearbyPGsText}>
+      <div style={modernStyles.noNearbyPGs}>
+        <div style={modernStyles.noNearbyPGsIcon}>🏠</div>
+        <h4 style={modernStyles.noNearbyPGsTitle}>No Nearby Properties</h4>
+        <p style={modernStyles.noNearbyPGsText}>
           We couldn't find other properties in this area.
         </p>
       </div>
@@ -1210,16 +1067,16 @@ const NearbyPGsPanel = ({ nearbyPGs, isLoading, onViewPG }) => {
   }
 
   return (
-    <div style={styles.nearbyPGsPanel}>
-      <div style={styles.nearbyPGsHeader}>
-        <h3 style={styles.nearbyPGsTitle}>
-          <span style={styles.nearbyPGsIcon}>🏘️</span>
+    <div style={modernStyles.nearbyPGsPanel}>
+      <div style={modernStyles.nearbyPGsHeader}>
+        <h3 style={modernStyles.nearbyPGsTitle}>
+          <span style={modernStyles.nearbyPGsIcon}>🏘️</span>
           Nearby Properties
         </h3>
-        <span style={styles.nearbyPGsCount}>{nearbyPGs.length} properties</span>
+        <span style={modernStyles.nearbyPGsCount}>{nearbyPGs.length} properties</span>
       </div>
       
-      <div style={styles.nearbyPGsGrid}>
+      <div style={modernStyles.nearbyPGsGrid}>
         {nearbyPGs.map((nearbyPG, index) => (
           <NearbyPGCard
             key={nearbyPG.id || index}
@@ -1230,8 +1087,8 @@ const NearbyPGsPanel = ({ nearbyPGs, isLoading, onViewPG }) => {
         ))}
       </div>
       
-      <div style={styles.nearbyPGsFooter}>
-        <button style={styles.viewAllPropertiesButton} onClick={() => onViewPG('all')}>
+      <div style={modernStyles.nearbyPGsFooter}>
+        <button style={modernStyles.viewAllPropertiesButton} onClick={() => onViewPG('all')}>
           View All Properties in {nearbyPGs[0]?.area || nearbyPGs[0]?.city || "Area"} →
         </button>
       </div>
@@ -1815,7 +1672,7 @@ export default function PGDetails() {
   // ✅ PROTECTION - MOVED AFTER ALL HOOKS
   if (authLoading) {
     return (
-      <div style={styles.loadingContainer}>
+      <div style={modernStyles.loadingContainer}>
         <div className="spinner"></div>
         <p>Loading authentication...</p>
       </div>
@@ -1824,7 +1681,7 @@ export default function PGDetails() {
 
   if (loading) {
     return (
-      <div style={styles.loadingContainer}>
+      <div style={modernStyles.loadingContainer}>
         <div className="spinner"></div>
         <p>Loading property details...</p>
       </div>
@@ -1833,10 +1690,10 @@ export default function PGDetails() {
 
   if (error || !pg) {
     return (
-      <div style={styles.errorContainer}>
+      <div style={modernStyles.errorContainer}>
         <h2>Property Not Found</h2>
         <p>{error || "The property you're looking for doesn't exist or has been removed."}</p>
-        <button style={styles.backButton} onClick={() => navigate("/")}>
+        <button style={modernStyles.backButton} onClick={() => navigate("/")}>
           ← Back to Home
         </button>
       </div>
@@ -1852,24 +1709,10 @@ export default function PGDetails() {
   const shouldShowNearbyPGs = nearbyPGs.length > 0 || loadingNearbyPGs;
 
   return (
-    <div style={styles.page}>
+    <div style={modernStyles.page}>
       {/* Notification Toast */}
       {notification && (
-        <div style={{
-          position: "fixed",
-          top: 20,
-          right: 20,
-          background: notification.includes("❌") ? "#ef4444" : "#10b981",
-          color: "white",
-          padding: "12px 24px",
-          borderRadius: 10,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-          zIndex: 4000,
-          animation: "slideIn 0.3s ease",
-          display: "flex",
-          alignItems: "center",
-          gap: 8
-        }}>
+        <div style={modernStyles.notification}>
           {notification.includes("✅") ? <Check size={18} /> : 
            notification.includes("❌") ? <X size={18} /> : 
            <Info size={18} />}
@@ -1877,22 +1720,22 @@ export default function PGDetails() {
         </div>
       )}
 
-      <div style={styles.breadcrumb}>
-        <span style={styles.breadcrumbLink} onClick={() => navigate("/")}>Home</span>
-        <span style={styles.breadcrumbSeparator}>/</span>
-        <span style={styles.breadcrumbLink} onClick={() => navigate("/properties")}>Properties</span>
-        <span style={styles.breadcrumbSeparator}>/</span>
-        <span style={styles.breadcrumbCurrent}>{pg.pg_name}</span>
-        <span style={styles.propertyCode}>{getPGCode(pg.id)}</span>
+      <div style={modernStyles.breadcrumb}>
+        <span style={modernStyles.breadcrumbLink} onClick={() => navigate("/")}>Home</span>
+        <span style={modernStyles.breadcrumbSeparator}>/</span>
+        <span style={modernStyles.breadcrumbLink} onClick={() => navigate("/properties")}>Properties</span>
+        <span style={modernStyles.breadcrumbSeparator}>/</span>
+        <span style={modernStyles.breadcrumbCurrent}>{pg.pg_name}</span>
+        <span style={modernStyles.propertyCode}>{getPGCode(pg.id)}</span>
       </div>
 
       {media.length > 0 ? (
-        <div style={styles.slider}>
+        <div style={modernStyles.slider}>
           {current.type === "photo" ? (
             <img 
               src={current.src} 
               alt={pg.pg_name} 
-              style={styles.media}
+              style={modernStyles.media}
               onError={(e) => {
                 console.error("Image failed to load:", current.src);
                 e.target.onerror = null;
@@ -1900,52 +1743,52 @@ export default function PGDetails() {
               }}
             />
           ) : (
-            <video src={current.src} controls style={styles.media} />
+            <video src={current.src} controls style={modernStyles.media} />
           )}
 
           {media.length > 1 && (
             <>
               <button
-                style={styles.navBtnLeft}
+                style={modernStyles.navBtnLeft}
                 onClick={() => setIndex(i => (i === 0 ? media.length - 1 : i - 1))}
               >
                 <ChevronLeft size={24} />
               </button>
               <button
-                style={styles.navBtnRight}
+                style={modernStyles.navBtnRight}
                 onClick={() => setIndex(i => (i + 1) % media.length)}
               >
                 <ChevronRight size={24} />
               </button>
-              <div style={styles.mediaCounter}>
+              <div style={modernStyles.mediaCounter}>
                 {index + 1} / {media.length}
               </div>
             </>
           )}
         </div>
       ) : (
-        <div style={styles.noMedia}>
-          <div style={styles.noMediaIcon}>📷</div>
+        <div style={modernStyles.noMedia}>
+          <div style={modernStyles.noMediaIcon}>📷</div>
           <p>No photos available</p>
         </div>
       )}
 
-      <div style={styles.mainCard}>
-        <div style={styles.headerRow}>
+      <div style={modernStyles.mainCard}>
+        <div style={modernStyles.headerRow}>
           <div>
-            <h1 style={styles.title}>{pg.pg_name}</h1>
-            <p style={styles.address}>
+            <h1 style={modernStyles.title}>{pg.pg_name}</h1>
+            <p style={modernStyles.address}>
               <MapPin size={16} /> {pg.address || `${pg.area}, ${pg.city}, ${pg.state}`}
             </p>
             {pg.landmark && (
-              <p style={styles.landmark}>
+              <p style={modernStyles.landmark}>
                 <Navigation size={14} /> Near {pg.landmark}
               </p>
             )}
           </div>
-          <div style={styles.actionButtons}>
+          <div style={modernStyles.actionButtons}>
             <button
-              style={styles.bookButton}
+              style={modernStyles.bookButton}
               onClick={handleBookNow}
             >
               <BookOpen size={18} />
@@ -1953,7 +1796,7 @@ export default function PGDetails() {
             </button>
             {hasOwnerContact && (
               <button
-                style={styles.callButton}
+                style={modernStyles.callButton}
                 onClick={handleCallOwner}
               >
                 <Phone size={18} />
@@ -1962,7 +1805,7 @@ export default function PGDetails() {
             )}
             {hasLocation && (
               <button
-                style={styles.directionButton}
+                style={modernStyles.directionButton}
                 onClick={() =>
                   window.open(
                     `https://www.google.com/maps/search/?api=1&query=${pg.latitude},${pg.longitude}`,
@@ -1977,15 +1820,15 @@ export default function PGDetails() {
           </div>
         </div>
 
-        <div style={styles.badgeRow}>
-          <span style={styles.typeBadge}>
+        <div style={modernStyles.badgeRow}>
+          <span style={modernStyles.typeBadge}>
             {isToLet ? "🏠 House/Flat" : 
              isCoLiving ? "🤝 Co-Living" : 
              "🏢 PG/Hostel"}
           </span>
           
           {!isToLet && !isCoLiving && pg.pg_type && (
-            <span style={styles.genderBadge}>
+            <span style={modernStyles.genderBadge}>
               {pg.pg_type === "boys" ? "👨 Boys Only" : 
                pg.pg_type === "girls" ? "👩 Girls Only" : 
                pg.pg_type === "coliving" ? "🤝 Co-Living" : "Mixed"}
@@ -1993,13 +1836,13 @@ export default function PGDetails() {
           )}
           
           {isToLet && pg.bhk_type && (
-            <span style={styles.bhkBadge}>
+            <span style={modernStyles.bhkBadge}>
               {pg.bhk_type === "4+" ? "4+ BHK" : `${pg.bhk_type} BHK`}
             </span>
           )}
           
           {isToLet && pg.furnishing_type && (
-            <span style={styles.furnishingBadge}>
+            <span style={modernStyles.furnishingBadge}>
               {pg.furnishing_type === "fully_furnished" ? "🛋️ Fully Furnished" :
                pg.furnishing_type === "semi_furnished" ? "🛋️ Semi-Furnished" :
                "🛋️ Unfurnished"}
@@ -2007,52 +1850,52 @@ export default function PGDetails() {
           )}
           
           <span style={{
-            ...styles.availabilityBadge,
+            ...modernStyles.availabilityBadge,
             backgroundColor: pg.available_rooms > 0 ? "#10b981" : "#ef4444"
           }}>
             {pg.available_rooms > 0 ? `🟢 ${pg.available_rooms} Available` : "🔴 Fully Occupied"}
           </span>
         </div>
 
-        <div style={styles.statsGrid}>
-          <div style={styles.statItem}>
-            <div style={styles.statIcon}>💰</div>
+        <div style={modernStyles.statsGrid}>
+          <div style={modernStyles.statItem}>
+            <div style={modernStyles.statIcon}>💰</div>
             <div>
-              <div style={styles.statLabel}>Starting from</div>
-              <div style={styles.statValue}>
+              <div style={modernStyles.statLabel}>Starting from</div>
+              <div style={modernStyles.statValue}>
                 ₹{formatPrice(getStartingPrice())} / month
               </div>
             </div>
           </div>
-          <div style={styles.statItem}>
-            <div style={styles.statIcon}>🏠</div>
+          <div style={modernStyles.statItem}>
+            <div style={modernStyles.statIcon}>🏠</div>
             <div>
-              <div style={styles.statLabel}>Total {isToLet ? "Properties" : "Rooms"}</div>
-              <div style={styles.statValue}>{pg.total_rooms || "—"}</div>
+              <div style={modernStyles.statLabel}>Total {isToLet ? "Properties" : "Rooms"}</div>
+              <div style={modernStyles.statValue}>{pg.total_rooms || "—"}</div>
             </div>
           </div>
-          <div style={styles.statItem}>
-            <div style={styles.statIcon}>✅</div>
+          <div style={modernStyles.statItem}>
+            <div style={modernStyles.statIcon}>✅</div>
             <div>
-              <div style={styles.statLabel}>Facilities</div>
-              <div style={styles.statValue}>{availableFacilitiesCount}+</div>
+              <div style={modernStyles.statLabel}>Facilities</div>
+              <div style={modernStyles.statValue}>{availableFacilitiesCount}+</div>
             </div>
           </div>
-          <div style={styles.statItem}>
-            <div style={styles.statIcon}>📍</div>
+          <div style={modernStyles.statItem}>
+            <div style={modernStyles.statIcon}>📍</div>
             <div>
-              <div style={styles.statLabel}>Nearby Places</div>
-              <div style={styles.statValue}>{nearbyHighlights.length}+</div>
+              <div style={modernStyles.statLabel}>Nearby Places</div>
+              <div style={modernStyles.statValue}>{nearbyHighlights.length}+</div>
             </div>
           </div>
         </div>
       </div>
 
-      <div style={styles.twoColumn}>
-        <div style={styles.leftColumn}>
+      <div style={modernStyles.twoColumn}>
+        <div style={modernStyles.leftColumn}>
           {pg.description && (
             <Section title="📝 About this Property">
-              <p style={styles.description}>{pg.description}</p>
+              <p style={modernStyles.description}>{pg.description}</p>
             </Section>
           )}
 
@@ -2067,7 +1910,7 @@ export default function PGDetails() {
               title={`🏠 Facilities & Amenities`} 
               badgeCount={availableFacilitiesCount}
             >
-              <div style={styles.facilityCategories}>
+              <div style={modernStyles.facilityCategories}>
                 {facilityCategories.map(category => {
                   const trueCount = getTrueFacilitiesCountInCategory(category.id);
                   
@@ -2077,7 +1920,7 @@ export default function PGDetails() {
                     <button
                       key={category.id}
                       style={{
-                        ...styles.facilityCategoryBtn,
+                        ...modernStyles.facilityCategoryBtn,
                         background: selectedFacilityCategory === category.id 
                           ? `linear-gradient(135deg, ${category.color}, ${category.color}dd)` 
                           : 'white',
@@ -2088,8 +1931,8 @@ export default function PGDetails() {
                       }}
                       onClick={() => setSelectedFacilityCategory(category.id)}
                     >
-                      <span style={styles.facilityCategoryIcon}>{category.icon}</span>
-                      <span style={styles.facilityCategoryLabel}>
+                      <span style={modernStyles.facilityCategoryIcon}>{category.icon}</span>
+                      <span style={modernStyles.facilityCategoryLabel}>
                         {category.label} {trueCount > 0 && `(${trueCount})`}
                       </span>
                     </button>
@@ -2098,7 +1941,7 @@ export default function PGDetails() {
               </div>
 
               {filteredFacilities.length > 0 ? (
-                <div style={styles.facilitiesGrid}>
+                <div style={modernStyles.facilitiesGrid}>
                   {filteredFacilities.map((facility, index) => {
                     const categoryColor = facilityCategories.find(c => c.id === facility.category)?.color;
                     return (
@@ -2113,16 +1956,16 @@ export default function PGDetails() {
                   })}
                 </div>
               ) : (
-                <div style={styles.noFacilitiesContainer}>
-                  <div style={styles.noFacilitiesIcon}>🏢</div>
-                  <p style={styles.noContentText}>
+                <div style={modernStyles.noFacilitiesContainer}>
+                  <div style={modernStyles.noFacilitiesIcon}>🏢</div>
+                  <p style={modernStyles.noContentText}>
                     No {selectedFacilityCategory === "all" ? "" : selectedFacilityCategory} facilities available
                   </p>
                 </div>
               )}
 
               {pg.water_type && (
-                <div style={styles.waterSource}>
+                <div style={modernStyles.waterSource}>
                   <strong>💧 Water Source:</strong> {pg.water_type === "borewell" ? "Borewell" : 
                                                  pg.water_type === "kaveri" ? "Kaveri" : 
                                                  pg.water_type === "both" ? "Both" : 
@@ -2134,20 +1977,20 @@ export default function PGDetails() {
 
           {hasRulesContent() && (
             <Section title="📜 House Rules & Restrictions">
-              <div style={styles.rulesContainer}>
+              <div style={modernStyles.rulesContainer}>
                 {(pg.visitor_allowed || pg.couple_allowed || pg.family_allowed) && (
-                  <div style={styles.rulesSection}>
-                    <div style={styles.rulesSectionHeader} onClick={() => toggleRulesSection('visitors')}>
-                      <h4 style={styles.rulesSectionTitle}>
-                        <span style={styles.rulesSectionIcon}>👥</span>
+                  <div style={modernStyles.rulesSection}>
+                    <div style={modernStyles.rulesSectionHeader} onClick={() => toggleRulesSection('visitors')}>
+                      <h4 style={modernStyles.rulesSectionTitle}>
+                        <span style={modernStyles.rulesSectionIcon}>👥</span>
                         Visitor Rules
                       </h4>
-                      <span style={styles.rulesToggle}>
+                      <span style={modernStyles.rulesToggle}>
                         {expandedRules.visitors ? '−' : '+'}
                       </span>
                     </div>
                     {expandedRules.visitors && (
-                      <div style={styles.rulesGrid}>
+                      <div style={modernStyles.rulesGrid}>
                         {(pg.visitor_allowed === true || pg.visitor_allowed === "true" || pg.visitor_allowed === "false") && (
                           <RuleItem 
                             icon="👥" 
@@ -2178,18 +2021,18 @@ export default function PGDetails() {
                 )}
 
                 {(pg.smoking_allowed || pg.drinking_allowed || pg.outside_food_allowed || pg.parties_allowed) && (
-                  <div style={styles.rulesSection}>
-                    <div style={styles.rulesSectionHeader} onClick={() => toggleRulesSection('lifestyle')}>
-                      <h4 style={styles.rulesSectionTitle}>
-                        <span style={styles.rulesSectionIcon}>🚬</span>
+                  <div style={modernStyles.rulesSection}>
+                    <div style={modernStyles.rulesSectionHeader} onClick={() => toggleRulesSection('lifestyle')}>
+                      <h4 style={modernStyles.rulesSectionTitle}>
+                        <span style={modernStyles.rulesSectionIcon}>🚬</span>
                         Lifestyle Rules
                       </h4>
-                      <span style={styles.rulesToggle}>
+                      <span style={modernStyles.rulesToggle}>
                         {expandedRules.lifestyle ? '−' : '+'}
                       </span>
                     </div>
                     {expandedRules.lifestyle && (
-                      <div style={styles.rulesGrid}>
+                      <div style={modernStyles.rulesGrid}>
                         {(pg.smoking_allowed === true || pg.smoking_allowed === "true" || pg.smoking_allowed === "false") && (
                           <RuleItem 
                             icon="🚬" 
@@ -2228,18 +2071,18 @@ export default function PGDetails() {
                 )}
 
                 {(pg.pets_allowed || pg.late_night_entry_allowed || pg.entry_curfew_time) && (
-                  <div style={styles.rulesSection}>
-                    <div style={styles.rulesSectionHeader} onClick={() => toggleRulesSection('pets')}>
-                      <h4 style={styles.rulesSectionTitle}>
-                        <span style={styles.rulesSectionIcon}>🐾</span>
+                  <div style={modernStyles.rulesSection}>
+                    <div style={modernStyles.rulesSectionHeader} onClick={() => toggleRulesSection('pets')}>
+                      <h4 style={modernStyles.rulesSectionTitle}>
+                        <span style={modernStyles.rulesSectionIcon}>🐾</span>
                         Pets & Entry Rules
                       </h4>
-                      <span style={styles.rulesToggle}>
+                      <span style={modernStyles.rulesToggle}>
                         {expandedRules.pets ? '−' : '+'}
                       </span>
                     </div>
                     {expandedRules.pets && (
-                      <div style={styles.rulesGrid}>
+                      <div style={modernStyles.rulesGrid}>
                         {(pg.pets_allowed === true || pg.pets_allowed === "true" || pg.pets_allowed === "false") && (
                           <RuleItem 
                             icon="🐕" 
@@ -2270,18 +2113,18 @@ export default function PGDetails() {
                 )}
 
                 {(pg.loud_music_restricted || pg.office_going_only || pg.students_only || pg.boys_only || pg.girls_only || pg.subletting_allowed) && (
-                  <div style={styles.rulesSection}>
-                    <div style={styles.rulesSectionHeader} onClick={() => toggleRulesSection('restrictions')}>
-                      <h4 style={styles.rulesSectionTitle}>
-                        <span style={styles.rulesSectionIcon}>🎯</span>
+                  <div style={modernStyles.rulesSection}>
+                    <div style={modernStyles.rulesSectionHeader} onClick={() => toggleRulesSection('restrictions')}>
+                      <h4 style={modernStyles.rulesSectionTitle}>
+                        <span style={modernStyles.rulesSectionIcon}>🎯</span>
                         Restrictions
                       </h4>
-                      <span style={styles.rulesToggle}>
+                      <span style={modernStyles.rulesToggle}>
                         {expandedRules.restrictions ? '−' : '+'}
                       </span>
                     </div>
                     {expandedRules.restrictions && (
-                      <div style={styles.rulesGrid}>
+                      <div style={modernStyles.rulesGrid}>
                         {(pg.loud_music_restricted === true || pg.loud_music_restricted === "true" || pg.loud_music_restricted === "false") && (
                           <RuleItem 
                             icon="🔇" 
@@ -2340,18 +2183,18 @@ export default function PGDetails() {
                 )}
 
                 {(pg.min_stay_months || pg.agreement_mandatory || pg.id_proof_mandatory) && (
-                  <div style={styles.rulesSection}>
-                    <div style={styles.rulesSectionHeader} onClick={() => toggleRulesSection('legal')}>
-                      <h4 style={styles.rulesSectionTitle}>
-                        <span style={styles.rulesSectionIcon}>⚖️</span>
+                  <div style={modernStyles.rulesSection}>
+                    <div style={modernStyles.rulesSectionHeader} onClick={() => toggleRulesSection('legal')}>
+                      <h4 style={modernStyles.rulesSectionTitle}>
+                        <span style={modernStyles.rulesSectionIcon}>⚖️</span>
                         Legal & Duration
                       </h4>
-                      <span style={styles.rulesToggle}>
+                      <span style={modernStyles.rulesToggle}>
                         {expandedRules.legal ? '−' : '+'}
                       </span>
                     </div>
                     {expandedRules.legal && (
-                      <div style={styles.rulesGrid}>
+                      <div style={modernStyles.rulesGrid}>
                         {pg.min_stay_months && (
                           <RuleItem 
                             icon="🔒" 
@@ -2385,10 +2228,10 @@ export default function PGDetails() {
           )}
         </div>
 
-        <div style={styles.rightColumn}>
+        <div style={modernStyles.rightColumn}>
           {hasLocation && (
             <Section title="📍 Location">
-              <div id="location-map" style={styles.mapContainer}>
+              <div id="location-map" style={modernStyles.mapContainer}>
                 <MapContainer
                   center={mapCenter}
                   zoom={mapZoom}
@@ -2398,11 +2241,11 @@ export default function PGDetails() {
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                   <Marker position={[pg.latitude, pg.longitude]}>
                     <Popup>
-                      <div style={styles.mapPopup}>
-                        <strong style={styles.mapPopupTitle}>{pg.pg_name}</strong><br/>
-                        <small style={styles.mapPopupAddress}>{pg.address || pg.area}</small><br/>
+                      <div style={modernStyles.mapPopup}>
+                        <strong style={modernStyles.mapPopupTitle}>{pg.pg_name}</strong><br/>
+                        <small style={modernStyles.mapPopupAddress}>{pg.address || pg.area}</small><br/>
                         <button 
-                          style={styles.mapPopupButton}
+                          style={modernStyles.mapPopupButton}
                           onClick={handleBookNow}
                         >
                           Book Now
@@ -2412,7 +2255,7 @@ export default function PGDetails() {
                   </Marker>
                 </MapContainer>
                 
-                <div style={styles.locationDetails}>
+                <div style={modernStyles.locationDetails}>
                   <InfoRow label="Area" value={pg.area} />
                   <InfoRow label="Road" value={pg.road} />
                   <InfoRow label="Landmark" value={pg.landmark} />
@@ -2442,25 +2285,25 @@ export default function PGDetails() {
           )}
 
           {(hasOwnerContact || hasContactPerson || pg?.contact_email) && (
-            <div style={styles.contactCard}>
-              <h3 style={styles.contactTitle}>📞 Contact Information</h3>
+            <div style={modernStyles.contactCard}>
+              <h3 style={modernStyles.contactTitle}>📞 Contact Information</h3>
               {hasContactPerson && (
-                <div style={styles.contactItem}>
-                  <span style={styles.contactIcon}>👤</span>
+                <div style={modernStyles.contactItem}>
+                  <span style={modernStyles.contactIcon}>👤</span>
                   <div>
-                    <div style={styles.contactLabel}>Contact Person</div>
-                    <div style={styles.contactValue}>{pg.contact_person}</div>
+                    <div style={modernStyles.contactLabel}>Contact Person</div>
+                    <div style={modernStyles.contactValue}>{pg.contact_person}</div>
                   </div>
                 </div>
               )}
               
               {hasOwnerContact && (
-                <div style={styles.contactItem}>
-                  <span style={styles.contactIcon}>📱</span>
+                <div style={modernStyles.contactItem}>
+                  <span style={modernStyles.contactIcon}>📱</span>
                   <div>
-                    <div style={styles.contactLabel}>Phone Number</div>
-                    <div style={styles.contactValue}>
-                      <a href={`tel:${pg.contact_phone}`} style={styles.phoneLink}>
+                    <div style={modernStyles.contactLabel}>Phone Number</div>
+                    <div style={modernStyles.contactValue}>
+                      <a href={`tel:${pg.contact_phone}`} style={modernStyles.phoneLink}>
                         {pg.contact_phone}
                       </a>
                     </div>
@@ -2469,12 +2312,12 @@ export default function PGDetails() {
               )}
               
               {pg.contact_email && (
-                <div style={styles.contactItem}>
-                  <span style={styles.contactIcon}>✉️</span>
+                <div style={modernStyles.contactItem}>
+                  <span style={modernStyles.contactIcon}>✉️</span>
                   <div>
-                    <div style={styles.contactLabel}>Email</div>
-                    <div style={styles.contactValue}>
-                      <a href={`mailto:${pg.contact_email}`} style={styles.emailLink}>
+                    <div style={modernStyles.contactLabel}>Email</div>
+                    <div style={modernStyles.contactValue}>
+                      <a href={`mailto:${pg.contact_email}`} style={modernStyles.emailLink}>
                         {pg.contact_email}
                       </a>
                     </div>
@@ -2482,9 +2325,9 @@ export default function PGDetails() {
                 </div>
               )}
               
-              <div style={styles.contactButtons}>
+              <div style={modernStyles.contactButtons}>
                 <button
-                  style={styles.bookButtonSmall}
+                  style={modernStyles.bookButtonSmall}
                   onClick={handleBookNow}
                   disabled={bookingLoading}
                 >
@@ -2493,7 +2336,7 @@ export default function PGDetails() {
                 </button>
                 {hasOwnerContact && (
                   <button
-                    style={styles.callButtonSmall}
+                    style={modernStyles.callButtonSmall}
                     onClick={handleCallOwner}
                     disabled={bookingLoading}
                   >
@@ -2506,26 +2349,26 @@ export default function PGDetails() {
           )}
 
           {(pg.total_rooms || pg.available_rooms) && (
-            <div style={styles.availabilityCard}>
-              <h3 style={styles.availabilityTitle}>🛏 Availability Status</h3>
+            <div style={modernStyles.availabilityCard}>
+              <h3 style={modernStyles.availabilityTitle}>🛏 Availability Status</h3>
               {pg.total_rooms && (
-                <div style={styles.availabilityItem}>
-                  <div style={styles.availabilityLabel}>Total {isToLet ? "Properties" : "Rooms"}</div>
-                  <div style={styles.availabilityValue}>{pg.total_rooms}</div>
+                <div style={modernStyles.availabilityItem}>
+                  <div style={modernStyles.availabilityLabel}>Total {isToLet ? "Properties" : "Rooms"}</div>
+                  <div style={modernStyles.availabilityValue}>{pg.total_rooms}</div>
                 </div>
               )}
               {(pg.available_rooms || pg.available_rooms === 0) && (
-                <div style={styles.availabilityItem}>
-                  <div style={styles.availabilityLabel}>Available Now</div>
+                <div style={modernStyles.availabilityItem}>
+                  <div style={modernStyles.availabilityLabel}>Available Now</div>
                   <div style={{
-                    ...styles.availabilityValue,
+                    ...modernStyles.availabilityValue,
                     color: pg.available_rooms > 0 ? "#10b981" : "#ef4444"
                   }}>
                     {pg.available_rooms > 0 ? `${pg.available_rooms} Available` : "Fully Occupied"}
                   </div>
                 </div>
               )}
-              <div style={styles.availabilityNote}>
+              <div style={modernStyles.availabilityNote}>
                 {pg.available_rooms > 0 
                   ? "Book now to secure your spot!" 
                   : "Check back later for availability"}
@@ -2535,17 +2378,17 @@ export default function PGDetails() {
         </div>
       </div>
 
-      <div style={styles.stickyBar}>
-        <div style={styles.stickyContent}>
+      <div style={modernStyles.stickyBar}>
+        <div style={modernStyles.stickyContent}>
           <div>
-            <div style={styles.stickyPrice}>₹{formatPrice(getStartingPrice())} / month</div>
-            <div style={styles.stickyInfo}>
+            <div style={modernStyles.stickyPrice}>₹{formatPrice(getStartingPrice())} / month</div>
+            <div style={modernStyles.stickyInfo}>
               {pg.pg_name} • {pg.area || pg.city}
             </div>
           </div>
-          <div style={styles.stickyActions}>
+          <div style={modernStyles.stickyActions}>
             <button
-              style={styles.stickyBookButton}
+              style={modernStyles.stickyBookButton}
               onClick={handleBookNow}
               disabled={bookingLoading}
             >
@@ -2554,7 +2397,7 @@ export default function PGDetails() {
             </button>
             {hasOwnerContact && (
               <button
-                style={styles.stickyCallButton}
+                style={modernStyles.stickyCallButton}
                 onClick={handleCallOwner}
                 disabled={bookingLoading}
               >
@@ -2581,37 +2424,54 @@ export default function PGDetails() {
           100% { transform: rotate(360deg); }
         }
         @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         @keyframes slideIn {
           from { transform: translateX(100%); opacity: 0; }
           to { transform: translateX(0); opacity: 1; }
         }
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
         .spinner {
           width: 40px;
           height: 40px;
           border: 4px solid #e5e7eb;
-          border-top: 4px solid #667eea;
+          border-top: 4px solid #6366f1;
           border-radius: 50%;
           animation: spin 1s linear infinite;
+        }
+        .spinner-small {
+          width: 18px;
+          height: 18px;
+          border: 2px solid rgba(255,255,255,0.3);
+          border-top: 2px solid white;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+          display: inline-block;
+          margin-right: 8px;
         }
       `}</style>
     </div>
   );
 }
 
-/* ================= STYLES ================= */
-const styles = {
+/* ================= MODERN STARTUP STYLES ================= */
+const modernStyles = {
+  // Base layout
   page: {
-    maxWidth: "1200px",
+    maxWidth: "1280px",
     margin: "0 auto",
-    padding: "20px",
+    padding: "24px 20px 100px 20px",
     backgroundColor: "#f8fafc",
     minHeight: "100vh",
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    position: "relative",
   },
 
+  // Loading & Error
   loadingContainer: {
     display: "flex",
     flexDirection: "column",
@@ -2619,8 +2479,10 @@ const styles = {
     justifyContent: "center",
     minHeight: "100vh",
     backgroundColor: "#f8fafc",
+    gap: "16px",
+    fontSize: "16px",
+    color: "#64748b",
   },
-
   errorContainer: {
     display: "flex",
     flexDirection: "column",
@@ -2629,101 +2491,112 @@ const styles = {
     minHeight: "100vh",
     padding: "20px",
     textAlign: "center",
+    backgroundColor: "#fff",
+    borderRadius: "32px",
+    margin: "20px",
+    boxShadow: "0 20px 35px -12px rgba(0,0,0,0.1)",
   },
   backButton: {
-    marginTop: "20px",
-    padding: "10px 20px",
-    backgroundColor: "#667eea",
+    marginTop: "24px",
+    padding: "12px 28px",
+    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
     color: "white",
     border: "none",
-    borderRadius: "8px",
+    borderRadius: "40px",
     cursor: "pointer",
     fontSize: "14px",
-    fontWeight: "500",
+    fontWeight: "600",
     transition: "all 0.3s ease",
+    boxShadow: "0 8px 20px rgba(99,102,241,0.3)",
   },
 
+  // Breadcrumb
   breadcrumb: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    marginBottom: "20px",
+    marginBottom: "24px",
     fontSize: "14px",
-    color: "#666",
-    padding: "10px 0",
+    color: "#64748b",
     flexWrap: "wrap",
+    padding: "8px 0",
   },
   breadcrumbLink: {
-    color: "#667eea",
+    color: "#6366f1",
     cursor: "pointer",
     textDecoration: "none",
     fontWeight: "500",
-    transition: "all 0.2s",
+    transition: "color 0.2s",
   },
   breadcrumbSeparator: {
     color: "#cbd5e1",
   },
   breadcrumbCurrent: {
-    color: "#334155",
+    color: "#1e293b",
     fontWeight: "600",
   },
   propertyCode: {
     marginLeft: "auto",
     background: "#f1f5f9",
-    padding: "4px 10px",
-    borderRadius: "6px",
+    padding: "6px 12px",
+    borderRadius: "30px",
     fontSize: "12px",
-    color: "#64748b",
-    fontWeight: "500",
+    fontWeight: "600",
+    color: "#475569",
+    letterSpacing: "0.5px",
   },
 
+  // Slider
   slider: {
     position: "relative",
-    borderRadius: "16px",
+    borderRadius: "28px",
     overflow: "hidden",
-    marginBottom: "20px",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
+    marginBottom: "28px",
+    boxShadow: "0 25px 40px -12px rgba(0,0,0,0.25)",
     transition: "all 0.3s ease",
   },
   media: {
     width: "100%",
-    height: "400px",
+    height: "480px",
     objectFit: "cover",
     display: "block",
+    transition: "transform 0.3s ease",
   },
   navBtnLeft: {
     position: "absolute",
     top: "50%",
     left: "20px",
     transform: "translateY(-50%)",
-    backgroundColor: "rgba(255,255,255,0.9)",
+    backgroundColor: "rgba(255,255,255,0.95)",
     border: "none",
-    width: "40px",
-    height: "40px",
+    width: "44px",
+    height: "44px",
     borderRadius: "50%",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 4px 15px rgba(0,0,0,0.2)",
-    transition: "all 0.3s ease",
+    boxShadow: "0 8px 20px rgba(0,0,0,0.2)",
+    transition: "all 0.2s ease",
+    backdropFilter: "blur(4px)",
   },
   navBtnRight: {
     position: "absolute",
     top: "50%",
     right: "20px",
     transform: "translateY(-50%)",
-    backgroundColor: "rgba(255,255,255,0.9)",
+    backgroundColor: "rgba(255,255,255,0.95)",
     border: "none",
-    width: "40px",
-    height: "40px",
+    width: "44px",
+    height: "44px",
     borderRadius: "50%",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 4px 15px rgba(0,0,0,0.2)",
-    transition: "all 0.3s ease",
+    boxShadow: "0 8px 20px rgba(0,0,0,0.2)",
+    transition: "all 0.2s ease",
+    backdropFilter: "blur(4px)",
   },
   mediaCounter: {
     position: "absolute",
@@ -2731,58 +2604,62 @@ const styles = {
     right: "20px",
     backgroundColor: "rgba(0,0,0,0.7)",
     color: "white",
-    padding: "6px 12px",
-    borderRadius: "20px",
-    fontSize: "12px",
-    fontWeight: "500",
-    backdropFilter: "blur(4px)",
+    padding: "6px 14px",
+    borderRadius: "30px",
+    fontSize: "13px",
+    fontWeight: "600",
+    backdropFilter: "blur(8px)",
   },
   noMedia: {
-    height: "200px",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    borderRadius: "16px",
+    height: "280px",
+    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    borderRadius: "28px",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: "20px",
+    marginBottom: "28px",
     color: "white",
+    boxShadow: "0 20px 35px -12px rgba(99,102,241,0.3)",
   },
   noMediaIcon: {
-    fontSize: "48px",
-    marginBottom: "10px",
-    opacity: 0.8,
+    fontSize: "56px",
+    marginBottom: "16px",
+    opacity: 0.9,
   },
 
+  // Main Card
   mainCard: {
     backgroundColor: "white",
-    borderRadius: "16px",
-    padding: "24px",
-    marginBottom: "20px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
-    border: "1px solid #e2e8f0",
+    borderRadius: "32px",
+    padding: "32px",
+    marginBottom: "28px",
+    boxShadow: "0 20px 35px -12px rgba(0,0,0,0.08)",
+    border: "1px solid rgba(226,232,240,0.6)",
+    transition: "transform 0.2s ease, box-shadow 0.2s ease",
   },
   headerRow: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: "16px",
+    marginBottom: "20px",
     flexWrap: "wrap",
     gap: "20px",
   },
   title: {
-    fontSize: "28px",
+    fontSize: "32px",
     fontWeight: "700",
-    color: "#1e293b",
+    color: "#0f172a",
     margin: "0 0 8px 0",
     lineHeight: "1.2",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    background: "linear-gradient(135deg, #0f172a, #334155)",
     WebkitBackgroundClip: "text",
     WebkitTextFillColor: "transparent",
+    letterSpacing: "-0.02em",
   },
   address: {
     fontSize: "15px",
-    color: "#64748b",
+    color: "#475569",
     margin: "0 0 4px 0",
     display: "flex",
     alignItems: "center",
@@ -2790,7 +2667,7 @@ const styles = {
   },
   landmark: {
     fontSize: "14px",
-    color: "#94a3b8",
+    color: "#64748b",
     margin: "0",
     display: "flex",
     alignItems: "center",
@@ -2798,196 +2675,247 @@ const styles = {
   },
   actionButtons: {
     display: "flex",
-    gap: "10px",
+    gap: "12px",
     flexWrap: "wrap",
   },
   bookButton: {
-    padding: "12px 24px",
-    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    padding: "12px 28px",
+    background: "linear-gradient(135deg, #10b981, #059669)",
     color: "white",
     border: "none",
-    borderRadius: "10px",
+    borderRadius: "40px",
     fontSize: "14px",
     fontWeight: "600",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-    whiteSpace: "nowrap",
+    gap: "10px",
     transition: "all 0.3s ease",
-    boxShadow: "0 4px 15px rgba(16, 185, 129, 0.3)",
+    boxShadow: "0 8px 18px rgba(16,185,129,0.3)",
   },
   callButton: {
-    padding: "12px 24px",
-    background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+    padding: "12px 28px",
+    background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
     color: "white",
     border: "none",
-    borderRadius: "10px",
+    borderRadius: "40px",
     fontSize: "14px",
     fontWeight: "600",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-    whiteSpace: "nowrap",
+    gap: "10px",
     transition: "all 0.3s ease",
-    boxShadow: "0 4px 15px rgba(59, 130, 246, 0.3)",
+    boxShadow: "0 8px 18px rgba(59,130,246,0.3)",
   },
   directionButton: {
-    padding: "12px 24px",
-    background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+    padding: "12px 28px",
+    background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
     color: "white",
     border: "none",
-    borderRadius: "10px",
+    borderRadius: "40px",
     fontSize: "14px",
     fontWeight: "600",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-    whiteSpace: "nowrap",
+    gap: "10px",
     transition: "all 0.3s ease",
-    boxShadow: "0 4px 15px rgba(139, 92, 246, 0.3)",
+    boxShadow: "0 8px 18px rgba(139,92,246,0.3)",
   },
 
   badgeRow: {
     display: "flex",
     flexWrap: "wrap",
-    gap: "8px",
-    marginBottom: "24px",
+    gap: "12px",
+    marginBottom: "28px",
   },
   typeBadge: {
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
     color: "white",
-    padding: "6px 12px",
-    borderRadius: "20px",
-    fontSize: "12px",
+    padding: "6px 16px",
+    borderRadius: "40px",
+    fontSize: "13px",
     fontWeight: "600",
     display: "flex",
     alignItems: "center",
-    gap: "6px",
-    boxShadow: "0 2px 8px rgba(102, 126, 234, 0.3)",
+    gap: "8px",
+    boxShadow: "0 4px 12px rgba(99,102,241,0.25)",
   },
   genderBadge: {
-    background: "linear-gradient(135deg, #ec4899 0%, #db2777 100%)",
+    background: "linear-gradient(135deg, #ec4899, #db2777)",
     color: "white",
-    padding: "6px 12px",
-    borderRadius: "20px",
-    fontSize: "12px",
+    padding: "6px 16px",
+    borderRadius: "40px",
+    fontSize: "13px",
     fontWeight: "600",
     display: "flex",
     alignItems: "center",
-    gap: "6px",
-    boxShadow: "0 2px 8px rgba(236, 72, 153, 0.3)",
+    gap: "8px",
   },
   bhkBadge: {
-    background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+    background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
     color: "white",
-    padding: "6px 12px",
-    borderRadius: "20px",
-    fontSize: "12px",
+    padding: "6px 16px",
+    borderRadius: "40px",
+    fontSize: "13px",
     fontWeight: "600",
     display: "flex",
     alignItems: "center",
-    gap: "6px",
-    boxShadow: "0 2px 8px rgba(139, 92, 246, 0.3)",
+    gap: "8px",
   },
   furnishingBadge: {
-    background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+    background: "linear-gradient(135deg, #f59e0b, #d97706)",
     color: "white",
-    padding: "6px 12px",
-    borderRadius: "20px",
-    fontSize: "12px",
+    padding: "6px 16px",
+    borderRadius: "40px",
+    fontSize: "13px",
     fontWeight: "600",
     display: "flex",
     alignItems: "center",
-    gap: "6px",
-    boxShadow: "0 2px 8px rgba(245, 158, 11, 0.3)",
+    gap: "8px",
   },
   availabilityBadge: {
     color: "white",
-    padding: "6px 12px",
-    borderRadius: "20px",
-    fontSize: "12px",
+    padding: "6px 16px",
+    borderRadius: "40px",
+    fontSize: "13px",
     fontWeight: "600",
     display: "flex",
     alignItems: "center",
-    gap: "6px",
-    boxShadow: "0 2px 8px rgba(239, 68, 68, 0.3)",
+    gap: "8px",
   },
 
   statsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-    gap: "16px",
-    padding: "16px",
-    background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
-    borderRadius: "12px",
+    gap: "20px",
+    padding: "20px",
+    background: "linear-gradient(135deg, #f8fafc, #f1f5f9)",
+    borderRadius: "24px",
     border: "1px solid #e2e8f0",
   },
   statItem: {
     display: "flex",
     alignItems: "center",
-    gap: "12px",
-    transition: "all 0.3s ease",
+    gap: "16px",
+    transition: "all 0.2s ease",
   },
   statIcon: {
-    fontSize: "24px",
-    width: "48px",
-    height: "48px",
+    fontSize: "28px",
+    width: "56px",
+    height: "56px",
     backgroundColor: "white",
-    borderRadius: "12px",
+    borderRadius: "20px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-    transition: "all 0.3s ease",
+    boxShadow: "0 8px 20px rgba(0,0,0,0.05)",
   },
   statLabel: {
-    fontSize: "12px",
+    fontSize: "13px",
     color: "#64748b",
-    marginBottom: "2px",
+    marginBottom: "4px",
     fontWeight: "500",
+    letterSpacing: "0.3px",
   },
   statValue: {
-    fontSize: "18px",
+    fontSize: "22px",
     fontWeight: "700",
-    color: "#1e293b",
+    color: "#0f172a",
   },
 
+  // Two column layout
+  twoColumn: {
+    display: "grid",
+    gridTemplateColumns: "2fr 1fr",
+    gap: "28px",
+    marginBottom: "100px",
+  },
+  leftColumn: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "28px",
+  },
+  rightColumn: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "28px",
+  },
+
+  // Sections
+  section: {
+    backgroundColor: "white",
+    borderRadius: "28px",
+    padding: "28px",
+    boxShadow: "0 12px 30px rgba(0,0,0,0.05)",
+    border: "1px solid #eef2ff",
+    transition: "all 0.2s ease",
+  },
+  sectionHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: "24px",
+    paddingBottom: "12px",
+    borderBottom: "2px solid #f1f5f9",
+  },
+  sectionTitle: {
+    fontSize: "20px",
+    fontWeight: "700",
+    color: "#0f172a",
+    margin: "0",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    letterSpacing: "-0.01em",
+  },
+  sectionBadge: {
+    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    color: "white",
+    padding: "4px 12px",
+    borderRadius: "30px",
+    fontSize: "12px",
+    fontWeight: "600",
+  },
+
+  description: {
+    fontSize: "16px",
+    lineHeight: "1.6",
+    color: "#334155",
+    margin: "0",
+  },
+
+  // Price Details
   priceDetailsContainer: {
-    padding: "16px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "12px",
-    border: "1px solid #e2e8f0",
+    padding: "0",
+    backgroundColor: "transparent",
+    borderRadius: "0",
   },
   priceSection: {
-    marginBottom: "24px",
+    marginBottom: "28px",
   },
   priceSectionTitle: {
     fontSize: "18px",
     fontWeight: "600",
     color: "#1e293b",
-    margin: "0 0 16px 0",
+    margin: "0 0 20px 0",
     display: "flex",
     alignItems: "center",
-    gap: "10px",
-  },
-  priceSectionIcon: {
-    fontSize: "20px",
+    gap: "12px",
   },
   priceGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-    gap: "12px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+    gap: "16px",
   },
   priceItem: {
-    backgroundColor: "white",
-    padding: "16px",
-    borderRadius: "10px",
+    backgroundColor: "#f8fafc",
+    padding: "20px 16px",
+    borderRadius: "20px",
     border: "1px solid #e2e8f0",
     textAlign: "center",
-    transition: "all 0.3s ease",
+    transition: "all 0.2s ease",
   },
   priceType: {
     fontSize: "14px",
@@ -2996,291 +2924,114 @@ const styles = {
     marginBottom: "8px",
   },
   priceValue: {
-    fontSize: "18px",
+    fontSize: "20px",
     fontWeight: "700",
     color: "#10b981",
-    marginBottom: "6px",
+    marginBottom: "8px",
   },
   depositAmount: {
     fontSize: "12px",
     color: "#ef4444",
     fontWeight: "500",
     backgroundColor: "#fef2f2",
-    padding: "4px 8px",
-    borderRadius: "6px",
+    padding: "4px 10px",
+    borderRadius: "30px",
     display: "inline-block",
-  },
-  bhkInfo: {
-    marginTop: "12px",
-    fontSize: "14px",
-    color: "#64748b",
-    backgroundColor: "#f1f5f9",
-    padding: "8px 12px",
-    borderRadius: "8px",
-    display: "inline-block",
-  },
-  priceCategory: {
-    marginBottom: "20px",
-  },
-  priceCategoryTitle: {
-    fontSize: "16px",
-    fontWeight: "600",
-    color: "#334155",
-    marginBottom: "12px",
-    paddingLeft: "8px",
-    borderLeft: "4px solid #667eea",
-  },
-  includesInfo: {
-    marginTop: "12px",
-    fontSize: "14px",
-    color: "#059669",
-    backgroundColor: "#d1fae5",
-    padding: "8px 12px",
-    borderRadius: "8px",
-    fontWeight: "500",
   },
   additionalCharges: {
-    marginTop: "20px",
-    padding: "16px",
-    backgroundColor: "white",
-    borderRadius: "10px",
-    border: "1px solid #e2e8f0",
-  },
-  additionalChargesTitle: {
-    fontSize: "16px",
-    fontWeight: "600",
-    color: "#334155",
-    marginBottom: "12px",
-  },
-  chargesGrid: {
-    display: "grid",
-    gap: "8px",
-  },
-  chargeItem: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "8px 0",
-    borderBottom: "1px solid #f1f5f9",
-  },
-  chargeLabel: {
-    fontSize: "14px",
-    color: "#64748b",
-  },
-  chargeValue: {
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "#1e293b",
+    marginTop: "24px",
+    padding: "20px",
+    backgroundColor: "#f8fafc",
+    borderRadius: "20px",
   },
   foodCharges: {
     display: "flex",
     alignItems: "center",
-    gap: "12px",
-    padding: "12px",
+    gap: "16px",
+    padding: "16px",
     backgroundColor: "#f0fdf4",
-    borderRadius: "10px",
-    border: "1px solid #86efac",
-    marginTop: "16px",
-  },
-  foodChargesIcon: {
-    fontSize: "24px",
-  },
-  foodChargesLabel: {
-    fontSize: "12px",
-    color: "#64748b",
-  },
-  foodChargesValue: {
-    fontSize: "16px",
-    fontWeight: "700",
-    color: "#059669",
-  },
-  noPriceContainer: {
-    textAlign: "center",
-    padding: "40px 20px",
-    backgroundColor: "#f1f5f9",
-    borderRadius: "10px",
-    border: "1px dashed #cbd5e1",
-  },
-  noPriceIcon: {
-    fontSize: "48px",
-    marginBottom: "12px",
-    opacity: 0.5,
-  },
-  noPriceText: {
-    fontSize: "14px",
-    color: "#64748b",
+    borderRadius: "20px",
+    marginTop: "20px",
   },
 
-  twoColumn: {
-    display: "grid",
-    gridTemplateColumns: "2fr 1fr",
-    gap: "20px",
-    marginBottom: "100px",
-  },
-  leftColumn: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "20px",
-  },
-  rightColumn: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "20px",
-  },
-
-  section: {
-    backgroundColor: "white",
-    borderRadius: "16px",
-    padding: "20px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
-    border: "1px solid #e2e8f0",
-    transition: "all 0.3s ease",
-  },
-  sectionHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: "20px",
-    paddingBottom: "12px",
-    borderBottom: "2px solid #f1f5f9",
-  },
-  sectionTitle: {
-    fontSize: "18px",
-    fontWeight: "600",
-    color: "#1e293b",
-    margin: "0",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  sectionBadge: {
-    backgroundColor: "#3b82f6",
-    color: "white",
-    padding: "4px 8px",
-    borderRadius: "12px",
-    fontSize: "12px",
-    fontWeight: "600",
-    minWidth: "24px",
-    textAlign: "center",
-  },
-
-  description: {
-    fontSize: "15px",
-    lineHeight: "1.7",
-    color: "#475569",
-    margin: "0",
-  },
-
-  noFacilitiesContainer: {
-    textAlign: "center",
-    padding: "40px 20px",
-    background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
-    borderRadius: "10px",
-    marginTop: "10px",
-    border: "1px dashed #cbd5e1",
-  },
-  noFacilitiesIcon: {
-    fontSize: "48px",
-    marginBottom: "15px",
-    opacity: 0.5,
-  },
-  noContentText: {
-    color: "#64748b",
-    fontSize: "15px",
-    fontWeight: "500",
-    marginBottom: "8px",
-  },
-
+  // Facilities
   facilityCategories: {
     display: "flex",
     flexWrap: "wrap",
-    gap: "8px",
-    marginBottom: "20px",
+    gap: "12px",
+    marginBottom: "24px",
   },
   facilityCategoryBtn: {
-    padding: "8px 12px",
-    backgroundColor: "white",
-    border: "1px solid #e2e8f0",
-    borderRadius: "8px",
+    padding: "8px 18px",
+    borderRadius: "40px",
     cursor: "pointer",
-    fontSize: "12px",
-    fontWeight: "500",
+    fontSize: "13px",
+    fontWeight: "600",
     display: "flex",
     alignItems: "center",
-    gap: "6px",
-    transition: "all 0.3s ease",
+    gap: "8px",
+    transition: "all 0.2s ease",
+    border: "1px solid #e2e8f0",
   },
-  facilityCategoryIcon: {
-    fontSize: "14px",
-  },
-  facilityCategoryLabel: {
-    fontSize: "12px",
-  },
-
   facilitiesGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-    gap: "12px",
+    gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+    gap: "16px",
   },
   facilityItem: {
     display: "flex",
     alignItems: "center",
-    gap: "12px",
-    padding: "12px",
-    borderRadius: "10px",
+    gap: "14px",
+    padding: "14px 18px",
+    borderRadius: "20px",
     border: "1px solid #e2e8f0",
-    transition: "all 0.3s",
+    transition: "all 0.2s ease",
     cursor: "pointer",
-    position: "relative",
-  },
-  facilityItemActive: {},
-  facilityItemInactive: {
-    opacity: 0.6,
   },
   facilityIcon: {
-    fontSize: "18px",
-    width: "32px",
-    height: "32px",
+    fontSize: "22px",
+    width: "40px",
+    height: "40px",
     backgroundColor: "white",
-    borderRadius: "8px",
+    borderRadius: "14px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
   },
   facilityLabel: {
-    fontSize: "14px",
-    color: "#334155",
+    fontSize: "15px",
     fontWeight: "500",
+    color: "#1e293b",
     flex: 1,
   },
   checkmark: {
     color: "#10b981",
     fontWeight: "bold",
-    fontSize: "14px",
+    fontSize: "16px",
   },
   waterSource: {
-    marginTop: "16px",
-    padding: "12px",
-    background: "linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)",
-    borderRadius: "10px",
+    marginTop: "20px",
+    padding: "14px 18px",
+    background: "linear-gradient(135deg, #e0f2fe, #bae6fd)",
+    borderRadius: "20px",
     fontSize: "14px",
-    color: "#0369a1",
     fontWeight: "500",
+    color: "#0369a1",
     display: "flex",
     alignItems: "center",
-    gap: "10px",
-    border: "1px solid #7dd3fc",
+    gap: "12px",
   },
 
+  // Rules
   rulesContainer: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "20px",
   },
   rulesSection: {
     backgroundColor: "#f8fafc",
-    borderRadius: "12px",
+    borderRadius: "24px",
     overflow: "hidden",
     border: "1px solid #e2e8f0",
   },
@@ -3288,133 +3039,161 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "16px",
+    padding: "18px 20px",
     cursor: "pointer",
     backgroundColor: "white",
-    transition: "all 0.3s ease",
+    transition: "all 0.2s ease",
   },
   rulesSectionTitle: {
-    fontSize: "15px",
+    fontSize: "16px",
     fontWeight: "600",
-    color: "#1e293b",
+    color: "#0f172a",
     margin: "0",
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-  },
-  rulesSectionIcon: {
-    fontSize: "16px",
+    gap: "10px",
   },
   rulesToggle: {
-    fontSize: "18px",
+    fontSize: "22px",
     color: "#64748b",
     fontWeight: "500",
-    transition: "all 0.3s ease",
   },
   rulesGrid: {
     display: "grid",
     gridTemplateColumns: "1fr",
-    gap: "12px",
-    padding: "16px",
+    gap: "16px",
+    padding: "20px",
     paddingTop: "0",
   },
   ruleItem: {
     display: "flex",
-    gap: "12px",
-    padding: "16px",
-    borderRadius: "10px",
+    gap: "16px",
+    padding: "18px",
+    borderRadius: "20px",
     border: "1px solid #e2e8f0",
-    transition: "all 0.3s ease",
-  },
-  ruleIconContainer: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
   },
   ruleIcon: {
-    fontSize: "20px",
-    width: "40px",
-    height: "40px",
-    borderRadius: "50%",
+    fontSize: "22px",
+    width: "48px",
+    height: "48px",
+    borderRadius: "30px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     color: "white",
   },
-  ruleContent: {
-    flex: 1,
-  },
   ruleLabel: {
-    fontSize: "14px",
+    fontSize: "15px",
     fontWeight: "600",
     marginBottom: "4px",
-  },
-  ruleDescription: {
-    fontSize: "12px",
-    color: "#64748b",
-    marginBottom: "8px",
-  },
-  ruleStatus: {
-    display: "flex",
-    alignItems: "center",
-  },
-  ruleStatusBadge: {
-    padding: "4px 8px",
-    borderRadius: "6px",
-    fontSize: "11px",
-    fontWeight: "600",
-    color: "white",
   },
 
+  // Map
   mapContainer: {
-    marginBottom: "20px",
-  },
-  mapPopup: {
-    padding: "10px",
-    maxWidth: "200px",
-  },
-  mapPopupTitle: {
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "#1f2937",
-    marginBottom: "4px",
-  },
-  mapPopupAddress: {
-    fontSize: "12px",
-    color: "#6b7280",
-    marginBottom: "8px",
-  },
-  mapPopupButton: {
-    padding: "6px 12px",
-    backgroundColor: "#10b981",
-    color: "white",
-    border: "none",
-    borderRadius: "4px",
-    fontSize: "12px",
-    fontWeight: "500",
-    cursor: "pointer",
-    marginTop: "8px",
+    marginBottom: "0",
   },
   locationDetails: {
-    marginTop: "16px",
-    padding: "16px",
+    marginTop: "20px",
+    padding: "20px",
     backgroundColor: "#f8fafc",
-    borderRadius: "12px",
+    borderRadius: "20px",
     border: "1px solid #e2e8f0",
   },
   infoRow: {
-    padding: "8px 0",
+    padding: "10px 0",
     borderBottom: "1px solid #e2e8f0",
     fontSize: "14px",
     color: "#475569",
   },
 
+  // Nearby Highlights Panel
+  highlightsPanel: {
+    backgroundColor: "white",
+    borderRadius: "28px",
+    overflow: "hidden",
+    border: "1px solid #eef2ff",
+    boxShadow: "0 12px 30px rgba(0,0,0,0.05)",
+  },
+  categoriesPills: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "10px",
+    padding: "18px",
+    backgroundColor: "#f8fafc",
+    borderBottom: "1px solid #e2e8f0",
+  },
+  highlightCategoryBtn: {
+    padding: "8px 16px",
+    borderRadius: "40px",
+    cursor: "pointer",
+    fontSize: "13px",
+    fontWeight: "500",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    transition: "all 0.2s ease",
+    border: "1px solid #e2e8f0",
+  },
+  highlightsList: {
+    padding: "0",
+  },
+  highlightsListHeader: {
+    padding: "18px 20px",
+    borderBottom: "1px solid #f1f5f9",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  highlightsItemsContainer: {
+    maxHeight: "420px",
+    overflowY: "auto",
+  },
+  highlightItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+    padding: "16px 20px",
+    borderBottom: "1px solid #f1f5f9",
+    transition: "all 0.2s ease",
+    cursor: "pointer",
+  },
+  highlightIconContainer: {
+    width: "44px",
+    height: "44px",
+    borderRadius: "16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 6px 14px rgba(0,0,0,0.1)",
+  },
+  highlightIcon: {
+    fontSize: "22px",
+    color: "white",
+  },
+  highlightName: {
+    fontSize: "15px",
+    fontWeight: "600",
+    color: "#1e293b",
+    marginBottom: "4px",
+  },
+  viewOnMapButton: {
+    padding: "8px 16px",
+    borderRadius: "30px",
+    color: "white",
+    border: "none",
+    fontSize: "12px",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+  },
+
+  // Nearby PGs
   nearbyPGsPanel: {
     backgroundColor: "white",
-    borderRadius: "16px",
-    padding: "20px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
-    border: "1px solid #e2e8f0",
+    borderRadius: "28px",
+    padding: "24px",
+    boxShadow: "0 12px 30px rgba(0,0,0,0.05)",
+    border: "1px solid #eef2ff",
   },
   nearbyPGsHeader: {
     display: "flex",
@@ -3426,541 +3205,157 @@ const styles = {
   },
   nearbyPGsTitle: {
     fontSize: "18px",
-    fontWeight: "600",
-    color: "#1e293b",
+    fontWeight: "700",
+    color: "#0f172a",
     margin: "0",
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-  },
-  nearbyPGsIcon: {
-    fontSize: "20px",
-  },
-  nearbyPGsCount: {
-    fontSize: "12px",
-    color: "#64748b",
-    fontWeight: "500",
-    backgroundColor: "#f1f5f9",
-    padding: "4px 8px",
-    borderRadius: "6px",
+    gap: "10px",
   },
   nearbyPGsGrid: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "20px",
   },
-  nearbyPGsFooter: {
-    marginTop: "20px",
-    paddingTop: "16px",
-    borderTop: "1px solid #e2e8f0",
-  },
-  viewAllPropertiesButton: {
-    width: "100%",
-    padding: "12px",
-    backgroundColor: "transparent",
-    color: "#3b82f6",
-    border: "1px solid #3b82f6",
-    borderRadius: "8px",
-    fontSize: "14px",
-    fontWeight: "500",
-    cursor: "pointer",
-    transition: "all 0.3s ease",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "8px",
-  },
-
   nearbyPgCard: {
     backgroundColor: "white",
-    borderRadius: "12px",
+    borderRadius: "20px",
     overflow: "hidden",
     border: "1px solid #e2e8f0",
+    transition: "all 0.2s ease",
     cursor: "pointer",
-    transition: "all 0.3s ease",
   },
   nearbyPgImageContainer: {
     position: "relative",
-    height: "140px",
+    height: "160px",
     overflow: "hidden",
   },
-  nearbyPgImagePlaceholder: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#f1f5f9",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  nearbyPgImage: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-  },
-  nearbyPgNoImage: {
-    fontSize: "40px",
-    color: "#94a3b8",
-  },
-  nearbyPgBadges: {
-    position: "absolute",
-    top: "10px",
-    left: "10px",
-    right: "10px",
-    display: "flex",
-    justifyContent: "space-between",
-  },
-  nearbyPgTypeBadge: {
-    backgroundColor: "rgba(59, 130, 246, 0.9)",
-    color: "white",
-    padding: "4px 8px",
-    borderRadius: "6px",
-    fontSize: "11px",
-    fontWeight: "500",
-    backdropFilter: "blur(4px)",
-  },
-  nearbyPgDistanceBadge: {
-    backgroundColor: "rgba(16, 185, 129, 0.9)",
-    color: "white",
-    padding: "4px 8px",
-    borderRadius: "6px",
-    fontSize: "11px",
-    fontWeight: "500",
-    backdropFilter: "blur(4px)",
-  },
   nearbyPgContent: {
-    padding: "16px",
+    padding: "18px",
   },
   nearbyPgTitle: {
     fontSize: "16px",
-    fontWeight: "600",
-    color: "#1e293b",
+    fontWeight: "700",
+    color: "#0f172a",
     margin: "0 0 8px 0",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  nearbyPgAddress: {
-    fontSize: "12px",
-    color: "#64748b",
-    margin: "0 0 12px 0",
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-  },
-  nearbyPgStats: {
-    display: "flex",
-    justifyContent: "space-between",
-    marginBottom: "12px",
-  },
-  nearbyPgStat: {
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-  },
-  nearbyPgStatIcon: {
-    fontSize: "14px",
-    color: "#64748b",
-  },
-  nearbyPgStatText: {
-    fontSize: "12px",
-    color: "#334155",
-    fontWeight: "500",
-  },
-  nearbyPgFacilities: {
-    display: "flex",
-    gap: "8px",
-    marginBottom: "12px",
-    flexWrap: "wrap",
-  },
-  nearbyPgFacility: {
-    fontSize: "16px",
-    backgroundColor: "#f1f5f9",
-    padding: "4px",
-    borderRadius: "4px",
   },
   nearbyPgViewButton: {
     width: "100%",
-    padding: "8px",
+    padding: "10px",
     backgroundColor: "#f1f5f9",
-    color: "#334155",
+    borderRadius: "40px",
+    fontSize: "13px",
+    fontWeight: "600",
     border: "none",
-    borderRadius: "6px",
-    fontSize: "12px",
-    fontWeight: "500",
     cursor: "pointer",
-    transition: "all 0.3s ease",
+    transition: "all 0.2s ease",
   },
 
-  loadingNearbyPGs: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "40px 20px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "12px",
-    textAlign: "center",
-    border: "1px dashed #cbd5e1",
-  },
-  noNearbyPGs: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "40px 20px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "12px",
-    textAlign: "center",
-    border: "1px dashed #cbd5e1",
-  },
-  noNearbyPGsIcon: {
-    fontSize: "48px",
-    marginBottom: "16px",
-    opacity: 0.5,
-  },
-  noNearbyPGsTitle: {
-    fontSize: "16px",
-    fontWeight: "600",
-    color: "#334155",
-    marginBottom: "8px",
-  },
-  noNearbyPGsText: {
-    fontSize: "14px",
-    color: "#64748b",
-    maxWidth: "300px",
-  },
-
-  highlightsPanel: {
-    backgroundColor: "white",
-    borderRadius: "16px",
-    overflow: "hidden",
-    border: "1px solid #e2e8f0",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
-  },
-  categoriesPills: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "8px",
-    padding: "16px",
-    backgroundColor: "#f8fafc",
-    borderBottom: "1px solid #e2e8f0",
-  },
-  highlightCategoryBtn: {
-    padding: "8px 12px",
-    backgroundColor: "white",
-    border: "1px solid #e2e8f0",
-    borderRadius: "20px",
-    cursor: "pointer",
-    fontSize: "12px",
-    fontWeight: "500",
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    transition: "all 0.3s ease",
-    whiteSpace: "nowrap",
-  },
-  highlightCategoryIcon: {
-    fontSize: "14px",
-  },
-  highlightCategoryLabel: {
-    fontSize: "12px",
-  },
-  highlightCategoryCount: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    padding: "2px 6px",
-    borderRadius: "10px",
-    fontSize: "10px",
-    fontWeight: "600",
-  },
-  highlightsList: {
-    padding: "0",
-  },
-  highlightsListHeader: {
-    padding: "16px",
-    borderBottom: "1px solid #f1f5f9",
-    backgroundColor: "white",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  highlightsListTitle: {
-    fontSize: "16px",
-    fontWeight: "600",
-    color: "#1e293b",
-    margin: "0",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  categoryIndicator: {
-    width: "8px",
-    height: "8px",
-    borderRadius: "50%",
-    display: "inline-block",
-  },
-  highlightsCount: {
-    fontSize: "12px",
-    color: "#64748b",
-    fontWeight: "500",
-    backgroundColor: "#f1f5f9",
-    padding: "4px 8px",
-    borderRadius: "6px",
-  },
-  highlightsItemsContainer: {
-    maxHeight: "400px",
-    overflowY: "auto",
-  },
-  highlightItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    padding: "12px 16px",
-    borderBottom: "1px solid #f1f5f9",
-    backgroundColor: "white",
-    transition: "all 0.3s ease",
-    cursor: "pointer",
-  },
-  highlightIconContainer: {
-    width: "36px",
-    height: "36px",
-    borderRadius: "8px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-  },
-  highlightIcon: {
-    fontSize: "18px",
-    color: "white",
-  },
-  highlightContent: {
-    flex: 1,
-    minWidth: 0,
-  },
-  highlightName: {
-    fontSize: "14px",
-    fontWeight: "500",
-    color: "#334155",
-    marginBottom: "4px",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  highlightType: {
-    fontSize: "11px",
-    color: "#64748b",
-    backgroundColor: "#f1f5f9",
-    padding: "2px 6px",
-    borderRadius: "10px",
-    display: "inline-block",
-    textTransform: "capitalize",
-  },
-  highlightDistance: {
-    fontSize: "11px",
-    color: "#64748b",
-    display: "block",
-    marginTop: "4px",
-  },
-  viewOnMapButton: {
-    padding: "6px 12px",
-    color: "white",
-    border: "none",
-    borderRadius: "6px",
-    fontSize: "12px",
-    fontWeight: "500",
-    cursor: "pointer",
-    transition: "all 0.3s",
-    whiteSpace: "nowrap",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-  },
-
-  loadingHighlightsPanel: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "40px 20px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "12px",
-    textAlign: "center",
-    border: "1px dashed #cbd5e1",
-  },
-  noHighlightsPanel: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "40px 20px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "12px",
-    textAlign: "center",
-    border: "1px dashed #cbd5e1",
-  },
-  noHighlightsIcon: {
-    fontSize: "48px",
-    marginBottom: "16px",
-    opacity: 0.5,
-  },
-  noHighlightsTitle: {
-    fontSize: "16px",
-    fontWeight: "600",
-    color: "#334155",
-    marginBottom: "8px",
-  },
-  noHighlightsText: {
-    fontSize: "14px",
-    color: "#64748b",
-    maxWidth: "300px",
-  },
-
+  // Contact Card
   contactCard: {
     backgroundColor: "white",
-    borderRadius: "16px",
-    padding: "20px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
-    border: "1px solid #e2e8f0",
+    borderRadius: "28px",
+    padding: "24px",
+    boxShadow: "0 12px 30px rgba(0,0,0,0.05)",
+    border: "1px solid #eef2ff",
   },
   contactTitle: {
     fontSize: "18px",
-    fontWeight: "600",
-    color: "#1e293b",
-    margin: "0 0 16px 0",
+    fontWeight: "700",
+    color: "#0f172a",
+    margin: "0 0 20px 0",
     display: "flex",
     alignItems: "center",
-    gap: "8px",
+    gap: "10px",
   },
   contactItem: {
     display: "flex",
     alignItems: "center",
-    gap: "12px",
-    padding: "12px 0",
+    gap: "14px",
+    padding: "14px 0",
     borderBottom: "1px solid #f1f5f9",
-  },
-  contactIcon: {
-    fontSize: "20px",
-    width: "40px",
-    height: "40px",
-    backgroundColor: "#f1f5f9",
-    borderRadius: "10px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#64748b",
-  },
-  contactLabel: {
-    fontSize: "12px",
-    color: "#64748b",
-    marginBottom: "2px",
-  },
-  contactValue: {
-    fontSize: "14px",
-    fontWeight: "500",
-    color: "#334155",
-  },
-  phoneLink: {
-    color: "#334155",
-    textDecoration: "none",
-    transition: "all 0.3s",
-  },
-  emailLink: {
-    color: "#3b82f6",
-    textDecoration: "none",
-    transition: "all 0.3s",
   },
   contactButtons: {
     display: "flex",
-    gap: "8px",
-    marginTop: "16px",
+    gap: "12px",
+    marginTop: "20px",
   },
   bookButtonSmall: {
-    flex: "1",
-    padding: "10px",
-    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    flex: 1,
+    padding: "12px",
+    background: "linear-gradient(135deg, #10b981, #059669)",
+    borderRadius: "40px",
     color: "white",
     border: "none",
-    borderRadius: "8px",
-    fontSize: "13px",
     fontWeight: "600",
-    cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: "6px",
-    transition: "all 0.3s ease",
+    gap: "8px",
+    cursor: "pointer",
   },
   callButtonSmall: {
-    flex: "1",
-    padding: "10px",
-    background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+    flex: 1,
+    padding: "12px",
+    background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+    borderRadius: "40px",
     color: "white",
     border: "none",
-    borderRadius: "8px",
-    fontSize: "13px",
     fontWeight: "600",
-    cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: "6px",
-    transition: "all 0.3s ease",
+    gap: "8px",
+    cursor: "pointer",
   },
 
+  // Availability Card
   availabilityCard: {
     backgroundColor: "white",
-    borderRadius: "16px",
-    padding: "20px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
-    border: "1px solid #e2e8f0",
+    borderRadius: "28px",
+    padding: "24px",
+    boxShadow: "0 12px 30px rgba(0,0,0,0.05)",
+    border: "1px solid #eef2ff",
   },
   availabilityTitle: {
     fontSize: "18px",
-    fontWeight: "600",
-    color: "#1e293b",
-    margin: "0 0 16px 0",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
+    fontWeight: "700",
+    color: "#0f172a",
+    margin: "0 0 20px 0",
   },
   availabilityItem: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "10px 0",
+    padding: "12px 0",
     borderBottom: "1px solid #f1f5f9",
   },
-  availabilityLabel: {
-    fontSize: "14px",
-    color: "#64748b",
-  },
-  availabilityValue: {
-    fontSize: "16px",
-    fontWeight: "700",
-  },
   availabilityNote: {
-    marginTop: "12px",
+    marginTop: "16px",
     fontSize: "13px",
     color: "#64748b",
     textAlign: "center",
     fontStyle: "italic",
-    padding: "8px",
+    padding: "10px",
     backgroundColor: "#f8fafc",
-    borderRadius: "8px",
+    borderRadius: "16px",
   },
 
+  // Sticky Bar
   stickyBar: {
     position: "fixed",
     bottom: "0",
     left: "0",
     right: "0",
-    backgroundColor: "white",
-    padding: "12px 20px",
-    boxShadow: "0 -4px 20px rgba(0,0,0,0.1)",
+    background: "rgba(255, 255, 255, 0.92)",
+    backdropFilter: "blur(12px)",
+    padding: "16px 24px",
+    boxShadow: "0 -8px 30px rgba(0,0,0,0.08)",
     zIndex: "1000",
-    backdropFilter: "blur(10px)",
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderTop: "1px solid rgba(226,232,240,0.6)",
   },
   stickyContent: {
-    maxWidth: "1200px",
+    maxWidth: "1280px",
     margin: "0 auto",
     display: "flex",
     justifyContent: "space-between",
@@ -3969,46 +3364,320 @@ const styles = {
     gap: "16px",
   },
   stickyPrice: {
-    fontSize: "20px",
-    fontWeight: "700",
-    color: "#1e293b",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    fontSize: "22px",
+    fontWeight: "800",
+    background: "linear-gradient(135deg, #0f172a, #334155)",
     WebkitBackgroundClip: "text",
     WebkitTextFillColor: "transparent",
   },
-  stickyInfo: {
-    fontSize: "13px",
-    color: "#64748b",
-  },
   stickyActions: {
     display: "flex",
-    gap: "8px",
-    flexWrap: "wrap",
+    gap: "12px",
   },
   stickyBookButton: {
-    padding: "10px 20px",
-    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    padding: "12px 28px",
+    background: "linear-gradient(135deg, #10b981, #059669)",
+    borderRadius: "40px",
     color: "white",
     border: "none",
-    borderRadius: "8px",
-    fontSize: "14px",
     fontWeight: "600",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
     cursor: "pointer",
-    whiteSpace: "nowrap",
-    transition: "all 0.3s ease",
-    boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
+    boxShadow: "0 6px 14px rgba(16,185,129,0.3)",
   },
   stickyCallButton: {
-    padding: "10px 20px",
-    background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+    padding: "12px 28px",
+    background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+    borderRadius: "40px",
     color: "white",
     border: "none",
-    borderRadius: "8px",
+    fontWeight: "600",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    cursor: "pointer",
+    boxShadow: "0 6px 14px rgba(59,130,246,0.3)",
+  },
+
+  // Modal
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.75)",
+    backdropFilter: "blur(8px)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 3000,
+    padding: "20px",
+    animation: "fadeIn 0.3s ease",
+  },
+  modalContainer: {
+    background: "white",
+    borderRadius: "32px",
+    width: "100%",
+    maxWidth: "520px",
+    maxHeight: "90vh",
+    overflowY: "auto",
+    position: "relative",
+    boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+  },
+  modalCloseBtn: {
+    position: "absolute",
+    top: "18px",
+    right: "18px",
+    background: "#f1f5f9",
+    border: "none",
+    width: "40px",
+    height: "40px",
+    borderRadius: "30px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    zIndex: 100,
+    transition: "all 0.2s ease",
+  },
+  modalContent: {
+    padding: "32px",
+  },
+  modalHeader: {
+    marginBottom: "24px",
+  },
+  modalTitle: {
+    fontSize: "26px",
+    fontWeight: "700",
+    color: "#0f172a",
+    marginBottom: "8px",
+  },
+  modalSubtitle: {
+    fontSize: "14px",
+    color: "#64748b",
+  },
+  modalWarning: {
+    background: "#fff7ed",
+    padding: "14px 18px",
+    borderRadius: "20px",
+    marginBottom: "24px",
+    fontSize: "13px",
+    color: "#9a3412",
+    border: "1px solid #fed7aa",
+  },
+  formGroup: {
+    marginBottom: "24px",
+  },
+  formLabel: {
+    display: "block",
+    marginBottom: "10px",
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "#334155",
+  },
+  formInput: {
+    width: "100%",
+    padding: "14px 18px",
+    border: "1px solid #cbd5e1",
+    borderRadius: "20px",
+    fontSize: "14px",
+    background: "#f9fafb",
+    transition: "all 0.2s ease",
+  },
+  formSelect: {
+    width: "100%",
+    padding: "14px 18px",
+    border: "1px solid #cbd5e1",
+    borderRadius: "20px",
+    fontSize: "14px",
+    background: "#f9fafb",
+  },
+  selectedPrice: {
+    marginTop: "10px",
+    fontWeight: "600",
+    color: "#10b981",
+    fontSize: "14px",
+  },
+  infoBox: {
+    background: "#f0fdf4",
+    borderRadius: "20px",
+    padding: "18px",
+    marginBottom: "28px",
+    border: "1px solid #bbf7d0",
+  },
+  infoBoxHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    marginBottom: "12px",
+    fontWeight: "600",
+    color: "#065f46",
+  },
+  infoList: {
+    margin: 0,
+    paddingLeft: "20px",
+    color: "#065f46",
+    fontSize: "13px",
+    lineHeight: "1.5",
+  },
+  modalActions: {
+    display: "flex",
+    gap: "14px",
+  },
+  cancelBtn: {
+    flex: 1,
+    padding: "14px",
+    background: "#f1f5f9",
+    color: "#334155",
+    border: "none",
+    borderRadius: "40px",
     fontSize: "14px",
     fontWeight: "600",
     cursor: "pointer",
-    whiteSpace: "nowrap",
-    transition: "all 0.3s ease",
-    boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
   },
+  confirmBtn: {
+    flex: 2,
+    padding: "14px",
+    background: "linear-gradient(135deg, #10b981, #059669)",
+    color: "white",
+    border: "none",
+    borderRadius: "40px",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+  },
+  spinnerSmall: {
+    width: "18px",
+    height: "18px",
+    border: "2px solid rgba(255,255,255,0.3)",
+    borderTop: "2px solid white",
+    borderRadius: "50%",
+    animation: "spin 0.8s linear infinite",
+  },
+  notification: {
+    position: "fixed",
+    top: "24px",
+    right: "24px",
+    background: "#10b981",
+    color: "white",
+    padding: "14px 24px",
+    borderRadius: "60px",
+    boxShadow: "0 15px 35px rgba(0,0,0,0.15)",
+    zIndex: 4000,
+    animation: "slideIn 0.3s ease",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    fontWeight: "500",
+    fontSize: "14px",
+  },
+  noFacilitiesContainer: {
+    textAlign: "center",
+    padding: "40px 20px",
+    background: "#f8fafc",
+    borderRadius: "20px",
+    border: "1px dashed #cbd5e1",
+  },
+  noContentText: {
+    color: "#64748b",
+    fontSize: "14px",
+    marginTop: "8px",
+  },
+  loadingHighlightsPanel: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "48px 20px",
+    backgroundColor: "#f8fafc",
+    borderRadius: "24px",
+    textAlign: "center",
+    border: "1px dashed #cbd5e1",
+  },
+  noHighlightsPanel: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "48px 20px",
+    backgroundColor: "#f8fafc",
+    borderRadius: "24px",
+    textAlign: "center",
+    border: "1px dashed #cbd5e1",
+  },
+  loadingNearbyPGs: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "48px 20px",
+    backgroundColor: "#f8fafc",
+    borderRadius: "24px",
+    textAlign: "center",
+    border: "1px dashed #cbd5e1",
+  },
+  noNearbyPGs: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "48px 20px",
+    backgroundColor: "#f8fafc",
+    borderRadius: "24px",
+    textAlign: "center",
+    border: "1px dashed #cbd5e1",
+  },
+  // Additional missing styles
+  priceCategory: { marginBottom: "20px" },
+  priceCategoryTitle: { fontSize: "16px", fontWeight: "600", marginBottom: "12px", paddingLeft: "8px", borderLeft: "4px solid #6366f1" },
+  bhkInfo: { marginTop: "12px", fontSize: "14px", color: "#475569", backgroundColor: "#f1f5f9", padding: "8px 14px", borderRadius: "40px", display: "inline-block" },
+  includesInfo: { marginTop: "12px", fontSize: "14px", color: "#059669", backgroundColor: "#d1fae5", padding: "8px 14px", borderRadius: "40px", fontWeight: "500" },
+  chargesGrid: { display: "grid", gap: "8px" },
+  chargeItem: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #e2e8f0" },
+  chargeLabel: { fontSize: "14px", color: "#64748b" },
+  chargeValue: { fontSize: "14px", fontWeight: "600", color: "#0f172a" },
+  noPriceContainer: { textAlign: "center", padding: "40px", background: "#f8fafc", borderRadius: "20px" },
+  noPriceIcon: { fontSize: "48px", opacity: 0.5 },
+  noPriceText: { fontSize: "14px", color: "#64748b", marginTop: "12px" },
+  mapPopup: { padding: "12px", maxWidth: "220px" },
+  mapPopupTitle: { fontSize: "14px", fontWeight: "700", color: "#0f172a" },
+  mapPopupAddress: { fontSize: "12px", color: "#64748b" },
+  mapPopupButton: { padding: "6px 14px", backgroundColor: "#10b981", color: "white", border: "none", borderRadius: "30px", fontSize: "12px", fontWeight: "600", cursor: "pointer", marginTop: "8px" },
+  phoneLink: { color: "#3b82f6", textDecoration: "none" },
+  emailLink: { color: "#3b82f6", textDecoration: "none" },
+  nearbyPGsFooter: { marginTop: "20px", paddingTop: "16px", borderTop: "1px solid #e2e8f0" },
+  viewAllPropertiesButton: { width: "100%", padding: "12px", backgroundColor: "transparent", color: "#3b82f6", border: "1px solid #3b82f6", borderRadius: "40px", fontSize: "14px", fontWeight: "600", cursor: "pointer" },
+  highlightCategoryBtnEmpty: { opacity: 0.5, cursor: "not-allowed" },
+  highlightCategoryCount: { backgroundColor: "rgba(255,255,255,0.2)", padding: "2px 8px", borderRadius: "30px", fontSize: "10px", fontWeight: "600", marginLeft: "4px" },
+  categoryIndicator: { width: "10px", height: "10px", borderRadius: "50%", display: "inline-block", marginRight: "8px" },
+  ruleIconContainer: { display: "flex", alignItems: "center" },
+  ruleContent: { flex: 1 },
+  ruleStatus: { marginTop: "8px" },
+  ruleStatusBadge: { padding: "4px 12px", borderRadius: "30px", fontSize: "11px", fontWeight: "600", color: "white" },
+  ruleDescription: { fontSize: "12px", color: "#64748b", marginBottom: "8px" },
+  nearbyPgBadges: { position: "absolute", top: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between" },
+  nearbyPgTypeBadge: { background: "rgba(59,130,246,0.9)", backdropFilter: "blur(4px)", padding: "4px 12px", borderRadius: "30px", fontSize: "11px", fontWeight: "600", color: "white" },
+  nearbyPgDistanceBadge: { background: "rgba(16,185,129,0.9)", backdropFilter: "blur(4px)", padding: "4px 12px", borderRadius: "30px", fontSize: "11px", fontWeight: "600", color: "white" },
+  nearbyPgImagePlaceholder: { width: "100%", height: "100%", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" },
+  nearbyPgImage: { width: "100%", height: "100%", objectFit: "cover" },
+  nearbyPgNoImage: { fontSize: "40px", color: "#94a3b8" },
+  nearbyPgStats: { display: "flex", justifyContent: "space-between", marginBottom: "12px" },
+  nearbyPgStat: { display: "flex", alignItems: "center", gap: "6px" },
+  nearbyPgStatIcon: { fontSize: "14px" },
+  nearbyPgStatText: { fontSize: "13px", fontWeight: "500", color: "#334155" },
+  nearbyPgFacilities: { display: "flex", gap: "10px", marginBottom: "12px", flexWrap: "wrap" },
+  nearbyPgFacility: { fontSize: "18px", backgroundColor: "#f1f5f9", padding: "4px 8px", borderRadius: "12px" },
+  noHighlightsIcon: { fontSize: "48px", marginBottom: "16px", opacity: 0.5 },
+  noHighlightsTitle: { fontSize: "16px", fontWeight: "600", color: "#334155", marginBottom: "8px" },
+  noHighlightsText: { fontSize: "14px", color: "#64748b", maxWidth: "300px", textAlign: "center" },
+  noNearbyPGsIcon: { fontSize: "48px", marginBottom: "16px", opacity: 0.5 },
+  noNearbyPGsTitle: { fontSize: "16px", fontWeight: "600", color: "#334155", marginBottom: "8px" },
+  noNearbyPGsText: { fontSize: "14px", color: "#64748b", maxWidth: "300px", textAlign: "center" },
 };
