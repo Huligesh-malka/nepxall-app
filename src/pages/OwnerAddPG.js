@@ -240,6 +240,7 @@ function OwnerAddPG() {
   const [planLoading, setPlanLoading] = useState(true);
   
   const mapRef = useRef(null);
+  const addressFormRef = useRef(null);
 
   const isToLet = form.pg_category === "to_let";
   const isPG = form.pg_category === "pg";
@@ -519,14 +520,30 @@ function OwnerAddPG() {
     });
   };
 
+  // FIXED: Handle location changes without cursor jumping
   const handleLocationChange = (e) => {
-  const { name, value } = e.target;
-
-  setSelectedLocation(prev => ({
-    ...prev,
-    [name]: value   // ✅ no parsing here
-  }));
-};
+    const { name, value } = e.target;
+    
+    // For lat/lng fields, we need to handle them specially to prevent cursor jump
+    if (name === 'lat' || name === 'lng') {
+      // Allow empty string or numbers
+      let processedValue = value;
+      
+      // If it's a valid number or empty string, update state
+      if (value === "" || !isNaN(parseFloat(value))) {
+        setSelectedLocation(prev => ({
+          ...prev,
+          [name]: value === "" ? "" : value
+        }));
+      }
+    } else {
+      // For all other fields, update normally
+      setSelectedLocation(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
 
   const handlePhotoUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -913,10 +930,42 @@ function OwnerAddPG() {
     );
   };
 
-  // Manual Address Entry Form
+  // Manual Address Entry Form - FIXED with ref to prevent cursor jump
   const ManualAddressForm = () => {
-    const displayLat = selectedLocation.lat || "";
-    const displayLng = selectedLocation.lng || "";
+    // Keep local state for the form to prevent cursor jumps
+    const [localLocation, setLocalLocation] = useState(selectedLocation);
+    const [isSaving, setIsSaving] = useState(false);
+    
+    // Update local state when selectedLocation changes from outside
+    useEffect(() => {
+      setLocalLocation(selectedLocation);
+    }, [selectedLocation]);
+    
+    const handleLocalChange = (e) => {
+      const { name, value } = e.target;
+      setLocalLocation(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    };
+    
+    const handleSave = () => {
+      if (!localLocation.address || !localLocation.area || !localLocation.city || !localLocation.state || !localLocation.pincode || !localLocation.country) {
+        alert("Please fill all required fields (marked with *)");
+        return;
+      }
+      
+      setIsSaving(true);
+      // Update the main state with all values at once
+      setSelectedLocation(localLocation);
+      setIsSaving(false);
+      setManualEditMode(false);
+    };
+    
+    const handleBackToMap = () => {
+      setManualEditMode(false);
+      setShowMap(true);
+    };
     
     return (
       <div style={styles.manualModalOverlay}>
@@ -932,8 +981,8 @@ function OwnerAddPG() {
                 <label>Full Address *</label>
                 <textarea
                   name="address"
-                  value={selectedLocation.address}
-                  onChange={handleLocationChange}
+                  value={localLocation.address}
+                  onChange={handleLocalChange}
                   placeholder="Complete address including floor, building, street"
                   style={styles.textarea}
                   rows="3"
@@ -946,8 +995,8 @@ function OwnerAddPG() {
                 <input
                   type="text"
                   name="area"
-                  value={selectedLocation.area}
-                  onChange={handleLocationChange}
+                  value={localLocation.area}
+                  onChange={handleLocalChange}
                   placeholder="e.g., Koramangala, Whitefield"
                   style={styles.input}
                   required
@@ -959,8 +1008,8 @@ function OwnerAddPG() {
                 <input
                   type="text"
                   name="road"
-                  value={selectedLocation.road}
-                  onChange={handleLocationChange}
+                  value={localLocation.road}
+                  onChange={handleLocalChange}
                   placeholder="e.g., MG Road, 100 Feet Road"
                   style={styles.input}
                 />
@@ -971,8 +1020,8 @@ function OwnerAddPG() {
                 <input
                   type="text"
                   name="landmark"
-                  value={selectedLocation.landmark}
-                  onChange={handleLocationChange}
+                  value={localLocation.landmark}
+                  onChange={handleLocalChange}
                   placeholder="e.g., Near Forum Mall, Opposite Metro Station"
                   style={styles.input}
                 />
@@ -983,8 +1032,8 @@ function OwnerAddPG() {
                 <input
                   type="text"
                   name="city"
-                  value={selectedLocation.city}
-                  onChange={handleLocationChange}
+                  value={localLocation.city}
+                  onChange={handleLocalChange}
                   placeholder="e.g., Bangalore"
                   style={styles.input}
                   required
@@ -996,8 +1045,8 @@ function OwnerAddPG() {
                 <input
                   type="text"
                   name="state"
-                  value={selectedLocation.state}
-                  onChange={handleLocationChange}
+                  value={localLocation.state}
+                  onChange={handleLocalChange}
                   placeholder="e.g., Karnataka"
                   style={styles.input}
                   required
@@ -1009,8 +1058,8 @@ function OwnerAddPG() {
                 <input
                   type="text"
                   name="pincode"
-                  value={selectedLocation.pincode}
-                  onChange={handleLocationChange}
+                  value={localLocation.pincode}
+                  onChange={handleLocalChange}
                   placeholder="e.g., 560034"
                   style={styles.input}
                   required
@@ -1023,8 +1072,8 @@ function OwnerAddPG() {
                 <input
                   type="text"
                   name="country"
-                  value={selectedLocation.country}
-                  onChange={handleLocationChange}
+                  value={localLocation.country}
+                  onChange={handleLocalChange}
                   placeholder="e.g., India"
                   style={styles.input}
                   required
@@ -1036,8 +1085,8 @@ function OwnerAddPG() {
                 <input
                   type="text"
                   name="lat"
-                  value={selectedLocation.lat || ""}
-                  onChange={handleLocationChange}
+                  value={localLocation.lat === 0 ? "" : localLocation.lat}
+                  onChange={handleLocalChange}
                   placeholder="e.g., 12.9716"
                   style={styles.input}
                   step="any"
@@ -1049,8 +1098,8 @@ function OwnerAddPG() {
                 <input
                   type="text"
                   name="lng"
-                  value={selectedLocation.lng || ""}
-                  onChange={handleLocationChange}
+                  value={localLocation.lng === 0 ? "" : localLocation.lng}
+                  onChange={handleLocalChange}
                   placeholder="e.g., 77.5946"
                   style={styles.input}
                   step="any"
@@ -1060,22 +1109,14 @@ function OwnerAddPG() {
             
             <div style={styles.manualFooter}>
               <button 
-                onClick={() => {
-                  if (!selectedLocation.address || !selectedLocation.area || !selectedLocation.city || !selectedLocation.state || !selectedLocation.pincode || !selectedLocation.country) {
-                    alert("Please fill all required fields (marked with *)");
-                    return;
-                  }
-                  setManualEditMode(false);
-                }}
+                onClick={handleSave}
                 style={styles.saveButton}
+                disabled={isSaving}
               >
-                💾 Save Address
+                {isSaving ? "Saving..." : "💾 Save Address"}
               </button>
               <button 
-                onClick={() => {
-                  setManualEditMode(false);
-                  setShowMap(true);
-                }}
+                onClick={handleBackToMap}
                 style={styles.backToMapButton}
               >
                 🗺️ Back to Map
