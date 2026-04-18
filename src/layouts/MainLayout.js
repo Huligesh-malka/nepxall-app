@@ -13,7 +13,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 
 // ✅ Sync with Sidebar width
-const SIDEBAR_WIDTH = 260;
+const SIDEBAR_WIDTH = 220;
 
 const MainLayout = () => {
   const { installable, installApp } = useInstallPrompt();
