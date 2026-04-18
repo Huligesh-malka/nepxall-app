@@ -167,7 +167,7 @@ export default function AdminSettlements() {
                   <StyledTableCell>Booking & Order</StyledTableCell>
                   <StyledTableCell>Owner Info</StyledTableCell>
                   <StyledTableCell>Property</StyledTableCell>
-                  <StyledTableCell>Payable Amount</StyledTableCell>
+                  <StyledTableCell>Financial Breakdown</StyledTableCell>
                   <StyledTableCell>Bank Details</StyledTableCell>
                   <StyledTableCell align="center">Admin Action</StyledTableCell>
                 </TableRow>
@@ -227,10 +227,25 @@ export default function AdminSettlements() {
                       </Box>
                     </TableCell>
 
-                    {/* Amount */}
+                    {/* Financial Breakdown - UPDATED SECTION */}
                     <TableCell>
+                      {/* ✅ OWNER AMOUNT */}
                       <Typography fontWeight="800" color="primary.main">
                         ₹{Number(item.owner_amount).toLocaleString("en-IN")}
+                      </Typography>
+
+                      {/* 🔥 TOTAL PAID BY USER */}
+                      <Typography variant="caption" display="block" color="text.secondary">
+                        Paid: ₹{Number(item.payment_amount).toLocaleString("en-IN")}
+                      </Typography>
+
+                      {/* 🔥 ADMIN PROFIT */}
+                      <Typography
+                        variant="caption"
+                        display="block"
+                        sx={{ color: "#16a34a", fontWeight: "bold" }}
+                      >
+                        Profit: ₹{Number(item.admin_profit).toLocaleString("en-IN")}
                       </Typography>
                     </TableCell>
 
@@ -259,7 +274,7 @@ export default function AdminSettlements() {
                       </Box>
                     </TableCell>
 
-                    {/* Action - UPDATED LOGIC */}
+                    {/* Action */}
                     <TableCell align="center">
                       {item.admin_settlement === "DONE" ? (
                         <Chip
