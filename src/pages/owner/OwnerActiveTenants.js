@@ -131,18 +131,10 @@ export default function OwnerActiveTenants() {
                   </p>
                 </div>
 
-                {/* ACTIONS */}
-                <div className="mt-4 flex gap-2">
-                  <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
-                    View
-                  </button>
-
-                  <button className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
-                    Message
-                  </button>
-
-                  <button className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
-                    Vacate
+                {/* ACTIONS - Only View button */}
+                <div className="mt-4">
+                  <button className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                    View Details
                   </button>
                 </div>
               </div>
