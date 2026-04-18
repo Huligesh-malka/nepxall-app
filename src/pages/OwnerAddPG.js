@@ -1034,7 +1034,7 @@ function OwnerAddPG() {
               <div style={styles.inputGroup}>
                 <label>Latitude (optional)</label>
                 <input
-                  type="number"
+                  type="text"
                   name="lat"
                   value={selectedLocation.lat || ""}
                   onChange={handleLocationChange}
@@ -1047,7 +1047,7 @@ function OwnerAddPG() {
               <div style={styles.inputGroup}>
                 <label>Longitude (optional)</label>
                 <input
-                  type="number"
+                  type="text"
                   name="lng"
                   value={selectedLocation.lng || ""}
                   onChange={handleLocationChange}
