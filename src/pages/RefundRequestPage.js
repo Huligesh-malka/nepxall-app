@@ -124,6 +124,11 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
         </div>
       </div>
 
+      {/* 🔥 NON-REFUNDABLE MESSAGE */}
+      <div style={styles.warningBanner}>
+        ⚠️ Agreement fee ₹500 is non-refundable if agreement is generated.
+      </div>
+
       <div style={styles.content}>
         {/* Modern Card for Booking Selection */}
         <div style={styles.card}>
@@ -438,7 +443,7 @@ const styles = {
   headerGradient: {
     background: `linear-gradient(135deg, ${DARK_BG}, #111827)`,
     padding: "32px 24px",
-    marginBottom: 24,
+    marginBottom: 0,
   },
   header: {
     display: "flex",
@@ -466,6 +471,15 @@ const styles = {
     color: "#9ca3af",
     margin: "8px 0 0 0",
   },
+  warningBanner: {
+    backgroundColor: "#fef2f2",
+    color: "#991b1b",
+    padding: "12px 16px",
+    textAlign: "center",
+    fontSize: "14px",
+    fontWeight: "600",
+    borderBottom: "1px solid #fecaca",
+  },
   content: {
     padding: "0 24px 48px 24px",
   },
@@ -474,6 +488,7 @@ const styles = {
     borderRadius: 16,
     padding: 24,
     marginBottom: 20,
+    marginTop: 20,
     boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
     border: "1px solid #e5e7eb",
   },
