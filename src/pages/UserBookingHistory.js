@@ -23,7 +23,9 @@ const UserBookingHistory = () => {
   const [paymentData, setPaymentData] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
-  const [submittingPayment, setSubmittingPayment] = useState(false); // New state for payment submission loading
+  const [submittingPayment, setSubmittingPayment] = useState(false);
+  const [showAgreementDialog, setShowAgreementDialog] = useState(false);
+  const [selectedBookingForPayment, setSelectedBookingForPayment] = useState(null);
   
   // Track submitted payments to prevent multiple submissions
   const [submittedPayments, setSubmittedPayments] = useState({});
@@ -97,7 +99,7 @@ const UserBookingHistory = () => {
     }
   }, [paymentStatuses]);
 
-  // 🔥 AUTO REFRESH PAYMENT STATUS - Added as requested
+  // 🔥 AUTO REFRESH PAYMENT STATUS
   useEffect(() => {
     if (!bookings.length) return;
 
@@ -113,57 +115,68 @@ const UserBookingHistory = () => {
     loadBookings();
   }, [loadBookings]);
 
-  // Create payment
-  const handlePayNow = useCallback(async (booking) => {
-  try {
-    setPayingId(booking.id);
-    setError("");
+  // Show agreement dialog before payment
+  const handleShowPaymentDialog = useCallback((booking) => {
+    setSelectedBookingForPayment(booking);
+    setShowAgreementDialog(true);
+  }, []);
 
-    // 👉 ASK USER (Agreement Optional)
-    const includeAgreement = window.confirm(
-      "Do you want to include Agreement?\n\n₹500 extra will be added."
-    );
+  // Create payment with agreement option
+  const handlePayNow = useCallback(async (includeAgreement) => {
+    if (!selectedBookingForPayment) return;
 
-    const rent = Number(booking.rent_amount || 0);
-    const deposit = Number(booking.security_deposit || 0);
-    const maintenance = Number(booking.maintenance_amount || 0);
+    try {
+      setPayingId(selectedBookingForPayment.id);
+      setError("");
+      setShowAgreementDialog(false);
 
-    let total = rent + deposit + maintenance;
+      const booking = selectedBookingForPayment;
 
-    if (includeAgreement) {
-      total += 500; // 👉 Agreement fee
+      const rent = Number(booking.rent_amount || 0);
+      const deposit = Number(booking.security_deposit || 0);
+      const maintenance = Number(booking.maintenance_amount || 0);
+
+      let total = rent + deposit + maintenance;
+
+      if (includeAgreement) {
+        total += 500; // Agreement fee
+      }
+
+      if (!total || total <= 0) {
+        throw new Error("Invalid payment amount");
+      }
+
+      // 🔥 SEND agreement flag to backend
+      const res = await api.post("/payments/create-payment", {
+        bookingId: booking.id,
+        includeAgreement: includeAgreement // 👈 IMPORTANT
+      });
+
+      if (!res.data.success) {
+        throw new Error(res.data.message || "Payment initialization failed");
+      }
+
+      setPaymentData({
+        qr: res.data.qr,
+        upiLink: res.data.upiLink,
+        orderId: res.data.orderId,
+        amount: total,
+        bookingId: booking.id,
+        agreement: includeAgreement,
+        rent: rent,
+        deposit: deposit,
+        maintenance: maintenance,
+        agreementFee: includeAgreement ? 500 : 0
+      });
+
+    } catch (err) {
+      console.error("PAYMENT ERROR:", err);
+      setError(err.message || "Payment initialization failed");
+    } finally {
+      setPayingId(null);
+      setSelectedBookingForPayment(null);
     }
-
-    if (!total || total <= 0) {
-      throw new Error("Invalid payment amount");
-    }
-
-    // 🔥 SEND agreement flag to backend
-    const res = await api.post("/payments/create-payment", {
-      bookingId: booking.id,
-      includeAgreement // 👈 IMPORTANT
-    });
-
-    if (!res.data.success) {
-      throw new Error(res.data.message || "Payment initialization failed");
-    }
-
-    setPaymentData({
-      qr: res.data.qr,
-      upiLink: res.data.upiLink,
-      orderId: res.data.orderId,
-      amount: total, // 👈 UPDATED AMOUNT
-      bookingId: booking.id,
-      agreement: includeAgreement
-    });
-
-  } catch (err) {
-    console.error("PAYMENT ERROR:", err);
-    setError(err.message || "Payment initialization failed");
-  } finally {
-    setPayingId(null);
-  }
-}, []);
+  }, [selectedBookingForPayment]);
 
   // Submit payment - I HAVE PAID button
   const submitPayment = useCallback(async () => {
@@ -184,6 +197,18 @@ const UserBookingHistory = () => {
         ...prev,
         [paymentData.bookingId]: true
       }));
+
+      // Submit payment to backend
+      const submitRes = await api.post("/payments/submit-payment", {
+        bookingId: paymentData.bookingId,
+        orderId: paymentData.orderId,
+        amount: paymentData.amount,
+        agreement: paymentData.agreement
+      });
+
+      if (!submitRes.data.success) {
+        throw new Error(submitRes.data.message || "Payment submission failed");
+      }
 
       // Update payment status locally
       setPaymentStatuses(prev => ({
@@ -225,7 +250,8 @@ const UserBookingHistory = () => {
       setError("");
       
       const res = await api.post("/payments/create-payment", {
-        bookingId: paymentData.bookingId
+        bookingId: paymentData.bookingId,
+        includeAgreement: paymentData.agreement
       });
 
       if (!res.data.success) {
@@ -233,11 +259,10 @@ const UserBookingHistory = () => {
       }
 
       setPaymentData({
+        ...paymentData,
         qr: res.data.qr,
         upiLink: res.data.upiLink,
-        orderId: res.data.orderId,
-        amount: paymentData.amount,
-        bookingId: paymentData.bookingId
+        orderId: res.data.orderId
       });
       
     } catch (err) {
@@ -252,6 +277,12 @@ const UserBookingHistory = () => {
   const closeModal = useCallback(() => {
     setPaymentData(null);
     setError("");
+  }, []);
+
+  // Close agreement dialog
+  const closeAgreementDialog = useCallback(() => {
+    setShowAgreementDialog(false);
+    setSelectedBookingForPayment(null);
   }, []);
 
   // Get payment status
@@ -321,7 +352,7 @@ const UserBookingHistory = () => {
     navigate(`/agreement-form/${bookingId}`);
   }, [navigate]);
 
-  // ✅ FIXED: Handle chat navigation - Uses MySQL ID from backend
+  // Handle chat navigation
   const handleChatNavigation = useCallback(async (booking) => {
     try {
       if (!booking.pg_id) {
@@ -329,7 +360,6 @@ const UserBookingHistory = () => {
         return;
       }
 
-      // ✅ ONLY use MySQL user id from backend (NOT Firebase UID)
       if (!me?.id) {
         console.log("User MySQL ID not loaded yet");
         return;
@@ -356,7 +386,7 @@ const UserBookingHistory = () => {
     }
   }, [navigate, me]);
 
-  // ✅ PROTECTION - MOVED AFTER ALL HOOKS
+  // PROTECTION
   if (authLoading) {
     return (
       <div style={styles.loadingContainer}>
@@ -486,7 +516,6 @@ const UserBookingHistory = () => {
                 <div style={styles.cardContent}>
                   {/* Details Grid */}
                   <div style={styles.detailsGrid}>
-                    {/* 🔥 STEP 1: REPLACE NUMBER WITH CALL BUTTON */}
                     <div style={styles.detailItem}>
                       <span style={styles.detailIcon}>📞</span>
                       <div>
@@ -505,7 +534,7 @@ const UserBookingHistory = () => {
                               textDecoration: "none"
                             }}
                           >
-                          Call Owner
+                            Call Owner
                           </a>
                         ) : (
                           <span style={{ color: "#9ca3af" }}>Not available</span>
@@ -545,7 +574,7 @@ const UserBookingHistory = () => {
                     )}
                   </div>
 
-                  {/* 🔥 STEP 3: WAITING FOR APPROVAL MESSAGE */}
+                  {/* Waiting for approval message */}
                   {booking.status === "pending" && (
                     <div style={{
                       background: "#fef3c7",
@@ -590,7 +619,7 @@ const UserBookingHistory = () => {
                     </div>
                   </div>
 
-                  {/* 🔥 STEP 2: PREVENT MULTIPLE PAYMENTS MESSAGE */}
+                  {/* Payment completed message */}
                   {paymentStatus === "paid" && (
                     <div style={{
                       background: "#d1fae5",
@@ -602,7 +631,7 @@ const UserBookingHistory = () => {
                       fontWeight: 600,
                       marginBottom: 16
                     }}>
-                      Payment completed 
+                      Payment completed
 
 If you are not interested in joining the PG after making the payment, you can request a refund (only if you have not completed check-in/joining).
 
@@ -631,7 +660,6 @@ For any queries, please contact support.
                         <span style={styles.buttonIcon}>🏠</span>
                         <span>View</span>
                       </button>
-                      {/* ✅ FIXED: Disabled until MySQL ID is loaded */}
                       <button
                         style={{
                           ...styles.iconButton,
@@ -671,7 +699,7 @@ For any queries, please contact support.
                       {showPayButton && (
                         <button
                           style={styles.payButton}
-                          onClick={() => handlePayNow(booking)}
+                          onClick={() => handleShowPaymentDialog(booking)}
                           disabled={payingId === booking.id}
                         >
                           {payingId === booking.id ? (
@@ -732,7 +760,43 @@ For any queries, please contact support.
         </div>
       )}
 
-      {/* Payment Modal - Simplified (No Screenshot Upload) */}
+      {/* Agreement Dialog - Yes/No Option */}
+      {showAgreementDialog && selectedBookingForPayment && (
+        <div style={styles.modalOverlay} onClick={closeAgreementDialog}>
+          <div style={styles.agreementDialogContent} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <h2 style={styles.modalTitle}>Agreement Option</h2>
+              <button style={styles.modalClose} onClick={closeAgreementDialog}>×</button>
+            </div>
+            
+            <div style={styles.agreementDialogBody}>
+              <div style={styles.agreementIcon}>📄</div>
+              <p style={styles.agreementText}>
+                Do you want to include a legal agreement for this booking?
+              </p>
+              <p style={styles.agreementFeeText}>
+                Agreement fee: <strong>₹500</strong> (one-time)
+              </p>
+              <div style={styles.agreementButtons}>
+                <button
+                  style={styles.agreementNoButton}
+                  onClick={() => handlePayNow(false)}
+                >
+                  No, Skip Agreement
+                </button>
+                <button
+                  style={styles.agreementYesButton}
+                  onClick={() => handlePayNow(true)}
+                >
+                  Yes, Include Agreement (+₹500)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
       {paymentData && (
         <div style={styles.modalOverlay} onClick={closeModal}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -742,11 +806,37 @@ For any queries, please contact support.
               <button style={styles.modalClose} onClick={closeModal}>×</button>
             </div>
 
-            {/* Amount */}
+            {/* Amount Breakdown */}
             <div style={styles.modalAmountSection}>
               <div style={styles.modalAmount}>
                 <span style={styles.modalAmountLabel}>Amount to Pay</span>
                 <span style={styles.modalAmountValue}>₹{paymentData.amount.toLocaleString()}</span>
+              </div>
+              
+              {/* Detailed breakdown */}
+              <div style={styles.breakdownSection}>
+                <div style={styles.breakdownRow}>
+                  <span>Rent:</span>
+                  <span>₹{paymentData.rent.toLocaleString()}</span>
+                </div>
+                <div style={styles.breakdownRow}>
+                  <span>Security Deposit:</span>
+                  <span>₹{paymentData.deposit.toLocaleString()}</span>
+                </div>
+                <div style={styles.breakdownRow}>
+                  <span>Maintenance:</span>
+                  <span>₹{paymentData.maintenance.toLocaleString()}</span>
+                </div>
+                {paymentData.agreementFee > 0 && (
+                  <div style={styles.breakdownRow}>
+                    <span>Agreement Fee:</span>
+                    <span>₹{paymentData.agreementFee.toLocaleString()}</span>
+                  </div>
+                )}
+                <div style={styles.breakdownTotal}>
+                  <span>Total:</span>
+                  <span>₹{paymentData.amount.toLocaleString()}</span>
+                </div>
               </div>
             </div>
 
@@ -771,12 +861,16 @@ For any queries, please contact support.
               <div style={styles.accountIcon}>🏦</div>
               <div style={styles.accountInfo}>
                 <div style={styles.accountRow}>
-                  <span></span>
-                  <strong></strong>
+                  <span>Bank:</span>
+                  <strong>Your Bank Name</strong>
                 </div>
                 <div style={styles.accountRow}>
-                  <span></span>
-                  <strong></strong>
+                  <span>Account:</span>
+                  <strong>Your Account Number</strong>
+                </div>
+                <div style={styles.accountRow}>
+                  <span>UPI ID:</span>
+                  <strong>your-upi@bank</strong>
                 </div>
               </div>
             </div>
@@ -1413,6 +1507,77 @@ const styles = {
     animation: "slideIn 0.3s ease",
   },
   
+  agreementDialogContent: {
+    background: "#fff",
+    borderRadius: 32,
+    width: "100%",
+    maxWidth: 400,
+    position: "relative",
+    animation: "slideIn 0.3s ease",
+  },
+  
+  agreementDialogBody: {
+    padding: "24px",
+    textAlign: "center",
+  },
+  
+  agreementIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  
+  agreementText: {
+    fontSize: 16,
+    color: "#1f2937",
+    marginBottom: 12,
+    lineHeight: 1.5,
+  },
+  
+  agreementFeeText: {
+    fontSize: 14,
+    color: "#6b7280",
+    marginBottom: 24,
+  },
+  
+  agreementButtons: {
+    display: "flex",
+    gap: 12,
+  },
+  
+  agreementYesButton: {
+    flex: 1,
+    padding: "14px",
+    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    border: "none",
+    borderRadius: 14,
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+    ":hover": {
+      transform: "translateY(-2px)",
+      boxShadow: "0 10px 20px rgba(16,185,129,0.3)",
+    }
+  },
+  
+  agreementNoButton: {
+    flex: 1,
+    padding: "14px",
+    background: "#f3f4f6",
+    border: "none",
+    borderRadius: 14,
+    color: "#4b5563",
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+    ":hover": {
+      background: "#e5e7eb",
+      transform: "translateY(-2px)",
+    }
+  },
+  
   modalHeader: {
     padding: "24px 24px 0",
     display: "flex",
@@ -1455,6 +1620,7 @@ const styles = {
   modalAmount: {
     display: "flex",
     flexDirection: "column",
+    marginBottom: 16,
   },
   
   modalAmountLabel: {
@@ -1470,6 +1636,32 @@ const styles = {
     fontWeight: 800,
     color: "#1f2937",
     lineHeight: 1,
+  },
+  
+  breakdownSection: {
+    marginTop: 16,
+    padding: "12px",
+    background: "#f9fafb",
+    borderRadius: 12,
+  },
+  
+  breakdownRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    padding: "4px 0",
+    fontSize: 13,
+    color: "#6b7280",
+  },
+  
+  breakdownTotal: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginTop: 8,
+    paddingTop: 8,
+    borderTop: "1px solid #e5e7eb",
+    fontSize: 14,
+    fontWeight: 700,
+    color: "#1f2937",
   },
   
   orderIdSection: {
