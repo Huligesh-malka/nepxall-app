@@ -109,7 +109,7 @@ const UserBookingHistory = () => {
       
       await Promise.all(bookingsList.map(async (booking) => {
         try {
-          const res = await api.get(`/payments/agreement-status/${booking.id}`);
+          const res = await api.get(`/agreement-status/${booking.id}`)
           if (res.data.success) {
             agreementMap[booking.id] = res.data.hasAgreement;
           }
