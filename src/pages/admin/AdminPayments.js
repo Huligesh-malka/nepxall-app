@@ -249,7 +249,33 @@ const AdminPayments = () => {
                         sx={{ height: '20px', fontSize: '10px', mt: 0.5, fontWeight: 'bold' }} 
                       />
                     </TableCell>
-                    <TableCell><Typography fontWeight="800" color={DARK_TEXT}>₹{p.total_amount || p.amount}</Typography></TableCell>
+                    
+                    {/* ✅ UPDATED AMOUNT CELL WITH AGREEMENT BADGE */}
+                    <TableCell>
+                      <Typography fontWeight="800" color={DARK_TEXT}>
+                        ₹{p.total_amount || p.amount}
+                      </Typography>
+
+                      {/* ✅ AGREEMENT BADGE */}
+                      <Chip
+                        label={p.agreement_paid === 1 ? "Agreement Paid" : "Agreement Not Paid"}
+                        size="small"
+                        sx={{
+                          mt: 0.5,
+                          fontWeight: "bold",
+                          backgroundColor: p.agreement_paid === 1 ? "#dcfce7" : "#fee2e2",
+                          color: p.agreement_paid === 1 ? "#16a34a" : "#dc2626"
+                        }}
+                      />
+
+                      {/* ✅ OPTIONAL: show +500 if paid */}
+                      {p.agreement_paid === 1 && (
+                        <Typography variant="caption" sx={{ display: "block", color: "#16a34a", mt: 0.5 }}>
+                          + ₹500 Agreement
+                        </Typography>
+                      )}
+                    </TableCell>
+                    
                     <TableCell>
                       <Typography variant="caption" display="block" sx={{ fontFamily: "monospace", color: "#707EAE" }}>{p.order_id}</Typography>
                       {p.utr && <Typography variant="caption" sx={{ color: BRAND_GREEN, fontWeight: 'bold' }}>UTR: {p.utr}</Typography>}
