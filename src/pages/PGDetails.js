@@ -139,6 +139,10 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
     onBook(bookingData);
   };
 
+
+
+  console.log("deploy trigger");
+
   const getRoomTypes = () => {
     const types = [];
     
