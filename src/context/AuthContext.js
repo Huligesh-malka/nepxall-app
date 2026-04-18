@@ -8,7 +8,7 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [userData, setUserData] = useState(null); // 🔥 NEW: Store extra data separately
+  const [userData, setUserData] = useState(null); // 🔥 Store extra data separately
   const [role, setRole] = useState(localStorage.getItem("role") || null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
@@ -37,13 +37,13 @@ export const AuthProvider = ({ children }) => {
   ////////////////////////////////////////////////////////
   const clearSession = () => {
     setUser(null);
-    setUserData(null); // 🔥 Clear extra data too
+    setUserData(null);
     setRole(null);
 
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("user_id");
-    localStorage.removeItem("user_name"); // 🔥 Optional: store name separately if needed
+    localStorage.removeItem("user_name");
   };
 
   ////////////////////////////////////////////////////////
@@ -169,3 +169,5 @@ export const AuthProvider = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
+export default AuthProvider;
