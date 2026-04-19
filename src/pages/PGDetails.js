@@ -1208,18 +1208,28 @@ export default function PGDetails() {
               src: getCorrectImageUrl(p) 
             }))
           : [];
+let videos = [];
 
-        let videos = [];
-        try {
-          if (data.videos) {
-            videos = JSON.parse(data.videos || "[]").map(v => ({
-              type: "video",
-              src: getCorrectImageUrl(v),
-            }));
-          }
-        } catch (err) {
-          console.error("Error parsing videos:", err);
-        }
+if (data.videos) {
+  if (Array.isArray(data.videos)) {
+    videos = data.videos.map(v => ({
+      type: "video",
+      src: getCorrectImageUrl(v),
+    }));
+  } else if (typeof data.videos === "string") {
+    try {
+      const parsed = JSON.parse(data.videos);
+      if (Array.isArray(parsed)) {
+        videos = parsed.map(v => ({
+          type: "video",
+          src: getCorrectImageUrl(v),
+        }));
+      }
+    } catch (err) {
+      console.error("❌ Invalid video JSON:", err);
+    }
+  }
+}
 
         setMedia([...photos, ...videos]);
         setPG(data);
