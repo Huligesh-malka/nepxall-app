@@ -130,7 +130,7 @@ function App() {
 
       {/* AUTH */}
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Navigate to="/login" />} />
+      <Route path="/register" element={<Register />} />
 
       {/* USER */}
       <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
