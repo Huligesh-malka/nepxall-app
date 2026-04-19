@@ -1,4 +1,3 @@
-// MainLayout.jsx
 import React, { useState, useEffect } from "react";
 import { Outlet, useLocation, Navigate, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
@@ -50,8 +49,10 @@ const MainLayout = () => {
     );
   }
 
-  /* ================= AUTH PROTECTION ================= */
-  if (!user && !loading && location.pathname !== "/login" && location.pathname !== "/register") {
+  /* ================= SIMPLIFIED AUTH PROTECTION ================= */
+  // MainLayout is now ONLY used for protected routes
+  // So if no user, redirect to login
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
 

@@ -23,7 +23,7 @@ import UserPGSearch from "./pages/UserPGSearch";
 import PGDetails from "./pages/PGDetails";
 import BookingForm from "./pages/BookingForm";
 import UserBookingHistory from "./pages/UserBookingHistory";   
-import BecomeOwner from "./pages/BecomeOwner"; // 🔥 top import
+import BecomeOwner from "./pages/BecomeOwner";
 import UserAgreements from "./pages/UserAgreements";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentPage from "./pages/PaymentPage";
@@ -55,7 +55,6 @@ import EditPG from "./pages/EditPG";
 import OwnerRooms from "./pages/OwnerRooms";
 import OwnerBookings from "./pages/OwnerBookings";
 import OwnerPGPhotos from "./pages/OwnerPGPhotos";
-
 import OwnerPGVideos from "./pages/OwnerPGVideos";
 import OwnerReviewReply from "./pages/OwnerReviewReply";
 import OwnerNotifications from "./pages/OwnerNotifications";
@@ -102,7 +101,36 @@ function App() {
     testBackendConnection();
   }, []);
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div style={{
+        height: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+      }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{
+            width: "50px",
+            height: "50px",
+            border: "4px solid rgba(255,255,255,0.3)",
+            borderTop: "4px solid white",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+            margin: "0 auto 20px"
+          }} />
+          <p style={{ color: "white", fontSize: "18px" }}>Loading Nepxall...</p>
+          <style>{`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      </div>
+    );
+  }
 
   const PrivateRoute = ({ children }) =>
     user ? children : <Navigate to="/login" replace />;
@@ -112,32 +140,27 @@ function App() {
 
   return (
     <Routes>
-
-      {/* PUBLIC */}
-      <Route element={<MainLayout />}>
-        <Route path="/" element={<UserPGSearch />} />
-        <Route path="/pg/:id" element={<PGDetails />} />
-        
-      </Route>
-
+      {/* 🌍 PUBLIC ROUTES - NO AUTH REQUIRED */}
+      <Route path="/" element={<UserPGSearch />} />
+      <Route path="/pg/:id" element={<PGDetails />} />
       <Route path="/scan/:id" element={<ScanPG />} />
+      <Route path="/public/agreement/:hash" element={<PublicAgreementPage />} />
 
-      {/* STATIC */}
+      {/* STATIC PAGES */}
       <Route path="/contact" element={<Contact />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/refund-policy" element={<RefundPolicy />} />
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
-      {/* AUTH */}
+      {/* AUTH PAGES */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* USER */}
+      {/* 🔐 PROTECTED ROUTES - WITH MainLayout */}
       <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
         <Route path="/booking/:pgId" element={<BookingForm />} />
         <Route path="/user/bookings" element={<UserBookingHistory />} />
         <Route path="/become-owner" element={<BecomeOwner />} />
-
         <Route path="/user/agreements" element={<UserAgreements />} />
         <Route path="/user/services/:bookingId" element={<ServicesPage />} />
         <Route path="/payment-success" element={<PaymentSuccess />} />
@@ -152,12 +175,11 @@ function App() {
         <Route path="/user/digilocker" element={<DigiLockerVerify />} />
         <Route path="/digilocker/callback" element={<DigiLockerCallback />} />
         <Route path="/user/visit-schedule/:bookingId" element={<VisitSchedulePage />} />
-        <Route path="/public/agreement/:hash" element={<PublicAgreementPage />} />
         <Route path="/user/premium" element={<UserPremiumPlans />} />
         <Route path="/chat/private/:userId/:pgId" element={<PrivateChat />} />
       </Route>
 
-      {/* OWNER */}
+      {/* 👑 OWNER ROUTES */}
       <Route path="/owner" element={
         <PrivateRoute>
           <RoleRoute allowedRole="owner">
@@ -166,22 +188,16 @@ function App() {
         </PrivateRoute>
       }>
         <Route index element={<Navigate to="dashboard" replace />} />
-
         <Route path="dashboard" element={<OwnerDashboard />} />
         <Route path="payments" element={<OwnerPayments />} />
         <Route path="vacate" element={<OwnerVacateRequests />} />
         <Route path="premium" element={<OwnerPremiumPlans />} />
         <Route path="bookings" element={<OwnerBookings />} />
-
-  <Route path="tenants" element={<OwnerActiveTenants />} />
-
-
-        {/* 🔥 IMPORTANT FIX */}
+        <Route path="tenants" element={<OwnerActiveTenants />} />
         <Route path="bank" element={<OwnerBankDetails />} />
         <Route path="verification" element={<OwnerVerificationPage />} />
         <Route path="notifications" element={<OwnerNotifications />} />
         <Route path="chats" element={<OwnerChatList />} />
-
         <Route path="hotels" element={<OwnerHotels />} />
         <Route path="add-hotel" element={<AddHotel />} />
         <Route path="add" element={<OwnerAddPG />} />
@@ -193,7 +209,7 @@ function App() {
         <Route path="property/:propertyId/plans" element={<CreatePlan />} />
       </Route>
 
-      {/* ADMIN */}
+      {/* 🛡️ ADMIN ROUTES */}
       <Route path="/admin" element={
         <PrivateRoute>
           <RoleRoute allowedRole="admin">
@@ -202,7 +218,6 @@ function App() {
         </PrivateRoute>
       }>
         <Route index element={<Navigate to="finance" replace />} />
-
         <Route path="finance" element={<AdminFinanceDashboard />} />
         <Route path="payments" element={<AdminPayments />} />
         <Route path="settlements" element={<AdminSettlements />} />
@@ -217,7 +232,7 @@ function App() {
         <Route path="agreement/:id" element={<AdminAgreementDetails />} />
       </Route>
 
-      {/* VENDOR */}
+      {/* 🔧 VENDOR ROUTES */}
       <Route path="/vendor" element={
         <PrivateRoute>
           <RoleRoute allowedRole="vendor">
@@ -229,9 +244,8 @@ function App() {
         <Route path="dashboard" element={<VendorDashboard />} />
       </Route>
 
-      {/* FALLBACK */}
+      {/* 404 FALLBACK */}
       <Route path="*" element={<Navigate to="/" replace />} />
-
     </Routes>
   );
 }
