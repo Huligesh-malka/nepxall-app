@@ -134,7 +134,7 @@ const getMaxDate = () => {
   return `${year}-${month}-${day}`;
 };
 
-/* ================= BOOKING MODAL COMPONENT (UPDATED MODERN DESIGN) ================= */
+/* ================= BOOKING MODAL COMPONENT ================= */
 const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
   const [bookingData, setBookingData] = useState({
     checkInDate: "",
@@ -469,16 +469,16 @@ const RuleItem = ({ icon, label, allowed, description }) => (
 
 const InfoRow = ({ label, value }) => {
   if (
-  value === null ||
-  value === undefined ||
-  value === "" ||
-  value === "0" ||
-  value === 0 ||
-  value === false ||
-  value === "false"
-) {
-  return null;
-}
+    value === null ||
+    value === undefined ||
+    value === "" ||
+    value === "0" ||
+    value === 0 ||
+    value === false ||
+    value === "false"
+  ) {
+    return null;
+  }
   return (
     <div style={modernStyles.infoRow}>
       <strong>{label}:</strong> {value}
@@ -486,7 +486,7 @@ const InfoRow = ({ label, value }) => {
   );
 };
 
-// Price Component for different property types (updated design)
+// Price Component for different property types
 const PriceDetails = ({ pg }) => {
   const isToLet = pg?.pg_category === "to_let";
   const isCoLiving = pg?.pg_category === "coliving";
@@ -757,7 +757,7 @@ const PriceDetails = ({ pg }) => {
   );
 };
 
-// Highlight Category Button (modern)
+// Highlight Category Button
 const HighlightCategoryButton = ({ 
   category, 
   icon, 
@@ -787,7 +787,7 @@ const HighlightCategoryButton = ({
   </button>
 );
 
-// Highlight Item Component (modern)
+// Highlight Item Component
 const HighlightItem = ({ name, type, category, icon, onMapView, coordinates, color }) => (
   <div 
     style={{
@@ -826,7 +826,7 @@ const HighlightItem = ({ name, type, category, icon, onMapView, coordinates, col
   </div>
 );
 
-// Nearby PG Card Component (modern)
+// Nearby PG Card Component
 const NearbyPGCard = ({ pg, onClick, distance }) => {
   const getStartingPrice = () => {
     if (!pg) return "—";
@@ -958,7 +958,7 @@ const calculateDistanceBetweenCoords = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
-// Interactive Nearby Highlights Panel (modern)
+// Interactive Nearby Highlights Panel
 const NearbyHighlightsPanel = ({ 
   highlights, 
   selectedCategory, 
@@ -1053,7 +1053,7 @@ const NearbyHighlightsPanel = ({
   );
 };
 
-// Nearby PGs Panel Component (modern)
+// Nearby PGs Panel Component
 const NearbyPGsPanel = ({ nearbyPGs, isLoading, onViewPG }) => {
   if (isLoading) {
     return (
@@ -1111,7 +1111,6 @@ export default function PGDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   
-  // ✅ USE ONLY THIS - No direct auth.currentUser
   const { user, role, loading: authLoading } = useAuth();
 
   const [pg, setPG] = useState(null);
@@ -1194,7 +1193,7 @@ export default function PGDetails() {
     setTimeout(() => setNotification(null), 3000);
   };
 
-  // ✅ FETCH PG DETAILS
+  // FETCH PG DETAILS
   useEffect(() => {
     const fetchPGDetails = async () => {
       try {
@@ -1218,28 +1217,28 @@ export default function PGDetails() {
               src: getCorrectImageUrl(p) 
             }))
           : [];
-let videos = [];
-
-if (data.videos) {
-  if (Array.isArray(data.videos)) {
-    videos = data.videos.map(v => ({
-      type: "video",
-      src: getCorrectImageUrl(v),
-    }));
-  } else if (typeof data.videos === "string") {
-    try {
-      const parsed = JSON.parse(data.videos);
-      if (Array.isArray(parsed)) {
-        videos = parsed.map(v => ({
-          type: "video",
-          src: getCorrectImageUrl(v),
-        }));
-      }
-    } catch (err) {
-      console.error("❌ Invalid video JSON:", err);
-    }
-  }
-}
+        
+        let videos = [];
+        if (data.videos) {
+          if (Array.isArray(data.videos)) {
+            videos = data.videos.map(v => ({
+              type: "video",
+              src: getCorrectImageUrl(v),
+            }));
+          } else if (typeof data.videos === "string") {
+            try {
+              const parsed = JSON.parse(data.videos);
+              if (Array.isArray(parsed)) {
+                videos = parsed.map(v => ({
+                  type: "video",
+                  src: getCorrectImageUrl(v),
+                }));
+              }
+            } catch (err) {
+              console.error("Invalid video JSON:", err);
+            }
+          }
+        }
 
         setMedia([...photos, ...videos]);
         setPG(data);
@@ -1263,7 +1262,7 @@ if (data.videos) {
     }
   }, [id]);
 
-  // ✅ FETCH NEARBY HIGHLIGHTS AND PGS
+  // FETCH NEARBY HIGHLIGHTS AND PGS
   useEffect(() => {
     if (!pg?.latitude || !pg?.longitude) return;
 
@@ -1480,7 +1479,7 @@ if (data.videos) {
     }
   };
 
-  // ✅ BOOK NOW CLICK - Using user from auth context
+  // BOOK NOW CLICK
   const handleBookNow = () => {
     if (!user) {
       showNotificationMessage("Please register or login to book this property");
@@ -1492,7 +1491,7 @@ if (data.videos) {
     setShowBookingModal(true);
   };
 
-  // ✅ BOOKING SUBMIT - Using user from auth context (same as search page)
+  // BOOKING SUBMIT
   const handleBookingSubmit = async (bookingData) => {
     try {
       if (bookingLoading) return;
@@ -1543,7 +1542,7 @@ if (data.videos) {
     }
   };
 
-  // 📞 CALL OWNER
+  // CALL OWNER
   const handleCallOwner = () => {
     if (hasOwnerContact && pg?.contact_phone) {
       window.location.href = `tel:${pg.contact_phone}`;
@@ -1689,7 +1688,6 @@ if (data.videos) {
     }
   };
 
-  // ✅ PROTECTION - MOVED AFTER ALL HOOKS
   if (authLoading) {
     return (
       <div style={modernStyles.loadingContainer}>
@@ -2473,6 +2471,11 @@ if (data.videos) {
           display: inline-block;
           margin-right: 8px;
         }
+        @media (max-width: 768px) {
+          .leaflet-container {
+            height: 200px !important;
+          }
+        }
       `}</style>
     </div>
   );
@@ -2845,7 +2848,7 @@ const modernStyles = {
     color: "#0f172a",
   },
 
-  // Two column layout
+  // Two column layout - responsive
   twoColumn: {
     display: "grid",
     gridTemplateColumns: "2fr 1fr",
@@ -3654,7 +3657,6 @@ const modernStyles = {
     textAlign: "center",
     border: "1px dashed #cbd5e1",
   },
-  // Additional missing styles
   priceCategory: { marginBottom: "20px" },
   priceCategoryTitle: { fontSize: "16px", fontWeight: "600", marginBottom: "12px", paddingLeft: "8px", borderLeft: "4px solid #6366f1" },
   bhkInfo: { marginTop: "12px", fontSize: "14px", color: "#475569", backgroundColor: "#f1f5f9", padding: "8px 14px", borderRadius: "40px", display: "inline-block" },
@@ -3728,3 +3730,64 @@ const modernStyles = {
   nearbyPGsCount: { fontSize: "12px", color: "#64748b", background: "#f1f5f9", padding: "4px 12px", borderRadius: "30px" },
   nearbyPgAddress: { fontSize: "12px", color: "#64748b", marginBottom: "12px", lineHeight: "1.4" },
 };
+
+// Responsive media queries
+if (typeof window !== 'undefined') {
+  const mediaQuery = window.matchMedia('(max-width: 768px)');
+  const handleResponsive = (e) => {
+    if (e.matches) {
+      modernStyles.twoColumn.gridTemplateColumns = "1fr";
+      modernStyles.section.padding = "20px";
+      modernStyles.mainCard.padding = "20px";
+      modernStyles.title.fontSize = "24px";
+      modernStyles.media.height = "300px";
+      modernStyles.statsGrid.gridTemplateColumns = "repeat(2, 1fr)";
+      modernStyles.facilitiesGrid.gridTemplateColumns = "1fr";
+      modernStyles.priceGrid.gridTemplateColumns = "1fr";
+      modernStyles.modalContent.padding = "20px";
+      modernStyles.modalTitle.fontSize = "22px";
+      modernStyles.actionButtons.flexDirection = "column";
+      modernStyles.actionButtons.width = "100%";
+      modernStyles.bookButton.width = "100%";
+      modernStyles.bookButton.justifyContent = "center";
+      modernStyles.callButton.width = "100%";
+      modernStyles.callButton.justifyContent = "center";
+      modernStyles.directionButton.width = "100%";
+      modernStyles.directionButton.justifyContent = "center";
+      modernStyles.stickyContent.flexDirection = "column";
+      modernStyles.stickyContent.textAlign = "center";
+      modernStyles.stickyActions.width = "100%";
+      modernStyles.stickyBookButton.flex = "1";
+      modernStyles.stickyBookButton.justifyContent = "center";
+      modernStyles.stickyCallButton.flex = "1";
+      modernStyles.stickyCallButton.justifyContent = "center";
+      modernStyles.breadcrumb.propertyCode.marginLeft = "0";
+      modernStyles.breadcrumb.propertyCode.marginTop = "8px";
+    } else {
+      modernStyles.twoColumn.gridTemplateColumns = "2fr 1fr";
+      modernStyles.section.padding = "28px";
+      modernStyles.mainCard.padding = "32px";
+      modernStyles.title.fontSize = "32px";
+      modernStyles.media.height = "480px";
+      modernStyles.statsGrid.gridTemplateColumns = "repeat(auto-fit, minmax(200px, 1fr))";
+      modernStyles.facilitiesGrid.gridTemplateColumns = "repeat(auto-fill, minmax(260px, 1fr))";
+      modernStyles.priceGrid.gridTemplateColumns = "repeat(auto-fit, minmax(160px, 1fr))";
+      modernStyles.modalContent.padding = "32px";
+      modernStyles.modalTitle.fontSize = "26px";
+      modernStyles.actionButtons.flexDirection = "row";
+      modernStyles.actionButtons.width = "auto";
+      modernStyles.bookButton.width = "auto";
+      modernStyles.callButton.width = "auto";
+      modernStyles.directionButton.width = "auto";
+      modernStyles.stickyContent.flexDirection = "row";
+      modernStyles.stickyContent.textAlign = "left";
+      modernStyles.stickyActions.width = "auto";
+      modernStyles.stickyBookButton.flex = "0";
+      modernStyles.stickyCallButton.flex = "0";
+      modernStyles.breadcrumb.propertyCode.marginLeft = "auto";
+      modernStyles.breadcrumb.propertyCode.marginTop = "0";
+    }
+  };
+  mediaQuery.addListener(handleResponsive);
+  handleResponsive(mediaQuery);
+}
