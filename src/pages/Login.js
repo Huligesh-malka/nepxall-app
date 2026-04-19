@@ -39,16 +39,16 @@ const PhoneLogin = () => {
   const [firebaseUser, setFirebaseUser] = useState(null);
   
   // Flow control states
-  const [otpVerified, setOtpVerified] = useState(false);
-  const [isNewUser, setIsNewUser] = useState(false);
+  const [needsName, setNeedsName] = useState(false);
   const [registrationComplete, setRegistrationComplete] = useState(false);
+  const [authToken, setAuthToken] = useState(null);
   
   // UI states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [otpTimer, setOtpTimer] = useState(0);
-  const [step, setStep] = useState(1); // 1: Phone, 2: OTP, 3: Name (only for new users without name)
+  const [step, setStep] = useState(1);
   const [activeStep, setActiveStep] = useState(0);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -60,6 +60,8 @@ const PhoneLogin = () => {
   const registrationInProgress = useRef(false);
 
   const navigate = useNavigate();
+
+  const steps = ['Mobile Number', 'Verify OTP', 'Complete Profile'];
 
   // Animation variants
   const containerVariants = {
@@ -73,20 +75,33 @@ const PhoneLogin = () => {
     tap: { scale: 0.98 }
   };
 
-  // Steps for stepper
-  const steps = ['Mobile Number', 'Verify OTP', 'Complete Profile'];
-
   /* ================= AUTO REDIRECT FOR EXISTING USERS ================= */
   useEffect(() => {
     if (authLoading || registrationComplete || redirectInProgress.current) {
       return;
     }
     
-    if (user && user.role && user.name && user.name.trim() !== "") {
+    // Check if user is already logged in and has name
+    const storedToken = localStorage.getItem("token");
+    const storedUser = localStorage.getItem("user");
+    
+    if (storedToken && storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        if (userData.name && userData.name.trim() !== "") {
+          redirectInProgress.current = true;
+          setTimeout(() => {
+            redirect(userData.role || "tenant");
+          }, 500);
+        }
+      } catch (e) {
+        console.error("Error parsing user data:", e);
+      }
+    } else if (user && user.name && user.name.trim() !== "" && user.role) {
       redirectInProgress.current = true;
       setTimeout(() => {
         redirect(user.role);
-      }, 1000);
+      }, 500);
     }
   }, [user, authLoading, registrationComplete]);
 
@@ -145,62 +160,14 @@ const PhoneLogin = () => {
     else navigate("/");
   };
 
-  /* ================= HANDLE AUTHENTICATION AFTER OTP ================= */
-  const handleAuthentication = async (firebaseUserObj, userName = null) => {
-    try {
-      const idToken = await firebaseUserObj.getIdToken(true);
-      const finalName = userName || name.trim();
-      
-      console.log("Authenticating user...", { phone, name: finalName });
-      
-      const response = await userAPI.post("/auth/register", {
-        idToken: idToken,
-        phone: phone,
-        name: finalName || null,
-        firebase_uid: firebaseUserObj.uid
-      });
-      
-      console.log("Authentication response:", response.data);
-      
-      if (response.data.success) {
-        setRegistrationComplete(true);
-        
-        if (response.data.isNewUser) {
-          setSnackbarMessage(`Welcome ${finalName}! Your account has been created.`);
-        } else {
-          setSnackbarMessage(`Welcome back ${response.data.user.name}!`);
-        }
-        
-        setSnackbarOpen(true);
-        
-        // Store user in context if needed
-        if (response.data.user && login) {
-          login(response.data.user);
-        }
-        
-        // Redirect after short delay
-        setTimeout(() => {
-          redirect(response.data.user?.role || "tenant");
-        }, 1500);
-        
-        return true;
-      } else {
-        setError(response.data.message || "Authentication failed");
-        
-        // If needs name, show name step
-        if (response.data.needsName) {
-          setStep(3);
-          setActiveStep(2);
-          setIsNewUser(true);
-        }
-        
-        return false;
-      }
-    } catch (err) {
-      console.error("Authentication error:", err);
-      setError(err?.response?.data?.message || "Server error. Please try again.");
-      return false;
+  /* ================= SAVE AUTH DATA ================= */
+  const saveAuthData = (token, userData) => {
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(userData));
+    if (login) {
+      login(userData);
     }
+    setAuthToken(token);
   };
 
   /* ================= SEND OTP ================= */
@@ -257,41 +224,52 @@ const PhoneLogin = () => {
 
       const result = await confirmObj.confirm(otp);
       setFirebaseUser(result.user);
-      setOtpVerified(true);
       
       setSuccess("OTP verified successfully!");
       
-      // First, check if user exists and needs name
+      // Get Firebase ID token
       const idToken = await result.user.getIdToken(true);
       
+      // Check user status from backend
       const checkResponse = await userAPI.post("/auth/firebase", {
         idToken,
         role: "tenant",
         phone: phone
       });
       
-      console.log("User check:", checkResponse.data);
+      console.log("User check response:", checkResponse.data);
       
-      if (checkResponse.data.needsName === true) {
-        // New user or user without name - show name form
-        setStep(3);
-        setActiveStep(2);
-        setIsNewUser(true);
-        setSuccess("");
-      } else if (checkResponse.data.user && checkResponse.data.user.name) {
-        // Existing user with name - complete authentication
-        await handleAuthentication(result.user);
+      if (checkResponse.data.success) {
+        // Save token and user data
+        if (checkResponse.data.token) {
+          saveAuthData(checkResponse.data.token, checkResponse.data.user);
+        }
+        
+        // Check if user needs to provide name
+        if (checkResponse.data.needsName === true) {
+          console.log("User needs name - showing name form");
+          setNeedsName(true);
+          setStep(3);
+          setActiveStep(2);
+          setSuccess("");
+        } else {
+          // User has name - redirect directly
+          console.log("User has name - redirecting");
+          setRegistrationComplete(true);
+          setSnackbarMessage(checkResponse.data.message || "Welcome back!");
+          setSnackbarOpen(true);
+          
+          setTimeout(() => {
+            redirect(checkResponse.data.user?.role || "tenant");
+          }, 1500);
+        }
       } else {
-        // Fallback - show name form
-        setStep(3);
-        setActiveStep(2);
-        setIsNewUser(true);
+        setError(checkResponse.data.message || "Authentication failed");
       }
       
     } catch (err) {
       console.error("Verify OTP error:", err);
-      setError("Invalid OTP. Please try again.");
-      setOtpVerified(false);
+      setError(err?.response?.data?.message || "Invalid OTP. Please try again.");
     } finally {
       setLoading(false);
       verificationInProgress.current = false;
@@ -328,9 +306,44 @@ const PhoneLogin = () => {
     try {
       setLoading(true);
       setError("");
+      setSuccess("Creating your account...");
       
-      // Complete authentication with name
-      await handleAuthentication(firebaseUser, name.trim());
+      const idToken = await firebaseUser.getIdToken(true);
+      
+      // Register/update user with name
+      const response = await userAPI.post("/auth/register", {
+        idToken: idToken,
+        phone: phone,
+        name: name.trim(),
+        firebase_uid: firebaseUser.uid
+      }, {
+        headers: {
+          Authorization: `Bearer ${authToken || localStorage.getItem("token")}`
+        }
+      });
+      
+      console.log("Registration response:", response.data);
+      
+      if (response.data.success) {
+        // Save updated auth data
+        if (response.data.token) {
+          saveAuthData(response.data.token, response.data.user);
+        }
+        
+        setRegistrationComplete(true);
+        setNeedsName(false);
+        
+        setSnackbarMessage(`Welcome ${name.trim()}! Your account has been created.`);
+        setSnackbarOpen(true);
+        
+        // Redirect after short delay
+        setTimeout(() => {
+          redirect(response.data.user?.role || "tenant");
+        }, 1500);
+        
+      } else {
+        setError(response.data.message || "Registration failed");
+      }
       
     } catch (err) {
       console.error("Complete registration error:", err);
@@ -357,10 +370,10 @@ const PhoneLogin = () => {
     setOtp("");
     setError("");
     setSuccess("");
-    setOtpVerified(false);
+    setNeedsName(false);
     setRegistrationComplete(false);
-    setIsNewUser(false);
     setFirebaseUser(null);
+    setName("");
     verificationInProgress.current = false;
     redirectInProgress.current = false;
     registrationInProgress.current = false;
@@ -397,6 +410,7 @@ const PhoneLogin = () => {
           overflow: "hidden",
         }}
       >
+        {/* Animated background elements */}
         <Box
           sx={{
             position: "absolute",
@@ -792,8 +806,8 @@ const PhoneLogin = () => {
                   </motion.div>
                 )}
 
-                {/* Step 3: Name Collection (Only for users who need it) */}
-                {step === 3 && (
+                {/* Step 3: Name Collection */}
+                {step === 3 && needsName && (
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
