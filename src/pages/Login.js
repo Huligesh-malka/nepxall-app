@@ -24,6 +24,7 @@ const PhoneLogin = () => {
   const [otp, setOtp] = useState("");
   const [name, setName] = useState("");
   const [confirmObj, setConfirmObj] = useState(null);
+  const [firebaseUser, setFirebaseUser] = useState(null);
   
   // Flow control states
   const [needsName, setNeedsName] = useState(false);
@@ -40,10 +41,11 @@ const PhoneLogin = () => {
   const verificationInProgress = useRef(false);
   const registrationInProgress = useRef(false);
 
-  /* ================= AUTO REDIRECT LOGIC ================= */
+  /* ================= AUTO REDIRECT (STRICT LOCK) ================= */
   useEffect(() => {
-    // Prevent redirect if busy or name is explicitly needed
-    if (loading || authLoading || needsName || registrationComplete || redirectInProgress.current) {
+    // 🔥 CRITICAL FIX: If we need a name, DO NOT REDIRECT.
+    // This stops the infinite loop to the phone number page.
+    if (authLoading || needsName || registrationComplete || redirectInProgress.current) {
       return;
     }
     
@@ -53,22 +55,16 @@ const PhoneLogin = () => {
     if (storedToken && storedUser) {
       try {
         const userData = JSON.parse(storedUser);
-        const hasValidName = userData.name && 
-                             userData.name.trim().length >= 3 && 
-                             !/^[0-9+]+$/.test(userData.name);
-
-        if (hasValidName) {
+        // Only redirect if a valid name exists in the profile
+        if (userData.name && userData.name.trim() !== "" && !/^[0-9+]+$/.test(userData.name)) {
           redirectInProgress.current = true;
           redirect(userData.role || "tenant");
-        } else {
-          setNeedsName(true);
-          setStep(3);
         }
       } catch (e) {
         console.error("Auth sync error:", e);
       }
     }
-  }, [authLoading, registrationComplete, needsName, loading]);
+  }, [authLoading, registrationComplete, needsName]); // needsName is a dependency
 
   const redirect = (role) => {
     if (role === "admin") navigate("/admin/dashboard");
@@ -101,7 +97,7 @@ const PhoneLogin = () => {
       setConfirmObj(confirmation);
       setStep(2);
     } catch (err) {
-      setError("Failed to send OTP. Check your connection.");
+      setError("Failed to send OTP. Try again.");
     } finally {
       setLoading(false);
     }
@@ -116,17 +112,17 @@ const PhoneLogin = () => {
       setError("");
 
       const result = await confirmObj.confirm(otp);
+      setFirebaseUser(result.user);
       const idToken = await result.user.getIdToken(true);
       
-      const res = await userAPI.post("/auth/firebase", { 
-        idToken, 
-        role: "tenant", 
-        phone: phone.replace(/\D/g, "") 
-      });
+      const res = await userAPI.post("/auth/firebase", { idToken, role: "tenant", phone });
       
       if (res.data.success) {
+        // Always save credentials to maintain the session
         saveAuthData(res.data.token, res.data.user);
+
         if (res.data.needsName) {
+          // 🔥 Set needsName FIRST to block the Auto-Redirect useEffect
           setNeedsName(true);
           setStep(3);
         } else {
@@ -137,45 +133,33 @@ const PhoneLogin = () => {
         }
       }
     } catch (err) {
-      setError("Invalid OTP. Try again.");
+      setError("Invalid OTP. Please check and try again.");
     } finally {
       setLoading(false);
       verificationInProgress.current = false;
     }
   };
 
-  /* ================= COMPLETE PROFILE (STEP 3) ================= */
   const completeRegistration = async () => {
     if (registrationInProgress.current || !name.trim()) return;
     registrationInProgress.current = true;
     
     try {
       setLoading(true);
-      setError("");
-
-      // 🔥 FIX: Re-fetch fresh token from auth.currentUser to avoid session expiration
-      if (!auth.currentUser) throw new Error("Firebase session lost");
-      const idToken = await auth.currentUser.getIdToken(true);
-      
-      const res = await userAPI.post("/auth/firebase", { 
-        idToken, 
-        phone: phone.replace(/\D/g, ""), 
-        name: name.trim() 
-      });
+      const idToken = await firebaseUser.getIdToken(true);
+      // Send the name to complete the profile
+      const res = await userAPI.post("/auth/firebase", { idToken, phone, name: name.trim() });
       
       if (res.data.success) {
         saveAuthData(res.data.token, res.data.user);
         setRegistrationComplete(true);
-        setNeedsName(false);
+        setNeedsName(false); // Unlock the redirect
         setSnackbarMessage("Profile created successfully!");
         setSnackbarOpen(true);
         setTimeout(() => redirect(res.data.user?.role), 1000);
-      } else {
-        setError(res.data.message || "Failed to update profile.");
       }
     } catch (err) {
-      console.error("Profile Save Error:", err);
-      setError("Failed to save profile. Please check your network.");
+      setError("Failed to save profile.");
     } finally {
       setLoading(false);
       registrationInProgress.current = false;
@@ -230,7 +214,7 @@ const PhoneLogin = () => {
           {step === 3 && (
             <Box sx={{ textAlign: "center" }}>
               <TextField fullWidth label="Full Name" value={name} onChange={(e) => setName(e.target.value)} margin="normal" autoFocus />
-              <Button fullWidth variant="contained" size="large" onClick={completeRegistration} sx={{ mt: 2 }} disabled={name.trim().length < 3}>
+              <Button fullWidth variant="contained" size="large" onClick={completeRegistration} sx={{ mt: 2 }} disabled={name.length < 3}>
                 Finish & Explore
               </Button>
             </Box>
