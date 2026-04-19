@@ -210,7 +210,7 @@ export default function AdminSettlements() {
                       </Box>
                     </TableCell>
 
-                    {/* PG */}
+                    {/* PG - JOIN STATUS ADDED HERE */}
                     <TableCell>
                       <Box display="flex" alignItems="center" gap={1.5}>
                         <Avatar sx={{ bgcolor: "#fff4e5", color: "#ed6c02" }}>
@@ -223,11 +223,18 @@ export default function AdminSettlements() {
                           <Typography variant="caption" color="textSecondary">
                             {item.area}
                           </Typography>
+                          {/* ✅ JOIN STATUS CHIP */}
+                          <Chip
+                            label={item.join_status || "NOT_JOINED"}
+                            size="small"
+                            color={item.join_status === "JOINED" ? "success" : "warning"}
+                            sx={{ mt: 0.5, fontSize: "0.7rem", height: "22px" }}
+                          />
                         </Box>
                       </Box>
                     </TableCell>
 
-                    {/* Financial Breakdown - UPDATED SECTION */}
+                    {/* Financial Breakdown */}
                     <TableCell>
                       {/* ✅ OWNER AMOUNT */}
                       <Typography fontWeight="800" color="primary.main">
@@ -274,7 +281,7 @@ export default function AdminSettlements() {
                       </Box>
                     </TableCell>
 
-                    {/* Action */}
+                    {/* Action - DISABLED IF NOT JOINED */}
                     <TableCell align="center">
                       {item.admin_settlement === "DONE" ? (
                         <Chip
@@ -286,7 +293,10 @@ export default function AdminSettlements() {
                         />
                       ) : (
                         <ApproveButton
-                          disabled={processingId === item.booking_id}
+                          disabled={
+                            processingId === item.booking_id || 
+                            item.join_status !== "JOINED"
+                          }
                           onClick={() => approveSettlement(item.booking_id)}
                         >
                           {processingId === item.booking_id ? (
