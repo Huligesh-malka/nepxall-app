@@ -1384,6 +1384,7 @@ export default function PGDetails() {
       }
     };
 
+    // FIXED: Nearby PGs fetch - using correct API endpoint
     const fetchNearbyPGs = async () => {
       try {
         setLoadingNearbyPGs(true);
@@ -1395,42 +1396,84 @@ export default function PGDetails() {
           return;
         }
 
-        const response = await api.get(
-          `/pg/nearby/${pg.latitude}/${pg.longitude}?radius=5&exclude=${id}`
-        );
+        // Try multiple endpoint formats for compatibility
+        let response = null;
+        let success = false;
         
-        console.log("Nearby PGs API response:", response.data);
+        // Try primary endpoint
+        try {
+          const url = `/pg/nearby/${pg.latitude}/${pg.longitude}?radius=5&exclude=${id}`;
+          console.log("Trying endpoint:", url);
+          response = await api.get(url);
+          if (response.data?.success) {
+            success = true;
+          }
+        } catch (err) {
+          console.log("Primary endpoint failed, trying alternative...");
+        }
         
-        if (response.data?.success) {
-          const pgsWithDistance = response.data.data.map(otherPG => {
-            let distance = 0;
-            if (otherPG.latitude && otherPG.longitude) {
-              distance = calculateDistanceBetweenCoords(
-                pg.latitude, 
-                pg.longitude, 
-                otherPG.latitude, 
-                otherPG.longitude
-              );
+        // If primary failed, try alternative endpoint
+        if (!success) {
+          try {
+            const url = `/properties/nearby?lat=${pg.latitude}&lng=${pg.longitude}&radius=5&exclude=${id}`;
+            console.log("Trying alternative endpoint:", url);
+            response = await api.get(url);
+            if (response.data?.success) {
+              success = true;
             }
-            return {
-              ...otherPG,
-              distance
-            };
-          });
+          } catch (err) {
+            console.log("Alternative endpoint also failed");
+          }
+        }
+        
+        // If still failed, try with pagination endpoint
+        if (!success) {
+          try {
+            const url = `/pg/all?page=1&limit=10&lat=${pg.latitude}&lng=${pg.longitude}&radius=5`;
+            console.log("Trying pagination endpoint:", url);
+            response = await api.get(url);
+            if (response.data?.success) {
+              success = true;
+            }
+          } catch (err) {
+            console.log("Pagination endpoint failed");
+          }
+        }
+        
+        if (success && response?.data?.data) {
+          let pgsList = Array.isArray(response.data.data) ? response.data.data : [];
+          
+          // Filter out current PG and calculate distances
+          const pgsWithDistance = pgsList
+            .filter(otherPG => otherPG.id !== parseInt(id))
+            .map(otherPG => {
+              let distance = 0;
+              if (otherPG.latitude && otherPG.longitude) {
+                distance = calculateDistanceBetweenCoords(
+                  pg.latitude, 
+                  pg.longitude, 
+                  otherPG.latitude, 
+                  otherPG.longitude
+                );
+              }
+              return {
+                ...otherPG,
+                distance
+              };
+            });
           
           const sortedPGs = pgsWithDistance
             .sort((a, b) => a.distance - b.distance)
             .slice(0, 4);
           
-          console.log("Sorted nearby PGs:", sortedPGs);
+          console.log("Found nearby PGs:", sortedPGs.length);
           setNearbyPGs(sortedPGs);
         } else {
-          console.error("API returned unsuccessful:", response.data);
+          console.log("No nearby PGs found or API returned no data");
           setNearbyPGs([]);
         }
       } catch (err) {
         console.error("Error fetching nearby PGs:", err);
-        console.error("Error details:", err.response?.data);
         setNearbyPGs([]);
       } finally {
         setLoadingNearbyPGs(false);
@@ -1725,6 +1768,14 @@ export default function PGDetails() {
 
   const shouldShowNearbyHighlights = hasLocation && (nearbyHighlights.length > 0 || loadingHighlights);
   const shouldShowNearbyPGs = nearbyPGs.length > 0 || loadingNearbyPGs;
+
+  // Helper function to check if legal duration has valid values
+  const hasValidLegalDuration = () => {
+    if (!pg) return false;
+    // Check if either min_stay_months or lock_in_period exists and has meaningful value
+    return (pg.min_stay_months && pg.min_stay_months !== "" && pg.min_stay_months !== "0") ||
+           (pg.lock_in_period && pg.lock_in_period !== "" && pg.lock_in_period !== "0");
+  };
 
   return (
     <div style={modernStyles.page}>
@@ -2200,7 +2251,7 @@ export default function PGDetails() {
                   </div>
                 )}
 
-                {(pg.min_stay_months || pg.agreement_mandatory || pg.id_proof_mandatory) && (
+                {hasValidLegalDuration() && (
                   <div style={modernStyles.rulesSection}>
                     <div style={modernStyles.rulesSectionHeader} onClick={() => toggleRulesSection('legal')}>
                       <h4 style={modernStyles.rulesSectionTitle}>
@@ -2213,17 +2264,25 @@ export default function PGDetails() {
                     </div>
                     {expandedRules.legal && (
                       <div style={modernStyles.rulesGrid}>
-                        {pg.min_stay_months && (
+                        {pg.min_stay_months && pg.min_stay_months !== "" && pg.min_stay_months !== "0" && (
                           <RuleItem 
                             icon="🔒" 
-                            label={`Min Stay: ${pg.min_stay_months} months`} 
-                            allowed={pg.lock_in_period === true || pg.lock_in_period === "true"}
+                            label={`Minimum Stay: ${pg.min_stay_months} months`} 
+                            allowed={true}
                             description="Minimum stay requirement"
+                          />
+                        )}
+                        {pg.lock_in_period && pg.lock_in_period !== "" && pg.lock_in_period !== "0" && (
+                          <RuleItem 
+                            icon="📝" 
+                            label={`Lock-in Period: ${pg.lock_in_period} months`} 
+                            allowed={true}
+                            description="Lock-in period before leaving"
                           />
                         )}
                         {(pg.agreement_mandatory === true || pg.agreement_mandatory === "true" || pg.agreement_mandatory === "false") && (
                           <RuleItem 
-                            icon="📝" 
+                            icon="📄" 
                             label="Agreement Mandatory" 
                             allowed={pg.agreement_mandatory === true || pg.agreement_mandatory === "true"}
                             description="Legal agreement required"
@@ -3732,14 +3791,13 @@ const modernStyles = {
 };
 
 // Responsive media queries
-// Responsive media queries - FIXED VERSION
 if (typeof window !== 'undefined') {
   const mediaQuery = window.matchMedia('(max-width: 768px)');
   
   const applyResponsiveStyles = (e) => {
     try {
       if (e.matches) {
-        // Mobile styles - safely check each property exists
+        // Mobile styles
         if (modernStyles.twoColumn) modernStyles.twoColumn.gridTemplateColumns = "1fr";
         if (modernStyles.section) modernStyles.section.padding = "20px";
         if (modernStyles.mainCard) modernStyles.mainCard.padding = "20px";
@@ -3788,10 +3846,9 @@ if (typeof window !== 'undefined') {
           modernStyles.stickyCallButton.justifyContent = "center";
         }
         
-        // Safely handle breadcrumb property
-        if (modernStyles.breadcrumb && modernStyles.breadcrumb.propertyCode) {
-          modernStyles.breadcrumb.propertyCode.marginLeft = "0";
-          modernStyles.breadcrumb.propertyCode.marginTop = "8px";
+        if (modernStyles.breadcrumb && modernStyles.propertyCode) {
+          modernStyles.propertyCode.marginLeft = "0";
+          modernStyles.propertyCode.marginTop = "8px";
         }
       } else {
         // Desktop styles
@@ -3843,10 +3900,9 @@ if (typeof window !== 'undefined') {
           modernStyles.stickyCallButton.justifyContent = "center";
         }
         
-        // Safely handle breadcrumb property
-        if (modernStyles.breadcrumb && modernStyles.breadcrumb.propertyCode) {
-          modernStyles.breadcrumb.propertyCode.marginLeft = "auto";
-          modernStyles.breadcrumb.propertyCode.marginTop = "0";
+        if (modernStyles.breadcrumb && modernStyles.propertyCode) {
+          modernStyles.propertyCode.marginLeft = "auto";
+          modernStyles.propertyCode.marginTop = "0";
         }
       }
     } catch (err) {
@@ -3854,9 +3910,6 @@ if (typeof window !== 'undefined') {
     }
   };
   
-  // Initial call
   applyResponsiveStyles(mediaQuery);
-  
-  // Add listener
   mediaQuery.addEventListener("change", applyResponsiveStyles);
 }
