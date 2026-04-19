@@ -1,428 +1,879 @@
-// Sidebar.jsx
 import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { 
-  FiHome, 
-  FiUser, 
-  FiLogOut, 
-  FiCalendar, 
-  FiSearch, 
-  FiDollarSign, 
-  FiFileText, 
-  FiMail, 
-  FiFlag, 
-  FiShield, 
-  FiBell, 
-  FiMessageCircle, 
-  FiBarChart2, 
-  FiUsers, 
-  FiTrendingUp, 
-  FiStar, 
-  FiHome as FiBuilding, 
-  FiPlusCircle, 
-  FiCreditCard, 
-  FiCheckCircle, 
-  FiTool, 
-  FiLock,
-  FiMapPin,
-  FiMenu,
-  FiX,
-  FiLogIn,
-  FiUserPlus,
-  FiSettings,
-  FiHelpCircle
-} from "react-icons/fi";
-import logo from "../assets/nepxall-logo.png";
+import {
+  Box, TextField, Button, Typography, Paper,
+  CircularProgress, Alert, Fade, Grow, Zoom,
+  InputAdornment, alpha, useTheme,
+  Stepper, Step, StepLabel,
+  Avatar, Chip, Backdrop, Snackbar
+} from "@mui/material";
+import {
+  Phone as PhoneIcon,
+  Lock as LockIcon,
+  Person as PersonIcon,
+  CheckCircle as CheckCircleIcon,
+  Smartphone as SmartphoneIcon,
+  Send as SendIcon,
+  VerifiedUser as VerifiedUserIcon,
+  EmojiEmotions as EmojiEmotionsIcon,
+  Security as SecurityIcon,
+  Speed as SpeedIcon,
+  Stars as StarsIcon,
+  Close as CloseIcon
+} from "@mui/icons-material";
+import { motion, AnimatePresence } from "framer-motion";
+import { auth } from "../firebase";
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import { userAPI } from "../api/api";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-/* ================= BRAND COLORS ================= */
-const BRAND_BLUE = "#0B5ED7";
-const BRAND_GREEN = "#4CAF50";
+const PhoneLogin = () => {
+  const { user, role: authRole, loading: authLoading } = useAuth();
+  const theme = useTheme();
 
-const Sidebar = ({ role, user }) => {
-  const location = useLocation();
-  const [isOpen, setIsOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  // Form states
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [name, setName] = useState("");
+  const [confirmObj, setConfirmObj] = useState(null);
+  const [firebaseUser, setFirebaseUser] = useState(null);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [loginCompleted, setLoginCompleted] = useState(false);
 
-  // 🔐 BACKEND ROLE ONLY (SAFE)
-  const safeRole = role?.toLowerCase().trim();
+  // UI states
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [step, setStep] = useState(1); // 1: Phone, 2: OTP, 3: Name
+  const [activeStep, setActiveStep] = useState(0);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [isResending, setIsResending] = useState(false);
+  const [needsNameFlow, setNeedsNameFlow] = useState(false);
 
-  // 🔐 LOGIN BASED ON FIREBASE USER
-  const isLoggedIn = !!user;
+  const navigate = useNavigate();
 
-  // Check if mobile on mount and window resize
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0, y: 50 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5, type: "spring", stiffness: 100 } },
+    exit: { opacity: 0, y: -50, transition: { duration: 0.3 } }
+  };
+
+  const buttonVariants = {
+    hover: { scale: 1.02, transition: { duration: 0.2 } },
+    tap: { scale: 0.98 }
+  };
+
+  /* ================= ✅ FIXED AUTO REDIRECT ================= */
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    // Only redirect if not loading, user exists, and has role
+    if (!authLoading && user && authRole) {
+      // Don't redirect during login flow
+      if (loginCompleted) return;
+      
+      // Don't redirect if we're in name collection flow
+      if (needsNameFlow) return;
+      
+      // Don't redirect if user doesn't have name (new user)
+      if (!user.name) return;
+      
+      // All good - redirect to appropriate dashboard
+      redirect(authRole);
+    }
+  }, [user, authRole, authLoading, loginCompleted, needsNameFlow]);
+
+  /* ================= LANGUAGE ================= */
+  useEffect(() => {
+    if (auth) {
+      auth.useDeviceLanguage();
+    }
   }, []);
 
-  // Close sidebar when screen becomes desktop
+  /* ================= OTP TIMER ================= */
   useEffect(() => {
-    if (!isMobile) {
-      setIsOpen(false);
+    if (otpTimer > 0) {
+      const timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
+      return () => clearTimeout(timer);
     }
-  }, [isMobile]);
+  }, [otpTimer]);
 
-  const isActive = (path) =>
-    location.pathname === path ||
-    location.pathname.startsWith(path + "/");
+  /* ================= RECAPTCHA SETUP ================= */
+  const setupRecaptcha = () => {
+    try {
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+      }
 
-  const closeSidebar = () => setIsOpen(false);
-  const openSidebar = () => setIsOpen(true);
+      window.recaptchaVerifier = new RecaptchaVerifier(
+        auth,
+        "recaptcha-container",
+        {
+          size: "invisible",
+        }
+      );
+    } catch (err) {
+      console.error("Recaptcha error:", err);
+    }
+  };
 
-  // Modern link style with hover animation and brand colors
-  const linkStyle = (active) => ({
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    color: active ? "#2563eb" : "#334155",
-    textDecoration: "none",
-    padding: "8px 12px",
-    borderRadius: 10,
-    background: active
-      ? "linear-gradient(90deg,#0B5ED710,#4CAF5010)"
-      : "transparent",
-    fontWeight: active ? "600" : "500",
-    transition: "all 0.2s ease",
-    fontSize: 13.5,
-    cursor: "pointer",
-  });
+  /* ================= ✅ FIXED REDIRECT FUNCTION ================= */
+  const redirect = (role) => {
+    if (role === "admin") navigate("/admin/dashboard");
+    else if (role === "owner") navigate("/owner/dashboard");
+    else if (role === "vendor") navigate("/vendor/dashboard");
+    else navigate("/user/bookings"); // ✅ FIXED: Send users to bookings page instead of home
+  };
 
-  // Sidebar content (reused for both mobile and desktop)
-  const SidebarContent = () => (
-    <>
-      {/* Close button (mobile only) */}
-      {isMobile && (
-        <button onClick={closeSidebar} style={closeBtn}>
-          <FiX size={18} />
-        </button>
-      )}
+  /* ================= ✅ FIXED CHECK IF NEEDS NAME ================= */
+  const checkIfNeedsName = async (firebaseUserObj) => {
+    try {
+      const idToken = await firebaseUserObj.getIdToken(true);
 
-      {/* ================= LOGO ================= */}
-      <div style={companyHeader}>
-        <img src={logo} alt="Nepxall logo" style={logoImage} />
-        <div>
-          <h2 style={companyName}>
-            <span style={{ color: BRAND_BLUE }}>Nep</span>
-            <span style={{ color: BRAND_GREEN }}>xall</span>
-          </h2>
-          <p style={companyTagline}>Next Places for Living</p>
-        </div>
-      </div>
+      const res = await userAPI.post("/auth/firebase", {
+        idToken,
+        role: "tenant",
+        phone: phone
+      });
 
-      <hr style={divider} />
+      console.log("✅ FULL RESPONSE:", res.data);
 
-      <nav style={nav}>
-        {/* ================= HOME ================= */}
-        <Link 
-          style={linkStyle(isActive("/"))} 
-          to="/" 
-          onClick={closeSidebar}
-          className="sidebar-link"
-        >
-          <FiHome size={16} /> Home
-        </Link>
+      // Check if user needs to provide name
+      if (res.data.needsName === true || !res.data.name) {
+        setNeedsNameFlow(true);
+        setStep(3);
+        setActiveStep(2);
+        return true;
+      }
 
-        {/* ================= TENANT ================= */}
-        {isLoggedIn && (safeRole === "tenant" || safeRole === "user") && (
-          <>
-            <hr style={divider} />
-            <p style={sectionLabel}>TENANT</p>
-            <Link style={linkStyle(isActive("/user/my-stay"))} to="/user/my-stay" onClick={closeSidebar} className="sidebar-link"><FiHome size={16} /> My Stay</Link>
-            <Link style={linkStyle(isActive("/user/bookings"))} to="/user/bookings" onClick={closeSidebar} className="sidebar-link"><FiCalendar size={16} /> My Bookings</Link>
-            <Link style={linkStyle(isActive("/"))} to="/" onClick={closeSidebar} className="sidebar-link"><FiSearch size={16} /> Browse Properties</Link>
-                {/* 🔥 ADD HERE */}
-    <Link 
-      style={linkStyle(isActive("/become-owner"))} 
-      to="/become-owner" 
-      onClick={closeSidebar} 
-      className="sidebar-link"
-    >
-      ⭐ Become Owner
-    </Link>
+      // Existing user - redirect after delay
+      setNeedsNameFlow(false);
+      
+      setTimeout(() => {
+        redirect(res.data.role);
+      }, 1500); // ✅ FIXED: Added delay and proper redirect
+      
+      return false;
 
-            <Link style={linkStyle(isActive("/user/vacate"))} to="/user/vacate" onClick={closeSidebar} className="sidebar-link"><FiLogOut size={16} /> Vacate Room</Link>
-            <Link style={linkStyle(isActive("/user/refunds"))} to="/user/refunds" onClick={closeSidebar} className="sidebar-link"><FiDollarSign size={16} /> Refunds</Link>
-            <Link style={linkStyle(isActive("/user/agreements"))} to="/user/agreements" onClick={closeSidebar} className="sidebar-link"><FiFileText size={16} /> My Agreements</Link>
-            <hr style={divider} />
-            <Link style={linkStyle(isActive("/contact"))} to="/contact" onClick={closeSidebar} className="sidebar-link"><FiMail size={16} /> Contact Us</Link>
-            <Link style={linkStyle(isActive("/terms"))} to="/terms" onClick={closeSidebar} className="sidebar-link"><FiFlag size={16} /> Terms & Conditions</Link>
-            <Link style={linkStyle(isActive("/refund-policy"))} to="/refund-policy" onClick={closeSidebar} className="sidebar-link"><FiShield size={16} /> Refund Policy</Link>
-            <Link style={linkStyle(isActive("/privacy-policy"))} to="/privacy-policy" onClick={closeSidebar} className="sidebar-link"><FiLock size={16} /> Privacy Policy</Link>
-          </>
-        )}
+    } catch (err) {
+      console.error("❌ ERROR:", err);
 
-        {/* ================= OWNER ================= */}
-        {isLoggedIn && safeRole === "owner" && (
-          <>
-            <hr style={divider} />
-            <p style={sectionLabel}>OWNER</p>
-            <Link style={linkStyle(isActive("/owner/dashboard"))} to="/owner/dashboard" onClick={closeSidebar} className="sidebar-link"><FiBarChart2 size={16} /> Dashboard</Link>
-            <Link style={linkStyle(isActive("/owner/bookings"))} to="/owner/bookings" onClick={closeSidebar} className="sidebar-link"><FiCalendar size={16} /> Booking Requests</Link>
-            <Link style={linkStyle(isActive("/owner/tenants"))} to="/owner/tenants" onClick={closeSidebar} className="sidebar-link"><FiUsers size={16} /> Active Tenants</Link>
-            <Link style={linkStyle(isActive("/owner/vacate"))} to="/owner/vacate" onClick={closeSidebar} className="sidebar-link"><FiLogOut size={16} /> Vacate Requests</Link>
-            <Link style={linkStyle(isActive("/owner/payments"))} to="/owner/payments" onClick={closeSidebar} className="sidebar-link"><FiTrendingUp size={16} /> Earnings / Payments</Link>
-            <Link style={linkStyle(isActive("/owner/premium"))} to="/owner/premium" onClick={closeSidebar} className="sidebar-link"><FiStar size={16} /> Premium Plans</Link>
-            <Link style={linkStyle(isActive("/owner/pgs"))} to="/owner/pgs" onClick={closeSidebar} className="sidebar-link"><FiBuilding size={16} /> My PGs</Link>
-            <Link style={linkStyle(isActive("/owner/hotels"))} to="/owner/hotels" onClick={closeSidebar} className="sidebar-link"><FiMapPin size={16} /> My Hotels</Link>
-            <Link style={linkStyle(isActive("/owner/add"))} to="/owner/add" onClick={closeSidebar} className="sidebar-link"><FiPlusCircle size={16} /> Add PG</Link>
-            <Link style={linkStyle(isActive("/owner/add-hotel"))} to="/owner/add-hotel" onClick={closeSidebar} className="sidebar-link"><FiPlusCircle size={16} /> Add Hotel</Link>
-            <Link style={linkStyle(isActive("/owner/bank"))} to="/owner/bank" onClick={closeSidebar} className="sidebar-link"><FiCreditCard size={16} /> Bank Details</Link>
-            <Link style={linkStyle(isActive("/owner/verification"))} to="/owner/verification" onClick={closeSidebar} className="sidebar-link"><FiCheckCircle size={16} /> Verification</Link>
-            <Link style={linkStyle(isActive("/owner/notifications"))} to="/owner/notifications" onClick={closeSidebar} className="sidebar-link"><FiBell size={16} /> Notifications</Link>
-            <Link style={linkStyle(isActive("/owner/chats"))} to="/owner/chats" onClick={closeSidebar} className="sidebar-link"><FiMessageCircle size={16} /> Chats</Link>
-          </>
-        )}
+      // Fallback to name collection on error
+      setNeedsNameFlow(true);
+      setStep(3);
+      setActiveStep(2);
+      
+      return true;
+    }
+  };
 
-        {/* ================= ADMIN ================= */}
-        {isLoggedIn && safeRole === "admin" && (
-          <>
-            <hr style={divider} />
-            <p style={sectionLabel}>ADMIN</p>
-            <Link style={linkStyle(isActive("/admin/finance"))} to="/admin/finance" onClick={closeSidebar} className="sidebar-link"><FiBarChart2 size={16} /> Finance Dashboard</Link>
-            <Link style={linkStyle(isActive("/admin/payments"))} to="/admin/payments" onClick={closeSidebar} className="sidebar-link"><FiCreditCard size={16} /> Payment Verification</Link>
-            <Link style={linkStyle(isActive("/admin/services"))} to="/admin/services" onClick={closeSidebar} className="sidebar-link"><FiTool size={16} /> Service Requests</Link>
-            <Link style={linkStyle(isActive("/admin/plan-payments"))} to="/admin/plan-payments" onClick={closeSidebar} className="sidebar-link"><FiStar size={16} /> Plan Payments</Link>
-            <Link style={linkStyle(isActive("/admin/owner-verification"))} to="/admin/owner-verification" onClick={closeSidebar} className="sidebar-link"><FiShield size={16} /> Verify Owners</Link>
-            <Link style={linkStyle(isActive("/admin/settlements"))} to="/admin/settlements" onClick={closeSidebar} className="sidebar-link"><FiDollarSign size={16} /> Settlements</Link>
-            <Link style={linkStyle(isActive("/admin/settlement-history"))} to="/admin/settlement-history" onClick={closeSidebar} className="sidebar-link"><FiFileText size={16} /> Settlement History</Link>
-            <Link style={linkStyle(isActive("/admin/refunds"))} to="/admin/refunds" onClick={closeSidebar} className="sidebar-link"><FiDollarSign size={16} /> Refund Requests</Link>
-            <Link style={linkStyle(isActive("/admin/agreements"))} to="/admin/agreements" onClick={closeSidebar} className="sidebar-link"><FiFileText size={16} /> Agreements</Link>
-          </>
-        )}
+  /* ================= SEND OTP ================= */
+  const sendOtp = async () => {
+    const cleanPhone = phone.replace(/\D/g, "");
+    if (cleanPhone.length !== 10) {
+      return setError("Enter a valid 10-digit mobile number");
+    }
 
-        {/* ================= VENDOR ================= */}
-        {isLoggedIn && safeRole === "vendor" && (
-          <>
-            <hr style={divider} />
-            <p style={sectionLabel}>VENDOR</p>
-            <Link style={linkStyle(isActive("/vendor/dashboard"))} to="/vendor/dashboard" onClick={closeSidebar} className="sidebar-link"><FiBarChart2 size={16} /> Dashboard</Link>
-            <Link style={linkStyle(isActive("/vendor/services"))} to="/vendor/services" onClick={closeSidebar} className="sidebar-link"><FiTool size={16} /> My Assigned Services</Link>
-          </>
-        )}
+    try {
+      setLoading(true);
+      setError("");
 
-        {/* ================= AUTH ================= */}
-        {!isLoggedIn && (
-          <>
-            <hr style={divider} />
-            <Link style={linkStyle(isActive("/login"))} to="/login" onClick={closeSidebar} className="sidebar-link"><FiLogIn size={16} /> Login</Link>
-            <Link style={linkStyle(isActive("/register"))} to="/register" onClick={closeSidebar} className="sidebar-link"><FiUserPlus size={16} /> Register</Link>
-          </>
-        )}
-      </nav>
+      setupRecaptcha();
 
-      {/* ================= USER INFO ================= */}
-      {isLoggedIn && (
-        <div style={userInfoStyle}>
-          <hr style={divider} />
-          <p style={{ color: "#64748b", fontSize: 12, margin: 0 }}>
-            Logged in as
-            <span style={{
-              color: "#1e293b",
-              fontWeight: "bold",
-              textTransform: "capitalize",
-            }}>
-              {" "}{safeRole}
-            </span>
-          </p>
-          <p style={{ color: "#4CAF50", fontSize: 11, fontWeight: 500 }}>
-            {user?.email?.split("@")[0] || "User"}
-          </p>
-        </div>
-      )}
-    </>
-  );
+      const confirmation = await signInWithPhoneNumber(
+        auth,
+        `+91${cleanPhone}`,
+        window.recaptchaVerifier
+      );
+
+      setConfirmObj(confirmation);
+      setOtpTimer(60);
+      setSuccess("OTP sent successfully!");
+      setStep(2);
+      setActiveStep(1);
+
+    } catch (err) {
+      console.error("Send OTP error:", err);
+      setError("Failed to send OTP. Please check your internet connection and try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ================= ✅ FIXED VERIFY OTP ================= */
+  const verifyOtp = async () => {
+    if (otp.length !== 6) return setError("Please enter a valid 6-digit OTP");
+
+    try {
+      setLoading(true);
+      setError("");
+
+      const result = await confirmObj.confirm(otp);
+      setFirebaseUser(result.user);
+      setOtpVerified(true);
+      setLoginCompleted(true);
+
+      await checkIfNeedsName(result.user);
+
+    } catch (err) {
+      console.error("Verify OTP error:", err);
+      setError("Invalid OTP. Please try again.");
+      setOtpVerified(false);
+      setLoginCompleted(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ================= ✅ FIXED COMPLETE REGISTRATION ================= */
+  const completeRegistration = async () => {
+    if (!firebaseUser) {
+      setError("Session expired. Please try again.");
+      setStep(1);
+      setActiveStep(0);
+      return;
+    }
+    
+    if (!name.trim()) {
+      return setError("Please enter your full name");
+    }
+    
+    try {
+      setLoading(true);
+      setError("");
+
+      const token = localStorage.getItem("token");
+
+      const res = await userAPI.post(
+        "/auth/register",
+        {
+          name: name.trim(),
+          phone: phone
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      console.log("Registration complete response:", res.data);
+
+      if (res.data.success) {
+        setNeedsNameFlow(false);
+        setOtpVerified(false);
+        setLoginCompleted(false);
+
+        setSnackbarMessage(`Welcome ${name.trim()}! Your account has been created.`);
+        setSnackbarOpen(true);
+
+        // ✅ FIXED: Redirect to user bookings after registration
+        setTimeout(() => {
+          navigate("/user/bookings");
+        }, 1500);
+      } else {
+        setError(res.data.message || "Registration failed");
+      }
+
+    } catch (err) {
+      console.error("Complete registration error:", err);
+      setError(err?.response?.data?.message || "Server error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ================= RESEND OTP ================= */
+  const resendOtp = async () => {
+    if (otpTimer > 0) return;
+    setIsResending(true);
+    await sendOtp();
+    setIsResending(false);
+  };
+
+  /* ================= BACK TO PHONE ================= */
+  const backToPhone = () => {
+    setStep(1);
+    setConfirmObj(null);
+    setOtp("");
+    setError("");
+    setActiveStep(0);
+    setNeedsNameFlow(false);
+  };
+
+  // Steps for stepper
+  const steps = ['Mobile Number', 'Verify OTP', 'Complete Profile'];
 
   return (
     <>
-      {/* Mobile Menu Button - only visible on mobile */}
-      {isMobile && (
-        <button onClick={openSidebar} style={menuButton}>
-          <FiMenu size={20} />
-        </button>
-      )}
+      <Backdrop
+        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open={loading}
+      >
+        <CircularProgress color="inherit" />
+      </Backdrop>
 
-      {/* Desktop Sidebar - always visible on desktop */}
-      {!isMobile && (
-        <div style={desktopSidebar}>
-          <SidebarContent />
-        </div>
-      )}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert severity="success" sx={{ width: '100%' }}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
 
-      {/* Mobile Drawer Sidebar - slides in from left */}
-      {isMobile && (
-        <>
-          <div style={drawerSidebar(isOpen)}>
-            <SidebarContent />
-          </div>
-          {isOpen && <div style={overlay} onClick={closeSidebar} />}
-        </>
-      )}
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.15)} 0%, ${alpha(theme.palette.secondary.main, 0.08)} 50%, ${alpha(theme.palette.primary.main, 0.05)} 100%)`,
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        {/* Animated background elements */}
+        <Box
+          sx={{
+            position: "absolute",
+            width: "400px",
+            height: "400px",
+            borderRadius: "50%",
+            background: `radial-gradient(circle, ${alpha(theme.palette.primary.main, 0.15)} 0%, transparent 70%)`,
+            top: "-150px",
+            right: "-150px",
+            animation: "float1 8s ease-in-out infinite",
+          }}
+        />
+        <Box
+          sx={{
+            position: "absolute",
+            width: "300px",
+            height: "300px",
+            borderRadius: "50%",
+            background: `radial-gradient(circle, ${alpha(theme.palette.secondary.main, 0.1)} 0%, transparent 70%)`,
+            bottom: "-100px",
+            left: "-100px",
+            animation: "float2 10s ease-in-out infinite reverse",
+          }}
+        />
+        
+        <style>
+          {`
+            @keyframes float1 {
+              0%, 100% { transform: translateY(0px) rotate(0deg); }
+              50% { transform: translateY(-30px) rotate(5deg); }
+            }
+            @keyframes float2 {
+              0%, 100% { transform: translateY(0px) rotate(0deg); }
+              50% { transform: translateY(30px) rotate(-5deg); }
+            }
+            @keyframes slideUp {
+              from {
+                opacity: 0;
+                transform: translateY(40px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+            @keyframes pulse {
+              0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+              50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
+            }
+            @keyframes shimmer {
+              0% { background-position: -1000px 0; }
+              100% { background-position: 1000px 0; }
+            }
+            @keyframes glow {
+              0%, 100% { box-shadow: 0 0 5px ${alpha(theme.palette.primary.main, 0.3)}; }
+              50% { box-shadow: 0 0 20px ${alpha(theme.palette.primary.main, 0.6)}; }
+            }
+            @keyframes shake {
+              0%, 100% { transform: translateX(0); }
+              25% { transform: translateX(-5px); }
+              75% { transform: translateX(5px); }
+            }
+          `}
+        </style>
 
-      {/* Add global styles for hover effects */}
-      <style>{`
-        .sidebar-link:hover {
-          background: #e2e8f0 !important;
-          transform: translateX(3px);
-        }
-      `}</style>
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          style={{ width: "100%", display: "flex", justifyContent: "center" }}
+        >
+          <Paper
+            elevation={0}
+            sx={{
+              width: 500,
+              maxWidth: "92%",
+              borderRadius: 6,
+              background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.98)} 0%, ${alpha(theme.palette.background.paper, 0.95)} 100%)`,
+              backdropFilter: "blur(20px)",
+              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+              boxShadow: `0 25px 50px -12px ${alpha(theme.palette.common.black, 0.3)}`,
+              overflow: "hidden",
+              position: "relative",
+            }}
+          >
+            {/* Gradient border effect */}
+            <Box
+              sx={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                height: "4px",
+                background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main}, ${theme.palette.success.main}, ${theme.palette.primary.main})`,
+                backgroundSize: "200% 100%",
+                animation: "shimmer 3s linear infinite",
+              }}
+            />
+
+            {/* Header with gradient */}
+            <Box
+              sx={{
+                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.95)} 0%, ${alpha(theme.palette.secondary.main, 0.95)} 100%)`,
+                padding: "35px 32px 25px",
+                textAlign: "center",
+                position: "relative",
+              }}
+            >
+              <Zoom in timeout={600}>
+                <motion.div
+                  whileHover={{ scale: 1.05, rotate: 5 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
+                  <Box
+                    sx={{
+                      width: 80,
+                      height: 80,
+                      margin: "0 auto 20px",
+                      background: "rgba(255,255,255,0.2)",
+                      borderRadius: "25px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backdropFilter: "blur(10px)",
+                      border: "1px solid rgba(255,255,255,0.3)",
+                    }}
+                  >
+                    {step === 1 && <SmartphoneIcon sx={{ fontSize: 45, color: "white" }} />}
+                    {step === 2 && <LockIcon sx={{ fontSize: 45, color: "white" }} />}
+                    {step === 3 && <PersonIcon sx={{ fontSize: 45, color: "white" }} />}
+                  </Box>
+                </motion.div>
+              </Zoom>
+              
+              <Typography
+                variant="h4"
+                sx={{
+                  color: "white",
+                  fontWeight: 800,
+                  mb: 1,
+                  letterSpacing: "-0.5px",
+                  textShadow: "0 2px 10px rgba(0,0,0,0.1)",
+                }}
+              >
+                {step === 1 && "Welcome Back!"}
+                {step === 2 && "Verify Your Number"}
+                {step === 3 && "Complete Your Profile"}
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: alpha(theme.palette.common.white, 0.95),
+                  opacity: 0.95,
+                  fontWeight: 500,
+                }}
+              >
+                {step === 1 && "Enter your mobile number to get started"}
+                {step === 2 && `We've sent a 6-digit code to +91 ${phone}`}
+                {step === 3 && "Please tell us your name to continue"}
+              </Typography>
+            </Box>
+
+            {/* Stepper */}
+            <Box sx={{ px: 4, pt: 3 }}>
+              <Stepper activeStep={activeStep} orientation="horizontal" sx={{ mb: 2 }}>
+                {steps.map((label, index) => (
+                  <Step key={label}>
+                    <StepLabel 
+                      StepIconProps={{
+                        sx: {
+                          '&.Mui-active': { color: theme.palette.primary.main },
+                          '&.Mui-completed': { color: theme.palette.success.main }
+                        }
+                      }}
+                    >
+                      <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                        {label}
+                      </Typography>
+                    </StepLabel>
+                  </Step>
+                ))}
+              </Stepper>
+            </Box>
+
+            {/* Content */}
+            <Box sx={{ padding: "24px 32px 32px" }}>
+              <AnimatePresence mode="wait">
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                  >
+                    <Alert
+                      severity="error"
+                      sx={{
+                        mb: 3,
+                        borderRadius: 2,
+                        animation: "shake 0.3s ease-in-out",
+                      }}
+                      onClose={() => setError("")}
+                      icon={<CloseIcon fontSize="small" />}
+                    >
+                      {error}
+                    </Alert>
+                  </motion.div>
+                )}
+
+                {success && step !== 3 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                  >
+                    <Alert
+                      severity="success"
+                      sx={{ mb: 3, borderRadius: 2 }}
+                      onClose={() => setSuccess("")}
+                    >
+                      {success}
+                    </Alert>
+                  </motion.div>
+                )}
+
+                {/* Step 1: Phone Number */}
+                {step === 1 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <TextField
+                      fullWidth
+                      label="Mobile Number"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                      inputProps={{ maxLength: 10 }}
+                      margin="normal"
+                      variant="outlined"
+                      autoFocus
+                      placeholder="9876543210"
+                      helperText="We'll send a verification code to this number"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Chip 
+                              label="+91" 
+                              size="small" 
+                              sx={{ 
+                                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                fontWeight: 600,
+                                fontSize: "0.85rem"
+                              }} 
+                            />
+                          </InputAdornment>
+                        ),
+                        sx: {
+                          borderRadius: 3,
+                          transition: "all 0.2s",
+                          '&:hover': {
+                            boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.1)}`,
+                          },
+                        }
+                      }}
+                      sx={{
+                        mb: 3,
+                        '& .MuiOutlinedInput-root': {
+                          '&.Mui-focused': {
+                            boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.2)}`,
+                          }
+                        }
+                      }}
+                    />
+
+                    <motion.div
+                      variants={buttonVariants}
+                      whileHover="hover"
+                      whileTap="tap"
+                    >
+                      <Button
+                        fullWidth
+                        onClick={sendOtp}
+                        disabled={loading || phone.replace(/\D/g, "").length !== 10}
+                        variant="contained"
+                        size="large"
+                        endIcon={!loading && <SendIcon />}
+                        sx={{
+                          borderRadius: 3,
+                          py: 1.5,
+                          textTransform: "none",
+                          fontSize: "1rem",
+                          fontWeight: 700,
+                          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                          transition: "all 0.3s",
+                          '&:hover': {
+                            transform: "translateY(-2px)",
+                            boxShadow: `0 8px 20px ${alpha(theme.palette.primary.main, 0.3)}`,
+                          },
+                        }}
+                      >
+                        {loading ? <CircularProgress size={24} color="inherit" /> : "Send OTP"}
+                      </Button>
+                    </motion.div>
+                  </motion.div>
+                )}
+
+                {/* Step 2: OTP Verification */}
+                {step === 2 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <TextField
+                      fullWidth
+                      label="Enter OTP"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                      inputProps={{ maxLength: 6 }}
+                      margin="normal"
+                      variant="outlined"
+                      autoFocus
+                      placeholder="123456"
+                      helperText={`${otpTimer > 0 ? `Code expires in ${otpTimer}s` : "Didn't receive code?"}`}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SecurityIcon color="primary" />
+                          </InputAdornment>
+                        ),
+                        sx: { borderRadius: 3 }
+                      }}
+                      sx={{
+                        mb: 2,
+                        '& .MuiOutlinedInput-root': {
+                          '&.Mui-focused': {
+                            boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.2)}`,
+                          }
+                        }
+                      }}
+                    />
+
+                    <motion.div
+                      variants={buttonVariants}
+                      whileHover="hover"
+                      whileTap="tap"
+                    >
+                      <Button
+                        fullWidth
+                        onClick={verifyOtp}
+                        disabled={loading || otp.length !== 6}
+                        variant="contained"
+                        size="large"
+                        endIcon={!loading && <VerifiedUserIcon />}
+                        sx={{
+                          borderRadius: 3,
+                          py: 1.5,
+                          textTransform: "none",
+                          fontSize: "1rem",
+                          fontWeight: 700,
+                          mb: 2,
+                          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                        }}
+                      >
+                        {loading ? <CircularProgress size={24} color="inherit" /> : "Verify OTP"}
+                      </Button>
+                    </motion.div>
+
+                    <Box sx={{ textAlign: "center", mt: 1 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {otpTimer > 0 ? (
+                          <Chip 
+                            label={`Resend in ${otpTimer}s`} 
+                            size="small" 
+                            variant="outlined"
+                            sx={{ opacity: 0.7 }}
+                          />
+                        ) : (
+                          <Button
+                            onClick={resendOtp}
+                            disabled={isResending}
+                            sx={{
+                              textTransform: "none",
+                              fontWeight: 600,
+                              '&:hover': { background: "transparent" }
+                            }}
+                          >
+                            {isResending ? <CircularProgress size={20} /> : "Resend OTP"}
+                          </Button>
+                        )}
+                      </Typography>
+                      <Button
+                        onClick={backToPhone}
+                        sx={{
+                          mt: 1.5,
+                          textTransform: "none",
+                          color: "text.secondary",
+                          '&:hover': { background: "transparent" }
+                        }}
+                      >
+                        ← Change Phone Number
+                      </Button>
+                    </Box>
+                  </motion.div>
+                )}
+
+                {/* Step 3: Name Collection (For new users only) */}
+                {step === 3 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Box sx={{ textAlign: "center", mb: 3 }}>
+                      <Avatar
+                        sx={{
+                          width: 80,
+                          height: 80,
+                          margin: "0 auto",
+                          bgcolor: alpha(theme.palette.success.main, 0.1),
+                          color: theme.palette.success.main,
+                          mb: 2,
+                          animation: "glow 2s infinite"
+                        }}
+                      >
+                        <EmojiEmotionsIcon sx={{ fontSize: 45 }} />
+                      </Avatar>
+                      <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+                        Welcome to our platform!
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Please tell us your name to personalize your experience
+                      </Typography>
+                    </Box>
+
+                    <TextField
+                      fullWidth
+                      label="Full Name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      margin="normal"
+                      variant="outlined"
+                      autoFocus
+                      placeholder="Enter your full name"
+                      helperText="This will be displayed on your profile"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <PersonIcon color="primary" />
+                          </InputAdornment>
+                        ),
+                        sx: { borderRadius: 3 }
+                      }}
+                      sx={{
+                        mb: 3,
+                        '& .MuiOutlinedInput-root': {
+                          '&.Mui-focused': {
+                            boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.2)}`,
+                          }
+                        }
+                      }}
+                    />
+
+                    <motion.div
+                      variants={buttonVariants}
+                      whileHover="hover"
+                      whileTap="tap"
+                    >
+                      <Button
+                        fullWidth
+                        onClick={completeRegistration}
+                        disabled={loading || !name.trim()}
+                        variant="contained"
+                        size="large"
+                        endIcon={!loading && <CheckCircleIcon />}
+                        sx={{
+                          borderRadius: 3,
+                          py: 1.5,
+                          textTransform: "none",
+                          fontSize: "1rem",
+                          fontWeight: 700,
+                          background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.dark} 100%)`,
+                          transition: "all 0.3s",
+                          '&:hover': {
+                            transform: "translateY(-2px)",
+                            boxShadow: `0 8px 20px ${alpha(theme.palette.success.main, 0.3)}`,
+                          },
+                        }}
+                      >
+                        {loading ? <CircularProgress size={24} color="inherit" /> : "Complete Registration"}
+                      </Button>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Trust badges */}
+              <Box sx={{ mt: 3, textAlign: "center" }}>
+                <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mb: 2 }}>
+                  <Chip 
+                    icon={<SecurityIcon sx={{ fontSize: 16 }} />} 
+                    label="Secure" 
+                    size="small" 
+                    variant="outlined"
+                    sx={{ opacity: 0.7 }}
+                  />
+                  <Chip 
+                    icon={<SpeedIcon sx={{ fontSize: 16 }} />} 
+                    label="Fast" 
+                    size="small" 
+                    variant="outlined"
+                    sx={{ opacity: 0.7 }}
+                  />
+                  <Chip 
+                    icon={<StarsIcon sx={{ fontSize: 16 }} />} 
+                    label="Trusted" 
+                    size="small" 
+                    variant="outlined"
+                    sx={{ opacity: 0.7 }}
+                  />
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                  By continuing, you agree to our Terms of Service and Privacy Policy
+                </Typography>
+              </Box>
+            </Box>
+
+            <div id="recaptcha-container"></div>
+          </Paper>
+        </motion.div>
+      </Box>
     </>
   );
 };
 
-export default Sidebar;
-
-/* ================= STYLES - MODERN GLASS LIGHT THEME ================= */
-
-// Desktop sidebar - glass morphism effect with REDUCED WIDTH (220px)
-const desktopSidebar = {
-  width: 220,
-  background: "rgba(255, 255, 255, 0.85)",
-  backdropFilter: "blur(12px)",
-  borderRight: "1px solid rgba(229, 231, 235, 0.6)",
-  color: "#1e293b",
-  minHeight: "100vh",
-  padding: "18px 14px",
-  position: "fixed",
-  left: 0,
-  top: 0,
-  display: "flex",
-  flexDirection: "column",
-  overflowY: "auto",
-  zIndex: 100,
-  boxShadow: "0 0 20px rgba(0, 0, 0, 0.05)",
-};
-
-// Mobile drawer sidebar - glass effect with slide animation and REDUCED WIDTH (240px)
-const drawerSidebar = (isOpen) => ({
-  width: 240,
-  background: "rgba(255, 255, 255, 0.95)",
-  backdropFilter: "blur(16px)",
-  borderRight: "1px solid rgba(229, 231, 235, 0.8)",
-  color: "#1e293b",
-  minHeight: "100vh",
-  padding: "18px 14px",
-  position: "fixed",
-  left: 0,
-  top: 0,
-  display: "flex",
-  flexDirection: "column",
-  overflowY: "auto",
-  zIndex: 1000,
-  transform: isOpen ? "translateX(0)" : "translateX(-100%)",
-  transition: "transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1)",
-  boxShadow: isOpen ? "4px 0 25px rgba(0, 0, 0, 0.15)" : "none",
-});
-
-// Mobile menu button (hamburger) - modern style
-const menuButton = {
-  position: "fixed",
-  top: 16,
-  left: 16,
-  zIndex: 1100,
-  background: "linear-gradient(135deg, #2563eb, #10b981)",
-  color: "#fff",
-  border: "none",
-  padding: "10px 12px",
-  borderRadius: 12,
-  cursor: "pointer",
-  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-  transition: "all 0.2s ease",
-  backdropFilter: "blur(4px)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
-
-// Close button inside mobile sidebar
-const closeBtn = {
-  background: "rgba(0, 0, 0, 0.05)",
-  border: "none",
-  color: "#64748b",
-  position: "absolute",
-  right: 14,
-  top: 18,
-  cursor: "pointer",
-  padding: 6,
-  borderRadius: 40,
-  width: 28,
-  height: 28,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 1001,
-  transition: "background 0.2s",
-};
-
-// Overlay when mobile sidebar is open
-const overlay = {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  width: "100%",
-  height: "100%",
-  background: "rgba(0, 0, 0, 0.3)",
-  backdropFilter: "blur(2px)",
-  zIndex: 999,
-  transition: "all 0.3s ease",
-};
-
-const companyHeader = {
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  marginBottom: 16,
-  paddingBottom: 6,
-  borderBottom: "1px solid #e2e8f0",
-};
-
-const logoImage = {
-  width: 38,
-  height: 38,
-  borderRadius: 10,
-  boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
-};
-
-const companyName = {
-  fontSize: 18,
-  fontWeight: "bold",
-  margin: 0,
-  letterSpacing: "-0.3px",
-};
-
-const companyTagline = {
-  fontSize: 9,
-  color: "#64748b",
-  marginTop: 2,
-  letterSpacing: "0.2px",
-};
-
-const nav = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 4,
-  flex: 1,
-};
-
-const divider = {
-  borderTop: "1px solid #e2e8f0",
-  margin: "12px 0",
-};
-
-const sectionLabel = {
-  fontSize: 10,
-  color: "#64748b",
-  letterSpacing: 0.5,
-  fontWeight: 600,
-  marginTop: 4,
-  marginBottom: 6,
-  paddingLeft: 8,
-};
-
-const userInfoStyle = {
-  marginTop: "auto",
-  paddingTop: 12,
-};
+export default PhoneLogin;
