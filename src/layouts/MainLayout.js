@@ -50,27 +50,46 @@ const MainLayout = () => {
     );
   }
 
-  /* ================= AUTH PROTECTION ================= */
-  if (!user && !loading && location.pathname !== "/login" && location.pathname !== "/register") {
-    return <Navigate to="/login" replace />;
+  /* ================= AUTH PROTECTION (FIXED) ================= */
+  // ✅ Public routes that anyone can access
+  const publicRoutes = ["/", "/login", "/register", "/pg"];
+  
+  if (!user && !loading) {
+    const isPublic = publicRoutes.some(route =>
+      location.pathname === route || location.pathname.startsWith(route + "/")
+    );
+    
+    if (!isPublic) {
+      return <Navigate to="/login" replace />;
+    }
+  }
+  
+  // ✅ OPTIONAL: Redirect logged-in users away from login/register
+  if (user && (location.pathname === "/login" || location.pathname === "/register")) {
+    return <Navigate to="/" replace />;
   }
 
   /* ================= TITLE ================= */
   const getTitle = () => {
-    if (location.pathname === "/") return "DASHBOARD";
+    if (location.pathname === "/") return "Find Your Perfect Stay";
+    if (location.pathname === "/pg") return "PG Listings";
+    if (location.pathname.startsWith("/pg/")) return "PG Details";
+    if (location.pathname === "/booking") return "My Bookings";
+    if (location.pathname === "/owner/dashboard") return "Owner Dashboard";
+    if (location.pathname === "/profile") return "My Profile";
     const path = location.pathname.split("/").pop();
     return path ? path.replace("-", " ").toUpperCase() : "PAGE";
   };
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
-      {/* SIDEBAR */}
-      <Sidebar role={role} user={user} />
+      {/* SIDEBAR - Only show if user is logged in */}
+      {user && <Sidebar role={role} user={user} />}
 
       {/* MAIN CONTENT - AUTO SYNC WITH SIDEBAR WIDTH */}
       <div
         style={{
-          marginLeft: isMobile ? 0 : SIDEBAR_WIDTH,
+          marginLeft: user && !isMobile ? SIDEBAR_WIDTH : 0,
           padding: isMobile ? "12px" : "24px",
           width: "100%",
           minHeight: "100vh",
