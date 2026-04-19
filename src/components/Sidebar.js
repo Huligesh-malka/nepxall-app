@@ -134,7 +134,7 @@ const Sidebar = ({ role, user }) => {
             <Link style={linkStyle(isActive("/user/my-stay"))} to="/user/my-stay" onClick={closeSidebar} className="sidebar-link"><FiHome size={16} /> My Stay</Link>
             <Link style={linkStyle(isActive("/user/bookings"))} to="/user/bookings" onClick={closeSidebar} className="sidebar-link"><FiCalendar size={16} /> My Bookings</Link>
             <Link style={linkStyle(isActive("/"))} to="/" onClick={closeSidebar} className="sidebar-link"><FiSearch size={16} /> Browse Properties</Link>
-                {/* 🔥 ADD HERE */}
+            {/* 🔥 ADD HERE */}
     <Link 
       style={linkStyle(isActive("/become-owner"))} 
       to="/become-owner" 
@@ -174,6 +174,21 @@ const Sidebar = ({ role, user }) => {
             <Link style={linkStyle(isActive("/owner/verification"))} to="/owner/verification" onClick={closeSidebar} className="sidebar-link"><FiCheckCircle size={16} /> Verification</Link>
             <Link style={linkStyle(isActive("/owner/notifications"))} to="/owner/notifications" onClick={closeSidebar} className="sidebar-link"><FiBell size={16} /> Notifications</Link>
             <Link style={linkStyle(isActive("/owner/chats"))} to="/owner/chats" onClick={closeSidebar} className="sidebar-link"><FiMessageCircle size={16} /> Chats</Link>
+            
+            {/* ✅ POLICY LINKS ADDED FOR OWNER */}
+            <hr style={divider} />
+            <Link style={linkStyle(isActive("/contact"))} to="/contact" onClick={closeSidebar} className="sidebar-link">
+              <FiMail size={16} /> Contact Us
+            </Link>
+            <Link style={linkStyle(isActive("/terms"))} to="/terms" onClick={closeSidebar} className="sidebar-link">
+              <FiFlag size={16} /> Terms & Conditions
+            </Link>
+            <Link style={linkStyle(isActive("/refund-policy"))} to="/refund-policy" onClick={closeSidebar} className="sidebar-link">
+              <FiShield size={16} /> Refund Policy
+            </Link>
+            <Link style={linkStyle(isActive("/privacy-policy"))} to="/privacy-policy" onClick={closeSidebar} className="sidebar-link">
+              <FiLock size={16} /> Privacy Policy
+            </Link>
           </>
         )}
 
