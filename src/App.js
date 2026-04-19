@@ -98,6 +98,40 @@ import { testBackendConnection } from "./config";
 const BRAND_BLUE = "#0B5ED7";
 const BRAND_GREEN = "#4CAF50";
 
+// Protected Route Component - FIXED
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  // Don't redirect while checking auth
+  if (loading) {
+    return null; // Let the loading screen handle this
+  }
+  
+  // Only redirect if we're sure there's no user
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return children;
+};
+
+// Role-based Route Component - FIXED
+const RoleBasedRoute = ({ children, allowedRole }) => {
+  const { user, role, loading } = useAuth();
+  
+  // Don't redirect while checking auth
+  if (loading) {
+    return null;
+  }
+  
+  // Redirect to home if not authenticated or wrong role
+  if (!user || role !== allowedRole) {
+    return <Navigate to="/" replace />;
+  }
+  
+  return children;
+};
+
 function App() {
   const { user, role, loading } = useAuth();
 
@@ -105,7 +139,7 @@ function App() {
     testBackendConnection();
   }, []);
 
-  // Beautiful brand loading screen
+  // Beautiful brand loading screen - FIXED to show properly
   if (loading) {
     return (
       <div style={{
@@ -217,12 +251,6 @@ function App() {
     );
   }
 
-  const PrivateRoute = ({ children }) =>
-    user ? children : <Navigate to="/login" replace />;
-
-  const RoleRoute = ({ children, allowedRole }) =>
-    user && role === allowedRole ? children : <Navigate to="/" replace />;
-
   return (
     <Routes>
       {/* 🌍 PUBLIC ROUTES - NO AUTH REQUIRED */}
@@ -242,7 +270,11 @@ function App() {
       <Route path="/register" element={<Register />} />
 
       {/* 🔐 PROTECTED ROUTES - WITH MainLayout */}
-      <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
+      <Route element={
+        <ProtectedRoute>
+          <MainLayout />
+        </ProtectedRoute>
+      }>
         <Route path="/booking/:pgId" element={<BookingForm />} />
         <Route path="/user/bookings" element={<UserBookingHistory />} />
         <Route path="/become-owner" element={<BecomeOwner />} />
@@ -266,11 +298,11 @@ function App() {
 
       {/* 👑 OWNER ROUTES */}
       <Route path="/owner" element={
-        <PrivateRoute>
-          <RoleRoute allowedRole="owner">
+        <ProtectedRoute>
+          <RoleBasedRoute allowedRole="owner">
             <OwnerLayout />
-          </RoleRoute>
-        </PrivateRoute>
+          </RoleBasedRoute>
+        </ProtectedRoute>
       }>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<OwnerDashboard />} />
@@ -296,11 +328,11 @@ function App() {
 
       {/* 🛡️ ADMIN ROUTES */}
       <Route path="/admin" element={
-        <PrivateRoute>
-          <RoleRoute allowedRole="admin">
+        <ProtectedRoute>
+          <RoleBasedRoute allowedRole="admin">
             <AdminLayout />
-          </RoleRoute>
-        </PrivateRoute>
+          </RoleBasedRoute>
+        </ProtectedRoute>
       }>
         <Route index element={<Navigate to="finance" replace />} />
         <Route path="finance" element={<AdminFinanceDashboard />} />
@@ -319,11 +351,11 @@ function App() {
 
       {/* 🔧 VENDOR ROUTES */}
       <Route path="/vendor" element={
-        <PrivateRoute>
-          <RoleRoute allowedRole="vendor">
+        <ProtectedRoute>
+          <RoleBasedRoute allowedRole="vendor">
             <VendorLayout />
-          </RoleRoute>
-        </PrivateRoute>
+          </RoleBasedRoute>
+        </ProtectedRoute>
       }>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<VendorDashboard />} />
