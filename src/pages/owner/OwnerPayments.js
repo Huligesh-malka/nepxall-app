@@ -663,41 +663,39 @@
                                       />
                                     </TableCell>
                                     <TableCell align="center" sx={{ p: { xs: 1, md: 2 } }}>
-                                      {!item.final_pdf ? (
-                                        <Chip label="Processing PDF..." variant="outlined" size="small" />
-                                      ) : isSigned ? (
-                                        <Button 
-                                          color="success" 
-                                          variant="contained" 
-                                          size="small"
-                                          sx={{ borderRadius: 2, textTransform: 'none', fontSize: { xs: '0.7rem', md: '0.75rem' }, p: { xs: '4px 8px', md: '6px 12px' } }}
-                                          onClick={() => handleViewPdf(item.booking_id, item.signed_pdf)}
-                                        >
-                                          VIEW PDF
-                                        </Button>
-                                      ) : (
-                                        <Stack direction="row" spacing={1} justifyContent="center">
-                                          <Button 
-                                            variant="outlined" 
-                                            size="small" 
-                                            sx={{ borderRadius: 2, textTransform: 'none', fontSize: { xs: '0.7rem', md: '0.75rem' }, p: { xs: '4px 8px', md: '6px 12px' } }}
-                                            onClick={() => handleViewPdf(item.booking_id, item.final_pdf)}
-                                          >
-                                            DRAFT
-                                          </Button>
-                                          {item.viewed_by_owner && (
-                                            <Button 
-                                              variant="contained" 
-                                              color="warning" 
-                                              size="small" 
-                                              sx={{ borderRadius: 2, textTransform: 'none', fontSize: { xs: '0.7rem', md: '0.75rem' }, p: { xs: '4px 8px', md: '6px 12px' } }}
-                                              onClick={() => handleOpenSign(item)}
-                                            >
-                                              SIGN
-                                            </Button>
-                                          )}
-                                        </Stack>
-                                      )}
+                                      {(!item.final_pdf || item.final_pdf === "0") ? (
+  <Chip label="Processing..." variant="outlined" size="small" />
+) : isSigned ? (
+  <Button 
+    color="success"
+    variant="contained"
+    size="small"
+    onClick={() => handleViewPdf(item.booking_id, item.signed_pdf)}
+  >
+    VIEW PDF
+  </Button>
+) : (
+  <Stack direction="row" spacing={1} justifyContent="center">
+    <Button
+      variant="outlined"
+      size="small"
+      onClick={() => handleViewPdf(item.booking_id, item.final_pdf)}
+    >
+      DRAFT
+    </Button>
+
+    {item.viewed_by_owner && (
+      <Button
+        variant="contained"
+        color="warning"
+        size="small"
+        onClick={() => handleOpenSign(item)}
+      >
+        SIGN
+      </Button>
+    )}
+  </Stack>
+)}
                                     </TableCell>
                                     <TableCell align="center" sx={{ p: { xs: 1, md: 2 } }}>
                                       {item.owner_settlement === "DONE" ? (
