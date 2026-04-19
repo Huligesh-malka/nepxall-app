@@ -1234,7 +1234,7 @@ const OwnerDashboard = () => {
                   <Box>
                     
                   </Box>
-                  <MoneyIcon sx={{ fontSize: { xs: 28, sm: 36 }, color: '#4CAF50', opacity: 0.7 }} />
+                  
                 </Box>
               </Box>
             </Grid>
