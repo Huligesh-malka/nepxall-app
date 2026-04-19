@@ -19,11 +19,9 @@ const OwnerBookings = () => {
     try {
       setError("");
       const token = await user.getIdToken(true);
-
       const res = await api.get("/owner/bookings", {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       setBookings(Array.isArray(res.data.data) ? res.data.data : []);
     } catch (err) {
       console.error(err);
@@ -45,36 +43,12 @@ const OwnerBookings = () => {
     if (!loading && !user) navigate("/login");
   }, [user, loading, navigate]);
 
-  // 🔥 UPDATED FUNCTION (MAIN CHANGE)
   const updateStatus = async (bookingId, status) => {
     try {
       setActionLoading(bookingId);
       setSuccess("");
-
       const token = await user.getIdToken(true);
 
-      // 🔍 STEP 1: CHECK BANK DETAILS
-      const bankRes = await api.get("/owner/bank", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const hasBank =
-        bankRes.data &&
-        bankRes.data.account_number &&
-        bankRes.data.ifsc;
-
-      // ❌ If bank not added → redirect
-      if (!hasBank) {
-        navigate("/owner/bank", {
-          state: {
-            message:
-              "⚠️ Please complete your bank details to continue onboarding.",
-          },
-        });
-        return;
-      }
-
-      // ✅ STEP 2: APPROVE / REJECT
       await api.put(
         `/owner/bookings/${bookingId}`,
         { status },
@@ -83,7 +57,6 @@ const OwnerBookings = () => {
 
       setSuccess(`Booking ${status.toUpperCase()} successfully`);
       loadOwnerBookings();
-
       setTimeout(() => setSuccess(""), 2500);
     } catch (err) {
       alert(err.response?.data?.message || "Action failed");
