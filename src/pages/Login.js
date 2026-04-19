@@ -41,11 +41,11 @@ const PhoneLogin = () => {
   const verificationInProgress = useRef(false);
   const registrationInProgress = useRef(false);
 
-  /* ================= AUTO REDIRECT (STRICT LOCK) ================= */
+  /* ================= AUTO REDIRECT (FIXED) ================= */
   useEffect(() => {
-    // 🔥 CRITICAL FIX: If we need a name, DO NOT REDIRECT.
-    // This stops the infinite loop to the phone number page.
-    if (authLoading || needsName || registrationComplete || redirectInProgress.current) {
+    // 🔥 FIX: We add 'loading' to the block list to prevent redirecting 
+    // while the API response for Step 2 or 3 is still pending.
+    if (loading || authLoading || needsName || registrationComplete || redirectInProgress.current) {
       return;
     }
     
@@ -55,16 +55,25 @@ const PhoneLogin = () => {
     if (storedToken && storedUser) {
       try {
         const userData = JSON.parse(storedUser);
-        // Only redirect if a valid name exists in the profile
-        if (userData.name && userData.name.trim() !== "" && !/^[0-9+]+$/.test(userData.name)) {
+        
+        // Check if the user has a real name (not just a phone number string)
+        const hasValidName = userData.name && 
+                             userData.name.trim() !== "" && 
+                             !/^[0-9+]+$/.test(userData.name);
+
+        if (hasValidName) {
           redirectInProgress.current = true;
           redirect(userData.role || "tenant");
+        } else {
+          // If token exists but name is missing, force Step 3
+          setNeedsName(true);
+          setStep(3);
         }
       } catch (e) {
         console.error("Auth sync error:", e);
       }
     }
-  }, [authLoading, registrationComplete, needsName]); // needsName is a dependency
+  }, [authLoading, registrationComplete, needsName, loading]);
 
   const redirect = (role) => {
     if (role === "admin") navigate("/admin/dashboard");
@@ -118,11 +127,11 @@ const PhoneLogin = () => {
       const res = await userAPI.post("/auth/firebase", { idToken, role: "tenant", phone });
       
       if (res.data.success) {
-        // Always save credentials to maintain the session
+        // Save the session data immediately
         saveAuthData(res.data.token, res.data.user);
 
         if (res.data.needsName) {
-          // 🔥 Set needsName FIRST to block the Auto-Redirect useEffect
+          // 🔥 Lock the redirect and move to Name Input
           setNeedsName(true);
           setStep(3);
         } else {
@@ -147,13 +156,14 @@ const PhoneLogin = () => {
     try {
       setLoading(true);
       const idToken = await firebaseUser.getIdToken(true);
-      // Send the name to complete the profile
+      
+      // Send the name to the backend to update the MySQL record
       const res = await userAPI.post("/auth/firebase", { idToken, phone, name: name.trim() });
       
       if (res.data.success) {
         saveAuthData(res.data.token, res.data.user);
         setRegistrationComplete(true);
-        setNeedsName(false); // Unlock the redirect
+        setNeedsName(false); // Unlock the redirect logic
         setSnackbarMessage("Profile created successfully!");
         setSnackbarOpen(true);
         setTimeout(() => redirect(res.data.user?.role), 1000);
@@ -184,6 +194,7 @@ const PhoneLogin = () => {
       <Backdrop sx={{ color: '#fff', zIndex: 9999 }} open={loading}><CircularProgress color="inherit" /></Backdrop>
 
       <Paper elevation={3} sx={{ width: 450, borderRadius: 4, overflow: "hidden" }}>
+        {/* Banner Header */}
         <Box sx={{ bgcolor: "primary.main", color: "white", p: 4, textAlign: "center" }}>
            <Avatar sx={{ width: 60, height: 60, mx: "auto", mb: 2, bgcolor: "rgba(255,255,255,0.2)" }}>
               {step === 1 ? <SmartphoneIcon /> : step === 2 ? <LockIcon /> : <PersonIcon />}
@@ -214,7 +225,7 @@ const PhoneLogin = () => {
           {step === 3 && (
             <Box sx={{ textAlign: "center" }}>
               <TextField fullWidth label="Full Name" value={name} onChange={(e) => setName(e.target.value)} margin="normal" autoFocus />
-              <Button fullWidth variant="contained" size="large" onClick={completeRegistration} sx={{ mt: 2 }} disabled={name.length < 3}>
+              <Button fullWidth variant="contained" size="large" onClick={completeRegistration} sx={{ mt: 2 }} disabled={name.trim().length < 3}>
                 Finish & Explore
               </Button>
             </Box>
