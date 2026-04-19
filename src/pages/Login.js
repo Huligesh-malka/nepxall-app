@@ -2,15 +2,12 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   Box, TextField, Button, Typography, Paper,
   CircularProgress, Alert, InputAdornment, alpha, useTheme,
-  Stepper, Step, StepLabel, Avatar, Chip, Backdrop, Snackbar, Zoom
+  Avatar, Backdrop, Snackbar
 } from "@mui/material";
 import {
   Smartphone as SmartphoneIcon, Lock as LockIcon,
-  Person as PersonIcon, Send as SendIcon,
-  VerifiedUser as VerifiedUserIcon, EmojiEmotions as EmojiEmotionsIcon,
-  Security as SecurityIcon, Close as CloseIcon
+  Person as PersonIcon
 } from "@mui/icons-material";
-import { motion, AnimatePresence } from "framer-motion";
 import { auth } from "../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { userAPI } from "../api/api";
@@ -18,7 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const PhoneLogin = () => {
-  const { user, loading: authLoading, login } = useAuth();
+  const { loading: authLoading, login } = useAuth();
   const theme = useTheme();
   const navigate = useNavigate();
 
@@ -36,24 +33,19 @@ const PhoneLogin = () => {
   // UI states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [otpTimer, setOtpTimer] = useState(0);
   const [step, setStep] = useState(1);
-  const [activeStep, setActiveStep] = useState(0);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [isResending, setIsResending] = useState(false);
   
   const redirectInProgress = useRef(false);
   const verificationInProgress = useRef(false);
   const registrationInProgress = useRef(false);
 
-  const steps = ['Mobile Number', 'Verify OTP', 'Complete Profile'];
-
-  /* ================= AUTO REDIRECT (FIXED) ================= */
+  /* ================= AUTO REDIRECT (STRICT LOCK) ================= */
   useEffect(() => {
-    // 🔥 FIX: Prevent redirect if we explicitly need a name or just finished registering
-    if (authLoading || registrationComplete || needsName || redirectInProgress.current) {
+    // 🔥 CRITICAL FIX: If we need a name, DO NOT REDIRECT.
+    // This stops the infinite loop to the phone number page.
+    if (authLoading || needsName || registrationComplete || redirectInProgress.current) {
       return;
     }
     
@@ -63,18 +55,16 @@ const PhoneLogin = () => {
     if (storedToken && storedUser) {
       try {
         const userData = JSON.parse(storedUser);
-        // Only redirect if name actually exists in the stored object
-        if (userData.name && userData.name.trim() !== "") {
+        // Only redirect if a valid name exists in the profile
+        if (userData.name && userData.name.trim() !== "" && !/^[0-9+]+$/.test(userData.name)) {
           redirectInProgress.current = true;
-          setTimeout(() => {
-            redirect(userData.role || "tenant");
-          }, 500);
+          redirect(userData.role || "tenant");
         }
       } catch (e) {
-        console.error("Error parsing user data:", e);
+        console.error("Auth sync error:", e);
       }
     }
-  }, [user, authLoading, registrationComplete, needsName]);
+  }, [authLoading, registrationComplete, needsName]); // needsName is a dependency
 
   const redirect = (role) => {
     if (role === "admin") navigate("/admin/dashboard");
@@ -105,9 +95,7 @@ const PhoneLogin = () => {
       setupRecaptcha();
       const confirmation = await signInWithPhoneNumber(auth, `+91${cleanPhone}`, window.recaptchaVerifier);
       setConfirmObj(confirmation);
-      setOtpTimer(60);
       setStep(2);
-      setActiveStep(1);
     } catch (err) {
       setError("Failed to send OTP. Try again.");
     } finally {
@@ -123,10 +111,6 @@ const PhoneLogin = () => {
       setLoading(true);
       setError("");
 
-      // 🔥 FIX: Clear any old session data before verifying new one
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-
       const result = await confirmObj.confirm(otp);
       setFirebaseUser(result.user);
       const idToken = await result.user.getIdToken(true);
@@ -134,21 +118,22 @@ const PhoneLogin = () => {
       const res = await userAPI.post("/auth/firebase", { idToken, role: "tenant", phone });
       
       if (res.data.success) {
+        // Always save credentials to maintain the session
+        saveAuthData(res.data.token, res.data.user);
+
         if (res.data.needsName) {
-          // Stay on this page but move to Step 3
+          // 🔥 Set needsName FIRST to block the Auto-Redirect useEffect
           setNeedsName(true);
           setStep(3);
-          setActiveStep(2);
         } else {
-          saveAuthData(res.data.token, res.data.user);
           setRegistrationComplete(true);
           setSnackbarMessage("Welcome back!");
           setSnackbarOpen(true);
-          setTimeout(() => redirect(res.data.user?.role), 1500);
+          setTimeout(() => redirect(res.data.user?.role), 1000);
         }
       }
     } catch (err) {
-      setError("Invalid OTP or server error.");
+      setError("Invalid OTP. Please check and try again.");
     } finally {
       setLoading(false);
       verificationInProgress.current = false;
@@ -162,15 +147,16 @@ const PhoneLogin = () => {
     try {
       setLoading(true);
       const idToken = await firebaseUser.getIdToken(true);
+      // Send the name to complete the profile
       const res = await userAPI.post("/auth/firebase", { idToken, phone, name: name.trim() });
       
       if (res.data.success) {
         saveAuthData(res.data.token, res.data.user);
         setRegistrationComplete(true);
-        setNeedsName(false); // 🔥 Ensure redirect check is now allowed
+        setNeedsName(false); // Unlock the redirect
         setSnackbarMessage("Profile created successfully!");
         setSnackbarOpen(true);
-        setTimeout(() => redirect(res.data.user?.role), 1500);
+        setTimeout(() => redirect(res.data.user?.role), 1000);
       }
     } catch (err) {
       setError("Failed to save profile.");
@@ -182,8 +168,7 @@ const PhoneLogin = () => {
 
   const backToPhone = () => {
     setStep(1);
-    setActiveStep(0);
-    setNeedsName(false); // Reset state
+    setNeedsName(false);
     setOtp("");
     setError("");
   };
@@ -193,19 +178,18 @@ const PhoneLogin = () => {
       <div id="recaptcha-container"></div>
       
       <Snackbar open={snackbarOpen} autoHideDuration={3000} onClose={() => setSnackbarOpen(false)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-        <Alert severity="success">{snackbarMessage}</Alert>
+        <Alert severity="success" variant="filled">{snackbarMessage}</Alert>
       </Snackbar>
 
       <Backdrop sx={{ color: '#fff', zIndex: 9999 }} open={loading}><CircularProgress color="inherit" /></Backdrop>
 
       <Paper elevation={3} sx={{ width: 450, borderRadius: 4, overflow: "hidden" }}>
-        {/* Header Section */}
         <Box sx={{ bgcolor: "primary.main", color: "white", p: 4, textAlign: "center" }}>
            <Avatar sx={{ width: 60, height: 60, mx: "auto", mb: 2, bgcolor: "rgba(255,255,255,0.2)" }}>
               {step === 1 ? <SmartphoneIcon /> : step === 2 ? <LockIcon /> : <PersonIcon />}
            </Avatar>
            <Typography variant="h5" fontWeight="bold">
-             {step === 1 ? "Login" : step === 2 ? "Verify OTP" : "Almost There!"}
+             {step === 1 ? "Login" : step === 2 ? "Verify OTP" : "Complete Profile"}
            </Typography>
         </Box>
 
@@ -221,7 +205,7 @@ const PhoneLogin = () => {
 
           {step === 2 && (
             <>
-              <TextField fullWidth label="6-Digit OTP" value={otp} onChange={(e) => setOtp(e.target.value)} margin="normal" />
+              <TextField fullWidth label="6-Digit OTP" value={otp} onChange={(e) => setOtp(e.target.value)} margin="normal" autoFocus />
               <Button fullWidth variant="contained" size="large" onClick={verifyOtp} sx={{ mt: 2 }}>Verify</Button>
               <Button fullWidth onClick={backToPhone} sx={{ mt: 1 }}>Back</Button>
             </>
