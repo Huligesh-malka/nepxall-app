@@ -652,7 +652,7 @@ For any queries, please contact support.
                       </button>
                      <button
   style={styles.iconButton}
-  onClick={() => window.open("/stamp-paper.pdf", "_blank")}
+ onClick={() => window.open("/e-stamp.jpg", "_blank")}
   title="Preview Agreement"
 >
   <span style={styles.buttonIcon}>📑</span>
