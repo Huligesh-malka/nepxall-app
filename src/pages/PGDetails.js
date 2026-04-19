@@ -468,7 +468,17 @@ const RuleItem = ({ icon, label, allowed, description }) => (
 );
 
 const InfoRow = ({ label, value }) => {
-  if (!value || value === "false" || value === false || value === "") return null;
+  if (
+  value === null ||
+  value === undefined ||
+  value === "" ||
+  value === "0" ||
+  value === 0 ||
+  value === false ||
+  value === "false"
+) {
+  return null;
+}
   return (
     <div style={modernStyles.infoRow}>
       <strong>{label}:</strong> {value}
