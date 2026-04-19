@@ -207,10 +207,11 @@ const PhoneLogin = () => {
 
   /* ================= VERIFY OTP ================= */
   const verifyOtp = async () => {
-    if (verificationInProgress.current) {
-      return;
-    }
-    
+    // 🔥 FIX 1: Lock verification properly
+    if (verificationInProgress.current) return;
+    if (firebaseUser) return; // 🔥 ADD THIS: Already verified
+    if (registrationComplete) return; // 🔥 ADD THIS: Already completed
+
     if (otp.length !== 6) {
       return setError("Please enter a valid 6-digit OTP");
     }
@@ -278,9 +279,9 @@ const PhoneLogin = () => {
 
   /* ================= COMPLETE REGISTRATION WITH NAME (FIXED) ================= */
   const completeRegistration = async () => {
-    if (registrationInProgress.current) {
-      return;
-    }
+    // 🔥 FIX 4: Most important - move guards to top with early returns
+    if (registrationInProgress.current) return;
+    if (registrationComplete) return;
     
     // ✅ Check if firebaseUser exists
     if (!firebaseUser) {
@@ -749,7 +750,7 @@ const PhoneLogin = () => {
                       <Button
                         fullWidth
                         onClick={verifyOtp}
-                        disabled={loading || otp.length !== 6 || verificationInProgress.current}
+                        disabled={loading || otp.length !== 6 || verificationInProgress.current || registrationComplete}
                         variant="contained"
                         size="large"
                         endIcon={!loading && <VerifiedUserIcon />}
@@ -871,7 +872,7 @@ const PhoneLogin = () => {
                       <Button
                         fullWidth
                         onClick={completeRegistration}
-                        disabled={loading || !name.trim() || name.trim().length < 3 || registrationInProgress.current}
+                        disabled={loading || !name.trim() || name.trim().length < 3 || registrationInProgress.current || registrationComplete}
                         variant="contained"
                         size="large"
                         endIcon={!loading && <CheckCircleIcon />}
