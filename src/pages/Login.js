@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box, TextField, Button, Typography, Paper,
   CircularProgress, Alert, Fade, Grow, Zoom,
@@ -37,9 +37,13 @@ const PhoneLogin = () => {
   const [name, setName] = useState("");
   const [confirmObj, setConfirmObj] = useState(null);
   const [firebaseUser, setFirebaseUser] = useState(null);
+  
+  // Flow control states
   const [otpVerified, setOtpVerified] = useState(false);
-  const [loginCompleted, setLoginCompleted] = useState(false);
-
+  const [registrationCompleted, setRegistrationCompleted] = useState(false);
+  const [isExistingUser, setIsExistingUser] = useState(false);
+  const [needsName, setNeedsName] = useState(false);
+  
   // UI states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -50,7 +54,10 @@ const PhoneLogin = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [isResending, setIsResending] = useState(false);
-  const [needsNameFlow, setNeedsNameFlow] = useState(false); // 🔥 NEW STATE to block auto-redirect
+  
+  // Refs to prevent duplicate calls
+  const verificationInProgress = useRef(false);
+  const redirectInProgress = useRef(false);
 
   const navigate = useNavigate();
 
@@ -66,18 +73,24 @@ const PhoneLogin = () => {
     tap: { scale: 0.98 }
   };
 
-  /* ================= AUTO REDIRECT (FIXED - BLOCKS WHEN NAME FLOW ACTIVE) ================= */
-useEffect(() => {
-  if (!authLoading && user && authRole) {
+  /* ================= AUTO REDIRECT FOR EXISTING USERS ================= */
+  useEffect(() => {
+    // Don't redirect if:
+    // 1. Still loading auth state
+    // 2. No user
+    // 3. No role
+    // 4. Registration is in progress (new user)
+    // 5. Already redirected
+    if (authLoading || !user || !authRole || needsName || redirectInProgress.current) {
+      return;
+    }
 
-    // 🔥 HARD BLOCK → prevents second OTP flow
-    if (loginCompleted) return;
-
-    if (!user.name) return;
-
-    redirect(authRole);
-  }
-}, [user, authRole, authLoading]);
+    // Only redirect if user has name (existing user)
+    if (user.name && !needsName) {
+      redirectInProgress.current = true;
+      redirect(authRole);
+    }
+  }, [user, authRole, authLoading, needsName]);
 
   /* ================= LANGUAGE ================= */
   useEffect(() => {
@@ -93,6 +106,19 @@ useEffect(() => {
       return () => clearTimeout(timer);
     }
   }, [otpTimer]);
+
+  /* ================= CLEANUP RECAPTCHA ================= */
+  useEffect(() => {
+    return () => {
+      if (window.recaptchaVerifier) {
+        try {
+          window.recaptchaVerifier.clear();
+        } catch (err) {
+          console.error("Error clearing recaptcha:", err);
+        }
+      }
+    };
+  }, []);
 
   /* ================= RECAPTCHA SETUP ================= */
   const setupRecaptcha = () => {
@@ -121,47 +147,56 @@ useEffect(() => {
     else navigate("/");
   };
 
+  /* ================= CHECK IF USER NEEDS NAME ================= */
   const checkIfNeedsName = async (firebaseUserObj) => {
-  try {
-    const idToken = await firebaseUserObj.getIdToken(true);
+    try {
+      const idToken = await firebaseUserObj.getIdToken(true);
 
-    const res = await userAPI.post("/auth/firebase", {
-      idToken,
-      role: "tenant",
-      phone: phone
-    });
+      const res = await userAPI.post("/auth/firebase", {
+        idToken,
+        role: "tenant",
+        phone: phone
+      });
 
-    console.log("✅ FULL RESPONSE:", res.data);
+      console.log("✅ User check response:", res.data);
 
-    // 🔥 IMPORTANT FIX
-   if (res.data.needsName === true || !res.data.name) {
-  setNeedsNameFlow(true);
+      // If user exists and has a name
+      if (res.data.exists && res.data.name) {
+        setIsExistingUser(true);
+        setNeedsName(false);
+        setRegistrationCompleted(true);
+        
+        // Show welcome back message
+        setSnackbarMessage(`Welcome back ${res.data.name}!`);
+        setSnackbarOpen(true);
+        
+        // Redirect after short delay
+        setTimeout(() => {
+          redirect(res.data.role);
+        }, 1500);
+        
+        return false;
+      }
+      
+      // New user - needs to provide name
+      setNeedsName(true);
+      setIsExistingUser(false);
+      setStep(3);
+      setActiveStep(2);
+      return true;
+      
+    } catch (err) {
+      console.error("❌ Error checking user:", err);
+      
+      // On error, assume new user to be safe
+      setNeedsName(true);
+      setIsExistingUser(false);
+      setStep(3);
+      setActiveStep(2);
+      return true;
+    }
+  };
 
-  setStep(3);
-setActiveStep(2);
-
-  return true;
-}
-
-// ✅ ADD THIS (MAIN FIX)
-setNeedsNameFlow(false);
-
-// 🔥 REDIRECT EXISTING USER
-redirect(res.data.role);
-
-return false;
-
-  } catch (err) {
-    console.error("❌ ERROR:", err);
-
-    // 🔥 FALLBACK (VERY IMPORTANT)
-    setNeedsNameFlow(true);
-    setStep(3);
-    setActiveStep(2);
-
-    return true;
-  }
-};
   /* ================= SEND OTP ================= */
   const sendOtp = async () => {
     const cleanPhone = phone.replace(/\D/g, "");
@@ -172,6 +207,7 @@ return false;
     try {
       setLoading(true);
       setError("");
+      setSuccess("");
 
       setupRecaptcha();
 
@@ -186,6 +222,7 @@ return false;
       setSuccess("OTP sent successfully!");
       setStep(2);
       setActiveStep(1);
+      setOtp(""); // Clear any previous OTP
 
     } catch (err) {
       console.error("Send OTP error:", err);
@@ -195,39 +232,50 @@ return false;
     }
   };
 
-  /* ================= VERIFY OTP (FIXED WITH AWAIT) ================= */
- const verifyOtp = async () => {
-  if (otp.length !== 6) return setError("Please enter a valid 6-digit OTP");
+  /* ================= VERIFY OTP ================= */
+  const verifyOtp = async () => {
+    // Prevent multiple verification attempts
+    if (verificationInProgress.current) {
+      return;
+    }
+    
+    if (otp.length !== 6) {
+      return setError("Please enter a valid 6-digit OTP");
+    }
 
-  try {
-    setLoading(true);
-    setError("");
+    verificationInProgress.current = true;
+    
+    try {
+      setLoading(true);
+      setError("");
+      setSuccess("");
 
-    const result = await confirmObj.confirm(otp);
+      const result = await confirmObj.confirm(otp);
+      setFirebaseUser(result.user);
+      setOtpVerified(true);
+      
+      setSuccess("OTP verified successfully!");
+      
+      // Check if user needs to provide name
+      await checkIfNeedsName(result.user);
+      
+    } catch (err) {
+      console.error("Verify OTP error:", err);
+      setError("Invalid OTP. Please try again.");
+      setOtpVerified(false);
+    } finally {
+      setLoading(false);
+      verificationInProgress.current = false;
+    }
+  };
 
-    setFirebaseUser(result.user);
-
-    setOtpVerified(true);
-    setLoginCompleted(true); // 🔥 MAIN LOCK
-
-    await checkIfNeedsName(result.user);
-
-  } catch (err) {
-    console.error("Verify OTP error:", err);
-    setError("Invalid OTP. Please try again.");
-    setOtpVerified(false);
-    setLoginCompleted(false);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  /* ================= COMPLETE REGISTRATION ================= */
+  /* ================= COMPLETE REGISTRATION FOR NEW USER ================= */
   const completeRegistration = async () => {
     if (!firebaseUser) {
       setError("Session expired. Please try again.");
       setStep(1);
       setActiveStep(0);
+      setNeedsName(false);
       return;
     }
     
@@ -241,36 +289,45 @@ return false;
 
       const token = localStorage.getItem("token");
 
-const res = await userAPI.post(
-  "/auth/register",
-  {
-    name: name.trim(),
-    phone: phone
-  },
-  {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  }
-);
+      const res = await userAPI.post(
+        "/auth/register",
+        {
+          name: name.trim(),
+          phone: phone
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
 
-console.log("Registration complete response:", res.data);
+      console.log("Registration complete response:", res.data);
 
-if (res.data.success) {
-  setNeedsNameFlow(false);
-  setOtpVerified(false); 
-  setLoginCompleted(false);
-
-  setSnackbarMessage(`Welcome ${name.trim()}! Your account has been created.`);
-  setSnackbarOpen(true);
-
-  setTimeout(() => {
-    navigate("/"); // or redirect based on role
-  }, 1500);
-} else {
-  setError(res.data.message || "Registration failed");
-}
-
+      if (res.data.success) {
+        setRegistrationCompleted(true);
+        setNeedsName(false);
+        
+        setSnackbarMessage(`Welcome ${name.trim()}! Your account has been created.`);
+        setSnackbarOpen(true);
+        
+        // Reset states
+        setOtpVerified(false);
+        setStep(1);
+        setActiveStep(0);
+        setOtp("");
+        setPhone("");
+        setName("");
+        
+        // Redirect to home after registration
+        setTimeout(() => {
+          navigate("/");
+        }, 2000);
+        
+      } else {
+        setError(res.data.message || "Registration failed");
+      }
+      
     } catch (err) {
       console.error("Complete registration error:", err);
       setError(err?.response?.data?.message || "Server error. Please try again.");
@@ -290,11 +347,36 @@ if (res.data.success) {
   /* ================= BACK TO PHONE ================= */
   const backToPhone = () => {
     setStep(1);
+    setActiveStep(0);
     setConfirmObj(null);
     setOtp("");
     setError("");
+    setSuccess("");
+    setNeedsName(false);
+    setOtpVerified(false);
+    setRegistrationCompleted(false);
+    setIsExistingUser(false);
+    verificationInProgress.current = false;
+    redirectInProgress.current = false;
+  };
+
+  /* ================= RESET FLOW ================= */
+  const resetFlow = () => {
+    setStep(1);
     setActiveStep(0);
-    setNeedsNameFlow(false); // Reset name flow flag
+    setPhone("");
+    setOtp("");
+    setName("");
+    setConfirmObj(null);
+    setFirebaseUser(null);
+    setOtpVerified(false);
+    setRegistrationCompleted(false);
+    setIsExistingUser(false);
+    setNeedsName(false);
+    setError("");
+    setSuccess("");
+    verificationInProgress.current = false;
+    redirectInProgress.current = false;
   };
 
   // Steps for stepper
@@ -495,27 +577,29 @@ if (res.data.success) {
               </Typography>
             </Box>
 
-            {/* Stepper */}
-            <Box sx={{ px: 4, pt: 3 }}>
-              <Stepper activeStep={activeStep} orientation="horizontal" sx={{ mb: 2 }}>
-                {steps.map((label, index) => (
-                  <Step key={label}>
-                    <StepLabel 
-                      StepIconProps={{
-                        sx: {
-                          '&.Mui-active': { color: theme.palette.primary.main },
-                          '&.Mui-completed': { color: theme.palette.success.main }
-                        }
-                      }}
-                    >
-                      <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                        {label}
-                      </Typography>
-                    </StepLabel>
-                  </Step>
-                ))}
-              </Stepper>
-            </Box>
+            {/* Stepper - Only show for new user flow */}
+            {needsName && step === 3 && (
+              <Box sx={{ px: 4, pt: 3 }}>
+                <Stepper activeStep={activeStep} orientation="horizontal" sx={{ mb: 2 }}>
+                  {steps.map((label, index) => (
+                    <Step key={label}>
+                      <StepLabel 
+                        StepIconProps={{
+                          sx: {
+                            '&.Mui-active': { color: theme.palette.primary.main },
+                            '&.Mui-completed': { color: theme.palette.success.main }
+                          }
+                        }}
+                      >
+                        <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                          {label}
+                        </Typography>
+                      </StepLabel>
+                    </Step>
+                  ))}
+                </Stepper>
+              </Box>
+            )}
 
             {/* Content */}
             <Box sx={{ padding: "24px 32px 32px" }}>
@@ -685,7 +769,7 @@ if (res.data.success) {
                       <Button
                         fullWidth
                         onClick={verifyOtp}
-                        disabled={loading || otp.length !== 6}
+                        disabled={loading || otp.length !== 6 || verificationInProgress.current}
                         variant="contained"
                         size="large"
                         endIcon={!loading && <VerifiedUserIcon />}
@@ -742,7 +826,7 @@ if (res.data.success) {
                 )}
 
                 {/* Step 3: Name Collection (For new users only) */}
-                {step === 3 && (
+                {step === 3 && needsName && (
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
