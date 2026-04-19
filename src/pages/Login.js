@@ -40,16 +40,15 @@ const PhoneLogin = () => {
   
   // Flow control states
   const [otpVerified, setOtpVerified] = useState(false);
-  const [isExistingUser, setIsExistingUser] = useState(false);
-  const [needsName, setNeedsName] = useState(false);
-  const [flowCompleted, setFlowCompleted] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
+  const [registrationComplete, setRegistrationComplete] = useState(false);
   
   // UI states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [otpTimer, setOtpTimer] = useState(0);
-  const [step, setStep] = useState(1); // 1: Phone, 2: OTP, 3: Name
+  const [step, setStep] = useState(1); // 1: Phone, 2: OTP, 3: Name (only for new users without name)
   const [activeStep, setActiveStep] = useState(0);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -58,7 +57,7 @@ const PhoneLogin = () => {
   // Refs to prevent duplicate calls
   const verificationInProgress = useRef(false);
   const redirectInProgress = useRef(false);
-  const nameSubmissionInProgress = useRef(false);
+  const registrationInProgress = useRef(false);
 
   const navigate = useNavigate();
 
@@ -74,21 +73,22 @@ const PhoneLogin = () => {
     tap: { scale: 0.98 }
   };
 
+  // Steps for stepper
+  const steps = ['Mobile Number', 'Verify OTP', 'Complete Profile'];
+
   /* ================= AUTO REDIRECT FOR EXISTING USERS ================= */
   useEffect(() => {
-    // Don't redirect if:
-    if (authLoading || !user || !authRole || needsName || flowCompleted || redirectInProgress.current) {
+    if (authLoading || registrationComplete || redirectInProgress.current) {
       return;
     }
-
-    // Only redirect if user has name (existing user)
-    if (user.name && user.name.trim() !== "" && !needsName) {
+    
+    if (user && user.role && user.name && user.name.trim() !== "") {
       redirectInProgress.current = true;
       setTimeout(() => {
-        redirect(authRole);
+        redirect(user.role);
       }, 1000);
     }
-  }, [user, authRole, authLoading, needsName, flowCompleted]);
+  }, [user, authLoading, registrationComplete]);
 
   /* ================= LANGUAGE ================= */
   useEffect(() => {
@@ -145,62 +145,61 @@ const PhoneLogin = () => {
     else navigate("/");
   };
 
-  /* ================= CHECK IF USER NEEDS NAME ================= */
-  const checkIfNeedsName = async (firebaseUserObj) => {
+  /* ================= HANDLE AUTHENTICATION AFTER OTP ================= */
+  const handleAuthentication = async (firebaseUserObj, userName = null) => {
     try {
       const idToken = await firebaseUserObj.getIdToken(true);
+      const finalName = userName || name.trim();
       
-      console.log("Checking user with phone:", phone);
+      console.log("Authenticating user...", { phone, name: finalName });
       
-      const res = await userAPI.post("/auth/firebase", {
-        idToken,
-        role: "tenant",
-        phone: phone
+      const response = await userAPI.post("/auth/register", {
+        idToken: idToken,
+        phone: phone,
+        name: finalName || null,
+        firebase_uid: firebaseUserObj.uid
       });
-
-      console.log("✅ User check response:", res.data);
-
-      // Store the user data in context if needed
-      if (res.data.user && !user) {
-        // You might want to update your auth context here
-        // login(res.data.user);
-      }
-
-      // Check if user needs to provide name
-      if (res.data.needsName === true) {
-        console.log("User needs to provide name");
-        setNeedsName(true);
-        setIsExistingUser(res.data.isExistingUser || false);
-        setStep(3);
-        setActiveStep(2);
+      
+      console.log("Authentication response:", response.data);
+      
+      if (response.data.success) {
+        setRegistrationComplete(true);
+        
+        if (response.data.isNewUser) {
+          setSnackbarMessage(`Welcome ${finalName}! Your account has been created.`);
+        } else {
+          setSnackbarMessage(`Welcome back ${response.data.user.name}!`);
+        }
+        
+        setSnackbarOpen(true);
+        
+        // Store user in context if needed
+        if (response.data.user && login) {
+          login(response.data.user);
+        }
+        
+        // Redirect after short delay
+        setTimeout(() => {
+          redirect(response.data.user?.role || "tenant");
+        }, 1500);
+        
         return true;
+      } else {
+        setError(response.data.message || "Authentication failed");
+        
+        // If needs name, show name step
+        if (response.data.needsName) {
+          setStep(3);
+          setActiveStep(2);
+          setIsNewUser(true);
+        }
+        
+        return false;
       }
-      
-      // User has a name and is existing
-      console.log("Existing user with name, redirecting...");
-      setNeedsName(false);
-      setIsExistingUser(true);
-      setFlowCompleted(true);
-      
-      setSnackbarMessage(res.data.message || `Welcome back ${res.data.user?.name || ''}!`);
-      setSnackbarOpen(true);
-      
-      // Redirect after short delay
-      setTimeout(() => {
-        redirect(res.data.user?.role || "tenant");
-      }, 1500);
-      
-      return false;
-      
     } catch (err) {
-      console.error("❌ Error checking user:", err);
-      
-      // On error, show name collection to be safe
-      setNeedsName(true);
-      setIsExistingUser(false);
-      setStep(3);
-      setActiveStep(2);
-      return true;
+      console.error("Authentication error:", err);
+      setError(err?.response?.data?.message || "Server error. Please try again.");
+      return false;
     }
   };
 
@@ -229,7 +228,7 @@ const PhoneLogin = () => {
       setSuccess("OTP sent successfully!");
       setStep(2);
       setActiveStep(1);
-      setOtp(""); // Clear any previous OTP
+      setOtp("");
 
     } catch (err) {
       console.error("Send OTP error:", err);
@@ -241,9 +240,7 @@ const PhoneLogin = () => {
 
   /* ================= VERIFY OTP ================= */
   const verifyOtp = async () => {
-    // Prevent multiple verification attempts
     if (verificationInProgress.current) {
-      console.log("Verification already in progress");
       return;
     }
     
@@ -256,7 +253,7 @@ const PhoneLogin = () => {
     try {
       setLoading(true);
       setError("");
-      setSuccess("");
+      setSuccess("Verifying OTP...");
 
       const result = await confirmObj.confirm(otp);
       setFirebaseUser(result.user);
@@ -264,25 +261,46 @@ const PhoneLogin = () => {
       
       setSuccess("OTP verified successfully!");
       
-      // Check if user needs to provide name
-      await checkIfNeedsName(result.user);
+      // First, check if user exists and needs name
+      const idToken = await result.user.getIdToken(true);
+      
+      const checkResponse = await userAPI.post("/auth/firebase", {
+        idToken,
+        role: "tenant",
+        phone: phone
+      });
+      
+      console.log("User check:", checkResponse.data);
+      
+      if (checkResponse.data.needsName === true) {
+        // New user or user without name - show name form
+        setStep(3);
+        setActiveStep(2);
+        setIsNewUser(true);
+        setSuccess("");
+      } else if (checkResponse.data.user && checkResponse.data.user.name) {
+        // Existing user with name - complete authentication
+        await handleAuthentication(result.user);
+      } else {
+        // Fallback - show name form
+        setStep(3);
+        setActiveStep(2);
+        setIsNewUser(true);
+      }
       
     } catch (err) {
       console.error("Verify OTP error:", err);
       setError("Invalid OTP. Please try again.");
       setOtpVerified(false);
-      setStep(2); // Stay on OTP step
     } finally {
       setLoading(false);
       verificationInProgress.current = false;
     }
   };
 
-  /* ================= COMPLETE REGISTRATION FOR NEW USER ================= */
+  /* ================= COMPLETE REGISTRATION WITH NAME ================= */
   const completeRegistration = async () => {
-    // Prevent multiple submissions
-    if (nameSubmissionInProgress.current) {
-      console.log("Name submission already in progress");
+    if (registrationInProgress.current) {
       return;
     }
     
@@ -290,7 +308,6 @@ const PhoneLogin = () => {
       setError("Session expired. Please try again.");
       setStep(1);
       setActiveStep(0);
-      setNeedsName(false);
       return;
     }
     
@@ -303,74 +320,24 @@ const PhoneLogin = () => {
     }
     
     if (/^[0-9+]+$/.test(name.trim())) {
-      return setError("Please enter a valid name (not phone number)");
+      return setError("Please enter a valid name (not a phone number)");
     }
     
-    nameSubmissionInProgress.current = true;
+    registrationInProgress.current = true;
     
     try {
       setLoading(true);
       setError("");
-
-      const idToken = await firebaseUser.getIdToken(true);
       
-      console.log("Registering user with name:", name.trim(), "phone:", phone);
-      
-      const res = await userAPI.post(
-        "/auth/register",
-        {
-          name: name.trim(),
-          phone: phone,
-          idToken: idToken
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${idToken}`
-          }
-        }
-      );
-
-      console.log("Registration complete response:", res.data);
-
-      if (res.data.success) {
-        setFlowCompleted(true);
-        setNeedsName(false);
-        
-        setSnackbarMessage(`Welcome ${name.trim()}! Your account has been created.`);
-        setSnackbarOpen(true);
-        
-        // Reset all states
-        setTimeout(() => {
-          // Clear all form data
-          setPhone("");
-          setOtp("");
-          setName("");
-          setConfirmObj(null);
-          setFirebaseUser(null);
-          setOtpVerified(false);
-          setStep(1);
-          setActiveStep(0);
-          
-          // Redirect to home after registration
-          navigate("/");
-        }, 2000);
-        
-      } else {
-        setError(res.data.message || "Registration failed");
-        // Keep user on name step if registration fails
-        setStep(3);
-        setActiveStep(2);
-      }
+      // Complete authentication with name
+      await handleAuthentication(firebaseUser, name.trim());
       
     } catch (err) {
       console.error("Complete registration error:", err);
       setError(err?.response?.data?.message || "Server error. Please try again.");
-      // Keep user on name step
-      setStep(3);
-      setActiveStep(2);
     } finally {
       setLoading(false);
-      nameSubmissionInProgress.current = false;
+      registrationInProgress.current = false;
     }
   };
 
@@ -390,18 +357,14 @@ const PhoneLogin = () => {
     setOtp("");
     setError("");
     setSuccess("");
-    setNeedsName(false);
     setOtpVerified(false);
-    setFlowCompleted(false);
-    setIsExistingUser(false);
+    setRegistrationComplete(false);
+    setIsNewUser(false);
     setFirebaseUser(null);
     verificationInProgress.current = false;
     redirectInProgress.current = false;
-    nameSubmissionInProgress.current = false;
+    registrationInProgress.current = false;
   };
-
-  // Steps for stepper
-  const steps = ['Mobile Number', 'Verify OTP', 'Complete Profile'];
 
   return (
     <>
@@ -434,7 +397,6 @@ const PhoneLogin = () => {
           overflow: "hidden",
         }}
       >
-        {/* Animated background elements */}
         <Box
           sx={{
             position: "absolute",
@@ -507,7 +469,6 @@ const PhoneLogin = () => {
               position: "relative",
             }}
           >
-            {/* Gradient border effect */}
             <Box
               sx={{
                 position: "absolute",
@@ -521,7 +482,6 @@ const PhoneLogin = () => {
               }}
             />
 
-            {/* Header with gradient */}
             <Box
               sx={{
                 background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.95)} 0%, ${alpha(theme.palette.secondary.main, 0.95)} 100%)`,
@@ -584,8 +544,8 @@ const PhoneLogin = () => {
               </Typography>
             </Box>
 
-            {/* Stepper - Only show when needed */}
-            {(step === 2 || (step === 3 && needsName)) && (
+            {/* Stepper */}
+            {(step === 2 || step === 3) && (
               <Box sx={{ px: 4, pt: 3 }}>
                 <Stepper activeStep={activeStep} orientation="horizontal" sx={{ mb: 2 }}>
                   {steps.map((label, index) => (
@@ -832,8 +792,8 @@ const PhoneLogin = () => {
                   </motion.div>
                 )}
 
-                {/* Step 3: Name Collection (For new users only) */}
-                {step === 3 && needsName && (
+                {/* Step 3: Name Collection (Only for users who need it) */}
+                {step === 3 && (
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -871,7 +831,7 @@ const PhoneLogin = () => {
                       variant="outlined"
                       autoFocus
                       placeholder="Enter your full name"
-                      helperText="This will be displayed on your profile"
+                      helperText="This will be displayed on your profile (minimum 3 characters)"
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
@@ -898,7 +858,7 @@ const PhoneLogin = () => {
                       <Button
                         fullWidth
                         onClick={completeRegistration}
-                        disabled={loading || !name.trim() || nameSubmissionInProgress.current}
+                        disabled={loading || !name.trim() || name.trim().length < 3 || registrationInProgress.current}
                         variant="contained"
                         size="large"
                         endIcon={!loading && <CheckCircleIcon />}
