@@ -24,7 +24,6 @@ const PhoneLogin = () => {
   const [otp, setOtp] = useState("");
   const [name, setName] = useState("");
   const [confirmObj, setConfirmObj] = useState(null);
-  const [firebaseUser, setFirebaseUser] = useState(null);
   
   // Flow control states
   const [needsName, setNeedsName] = useState(false);
@@ -41,10 +40,9 @@ const PhoneLogin = () => {
   const verificationInProgress = useRef(false);
   const registrationInProgress = useRef(false);
 
-  /* ================= AUTO REDIRECT (FIXED) ================= */
+  /* ================= AUTO REDIRECT LOGIC ================= */
   useEffect(() => {
-    // 🔥 FIX: We add 'loading' to the block list to prevent redirecting 
-    // while the API response for Step 2 or 3 is still pending.
+    // Prevent redirect if busy or name is explicitly needed
     if (loading || authLoading || needsName || registrationComplete || redirectInProgress.current) {
       return;
     }
@@ -55,17 +53,14 @@ const PhoneLogin = () => {
     if (storedToken && storedUser) {
       try {
         const userData = JSON.parse(storedUser);
-        
-        // Check if the user has a real name (not just a phone number string)
         const hasValidName = userData.name && 
-                             userData.name.trim() !== "" && 
+                             userData.name.trim().length >= 3 && 
                              !/^[0-9+]+$/.test(userData.name);
 
         if (hasValidName) {
           redirectInProgress.current = true;
           redirect(userData.role || "tenant");
         } else {
-          // If token exists but name is missing, force Step 3
           setNeedsName(true);
           setStep(3);
         }
@@ -106,7 +101,7 @@ const PhoneLogin = () => {
       setConfirmObj(confirmation);
       setStep(2);
     } catch (err) {
-      setError("Failed to send OTP. Try again.");
+      setError("Failed to send OTP. Check your connection.");
     } finally {
       setLoading(false);
     }
@@ -121,17 +116,17 @@ const PhoneLogin = () => {
       setError("");
 
       const result = await confirmObj.confirm(otp);
-      setFirebaseUser(result.user);
       const idToken = await result.user.getIdToken(true);
       
-      const res = await userAPI.post("/auth/firebase", { idToken, role: "tenant", phone });
+      const res = await userAPI.post("/auth/firebase", { 
+        idToken, 
+        role: "tenant", 
+        phone: phone.replace(/\D/g, "") 
+      });
       
       if (res.data.success) {
-        // Save the session data immediately
         saveAuthData(res.data.token, res.data.user);
-
         if (res.data.needsName) {
-          // 🔥 Lock the redirect and move to Name Input
           setNeedsName(true);
           setStep(3);
         } else {
@@ -142,34 +137,45 @@ const PhoneLogin = () => {
         }
       }
     } catch (err) {
-      setError("Invalid OTP. Please check and try again.");
+      setError("Invalid OTP. Try again.");
     } finally {
       setLoading(false);
       verificationInProgress.current = false;
     }
   };
 
+  /* ================= COMPLETE PROFILE (STEP 3) ================= */
   const completeRegistration = async () => {
     if (registrationInProgress.current || !name.trim()) return;
     registrationInProgress.current = true;
     
     try {
       setLoading(true);
-      const idToken = await firebaseUser.getIdToken(true);
+      setError("");
+
+      // 🔥 FIX: Re-fetch fresh token from auth.currentUser to avoid session expiration
+      if (!auth.currentUser) throw new Error("Firebase session lost");
+      const idToken = await auth.currentUser.getIdToken(true);
       
-      // Send the name to the backend to update the MySQL record
-      const res = await userAPI.post("/auth/firebase", { idToken, phone, name: name.trim() });
+      const res = await userAPI.post("/auth/firebase", { 
+        idToken, 
+        phone: phone.replace(/\D/g, ""), 
+        name: name.trim() 
+      });
       
       if (res.data.success) {
         saveAuthData(res.data.token, res.data.user);
         setRegistrationComplete(true);
-        setNeedsName(false); // Unlock the redirect logic
+        setNeedsName(false);
         setSnackbarMessage("Profile created successfully!");
         setSnackbarOpen(true);
         setTimeout(() => redirect(res.data.user?.role), 1000);
+      } else {
+        setError(res.data.message || "Failed to update profile.");
       }
     } catch (err) {
-      setError("Failed to save profile.");
+      console.error("Profile Save Error:", err);
+      setError("Failed to save profile. Please check your network.");
     } finally {
       setLoading(false);
       registrationInProgress.current = false;
@@ -194,7 +200,6 @@ const PhoneLogin = () => {
       <Backdrop sx={{ color: '#fff', zIndex: 9999 }} open={loading}><CircularProgress color="inherit" /></Backdrop>
 
       <Paper elevation={3} sx={{ width: 450, borderRadius: 4, overflow: "hidden" }}>
-        {/* Banner Header */}
         <Box sx={{ bgcolor: "primary.main", color: "white", p: 4, textAlign: "center" }}>
            <Avatar sx={{ width: 60, height: 60, mx: "auto", mb: 2, bgcolor: "rgba(255,255,255,0.2)" }}>
               {step === 1 ? <SmartphoneIcon /> : step === 2 ? <LockIcon /> : <PersonIcon />}
