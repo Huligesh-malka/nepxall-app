@@ -47,8 +47,42 @@ const OwnerBookings = () => {
     try {
       setActionLoading(bookingId);
       setSuccess("");
+      
       const token = await user.getIdToken(true);
 
+      // 🔥 CHECK: If approving, verify bank details first
+      if (status === "approved") {
+        try {
+          const bankRes = await api.get("/owner/bank", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          const hasBank = bankRes.data?.account_number && bankRes.data?.ifsc;
+
+          if (!hasBank) {
+            // Redirect to bank details page with message
+            navigate("/owner/bank", {
+              state: {
+                message: "⚠️ Please complete your bank details to continue onboarding tenants.",
+              },
+            });
+            return;
+          }
+        } catch (bankErr) {
+          // If bank endpoint returns 404 or error, assume no bank details
+          if (bankErr.response?.status === 404) {
+            navigate("/owner/bank", {
+              state: {
+                message: "⚠️ Please add your bank details before approving bookings.",
+              },
+            });
+            return;
+          }
+          throw bankErr; // Re-throw other errors
+        }
+      }
+
+      // ✅ Proceed with approval/rejection
       await api.put(
         `/owner/bookings/${bookingId}`,
         { status },
@@ -59,6 +93,7 @@ const OwnerBookings = () => {
       loadOwnerBookings();
       setTimeout(() => setSuccess(""), 2500);
     } catch (err) {
+      console.error("Update status error:", err);
       alert(err.response?.data?.message || "Action failed");
     } finally {
       setActionLoading(null);
@@ -245,6 +280,7 @@ const approveBtn = {
   border: "none",
   borderRadius: 6,
   marginRight: 8,
+  cursor: "pointer",
 };
 
 const rejectBtn = {
@@ -253,4 +289,5 @@ const rejectBtn = {
   color: "#fff",
   border: "none",
   borderRadius: 6,
+  cursor: "pointer",
 };

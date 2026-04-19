@@ -210,10 +210,6 @@ function OwnerAddPG() {
   const [form, setForm] = useState(initialForm);
   const [manualEditMode, setManualEditMode] = useState(false);
   
-  // Plan state
-  const [plan, setPlan] = useState(null);
-  const [planLoading, setPlanLoading] = useState(true);
-  
   // Validation error states (for red warnings)
   const [validationErrors, setValidationErrors] = useState({});
   
@@ -248,23 +244,6 @@ function OwnerAddPG() {
       }));
     }
   }, [user, role, authLoading, navigate]);
-
-  const loadUserPlan = async () => {
-    try {
-      setPlanLoading(true);
-      const response = await pgAPI.getPlan();
-      setPlan(response.data);
-    } catch (err) {
-      console.error("Failed to load plan:", err);
-      setPlan(null);
-    } finally {
-      setPlanLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user && role === "owner") loadUserPlan();
-  }, [user, role]);
 
   // Gender / type sync
   useEffect(() => {
@@ -395,10 +374,6 @@ function OwnerAddPG() {
 
   const handlePhotoUpload = (e) => {
     const files = Array.from(e.target.files);
-    if (plan && photos.length + files.length > plan.max_photos_per_pg) {
-      alert(`❌ Your ${plan.name} plan allows only ${plan.max_photos_per_pg} photos per PG. Upgrade to upload more!`);
-      return;
-    }
     if (photos.length + files.length > 10) {
       alert("Maximum 10 photos allowed");
       return;
@@ -437,16 +412,10 @@ function OwnerAddPG() {
     if (value !== "" && value !== null && value !== undefined) fd.append(key, value.toString());
   };
 
-  const isLimitReached = plan && plan.current_usage?.total_pgs >= plan.max_listings;
-
   const handleSubmit = async () => {
     if (!user) {
       alert("Please log in to add a property");
       navigate("/login");
-      return;
-    }
-    if (isLimitReached) {
-      alert(`🚫 Your ${plan?.name} plan limit of ${plan?.max_listings} ${isToLet ? 'properties' : 'listings'} has been reached. Please upgrade to add more.`);
       return;
     }
     if (!validateForm()) {
@@ -588,42 +557,18 @@ function OwnerAddPG() {
   const getErrorStyle = (fieldName) => validationErrors[fieldName] ? { border: "2px solid #f44336", backgroundColor: "#ffebee" } : {};
 
   // ================= RENDER =================
-  if (authLoading || planLoading) {
+  if (authLoading) {
     return <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh"><CircularProgress /></Box>;
   }
   if (!user) return <Navigate to="/login" replace />;
   if (role !== "owner") return <Navigate to="/" replace />;
 
-  const isSubmitDisabled = loading || !selectedLocation.address || photos.length === 0 || !form.pg_name?.trim() || !form.contact_person?.trim() || !form.contact_phone?.trim() || isLimitReached;
+  const isSubmitDisabled = loading || !selectedLocation.address || photos.length === 0 || !form.pg_name?.trim() || !form.contact_person?.trim() || !form.contact_phone?.trim();
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
         <h2 style={styles.title}>➕ Add New Property</h2>
-        
-        {/* Plan info */}
-        {plan && (
-          <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", borderRadius: 12, padding: 16, marginBottom: 24, color: "white" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-              <div>
-                <h3 style={{ margin: "0 0 8px 0", fontSize: 18 }}>💎 Current Plan: {plan.name}</h3>
-                <p style={{ margin: "4px 0", fontSize: 14 }}>📊 Listings: {plan.current_usage?.total_pgs || 0} / {plan.max_listings}</p>
-                <p style={{ margin: "4px 0", fontSize: 12, opacity: 0.9 }}>📅 Expires: {new Date(plan.expiry_date).toLocaleDateString("en-IN")}</p>
-              </div>
-              <button onClick={() => navigate("/owner/premium")} style={{ backgroundColor: "white", color: "#667eea", border: "none", padding: "8px 16px", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 14 }}>🚀 Upgrade Plan</button>
-            </div>
-            <div style={{ marginTop: 12, height: 6, backgroundColor: "rgba(255,255,255,0.3)", borderRadius: 3, overflow: "hidden" }}>
-              <div style={{ width: `${((plan.current_usage?.total_pgs || 0) / plan.max_listings) * 100}%`, height: "100%", backgroundColor: "#4ade80", borderRadius: 3 }} />
-            </div>
-          </div>
-        )}
-        
-        {isLimitReached && (
-          <div style={{ backgroundColor: "#fff3cd", border: "1px solid #ffc107", borderRadius: 12, padding: 16, marginBottom: 24, textAlign: "center" }}>
-            <p style={{ color: "#856404", marginBottom: 12, fontSize: 16 }}>🚫 Your {plan?.name} plan limit of {plan?.max_listings} {isToLet ? 'properties' : 'listings'} has been reached.</p>
-            <button onClick={() => navigate("/owner/premium")} style={{ backgroundColor: "#ffc107", color: "#333", border: "none", padding: "10px 24px", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 14 }}>🚀 Upgrade Plan to Add More</button>
-          </div>
-        )}
         
         {/* Basic Information */}
         <div style={styles.section}>
@@ -631,11 +576,11 @@ function OwnerAddPG() {
           <div style={styles.grid}>
             <div style={styles.inputGroup}>
               <label>Property Name *</label>
-              <input name="pg_name" placeholder={isToLet ? "e.g., 2BHK Flat, Independent House" : "e.g., Royal PG, Cozy Coliving"} value={form.pg_name} onChange={handleChange} style={{...styles.input, ...getErrorStyle("pg_name")}} required disabled={isLimitReached} />
+              <input name="pg_name" placeholder={isToLet ? "e.g., 2BHK Flat, Independent House" : "e.g., Royal PG, Cozy Coliving"} value={form.pg_name} onChange={handleChange} style={{...styles.input, ...getErrorStyle("pg_name")}} required />
             </div>
             <div style={styles.inputGroup}>
               <label>Property Category *</label>
-              <select name="pg_category" value={form.pg_category} onChange={handleChange} style={styles.input} disabled={isLimitReached}>
+              <select name="pg_category" value={form.pg_category} onChange={handleChange} style={styles.input}>
                 <option value="pg">PG/Hostel</option>
                 <option value="coliving">Co-Living Space</option>
                 <option value="to_let">House/Flat To Let</option>
@@ -644,7 +589,7 @@ function OwnerAddPG() {
             {!isToLet && (
               <div style={styles.inputGroup}>
                 <label>Property Type *</label>
-                <select name="pg_type" value={form.pg_type} onChange={handleChange} style={styles.input} disabled={isLimitReached}>
+                <select name="pg_type" value={form.pg_type} onChange={handleChange} style={styles.input}>
                   <option value="boys">Boys Only</option>
                   <option value="girls">Girls Only</option>
                   <option value="coliving">Co-Living</option>
@@ -656,13 +601,13 @@ function OwnerAddPG() {
             <div style={styles.grid}>
               <div style={styles.inputGroup}>
                 <label>BHK Type *</label>
-                <select name="bhk_type" value={form.bhk_type} onChange={handleChange} style={styles.input} disabled={isLimitReached}>
+                <select name="bhk_type" value={form.bhk_type} onChange={handleChange} style={styles.input}>
                   <option value="1">1 BHK</option><option value="2">2 BHK</option><option value="3">3 BHK</option><option value="4">4 BHK</option><option value="4+">4+ BHK</option>
                 </select>
               </div>
               <div style={styles.inputGroup}>
                 <label>Furnishing Type *</label>
-                <select name="furnishing_type" value={form.furnishing_type} onChange={handleChange} style={styles.input} disabled={isLimitReached}>
+                <select name="furnishing_type" value={form.furnishing_type} onChange={handleChange} style={styles.input}>
                   <option value="unfurnished">Unfurnished</option>
                   <option value="semi_furnished">Semi-Furnished</option>
                   <option value="fully_furnished">Fully Furnished</option>
@@ -676,8 +621,8 @@ function OwnerAddPG() {
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>Location *</h3>
           <div style={styles.locationButtons}>
-            <button type="button" onClick={() => setShowMap(true)} style={styles.mapButton} disabled={isLimitReached}>🗺️ Select on OpenStreetMap</button>
-            <button type="button" onClick={() => setManualEditMode(true)} style={styles.manualAddressButton} disabled={isLimitReached}>📝 Enter Address Manually</button>
+            <button type="button" onClick={() => setShowMap(true)} style={styles.mapButton}>🗺️ Select on OpenStreetMap</button>
+            <button type="button" onClick={() => setManualEditMode(true)} style={styles.manualAddressButton}>📝 Enter Address Manually</button>
           </div>
           {selectedLocation.address ? (
             <div style={styles.locationPreview}>
@@ -773,15 +718,15 @@ function OwnerAddPG() {
           <div style={styles.checkboxGrid}>
             {!isToLet && (
               <>
-                <label style={styles.checkboxLabel}><input type="checkbox" name="food_available" checked={form.food_available} onChange={handleChange} style={styles.checkbox} disabled={isLimitReached} /> 🍽️ Food Available</label>
+                <label style={styles.checkboxLabel}><input type="checkbox" name="food_available" checked={form.food_available} onChange={handleChange} style={styles.checkbox} /> 🍽️ Food Available</label>
                 {form.food_available && (
                   <div style={{ gridColumn: "1 / -1" }}>
                     <label style={{ marginRight: 10 }}>Food Type:</label>
-                    <select name="food_type" value={form.food_type} onChange={handleChange} style={{...styles.input, width: 150, display: "inline-block"}} disabled={isLimitReached}>
+                    <select name="food_type" value={form.food_type} onChange={handleChange} style={{...styles.input, width: 150, display: "inline-block"}}>
                       <option value="veg">Vegetarian</option><option value="non_veg">Non-Vegetarian</option><option value="both">Both</option>
                     </select>
                     <label style={{ marginLeft: 20, marginRight: 10 }}>Meals per Day:</label>
-                    <input type="number" name="meals_per_day" placeholder="e.g., 3" value={form.meals_per_day} onChange={handleChange} style={{...styles.input, width: 100, display: "inline-block"}} min="1" max="4" disabled={isLimitReached} />
+                    <input type="number" name="meals_per_day" placeholder="e.g., 3" value={form.meals_per_day} onChange={handleChange} style={{...styles.input, width: 100, display: "inline-block"}} min="1" max="4" />
                   </div>
                 )}
               </>
@@ -789,7 +734,7 @@ function OwnerAddPG() {
             <div style={{ gridColumn: "1 / -1", marginTop: 10 }}><h4>🛏️ Room Furnishings:</h4></div>
             {["cupboard_available","table_chair_available","dining_table_available","attached_bathroom","balcony_available","wall_mounted_clothes_hook","bed_with_mattress","fan_light","kitchen_room"].map(key => (
               <label key={key} style={styles.checkboxLabel}>
-                <input type="checkbox" name={key} checked={form[key]} onChange={handleChange} style={styles.checkbox} disabled={isLimitReached} />
+                <input type="checkbox" name={key} checked={form[key]} onChange={handleChange} style={styles.checkbox} />
                 {key === "cupboard_available" && "👔 Cupboard/Wardrobe"}
                 {key === "table_chair_available" && "💺 Study Table & Chair"}
                 {key === "dining_table_available" && "🍽️ Dining Table"}
@@ -804,7 +749,7 @@ function OwnerAddPG() {
             <div style={{ gridColumn: "1 / -1", marginTop: 10 }}><h4>🏢 Building Facilities:</h4></div>
             {["ac_available","wifi_available","tv","parking_available","bike_parking","laundry_available","washing_machine","refrigerator","microwave","geyser","power_backup","lift_elevator","cctv","security_guard","gym","housekeeping","water_purifier","fire_safety","study_room","common_tv_lounge","balcony_open_space","water_24x7"].map(key => (
               <label key={key} style={styles.checkboxLabel}>
-                <input type="checkbox" name={key} checked={form[key]} onChange={handleChange} style={styles.checkbox} disabled={isLimitReached} />
+                <input type="checkbox" name={key} checked={form[key]} onChange={handleChange} style={styles.checkbox} />
                 {key === "ac_available" && "❄️ Air Conditioner"}
                 {key === "wifi_available" && "📶 Wi-Fi / Internet"}
                 {key === "tv" && "📺 Television"}
@@ -842,7 +787,7 @@ function OwnerAddPG() {
                   { key: "co_living_maintenance", label: "🔧 Maintenance" }
                 ].map(item => (
                   <label key={item.key} style={{...styles.checkboxLabel, color: "#2E7D32"}}>
-                    <input type="checkbox" name={item.key} checked={form[item.key]} onChange={handleChange} style={styles.checkbox} disabled={isLimitReached} />
+                    <input type="checkbox" name={item.key} checked={form[item.key]} onChange={handleChange} style={styles.checkbox} />
                     {item.label}
                   </label>
                 ))}
@@ -850,7 +795,7 @@ function OwnerAddPG() {
             )}
             <div style={{ gridColumn: "1 / -1", marginTop: 10 }}>
               <label style={{ marginRight: 10 }}>💧 Water Source:</label>
-              <select name="water_type" value={form.water_type} onChange={handleChange} style={{...styles.input, width: 150, display: "inline-block"}} disabled={isLimitReached}>
+              <select name="water_type" value={form.water_type} onChange={handleChange} style={{...styles.input, width: 150, display: "inline-block"}}>
                 <option value="borewell">Borewell</option><option value="kaveri">Kaveri</option><option value="both">Both</option><option value="municipal">Municipal</option>
               </select>
             </div>
@@ -863,14 +808,14 @@ function OwnerAddPG() {
           <div style={styles.checkboxGrid}>
             <div style={{ gridColumn: "1 / -1", marginBottom: 10 }}><h4>👥 Allowed For:</h4>
               <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-                <label style={styles.checkboxLabel}><input type="checkbox" name="boys_only" checked={form.boys_only} onChange={handleChange} style={styles.checkbox} disabled={isLimitReached} /> 👨 Boys Only</label>
-                <label style={styles.checkboxLabel}><input type="checkbox" name="girls_only" checked={form.girls_only} onChange={handleChange} style={styles.checkbox} disabled={isLimitReached} /> 👩 Girls Only</label>
-                <label style={styles.checkboxLabel}><input type="checkbox" name="co_living_allowed" checked={form.co_living_allowed} onChange={handleChange} style={styles.checkbox} disabled={isLimitReached} /> 🤝 Co-Living (Mixed)</label>
+                <label style={styles.checkboxLabel}><input type="checkbox" name="boys_only" checked={form.boys_only} onChange={handleChange} style={styles.checkbox} /> 👨 Boys Only</label>
+                <label style={styles.checkboxLabel}><input type="checkbox" name="girls_only" checked={form.girls_only} onChange={handleChange} style={styles.checkbox} /> 👩 Girls Only</label>
+                <label style={styles.checkboxLabel}><input type="checkbox" name="co_living_allowed" checked={form.co_living_allowed} onChange={handleChange} style={styles.checkbox} /> 🤝 Co-Living (Mixed)</label>
               </div>
             </div>
             {["visitor_allowed","visitor_time_restricted","couple_allowed","family_allowed","smoking_allowed","drinking_allowed","pets_allowed","late_night_entry_allowed","outside_food_allowed","parties_allowed","loud_music_restricted","lock_in_period","agreement_mandatory","id_proof_mandatory","office_going_only","students_only","subletting_allowed"].map(rule => (
               <label key={rule} style={styles.checkboxLabel}>
-                <input type="checkbox" name={rule} checked={form[rule]} onChange={handleChange} style={styles.checkbox} disabled={isLimitReached} />
+                <input type="checkbox" name={rule} checked={form[rule]} onChange={handleChange} style={styles.checkbox} />
                 {rule === "visitor_allowed" && "👥 Visitors Allowed"}
                 {rule === "visitor_time_restricted" && "⏰ Visitor Time Restricted"}
                 {rule === "couple_allowed" && "❤️ Couples Allowed"}
@@ -892,9 +837,9 @@ function OwnerAddPG() {
             ))}
           </div>
           <div style={{...styles.grid, marginTop: 15}}>
-            {form.visitor_time_restricted && <div style={styles.inputGroup}><label>Visitors Allowed Till</label><input type="time" name="visitors_allowed_till" value={form.visitors_allowed_till} onChange={handleChange} style={styles.input} disabled={isLimitReached} /></div>}
-            {!form.late_night_entry_allowed && <div style={styles.inputGroup}><label>Entry Curfew Time</label><input type="time" name="entry_curfew_time" value={form.entry_curfew_time} onChange={handleChange} style={styles.input} disabled={isLimitReached} /></div>}
-            {form.lock_in_period && <div style={styles.inputGroup}><label>Minimum Stay (Months)</label><input type="number" name="min_stay_months" value={form.min_stay_months} onChange={handleChange} style={styles.input} min="1" placeholder="e.g., 6" disabled={isLimitReached} /></div>}
+            {form.visitor_time_restricted && <div style={styles.inputGroup}><label>Visitors Allowed Till</label><input type="time" name="visitors_allowed_till" value={form.visitors_allowed_till} onChange={handleChange} style={styles.input} /></div>}
+            {!form.late_night_entry_allowed && <div style={styles.inputGroup}><label>Entry Curfew Time</label><input type="time" name="entry_curfew_time" value={form.entry_curfew_time} onChange={handleChange} style={styles.input} /></div>}
+            {form.lock_in_period && <div style={styles.inputGroup}><label>Minimum Stay (Months)</label><input type="number" name="min_stay_months" value={form.min_stay_months} onChange={handleChange} style={styles.input} min="1" placeholder="e.g., 6" /></div>}
           </div>
         </div>
 
@@ -902,15 +847,15 @@ function OwnerAddPG() {
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>💰 Additional Details & Charges</h3>
           <div style={styles.grid}>
-            <div style={styles.inputGroup}><label>Security Deposit (₹)</label><input type="number" name="security_deposit" placeholder="e.g., 10000" value={form.security_deposit} onChange={handleChange} style={styles.input} min="0" disabled={isLimitReached} /></div>
-            <div style={styles.inputGroup}><label>Maintenance Charges (₹/Month)</label><input type="number" name="maintenance_amount" placeholder="e.g., 1000" value={form.maintenance_amount} onChange={handleChange} style={styles.input} min="0" disabled={isLimitReached} /></div>
-            <div style={styles.inputGroup}><label>Notice Period</label><select name="notice_period" value={form.notice_period} onChange={handleChange} style={styles.input} disabled={isLimitReached}><option value="1">1 Month</option><option value="2">2 Months</option><option value="3">3 Months</option></select></div>
-            <div style={styles.inputGroup}><label>Total {isToLet ? "Properties" : "Rooms"}</label><input type="number" name="total_rooms" placeholder={isToLet ? "e.g., 1" : "e.g., 10"} value={form.total_rooms} onChange={handleChange} style={styles.input} min="1" disabled={isLimitReached} /></div>
-            <div style={styles.inputGroup}><label>Available {isToLet ? "Properties" : "Rooms"}</label><input type="number" name="available_rooms" placeholder={isToLet ? "e.g., 1" : "e.g., 5"} value={form.available_rooms} onChange={handleChange} style={styles.input} min="0" disabled={isLimitReached} /></div>
+            <div style={styles.inputGroup}><label>Security Deposit (₹)</label><input type="number" name="security_deposit" placeholder="e.g., 10000" value={form.security_deposit} onChange={handleChange} style={styles.input} min="0" /></div>
+            <div style={styles.inputGroup}><label>Maintenance Charges (₹/Month)</label><input type="number" name="maintenance_amount" placeholder="e.g., 1000" value={form.maintenance_amount} onChange={handleChange} style={styles.input} min="0" /></div>
+            <div style={styles.inputGroup}><label>Notice Period</label><select name="notice_period" value={form.notice_period} onChange={handleChange} style={styles.input}><option value="1">1 Month</option><option value="2">2 Months</option><option value="3">3 Months</option></select></div>
+            <div style={styles.inputGroup}><label>Total {isToLet ? "Properties" : "Rooms"}</label><input type="number" name="total_rooms" placeholder={isToLet ? "e.g., 1" : "e.g., 10"} value={form.total_rooms} onChange={handleChange} style={styles.input} min="1" /></div>
+            <div style={styles.inputGroup}><label>Available {isToLet ? "Properties" : "Rooms"}</label><input type="number" name="available_rooms" placeholder={isToLet ? "e.g., 1" : "e.g., 5"} value={form.available_rooms} onChange={handleChange} style={styles.input} min="0" /></div>
           </div>
           <div style={styles.inputGroup}>
             <label>Description *</label>
-            <textarea name="description" placeholder={isToLet ? "Describe your house/flat, bedrooms, bathrooms, nearby facilities..." : "Describe your property, amenities, nearby facilities..."} value={form.description} onChange={handleChange} style={{...styles.textarea, ...getErrorStyle("description")}} rows="4" required disabled={isLimitReached} />
+            <textarea name="description" placeholder={isToLet ? "Describe your house/flat, bedrooms, bathrooms, nearby facilities..." : "Describe your property, amenities, nearby facilities..."} value={form.description} onChange={handleChange} style={{...styles.textarea, ...getErrorStyle("description")}} rows="4" required />
           </div>
         </div>
 
@@ -918,27 +863,26 @@ function OwnerAddPG() {
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>📞 Contact Information</h3>
           <div style={styles.grid}>
-            <div style={styles.inputGroup}><label>Contact Person *</label><input name="contact_person" placeholder="e.g., Owner/Manager Name" value={form.contact_person} onChange={handleChange} style={{...styles.input, ...getErrorStyle("contact_person")}} required disabled={isLimitReached} /></div>
-            <div style={styles.inputGroup}><label>Contact Email</label><input type="email" name="contact_email" placeholder="contact@example.com" value={form.contact_email} onChange={handleChange} style={{...styles.input, ...getErrorStyle("contact_email")}} disabled={isLimitReached} /></div>
-            <div style={styles.inputGroup}><label>Contact Phone *</label><input type="tel" name="contact_phone" placeholder="Enter 10-digit phone number" value={form.contact_phone} onChange={handleChange} style={{...styles.input, ...getErrorStyle("contact_phone")}} required pattern="[0-9]{10,15}" disabled={isLimitReached} /></div>
+            <div style={styles.inputGroup}><label>Contact Person *</label><input name="contact_person" placeholder="e.g., Owner/Manager Name" value={form.contact_person} onChange={handleChange} style={{...styles.input, ...getErrorStyle("contact_person")}} required /></div>
+            <div style={styles.inputGroup}><label>Contact Email</label><input type="email" name="contact_email" placeholder="contact@example.com" value={form.contact_email} onChange={handleChange} style={{...styles.input, ...getErrorStyle("contact_email")}} /></div>
+            <div style={styles.inputGroup}><label>Contact Phone *</label><input type="tel" name="contact_phone" placeholder="Enter 10-digit phone number" value={form.contact_phone} onChange={handleChange} style={{...styles.input, ...getErrorStyle("contact_phone")}} required pattern="[0-9]{10,15}" /></div>
           </div>
         </div>
 
         {/* Photo Upload */}
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>📷 Property Photos *</h3>
-          <p style={styles.note}>Upload at least 1 photo. Maximum {plan?.max_photos_per_pg || 10} photos allowed.</p>
-          {plan && <div style={{ backgroundColor: "#e0f2fe", padding: "8px 12px", borderRadius: 8, marginBottom: 12, fontSize: 14 }}>📸 Photo usage: {photos.length} / {plan.max_photos_per_pg} photos</div>}
+          <p style={styles.note}>Upload at least 1 photo. Maximum 10 photos allowed.</p>
           <div style={styles.fileUpload}>
-            <label htmlFor="photo-upload" style={{...styles.fileUploadLabel, opacity: isLimitReached ? 0.5 : 1, cursor: isLimitReached ? "not-allowed" : "pointer"}}>📁 Choose Photos</label>
-            <input id="photo-upload" type="file" accept="image/*" multiple onChange={handlePhotoUpload} style={styles.fileInput} disabled={isLimitReached} />
+            <label htmlFor="photo-upload" style={styles.fileUploadLabel}>📁 Choose Photos</label>
+            <input id="photo-upload" type="file" accept="image/*" multiple onChange={handlePhotoUpload} style={styles.fileInput} />
           </div>
           {photos.length > 0 && (
             <div style={styles.photoPreview}>
               {photos.map((photo, idx) => (
                 <div key={idx} style={styles.photoItem}>
                   <span style={styles.photoName}>{photo.name.length > 20 ? photo.name.substring(0,20)+"..." : photo.name}</span>
-                  <button type="button" onClick={() => removePhoto(idx)} style={styles.removePhotoBtn} disabled={isLimitReached}>✕</button>
+                  <button type="button" onClick={() => removePhoto(idx)} style={styles.removePhotoBtn}>✕</button>
                 </div>
               ))}
             </div>
@@ -947,7 +891,7 @@ function OwnerAddPG() {
         </div>
 
         <button onClick={handleSubmit} disabled={isSubmitDisabled} style={{...styles.submitBtn, ...(isSubmitDisabled ? styles.submitBtnDisabled : {})}}>
-          {loading ? "Creating Property..." : (isLimitReached ? "⚠️ Limit Reached - Upgrade to Add" : `➕ Create ${isToLet ? 'House/Flat' : 'Property'}`)}
+          {loading ? "Creating Property..." : `➕ Create ${isToLet ? 'House/Flat' : 'Property'}`}
         </button>
       </div>
 
