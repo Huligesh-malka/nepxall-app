@@ -166,7 +166,7 @@ const Sidebar = ({ role, user }) => {
             <Link style={linkStyle(isActive("/owner/vacate"))} to="/owner/vacate" onClick={closeSidebar} className="sidebar-link"><FiLogOut size={16} /> Vacate Requests</Link>
             <Link style={linkStyle(isActive("/owner/payments"))} to="/owner/payments" onClick={closeSidebar} className="sidebar-link"><FiTrendingUp size={16} /> Earnings / Payments</Link>
             <Link style={linkStyle(isActive("/owner/premium"))} to="/owner/premium" onClick={closeSidebar} className="sidebar-link"><FiStar size={16} /> Premium Plans</Link>
-            <Link style={linkStyle(isActive("/owner/pgs"))} to="/owner/pgs" onClick={closeSidebar} className="sidebar-link"><FiBuilding size={16} /> My PGs</Link>
+            
 
             <Link style={linkStyle(isActive("/owner/add"))} to="/owner/add" onClick={closeSidebar} className="sidebar-link"><FiPlusCircle size={16} /> Add PG</Link>
 
