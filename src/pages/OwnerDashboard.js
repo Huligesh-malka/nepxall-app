@@ -1232,10 +1232,7 @@ const OwnerDashboard = () => {
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <Box>
-                    <Typography sx={{ color: '#64748b', fontSize: { xs: '0.65rem', sm: '0.75rem' }, fontWeight: 500 }}>MONTHLY REVENUE</Typography>
-                    <Typography sx={{ fontSize: { xs: '1rem', sm: '1.4rem' }, fontWeight: 800, color: '#1e293b', lineHeight: 1 }}>
-                      {formatCurrency(animatedMonthlyRevenue)}
-                    </Typography>
+                    
                   </Box>
                   <MoneyIcon sx={{ fontSize: { xs: 28, sm: 36 }, color: '#4CAF50', opacity: 0.7 }} />
                 </Box>
