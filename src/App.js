@@ -94,6 +94,10 @@ import ScanPG from "./pages/ScanPG";
 /* CONFIG */
 import { testBackendConnection } from "./config";
 
+// Brand colors
+const BRAND_BLUE = "#0B5ED7";
+const BRAND_GREEN = "#4CAF50";
+
 function App() {
   const { user, role, loading } = useAuth();
 
@@ -101,6 +105,7 @@ function App() {
     testBackendConnection();
   }, []);
 
+  // Beautiful brand loading screen
   if (loading) {
     return (
       <div style={{
@@ -108,26 +113,106 @@ function App() {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+        background: "linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%)",
+        position: "relative",
+        overflow: "hidden"
       }}>
-        <div style={{ textAlign: "center" }}>
+        {/* Animated background circles */}
+        <div style={{
+          position: "absolute",
+          width: "300px",
+          height: "300px",
+          borderRadius: "50%",
+          background: `radial-gradient(circle, ${BRAND_BLUE}10 0%, transparent 70%)`,
+          top: "-150px",
+          right: "-150px",
+          animation: "pulse 3s ease-in-out infinite"
+        }} />
+        <div style={{
+          position: "absolute",
+          width: "400px",
+          height: "400px",
+          borderRadius: "50%",
+          background: `radial-gradient(circle, ${BRAND_GREEN}10 0%, transparent 70%)`,
+          bottom: "-200px",
+          left: "-200px",
+          animation: "pulse 4s ease-in-out infinite reverse"
+        }} />
+        
+        <div style={{ textAlign: "center", zIndex: 1 }}>
+          {/* Logo animation */}
           <div style={{
-            width: "50px",
-            height: "50px",
-            border: "4px solid rgba(255,255,255,0.3)",
-            borderTop: "4px solid white",
+            width: "80px",
+            height: "80px",
+            margin: "0 auto 25px",
+            background: `linear-gradient(135deg, ${BRAND_BLUE}, ${BRAND_GREEN})`,
+            borderRadius: "20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            animation: "bounce 1s ease-in-out infinite",
+            boxShadow: `0 10px 30px ${BRAND_BLUE}40`
+          }}>
+            <span style={{ fontSize: "40px", fontWeight: "bold", color: "white" }}>N</span>
+          </div>
+          
+          {/* Brand name with gradient */}
+          <h1 style={{
+            fontSize: "32px",
+            fontWeight: "bold",
+            margin: "0 0 8px 0",
+            background: `linear-gradient(135deg, ${BRAND_BLUE}, ${BRAND_GREEN})`,
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            letterSpacing: "-0.5px"
+          }}>
+            Nepxall
+          </h1>
+          <p style={{
+            color: "#64748b",
+            fontSize: "14px",
+            margin: "0 0 30px 0",
+            fontWeight: 500
+          }}>
+            Next Places for Living
+          </p>
+          
+          {/* Loading spinner with brand colors */}
+          <div style={{
+            width: "40px",
+            height: "40px",
+            margin: "0 auto",
+            border: `3px solid ${BRAND_BLUE}20`,
+            borderTop: `3px solid ${BRAND_BLUE}`,
+            borderRight: `3px solid ${BRAND_GREEN}`,
             borderRadius: "50%",
-            animation: "spin 1s linear infinite",
-            margin: "0 auto 20px"
+            animation: "spin 0.8s linear infinite"
           }} />
-          <p style={{ color: "white", fontSize: "18px" }}>Loading Nepxall...</p>
-          <style>{`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}</style>
+          
+          <p style={{
+            color: "#94a3b8",
+            fontSize: "13px",
+            marginTop: "15px",
+            fontWeight: 500
+          }}>
+            Loading your experience...
+          </p>
         </div>
+        
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+          }
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+          }
+        `}</style>
       </div>
     );
   }

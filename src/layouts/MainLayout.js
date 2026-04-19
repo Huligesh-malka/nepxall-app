@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Outlet, useLocation, Navigate, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
@@ -7,7 +7,9 @@ import { Button, Box, CircularProgress, Typography } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
 
-// ✅ Sync with Sidebar width
+// Brand colors (matching Sidebar)
+const BRAND_BLUE = "#0B5ED7";
+const BRAND_GREEN = "#4CAF50";
 const SIDEBAR_WIDTH = 220;
 
 const MainLayout = () => {
@@ -44,17 +46,15 @@ const MainLayout = () => {
   if (loading) {
     return (
       <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
-        <CircularProgress />
+        <CircularProgress sx={{ color: BRAND_BLUE }} />
       </Box>
     );
   }
 
-  /* ================= SIMPLIFIED AUTH PROTECTION ================= */
-  // MainLayout is now ONLY used for protected routes
-  // So if no user, redirect to login
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
+  /* ================= 🚨 NO AUTH CHECK HERE! ================= */
+  // Auth protection is handled by PrivateRoute in App.js
+  // MainLayout only renders when user is authenticated (via PrivateRoute)
+  // So we don't need any redirect logic here
 
   /* ================= TITLE ================= */
   const getTitle = () => {
@@ -91,7 +91,7 @@ const MainLayout = () => {
             width: "100%"
           }}
         >
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, color: "#1e293b" }}>
             {getTitle()}
           </Typography>
 
@@ -104,10 +104,15 @@ const MainLayout = () => {
                   variant="contained"
                   onClick={installApp}
                   sx={{
-                    background: "#2563eb",
-                    "&:hover": { background: "#1d4ed8" },
+                    background: `linear-gradient(135deg, ${BRAND_BLUE}, ${BRAND_GREEN})`,
+                    "&:hover": {
+                      background: `linear-gradient(135deg, ${BRAND_BLUE}dd, ${BRAND_GREEN}dd)`,
+                      transform: "translateY(-2px)"
+                    },
                     borderRadius: "8px",
-                    fontWeight: 600
+                    fontWeight: 600,
+                    textTransform: "none",
+                    transition: "all 0.2s ease"
                   }}
                 >
                   📲 Install App
@@ -115,7 +120,21 @@ const MainLayout = () => {
               )}
 
               {/* LOGOUT */}
-              <Button variant="contained" color="error" onClick={handleLogout}>
+              <Button 
+                variant="contained" 
+                onClick={handleLogout}
+                sx={{
+                  background: "#ef4444",
+                  "&:hover": {
+                    background: "#dc2626",
+                    transform: "translateY(-2px)"
+                  },
+                  borderRadius: "8px",
+                  fontWeight: 600,
+                  textTransform: "none",
+                  transition: "all 0.2s ease"
+                }}
+              >
                 Logout
               </Button>
             </div>
