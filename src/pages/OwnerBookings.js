@@ -1,192 +1,199 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useEffect, useState, useCallback } from "react";
+import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { Box, CircularProgress } from "@mui/material";
 import api from "../api/api";
 
-const OwnerBank = () => {
+const OwnerBookings = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { user } = useAuth();
+  const { user, role, loading } = useAuth();
 
-  const [formData, setFormData] = useState({
-    account_number: "",
-    ifsc: "",
-    account_holder_name: "",
-  });
-  const [loading, setLoading] = useState(false);
+  const [bookings, setBookings] = useState([]);
+  const [filter, setFilter] = useState("all");
+  const [pageLoading, setPageLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  useEffect(() => {
-    loadBankDetails();
-  }, []);
-
-  const loadBankDetails = async () => {
+  const loadOwnerBookings = useCallback(async () => {
     try {
-      const token = await user.getIdToken();
-      const res = await api.get("/owner/bank", {
+      setError("");
+      const token = await user.getIdToken(true);
+
+      const res = await api.get("/owner/bookings", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.data) {
-        setFormData({
-          account_number: res.data.account_number || "",
-          ifsc: res.data.ifsc || "",
-          account_holder_name: res.data.account_holder_name || "",
-        });
-      }
-    } catch (err) {
-      // 404 means no bank details yet, that's fine
-      if (err.response?.status !== 404) {
-        console.error(err);
-      }
-    }
-  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const token = await user.getIdToken();
-      await api.post("/owner/bank", formData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSuccess("Bank details saved successfully!");
-      setTimeout(() => {
-        navigate("/owner/bookings");
-      }, 1500);
+      setBookings(Array.isArray(res.data.data) ? res.data.data : []);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to save bank details");
+      console.error(err);
+      setError("Failed to load booking history");
     } finally {
-      setLoading(false);
+      setPageLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user && role === "owner") {
+      loadOwnerBookings();
+      const interval = setInterval(loadOwnerBookings, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user, role, loadOwnerBookings]);
+
+  useEffect(() => {
+    if (!loading && !user) navigate("/login");
+  }, [user, loading, navigate]);
+
+  // 🔥 UPDATED FUNCTION (MAIN CHANGE)
+  const updateStatus = async (bookingId, status) => {
+    try {
+      setActionLoading(bookingId);
+      setSuccess("");
+
+      const token = await user.getIdToken(true);
+
+      // 🔍 STEP 1: CHECK BANK DETAILS
+      const bankRes = await api.get("/owner/bank", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const hasBank =
+        bankRes.data &&
+        bankRes.data.account_number &&
+        bankRes.data.ifsc;
+
+      // ❌ If bank not added → redirect
+      if (!hasBank) {
+        navigate("/owner/bank", {
+          state: {
+            message:
+              "⚠️ Please complete your bank details to continue onboarding.",
+          },
+        });
+        return;
+      }
+
+      // ✅ STEP 2: APPROVE / REJECT
+      await api.put(
+        `/owner/bookings/${bookingId}`,
+        { status },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setSuccess(`Booking ${status.toUpperCase()} successfully`);
+      loadOwnerBookings();
+
+      setTimeout(() => setSuccess(""), 2500);
+    } catch (err) {
+      alert(err.response?.data?.message || "Action failed");
+    } finally {
+      setActionLoading(null);
     }
   };
+
+  const getRemainingTime = (createdAt) => {
+    const created = new Date(createdAt);
+    const expiry = new Date(created.getTime() + 86400000);
+    const now = new Date();
+    const diff = expiry - now;
+    if (diff <= 0) return "Expired";
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    return `${h}h ${m}m left`;
+  };
+
+  const filteredBookings = bookings.filter((b) => {
+    if (filter === "all") return true;
+    if (filter === "pending") return b.status === "pending";
+    if (filter === "active") return b.status === "confirmed";
+    if (filter === "expired") return b.status === "expired";
+    if (filter === "history") return b.status === "left";
+    return true;
+  });
+
+  if (loading || pageLoading) {
+    return (
+      <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (role !== "owner") return <Navigate to="/" replace />;
 
   return (
     <div style={container}>
-      <h2>🏦 Bank Details</h2>
-      <p style={subtitle}>Add your bank account to receive payments</p>
+      <h2>🏠 Owner Booking Requests</h2>
 
-      {location.state?.message && (
-        <div style={warningBox}>
-          {location.state.message}
-        </div>
-      )}
+      <div style={filterBar}>
+        <button onClick={() => setFilter("all")} style={filterBtn}>All</button>
+        <button onClick={() => setFilter("pending")} style={filterBtn}>Pending</button>
+        <button onClick={() => setFilter("active")} style={filterBtn}>Active</button>
+        <button onClick={() => setFilter("expired")} style={filterBtn}>Expired</button>
+        <button onClick={() => setFilter("history")} style={filterBtn}>History</button>
+      </div>
 
       {success && <div style={successBox}>{success}</div>}
       {error && <div style={errorBox}>{error}</div>}
 
-      <form onSubmit={handleSubmit} style={form}>
-        <div style={inputGroup}>
-          <label>Account Holder Name</label>
-          <input
-            type="text"
-            value={formData.account_holder_name}
-            onChange={(e) => setFormData({ ...formData, account_holder_name: e.target.value })}
-            required
-            style={input}
-            placeholder="Enter account holder name"
-          />
-        </div>
+      {filteredBookings.length === 0 ? (
+        <div style={emptyBox}>No bookings</div>
+      ) : (
+        filteredBookings.map((b) => {
+          const isExpired = b.status === "expired";
+          const isPending = b.status === "pending";
 
-        <div style={inputGroup}>
-          <label>Account Number</label>
-          <input
-            type="text"
-            value={formData.account_number}
-            onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
-            required
-            style={input}
-            placeholder="Enter account number"
-          />
-        </div>
+          return (
+            <div key={b.id} style={card}>
+              <p><b>PG:</b> {b.pg_name}</p>
+              <p><b>Tenant:</b> {b.tenant_name}</p>
+              <p><b>Phone:</b> {b.tenant_phone || "🔒 Hidden"}</p>
+              <p><b>Check-in:</b> {b.check_in_date ? new Date(b.check_in_date).toDateString() : "N/A"}</p>
+              <p><b>Room:</b> {b.room_type}</p>
 
-        <div style={inputGroup}>
-          <label>IFSC Code</label>
-          <input
-            type="text"
-            value={formData.ifsc}
-            onChange={(e) => setFormData({ ...formData, ifsc: e.target.value.toUpperCase() })}
-            required
-            style={input}
-            placeholder="Enter IFSC code"
-          />
-        </div>
+              <p>
+                <b>Status:</b>{" "}
+                <span style={statusBadge(b.status)}>
+                  {b.status?.toUpperCase()}
+                </span>
+              </p>
 
-        <button type="submit" disabled={loading} style={button}>
-          {loading ? "Saving..." : "Save Bank Details"}
-        </button>
-      </form>
+              {isPending && (
+                <>
+                  <p style={{ color: "#2563eb" }}>
+                    ⏳ {getRemainingTime(b.created_at)}
+                  </p>
+                  <div style={{ marginTop: 12 }}>
+                    <button
+                      style={approveBtn}
+                      disabled={actionLoading === b.id}
+                      onClick={() => updateStatus(b.id, "approved")}
+                    >
+                      {actionLoading === b.id ? "..." : "Approve"}
+                    </button>
+                    <button
+                      style={rejectBtn}
+                      disabled={actionLoading === b.id}
+                      onClick={() => updateStatus(b.id, "rejected")}
+                    >
+                      {actionLoading === b.id ? "..." : "Reject"}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {b.status === "approved" && <p style={{ color: "#2563eb" }}>Waiting for payment</p>}
+              {b.status === "confirmed" && <p style={{ color: "#16a34a" }}>Active</p>}
+              {b.status === "left" && <p style={{ color: "#6b7280" }}>Vacated</p>}
+              {isExpired && <p style={{ color: "red" }}>Expired</p>}
+            </div>
+          );
+        })
+      )}
     </div>
   );
 };
 
-export default OwnerBank;
-
-const container = {
-  maxWidth: 500,
-  margin: "auto",
-  padding: 20,
-};
-
-const subtitle = {
-  color: "#666",
-  marginBottom: 20,
-};
-
-const warningBox = {
-  background: "#fef3c7",
-  padding: 12,
-  borderRadius: 8,
-  marginBottom: 20,
-  color: "#92400e",
-  border: "1px solid #fde68a",
-};
-
-const form = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 20,
-};
-
-const inputGroup = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 8,
-};
-
-const input = {
-  padding: 10,
-  border: "1px solid #ddd",
-  borderRadius: 6,
-  fontSize: 16,
-};
-
-const button = {
-  padding: 12,
-  background: "#16a34a",
-  color: "#fff",
-  border: "none",
-  borderRadius: 6,
-  fontSize: 16,
-  cursor: "pointer",
-  marginTop: 10,
-};
-
-const successBox = {
-  background: "#dcfce7",
-  color: "#166534",
-  padding: 12,
-  borderRadius: 8,
-  marginBottom: 20,
-};
-
-const errorBox = {
-  background: "#fee2e2",
-  color: "#b91c1c",
-  padding: 12,
-  borderRadius: 8,
-  marginBottom: 20,
-};
+export default OwnerBookings;
