@@ -1230,12 +1230,12 @@ const OwnerDashboard = () => {
                   background: 'linear-gradient(90deg, #4CAF50, #0B5ED7)',
                 }
               }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+
                   <Box>
                     
                   </Box>
                   
-                </Box>
+                
               </Box>
             </Grid>
 
