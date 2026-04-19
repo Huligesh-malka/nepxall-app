@@ -197,3 +197,87 @@ const OwnerBookings = () => {
 };
 
 export default OwnerBookings;
+
+const container = { maxWidth: 900, margin: "auto", padding: 20 };
+
+const filterBar = {
+  display: "flex",
+  gap: 10,
+  marginBottom: 20,
+  flexWrap: "wrap",
+};
+
+const filterBtn = {
+  padding: "8px 14px",
+  border: "none",
+  borderRadius: 20,
+  background: "#111827",
+  color: "#fff",
+  cursor: "pointer",
+};
+
+const card = {
+  border: "1px solid #e5e7eb",
+  padding: 20,
+  borderRadius: 12,
+  marginBottom: 16,
+  background: "#fff",
+};
+
+const emptyBox = {
+  padding: 30,
+  textAlign: "center",
+  background: "#f9fafb",
+  borderRadius: 10,
+};
+
+const errorBox = {
+  padding: 20,
+  background: "#fee2e2",
+  color: "#b91c1c",
+  borderRadius: 8,
+};
+
+const successBox = {
+  background: "#dcfce7",
+  color: "#166534",
+  padding: 12,
+  borderRadius: 8,
+};
+
+const statusBadge = (status) => ({
+  padding: "4px 12px",
+  borderRadius: 20,
+  color: "#fff",
+  fontSize: 12,
+  fontWeight: "bold",
+  background:
+    status === "approved"
+      ? "#2563eb"
+      : status === "confirmed"
+      ? "#16a34a"
+      : status === "rejected"
+      ? "#dc2626"
+      : status === "left"
+      ? "#6b7280"
+      : status === "expired"
+      ? "#dc2626"
+      : "#f59e0b",
+});
+
+const approveBtn = {
+  padding: "8px 14px",
+  background: "#16a34a",
+  color: "#fff",
+  border: "none",
+  borderRadius: 6,
+  marginRight: 8,
+};
+
+const rejectBtn = {
+  padding: "8px 14px",
+  background: "#dc2626",
+  color: "#fff",
+  border: "none",
+  borderRadius: 6,
+};
