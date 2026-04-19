@@ -1666,49 +1666,7 @@ const OwnerDashboard = () => {
               </Box>
             )}
 
-            {/* Insights Tab */}
-            {activeTab === 2 && (
-              <Grid container spacing={3}>
-                {/* Revenue Summary */}
-                <Grid item xs={12} md={6}>
-                  <Box sx={insightCardStyle}>
-                    <Typography sx={insightTitleStyle}>
-                      <MoneyIcon sx={{ color: '#4CAF50' }} /> Revenue Summary
-                    </Typography>
-                    <Divider sx={{ borderColor: '#e2e8f0', mb: 2 }} />
-                    
-                    <Row 
-                      label="Total Earnings" 
-                      value={formatCurrency(stats.totalEarnings)} 
-                      color="#4CAF50"
-                      icon="💰"
-                    />
-                    <Row 
-                      label="Monthly Revenue" 
-                      value={formatCurrency(stats.monthlyRevenue)} 
-                      color="#0B5ED7"
-                      icon="📅"
-                    />
-                    <Row 
-                      label="Yearly Revenue" 
-                      value={formatCurrency(stats.yearlyRevenue)} 
-                      color="#8B5CF6"
-                      icon="📊"
-                    />
-                    <Row 
-                      label="Total Rent Collected" 
-                      value={formatCurrency(stats.totalRent)} 
-                      color="#1e293b"
-                      icon="🏠"
-                    />
-                    <Row 
-                      label="Total Deposit Collected" 
-                      value={formatCurrency(stats.totalDeposit)} 
-                      color="#4CAF50"
-                      icon="🏦"
-                    />
-                  </Box>
-                </Grid>
+            
 
                 {/* Booking Summary */}
                 <Grid item xs={12} md={6}>
