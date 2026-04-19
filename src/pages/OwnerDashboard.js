@@ -1666,7 +1666,11 @@ const OwnerDashboard = () => {
               </Box>
             )}
 
-            
+            {/* Insights Tab */}
+            {activeTab === 2 && (
+              <Grid container spacing={3}>
+                {/* Revenue Summary */}
+                
 
                 {/* Booking Summary */}
                 <Grid item xs={12} md={6}>
