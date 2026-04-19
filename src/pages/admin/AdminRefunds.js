@@ -16,7 +16,7 @@ const AdminRefunds = () => {
     try {
       setLoading(true);
       const res = await api.get("/admin/refunds");
-      setRefunds(res.data || []);
+      setRefunds(res.data.data || []);
     } catch (err) {
       console.error("❌ Error loading refunds:", err);
       alert("Failed to load refunds");
