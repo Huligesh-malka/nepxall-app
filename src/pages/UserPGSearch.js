@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Navigate } from "react-router-dom";
+
 
 import { 
   Search, 
@@ -2713,9 +2713,7 @@ function UserPGSearch() {
     );
   }
   
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
+  
 
   return (
     <div style={{ padding: 20, maxWidth: 1400, margin: "auto", minHeight: "100vh" }}>
