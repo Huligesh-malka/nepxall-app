@@ -3658,7 +3658,7 @@ function UserPGSearch() {
                   </h3>
 
                   <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>
-                    {getPGCode(pg.id)}
+                    
                   </p>
 
                   <div style={{ 

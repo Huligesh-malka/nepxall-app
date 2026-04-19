@@ -1795,7 +1795,7 @@ export default function PGDetails() {
         <span style={modernStyles.breadcrumbLink} onClick={() => navigate("/properties")}>Properties</span>
         <span style={modernStyles.breadcrumbSeparator}>/</span>
         <span style={modernStyles.breadcrumbCurrent}>{pg.pg_name}</span>
-        <span style={modernStyles.propertyCode}>{getPGCode(pg.id)}</span>
+        <span style={modernStyles.propertyCode}></span>
       </div>
 
       {media.length > 0 ? (
