@@ -23,7 +23,7 @@ import UserPGSearch from "./pages/UserPGSearch";
 import PGDetails from "./pages/PGDetails";
 import BookingForm from "./pages/BookingForm";
 import UserBookingHistory from "./pages/UserBookingHistory";   
-import BecomeOwner from "./pages/BecomeOwner";
+import BecomeOwner from "./pages/BecomeOwner"; // 🔥 top import
 import UserAgreements from "./pages/UserAgreements";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentPage from "./pages/PaymentPage";
@@ -55,6 +55,7 @@ import EditPG from "./pages/EditPG";
 import OwnerRooms from "./pages/OwnerRooms";
 import OwnerBookings from "./pages/OwnerBookings";
 import OwnerPGPhotos from "./pages/OwnerPGPhotos";
+
 import OwnerPGVideos from "./pages/OwnerPGVideos";
 import OwnerReviewReply from "./pages/OwnerReviewReply";
 import OwnerNotifications from "./pages/OwnerNotifications";
@@ -94,44 +95,6 @@ import ScanPG from "./pages/ScanPG";
 /* CONFIG */
 import { testBackendConnection } from "./config";
 
-// Brand colors
-const BRAND_BLUE = "#0B5ED7";
-const BRAND_GREEN = "#4CAF50";
-
-// Protected Route Component - FIXED
-const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth();
-  
-  // Don't redirect while checking auth
-  if (loading) {
-    return null; // Let the loading screen handle this
-  }
-  
-  // Only redirect if we're sure there's no user
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  return children;
-};
-
-// Role-based Route Component - FIXED
-const RoleBasedRoute = ({ children, allowedRole }) => {
-  const { user, role, loading } = useAuth();
-  
-  // Don't redirect while checking auth
-  if (loading) {
-    return null;
-  }
-  
-  // Redirect to home if not authenticated or wrong role
-  if (!user || role !== allowedRole) {
-    return <Navigate to="/" replace />;
-  }
-  
-  return children;
-};
-
 function App() {
   const { user, role, loading } = useAuth();
 
@@ -139,145 +102,42 @@ function App() {
     testBackendConnection();
   }, []);
 
-  // Beautiful brand loading screen - FIXED to show properly
-  if (loading) {
-    return (
-      <div style={{
-        height: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        background: "linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%)",
-        position: "relative",
-        overflow: "hidden"
-      }}>
-        {/* Animated background circles */}
-        <div style={{
-          position: "absolute",
-          width: "300px",
-          height: "300px",
-          borderRadius: "50%",
-          background: `radial-gradient(circle, ${BRAND_BLUE}10 0%, transparent 70%)`,
-          top: "-150px",
-          right: "-150px",
-          animation: "pulse 3s ease-in-out infinite"
-        }} />
-        <div style={{
-          position: "absolute",
-          width: "400px",
-          height: "400px",
-          borderRadius: "50%",
-          background: `radial-gradient(circle, ${BRAND_GREEN}10 0%, transparent 70%)`,
-          bottom: "-200px",
-          left: "-200px",
-          animation: "pulse 4s ease-in-out infinite reverse"
-        }} />
-        
-        <div style={{ textAlign: "center", zIndex: 1 }}>
-          {/* Logo animation */}
-          <div style={{
-            width: "80px",
-            height: "80px",
-            margin: "0 auto 25px",
-            background: `linear-gradient(135deg, ${BRAND_BLUE}, ${BRAND_GREEN})`,
-            borderRadius: "20px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            animation: "bounce 1s ease-in-out infinite",
-            boxShadow: `0 10px 30px ${BRAND_BLUE}40`
-          }}>
-            <span style={{ fontSize: "40px", fontWeight: "bold", color: "white" }}>N</span>
-          </div>
-          
-          {/* Brand name with gradient */}
-          <h1 style={{
-            fontSize: "32px",
-            fontWeight: "bold",
-            margin: "0 0 8px 0",
-            background: `linear-gradient(135deg, ${BRAND_BLUE}, ${BRAND_GREEN})`,
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            letterSpacing: "-0.5px"
-          }}>
-            Nepxall
-          </h1>
-          <p style={{
-            color: "#64748b",
-            fontSize: "14px",
-            margin: "0 0 30px 0",
-            fontWeight: 500
-          }}>
-            Next Places for Living
-          </p>
-          
-          {/* Loading spinner with brand colors */}
-          <div style={{
-            width: "40px",
-            height: "40px",
-            margin: "0 auto",
-            border: `3px solid ${BRAND_BLUE}20`,
-            borderTop: `3px solid ${BRAND_BLUE}`,
-            borderRight: `3px solid ${BRAND_GREEN}`,
-            borderRadius: "50%",
-            animation: "spin 0.8s linear infinite"
-          }} />
-          
-          <p style={{
-            color: "#94a3b8",
-            fontSize: "13px",
-            marginTop: "15px",
-            fontWeight: 500
-          }}>
-            Loading your experience...
-          </p>
-        </div>
-        
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-          @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-          }
-          @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 0.5; }
-            50% { transform: scale(1.1); opacity: 0.8; }
-          }
-        `}</style>
-      </div>
-    );
-  }
+  if (loading) return null;
+
+  const PrivateRoute = ({ children }) =>
+    user ? children : <Navigate to="/login" replace />;
+
+  const RoleRoute = ({ children, allowedRole }) =>
+    user && role === allowedRole ? children : <Navigate to="/" replace />;
 
   return (
     <Routes>
-      {/* 🌍 PUBLIC ROUTES - NO AUTH REQUIRED */}
-      <Route path="/" element={<UserPGSearch />} />
-      <Route path="/pg/:id" element={<PGDetails />} />
-      <Route path="/scan/:id" element={<ScanPG />} />
-      <Route path="/public/agreement/:hash" element={<PublicAgreementPage />} />
 
-      {/* STATIC PAGES */}
+      {/* PUBLIC */}
+      <Route element={<MainLayout />}>
+        <Route path="/" element={<UserPGSearch />} />
+        <Route path="/pg/:id" element={<PGDetails />} />
+        
+      </Route>
+
+      <Route path="/scan/:id" element={<ScanPG />} />
+
+      {/* STATIC */}
       <Route path="/contact" element={<Contact />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/refund-policy" element={<RefundPolicy />} />
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
-      {/* AUTH PAGES */}
+      {/* AUTH */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* 🔐 PROTECTED ROUTES - WITH MainLayout */}
-      <Route element={
-        <ProtectedRoute>
-          <MainLayout />
-        </ProtectedRoute>
-      }>
+      {/* USER */}
+      <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
         <Route path="/booking/:pgId" element={<BookingForm />} />
         <Route path="/user/bookings" element={<UserBookingHistory />} />
         <Route path="/become-owner" element={<BecomeOwner />} />
+
         <Route path="/user/agreements" element={<UserAgreements />} />
         <Route path="/user/services/:bookingId" element={<ServicesPage />} />
         <Route path="/payment-success" element={<PaymentSuccess />} />
@@ -292,29 +152,36 @@ function App() {
         <Route path="/user/digilocker" element={<DigiLockerVerify />} />
         <Route path="/digilocker/callback" element={<DigiLockerCallback />} />
         <Route path="/user/visit-schedule/:bookingId" element={<VisitSchedulePage />} />
+        <Route path="/public/agreement/:hash" element={<PublicAgreementPage />} />
         <Route path="/user/premium" element={<UserPremiumPlans />} />
         <Route path="/chat/private/:userId/:pgId" element={<PrivateChat />} />
       </Route>
 
-      {/* 👑 OWNER ROUTES */}
+      {/* OWNER */}
       <Route path="/owner" element={
-        <ProtectedRoute>
-          <RoleBasedRoute allowedRole="owner">
+        <PrivateRoute>
+          <RoleRoute allowedRole="owner">
             <OwnerLayout />
-          </RoleBasedRoute>
-        </ProtectedRoute>
+          </RoleRoute>
+        </PrivateRoute>
       }>
         <Route index element={<Navigate to="dashboard" replace />} />
+
         <Route path="dashboard" element={<OwnerDashboard />} />
         <Route path="payments" element={<OwnerPayments />} />
         <Route path="vacate" element={<OwnerVacateRequests />} />
         <Route path="premium" element={<OwnerPremiumPlans />} />
         <Route path="bookings" element={<OwnerBookings />} />
-        <Route path="tenants" element={<OwnerActiveTenants />} />
+
+  <Route path="tenants" element={<OwnerActiveTenants />} />
+
+
+        {/* 🔥 IMPORTANT FIX */}
         <Route path="bank" element={<OwnerBankDetails />} />
         <Route path="verification" element={<OwnerVerificationPage />} />
         <Route path="notifications" element={<OwnerNotifications />} />
         <Route path="chats" element={<OwnerChatList />} />
+
         <Route path="hotels" element={<OwnerHotels />} />
         <Route path="add-hotel" element={<AddHotel />} />
         <Route path="add" element={<OwnerAddPG />} />
@@ -326,15 +193,16 @@ function App() {
         <Route path="property/:propertyId/plans" element={<CreatePlan />} />
       </Route>
 
-      {/* 🛡️ ADMIN ROUTES */}
+      {/* ADMIN */}
       <Route path="/admin" element={
-        <ProtectedRoute>
-          <RoleBasedRoute allowedRole="admin">
+        <PrivateRoute>
+          <RoleRoute allowedRole="admin">
             <AdminLayout />
-          </RoleBasedRoute>
-        </ProtectedRoute>
+          </RoleRoute>
+        </PrivateRoute>
       }>
         <Route index element={<Navigate to="finance" replace />} />
+
         <Route path="finance" element={<AdminFinanceDashboard />} />
         <Route path="payments" element={<AdminPayments />} />
         <Route path="settlements" element={<AdminSettlements />} />
@@ -349,20 +217,21 @@ function App() {
         <Route path="agreement/:id" element={<AdminAgreementDetails />} />
       </Route>
 
-      {/* 🔧 VENDOR ROUTES */}
+      {/* VENDOR */}
       <Route path="/vendor" element={
-        <ProtectedRoute>
-          <RoleBasedRoute allowedRole="vendor">
+        <PrivateRoute>
+          <RoleRoute allowedRole="vendor">
             <VendorLayout />
-          </RoleBasedRoute>
-        </ProtectedRoute>
+          </RoleRoute>
+        </PrivateRoute>
       }>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<VendorDashboard />} />
       </Route>
 
-      {/* 404 FALLBACK */}
+      {/* FALLBACK */}
       <Route path="*" element={<Navigate to="/" replace />} />
+
     </Routes>
   );
 }

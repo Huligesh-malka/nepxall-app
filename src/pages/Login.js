@@ -50,7 +50,7 @@ const PhoneLogin = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [isResending, setIsResending] = useState(false);
-  const [needsNameFlow, setNeedsNameFlow] = useState(false);
+  const [needsNameFlow, setNeedsNameFlow] = useState(false); // 🔥 NEW STATE to block auto-redirect
 
   const navigate = useNavigate();
 
@@ -66,17 +66,18 @@ const PhoneLogin = () => {
     tap: { scale: 0.98 }
   };
 
-  /* ================= ✅ FIX 2: AUTO REDIRECT (FIXED) ================= */
-  useEffect(() => {
-    // Only redirect if not loading, user exists, has role, and NOT in name collection flow
-    if (!authLoading && user && authRole && !needsNameFlow) {
-      // Don't redirect during active login
-      if (loginCompleted) return;
-      
-      // Redirect to appropriate dashboard
-      redirect(authRole);
-    }
-  }, [user, authRole, authLoading, needsNameFlow, loginCompleted]);
+  /* ================= AUTO REDIRECT (FIXED - BLOCKS WHEN NAME FLOW ACTIVE) ================= */
+useEffect(() => {
+  if (!authLoading && user && authRole) {
+
+    // 🔥 HARD BLOCK → prevents second OTP flow
+    if (loginCompleted) return;
+
+    if (!user.name) return;
+
+    redirect(authRole);
+  }
+}, [user, authRole, authLoading]);
 
   /* ================= LANGUAGE ================= */
   useEffect(() => {
@@ -112,56 +113,55 @@ const PhoneLogin = () => {
     }
   };
 
-  /* ================= ✅ FIX 1: REDIRECT FUNCTION ================= */
+  /* ================= REDIRECT ================= */
   const redirect = (role) => {
     if (role === "admin") navigate("/admin/dashboard");
     else if (role === "owner") navigate("/owner/dashboard");
     else if (role === "vendor") navigate("/vendor/dashboard");
-    else navigate("/user/bookings"); // ✅ FIXED: Send regular users to bookings page
+    else navigate("/");
   };
 
-  /* ================= CHECK IF NEEDS NAME ================= */
   const checkIfNeedsName = async (firebaseUserObj) => {
-    try {
-      const idToken = await firebaseUserObj.getIdToken(true);
+  try {
+    const idToken = await firebaseUserObj.getIdToken(true);
 
-      const res = await userAPI.post("/auth/firebase", {
-        idToken,
-        role: "tenant",
-        phone: phone
-      });
+    const res = await userAPI.post("/auth/firebase", {
+      idToken,
+      role: "tenant",
+      phone: phone
+    });
 
-      console.log("✅ FULL RESPONSE:", res.data);
+    console.log("✅ FULL RESPONSE:", res.data);
 
-      // Check if user needs to provide name
-      if (res.data.needsName === true || !res.data.name) {
-        setNeedsNameFlow(true);
-        setStep(3);
-        setActiveStep(2);
-        return true;
-      }
+    // 🔥 IMPORTANT FIX
+   if (res.data.needsName === true || !res.data.name) {
+  setNeedsNameFlow(true);
 
-      // Existing user - redirect after delay
-      setNeedsNameFlow(false);
-      
-      setTimeout(() => {
-        redirect(res.data.role);
-      }, 1500);
-      
-      return false;
+  setStep(3);
+setActiveStep(2);
 
-    } catch (err) {
-      console.error("❌ ERROR:", err);
+  return true;
+}
 
-      // Fallback to name collection on error
-      setNeedsNameFlow(true);
-      setStep(3);
-      setActiveStep(2);
-      
-      return true;
-    }
-  };
+// ✅ ADD THIS (MAIN FIX)
+setNeedsNameFlow(false);
 
+// 🔥 REDIRECT EXISTING USER
+redirect(res.data.role);
+
+return false;
+
+  } catch (err) {
+    console.error("❌ ERROR:", err);
+
+    // 🔥 FALLBACK (VERY IMPORTANT)
+    setNeedsNameFlow(true);
+    setStep(3);
+    setActiveStep(2);
+
+    return true;
+  }
+};
   /* ================= SEND OTP ================= */
   const sendOtp = async () => {
     const cleanPhone = phone.replace(/\D/g, "");
@@ -195,32 +195,34 @@ const PhoneLogin = () => {
     }
   };
 
-  /* ================= VERIFY OTP ================= */
-  const verifyOtp = async () => {
-    if (otp.length !== 6) return setError("Please enter a valid 6-digit OTP");
+  /* ================= VERIFY OTP (FIXED WITH AWAIT) ================= */
+ const verifyOtp = async () => {
+  if (otp.length !== 6) return setError("Please enter a valid 6-digit OTP");
 
-    try {
-      setLoading(true);
-      setError("");
+  try {
+    setLoading(true);
+    setError("");
 
-      const result = await confirmObj.confirm(otp);
-      setFirebaseUser(result.user);
-      setOtpVerified(true);
-      setLoginCompleted(true);
+    const result = await confirmObj.confirm(otp);
 
-      await checkIfNeedsName(result.user);
+    setFirebaseUser(result.user);
 
-    } catch (err) {
-      console.error("Verify OTP error:", err);
-      setError("Invalid OTP. Please try again.");
-      setOtpVerified(false);
-      setLoginCompleted(false);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setOtpVerified(true);
+    setLoginCompleted(true); // 🔥 MAIN LOCK
 
-  /* ================= ✅ FIX 3: COMPLETE REGISTRATION ================= */
+    await checkIfNeedsName(result.user);
+
+  } catch (err) {
+    console.error("Verify OTP error:", err);
+    setError("Invalid OTP. Please try again.");
+    setOtpVerified(false);
+    setLoginCompleted(false);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  /* ================= COMPLETE REGISTRATION ================= */
   const completeRegistration = async () => {
     if (!firebaseUser) {
       setError("Session expired. Please try again.");
@@ -239,36 +241,35 @@ const PhoneLogin = () => {
 
       const token = localStorage.getItem("token");
 
-      const res = await userAPI.post(
-        "/auth/register",
-        {
-          name: name.trim(),
-          phone: phone
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+const res = await userAPI.post(
+  "/auth/register",
+  {
+    name: name.trim(),
+    phone: phone
+  },
+  {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  }
+);
 
-      console.log("Registration complete response:", res.data);
+console.log("Registration complete response:", res.data);
 
-      if (res.data.success) {
-        setNeedsNameFlow(false);
-        setOtpVerified(false);
-        setLoginCompleted(false);
+if (res.data.success) {
+  setNeedsNameFlow(false);
+  setOtpVerified(false); 
+  setLoginCompleted(false);
 
-        setSnackbarMessage(`Welcome ${name.trim()}! Your account has been created.`);
-        setSnackbarOpen(true);
+  setSnackbarMessage(`Welcome ${name.trim()}! Your account has been created.`);
+  setSnackbarOpen(true);
 
-        // ✅ FIXED: Redirect to user bookings page
-        setTimeout(() => {
-          navigate("/user/bookings");
-        }, 1500);
-      } else {
-        setError(res.data.message || "Registration failed");
-      }
+  setTimeout(() => {
+    navigate("/"); // or redirect based on role
+  }, 1500);
+} else {
+  setError(res.data.message || "Registration failed");
+}
 
     } catch (err) {
       console.error("Complete registration error:", err);
@@ -293,7 +294,7 @@ const PhoneLogin = () => {
     setOtp("");
     setError("");
     setActiveStep(0);
-    setNeedsNameFlow(false);
+    setNeedsNameFlow(false); // Reset name flow flag
   };
 
   // Steps for stepper
