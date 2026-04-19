@@ -62,7 +62,6 @@ import OwnerNotifications from "./pages/OwnerNotifications";
 import OwnerBankDetails from "./pages/owner/OwnerBankDetails";
 import OwnerVerificationPage from "./pages/owner/OwnerVerification";
 import OwnerChatList from "./pages/OwnerChatList";
-import OwnerPGs from "./pages/OwnerPGs";
 import CreatePlan from "./pages/CreatePlan";
 import OwnerPayments from "./pages/owner/OwnerPayments";
 import OwnerActiveTenants from "./pages/owner/OwnerActiveTenants";
@@ -341,7 +340,6 @@ function App() {
         <Route path="bank" element={<OwnerBankDetails />} />
         <Route path="verification" element={<OwnerVerificationPage />} />
         <Route path="notifications" element={<OwnerNotifications />} />
-        <Route path="pgs" element={<OwnerPGs />} />
         <Route path="chats" element={<OwnerChatList />} />
         <Route path="hotels" element={<OwnerHotels />} />
         <Route path="add-hotel" element={<AddHotel />} />

@@ -167,12 +167,11 @@ const Sidebar = ({ role, user }) => {
             <Link style={linkStyle(isActive("/owner/payments"))} to="/owner/payments" onClick={closeSidebar} className="sidebar-link"><FiTrendingUp size={16} /> Earnings / Payments</Link>
             <Link style={linkStyle(isActive("/owner/premium"))} to="/owner/premium" onClick={closeSidebar} className="sidebar-link"><FiStar size={16} /> Premium Plans</Link>
             <Link style={linkStyle(isActive("/owner/pgs"))} to="/owner/pgs" onClick={closeSidebar} className="sidebar-link"><FiBuilding size={16} /> My PGs</Link>
-            <Link style={linkStyle(isActive("/owner/hotels"))} to="/owner/hotels" onClick={closeSidebar} className="sidebar-link"><FiMapPin size={16} /> My Hotels</Link>
+
             <Link style={linkStyle(isActive("/owner/add"))} to="/owner/add" onClick={closeSidebar} className="sidebar-link"><FiPlusCircle size={16} /> Add PG</Link>
-            <Link style={linkStyle(isActive("/owner/add-hotel"))} to="/owner/add-hotel" onClick={closeSidebar} className="sidebar-link"><FiPlusCircle size={16} /> Add Hotel</Link>
+
             <Link style={linkStyle(isActive("/owner/bank"))} to="/owner/bank" onClick={closeSidebar} className="sidebar-link"><FiCreditCard size={16} /> Bank Details</Link>
-            <Link style={linkStyle(isActive("/owner/verification"))} to="/owner/verification" onClick={closeSidebar} className="sidebar-link"><FiCheckCircle size={16} /> Verification</Link>
-            <Link style={linkStyle(isActive("/owner/notifications"))} to="/owner/notifications" onClick={closeSidebar} className="sidebar-link"><FiBell size={16} /> Notifications</Link>
+            
             <Link style={linkStyle(isActive("/owner/chats"))} to="/owner/chats" onClick={closeSidebar} className="sidebar-link"><FiMessageCircle size={16} /> Chats</Link>
             
             {/* ✅ POLICY LINKS ADDED FOR OWNER */}
