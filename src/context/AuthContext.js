@@ -9,13 +9,12 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
-  const [role, setRole] = useState(null);
-  const [loading, setLoading] = useState(true); // Start with true
+  const [role, setRole] = useState(localStorage.getItem("role") || null);
+  const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
   const isSyncing = useRef(false);
   const logoutTimer = useRef(null);
-  const authCheckComplete = useRef(false);
 
   const retryRequest = async (fn, retries = 3, delay = 2000) => {
     try {
@@ -52,10 +51,12 @@ export const AuthProvider = ({ children }) => {
 
       if (res.data.success) {
         setUser(firebaseUser);
+
         setUserData({
           name: res.data.name,
           id: res.data.userId
         });
+
         setRole(res.data.role?.toLowerCase().trim());
 
         localStorage.setItem("token", res.data.token);
@@ -64,7 +65,6 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem("user_name", res.data.name);
       }
     } catch (err) {
-      console.error("Sync user error:", err);
       if (!err.response) {
         setUser(firebaseUser);
         return;
@@ -78,56 +78,29 @@ export const AuthProvider = ({ children }) => {
     } finally {
       isSyncing.current = false;
       setLoading(false);
-      setInitialized(true);
-      authCheckComplete.current = true;
     }
   };
 
   useEffect(() => {
-    let mounted = true;
-    
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (!mounted) return;
-      
       if (firebaseUser) {
-        // User is logged in
         setLoading(true);
         await syncUser(firebaseUser);
+        setInitialized(true);
       } else {
-        // No user - clear any pending timers
-        if (logoutTimer.current) {
-          clearTimeout(logoutTimer.current);
-        }
+        if (logoutTimer.current) clearTimeout(logoutTimer.current);
 
-        // Small delay to ensure Firebase has completely settled
         logoutTimer.current = setTimeout(() => {
-          if (mounted) {
-            if (!auth.currentUser) {
-              clearSession();
-            }
-            setLoading(false);
-            setInitialized(true);
-            authCheckComplete.current = true;
-          }
-        }, 500); // Reduced from 2000ms to 500ms for better UX
+          if (!auth.currentUser) clearSession();
+          setLoading(false);
+          setInitialized(true);
+        }, 2000);
       }
     });
 
-    // Safety timeout - ensure loading doesn't stay forever
-    const safetyTimeout = setTimeout(() => {
-      if (mounted && !authCheckComplete.current) {
-        console.log("Safety timeout triggered - forcing loading complete");
-        setLoading(false);
-        setInitialized(true);
-        authCheckComplete.current = true;
-      }
-    }, 5000); // 5 seconds max loading time
-
     return () => {
-      mounted = false;
       unsub();
       if (logoutTimer.current) clearTimeout(logoutTimer.current);
-      clearTimeout(safetyTimeout);
     };
   }, []);
 
@@ -135,7 +108,7 @@ export const AuthProvider = ({ children }) => {
     user,
     userData,
     role,
-    loading: loading || !initialized, // Only show loading if not initialized
+    loading: loading || !initialized,
     isAuthenticated: !!user,
   };
 
