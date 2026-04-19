@@ -251,7 +251,7 @@ const PhoneLogin = () => {
           setNeedsName(true);
           setStep(3);
           setActiveStep(2);
-          setSuccess("");
+          setSuccess(""); // ✅ Clear success message before name step
         } else {
           // User has name - redirect directly
           console.log("User has name - redirecting");
@@ -276,19 +276,22 @@ const PhoneLogin = () => {
     }
   };
 
-  /* ================= COMPLETE REGISTRATION WITH NAME ================= */
+  /* ================= COMPLETE REGISTRATION WITH NAME (FIXED) ================= */
   const completeRegistration = async () => {
     if (registrationInProgress.current) {
       return;
     }
     
+    // ✅ Check if firebaseUser exists
     if (!firebaseUser) {
       setError("Session expired. Please try again.");
       setStep(1);
       setActiveStep(0);
+      setNeedsName(false);
       return;
     }
     
+    // ✅ Validate name
     if (!name.trim()) {
       return setError("Please enter your full name");
     }
@@ -306,20 +309,16 @@ const PhoneLogin = () => {
     try {
       setLoading(true);
       setError("");
-      setSuccess("Creating your account...");
       
       const idToken = await firebaseUser.getIdToken(true);
       
-      // Register/update user with name
-      const response = await userAPI.post("/auth/register", {
+      // ✅ FIXED: Use /auth/firebase endpoint (not /register)
+      // ✅ REMOVED auth header
+      // ✅ REMOVED firebase_uid from body
+      const response = await userAPI.post("/auth/firebase", {
         idToken: idToken,
         phone: phone,
-        name: name.trim(),
-        firebase_uid: firebaseUser.uid
-      }, {
-        headers: {
-          Authorization: `Bearer ${authToken || localStorage.getItem("token")}`
-        }
+        name: name.trim()
       });
       
       console.log("Registration response:", response.data);
@@ -806,7 +805,7 @@ const PhoneLogin = () => {
                   </motion.div>
                 )}
 
-                {/* Step 3: Name Collection */}
+                {/* Step 3: Name Collection (FIXED) */}
                 {step === 3 && needsName && (
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
