@@ -650,14 +650,14 @@ For any queries, please contact support.
                           {!me?.id ? "Loading..." : "Chat"}
                         </span>
                       </button>
-                      <button
-                        style={styles.iconButton}
-                        onClick={() => navigate(`/agreement/${booking.id}`)}
-                        title="View Agreement"
-                      >
-                        <span style={styles.buttonIcon}>📄</span>
-                        <span>View</span>
-                      </button>
+                     <button
+  style={styles.iconButton}
+  onClick={() => window.open("/stamp-paper.pdf", "_blank")}
+  title="Preview Agreement"
+>
+  <span style={styles.buttonIcon}>📑</span>
+  <span>Preview</span>
+</button>
                       <button
                         style={styles.iconButton}
                         onClick={() => navigate(`/user/services/${booking.id}`)}
