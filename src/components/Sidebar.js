@@ -209,7 +209,7 @@ const Sidebar = ({ role, user }) => {
           <>
             <hr style={divider} />
             <Link style={linkStyle(isActive("/login"))} to="/login" onClick={closeSidebar} className="sidebar-link"><FiLogIn size={16} /> Login</Link>
-            <Link style={linkStyle(isActive("/register"))} to="/register" onClick={closeSidebar} className="sidebar-link"><FiUserPlus size={16} /> Register</Link>
+            
           </>
         )}
       </nav>
