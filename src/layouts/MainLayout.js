@@ -1,4 +1,3 @@
-// MainLayout.jsx
 import React, { useState, useEffect } from "react";
 import { Outlet, useLocation, Navigate, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
@@ -8,7 +7,6 @@ import { Button, Box, CircularProgress, Typography } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
 
-// ✅ Sync with Sidebar width
 const SIDEBAR_WIDTH = 220;
 
 const MainLayout = () => {
@@ -18,7 +16,6 @@ const MainLayout = () => {
   const { user, role, loading } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
 
-  /* ================= CHECK MOBILE ================= */
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768);
@@ -28,7 +25,6 @@ const MainLayout = () => {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  /* ================= LOGOUT ================= */
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -41,7 +37,6 @@ const MainLayout = () => {
     }
   };
 
-  /* ================= LOADING ================= */
   if (loading) {
     return (
       <Box height="100vh" display="flex" justifyContent="center" alignItems="center">
@@ -50,26 +45,21 @@ const MainLayout = () => {
     );
   }
 
-  /* ================= AUTH PROTECTION (FIXED) ================= */
-  // ✅ Public routes that anyone can access
+  // 🔥 FIX 2: SAFER REDIRECT LOGIC – only for non‑public routes
   const publicRoutes = ["/", "/login", "/register", "/pg"];
-  
-  if (!user && !loading) {
-    const isPublic = publicRoutes.some(route =>
-      location.pathname === route || location.pathname.startsWith(route + "/")
-    );
-    
-    if (!isPublic) {
-      return <Navigate to="/login" replace />;
-    }
+  const isPublic = publicRoutes.some(route =>
+    location.pathname === route || location.pathname.startsWith(route + "/")
+  );
+
+  if (!user && !isPublic) {
+    return <Navigate to="/login" replace />;
   }
-  
-  // ✅ OPTIONAL: Redirect logged-in users away from login/register
+
+  // Redirect logged-in users away from auth pages
   if (user && (location.pathname === "/login" || location.pathname === "/register")) {
     return <Navigate to="/" replace />;
   }
 
-  /* ================= TITLE ================= */
   const getTitle = () => {
     if (location.pathname === "/") return "Find Your Perfect Stay";
     if (location.pathname === "/pg") return "PG Listings";
@@ -83,10 +73,9 @@ const MainLayout = () => {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
-      {/* SIDEBAR - Only show if user is logged in */}
+      {/* Sidebar only for logged-in users */}
       {user && <Sidebar role={role} user={user} />}
 
-      {/* MAIN CONTENT - AUTO SYNC WITH SIDEBAR WIDTH */}
       <div
         style={{
           marginLeft: user && !isMobile ? SIDEBAR_WIDTH : 0,
@@ -97,7 +86,6 @@ const MainLayout = () => {
           overflowX: "hidden",
         }}
       >
-        {/* RESPONSIVE HEADER */}
         <Box
           sx={{
             display: "flex",
@@ -109,14 +97,16 @@ const MainLayout = () => {
             width: "100%"
           }}
         >
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>
-            {getTitle()}
-          </Typography>
+          {/* 🔥 Hide title for public users (optional) */}
+          {user && (
+            <Typography variant="h6" sx={{ fontWeight: 800 }}>
+              {getTitle()}
+            </Typography>
+          )}
 
-          {/* SINGLE LOGOUT + INSTALL BUTTON (NO DUPLICATE) */}
+          {/* Buttons only for logged-in users */}
           {user && (
             <div style={{ display: "flex", gap: "10px" }}>
-              {/* INSTALL BUTTON */}
               {installable && (
                 <Button
                   variant="contained"
@@ -131,8 +121,6 @@ const MainLayout = () => {
                   📲 Install App
                 </Button>
               )}
-
-              {/* LOGOUT */}
               <Button variant="contained" color="error" onClick={handleLogout}>
                 Logout
               </Button>
@@ -140,7 +128,6 @@ const MainLayout = () => {
           )}
         </Box>
 
-        {/* PAGE CONTENT */}
         <Outlet />
       </div>
     </div>

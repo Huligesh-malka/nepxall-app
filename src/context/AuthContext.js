@@ -14,7 +14,6 @@ export const AuthProvider = ({ children }) => {
   const [initialized, setInitialized] = useState(false);
 
   const isSyncing = useRef(false);
-  const logoutTimer = useRef(null);
 
   const retryRequest = async (fn, retries = 3, delay = 2000) => {
     try {
@@ -88,20 +87,14 @@ export const AuthProvider = ({ children }) => {
         await syncUser(firebaseUser);
         setInitialized(true);
       } else {
-        if (logoutTimer.current) clearTimeout(logoutTimer.current);
-
-        logoutTimer.current = setTimeout(() => {
-          if (!auth.currentUser) clearSession();
-          setLoading(false);
-          setInitialized(true);
-        }, 2000);
+        // 🔥 FIX 1: REMOVE THE 2s TIMEOUT – INSTANT CLEAR
+        clearSession();
+        setLoading(false);
+        setInitialized(true);
       }
     });
 
-    return () => {
-      unsub();
-      if (logoutTimer.current) clearTimeout(logoutTimer.current);
-    };
+    return () => unsub();
   }, []);
 
   const value = {
