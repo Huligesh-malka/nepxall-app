@@ -133,22 +133,37 @@ const PhoneLogin = () => {
     };
   }, []);
 
-  /* ================= RECAPTCHA SETUP ================= */
-  const setupRecaptcha = () => {
+  /* ================= RECAPTCHA SETUP - FIXED VERSION ================= */
+  const setupRecaptcha = async () => {
     try {
+      // Clear existing verifier if present
       if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
+        await window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = null;
       }
 
+      // Create new verifier
       window.recaptchaVerifier = new RecaptchaVerifier(
         auth,
         "recaptcha-container",
         {
           size: "invisible",
+          "expired-callback": () => {
+            console.log("reCAPTCHA expired");
+            window.recaptchaVerifier = null;
+          },
         }
       );
+
+      // 🔥 CRITICAL: Call render() to initialize
+      await window.recaptchaVerifier.render();
+      
+      console.log("reCAPTCHA initialized successfully");
+      
     } catch (err) {
-      console.error("Recaptcha error:", err);
+      console.error("Recaptcha setup error:", err);
+      window.recaptchaVerifier = null;
+      throw new Error("Failed to initialize security verification");
     }
   };
 
@@ -170,7 +185,7 @@ const PhoneLogin = () => {
     setAuthToken(token);
   };
 
-  /* ================= SEND OTP ================= */
+  /* ================= SEND OTP - FIXED VERSION ================= */
   const sendOtp = async () => {
     const cleanPhone = phone.replace(/\D/g, "");
     if (cleanPhone.length !== 10) {
@@ -181,9 +196,17 @@ const PhoneLogin = () => {
       setLoading(true);
       setError("");
       setSuccess("");
+      
+      // Reset states
+      setConfirmObj(null);
+      setOtp("");
+      setFirebaseUser(null);
+      setNeedsName(false);
 
-      setupRecaptcha();
+      // 🔥 CRITICAL: Await and setup recaptcha properly
+      await setupRecaptcha();
 
+      // Send OTP
       const confirmation = await signInWithPhoneNumber(
         auth,
         `+91${cleanPhone}`,
@@ -195,17 +218,34 @@ const PhoneLogin = () => {
       setSuccess("OTP sent successfully!");
       setStep(2);
       setActiveStep(1);
-      setOtp("");
 
     } catch (err) {
       console.error("Send OTP error:", err);
-      setError("Failed to send OTP. Please check your internet connection and try again.");
+      
+      // Clear recaptcha on error
+      if (window.recaptchaVerifier) {
+        try {
+          await window.recaptchaVerifier.clear();
+        } catch (e) {}
+        window.recaptchaVerifier = null;
+      }
+      
+      // User-friendly error messages
+      if (err.code === "auth/invalid-phone-number") {
+        setError("Invalid phone number format");
+      } else if (err.code === "auth/too-many-requests") {
+        setError("Too many attempts. Please try again later");
+      } else if (err.code === "auth/network-request-failed") {
+        setError("Network error. Please check your internet connection");
+      } else {
+        setError("Failed to send OTP. Please try again");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= VERIFY OTP ================= */
+  /* ================= VERIFY OTP - FIXED VERSION ================= */
   const verifyOtp = async () => {
     if (verificationInProgress.current) {
       return;
