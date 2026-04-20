@@ -34,12 +34,10 @@ const PhoneLogin = () => {
   // Form states
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [name, setName] = useState("");
   const [confirmObj, setConfirmObj] = useState(null);
   const [firebaseUser, setFirebaseUser] = useState(null);
   
   // Flow control states
-  const [needsName, setNeedsName] = useState(false);
   const [registrationComplete, setRegistrationComplete] = useState(false);
   const [authToken, setAuthToken] = useState(null);
   
@@ -57,11 +55,10 @@ const PhoneLogin = () => {
   // Refs to prevent duplicate calls
   const verificationInProgress = useRef(false);
   const redirectInProgress = useRef(false);
-  const registrationInProgress = useRef(false);
 
   const navigate = useNavigate();
 
-  const steps = ['Mobile Number', 'Verify OTP', 'Complete Profile'];
+  const steps = ['Mobile Number', 'Verify OTP'];
 
   // Animation variants
   const containerVariants = {
@@ -81,7 +78,7 @@ const PhoneLogin = () => {
       return;
     }
     
-    // Check if user is already logged in and has name
+    // Check if user is already logged in
     const storedToken = localStorage.getItem("token");
     const storedUser = localStorage.getItem("user");
     
@@ -91,7 +88,7 @@ const PhoneLogin = () => {
         if (userData.name && userData.name.trim() !== "") {
           redirectInProgress.current = true;
           setTimeout(() => {
-            redirect(userData.role || "tenant");
+            redirect("owner"); // 🔥 FORCE OWNER
           }, 500);
         }
       } catch (e) {
@@ -100,7 +97,7 @@ const PhoneLogin = () => {
     } else if (user && user.name && user.name.trim() !== "" && user.role) {
       redirectInProgress.current = true;
       setTimeout(() => {
-        redirect(user.role);
+        redirect("owner"); // 🔥 FORCE OWNER
       }, 500);
     }
   }, [user, authLoading, registrationComplete]);
@@ -201,7 +198,6 @@ const PhoneLogin = () => {
       setConfirmObj(null);
       setOtp("");
       setFirebaseUser(null);
-      setNeedsName(false);
 
       // 🔥 CRITICAL: Await and setup recaptcha properly
       await setupRecaptcha();
@@ -245,7 +241,7 @@ const PhoneLogin = () => {
     }
   };
 
-  /* ================= VERIFY OTP - FIXED VERSION ================= */
+  /* ================= VERIFY OTP - MODIFIED FOR DIRECT LOGIN ================= */
   const verifyOtp = async () => {
     if (verificationInProgress.current) {
       return;
@@ -270,10 +266,10 @@ const PhoneLogin = () => {
       // Get Firebase ID token
       const idToken = await result.user.getIdToken(true);
       
-      // Check user status from backend
+      // 🔥 CHANGE: Force role to "owner" always
       const checkResponse = await userAPI.post("/auth/firebase", {
         idToken,
-        role: "tenant",
+        role: "owner", // 🔥 FORCE OWNER ROLE
         phone: phone
       });
       
@@ -285,24 +281,16 @@ const PhoneLogin = () => {
           saveAuthData(checkResponse.data.token, checkResponse.data.user);
         }
         
-        // Check if user needs to provide name
-        if (checkResponse.data.needsName === true) {
-          console.log("User needs name - showing name form");
-          setNeedsName(true);
-          setStep(3);
-          setActiveStep(2);
-          setSuccess("");
-        } else {
-          // User has name - redirect directly
-          console.log("User has name - redirecting");
-          setRegistrationComplete(true);
-          setSnackbarMessage(checkResponse.data.message || "Welcome back!");
-          setSnackbarOpen(true);
-          
-          setTimeout(() => {
-            redirect(checkResponse.data.user?.role || "tenant");
-          }, 1500);
-        }
+        // 🔥 CHANGE: Always login directly - NO NAME STEP
+        console.log("Direct login - redirecting to Owner Dashboard");
+        setRegistrationComplete(true);
+        setSnackbarMessage(checkResponse.data.message || "Welcome! 🚀");
+        setSnackbarOpen(true);
+        
+        // 🔥 CHANGE: Force redirect to owner dashboard
+        setTimeout(() => {
+          redirect("owner"); // 🔥 FORCE OWNER
+        }, 1000);
       } else {
         setError(checkResponse.data.message || "Authentication failed");
       }
@@ -313,84 +301,6 @@ const PhoneLogin = () => {
     } finally {
       setLoading(false);
       verificationInProgress.current = false;
-    }
-  };
-
-  /* ================= COMPLETE REGISTRATION WITH NAME ================= */
-  const completeRegistration = async () => {
-    if (registrationInProgress.current) {
-      return;
-    }
-    
-    if (!firebaseUser) {
-      setError("Session expired. Please try again.");
-      setStep(1);
-      setActiveStep(0);
-      return;
-    }
-    
-    if (!name.trim()) {
-      return setError("Please enter your full name");
-    }
-    
-    if (name.trim().length < 3) {
-      return setError("Please enter a valid name (minimum 3 characters)");
-    }
-    
-    if (/^[0-9+]+$/.test(name.trim())) {
-      return setError("Please enter a valid name (not a phone number)");
-    }
-    
-    registrationInProgress.current = true;
-    
-    try {
-      setLoading(true);
-      setError("");
-      setSuccess("Creating your account...");
-      
-      const idToken = await firebaseUser.getIdToken(true);
-      
-      // Register/update user with name
-      const response = await userAPI.post("/auth/register", {
-        idToken: idToken,
-        phone: phone,
-        name: name.trim(),
-        firebase_uid: firebaseUser.uid
-      }, {
-        headers: {
-          Authorization: `Bearer ${authToken || localStorage.getItem("token")}`
-        }
-      });
-      
-      console.log("Registration response:", response.data);
-      
-      if (response.data.success) {
-        // Save updated auth data
-        if (response.data.token) {
-          saveAuthData(response.data.token, response.data.user);
-        }
-        
-        setRegistrationComplete(true);
-        setNeedsName(false);
-        
-        setSnackbarMessage(`Welcome ${name.trim()}! Your account has been created.`);
-        setSnackbarOpen(true);
-        
-        // Redirect after short delay
-        setTimeout(() => {
-          redirect(response.data.user?.role || "tenant");
-        }, 1500);
-        
-      } else {
-        setError(response.data.message || "Registration failed");
-      }
-      
-    } catch (err) {
-      console.error("Complete registration error:", err);
-      setError(err?.response?.data?.message || "Server error. Please try again.");
-    } finally {
-      setLoading(false);
-      registrationInProgress.current = false;
     }
   };
 
@@ -410,13 +320,10 @@ const PhoneLogin = () => {
     setOtp("");
     setError("");
     setSuccess("");
-    setNeedsName(false);
     setRegistrationComplete(false);
     setFirebaseUser(null);
-    setName("");
     verificationInProgress.current = false;
     redirectInProgress.current = false;
-    registrationInProgress.current = false;
   };
 
   return (
@@ -565,7 +472,6 @@ const PhoneLogin = () => {
                   >
                     {step === 1 && <SmartphoneIcon sx={{ fontSize: 45, color: "white" }} />}
                     {step === 2 && <LockIcon sx={{ fontSize: 45, color: "white" }} />}
-                    {step === 3 && <PersonIcon sx={{ fontSize: 45, color: "white" }} />}
                   </Box>
                 </motion.div>
               </Zoom>
@@ -582,7 +488,6 @@ const PhoneLogin = () => {
               >
                 {step === 1 && "Welcome Back!"}
                 {step === 2 && "Verify Your Number"}
-                {step === 3 && "Complete Your Profile"}
               </Typography>
               <Typography
                 variant="body2"
@@ -594,12 +499,11 @@ const PhoneLogin = () => {
               >
                 {step === 1 && "Enter your mobile number to get started"}
                 {step === 2 && `We've sent a 6-digit code to +91 ${phone}`}
-                {step === 3 && "Please tell us your name to continue"}
               </Typography>
             </Box>
 
-            {/* Stepper */}
-            {(step === 2 || step === 3) && (
+            {/* Stepper - Updated for 2 steps only */}
+            {step === 2 && (
               <Box sx={{ px: 4, pt: 3 }}>
                 <Stepper activeStep={activeStep} orientation="horizontal" sx={{ mb: 2 }}>
                   {steps.map((label, index) => (
@@ -843,96 +747,6 @@ const PhoneLogin = () => {
                         ← Change Phone Number
                       </Button>
                     </Box>
-                  </motion.div>
-                )}
-
-                {/* Step 3: Name Collection */}
-                {step === 3 && needsName && (
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Box sx={{ textAlign: "center", mb: 3 }}>
-                      <Avatar
-                        sx={{
-                          width: 80,
-                          height: 80,
-                          margin: "0 auto",
-                          bgcolor: alpha(theme.palette.success.main, 0.1),
-                          color: theme.palette.success.main,
-                          mb: 2,
-                          animation: "glow 2s infinite"
-                        }}
-                      >
-                        <EmojiEmotionsIcon sx={{ fontSize: 45 }} />
-                      </Avatar>
-                      <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-                        Welcome to our platform!
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Please tell us your name to personalize your experience
-                      </Typography>
-                    </Box>
-
-                    <TextField
-                      fullWidth
-                      label="Full Name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      margin="normal"
-                      variant="outlined"
-                      autoFocus
-                      placeholder="Enter your full name"
-                      helperText="This will be displayed on your profile (minimum 3 characters)"
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <PersonIcon color="primary" />
-                          </InputAdornment>
-                        ),
-                        sx: { borderRadius: 3 }
-                      }}
-                      sx={{
-                        mb: 3,
-                        '& .MuiOutlinedInput-root': {
-                          '&.Mui-focused': {
-                            boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.2)}`,
-                          }
-                        }
-                      }}
-                    />
-
-                    <motion.div
-                      variants={buttonVariants}
-                      whileHover="hover"
-                      whileTap="tap"
-                    >
-                      <Button
-                        fullWidth
-                        onClick={completeRegistration}
-                        disabled={loading || !name.trim() || name.trim().length < 3 || registrationInProgress.current}
-                        variant="contained"
-                        size="large"
-                        endIcon={!loading && <CheckCircleIcon />}
-                        sx={{
-                          borderRadius: 3,
-                          py: 1.5,
-                          textTransform: "none",
-                          fontSize: "1rem",
-                          fontWeight: 700,
-                          background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.dark} 100%)`,
-                          transition: "all 0.3s",
-                          '&:hover': {
-                            transform: "translateY(-2px)",
-                            boxShadow: `0 8px 20px ${alpha(theme.palette.success.main, 0.3)}`,
-                          },
-                        }}
-                      >
-                        {loading ? <CircularProgress size={24} color="inherit" /> : "Complete Registration"}
-                      </Button>
-                    </motion.div>
                   </motion.div>
                 )}
               </AnimatePresence>
