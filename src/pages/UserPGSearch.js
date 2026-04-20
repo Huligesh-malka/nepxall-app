@@ -2802,8 +2802,11 @@ function UserPGSearch() {
               <ZapIcon size={24} />
             </div>
             <div>
-              <div style={{ fontSize: 18, fontWeight: 700 }}>⚡ Instant Booking Available</div>
-              <div style={{ fontSize: 13, opacity: 0.9 }}>Book your room instantly with just one click</div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>⚡Add your Pg/coliving/Tolet in 2 minutes </div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}> ✓ Get tenants in 7days </div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}> ✓ Instagram promotion included </div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}> ✓ Direct tenant leads  </div>
+              <div style={{ fontSize: 13, opacity: 0.9 }}> </div>
             </div>
           </div>
 
