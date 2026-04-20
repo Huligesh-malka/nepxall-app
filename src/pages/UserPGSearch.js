@@ -2811,7 +2811,7 @@ function UserPGSearch() {
             </div>
             <div>
               <div style={{ fontSize: 18, fontWeight: 700 }}>⚡ Add your PG/Coliving/Tolet in 2 minutes</div>
-              <div style={{ fontSize: 13, opacity: 0.9 }}>Quick and easy property listing process</div>
+              <div style={{ fontSize: 13, opacity: 0.9 }}>Free Listing • ZERO Commission • Direct Enquiries</div>
             </div>
           </div>
 
