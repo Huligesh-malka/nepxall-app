@@ -196,7 +196,7 @@ const MainLayout = () => {
       localStorage.removeItem("token");
       localStorage.removeItem("role");
       localStorage.removeItem("user_id");
-      navigate("/login", { replace: true });
+      navigate("/", { replace: true }); // Navigate to home page after logout
     } catch (err) {
       console.error("Logout error:", err);
     }
@@ -300,6 +300,22 @@ const MainLayout = () => {
             {/* ✅ IF USER LOGGED IN */}
             {user && (
               <>
+                {/* Become Owner button for logged-in users who are not already owners */}
+                {role !== "owner" && (
+                  <Button
+                    variant="contained"
+                    onClick={() => navigate("/become-owner")}
+                    sx={{
+                      background: "#4CAF50",
+                      "&:hover": { background: "#43a047" },
+                      borderRadius: "8px",
+                      fontWeight: 600
+                    }}
+                  >
+                    Become Owner
+                  </Button>
+                )}
+
                 {installable && (
                   <Button
                     variant="contained"
@@ -317,8 +333,13 @@ const MainLayout = () => {
 
                 <Button
                   variant="contained"
-                  color="error"
                   onClick={handleLogout}
+                  sx={{
+                    background: "#dc2626",
+                    "&:hover": { background: "#b91c1c" },
+                    borderRadius: "8px",
+                    fontWeight: 600
+                  }}
                 >
                   Logout
                 </Button>
