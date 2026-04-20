@@ -2823,8 +2823,8 @@ function UserPGSearch() {
               <BadgePercent size={24} />
             </div>
             <div>
-              <div style={{ fontSize: 18, fontWeight: 700 }}>🆓 Free to Book </div>
-              <div style={{ fontSize: 13, opacity: 0.9 }}>Save up to ₹5,000 on booking fees</div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>🆓 Start Free – No Charges  </div>
+              <div style={{ fontSize: 13, opacity: 0.9 }}>🎉 Lifetime Premium FREE for First 100 Owners</div>
             </div>
           </div>
 
