@@ -223,7 +223,7 @@ const MainLayout = () => {
   }
 
   const getTitle = () => {
-    if (location.pathname === "/") return "Find Your Perfect Stay";
+    if (location.pathname === "/") return "";
     if (location.pathname === "/pg") return "PG Listings";
     if (location.pathname.startsWith("/pg/")) return "PG Details";
     if (location.pathname === "/booking") return "My Bookings";
