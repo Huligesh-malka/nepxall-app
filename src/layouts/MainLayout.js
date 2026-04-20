@@ -236,11 +236,11 @@ const MainLayout = () => {
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       {/* Sidebar only for logged-in users */}
-      <Sidebar role={role} user={user} />
+      {user && <Sidebar role={role} user={user} />}
 
       <div
         style={{
-          marginLeft: !isMobile ? SIDEBAR_WIDTH : 0,
+          marginLeft: !isMobile && user ? SIDEBAR_WIDTH : 0,
           padding: isMobile ? "12px" : "24px",
           width: "100%",
           minHeight: "100vh",
@@ -266,28 +266,65 @@ const MainLayout = () => {
             </Typography>
           )}
 
-          {/* Buttons only for logged-in users */}
-          {user && (
-            <div style={{ display: "flex", gap: "10px" }}>
-              {installable && (
+          {/* RIGHT SIDE BUTTONS */}
+          <div style={{ display: "flex", gap: "10px" }}>
+            {/* ✅ IF USER NOT LOGGED IN */}
+            {!user && (
+              <>
                 <Button
-                  variant="contained"
-                  onClick={installApp}
+                  variant="outlined"
+                  onClick={() => navigate("/login")}
                   sx={{
-                    background: "#2563eb",
-                    "&:hover": { background: "#1d4ed8" },
                     borderRadius: "8px",
                     fontWeight: 600
                   }}
                 >
-                  📲 Install App
+                  Login
                 </Button>
-              )}
-              <Button variant="contained" color="error" onClick={handleLogout}>
-                Logout
-              </Button>
-            </div>
-          )}
+
+                <Button
+                  variant="contained"
+                  onClick={() => navigate("/become-owner")}
+                  sx={{
+                    background: "#4CAF50",
+                    "&:hover": { background: "#43a047" },
+                    borderRadius: "8px",
+                    fontWeight: 600
+                  }}
+                >
+                  Become Owner
+                </Button>
+              </>
+            )}
+
+            {/* ✅ IF USER LOGGED IN */}
+            {user && (
+              <>
+                {installable && (
+                  <Button
+                    variant="contained"
+                    onClick={installApp}
+                    sx={{
+                      background: "#2563eb",
+                      "&:hover": { background: "#1d4ed8" },
+                      borderRadius: "8px",
+                      fontWeight: 600
+                    }}
+                  >
+                    📲 Install App
+                  </Button>
+                )}
+
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={handleLogout}
+                >
+                  Logout
+                </Button>
+              </>
+            )}
+          </div>
         </Box>
 
         <Outlet />
