@@ -1654,56 +1654,76 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
                   ))}
                 </div>
               </div>
+<div style={{
+  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+  borderRadius: 16,
+  padding: 24,
+  color: "white",
+  marginTop: 20
+}}>
+  <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>
+    ⚡ Instant Booking
+  </h3>
+  <div style={{ marginBottom: 20 }}>
+    <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 4 }}>Available Rooms</div>
+    <div style={{ fontSize: 32, fontWeight: 700 }}>
+      {pg.available_rooms || 0}
+      <span style={{ fontSize: 16, opacity: 0.9 }}> / {pg.total_rooms || "N/A"}</span>
+    </div>
+  </div>
+  <button
+    onClick={() => onBook(pg)}
+    style={{
+      width: "100%",
+      padding: "14px",
+      background: "white",
+      color: "#667eea",
+      border: "none",
+      borderRadius: 10,
+      fontSize: 16,
+      fontWeight: 700,
+      cursor: "pointer",
+      transition: "all 0.2s"
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.transform = "translateY(-2px)";
+      e.currentTarget.style.boxShadow = "0 8px 25px rgba(255,255,255,0.3)";
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.transform = "translateY(0)";
+      e.currentTarget.style.boxShadow = "none";
+    }}
+  >
+    🏠 Book Now
+  </button>
+</div>
 
-              <div style={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                borderRadius: 16,
-                padding: 24,
-                color: "white",
-                marginTop: 20
-              }}>
-                <h3 style={{ 
-                  fontSize: 20, 
-                  fontWeight: 700,
-                  marginBottom: 16 
-                }}>
-                  ⚡ Instant Booking
-                </h3>
-                <div style={{ marginBottom: 20 }}>
-                  <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 4 }}>Available Rooms</div>
-                  <div style={{ fontSize: 32, fontWeight: 700 }}>
-                    {pg.available_rooms || 0}
-                    <span style={{ fontSize: 16, opacity: 0.9 }}> / {pg.total_rooms || "N/A"}</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => onBook(pg)}
-                  style={{
-                    width: "100%",
-                    padding: "14px",
-                    background: "white",
-                    color: "#667eea",
-                    border: "none",
-                    borderRadius: 10,
-                    fontSize: 16,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    transition: "all 0.2s"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = "0 8px 25px rgba(255,255,255,0.3)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "none";
-                  }}
-                >
-                  🏠 Book Now
-                </button>
-              </div>
-            </div>
-
+{/* ✅ Add your PG promotional section */}
+<div style={{
+  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+  borderRadius: 16,
+  padding: 24,
+  color: "white",
+  marginTop: 20
+}}>
+  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+    <ZapIcon size={32} />
+    <div>
+      <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
+        ⚡ Add your PG/Coliving/Tolet in 2 minutes
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 500, marginTop: 6 }}>
+        ✓ Get tenants in 7 days
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 500, marginTop: 6 }}>
+        ✓ Instagram promotion included
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 500, marginTop: 6 }}>
+        ✓ Direct tenant leads (no brokerage)
+      </div>
+    </div>
+  </div>
+</div>
             <div>
               <div style={{
                 background: "#f0fdf4",
@@ -2799,15 +2819,13 @@ function UserPGSearch() {
               alignItems: "center",
               justifyContent: "center"
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 16, padding: 20, borderRadius: 12, background: "#f8f9fa", maxWidth: 500 }}>
-  <ZapIcon size={24} />
-  <div>
-    <div style={{ fontSize: 18, fontWeight: 700 }}>⚡ Add your PG/Coliving/Tolet in 2 minutes</div>
-    <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>✓ Get tenants in 7 days</div>
-    <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>✓ Instagram promotion included</div>
-    <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>✓ Direct tenant leads (no brokerage)</div>
-  </div>
-</div>
+              <ZapIcon size={24} />
+            </div>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>⚡ Instant Booking Available</div>
+              <div style={{ fontSize: 13, opacity: 0.9 }}>Book your room instantly with just one click</div>
+            </div>
+          </div>
 
           <div style={{
             display: "flex",
