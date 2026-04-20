@@ -292,7 +292,7 @@ const MainLayout = () => {
                     fontWeight: 600
                   }}
                 >
-                  Become Owner
+                  Add Pg/CoLiving/Tolet
                 </Button>
               </>
             )}
@@ -312,7 +312,7 @@ const MainLayout = () => {
                       fontWeight: 600
                     }}
                   >
-                    Become Owner
+                    Add Pg/CoLiving/Tolet
                   </Button>
                 )}
 
