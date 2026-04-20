@@ -390,7 +390,23 @@ function OwnerAddPG() {
     setValidationErrors(prev => ({ ...prev, address: false }));
   };
 
-  // Validate form and mark missing fields
+  // Enhanced validate form that returns list of missing fields
+  const getMissingFieldsList = () => {
+    const missing = [];
+    if (!form.pg_name?.trim()) missing.push("Property Name");
+    if (!selectedLocation.address?.trim()) missing.push("Property Location (Address)");
+    if (!form.contact_person?.trim()) missing.push("Contact Person");
+    if (!form.contact_phone?.trim()) missing.push("Contact Phone");
+    if (photos.length === 0) missing.push("Property Photos (at least 1)");
+    if (form.contact_email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
+      missing.push("Valid Contact Email");
+    }
+    if (form.contact_phone?.trim() && !/^[0-9]{10,15}$/.test(form.contact_phone.replace(/\D/g, ''))) {
+      missing.push("Valid Contact Phone (10-15 digits)");
+    }
+    return missing;
+  };
+
   const validateForm = () => {
     const errors = {};
     if (!form.pg_name?.trim()) errors.pg_name = true;
@@ -398,14 +414,23 @@ function OwnerAddPG() {
     if (!form.contact_person?.trim()) errors.contact_person = true;
     if (!form.contact_phone?.trim()) errors.contact_phone = true;
     if (photos.length === 0) errors.photos = true;
-    if (form.contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
+    if (form.contact_email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
       errors.contact_email = true;
     }
-    if (!/^[0-9]{10,15}$/.test(form.contact_phone.replace(/\D/g, ''))) {
+    if (form.contact_phone?.trim() && !/^[0-9]{10,15}$/.test(form.contact_phone.replace(/\D/g, ''))) {
       errors.contact_phone = true;
     }
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  // Show detailed missing fields message
+  const showMissingFieldsAlert = () => {
+    const missingFields = getMissingFieldsList();
+    if (missingFields.length > 0) {
+      alert(`⚠️ Please complete the following required fields:\n\n• ${missingFields.join('\n• ')}`);
+    }
+    return missingFields.length > 0;
   };
 
   const appendIfValue = (fd, key, value) => {
@@ -418,7 +443,30 @@ function OwnerAddPG() {
       navigate("/login");
       return;
     }
+    
+    // First check if there are any missing fields and show detailed alert
+    const missingFields = getMissingFieldsList();
+    if (missingFields.length > 0) {
+      alert(`⚠️ Cannot create property. Please complete the following required fields:\n\n• ${missingFields.join('\n• ')}`);
+      // Also highlight the missing fields with red border
+      const errors = {};
+      if (!form.pg_name?.trim()) errors.pg_name = true;
+      if (!selectedLocation.address?.trim()) errors.address = true;
+      if (!form.contact_person?.trim()) errors.contact_person = true;
+      if (!form.contact_phone?.trim()) errors.contact_phone = true;
+      if (photos.length === 0) errors.photos = true;
+      if (form.contact_email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
+        errors.contact_email = true;
+      }
+      if (form.contact_phone?.trim() && !/^[0-9]{10,15}$/.test(form.contact_phone.replace(/\D/g, ''))) {
+        errors.contact_phone = true;
+      }
+      setValidationErrors(errors);
+      return;
+    }
+    
     if (!validateForm()) {
+      // This should not happen because we already checked missing fields, but just in case
       alert("Please fill all required fields (marked in red)");
       return;
     }
@@ -563,7 +611,8 @@ function OwnerAddPG() {
   if (!user) return <Navigate to="/login" replace />;
   if (role !== "owner") return <Navigate to="/" replace />;
 
-  const isSubmitDisabled = loading || !selectedLocation.address || photos.length === 0 || !form.pg_name?.trim() || !form.contact_person?.trim() || !form.contact_phone?.trim();
+  // Disable submit only when loading - we want to show alert for missing fields instead of blocking button
+  const isSubmitDisabled = loading;
 
   return (
     <div style={styles.container}>
@@ -625,7 +674,7 @@ function OwnerAddPG() {
             <button type="button" onClick={() => setManualEditMode(true)} style={styles.manualAddressButton}>📝 Enter Address Manually</button>
           </div>
           {selectedLocation.address ? (
-            <div style={styles.locationPreview}>
+            <div style={{...styles.locationPreview, ...(validationErrors.address ? { borderLeftColor: "#f44336", backgroundColor: "#ffebee" } : {})}}>
               <div style={styles.locationHeader}>
                 <h4>📍 Selected Location</h4>
                 <div style={styles.locationActionButtons}>
