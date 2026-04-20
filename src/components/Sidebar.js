@@ -165,7 +165,7 @@ const Sidebar = ({ role, user }) => {
             <Link style={linkStyle(isActive("/owner/tenants"))} to="/owner/tenants" onClick={closeSidebar} className="sidebar-link"><FiUsers size={16} /> Active Tenants</Link>
             <Link style={linkStyle(isActive("/owner/vacate"))} to="/owner/vacate" onClick={closeSidebar} className="sidebar-link"><FiLogOut size={16} /> Vacate Requests</Link>
             <Link style={linkStyle(isActive("/owner/payments"))} to="/owner/payments" onClick={closeSidebar} className="sidebar-link"><FiTrendingUp size={16} /> Earnings / Payments</Link>
-            <Link style={linkStyle(isActive("/owner/premium"))} to="/owner/premium" onClick={closeSidebar} className="sidebar-link"><FiStar size={16} /> Premium Plans</Link>
+           
             
 
             <Link style={linkStyle(isActive("/owner/add"))} to="/owner/add" onClick={closeSidebar} className="sidebar-link"><FiPlusCircle size={16} /> Add PG</Link>
@@ -173,6 +173,9 @@ const Sidebar = ({ role, user }) => {
             <Link style={linkStyle(isActive("/owner/bank"))} to="/owner/bank" onClick={closeSidebar} className="sidebar-link"><FiCreditCard size={16} /> Bank Details</Link>
             
             <Link style={linkStyle(isActive("/owner/chats"))} to="/owner/chats" onClick={closeSidebar} className="sidebar-link"><FiMessageCircle size={16} /> Chats</Link>
+
+
+            <Link style={linkStyle(isActive("/owner/premium"))} to="/owner/premium" onClick={closeSidebar} className="sidebar-link"><FiStar size={16} /> Premium Plans</Link>
             
             {/* ✅ POLICY LINKS ADDED FOR OWNER */}
             <hr style={divider} />
