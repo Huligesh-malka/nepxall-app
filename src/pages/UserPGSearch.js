@@ -2799,16 +2799,15 @@ function UserPGSearch() {
               alignItems: "center",
               justifyContent: "center"
             }}>
-              <ZapIcon size={24} />
-            </div>
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 700 }}>⚡Add your Pg/coliving/Tolet in 2 minutes </div>
-              <div style={{ fontSize: 18, fontWeight: 700 }}> ✓ Get tenants in 7days </div>
-              <div style={{ fontSize: 18, fontWeight: 700 }}> ✓ Instagram promotion included </div>
-              <div style={{ fontSize: 18, fontWeight: 700 }}> ✓ Direct tenant leads  </div>
-              <div style={{ fontSize: 13, opacity: 0.9 }}> </div>
-            </div>
-          </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 16, padding: 20, borderRadius: 12, background: "#f8f9fa", maxWidth: 500 }}>
+  <ZapIcon size={24} />
+  <div>
+    <div style={{ fontSize: 18, fontWeight: 700 }}>⚡ Add your PG/Coliving/Tolet in 2 minutes</div>
+    <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>✓ Get tenants in 7 days</div>
+    <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>✓ Instagram promotion included</div>
+    <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>✓ Direct tenant leads (no brokerage)</div>
+  </div>
+</div>
 
           <div style={{
             display: "flex",
