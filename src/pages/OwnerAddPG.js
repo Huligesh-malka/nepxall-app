@@ -618,6 +618,13 @@ function OwnerAddPG() {
     <div style={styles.container}>
       <div style={styles.card}>
         <h2 style={styles.title}>➕ Add New Property</h2>
+        <div style={styles.premiumBanner}>
+  🎉 First 100 Owners Get <b>Lifetime Premium FREE</b> 🚀  
+  <br />
+  <span style={{ fontSize: "13px", opacity: 0.9 }}>
+    No monthly fees • Save up to ₹5,000 • Limited Offer
+  </span>
+</div>
         
         {/* Basic Information */}
         <div style={styles.section}>
