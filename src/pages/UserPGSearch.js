@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 
@@ -74,7 +74,14 @@ import {
   BarChart,
   Zap as ZapIcon,
   BadgePercent,
-  Coins
+  Coins,
+  Rocket,
+  Users as UsersIcon,
+  Megaphone,
+  Instagram,
+  Sparkles as SparklesIcon,
+  Crown,
+  Gem
 } from "lucide-react";
 import api from "../api/api";
 
@@ -1655,7 +1662,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
                 </div>
               </div>
 
-              {/* Instant Booking Card */}
               <div style={{
                 background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                 borderRadius: 16,
@@ -1702,42 +1708,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
                 >
                   🏠 Book Now
                 </button>
-              </div>
-
-              {/* ✅ ADD YOUR PG PROMOTIONAL SECTION */}
-              <div style={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                borderRadius: 16,
-                padding: 24,
-                color: "white",
-                marginTop: 20
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                  <div style={{
-                    background: "rgba(255,255,255,0.2)",
-                    padding: 12,
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center"
-                  }}>
-                    <ZapIcon size={28} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
-                      ⚡ Add your PG/Coliving/Tolet in 2 minutes
-                    </div>
-                    <div style={{ fontSize: 15, fontWeight: 500, marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
-                      <Check size={16} /> Get tenants in 7 days
-                    </div>
-                    <div style={{ fontSize: 15, fontWeight: 500, marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
-                      <Check size={16} /> Instagram promotion included
-                    </div>
-                    <div style={{ fontSize: 15, fontWeight: 500, marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
-                      <Check size={16} /> Direct tenant leads (no brokerage)
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -2809,7 +2779,7 @@ function UserPGSearch() {
           </button>
         </div>
         
-        {/* Features Banner */}
+        {/* Features Banner - UPDATED */}
         <div style={{
           display: "flex",
           gap: 20,
@@ -2823,6 +2793,7 @@ function UserPGSearch() {
           alignItems: "center",
           justifyContent: "center"
         }}>
+          {/* Feature 1: Quick Listing */}
           <div style={{
             display: "flex",
             alignItems: "center",
@@ -2836,14 +2807,15 @@ function UserPGSearch() {
               alignItems: "center",
               justifyContent: "center"
             }}>
-              <ZapIcon size={24} />
+              <Rocket size={24} />
             </div>
             <div>
-              <div style={{ fontSize: 18, fontWeight: 700 }}>⚡ Instant Booking Available</div>
-              <div style={{ fontSize: 13, opacity: 0.9 }}>Book your room instantly with just one click</div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>⚡ Add your PG/Coliving/Tolet in 2 minutes</div>
+              <div style={{ fontSize: 13, opacity: 0.9 }}>Quick and easy property listing process</div>
             </div>
           </div>
 
+          {/* Feature 2: Fast Tenants */}
           <div style={{
             display: "flex",
             alignItems: "center",
@@ -2857,14 +2829,15 @@ function UserPGSearch() {
               alignItems: "center",
               justifyContent: "center"
             }}>
-              <BadgePercent size={24} />
+              <UsersIcon size={24} />
             </div>
             <div>
-              <div style={{ fontSize: 18, fontWeight: 700 }}>🆓 Start Free – No Charges</div>
-              <div style={{ fontSize: 13, opacity: 0.9 }}>🎉 Lifetime Premium FREE for First 100 Owners</div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>👥 Get tenants in 7 days</div>
+              <div style={{ fontSize: 13, opacity: 0.9 }}>Fast matching with verified tenants</div>
             </div>
           </div>
 
+          {/* Feature 3: Instagram Promotion */}
           <div style={{
             display: "flex",
             alignItems: "center",
@@ -2878,11 +2851,33 @@ function UserPGSearch() {
               alignItems: "center",
               justifyContent: "center"
             }}>
-              <Coins size={24} />
+              <Instagram size={24} />
             </div>
             <div>
-              <div style={{ fontSize: 18, fontWeight: 700 }}>💰 Zero Brokerage</div>
-              <div style={{ fontSize: 13, opacity: 0.9 }}>Direct owner listings, no middleman</div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>📱 Instagram promotion included</div>
+              <div style={{ fontSize: 13, opacity: 0.9 }}>Get featured on our social media</div>
+            </div>
+          </div>
+
+          {/* Feature 4: Direct Leads */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12
+          }}>
+            <div style={{
+              background: "rgba(255,255,255,0.2)",
+              padding: "10px",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}>
+              <SparklesIcon size={24} />
+            </div>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>📞 Direct tenant leads (no brokerage)</div>
+              <div style={{ fontSize: 13, opacity: 0.9 }}>Connect directly with potential tenants</div>
             </div>
           </div>
         </div>
