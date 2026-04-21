@@ -595,7 +595,7 @@ const AdminAllPGs = () => {
                         alt={pg.pg_name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.target.src = "https://via.placeholder.com/400x200?text=No+Image";
+                          e.target.src = "/images/no-image.png";
                         }}
                       />
                     ) : (

@@ -165,7 +165,7 @@ const AdminPGDetails = () => {
   const handleFieldUpdate = async (field, value) => {
     try {
       setSaving(true);
-      const res = await fetch(`${API_BASE}/admin/pg/${id}/field`, {
+      fetch(`${API_BASE}/admin/pg/${id}/update-field`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
