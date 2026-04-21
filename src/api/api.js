@@ -196,10 +196,19 @@ export const pgAPI = {
 
 export const adminPGAPI = {
   getPendingPGs: () => adminAPI.get("/pgs/pending"),
+
   getPGById: (id) => adminAPI.get(`/pg/${id}`),
+
   approvePG: (id) => adminAPI.patch(`/pg/${id}/approve`),
+
   rejectPG: (id, reason) =>
     adminAPI.patch(`/pg/${id}/reject`, { reason }),
-};
 
+  // 🔥 ADD THIS FUNCTION
+  updatePGField: (id, field, value) =>
+    adminAPI.patch(`/pg/${id}/update-field`, {
+      field,
+      value,
+    }),
+};
 export default userAPI;
