@@ -161,35 +161,37 @@ const AdminPGDetails = () => {
   if (!user) return <Navigate to="/login" replace />;
   if (role !== "admin") return <Navigate to="/" replace />;
   if (!pg) return <Navigate to="/admin/pgs" replace />;
+const handleFieldUpdate = async (field, value) => {
+  try {
+    setSaving(true);
 
-  const handleFieldUpdate = async (field, value) => {
-    try {
-      setSaving(true);
-      fetch(`${API_BASE}/admin/pg/${id}/update-field`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ field, value })
-      });
-      
-      if (res.ok) {
-        setPG(prev => ({ ...prev, [field]: value }));
-        showNotification(`${field.replace(/_/g, " ")} updated successfully`);
-      } else {
-        const error = await res.json();
-        showNotification(error.message || "Update failed", "error");
-      }
-    } catch (err) {
-      console.error("Update error:", err);
-      showNotification("Update failed", "error");
-    } finally {
-      setSaving(false);
-      setEditingField(null);
-      setEditValue("");
+    const res = await fetch(`${API_BASE}/admin/pg/${id}/update-field`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ field, value })
+    });
+
+    // ✅ res is used inside same scope
+    if (res.ok) {
+      setPG(prev => ({ ...prev, [field]: value }));
+      showNotification(`${field.replace(/_/g, " ")} updated successfully`);
+    } else {
+      const error = await res.json();
+      showNotification(error.message || "Update failed", "error");
     }
-  };
+
+  } catch (err) {
+    console.error("Update error:", err);
+    showNotification("Update failed", "error");
+  } finally {
+    setSaving(false);
+    setEditingField(null);
+    setEditValue("");
+  }
+};
 
   const handleApprove = async () => {
     if (!window.confirm("Are you sure you want to approve this property?")) return;
