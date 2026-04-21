@@ -1034,4 +1034,4 @@ const styles = {
   backToMapButton: { padding: "12px 24px", background: "#2196F3", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "14px", fontWeight: "500", display: "flex", alignItems: "center", gap: "8px" },
 };
 
-export default OwnerAdd;
+export default OwnerAddPG;  
