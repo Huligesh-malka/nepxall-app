@@ -3,9 +3,9 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 're
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useNavigate, Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 import { Box, CircularProgress } from "@mui/material";
-import api, { pgAPI } from "../api/api";
+import api from "../../api/api";
 
 
 // Fix for default marker icons in Leaflet
