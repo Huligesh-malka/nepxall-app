@@ -151,20 +151,20 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
 
   const getDefaultRoomType = () => {
     if (pg?.pg_category === "pg") {
-      if (Number(pg.single_sharing) > 0) return "Single Sharing";
-      if (Number(pg.double_sharing) > 0) return "Double Sharing";
-      if (Number(pg.triple_sharing) > 0) return "Triple Sharing";
-      if (Number(pg.four_sharing) > 0) return "Four Sharing";
-      if (Number(pg.single_room) > 0) return "Single Room";
-      if (Number(pg.double_room) > 0) return "Double Room";
+      if (pg.single_sharing) return "Single Sharing";
+      if (pg.double_sharing) return "Double Sharing";
+      if (pg.triple_sharing) return "Triple Sharing";
+      if (pg.four_sharing) return "Four Sharing";
+      if (pg.single_room) return "Single Room";
+      if (pg.double_room) return "Double Room";
     } else if (pg?.pg_category === "coliving") {
-      if (Number(pg.co_living_single_room) > 0) return "Single Room";
-      if (Number(pg.co_living_double_room) > 0) return "Double Room";
+      if (pg.co_living_single_room) return "Single Room";
+      if (pg.co_living_double_room) return "Double Room";
     } else if (pg?.pg_category === "to_let") {
-      if (Number(pg.price_1bhk) > 0) return "1BHK";
-      if (Number(pg.price_2bhk) > 0) return "2BHK";
-      if (Number(pg.price_3bhk) > 0) return "3BHK";
-      if (Number(pg.price_4bhk) > 0) return "4BHK";
+      if (pg.price_1bhk) return "1BHK";
+      if (pg.price_2bhk) return "2BHK";
+      if (pg.price_3bhk) return "3BHK";
+      if (pg.price_4bhk) return "4BHK";
     }
     return "";
   };
@@ -183,53 +183,53 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
     const types = [];
     
     if (pg?.pg_category === "pg") {
-      if (Number(pg.single_sharing) > 0) types.push({ 
+      if (pg.single_sharing && Number(pg.single_sharing) > 0) types.push({ 
         value: "Single Sharing", 
         label: `Single Sharing - ₹${formatPrice(pg.single_sharing)}` 
       });
-      if (Number(pg.double_sharing) > 0) types.push({ 
+      if (pg.double_sharing && Number(pg.double_sharing) > 0) types.push({ 
         value: "Double Sharing", 
         label: `Double Sharing - ₹${formatPrice(pg.double_sharing)}` 
       });
-      if (Number(pg.triple_sharing) > 0) types.push({ 
+      if (pg.triple_sharing && Number(pg.triple_sharing) > 0) types.push({ 
         value: "Triple Sharing", 
         label: `Triple Sharing - ₹${formatPrice(pg.triple_sharing)}` 
       });
-      if (Number(pg.four_sharing) > 0) types.push({ 
+      if (pg.four_sharing && Number(pg.four_sharing) > 0) types.push({ 
         value: "Four Sharing", 
         label: `Four Sharing - ₹${formatPrice(pg.four_sharing)}` 
       });
-      if (Number(pg.single_room) > 0) types.push({ 
+      if (pg.single_room && Number(pg.single_room) > 0) types.push({ 
         value: "Single Room", 
         label: `Single Room - ₹${formatPrice(pg.single_room)}` 
       });
-      if (Number(pg.double_room) > 0) types.push({ 
+      if (pg.double_room && Number(pg.double_room) > 0) types.push({ 
         value: "Double Room", 
         label: `Double Room - ₹${formatPrice(pg.double_room)}` 
       });
     } else if (pg?.pg_category === "coliving") {
-      if (Number(pg.co_living_single_room) > 0) types.push({ 
+      if (pg.co_living_single_room && Number(pg.co_living_single_room) > 0) types.push({ 
         value: "Single Room", 
         label: `Co-Living Single Room - ₹${formatPrice(pg.co_living_single_room)}` 
       });
-      if (Number(pg.co_living_double_room) > 0) types.push({ 
+      if (pg.co_living_double_room && Number(pg.co_living_double_room) > 0) types.push({ 
         value: "Double Room", 
         label: `Co-Living Double Room - ₹${formatPrice(pg.co_living_double_room)}` 
       });
     } else if (pg?.pg_category === "to_let") {
-      if (Number(pg.price_1bhk) > 0) types.push({ 
+      if (pg.price_1bhk && Number(pg.price_1bhk) > 0) types.push({ 
         value: "1BHK", 
         label: `1 BHK - ₹${formatPrice(pg.price_1bhk)}` 
       });
-      if (Number(pg.price_2bhk) > 0) types.push({ 
+      if (pg.price_2bhk && Number(pg.price_2bhk) > 0) types.push({ 
         value: "2BHK", 
         label: `2 BHK - ₹${formatPrice(pg.price_2bhk)}` 
       });
-      if (Number(pg.price_3bhk) > 0) types.push({ 
+      if (pg.price_3bhk && Number(pg.price_3bhk) > 0) types.push({ 
         value: "3BHK", 
         label: `3 BHK - ₹${formatPrice(pg.price_3bhk)}` 
       });
-      if (Number(pg.price_4bhk) > 0) types.push({ 
+      if (pg.price_4bhk && Number(pg.price_4bhk) > 0) types.push({ 
         value: "4BHK", 
         label: `4 BHK - ₹${formatPrice(pg.price_4bhk)}` 
       });
@@ -314,7 +314,7 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
                 ))}
               </select>
               
-              {selectedPrice !== null && Number(selectedPrice) > 0 && (
+              {selectedPrice !== null && selectedPrice > 0 && (
                 <p style={modernStyles.selectedPrice}>
                   Selected: {bookingData.roomType} - ₹{formatPrice(selectedPrice)}/month
                 </p>
@@ -497,19 +497,16 @@ const PriceDetails = ({ pg }) => {
     return `₹${parseInt(price).toLocaleString('en-IN')}`;
   };
 
-  // FIX 1: Improved hasAnyPrice with Number() > 0 check
   const hasAnyPrice = () => {
     if (!pg) return false;
     
     if (isToLet) {
-      return Number(pg.price_1bhk) > 0 || Number(pg.price_2bhk) > 0 || 
-             Number(pg.price_3bhk) > 0 || Number(pg.price_4bhk) > 0;
+      return pg.price_1bhk || pg.price_2bhk || pg.price_3bhk || pg.price_4bhk;
     } else if (isCoLiving) {
-      return Number(pg.co_living_single_room) > 0 || Number(pg.co_living_double_room) > 0;
+      return pg.co_living_single_room || pg.co_living_double_room;
     } else {
-      return Number(pg.single_sharing) > 0 || Number(pg.double_sharing) > 0 || 
-             Number(pg.triple_sharing) > 0 || Number(pg.four_sharing) > 0 ||
-             Number(pg.single_room) > 0 || Number(pg.double_room) > 0;
+      return pg.single_sharing || pg.double_sharing || pg.triple_sharing || 
+             pg.four_sharing || pg.single_room || pg.double_room || pg.triple_room;
     }
   };
 
@@ -531,52 +528,52 @@ const PriceDetails = ({ pg }) => {
             House/Flat Rental Prices
           </h4>
           <div style={modernStyles.priceGrid}>
-            {Number(pg.price_1bhk) > 0 && (
+            {pg.price_1bhk && pg.price_1bhk !== "0" && pg.price_1bhk !== "" && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>1 BHK</div>
                 <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.price_1bhk)}/month
                 </div>
-                {Number(pg.security_deposit_1bhk) > 0 && (
+                {pg.security_deposit_1bhk && pg.security_deposit_1bhk !== "0" && pg.security_deposit_1bhk !== "" && (
                   <div style={modernStyles.depositAmount}>
                     Security: {formatPriceLocal(pg.security_deposit_1bhk)}
                   </div>
                 )}
               </div>
             )}
-            {Number(pg.price_2bhk) > 0 && (
+            {pg.price_2bhk && pg.price_2bhk !== "0" && pg.price_2bhk !== "" && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>2 BHK</div>
                 <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.price_2bhk)}/month
                 </div>
-                {Number(pg.security_deposit_2bhk) > 0 && (
+                {pg.security_deposit_2bhk && pg.security_deposit_2bhk !== "0" && pg.security_deposit_2bhk !== "" && (
                   <div style={modernStyles.depositAmount}>
                     Security: {formatPriceLocal(pg.security_deposit_2bhk)}
                   </div>
                 )}
               </div>
             )}
-            {Number(pg.price_3bhk) > 0 && (
+            {pg.price_3bhk && pg.price_3bhk !== "0" && pg.price_3bhk !== "" && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>3 BHK</div>
                 <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.price_3bhk)}/month
                 </div>
-                {Number(pg.security_deposit_3bhk) > 0 && (
+                {pg.security_deposit_3bhk && pg.security_deposit_3bhk !== "0" && pg.security_deposit_3bhk !== "" && (
                   <div style={modernStyles.depositAmount}>
                     Security: {formatPriceLocal(pg.security_deposit_3bhk)}
                   </div>
                 )}
               </div>
             )}
-            {Number(pg.price_4bhk) > 0 && (
+            {pg.price_4bhk && pg.price_4bhk !== "0" && pg.price_4bhk !== "" && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>4 BHK</div>
                 <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.price_4bhk)}/month
                 </div>
-                {Number(pg.security_deposit_4bhk) > 0 && (
+                {pg.security_deposit_4bhk && pg.security_deposit_4bhk !== "0" && pg.security_deposit_4bhk !== "" && (
                   <div style={modernStyles.depositAmount}>
                     Security: {formatPriceLocal(pg.security_deposit_4bhk)}
                   </div>
@@ -599,26 +596,26 @@ const PriceDetails = ({ pg }) => {
             Co-Living Prices
           </h4>
           <div style={modernStyles.priceGrid}>
-            {Number(pg.co_living_single_room) > 0 && (
+            {pg.co_living_single_room && pg.co_living_single_room !== "0" && pg.co_living_single_room !== "" && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>Single Room</div>
                 <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.co_living_single_room)}/month
                 </div>
-                {Number(pg.co_living_security_deposit) > 0 && (
+                {pg.co_living_security_deposit && pg.co_living_security_deposit !== "0" && pg.co_living_security_deposit !== "" && (
                   <div style={modernStyles.depositAmount}>
                     Security: {formatPriceLocal(pg.co_living_security_deposit)}
                   </div>
                 )}
               </div>
             )}
-            {Number(pg.co_living_double_room) > 0 && (
+            {pg.co_living_double_room && pg.co_living_double_room !== "0" && pg.co_living_double_room !== "" && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>Double Room</div>
                 <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.co_living_double_room)}/month
                 </div>
-                {Number(pg.co_living_security_deposit) > 0 && (
+                {pg.co_living_security_deposit && pg.co_living_security_deposit !== "0" && pg.co_living_security_deposit !== "" && (
                   <div style={modernStyles.depositAmount}>
                     Security: {formatPriceLocal(pg.co_living_security_deposit)}
                   </div>
@@ -641,12 +638,11 @@ const PriceDetails = ({ pg }) => {
             PG/Hostel Room Prices
           </h4>
           
-          {(Number(pg.single_sharing) > 0 || Number(pg.double_sharing) > 0 || 
-            Number(pg.triple_sharing) > 0 || Number(pg.four_sharing) > 0) && (
+          {(pg.single_sharing || pg.double_sharing || pg.triple_sharing || pg.four_sharing) && (
             <div style={modernStyles.priceCategory}>
               <div style={modernStyles.priceCategoryTitle}>Sharing Rooms</div>
               <div style={modernStyles.priceGrid}>
-                {Number(pg.single_sharing) > 0 && (
+                {pg.single_sharing && pg.single_sharing !== "0" && pg.single_sharing !== "" && (
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Single Sharing</div>
                     <div style={modernStyles.priceValue}>
@@ -654,7 +650,7 @@ const PriceDetails = ({ pg }) => {
                     </div>
                   </div>
                 )}
-                {Number(pg.double_sharing) > 0 && (
+                {pg.double_sharing && pg.double_sharing !== "0" && pg.double_sharing !== "" && (
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Double Sharing</div>
                     <div style={modernStyles.priceValue}>
@@ -662,7 +658,7 @@ const PriceDetails = ({ pg }) => {
                     </div>
                   </div>
                 )}
-                {Number(pg.triple_sharing) > 0 && (
+                {pg.triple_sharing && pg.triple_sharing !== "0" && pg.triple_sharing !== "" && (
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Triple Sharing</div>
                     <div style={modernStyles.priceValue}>
@@ -670,7 +666,7 @@ const PriceDetails = ({ pg }) => {
                     </div>
                   </div>
                 )}
-                {Number(pg.four_sharing) > 0 && (
+                {pg.four_sharing && pg.four_sharing !== "0" && pg.four_sharing !== "" && (
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Four Sharing</div>
                     <div style={modernStyles.priceValue}>
@@ -682,11 +678,11 @@ const PriceDetails = ({ pg }) => {
             </div>
           )}
 
-          {(Number(pg.single_room) > 0 || Number(pg.double_room) > 0) && (
+          {(pg.single_room || pg.double_room || pg.triple_room) && (
             <div style={modernStyles.priceCategory}>
               <div style={modernStyles.priceCategoryTitle}>Private Rooms</div>
               <div style={modernStyles.priceGrid}>
-                {Number(pg.single_room) > 0 && (
+                {pg.single_room && pg.single_room !== "0" && pg.single_room !== "" && (
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Single Room</div>
                     <div style={modernStyles.priceValue}>
@@ -694,7 +690,7 @@ const PriceDetails = ({ pg }) => {
                     </div>
                   </div>
                 )}
-                {Number(pg.double_room) > 0 && (
+                {pg.double_room && pg.double_room !== "0" && pg.double_room !== "" && (
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Double Room</div>
                     <div style={modernStyles.priceValue}>
@@ -702,34 +698,41 @@ const PriceDetails = ({ pg }) => {
                     </div>
                   </div>
                 )}
+                {pg.triple_room && pg.triple_room !== "0" && pg.triple_room !== "" && (
+                  <div style={modernStyles.priceItem}>
+                    <div style={modernStyles.priceType}>Triple Room</div>
+                    <div style={modernStyles.priceValue}>
+                      {formatPriceLocal(pg.triple_room)}/month
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {(Number(pg.security_deposit) > 0 || Number(pg.maintenance_charges) > 0 || 
-            Number(pg.advance_rent) > 0 || Number(pg.lock_in_period) > 0) && (
+          {(pg.security_deposit || pg.maintenance_charges || pg.advance_rent) && (
             <div style={modernStyles.additionalCharges}>
               <h5 style={modernStyles.additionalChargesTitle}>Additional Charges</h5>
               <div style={modernStyles.chargesGrid}>
-                {Number(pg.security_deposit) > 0 && (
+                {pg.security_deposit && pg.security_deposit !== "0" && pg.security_deposit !== "" && (
                   <div style={modernStyles.chargeItem}>
                     <span style={modernStyles.chargeLabel}>Security Deposit:</span>
                     <span style={modernStyles.chargeValue}>{formatPriceLocal(pg.security_deposit)}</span>
                   </div>
                 )}
-                {Number(pg.maintenance_charges) > 0 && (
+                {pg.maintenance_charges && pg.maintenance_charges !== "0" && pg.maintenance_charges !== "" && (
                   <div style={modernStyles.chargeItem}>
                     <span style={modernStyles.chargeLabel}>Maintenance:</span>
                     <span style={modernStyles.chargeValue}>{formatPriceLocal(pg.maintenance_charges)}/month</span>
                   </div>
                 )}
-                {Number(pg.advance_rent) > 0 && (
+                {pg.advance_rent && pg.advance_rent !== "0" && pg.advance_rent !== "" && (
                   <div style={modernStyles.chargeItem}>
                     <span style={modernStyles.chargeLabel}>Advance Rent:</span>
                     <span style={modernStyles.chargeValue}>{pg.advance_rent} months</span>
                   </div>
                 )}
-                {Number(pg.lock_in_period) > 0 && (
+                {pg.lock_in_period && pg.lock_in_period !== "0" && pg.lock_in_period !== "" && (
                   <div style={modernStyles.chargeItem}>
                     <span style={modernStyles.chargeLabel}>Lock-in Period:</span>
                     <span style={modernStyles.chargeValue}>{pg.lock_in_period} months</span>
@@ -741,7 +744,7 @@ const PriceDetails = ({ pg }) => {
         </div>
       )}
 
-      {pg.food_available && Number(pg.food_charges) > 0 && (
+      {pg.food_available && pg.food_charges && pg.food_charges !== "0" && pg.food_charges !== "" && (
         <div style={modernStyles.foodCharges}>
           <span style={modernStyles.foodChargesIcon}>🍽️</span>
           <div>
@@ -825,40 +828,31 @@ const HighlightItem = ({ name, type, category, icon, onMapView, coordinates, col
 
 // Nearby PG Card Component
 const NearbyPGCard = ({ pg, onClick, distance }) => {
-  // FIX 2: Improved getStartingPrice with Number() > 0
   const getStartingPrice = () => {
-    if (!pg) return null;
+    if (!pg) return "—";
     
     const isToLet = pg.pg_category === "to_let";
     const isCoLiving = pg.pg_category === "coliving";
     
     if (isToLet) {
-      const prices = [
-        Number(pg.price_1bhk),
-        Number(pg.price_2bhk),
-        Number(pg.price_3bhk),
-        Number(pg.price_4bhk)
-      ];
-      const validPrices = prices.filter(p => p > 0);
-      return validPrices.length > 0 ? Math.min(...validPrices) : null;
+      if (pg.price_1bhk && parseInt(pg.price_1bhk) > 0) return pg.price_1bhk;
+      if (pg.price_2bhk && parseInt(pg.price_2bhk) > 0) return pg.price_2bhk;
+      if (pg.price_3bhk && parseInt(pg.price_3bhk) > 0) return pg.price_3bhk;
+      if (pg.price_4bhk && parseInt(pg.price_4bhk) > 0) return pg.price_4bhk;
+      return "—";
     } else if (isCoLiving) {
-      const prices = [
-        Number(pg.co_living_single_room),
-        Number(pg.co_living_double_room)
-      ];
-      const validPrices = prices.filter(p => p > 0);
-      return validPrices.length > 0 ? Math.min(...validPrices) : null;
+      if (pg.co_living_single_room && parseInt(pg.co_living_single_room) > 0) return pg.co_living_single_room;
+      if (pg.co_living_double_room && parseInt(pg.co_living_double_room) > 0) return pg.co_living_double_room;
+      return "—";
     } else {
-      const prices = [
-        Number(pg.single_sharing),
-        Number(pg.double_sharing),
-        Number(pg.triple_sharing),
-        Number(pg.four_sharing),
-        Number(pg.single_room),
-        Number(pg.double_room)
-      ];
-      const validPrices = prices.filter(p => p > 0);
-      return validPrices.length > 0 ? Math.min(...validPrices) : null;
+      if (pg.single_sharing && parseInt(pg.single_sharing) > 0) return pg.single_sharing;
+      if (pg.double_sharing && parseInt(pg.double_sharing) > 0) return pg.double_sharing;
+      if (pg.triple_sharing && parseInt(pg.triple_sharing) > 0) return pg.triple_sharing;
+      if (pg.four_sharing && parseInt(pg.four_sharing) > 0) return pg.four_sharing;
+      if (pg.single_room && parseInt(pg.single_room) > 0) return pg.single_room;
+      if (pg.double_room && parseInt(pg.double_room) > 0) return pg.double_room;
+      if (pg.triple_room && parseInt(pg.triple_room) > 0) return pg.triple_room;
+      return "—";
     }
   };
 
@@ -870,7 +864,6 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
   };
 
   const imageUrl = getImageUrl();
-  const startingPrice = getStartingPrice();
 
   return (
     <div style={modernStyles.nearbyPgCard} onClick={onClick}>
@@ -915,7 +908,7 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
           <div style={modernStyles.nearbyPgStat}>
             <span style={modernStyles.nearbyPgStatIcon}>💰</span>
             <span style={modernStyles.nearbyPgStatText}>
-              {startingPrice ? `₹${startingPrice.toLocaleString('en-IN')}/month` : "Price N/A"}
+              ₹{getStartingPrice()}/month
             </span>
           </div>
           <div style={modernStyles.nearbyPgStat}>
@@ -1504,37 +1497,28 @@ export default function PGDetails() {
   const hasContactPerson = pg?.contact_person && pg.contact_person.trim() !== "";
   const hasLocation = pg?.latitude && pg?.longitude;
 
-  // FIX 2: Improved getStartingPrice with proper filtering
   const getStartingPrice = () => {
-    if (!pg) return null;
+    if (!pg) return "—";
     
     if (isToLet) {
-      const prices = [
-        Number(pg.price_1bhk),
-        Number(pg.price_2bhk),
-        Number(pg.price_3bhk),
-        Number(pg.price_4bhk)
-      ];
-      const validPrices = prices.filter(p => p > 0);
-      return validPrices.length > 0 ? Math.min(...validPrices) : null;
+      if (pg.price_1bhk && parseInt(pg.price_1bhk) > 0) return pg.price_1bhk;
+      if (pg.price_2bhk && parseInt(pg.price_2bhk) > 0) return pg.price_2bhk;
+      if (pg.price_3bhk && parseInt(pg.price_3bhk) > 0) return pg.price_3bhk;
+      if (pg.price_4bhk && parseInt(pg.price_4bhk) > 0) return pg.price_4bhk;
+      return "—";
     } else if (isCoLiving) {
-      const prices = [
-        Number(pg.co_living_single_room),
-        Number(pg.co_living_double_room)
-      ];
-      const validPrices = prices.filter(p => p > 0);
-      return validPrices.length > 0 ? Math.min(...validPrices) : null;
+      if (pg.co_living_single_room && parseInt(pg.co_living_single_room) > 0) return pg.co_living_single_room;
+      if (pg.co_living_double_room && parseInt(pg.co_living_double_room) > 0) return pg.co_living_double_room;
+      return "—";
     } else {
-      const prices = [
-        Number(pg.single_sharing),
-        Number(pg.double_sharing),
-        Number(pg.triple_sharing),
-        Number(pg.four_sharing),
-        Number(pg.single_room),
-        Number(pg.double_room)
-      ];
-      const validPrices = prices.filter(p => p > 0);
-      return validPrices.length > 0 ? Math.min(...validPrices) : null;
+      if (pg.single_sharing && parseInt(pg.single_sharing) > 0) return pg.single_sharing;
+      if (pg.double_sharing && parseInt(pg.double_sharing) > 0) return pg.double_sharing;
+      if (pg.triple_sharing && parseInt(pg.triple_sharing) > 0) return pg.triple_sharing;
+      if (pg.four_sharing && parseInt(pg.four_sharing) > 0) return pg.four_sharing;
+      if (pg.single_room && parseInt(pg.single_room) > 0) return pg.single_room;
+      if (pg.double_room && parseInt(pg.double_room) > 0) return pg.double_room;
+      if (pg.triple_room && parseInt(pg.triple_room) > 0) return pg.triple_room;
+      return "—";
     }
   };
 
@@ -1738,14 +1722,12 @@ export default function PGDetails() {
     if (!pg) return false;
     
     if (isToLet) {
-      return Number(pg.price_1bhk) > 0 || Number(pg.price_2bhk) > 0 || 
-             Number(pg.price_3bhk) > 0 || Number(pg.price_4bhk) > 0;
+      return pg.price_1bhk || pg.price_2bhk || pg.price_3bhk || pg.price_4bhk;
     } else if (isCoLiving) {
-      return Number(pg.co_living_single_room) > 0 || Number(pg.co_living_double_room) > 0;
+      return pg.co_living_single_room || pg.co_living_double_room;
     } else {
-      return Number(pg.single_sharing) > 0 || Number(pg.double_sharing) > 0 || 
-             Number(pg.triple_sharing) > 0 || Number(pg.four_sharing) > 0 ||
-             Number(pg.single_room) > 0 || Number(pg.double_room) > 0;
+      return pg.single_sharing || pg.double_sharing || pg.triple_sharing || 
+             pg.four_sharing || pg.single_room || pg.double_room || pg.triple_room;
     }
   };
 
@@ -1780,7 +1762,6 @@ export default function PGDetails() {
   }
 
   const current = media[index];
-  const startingPrice = getStartingPrice();
   
   const availableFacilitiesCount = getTrueFacilitiesCountInCategory("all");
   const filteredFacilities = getFilteredFacilities();
@@ -1791,7 +1772,9 @@ export default function PGDetails() {
   // Helper function to check if legal duration has valid values
   const hasValidLegalDuration = () => {
     if (!pg) return false;
-    return (Number(pg.min_stay_months) > 0) || (Number(pg.lock_in_period) > 0);
+    // Check if either min_stay_months or lock_in_period exists and has meaningful value
+    return (pg.min_stay_months && pg.min_stay_months !== "" && pg.min_stay_months !== "0") ||
+           (pg.lock_in_period && pg.lock_in_period !== "" && pg.lock_in_period !== "0");
   };
 
   return (
@@ -1949,7 +1932,7 @@ export default function PGDetails() {
             <div>
               <div style={modernStyles.statLabel}>Starting from</div>
               <div style={modernStyles.statValue}>
-                {startingPrice ? `₹${startingPrice.toLocaleString('en-IN')}` : "Price N/A"} / month
+                ₹{formatPrice(getStartingPrice())} / month
               </div>
             </div>
           </div>
@@ -2281,7 +2264,7 @@ export default function PGDetails() {
                     </div>
                     {expandedRules.legal && (
                       <div style={modernStyles.rulesGrid}>
-                        {Number(pg.min_stay_months) > 0 && (
+                        {pg.min_stay_months && pg.min_stay_months !== "" && pg.min_stay_months !== "0" && (
                           <RuleItem 
                             icon="🔒" 
                             label={`Minimum Stay: ${pg.min_stay_months} months`} 
@@ -2289,7 +2272,7 @@ export default function PGDetails() {
                             description="Minimum stay requirement"
                           />
                         )}
-                        {Number(pg.lock_in_period) > 0 && (
+                        {pg.lock_in_period && pg.lock_in_period !== "" && pg.lock_in_period !== "0" && (
                           <RuleItem 
                             icon="📝" 
                             label={`Lock-in Period: ${pg.lock_in_period} months`} 
@@ -2475,9 +2458,7 @@ export default function PGDetails() {
       <div style={modernStyles.stickyBar}>
         <div style={modernStyles.stickyContent}>
           <div>
-            <div style={modernStyles.stickyPrice}>
-              {startingPrice ? `₹${startingPrice.toLocaleString('en-IN')}` : "Price N/A"} / month
-            </div>
+            <div style={modernStyles.stickyPrice}>₹{formatPrice(getStartingPrice())} / month</div>
             <div style={modernStyles.stickyInfo}>
               {pg.pg_name} • {pg.area || pg.city}
             </div>

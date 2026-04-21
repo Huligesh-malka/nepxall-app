@@ -154,20 +154,20 @@ const initialForm = {
   contact_phone: "",
 };
 
-// 🔧 FIX: Use null instead of empty string for room rates
 const initialRoomRates = {
-  single_sharing: null,
-  double_sharing: null,
-  triple_sharing: null,
-  four_sharing: null,
-  single_room: null,
-  double_room: null,
-  price_1bhk: null,
-  price_2bhk: null,
-  price_3bhk: null,
-  price_4bhk: null,
-  co_living_single_room: null,
-  co_living_double_room: null,
+  single_sharing: "",
+  double_sharing: "",
+  triple_sharing: "",
+  four_sharing: "",
+  single_room: "",
+  double_room: "",
+  // triple_room removed
+  price_1bhk: "",
+  price_2bhk: "",
+  price_3bhk: "",
+  price_4bhk: "",
+  co_living_single_room: "",
+  co_living_double_room: "",
 };
 
 const initialBhkConfig = {
@@ -359,8 +359,7 @@ function OwnerAddPG() {
 
   const handleRateChange = (e) => {
     const { name, value } = e.target;
-    // Allow empty string, we'll convert to null on submit
-    setRoomRates(prev => ({ ...prev, [name]: value === "" ? null : value }));
+    setRoomRates(prev => ({ ...prev, [name]: value }));
   };
 
   const handleBhkConfigChange = (e) => {
@@ -391,23 +390,7 @@ function OwnerAddPG() {
     setValidationErrors(prev => ({ ...prev, address: false }));
   };
 
-  // Enhanced validate form that returns list of missing fields
-  const getMissingFieldsList = () => {
-    const missing = [];
-    if (!form.pg_name?.trim()) missing.push("Property Name");
-    if (!selectedLocation.address?.trim()) missing.push("Property Location (Address)");
-    if (!form.contact_person?.trim()) missing.push("Contact Person");
-    if (!form.contact_phone?.trim()) missing.push("Contact Phone");
-    if (photos.length === 0) missing.push("Property Photos (at least 1)");
-    if (form.contact_email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
-      missing.push("Valid Contact Email");
-    }
-    if (form.contact_phone?.trim() && !/^[0-9]{10,15}$/.test(form.contact_phone.replace(/\D/g, ''))) {
-      missing.push("Valid Contact Phone (10-15 digits)");
-    }
-    return missing;
-  };
-
+  // Validate form and mark missing fields
   const validateForm = () => {
     const errors = {};
     if (!form.pg_name?.trim()) errors.pg_name = true;
@@ -415,43 +398,18 @@ function OwnerAddPG() {
     if (!form.contact_person?.trim()) errors.contact_person = true;
     if (!form.contact_phone?.trim()) errors.contact_phone = true;
     if (photos.length === 0) errors.photos = true;
-    if (form.contact_email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
+    if (form.contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
       errors.contact_email = true;
     }
-    if (form.contact_phone?.trim() && !/^[0-9]{10,15}$/.test(form.contact_phone.replace(/\D/g, ''))) {
+    if (!/^[0-9]{10,15}$/.test(form.contact_phone.replace(/\D/g, ''))) {
       errors.contact_phone = true;
     }
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  // Show detailed missing fields message
-  const showMissingFieldsAlert = () => {
-    const missingFields = getMissingFieldsList();
-    if (missingFields.length > 0) {
-      alert(`⚠️ Please complete the following required fields:\n\n• ${missingFields.join('\n• ')}`);
-    }
-    return missingFields.length > 0;
-  };
-
   const appendIfValue = (fd, key, value) => {
-    // 🔧 FIX: Only append if value is not null, undefined, or empty string
-    if (value !== null && value !== undefined && value !== "") {
-      fd.append(key, value.toString());
-    }
-  };
-
-  // 🔧 FIX: Helper to clean room rates (convert null to nothing, but don't send empty strings)
-  const cleanRoomRates = () => {
-    const cleaned = {};
-    Object.keys(roomRates).forEach(key => {
-      const value = roomRates[key];
-      // Only include if value is not null and not empty string
-      if (value !== null && value !== "" && value !== undefined) {
-        cleaned[key] = Number(value);
-      }
-    });
-    return cleaned;
+    if (value !== "" && value !== null && value !== undefined) fd.append(key, value.toString());
   };
 
   const handleSubmit = async () => {
@@ -460,30 +418,7 @@ function OwnerAddPG() {
       navigate("/login");
       return;
     }
-    
-    // First check if there are any missing fields and show detailed alert
-    const missingFields = getMissingFieldsList();
-    if (missingFields.length > 0) {
-      alert(`⚠️ Cannot create property. Please complete the following required fields:\n\n• ${missingFields.join('\n• ')}`);
-      // Also highlight the missing fields with red border
-      const errors = {};
-      if (!form.pg_name?.trim()) errors.pg_name = true;
-      if (!selectedLocation.address?.trim()) errors.address = true;
-      if (!form.contact_person?.trim()) errors.contact_person = true;
-      if (!form.contact_phone?.trim()) errors.contact_phone = true;
-      if (photos.length === 0) errors.photos = true;
-      if (form.contact_email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
-        errors.contact_email = true;
-      }
-      if (form.contact_phone?.trim() && !/^[0-9]{10,15}$/.test(form.contact_phone.replace(/\D/g, ''))) {
-        errors.contact_phone = true;
-      }
-      setValidationErrors(errors);
-      return;
-    }
-    
     if (!validateForm()) {
-      // This should not happen because we already checked missing fields, but just in case
       alert("Please fill all required fields (marked in red)");
       return;
     }
@@ -516,36 +451,26 @@ function OwnerAddPG() {
       if (isToLet) {
         formData.append("bhk_type", form.bhk_type);
         formData.append("furnishing_type", form.furnishing_type);
-        
-        // 🔧 FIX: Only append rates that have values
-        if (roomRates.price_1bhk !== null && roomRates.price_1bhk !== "") formData.append("price_1bhk", Number(roomRates.price_1bhk));
-        if (roomRates.price_2bhk !== null && roomRates.price_2bhk !== "") formData.append("price_2bhk", Number(roomRates.price_2bhk));
-        if (roomRates.price_3bhk !== null && roomRates.price_3bhk !== "") formData.append("price_3bhk", Number(roomRates.price_3bhk));
-        if (roomRates.price_4bhk !== null && roomRates.price_4bhk !== "") formData.append("price_4bhk", Number(roomRates.price_4bhk));
-        
+        appendIfValue(formData, "price_1bhk", roomRates.price_1bhk);
+        appendIfValue(formData, "price_2bhk", roomRates.price_2bhk);
+        appendIfValue(formData, "price_3bhk", roomRates.price_3bhk);
+        appendIfValue(formData, "price_4bhk", roomRates.price_4bhk);
         Object.entries(bhkConfig).forEach(([k, v]) => appendIfValue(formData, k, v));
       }
       
-      // PG room rates
+      // PG room rates (triple_room removed)
       if (isPG) {
-        // 🔧 FIX: Only append rates that have values (not null, not empty string)
-        const pgRateFields = ["single_sharing", "double_sharing", "triple_sharing", "four_sharing", "single_room", "double_room"];
-        pgRateFields.forEach(field => {
-          const value = roomRates[field];
-          if (value !== null && value !== "" && value !== undefined) {
-            formData.append(field, Number(value));
+        Object.entries(roomRates).forEach(([k, v]) => {
+          if (k.startsWith("single_") || k.startsWith("double_") || k.startsWith("triple_") || k.startsWith("four_")) {
+            appendIfValue(formData, k, v);
           }
         });
       }
       
       // Co-living rates
       if (isCoLiving) {
-        if (roomRates.co_living_single_room !== null && roomRates.co_living_single_room !== "") {
-          formData.append("co_living_single_room", Number(roomRates.co_living_single_room));
-        }
-        if (roomRates.co_living_double_room !== null && roomRates.co_living_double_room !== "") {
-          formData.append("co_living_double_room", Number(roomRates.co_living_double_room));
-        }
+        appendIfValue(formData, "co_living_single_room", roomRates.co_living_single_room);
+        appendIfValue(formData, "co_living_double_room", roomRates.co_living_double_room);
       }
       
       // Facilities (booleans)
@@ -631,11 +556,6 @@ function OwnerAddPG() {
   // Helper: get error style for input
   const getErrorStyle = (fieldName) => validationErrors[fieldName] ? { border: "2px solid #f44336", backgroundColor: "#ffebee" } : {};
 
-  // Helper: get input value that handles null properly
-  const getRateValue = (value) => {
-    return value === null ? "" : value;
-  };
-
   // ================= RENDER =================
   if (authLoading) {
     return <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh"><CircularProgress /></Box>;
@@ -643,20 +563,12 @@ function OwnerAddPG() {
   if (!user) return <Navigate to="/login" replace />;
   if (role !== "owner") return <Navigate to="/" replace />;
 
-  // Disable submit only when loading - we want to show alert for missing fields instead of blocking button
-  const isSubmitDisabled = loading;
+  const isSubmitDisabled = loading || !selectedLocation.address || photos.length === 0 || !form.pg_name?.trim() || !form.contact_person?.trim() || !form.contact_phone?.trim();
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
         <h2 style={styles.title}>➕ Add New Property</h2>
-        <div style={styles.premiumBanner}>
-  🎉 First 100 Owners Get <b>Lifetime Premium FREE</b> 🚀  
-  <br />
-  <span style={{ fontSize: "13px", opacity: 0.9 }}>
-    No monthly fees • Save up to ₹5,000 • Limited Offer
-  </span>
-</div>
         
         {/* Basic Information */}
         <div style={styles.section}>
@@ -713,7 +625,7 @@ function OwnerAddPG() {
             <button type="button" onClick={() => setManualEditMode(true)} style={styles.manualAddressButton}>📝 Enter Address Manually</button>
           </div>
           {selectedLocation.address ? (
-            <div style={{...styles.locationPreview, ...(validationErrors.address ? { borderLeftColor: "#f44336", backgroundColor: "#ffebee" } : {})}}>
+            <div style={styles.locationPreview}>
               <div style={styles.locationHeader}>
                 <h4>📍 Selected Location</h4>
                 <div style={styles.locationActionButtons}>
@@ -755,46 +667,46 @@ function OwnerAddPG() {
           </div>
         )}
 
-        {/* Room Rates */}
+        {/* Room Rates - Triple Room Removed */}
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>{isToLet ? "💰 Rental Amount (₹/Month)" : isCoLiving ? "💰 Co-Living Rates (₹/Month)" : "💰 Room Rates (₹/Month)"}</h3>
           {isToLet ? (
             <div style={styles.grid}>
-              <div style={styles.inputGroup}><label>1 BHK Rent *</label><input type="number" name="price_1bhk" placeholder="₹" value={getRateValue(roomRates.price_1bhk)} onChange={handleRateChange} style={styles.input} min="0" required /></div>
-              {parseInt(form.bhk_type) >= 2 && <div style={styles.inputGroup}><label>2 BHK Rent</label><input type="number" name="price_2bhk" placeholder="₹" value={getRateValue(roomRates.price_2bhk)} onChange={handleRateChange} style={styles.input} min="0" /></div>}
-              {parseInt(form.bhk_type) >= 3 && <div style={styles.inputGroup}><label>3 BHK Rent</label><input type="number" name="price_3bhk" placeholder="₹" value={getRateValue(roomRates.price_3bhk)} onChange={handleRateChange} style={styles.input} min="0" /></div>}
-              {parseInt(form.bhk_type) >= 4 && <div style={styles.inputGroup}><label>4 BHK Rent</label><input type="number" name="price_4bhk" placeholder="₹" value={getRateValue(roomRates.price_4bhk)} onChange={handleRateChange} style={styles.input} min="0" /></div>}
+              <div style={styles.inputGroup}><label>1 BHK Rent *</label><input type="number" name="price_1bhk" placeholder="₹" value={roomRates.price_1bhk} onChange={handleRateChange} style={styles.input} min="0" required /></div>
+              {parseInt(form.bhk_type) >= 2 && <div style={styles.inputGroup}><label>2 BHK Rent</label><input type="number" name="price_2bhk" placeholder="₹" value={roomRates.price_2bhk} onChange={handleRateChange} style={styles.input} min="0" /></div>}
+              {parseInt(form.bhk_type) >= 3 && <div style={styles.inputGroup}><label>3 BHK Rent</label><input type="number" name="price_3bhk" placeholder="₹" value={roomRates.price_3bhk} onChange={handleRateChange} style={styles.input} min="0" /></div>}
+              {parseInt(form.bhk_type) >= 4 && <div style={styles.inputGroup}><label>4 BHK Rent</label><input type="number" name="price_4bhk" placeholder="₹" value={roomRates.price_4bhk} onChange={handleRateChange} style={styles.input} min="0" /></div>}
             </div>
           ) : isCoLiving ? (
             <div style={styles.grid}>
-              <div style={styles.inputGroup}><label>Co-Living Single Room *</label><input type="number" name="co_living_single_room" placeholder="₹" value={getRateValue(roomRates.co_living_single_room)} onChange={handleRateChange} style={styles.input} min="0" required /></div>
-              <div style={styles.inputGroup}><label>Co-Living Double Room</label><input type="number" name="co_living_double_room" placeholder="₹" value={getRateValue(roomRates.co_living_double_room)} onChange={handleRateChange} style={styles.input} min="0" /></div>
+              <div style={styles.inputGroup}><label>Co-Living Single Room *</label><input type="number" name="co_living_single_room" placeholder="₹" value={roomRates.co_living_single_room} onChange={handleRateChange} style={styles.input} min="0" required /></div>
+              <div style={styles.inputGroup}><label>Co-Living Double Room</label><input type="number" name="co_living_double_room" placeholder="₹" value={roomRates.co_living_double_room} onChange={handleRateChange} style={styles.input} min="0" /></div>
             </div>
           ) : (
             <div style={styles.ratesGrid}>
               <div style={styles.inputGroup}>
                 <label>Single Sharing</label>
-                <input type="number" name="single_sharing" placeholder="₹" value={getRateValue(roomRates.single_sharing)} onChange={handleRateChange} style={styles.input} min="0" />
+                <input type="number" name="single_sharing" placeholder="₹" value={roomRates.single_sharing} onChange={handleRateChange} style={styles.input} min="0" />
               </div>
               <div style={styles.inputGroup}>
                 <label>Double Sharing</label>
-                <input type="number" name="double_sharing" placeholder="₹" value={getRateValue(roomRates.double_sharing)} onChange={handleRateChange} style={styles.input} min="0" />
+                <input type="number" name="double_sharing" placeholder="₹" value={roomRates.double_sharing} onChange={handleRateChange} style={styles.input} min="0" />
               </div>
               <div style={styles.inputGroup}>
                 <label>Triple Sharing</label>
-                <input type="number" name="triple_sharing" placeholder="₹" value={getRateValue(roomRates.triple_sharing)} onChange={handleRateChange} style={styles.input} min="0" />
+                <input type="number" name="triple_sharing" placeholder="₹" value={roomRates.triple_sharing} onChange={handleRateChange} style={styles.input} min="0" />
               </div>
               <div style={styles.inputGroup}>
                 <label>Four Sharing</label>
-                <input type="number" name="four_sharing" placeholder="₹" value={getRateValue(roomRates.four_sharing)} onChange={handleRateChange} style={styles.input} min="0" />
+                <input type="number" name="four_sharing" placeholder="₹" value={roomRates.four_sharing} onChange={handleRateChange} style={styles.input} min="0" />
               </div>
               <div style={styles.inputGroup}>
                 <label>Single Room</label>
-                <input type="number" name="single_room" placeholder="₹" value={getRateValue(roomRates.single_room)} onChange={handleRateChange} style={styles.input} min="0" />
+                <input type="number" name="single_room" placeholder="₹" value={roomRates.single_room} onChange={handleRateChange} style={styles.input} min="0" />
               </div>
               <div style={styles.inputGroup}>
                 <label>Double Room</label>
-                <input type="number" name="double_room" placeholder="₹" value={getRateValue(roomRates.double_room)} onChange={handleRateChange} style={styles.input} min="0" />
+                <input type="number" name="double_room" placeholder="₹" value={roomRates.double_room} onChange={handleRateChange} style={styles.input} min="0" />
               </div>
             </div>
           )}
@@ -1066,7 +978,6 @@ const styles = {
   container: { minHeight: "100vh", background: "linear-gradient(135deg, #667eea, #764ba2)", padding: "20px", display: "flex", justifyContent: "center", alignItems: "flex-start" },
   card: { background: "#ffffff", width: "100%", maxWidth: "1200px", padding: "30px", borderRadius: "20px", boxShadow: "0 25px 50px rgba(0, 0, 0, 0.2)", margin: "20px 0" },
   title: { textAlign: "center", marginBottom: "30px", color: "#333", fontSize: "28px", fontWeight: "600" },
-  premiumBanner: { background: "linear-gradient(135deg, #FFD700, #FFA500)", padding: "15px", borderRadius: "10px", textAlign: "center", marginBottom: "25px", color: "#333", fontWeight: "500", boxShadow: "0 2px 10px rgba(0,0,0,0.1)" },
   section: { marginBottom: "30px", paddingBottom: "20px", borderBottom: "1px solid #eee" },
   sectionTitle: { fontSize: "18px", fontWeight: "600", color: "#444", marginBottom: "15px", display: "flex", alignItems: "center", gap: "8px" },
   note: { fontSize: "14px", color: "#666", marginBottom: "15px", fontStyle: "italic" },
@@ -1123,4 +1034,4 @@ const styles = {
   backToMapButton: { padding: "12px 24px", background: "#2196F3", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "14px", fontWeight: "500", display: "flex", alignItems: "center", gap: "8px" },
 };
 
-export default OwnerAddPG;
+export default OwnerAdd;
