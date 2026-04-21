@@ -97,6 +97,7 @@ const AdminPGDetails = () => {
 
   const handleEdit = (field, currentValue) => {
     setEditingField(field);
+    // Store raw value for editing (no formatting)
     setEditValue(currentValue !== undefined && currentValue !== null ? String(currentValue) : "");
   };
 
@@ -104,9 +105,28 @@ const AdminPGDetails = () => {
     if (!editingField) return;
     try {
       setSaving(true);
-      // Optimistic update
-      setPG(prev => ({ ...prev, [editingField]: editValue }));
-      await adminPGAPI.updatePGField(id, editingField, editValue);
+      
+      // ✅ CRITICAL FIX: Convert numbers properly
+      let valueToSend = editValue;
+      
+      // Check if this is a numeric field
+      const numericFields = [
+        "single_sharing", "double_sharing", "triple_sharing", 
+        "deposit_amount", "maintenance_amount", "total_rooms", 
+        "total_beds", "available_rooms", "room_size"
+      ];
+      
+      if (numericFields.includes(editingField)) {
+        // Remove any non-numeric characters and convert to number
+        const cleanedValue = String(editValue).replace(/[^0-9.-]/g, '');
+        valueToSend = cleanedValue && !isNaN(cleanedValue) ? Number(cleanedValue) : 0;
+      }
+      
+      // Optimistic update with formatted display value
+      setPG(prev => ({ ...prev, [editingField]: valueToSend }));
+      
+      // Send to backend
+      await adminPGAPI.updatePGField(id, editingField, valueToSend);
       alert(`${editingField} updated successfully`);
       await loadPG(); // refresh to ensure sync
     } catch (err) {
@@ -131,22 +151,24 @@ const AdminPGDetails = () => {
     return `₹${Number(value).toLocaleString("en-IN")}`;
   };
 
-  const formatBoolean = (value) => {
-    if (value === true || value === 1 || value === "1") return "✅ Yes";
-    if (value === false || value === 0 || value === "0") return "❌ No";
-    return "—";
-  };
-
   /* ================= RENDER EDITABLE FIELD ================= */
   const EditableRow = ({ label, field, value, type = "text", options = null }) => {
     const isEditing = editingField === field;
-    const displayValue = value !== undefined && value !== null ? value : "—";
+    
+    // Format display value for non-editing mode
+    let displayValue = value !== undefined && value !== null ? value : "—";
+    
+    // Format currency for price fields in display mode
+    const isPriceField = field.includes("sharing") || field.includes("amount");
+    if (!isEditing && isPriceField && value && value !== "—") {
+      displayValue = formatCurrency(value);
+    }
 
     if (isEditing) {
       return (
-        <div className="flex justify-between items-center border-b border-gray-100 py-2">
+        <div className="flex justify-between items-start border-b border-gray-100 py-2 flex-wrap gap-2">
           <span className="text-gray-500 text-sm font-medium">{label}</span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-start gap-2">
             {options ? (
               <select
                 value={editValue}
@@ -157,9 +179,17 @@ const AdminPGDetails = () => {
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
+            ) : type === "textarea" ? (
+              <textarea
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                className="border rounded px-2 py-1 text-sm w-64"
+                rows={3}
+                autoFocus
+              />
             ) : (
               <input
-                type={type}
+                type={type === "number" ? "text" : type}
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
                 className="border rounded px-2 py-1 text-sm w-40"
@@ -188,7 +218,13 @@ const AdminPGDetails = () => {
       <div className="flex justify-between items-center border-b border-gray-50 py-2 group">
         <span className="text-gray-500 text-sm font-medium">{label}</span>
         <div className="flex items-center gap-2">
-          <span className="text-gray-800 font-semibold">{displayValue}</span>
+          <span className="text-gray-800 font-semibold">
+            {type === "textarea" ? (
+              <span className="line-clamp-2 max-w-md">{displayValue}</span>
+            ) : (
+              displayValue
+            )}
+          </span>
           <button
             onClick={() => handleEdit(field, value)}
             className="text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
@@ -268,13 +304,13 @@ const AdminPGDetails = () => {
             <SimpleRow label="Owner ID (User ID)" value={pg.owner_id} />
           </Section>
 
-          {/* 💰 PRICING */}
+          {/* 💰 PRICING - FIXED: Pass raw values, not formatted */}
           <Section title="💰 Pricing Details">
-            <EditableRow label="Single Sharing (Monthly)" field="single_sharing" value={formatCurrency(pg.single_sharing)} type="number" />
-            <EditableRow label="Double Sharing (Monthly)" field="double_sharing" value={formatCurrency(pg.double_sharing)} type="number" />
-            <EditableRow label="Triple Sharing (Monthly)" field="triple_sharing" value={formatCurrency(pg.triple_sharing)} type="number" />
-            <EditableRow label="Deposit Amount" field="deposit_amount" value={formatCurrency(pg.deposit_amount)} type="number" />
-            <EditableRow label="Maintenance Amount" field="maintenance_amount" value={formatCurrency(pg.maintenance_amount)} type="number" />
+            <EditableRow label="Single Sharing (Monthly)" field="single_sharing" value={pg.single_sharing} type="number" />
+            <EditableRow label="Double Sharing (Monthly)" field="double_sharing" value={pg.double_sharing} type="number" />
+            <EditableRow label="Triple Sharing (Monthly)" field="triple_sharing" value={pg.triple_sharing} type="number" />
+            <EditableRow label="Deposit Amount" field="deposit_amount" value={pg.deposit_amount} type="number" />
+            <EditableRow label="Maintenance Amount" field="maintenance_amount" value={pg.maintenance_amount} type="number" />
           </Section>
 
           {/* 📍 LOCATION */}
@@ -359,7 +395,7 @@ const AdminPGDetails = () => {
             </div>
           </Section>
 
-          {/* 📝 DESCRIPTION */}
+          {/* 📝 DESCRIPTION - FIXED: textarea now works */}
           <Section title="📝 Description">
             <EditableRow label="Description" field="description" value={pg.description} type="textarea" />
           </Section>
