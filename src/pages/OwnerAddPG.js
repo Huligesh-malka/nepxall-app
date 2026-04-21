@@ -460,12 +460,12 @@ function OwnerAddPG() {
       
       // PG room rates (triple_room removed)
       if (isPG) {
-        Object.entries(roomRates).forEach(([k, v]) => {
-          if (k.startsWith("single_") || k.startsWith("double_") || k.startsWith("triple_") || k.startsWith("four_")) {
-            appendIfValue(formData, k, v);
-          }
-        });
-      }
+  Object.entries(roomRates).forEach(([k, v]) => {
+    if (k.startsWith("single_") || k.startsWith("double_") || k.startsWith("triple_") || k.startsWith("four_")) {
+      formData.append(k, v ? Number(v) : 0);
+    }
+  });
+}
       
       // Co-living rates
       if (isCoLiving) {
