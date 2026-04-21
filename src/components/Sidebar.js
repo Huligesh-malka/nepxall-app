@@ -201,6 +201,11 @@ const Sidebar = ({ role, user }) => {
             <p style={sectionLabel}>ADMIN</p>
             <Link style={linkStyle(isActive("/admin/finance"))} to="/admin/finance" onClick={closeSidebar} className="sidebar-link"><FiBarChart2 size={16} /> Finance Dashboard</Link>
             <Link style={linkStyle(isActive("/admin/payments"))} to="/admin/payments" onClick={closeSidebar} className="sidebar-link"><FiCreditCard size={16} /> Payment Verification</Link>
+            {/* ✅ ADD THIS */}
+    <Link style={linkStyle(isActive("/admin/pgs"))} to="/admin/pgs">
+      <FiBuilding size={16} /> All PGs
+    </Link>
+
             <Link style={linkStyle(isActive("/admin/services"))} to="/admin/services" onClick={closeSidebar} className="sidebar-link"><FiTool size={16} /> Service Requests</Link>
             <Link style={linkStyle(isActive("/admin/plan-payments"))} to="/admin/plan-payments" onClick={closeSidebar} className="sidebar-link"><FiStar size={16} /> Plan Payments</Link>
             <Link style={linkStyle(isActive("/admin/owner-verification"))} to="/admin/owner-verification" onClick={closeSidebar} className="sidebar-link"><FiShield size={16} /> Verify Owners</Link>
