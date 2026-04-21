@@ -85,6 +85,7 @@ import AdminRefunds from "./pages/admin/AdminRefunds";
 import AdminAgreements from "./pages/admin/AdminAgreements";
 import AdminPlanPayments from "./pages/admin/AdminPlanPayments";
 import AdminAgreementDetails from "./pages/admin/AdminAgreementDetails";
+import AdminAddPG from "./pages/admin/AdminAddPG";
 
 /* VENDOR */
 import VendorDashboard from "./pages/VendorDashboard";
@@ -373,6 +374,8 @@ function App() {
         <Route path="agreements" element={<AdminAgreements />} />
         <Route path="plan-payments" element={<AdminPlanPayments />} />
         <Route path="agreement/:id" element={<AdminAgreementDetails />} />
+        <Route path="add-pg" element={<AdminAddPG />} />
+
       </Route>
 
       {/* VENDOR */}

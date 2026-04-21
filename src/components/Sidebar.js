@@ -208,6 +208,14 @@ const Sidebar = ({ role, user }) => {
             <Link style={linkStyle(isActive("/admin/settlement-history"))} to="/admin/settlement-history" onClick={closeSidebar} className="sidebar-link"><FiFileText size={16} /> Settlement History</Link>
             <Link style={linkStyle(isActive("/admin/refunds"))} to="/admin/refunds" onClick={closeSidebar} className="sidebar-link"><FiDollarSign size={16} /> Refund Requests</Link>
             <Link style={linkStyle(isActive("/admin/agreements"))} to="/admin/agreements" onClick={closeSidebar} className="sidebar-link"><FiFileText size={16} /> Agreements</Link>
+            <Link 
+  style={linkStyle(isActive("/admin/add-pg"))} 
+  to="/admin/add-pg" 
+  onClick={closeSidebar} 
+  className="sidebar-link"
+>
+  <FiPlusCircle size={16} /> Add PG
+</Link>
           </>
         )}
 
