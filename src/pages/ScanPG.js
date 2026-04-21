@@ -244,7 +244,7 @@ const ScanPG = () => {
 
     if (!user) {
       showNotificationMessage("Please register or login to book this property");
-      navigate("/register", {
+      navigate("/login", {
         state: { redirectTo: `/scan/${id}` }
       });
       return;

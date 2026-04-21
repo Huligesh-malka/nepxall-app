@@ -1526,7 +1526,7 @@ export default function PGDetails() {
   const handleBookNow = () => {
     if (!user) {
       showNotificationMessage("Please register or login to book this property");
-      navigate("/register", {
+      navigate("/login", {
         state: { redirectTo: `/pg/${id}` }
       });
       return;

@@ -2496,7 +2496,7 @@ function UserPGSearch() {
   const handleBookNow = (pg) => {
     if (!user) {
       showNotification("Please register or login to book this property");
-      navigate("/register");
+      navigate("/login");
       return;
     }
 
