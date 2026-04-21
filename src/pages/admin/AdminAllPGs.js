@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useParams, Navigate, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import {
   Building,
-  Users,
   MapPin,
   DollarSign,
   Clock,
@@ -11,85 +11,66 @@ import {
   Eye,
   ThumbsUp,
   ThumbsDown,
-  Search,
-  RefreshCw,
   Phone,
   Mail,
   AlertCircle,
   Home,
   UserCheck,
   Calendar,
-  ChevronDown,
-  ChevronUp,
+  Edit2,
+  Save,
+  X,
   Image as ImageIcon,
+  Video,
   Info,
-  TrendingUp,
-  Filter,
-  Edit,
-  Trash2,
-  Plus,
-  Grid,
-  List,
-  Download,
-  FileText,
-  Star,
-  Award,
   Shield,
-  Zap,
+  Users,
   Wifi,
   Coffee,
   Car,
   Tv,
   Wind,
-  Thermometer,
   Lock,
   Volume2,
-  Users as UsersIcon,
   PawPrint,
   Music,
   Utensils,
   Dumbbell,
   Droplet,
-  Flame,
-  Sun,
-  Moon,
-  Smartphone,
-  Watch,
   Camera,
-  Video,
-  Menu
+  ChevronLeft,
+  ExternalLink,
+  Layers,
+  Bed,
+  Bath,
+  Maximize2,
+  Plus,
+  Trash2,
+  RefreshCw
 } from "lucide-react";
 
 const API_BASE = "https://nepxall-backend.onrender.com/api";
 const FILES_BASE = "https://nepxall-backend.onrender.com";
 
-const AdminAllPGs = () => {
+const AdminPGDetails = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [pgs, setPgs] = useState([]);
-  const [filteredPGs, setFilteredPGs] = useState([]);
+  const { user, role, loading: authLoading } = useAuth();
+
+  const [pg, setPG] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [expandedPG, setExpandedPG] = useState(null);
-  const [actionLoading, setActionLoading] = useState(null);
-  const [showRejectModal, setShowRejectModal] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [editingField, setEditingField] = useState(null);
+  const [editValue, setEditValue] = useState("");
   const [rejectReason, setRejectReason] = useState("");
+  const [showReject, setShowReject] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-  const [viewMode, setViewMode] = useState("grid"); // grid or list
-  const [stats, setStats] = useState({
-    total: 0,
-    pending: 0,
-    approved: 0,
-    rejected: 0,
-    totalRevenue: 0,
-    boys: 0,
-    girls: 0,
-    coLiving: 0
-  });
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [newPhotos, setNewPhotos] = useState([]);
+  const [photosToDelete, setPhotosToDelete] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [activeTab, setActiveTab] = useState("basic");
 
   const token = localStorage.getItem("token");
 
@@ -99,204 +80,313 @@ const AdminAllPGs = () => {
     setTimeout(() => setShowSuccessToast(false), 3000);
   };
 
-  const fetchPGs = useCallback(async () => {
+  const loadPG = useCallback(async () => {
     try {
       setLoading(true);
-      setError("");
-
-      const res = await fetch(`${API_BASE}/admin/pgs`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const res = await fetch(`${API_BASE}/admin/pg/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-
-      if (res.status === 401) {
-        localStorage.removeItem("token");
-        navigate("/login");
-        return;
-      }
-
       const data = await res.json();
-
       if (data.success) {
-        setPgs(data.data);
-        calculateStats(data.data);
+        setPG(data.data);
       } else {
-        setError("Failed to load PGs");
+        showNotification("Failed to load PG details", "error");
       }
     } catch (err) {
-      console.error("Error fetching PGs:", err);
-      setError("Server error. Please try again.");
+      console.error("Load PG error:", err);
+      showNotification("Failed to load PG details", "error");
     } finally {
       setLoading(false);
     }
-  }, [token, navigate]);
-
-  const calculateStats = (data) => {
-    const pending = data.filter(p => p.status === "pending").length;
-    const approved = data.filter(p => p.status === "approved").length;
-    const rejected = data.filter(p => p.status === "rejected").length;
-    const totalRevenue = data.reduce((sum, p) => sum + (p.single_sharing || 0), 0);
-    const boys = data.filter(p => p.pg_category === "boys").length;
-    const girls = data.filter(p => p.pg_category === "girls").length;
-    const coLiving = data.filter(p => p.pg_category === "co-living").length;
-
-    setStats({
-      total: data.length,
-      pending,
-      approved,
-      rejected,
-      totalRevenue,
-      boys,
-      girls,
-      coLiving
-    });
-  };
+  }, [id, token]);
 
   useEffect(() => {
-    if (!token) {
-      navigate("/login");
-      return;
+    if (!authLoading && user && role === "admin") {
+      loadPG();
     }
-    fetchPGs();
-  }, [token, navigate, fetchPGs]);
+  }, [loadPG, authLoading, user, role]);
 
-  useEffect(() => {
-    let filtered = [...pgs];
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading property details...</p>
+        </div>
+      </div>
+    );
+  }
 
-    if (searchTerm) {
-      filtered = filtered.filter(pg =>
-        pg.pg_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        pg.owner_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        pg.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        pg.area?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        pg.pg_code?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+  if (!user) return <Navigate to="/login" replace />;
+  if (role !== "admin") return <Navigate to="/" replace />;
+  if (!pg) return <Navigate to="/admin/pgs" replace />;
 
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(pg => pg.status === statusFilter);
-    }
-
-    if (categoryFilter !== "all") {
-      filtered = filtered.filter(pg => pg.pg_category === categoryFilter);
-    }
-
-    if (typeFilter !== "all") {
-      filtered = filtered.filter(pg => pg.pg_type === typeFilter);
-    }
-
-    setFilteredPGs(filtered);
-  }, [pgs, searchTerm, statusFilter, categoryFilter, typeFilter]);
-
-  const handleApprove = async (id) => {
-    if (!window.confirm("Are you sure you want to approve this property?")) return;
-
+  const handleFieldUpdate = async (field, value) => {
     try {
-      setActionLoading(id);
-      const res = await fetch(`${API_BASE}/admin/pg/${id}/approve`, {
+      setSaving(true);
+      const res = await fetch(`${API_BASE}/admin/pg/${id}/field`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
         },
+        body: JSON.stringify({ field, value })
       });
-
+      
       if (res.ok) {
-        showNotification("Property approved successfully!");
-        fetchPGs();
+        setPG(prev => ({ ...prev, [field]: value }));
+        showNotification(`${field.replace(/_/g, " ")} updated successfully`);
       } else {
-        showNotification("Failed to approve property", "error");
+        showNotification("Update failed", "error");
       }
     } catch (err) {
-      console.error("Approve error:", err);
-      showNotification("Error approving property", "error");
+      console.error("Update error:", err);
+      showNotification("Update failed", "error");
     } finally {
-      setActionLoading(null);
+      setSaving(false);
+      setEditingField(null);
+      setEditValue("");
     }
   };
 
-  const handleReject = async (id) => {
+  const handleApprove = async () => {
+    if (!window.confirm("Are you sure you want to approve this property?")) return;
+    try {
+      const res = await fetch(`${API_BASE}/admin/pg/${id}/approve`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        showNotification("Property approved successfully!");
+        loadPG();
+      }
+    } catch (err) {
+      console.error("Approval error:", err);
+      showNotification("Approval failed", "error");
+    }
+  };
+
+  const handleReject = async () => {
     if (!rejectReason.trim()) {
-      showNotification("Please provide a rejection reason", "error");
+      showNotification("Please enter a rejection reason", "error");
       return;
     }
-
     try {
-      setActionLoading(id);
       const res = await fetch(`${API_BASE}/admin/pg/${id}/reject`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify({ reason: rejectReason }),
+        body: JSON.stringify({ reason: rejectReason })
       });
-
       if (res.ok) {
         showNotification("Property rejected successfully!");
-        setShowRejectModal(null);
+        setShowReject(false);
         setRejectReason("");
-        fetchPGs();
-      } else {
-        showNotification("Failed to reject property", "error");
+        loadPG();
       }
     } catch (err) {
-      console.error("Reject error:", err);
-      showNotification("Error rejecting property", "error");
-    } finally {
-      setActionLoading(null);
+      console.error("Rejection error:", err);
+      showNotification("Rejection failed", "error");
     }
   };
 
-  const getStatusBadge = (status) => {
+  const handlePhotoUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (pg.photos?.length + newPhotos.length + files.length - photosToDelete.length > 10) {
+      showNotification("Maximum 10 photos allowed", "error");
+      return;
+    }
+
+    const formData = new FormData();
+    files.forEach(file => formData.append("photos", file));
+
+    setUploading(true);
+    try {
+      const res = await fetch(`${API_BASE}/admin/pg/${id}/upload-photos`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPG(prev => ({ ...prev, photos: data.photos }));
+        showNotification("Photos uploaded successfully");
+        loadPG();
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      showNotification("Upload failed", "error");
+    } finally {
+      setUploading(false);
+      setNewPhotos([]);
+    }
+  };
+
+  const handleDeletePhoto = async (photoUrl) => {
+    if (!window.confirm("Remove this photo?")) return;
+    try {
+      const res = await fetch(`${API_BASE}/admin/pg/${id}/delete-photo`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ photo: photoUrl })
+      });
+      if (res.ok) {
+        setPG(prev => ({
+          ...prev,
+          photos: prev.photos.filter(p => p !== photoUrl)
+        }));
+        showNotification("Photo removed successfully");
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+      showNotification("Failed to remove photo", "error");
+    }
+  };
+
+  const getStatusBadge = () => {
     const configs = {
       approved: { icon: CheckCircle, color: "text-green-700", bg: "bg-green-50", label: "Approved" },
       pending: { icon: Clock, color: "text-yellow-700", bg: "bg-yellow-50", label: "Pending" },
       rejected: { icon: XCircle, color: "text-red-700", bg: "bg-red-50", label: "Rejected" }
     };
-    const config = configs[status] || configs.pending;
+    const config = configs[pg.status] || configs.pending;
     const Icon = config.icon;
     return (
-      <div className={`${config.bg} ${config.color} px-3 py-1 rounded-full flex items-center gap-1 text-xs font-semibold`}>
-        <Icon size={12} />
+      <div className={`${config.bg} ${config.color} px-4 py-2 rounded-full flex items-center gap-2 font-semibold text-sm`}>
+        <Icon size={16} />
         <span>{config.label}</span>
       </div>
     );
   };
 
-  const getCategoryIcon = (category) => {
-    switch(category) {
-      case 'boys': return <Users className="text-blue-500" size={14} />;
-      case 'girls': return <Users className="text-pink-500" size={14} />;
-      case 'co-living': return <UsersIcon className="text-purple-500" size={14} />;
-      default: return <Building size={14} />;
-    }
+  const formatCurrency = (value) => {
+    if (!value && value !== 0) return "—";
+    return `₹${Number(value).toLocaleString("en-IN")}`;
   };
 
-  const StatCard = ({ title, value, icon: Icon, color, trend, onClick }) => (
-    <div 
-      onClick={onClick}
-      className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all cursor-pointer"
-    >
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-500 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
-          {trend && <p className="text-xs text-green-600 mt-2">{trend}</p>}
+  const EditableField = ({ label, field, value, type = "text", icon: Icon, options = null }) => {
+    const isEditing = editingField === field;
+    let displayValue = value !== undefined && value !== null ? value : "—";
+    const isPriceField = field.includes("sharing") || field.includes("amount") || field.includes("deposit") || field.includes("maintenance");
+    
+    if (!isEditing && isPriceField && value && value !== "—") {
+      displayValue = formatCurrency(value);
+    }
+
+    if (isEditing) {
+      return (
+        <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              {Icon && <Icon size={16} className="text-blue-600" />}
+              <span className="text-sm font-medium text-gray-700">{label}</span>
+            </div>
+            <div className="flex items-center gap-2 flex-1 justify-end">
+              {options ? (
+                <select
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500"
+                >
+                  {options.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              ) : type === "textarea" ? (
+                <textarea
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-64 focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  autoFocus
+                />
+              ) : (
+                <input
+                  type={type === "number" ? "text" : type}
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-40 focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                />
+              )}
+              <button
+                onClick={() => handleFieldUpdate(field, editValue)}
+                disabled={saving}
+                className="bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 transition-all text-sm font-medium"
+              >
+                <Save size={14} className="inline mr-1" />
+                Save
+              </button>
+              <button
+                onClick={() => { setEditingField(null); setEditValue(""); }}
+                className="bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-300 transition-all text-sm"
+              >
+                <X size={14} className="inline mr-1" />
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
-        <div className={`p-3 rounded-lg ${color}`}>
-          <Icon size={24} />
+      );
+    }
+
+    return (
+      <div className="group flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-all">
+        <div className="flex items-center gap-2">
+          {Icon && <Icon size={16} className="text-gray-400" />}
+          <span className="text-sm text-gray-600">{label}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-gray-900 font-medium">
+            {type === "textarea" ? (
+              <span className="line-clamp-2 max-w-md">{displayValue}</span>
+            ) : (
+              displayValue
+            )}
+          </span>
+          <button
+            onClick={() => {
+              setEditingField(field);
+              setEditValue(value !== undefined && value !== null ? String(value) : "");
+            }}
+            className="opacity-0 group-hover:opacity-100 transition-all text-blue-600 hover:text-blue-700"
+          >
+            <Edit2 size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const InfoCard = ({ label, value, icon: Icon }) => (
+    <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-4 border border-gray-100">
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-blue-100 rounded-lg">
+          <Icon size={18} className="text-blue-600" />
+        </div>
+        <div>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">{label}</p>
+          <p className="text-gray-900 font-semibold mt-1">{value || "—"}</p>
         </div>
       </div>
     </div>
   );
 
-  const PGDetailRow = ({ label, value, icon: Icon }) => (
-    <div className="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0">
-      <Icon size={16} className="text-gray-400 mt-0.5" />
-      <div className="flex-1">
-        <span className="text-xs text-gray-500 block">{label}</span>
-        <span className="text-sm text-gray-800 font-medium">{value || "—"}</span>
+  const Section = ({ title, icon: Icon, children }) => (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          {Icon && <Icon size={20} className="text-blue-600" />}
+          <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+        </div>
+      </div>
+      <div className="p-6">
+        <div className="grid md:grid-cols-2 gap-2">{children}</div>
       </div>
     </div>
   );
@@ -304,63 +394,26 @@ const AdminAllPGs = () => {
   const AmenityBadge = ({ label, value }) => {
     const isAvailable = value === true || value === 1 || value === "1";
     return (
-      <div className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${isAvailable ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-400'}`}>
-        {isAvailable ? <CheckCircle size={10} /> : <XCircle size={10} />}
+      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${isAvailable ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-50 text-gray-400'}`}>
+        {isAvailable ? <CheckCircle size={14} /> : <XCircle size={14} />}
         <span>{label}</span>
       </div>
     );
   };
 
-  const exportToCSV = () => {
-    const headers = ["ID", "PG Name", "Owner", "City", "Status", "Category", "Price", "Phone", "Email"];
-    const data = filteredPGs.map(pg => [
-      pg.id,
-      pg.pg_name,
-      pg.owner_name,
-      pg.city,
-      pg.status,
-      pg.pg_category,
-      pg.single_sharing,
-      pg.owner_phone,
-      pg.owner_email
-    ]);
-    
-    const csvContent = [headers, ...data].map(row => row.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `pgs_export_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showNotification("Export completed successfully!");
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading properties...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl p-8 text-center max-w-md">
-          <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Data</h3>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button onClick={fetchPGs} className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-all">
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const TabButton = ({ tab, label, icon: Icon }) => (
+    <button
+      onClick={() => setActiveTab(tab)}
+      className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+        activeTab === tab
+          ? "bg-blue-600 text-white shadow-md"
+          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+      }`}
+    >
+      <Icon size={16} />
+      {label}
+    </button>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -374,9 +427,21 @@ const AdminAllPGs = () => {
         </div>
       )}
 
+      {/* Photo Modal */}
+      {selectedPhoto && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setSelectedPhoto(null)}>
+          <div className="relative max-w-4xl w-full">
+            <img src={`${FILES_BASE}${selectedPhoto}`} alt="Full size" className="w-full h-auto rounded-xl" />
+            <button onClick={() => setSelectedPhoto(null)} className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-all">
+              <X size={24} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Reject Modal */}
-      {showRejectModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowRejectModal(null)}>
+      {showReject && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowReject(false)}>
           <div className="bg-white rounded-2xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-2 mb-4">
               <XCircle size={24} className="text-red-600" />
@@ -390,18 +455,11 @@ const AdminAllPGs = () => {
               onChange={(e) => setRejectReason(e.target.value)}
             />
             <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowRejectModal(null)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-all"
-              >
+              <button onClick={() => setShowReject(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-all">
                 Cancel
               </button>
-              <button
-                onClick={() => handleReject(showRejectModal)}
-                disabled={actionLoading === showRejectModal}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all disabled:opacity-50"
-              >
-                {actionLoading === showRejectModal ? "Processing..." : "Reject"}
+              <button onClick={handleReject} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all">
+                Submit Rejection
               </button>
             </div>
           </div>
@@ -410,455 +468,323 @@ const AdminAllPGs = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Property Management Dashboard</h1>
-          <p className="text-gray-600">Manage all PG properties, approvals, and owner information</p>
-        </div>
+        <div className="mb-6">
+          <button
+            onClick={() => navigate("/admin/pgs")}
+            className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <ChevronLeft size={20} />
+            <span>Back to Properties</span>
+          </button>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
-          <StatCard 
-            title="Total Properties" 
-            value={stats.total} 
-            icon={Building} 
-            color="bg-blue-100 text-blue-600"
-            onClick={() => { setStatusFilter("all"); setSearchTerm(""); }}
-          />
-          <StatCard 
-            title="Pending Review" 
-            value={stats.pending} 
-            icon={Clock} 
-            color="bg-yellow-100 text-yellow-600"
-            onClick={() => setStatusFilter("pending")}
-          />
-          <StatCard 
-            title="Approved" 
-            value={stats.approved} 
-            icon={CheckCircle} 
-            color="bg-green-100 text-green-600"
-            onClick={() => setStatusFilter("approved")}
-          />
-          <StatCard 
-            title="Rejected" 
-            value={stats.rejected} 
-            icon={XCircle} 
-            color="bg-red-100 text-red-600"
-            onClick={() => setStatusFilter("rejected")}
-          />
-          <StatCard 
-            title="Boys PG" 
-            value={stats.boys} 
-            icon={Users} 
-            color="bg-blue-100 text-blue-600"
-            onClick={() => setCategoryFilter("boys")}
-          />
-          <StatCard 
-            title="Girls PG" 
-            value={stats.girls} 
-            icon={Users} 
-            color="bg-pink-100 text-pink-600"
-            onClick={() => setCategoryFilter("girls")}
-          />
-          <StatCard 
-            title="Co-Living" 
-            value={stats.coLiving} 
-            icon={UsersIcon} 
-            color="bg-purple-100 text-purple-600"
-            onClick={() => setCategoryFilter("co-living")}
-          />
-        </div>
-
-        {/* Filters and Actions */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by name, owner, city, area, or PG code..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            <div className="flex gap-3 flex-wrap">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </select>
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All Categories</option>
-                <option value="boys">Boys Only</option>
-                <option value="girls">Girls Only</option>
-                <option value="co-living">Co-Living</option>
-              </select>
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All Types</option>
-                <option value="normal">Normal</option>
-                <option value="luxury">Luxury</option>
-              </select>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setViewMode("grid")}
-                  className={`p-2 rounded-lg transition-all ${viewMode === "grid" ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-600"}`}
-                >
-                  <Grid size={18} />
-                </button>
-                <button
-                  onClick={() => setViewMode("list")}
-                  className={`p-2 rounded-lg transition-all ${viewMode === "list" ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-600"}`}
-                >
-                  <List size={18} />
-                </button>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">{pg.pg_name || "Unnamed Property"}</h1>
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="text-sm text-gray-500">ID: #{pg.id}</span>
+                  <span className="text-sm text-gray-500">•</span>
+                  <span className="text-sm text-gray-500">Code: {pg.pg_code || "—"}</span>
+                </div>
               </div>
-              <button
-                onClick={exportToCSV}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all flex items-center gap-2"
-              >
-                <Download size={16} />
-                Export CSV
-              </button>
-              <button
-                onClick={fetchPGs}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all flex items-center gap-2"
-              >
-                <RefreshCw size={16} />
-                Refresh
-              </button>
+              {getStatusBadge()}
             </div>
           </div>
         </div>
 
-        {/* Results Count */}
-        <div className="mb-4 flex justify-between items-center">
-          <p className="text-sm text-gray-600">
-            Showing {filteredPGs.length} of {pgs.length} properties
-          </p>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>Total Revenue: <strong className="text-green-600">₹{stats.totalRevenue.toLocaleString()}</strong></span>
-          </div>
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <InfoCard label="Owner" value={pg.owner_name} icon={UserCheck} />
+          <InfoCard label="Phone" value={pg.owner_phone} icon={Phone} />
+          <InfoCard label="Email" value={pg.owner_email} icon={Mail} />
+          <InfoCard label="Location" value={`${pg.city || ""}, ${pg.area || ""}`} icon={MapPin} />
         </div>
 
-        {/* PG Cards/List Grid */}
-        {filteredPGs.length === 0 ? (
-          <div className="bg-white rounded-xl p-12 text-center">
-            <Building size={48} className="text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg">No properties found</p>
-            <p className="text-gray-400 text-sm mt-2">Try adjusting your filters</p>
-          </div>
-        ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {filteredPGs.map((pg) => (
-              <div
-                key={pg.id}
-                className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-300"
-              >
-                {/* Card Header with Image Preview */}
-                <div className="relative h-48 bg-gray-100">
-                  {pg.photos && pg.photos.length > 0 ? (
-                    <img
-                      src={`${FILES_BASE}${pg.photos[0]}`}
-                      alt={pg.pg_name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Building size={48} className="text-gray-400" />
-                    </div>
+        {/* Tab Navigation */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <TabButton tab="basic" label="Basic Info" icon={Info} />
+          <TabButton tab="pricing" label="Pricing" icon={DollarSign} />
+          <TabButton tab="amenities" label="Amenities" icon={Shield} />
+          <TabButton tab="rules" label="Rules" icon={Lock} />
+          <TabButton tab="media" label="Media" icon={Camera} />
+          <TabButton tab="system" label="System" icon={Calendar} />
+        </div>
+
+        <div className="space-y-6">
+          {/* Basic Information Tab */}
+          {activeTab === "basic" && (
+            <>
+              <Section title="Basic Information" icon={Info}>
+                <EditableField label="PG Name" field="pg_name" value={pg.pg_name} icon={Building} />
+                <EditableField label="PG Code" field="pg_code" value={pg.pg_code} icon={Layers} />
+                <EditableField 
+                  label="Category" 
+                  field="pg_category" 
+                  value={pg.pg_category}
+                  icon={Users}
+                  options={[
+                    { value: "boys", label: "Boys" },
+                    { value: "girls", label: "Girls" },
+                    { value: "co-living", label: "Co-Living" }
+                  ]}
+                />
+                <EditableField 
+                  label="Type" 
+                  field="pg_type" 
+                  value={pg.pg_type}
+                  icon={Home}
+                  options={[
+                    { value: "normal", label: "Normal" },
+                    { value: "luxury", label: "Luxury" }
+                  ]}
+                />
+                <EditableField label="City" field="city" value={pg.city} icon={MapPin} />
+                <EditableField label="Area / Locality" field="area" value={pg.area} icon={MapPin} />
+                <EditableField label="Complete Address" field="address" value={pg.address} icon={MapPin} />
+                <EditableField label="Landmark" field="landmark" value={pg.landmark} icon={MapPin} />
+                <EditableField label="Pincode" field="pincode" value={pg.pincode} icon={MapPin} />
+              </Section>
+
+              <Section title="Location Coordinates" icon={MapPin}>
+                <div className="col-span-full">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <InfoCard label="Latitude" value={pg.latitude || "—"} icon={MapPin} />
+                    <InfoCard label="Longitude" value={pg.longitude || "—"} icon={MapPin} />
+                  </div>
+                  {pg.latitude && pg.longitude && (
+                    <a
+                      href={`https://www.google.com/maps?q=${pg.latitude},${pg.longitude}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 mt-4 text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      <ExternalLink size={16} />
+                      View on Google Maps
+                    </a>
                   )}
-                  <div className="absolute top-3 right-3">
-                    {getStatusBadge(pg.status)}
+                </div>
+              </Section>
+
+              <Section title="Room Details" icon={Bed}>
+                <EditableField label="Total Rooms" field="total_rooms" value={pg.total_rooms} type="number" icon={Home} />
+                <EditableField label="Total Beds" field="total_beds" value={pg.total_beds} type="number" icon={Bed} />
+                <EditableField label="Available Rooms" field="available_rooms" value={pg.available_rooms} type="number" icon={Home} />
+                <EditableField label="Room Size (sq ft)" field="room_size" value={pg.room_size} type="number" icon={Maximize2} />
+                <EditableField label="Bathroom Type" field="bathroom_type" value={pg.bathroom_type} icon={Bath} />
+                <EditableField label="Balcony" field="balcony" value={pg.balcony} icon={Home} />
+              </Section>
+
+              <Section title="Description" icon={Info}>
+                <div className="col-span-full">
+                  <EditableField label="Description" field="description" value={pg.description} type="textarea" />
+                </div>
+              </Section>
+            </>
+          )}
+
+          {/* Pricing Tab */}
+          {activeTab === "pricing" && (
+            <Section title="Pricing Details" icon={DollarSign}>
+              <EditableField label="Single Sharing" field="single_sharing" value={pg.single_sharing} type="number" icon={DollarSign} />
+              <EditableField label="Double Sharing" field="double_sharing" value={pg.double_sharing} type="number" icon={DollarSign} />
+              <EditableField label="Triple Sharing" field="triple_sharing" value={pg.triple_sharing} type="number" icon={DollarSign} />
+              <EditableField label="Four Sharing" field="four_sharing" value={pg.four_sharing} type="number" icon={DollarSign} />
+              <EditableField label="Single Room" field="single_room" value={pg.single_room} type="number" icon={DollarSign} />
+              <EditableField label="Double Room" field="double_room" value={pg.double_room} type="number" icon={DollarSign} />
+              <EditableField label="Deposit Amount" field="deposit_amount" value={pg.deposit_amount} type="number" icon={DollarSign} />
+              <EditableField label="Maintenance Amount" field="maintenance_amount" value={pg.maintenance_amount} type="number" icon={DollarSign} />
+              {pg.pg_category === "to_let" && (
+                <>
+                  <EditableField label="1 BHK Price" field="price_1bhk" value={pg.price_1bhk} type="number" icon={DollarSign} />
+                  <EditableField label="2 BHK Price" field="price_2bhk" value={pg.price_2bhk} type="number" icon={DollarSign} />
+                  <EditableField label="3 BHK Price" field="price_3bhk" value={pg.price_3bhk} type="number" icon={DollarSign} />
+                </>
+              )}
+              {pg.pg_category === "coliving" && (
+                <>
+                  <EditableField label="Co-Living Single Room" field="co_living_single_room" value={pg.co_living_single_room} type="number" icon={DollarSign} />
+                  <EditableField label="Co-Living Double Room" field="co_living_double_room" value={pg.co_living_double_room} type="number" icon={DollarSign} />
+                </>
+              )}
+            </Section>
+          )}
+
+          {/* Amenities Tab */}
+          {activeTab === "amenities" && (
+            <Section title="Amenities & Facilities" icon={Shield}>
+              <div className="col-span-full">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <AmenityBadge label="WiFi" value={pg.wifi_available} />
+                  <AmenityBadge label="AC" value={pg.ac_available} />
+                  <AmenityBadge label="Food" value={pg.food_available} />
+                  <AmenityBadge label="Parking" value={pg.parking_available} />
+                  <AmenityBadge label="Bike Parking" value={pg.bike_parking} />
+                  <AmenityBadge label="Laundry" value={pg.laundry_available} />
+                  <AmenityBadge label="Washing Machine" value={pg.washing_machine} />
+                  <AmenityBadge label="Refrigerator" value={pg.refrigerator} />
+                  <AmenityBadge label="Microwave" value={pg.microwave} />
+                  <AmenityBadge label="Geyser" value={pg.geyser} />
+                  <AmenityBadge label="Power Backup" value={pg.power_backup} />
+                  <AmenityBadge label="Lift" value={pg.lift_elevator} />
+                  <AmenityBadge label="CCTV" value={pg.cctv} />
+                  <AmenityBadge label="Security" value={pg.security_guard} />
+                  <AmenityBadge label="Gym" value={pg.gym} />
+                  <AmenityBadge label="Housekeeping" value={pg.housekeeping} />
+                  <AmenityBadge label="Water Purifier" value={pg.water_purifier} />
+                  <AmenityBadge label="Fire Safety" value={pg.fire_safety} />
+                  <AmenityBadge label="Study Room" value={pg.study_room} />
+                  <AmenityBadge label="TV Lounge" value={pg.common_tv_lounge} />
+                  <AmenityBadge label="Balcony" value={pg.balcony_open_space} />
+                  <AmenityBadge label="24x7 Water" value={pg.water_24x7} />
+                  <AmenityBadge label="Cupboard" value={pg.cupboard_available} />
+                  <AmenityBadge label="Study Table" value={pg.table_chair_available} />
+                  <AmenityBadge label="Attached Bathroom" value={pg.attached_bathroom} />
+                  <AmenityBadge label="Bed with Mattress" value={pg.bed_with_mattress} />
+                </div>
+              </div>
+            </Section>
+          )}
+
+          {/* Rules Tab */}
+          {activeTab === "rules" && (
+            <Section title="Rules & Restrictions" icon={Lock}>
+              <div className="col-span-full">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <AmenityBadge label="Couple Allowed" value={pg.couple_allowed} />
+                  <AmenityBadge label="Family Allowed" value={pg.family_allowed} />
+                  <AmenityBadge label="Smoking" value={pg.smoking_allowed} />
+                  <AmenityBadge label="Drinking" value={pg.drinking_allowed} />
+                  <AmenityBadge label="Pets" value={pg.pets_allowed} />
+                  <AmenityBadge label="Visitors" value={pg.visitor_allowed} />
+                  <AmenityBadge label="Visitor Time Restriction" value={pg.visitor_time_restricted} />
+                  <AmenityBadge label="Late Night Entry" value={pg.late_night_entry_allowed} />
+                  <AmenityBadge label="Outside Food" value={pg.outside_food_allowed} />
+                  <AmenityBadge label="Parties" value={pg.parties_allowed} />
+                  <AmenityBadge label="Loud Music Restriction" value={pg.loud_music_restricted} />
+                  <AmenityBadge label="Lock-in Period" value={pg.lock_in_period} />
+                  <AmenityBadge label="Agreement Mandatory" value={pg.agreement_mandatory} />
+                  <AmenityBadge label="ID Proof Required" value={pg.id_proof_mandatory} />
+                  <AmenityBadge label="Office Going Only" value={pg.office_going_only} />
+                  <AmenityBadge label="Students Only" value={pg.students_only} />
+                  <AmenityBadge label="Boys Only" value={pg.boys_only} />
+                  <AmenityBadge label="Girls Only" value={pg.girls_only} />
+                  <AmenityBadge label="Co-Living" value={pg.co_living_allowed} />
+                  <AmenityBadge label="Subletting" value={pg.subletting_allowed} />
+                </div>
+                {pg.visitors_allowed_till && (
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-sm"><strong>Visitors Allowed Till:</strong> {pg.visitors_allowed_till}</p>
                   </div>
-                  <div className="absolute bottom-3 left-3 flex gap-1">
-                    {pg.photos && pg.photos.length > 0 && (
-                      <span className="bg-black/50 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                        <Camera size={10} />
-                        {pg.photos.length}
-                      </span>
-                    )}
-                    {pg.videos && pg.videos.length > 0 && (
-                      <span className="bg-black/50 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                        <Video size={10} />
-                        {pg.videos.length}
-                      </span>
-                    )}
+                )}
+                {pg.entry_curfew_time && (
+                  <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-sm"><strong>Entry Curfew Time:</strong> {pg.entry_curfew_time}</p>
                   </div>
+                )}
+                {pg.min_stay_months > 0 && (
+                  <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-sm"><strong>Minimum Stay:</strong> {pg.min_stay_months} months</p>
+                  </div>
+                )}
+              </div>
+            </Section>
+          )}
+
+          {/* Media Tab */}
+          {activeTab === "media" && (
+            <Section title="Photos" icon={Camera}>
+              <div className="col-span-full">
+                {/* Upload New Photos */}
+                <div className="mb-6">
+                  <label className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-all">
+                    <Plus size={16} />
+                    Add Photos
+                    <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" disabled={uploading} />
+                  </label>
+                  {uploading && <span className="ml-3 text-sm text-gray-500">Uploading...</span>}
+                  <p className="text-xs text-gray-500 mt-2">Maximum 10 photos allowed</p>
                 </div>
 
-                {/* Card Content */}
-                <div className="p-5">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-900 mb-1">{pg.pg_name || "Unnamed Property"}</h3>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <MapPin size={14} />
-                        <span>{pg.area}, {pg.city}</span>
+                {/* Existing Photos */}
+                {pg.photos && pg.photos.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {pg.photos.map((img, i) => (
+                      <div key={i} className="relative group">
+                        <img
+                          src={`${FILES_BASE}${img}`}
+                          alt={`Property ${i + 1}`}
+                          className="h-48 w-full object-cover rounded-xl cursor-pointer transition-transform duration-300 group-hover:scale-105"
+                          onClick={() => setSelectedPhoto(img)}
+                        />
+                        <button
+                          onClick={() => handleDeletePhoto(img)}
+                          className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                          title="Remove photo"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                  
-                  {/* Quick Info */}
-                  <div className="flex flex-wrap items-center gap-4 text-sm mt-3">
-                    <div className="flex items-center gap-1 text-gray-600">
-                      <DollarSign size={14} />
-                      <span className="font-semibold">{pg.single_sharing ? `₹${pg.single_sharing.toLocaleString()}` : "—"}</span>
-                      <span className="text-xs">/month</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-gray-600">
-                      {getCategoryIcon(pg.pg_category)}
-                      <span className="capitalize">{pg.pg_category || "N/A"}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-gray-600">
-                      <Star size={14} className="text-yellow-500" />
-                      <span className="capitalize">{pg.pg_type || "normal"}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Owner Info */}
-                <div className="px-5 py-3 bg-gray-50 border-t border-gray-100">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
-                      <UserCheck size={14} className="text-gray-500" />
-                      <span className="text-sm font-medium text-gray-700">{pg.owner_name}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {pg.owner_phone && (
-                        <a href={`tel:${pg.owner_phone}`} className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1">
-                          <Phone size={12} />
-                          Call
-                        </a>
-                      )}
-                      {pg.owner_email && (
-                        <a href={`mailto:${pg.owner_email}`} className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1">
-                          <Mail size={12} />
-                          Email
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Expandable Details */}
-                <button
-                  onClick={() => setExpandedPG(expandedPG === pg.id ? null : pg.id)}
-                  className="w-full px-5 py-3 text-left text-sm text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-between"
-                >
-                  <span className="font-medium">{expandedPG === pg.id ? "Hide Details" : "View Complete Details"}</span>
-                  {expandedPG === pg.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </button>
-
-                {expandedPG === pg.id && (
-                  <div className="px-5 pb-5 pt-2 border-t border-gray-100 bg-gray-50/50 max-h-96 overflow-y-auto">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <h4 className="font-semibold text-gray-800 mb-2 text-sm">Property Details</h4>
-                        <PGDetailRow label="PG Code" value={pg.pg_code} icon={Building} />
-                        <PGDetailRow label="Address" value={pg.address} icon={MapPin} />
-                        <PGDetailRow label="Landmark" value={pg.landmark} icon={MapPin} />
-                        <PGDetailRow label="Pincode" value={pg.pincode} icon={MapPin} />
-                        <PGDetailRow label="Type" value={pg.pg_type} icon={Home} />
-                        <PGDetailRow label="Total Rooms" value={pg.total_rooms} icon={Building} />
-                        <PGDetailRow label="Available Rooms" value={pg.available_rooms} icon={Building} />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-800 mb-2 text-sm">Pricing</h4>
-                        <PGDetailRow label="Single Sharing" value={pg.single_sharing ? `₹${pg.single_sharing.toLocaleString()}` : "—"} icon={DollarSign} />
-                        <PGDetailRow label="Double Sharing" value={pg.double_sharing ? `₹${pg.double_sharing.toLocaleString()}` : "—"} icon={DollarSign} />
-                        <PGDetailRow label="Triple Sharing" value={pg.triple_sharing ? `₹${pg.triple_sharing.toLocaleString()}` : "—"} icon={DollarSign} />
-                        <PGDetailRow label="Deposit" value={pg.deposit_amount ? `₹${pg.deposit_amount.toLocaleString()}` : "—"} icon={DollarSign} />
-                        <PGDetailRow label="Maintenance" value={pg.maintenance_amount ? `₹${pg.maintenance_amount.toLocaleString()}` : "—"} icon={DollarSign} />
-                      </div>
-                    </div>
-
-                    {/* Key Amenities Preview */}
-                    <div className="mt-4">
-                      <h4 className="font-semibold text-gray-800 mb-2 text-sm">Key Amenities</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {pg.wifi_available && <AmenityBadge label="WiFi" value={true} />}
-                        {pg.ac_available && <AmenityBadge label="AC" value={true} />}
-                        {pg.food_available && <AmenityBadge label="Food" value={true} />}
-                        {pg.parking_available && <AmenityBadge label="Parking" value={true} />}
-                        {pg.gym && <AmenityBadge label="Gym" value={true} />}
-                        {pg.cctv && <AmenityBadge label="CCTV" value={true} />}
-                      </div>
-                    </div>
-
-                    {/* Description Preview */}
-                    {pg.description && (
-                      <div className="mt-4">
-                        <h4 className="font-semibold text-gray-800 mb-2 text-sm">Description</h4>
-                        <p className="text-sm text-gray-600 line-clamp-3">{pg.description}</p>
-                      </div>
-                    )}
-
-                    {/* Photos Preview */}
-                    {pg.photos && pg.photos.length > 0 && (
-                      <div className="mt-4">
-                        <h4 className="font-semibold text-gray-800 mb-2 text-sm flex items-center gap-2">
-                          <ImageIcon size={14} />
-                          Photos ({pg.photos.length})
-                        </h4>
-                        <div className="flex gap-2 overflow-x-auto pb-2">
-                          {pg.photos.slice(0, 4).map((photo, idx) => (
-                            <img
-                              key={idx}
-                              src={`${FILES_BASE}${photo}`}
-                              alt={`Property ${idx + 1}`}
-                              className="h-16 w-16 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => window.open(`${FILES_BASE}${photo}`, '_blank')}
-                            />
-                          ))}
-                          {pg.photos.length > 4 && (
-                            <div className="h-16 w-16 bg-gray-200 rounded-lg flex items-center justify-center text-xs text-gray-500">
-                              +{pg.photos.length - 4}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* System Info */}
-                    <div className="mt-4 pt-3 border-t border-gray-200">
-                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
-                        <span>Created: {pg.created_at ? new Date(pg.created_at).toLocaleString() : "—"}</span>
-                        <span>Updated: {pg.updated_at ? new Date(pg.updated_at).toLocaleString() : "—"}</span>
-                      </div>
-                    </div>
+                ) : (
+                  <div className="text-center py-12 bg-gray-50 rounded-xl">
+                    <Camera size={48} className="text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-500">No photos uploaded</p>
                   </div>
                 )}
 
-                {/* Action Buttons */}
-                <div className="px-5 py-4 bg-gray-50 border-t border-gray-100 flex gap-3">
-                  {pg.status === "pending" && (
-                    <>
-                      <button
-                        onClick={() => handleApprove(pg.id)}
-                        disabled={actionLoading === pg.id}
-                        className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                      >
-                        {actionLoading === pg.id ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        ) : (
-                          <>
-                            <ThumbsUp size={16} />
-                            Approve
-                          </>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => setShowRejectModal(pg.id)}
-                        disabled={actionLoading === pg.id}
-                        className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                      >
-                        <ThumbsDown size={16} />
-                        Reject
-                      </button>
-                    </>
-                  )}
-                  <button
-                    onClick={() => navigate(`/admin/pg/${pg.id}`)}
-                    className={`${pg.status === "pending" ? "flex-1" : "w-full"} bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-all flex items-center justify-center gap-2`}
-                  >
-                    <Eye size={16} />
-                    {pg.status === "pending" ? "View & Edit" : "View Full Details"}
-                  </button>
-                </div>
+                {/* Videos Section */}
+                {pg.videos && pg.videos.length > 0 && (
+                  <div className="mt-8">
+                    <h4 className="font-semibold text-gray-800 mb-4 text-lg flex items-center gap-2">
+                      <Video size={18} />
+                      Videos
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {pg.videos.map((video, i) => (
+                        <video key={i} controls className="w-full rounded-xl shadow-md">
+                          <source src={`${FILES_BASE}${video}`} type="video/mp4" />
+                        </video>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-        ) : (
-          // List View
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {filteredPGs.map((pg) => (
-                    <tr key={pg.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">#{pg.id}</td>
-                      <td className="px-6 py-4">
-                        <div>
-                          <div className="font-medium text-gray-900">{pg.pg_name}</div>
-                          <div className="text-xs text-gray-500">Code: {pg.pg_code}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div>
-                          <div className="text-sm text-gray-900">{pg.owner_name}</div>
-                          <div className="text-xs text-gray-500">{pg.owner_phone}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">{pg.city}</div>
-                        <div className="text-xs text-gray-500">{pg.area}</div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {pg.single_sharing ? `₹${pg.single_sharing.toLocaleString()}` : "—"}
-                      </td>
-                      <td className="px-6 py-4">
-                        {getStatusBadge(pg.status)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex gap-2">
-                          {pg.status === "pending" && (
-                            <>
-                              <button
-                                onClick={() => handleApprove(pg.id)}
-                                className="p-1 text-green-600 hover:bg-green-50 rounded transition-all"
-                                title="Approve"
-                              >
-                                <ThumbsUp size={16} />
-                              </button>
-                              <button
-                                onClick={() => setShowRejectModal(pg.id)}
-                                className="p-1 text-red-600 hover:bg-red-50 rounded transition-all"
-                                title="Reject"
-                              >
-                                <ThumbsDown size={16} />
-                              </button>
-                            </>
-                          )}
-                          <button
-                            onClick={() => navigate(`/admin/pg/${pg.id}`)}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-all"
-                            title="View Details"
-                          >
-                            <Eye size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            </Section>
+          )}
+
+          {/* System Tab */}
+          {activeTab === "system" && (
+            <Section title="System Information" icon={Calendar}>
+              <InfoCard label="Status" value={pg.status} icon={Clock} />
+              <InfoCard label="Created" value={pg.created_at ? new Date(pg.created_at).toLocaleString() : "—"} icon={Calendar} />
+              <InfoCard label="Updated" value={pg.updated_at ? new Date(pg.updated_at).toLocaleString() : "—"} icon={Calendar} />
+              <InfoCard label="Is Deleted" value={pg.is_deleted ? "Yes" : "No"} icon={XCircle} />
+            </Section>
+          )}
+
+          {/* Action Footer - Only show for pending properties */}
+          {pg.status === "pending" && !showReject && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => setShowReject(true)}
+                  className="px-6 py-2.5 rounded-xl border-2 border-red-200 text-red-600 font-semibold hover:bg-red-50 hover:border-red-300 transition-all"
+                >
+                  <ThumbsDown size={18} className="inline mr-2" />
+                  Reject
+                </button>
+                <button
+                  onClick={handleApprove}
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-2.5 rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 shadow-md transition-all"
+                >
+                  <ThumbsUp size={18} className="inline mr-2" />
+                  Approve Listing
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <style>{`
@@ -880,4 +806,4 @@ const AdminAllPGs = () => {
   );
 };
 
-export default AdminAllPGs;
+export default AdminPGDetails;
