@@ -86,6 +86,7 @@ import AdminAgreements from "./pages/admin/AdminAgreements";
 import AdminPlanPayments from "./pages/admin/AdminPlanPayments";
 import AdminAgreementDetails from "./pages/admin/AdminAgreementDetails";
 import AdminAddPG from "./pages/admin/AdminAddPG";
+import AdminAllPGs from "./pages/admin/AdminAllPGs";
 
 /* VENDOR */
 import VendorDashboard from "./pages/VendorDashboard";
@@ -367,6 +368,8 @@ function App() {
         <Route path="settlements" element={<AdminSettlements />} />
         <Route path="settlement-history" element={<SettlementHistory />} />
         <Route path="pending-pgs" element={<AdminPendingPGs />} />
+          <Route path="pgs" element={<AdminAllPGs />} />
+
         <Route path="pg/:id" element={<AdminPGDetails />} />
         <Route path="owner-verification" element={<AdminOwnerVerification />} />
         <Route path="services" element={<AdminServiceBookings />} />
