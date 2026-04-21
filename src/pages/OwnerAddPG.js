@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -111,7 +111,6 @@ const initialForm = {
   fan_light: false,
   kitchen_room: false,
   
-  // Co-Living Inclusions (now manually editable)
   co_living_fully_furnished: false,
   co_living_food_included: false,
   co_living_wifi_included: false,
@@ -161,7 +160,6 @@ const initialRoomRates = {
   four_sharing: "",
   single_room: "",
   double_room: "",
-  // triple_room removed
   price_1bhk: "",
   price_2bhk: "",
   price_3bhk: "",
@@ -210,7 +208,6 @@ function OwnerAddPG() {
   const [form, setForm] = useState(initialForm);
   const [manualEditMode, setManualEditMode] = useState(false);
   
-  // Validation error states (for red warnings)
   const [validationErrors, setValidationErrors] = useState({});
   
   const mapRef = useRef(null);
@@ -309,7 +306,7 @@ function OwnerAddPG() {
   };
 
   // Search location (English only)
-  const searchLocation = async (searchQuery) => {
+  const searchLocation = useCallback(async (searchQuery) => {
     if (!searchQuery.trim()) return;
     try {
       setMapLoading(true);
@@ -333,7 +330,7 @@ function OwnerAddPG() {
     } finally {
       setMapLoading(false);
     }
-  };
+  }, []);
 
   const handleLocationSelect = async (lat, lng) => {
     await fetchAddressFromCoordinates(lat, lng);
@@ -351,7 +348,6 @@ function OwnerAddPG() {
     } else {
       setForm({ ...form, [name]: type === "checkbox" ? checked : value });
     }
-    // Clear validation error for this field if any
     if (validationErrors[name]) {
       setValidationErrors(prev => ({ ...prev, [name]: false }));
     }
@@ -390,7 +386,22 @@ function OwnerAddPG() {
     setValidationErrors(prev => ({ ...prev, address: false }));
   };
 
-  // Validate form and mark missing fields
+  const getMissingFieldsList = () => {
+    const missing = [];
+    if (!form.pg_name?.trim()) missing.push("Property Name");
+    if (!selectedLocation.address?.trim()) missing.push("Property Location (Address)");
+    if (!form.contact_person?.trim()) missing.push("Contact Person");
+    if (!form.contact_phone?.trim()) missing.push("Contact Phone");
+    if (photos.length === 0) missing.push("Property Photos (at least 1)");
+    if (form.contact_email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
+      missing.push("Valid Contact Email");
+    }
+    if (form.contact_phone?.trim() && !/^[0-9]{10,15}$/.test(form.contact_phone.replace(/\D/g, ''))) {
+      missing.push("Valid Contact Phone (10-15 digits)");
+    }
+    return missing;
+  };
+
   const validateForm = () => {
     const errors = {};
     if (!form.pg_name?.trim()) errors.pg_name = true;
@@ -398,10 +409,10 @@ function OwnerAddPG() {
     if (!form.contact_person?.trim()) errors.contact_person = true;
     if (!form.contact_phone?.trim()) errors.contact_phone = true;
     if (photos.length === 0) errors.photos = true;
-    if (form.contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
+    if (form.contact_email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
       errors.contact_email = true;
     }
-    if (!/^[0-9]{10,15}$/.test(form.contact_phone.replace(/\D/g, ''))) {
+    if (form.contact_phone?.trim() && !/^[0-9]{10,15}$/.test(form.contact_phone.replace(/\D/g, ''))) {
       errors.contact_phone = true;
     }
     setValidationErrors(errors);
@@ -409,15 +420,38 @@ function OwnerAddPG() {
   };
 
   const appendIfValue = (fd, key, value) => {
-    if (value !== "" && value !== null && value !== undefined) fd.append(key, value.toString());
+    if (value !== "" && value !== null && value !== undefined && value !== 0) {
+      fd.append(key, value.toString());
+    }
   };
 
+  // FIXED: handleSubmit using pgAPI pattern like EditPG
   const handleSubmit = async () => {
     if (!user) {
       alert("Please log in to add a property");
       navigate("/login");
       return;
     }
+    
+    const missingFields = getMissingFieldsList();
+    if (missingFields.length > 0) {
+      alert(`⚠️ Cannot create property. Please complete the following required fields:\n\n• ${missingFields.join('\n• ')}`);
+      const errors = {};
+      if (!form.pg_name?.trim()) errors.pg_name = true;
+      if (!selectedLocation.address?.trim()) errors.address = true;
+      if (!form.contact_person?.trim()) errors.contact_person = true;
+      if (!form.contact_phone?.trim()) errors.contact_phone = true;
+      if (photos.length === 0) errors.photos = true;
+      if (form.contact_email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
+        errors.contact_email = true;
+      }
+      if (form.contact_phone?.trim() && !/^[0-9]{10,15}$/.test(form.contact_phone.replace(/\D/g, ''))) {
+        errors.contact_phone = true;
+      }
+      setValidationErrors(errors);
+      return;
+    }
+    
     if (!validateForm()) {
       alert("Please fill all required fields (marked in red)");
       return;
@@ -431,8 +465,9 @@ function OwnerAddPG() {
       formData.append("pg_name", form.pg_name);
       formData.append("pg_category", form.pg_category);
       formData.append("pg_type", form.pg_type);
+      formData.append("owner_id", user.uid);
       
-      // Location
+      // Location details
       formData.append("address", selectedLocation.address);
       formData.append("area", selectedLocation.area);
       appendIfValue(formData, "road", selectedLocation.road);
@@ -442,10 +477,11 @@ function OwnerAddPG() {
       appendIfValue(formData, "pincode", selectedLocation.pincode);
       appendIfValue(formData, "country", selectedLocation.country);
       
+      // Coordinates
       const lat = parseFloat(selectedLocation.lat);
       const lng = parseFloat(selectedLocation.lng);
-      if (!isNaN(lat) && lat !== 0) formData.append("latitude", lat);
-      if (!isNaN(lng) && lng !== 0) formData.append("longitude", lng);
+      if (!isNaN(lat) && lat !== 0) formData.append("latitude", lat.toString());
+      if (!isNaN(lng) && lng !== 0) formData.append("longitude", lng.toString());
       
       // BHK config for to_let
       if (isToLet) {
@@ -458,14 +494,14 @@ function OwnerAddPG() {
         Object.entries(bhkConfig).forEach(([k, v]) => appendIfValue(formData, k, v));
       }
       
-      // PG room rates (triple_room removed)
+      // PG room rates
       if (isPG) {
-  Object.entries(roomRates).forEach(([k, v]) => {
-    if (k.startsWith("single_") || k.startsWith("double_") || k.startsWith("triple_") || k.startsWith("four_")) {
-      formData.append(k, v ? Number(v) : 0);
-    }
-  });
-}
+        Object.entries(roomRates).forEach(([k, v]) => {
+          if (k.startsWith("single_") || k.startsWith("double_") || k.startsWith("triple_") || k.startsWith("four_")) {
+            appendIfValue(formData, k, v);
+          }
+        });
+      }
       
       // Co-living rates
       if (isCoLiving) {
@@ -473,7 +509,7 @@ function OwnerAddPG() {
         appendIfValue(formData, "co_living_double_room", roomRates.co_living_double_room);
       }
       
-      // Facilities (booleans)
+      // Facilities (booleans) - convert to "true"/"false" strings
       const facilities = [
         "food_available", "ac_available", "wifi_available", "tv",
         "parking_available", "bike_parking", "laundry_available",
@@ -491,7 +527,7 @@ function OwnerAddPG() {
       appendIfValue(formData, "meals_per_day", form.meals_per_day);
       appendIfValue(formData, "water_type", form.water_type);
       
-      // Co-living inclusions (now manually set)
+      // Co-living inclusions
       formData.append("co_living_fully_furnished", form.co_living_fully_furnished ? "true" : "false");
       formData.append("co_living_food_included", form.co_living_food_included ? "true" : "false");
       formData.append("co_living_wifi_included", form.co_living_wifi_included ? "true" : "false");
@@ -530,8 +566,10 @@ function OwnerAddPG() {
       
       photos.forEach(photo => formData.append("photos", photo));
       
-      const response = await api.post("/pg/add", formData);
-      if (response.data.success) {
+      // Using pgAPI which handles the correct endpoint
+      const response = await pgAPI.addProperty(formData);
+      
+      if (response.data && response.data.success) {
         alert(`✅ ${isToLet ? 'House/Flat' : 'Property'} Created Successfully!`);
         navigate("/owner/dashboard");
         // Reset form
@@ -543,32 +581,90 @@ function OwnerAddPG() {
         setUserLocation(null);
         setValidationErrors({});
       } else {
-        alert(`❌ Failed: ${response.data.message}`);
+        alert(`❌ Failed: ${response.data?.message || "Unknown error"}`);
       }
     } catch (err) {
-      console.error(err);
-      alert(`❌ Failed to create property: ${err.response?.data?.message || err.message}`);
+      console.error("Error:", err.response?.data || err.message);
+      let errorMessage = err.response?.data?.message || err.message || "Unknown error";
+      alert(`❌ Failed to create property: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // Helper: get error style for input
   const getErrorStyle = (fieldName) => validationErrors[fieldName] ? { border: "2px solid #f44336", backgroundColor: "#ffebee" } : {};
 
-  // ================= RENDER =================
+  // Manual Address Modal Component
+  const ManualAddressModal = () => {
+    const [localLocation, setLocalLocation] = useState(selectedLocation);
+    
+    useEffect(() => {
+      setLocalLocation(selectedLocation);
+    }, [selectedLocation]);
+    
+    const handleLocalChange = (e) => {
+      const { name, value } = e.target;
+      setLocalLocation(prev => ({ ...prev, [name]: value }));
+    };
+    
+    const handleSave = () => {
+      if (!localLocation.address || !localLocation.area || !localLocation.city || !localLocation.state || !localLocation.pincode || !localLocation.country) {
+        alert("Please fill all required fields (marked with *)");
+        return;
+      }
+      setSelectedLocation(localLocation);
+      setManualEditMode(false);
+    };
+    
+    return (
+      <div style={styles.manualModalOverlay}>
+        <div style={styles.manualModal}>
+          <div style={styles.manualHeader}>
+            <h3>Enter Address Manually</h3>
+            <button onClick={() => setManualEditMode(false)} style={styles.closeBtn}>✕</button>
+          </div>
+          <div style={styles.manualForm}>
+            <div style={styles.grid}>
+              <div style={styles.inputGroup}><label>Full Address *</label><textarea name="address" value={localLocation.address} onChange={handleLocalChange} placeholder="Complete address including floor, building, street" style={styles.textarea} rows="3" required /></div>
+              <div style={styles.inputGroup}><label>Area/Locality *</label><input type="text" name="area" value={localLocation.area} onChange={handleLocalChange} placeholder="e.g., Koramangala, Whitefield" style={styles.input} required /></div>
+              <div style={styles.inputGroup}><label>Road/Street</label><input type="text" name="road" value={localLocation.road} onChange={handleLocalChange} placeholder="e.g., MG Road, 100 Feet Road" style={styles.input} /></div>
+              <div style={styles.inputGroup}><label>Landmark</label><input type="text" name="landmark" value={localLocation.landmark} onChange={handleLocalChange} placeholder="e.g., Near Forum Mall, Opposite Metro Station" style={styles.input} /></div>
+              <div style={styles.inputGroup}><label>City *</label><input type="text" name="city" value={localLocation.city} onChange={handleLocalChange} placeholder="e.g., Bangalore" style={styles.input} required /></div>
+              <div style={styles.inputGroup}><label>State *</label><input type="text" name="state" value={localLocation.state} onChange={handleLocalChange} placeholder="e.g., Karnataka" style={styles.input} required /></div>
+              <div style={styles.inputGroup}><label>Pincode *</label><input type="text" name="pincode" value={localLocation.pincode} onChange={handleLocalChange} placeholder="e.g., 560034" style={styles.input} required pattern="[0-9]{6}" /></div>
+              <div style={styles.inputGroup}><label>Country *</label><input type="text" name="country" value={localLocation.country} onChange={handleLocalChange} placeholder="e.g., India" style={styles.input} required /></div>
+              <div style={styles.inputGroup}><label>Latitude (optional)</label><input type="text" name="lat" value={localLocation.lat === 0 ? "" : localLocation.lat} onChange={handleLocalChange} placeholder="e.g., 12.9716" style={styles.input} step="any" /></div>
+              <div style={styles.inputGroup}><label>Longitude (optional)</label><input type="text" name="lng" value={localLocation.lng === 0 ? "" : localLocation.lng} onChange={handleLocalChange} placeholder="e.g., 77.5946" style={styles.input} step="any" /></div>
+            </div>
+            <div style={styles.manualFooter}>
+              <button onClick={handleSave} style={styles.saveButton}>💾 Save Address</button>
+              <button onClick={() => { setManualEditMode(false); setShowMap(true); }} style={styles.backToMapButton}>🗺️ Back to Map</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (authLoading) {
     return <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh"><CircularProgress /></Box>;
   }
   if (!user) return <Navigate to="/login" replace />;
   if (role !== "owner") return <Navigate to="/" replace />;
 
-  const isSubmitDisabled = loading || !selectedLocation.address || photos.length === 0 || !form.pg_name?.trim() || !form.contact_person?.trim() || !form.contact_phone?.trim();
+  const isSubmitDisabled = loading;
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
         <h2 style={styles.title}>➕ Add New Property</h2>
+        <div style={styles.premiumBanner}>
+          🎉 First 100 Owners Get <b>Lifetime Premium FREE</b> 🚀  
+          <br />
+          <span style={{ fontSize: "13px", opacity: 0.9 }}>
+            No monthly fees • Save up to ₹5,000 • Limited Offer
+          </span>
+        </div>
         
         {/* Basic Information */}
         <div style={styles.section}>
@@ -625,7 +721,7 @@ function OwnerAddPG() {
             <button type="button" onClick={() => setManualEditMode(true)} style={styles.manualAddressButton}>📝 Enter Address Manually</button>
           </div>
           {selectedLocation.address ? (
-            <div style={styles.locationPreview}>
+            <div style={{...styles.locationPreview, ...(validationErrors.address ? { borderLeftColor: "#f44336", backgroundColor: "#ffebee" } : {})}}>
               <div style={styles.locationHeader}>
                 <h4>📍 Selected Location</h4>
                 <div style={styles.locationActionButtons}>
@@ -667,7 +763,7 @@ function OwnerAddPG() {
           </div>
         )}
 
-        {/* Room Rates - Triple Room Removed */}
+        {/* Room Rates */}
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>{isToLet ? "💰 Rental Amount (₹/Month)" : isCoLiving ? "💰 Co-Living Rates (₹/Month)" : "💰 Room Rates (₹/Month)"}</h3>
           {isToLet ? (
@@ -684,30 +780,12 @@ function OwnerAddPG() {
             </div>
           ) : (
             <div style={styles.ratesGrid}>
-              <div style={styles.inputGroup}>
-                <label>Single Sharing</label>
-                <input type="number" name="single_sharing" placeholder="₹" value={roomRates.single_sharing} onChange={handleRateChange} style={styles.input} min="0" />
-              </div>
-              <div style={styles.inputGroup}>
-                <label>Double Sharing</label>
-                <input type="number" name="double_sharing" placeholder="₹" value={roomRates.double_sharing} onChange={handleRateChange} style={styles.input} min="0" />
-              </div>
-              <div style={styles.inputGroup}>
-                <label>Triple Sharing</label>
-                <input type="number" name="triple_sharing" placeholder="₹" value={roomRates.triple_sharing} onChange={handleRateChange} style={styles.input} min="0" />
-              </div>
-              <div style={styles.inputGroup}>
-                <label>Four Sharing</label>
-                <input type="number" name="four_sharing" placeholder="₹" value={roomRates.four_sharing} onChange={handleRateChange} style={styles.input} min="0" />
-              </div>
-              <div style={styles.inputGroup}>
-                <label>Single Room</label>
-                <input type="number" name="single_room" placeholder="₹" value={roomRates.single_room} onChange={handleRateChange} style={styles.input} min="0" />
-              </div>
-              <div style={styles.inputGroup}>
-                <label>Double Room</label>
-                <input type="number" name="double_room" placeholder="₹" value={roomRates.double_room} onChange={handleRateChange} style={styles.input} min="0" />
-              </div>
+              <div style={styles.inputGroup}><label>Single Sharing</label><input type="number" name="single_sharing" placeholder="₹" value={roomRates.single_sharing} onChange={handleRateChange} style={styles.input} min="0" /></div>
+              <div style={styles.inputGroup}><label>Double Sharing</label><input type="number" name="double_sharing" placeholder="₹" value={roomRates.double_sharing} onChange={handleRateChange} style={styles.input} min="0" /></div>
+              <div style={styles.inputGroup}><label>Triple Sharing</label><input type="number" name="triple_sharing" placeholder="₹" value={roomRates.triple_sharing} onChange={handleRateChange} style={styles.input} min="0" /></div>
+              <div style={styles.inputGroup}><label>Four Sharing</label><input type="number" name="four_sharing" placeholder="₹" value={roomRates.four_sharing} onChange={handleRateChange} style={styles.input} min="0" /></div>
+              <div style={styles.inputGroup}><label>Single Room</label><input type="number" name="single_room" placeholder="₹" value={roomRates.single_room} onChange={handleRateChange} style={styles.input} min="0" /></div>
+              <div style={styles.inputGroup}><label>Double Room</label><input type="number" name="double_room" placeholder="₹" value={roomRates.double_room} onChange={handleRateChange} style={styles.input} min="0" /></div>
             </div>
           )}
         </div>
@@ -774,7 +852,6 @@ function OwnerAddPG() {
                 {key === "water_24x7" && "💦 24×7 Water Supply"}
               </label>
             ))}
-            {/* Co-Living Inclusions - now manually editable */}
             {isCoLiving && (
               <>
                 <div style={{ gridColumn: "1 / -1", marginTop: 10 }}><h4>🤝 Co-Living Inclusions (click to edit):</h4></div>
@@ -941,34 +1018,7 @@ function OwnerAddPG() {
       )}
 
       {/* Manual Address Modal */}
-      {manualEditMode && (
-        <div style={styles.manualModalOverlay}>
-          <div style={styles.manualModal}>
-            <div style={styles.manualHeader}>
-              <h3>Enter Address Manually</h3>
-              <button onClick={() => setManualEditMode(false)} style={styles.closeBtn}>✕</button>
-            </div>
-            <div style={styles.manualForm}>
-              <div style={styles.grid}>
-                <div style={styles.inputGroup}><label>Full Address *</label><textarea name="address" value={selectedLocation.address} onChange={handleLocationChange} placeholder="Complete address including floor, building, street" style={styles.textarea} rows="3" required /></div>
-                <div style={styles.inputGroup}><label>Area/Locality *</label><input type="text" name="area" value={selectedLocation.area} onChange={handleLocationChange} placeholder="e.g., Koramangala, Whitefield" style={styles.input} required /></div>
-                <div style={styles.inputGroup}><label>Road/Street</label><input type="text" name="road" value={selectedLocation.road} onChange={handleLocationChange} placeholder="e.g., MG Road, 100 Feet Road" style={styles.input} /></div>
-                <div style={styles.inputGroup}><label>Landmark</label><input type="text" name="landmark" value={selectedLocation.landmark} onChange={handleLocationChange} placeholder="e.g., Near Forum Mall, Opposite Metro Station" style={styles.input} /></div>
-                <div style={styles.inputGroup}><label>City *</label><input type="text" name="city" value={selectedLocation.city} onChange={handleLocationChange} placeholder="e.g., Bangalore" style={styles.input} required /></div>
-                <div style={styles.inputGroup}><label>State *</label><input type="text" name="state" value={selectedLocation.state} onChange={handleLocationChange} placeholder="e.g., Karnataka" style={styles.input} required /></div>
-                <div style={styles.inputGroup}><label>Pincode *</label><input type="text" name="pincode" value={selectedLocation.pincode} onChange={handleLocationChange} placeholder="e.g., 560034" style={styles.input} required pattern="[0-9]{6}" /></div>
-                <div style={styles.inputGroup}><label>Country *</label><input type="text" name="country" value={selectedLocation.country} onChange={handleLocationChange} placeholder="e.g., India" style={styles.input} required /></div>
-                <div style={styles.inputGroup}><label>Latitude (optional)</label><input type="text" name="lat" value={selectedLocation.lat === 0 ? "" : selectedLocation.lat} onChange={handleLocationChange} placeholder="e.g., 12.9716" style={styles.input} step="any" /></div>
-                <div style={styles.inputGroup}><label>Longitude (optional)</label><input type="text" name="lng" value={selectedLocation.lng === 0 ? "" : selectedLocation.lng} onChange={handleLocationChange} placeholder="e.g., 77.5946" style={styles.input} step="any" /></div>
-              </div>
-              <div style={styles.manualFooter}>
-                <button onClick={() => { if (selectedLocation.address && selectedLocation.area && selectedLocation.city && selectedLocation.state && selectedLocation.pincode && selectedLocation.country) { setManualEditMode(false); } else { alert("Please fill all required fields (marked with *)"); } }} style={styles.saveButton}>💾 Save Address</button>
-                <button onClick={() => { setManualEditMode(false); setShowMap(true); }} style={styles.backToMapButton}>🗺️ Back to Map</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {manualEditMode && <ManualAddressModal />}
     </div>
   );
 }
@@ -978,6 +1028,7 @@ const styles = {
   container: { minHeight: "100vh", background: "linear-gradient(135deg, #667eea, #764ba2)", padding: "20px", display: "flex", justifyContent: "center", alignItems: "flex-start" },
   card: { background: "#ffffff", width: "100%", maxWidth: "1200px", padding: "30px", borderRadius: "20px", boxShadow: "0 25px 50px rgba(0, 0, 0, 0.2)", margin: "20px 0" },
   title: { textAlign: "center", marginBottom: "30px", color: "#333", fontSize: "28px", fontWeight: "600" },
+  premiumBanner: { background: "linear-gradient(135deg, #FFD700, #FFA500)", color: "#333", padding: "15px", borderRadius: "10px", textAlign: "center", marginBottom: "25px", fontWeight: "bold", fontSize: "16px" },
   section: { marginBottom: "30px", paddingBottom: "20px", borderBottom: "1px solid #eee" },
   sectionTitle: { fontSize: "18px", fontWeight: "600", color: "#444", marginBottom: "15px", display: "flex", alignItems: "center", gap: "8px" },
   note: { fontSize: "14px", color: "#666", marginBottom: "15px", fontStyle: "italic" },
@@ -1034,4 +1085,4 @@ const styles = {
   backToMapButton: { padding: "12px 24px", background: "#2196F3", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "14px", fontWeight: "500", display: "flex", alignItems: "center", gap: "8px" },
 };
 
-export default OwnerAddPG;  
+export default OwnerAddPG;
