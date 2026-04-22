@@ -208,7 +208,7 @@ const MainLayout = () => {
   }
 
   // SAFER REDIRECT LOGIC – only for non‑public routes
-  const publicRoutes = ["/", "/login", "/register", "/pg"];
+  const publicRoutes = ["/", "/login", "/register", "/pg", "/owner/login"];
   const isPublic = publicRoutes.some(route =>
     location.pathname === route || location.pathname.startsWith(route + "/")
   );
@@ -218,14 +218,20 @@ const MainLayout = () => {
   }
 
   // Redirect logged-in users away from auth pages
-  if (user && (location.pathname === "/login" || location.pathname === "/register")) {
-    return <Navigate to="/" replace />;
+  if (user && (location.pathname === "/login" || location.pathname === "/register" || location.pathname === "/owner/login")) {
+    // After login success, redirect based on role
+    if (role === "owner") {
+      return <Navigate to="/owner/dashboard" replace />;
+    } else {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   const getTitle = () => {
     if (location.pathname === "/") return "";
     if (location.pathname === "/pg") return "PG Listings";
     if (location.pathname.startsWith("/pg/")) return "PG Details";
+    if (location.pathname === "/dashboard") return "User Dashboard";
     if (location.pathname === "/booking") return "My Bookings";
     if (location.pathname === "/owner/dashboard") return "Owner Dashboard";
     if (location.pathname === "/profile") return "My Profile";
@@ -273,18 +279,18 @@ const MainLayout = () => {
               <>
                 <Button
                   variant="outlined"
-                  onClick={() => navigate("/login")}
+                  onClick={() => navigate("/owner/login")}
                   sx={{
                     borderRadius: "8px",
                     fontWeight: 600
                   }}
                 >
-                  ADD Pg/coliving/Tolet
+                  Add PG
                 </Button>
 
                 <Button
                   variant="contained"
-                  onClick={() => navigate("/become-owner")}
+                  onClick={() => navigate("/login")}
                   sx={{
                     background: "#4CAF50",
                     "&:hover": { background: "#43a047" },
@@ -292,7 +298,7 @@ const MainLayout = () => {
                     fontWeight: 600
                   }}
                 >
-                  LOGIN
+                  Tenant Login
                 </Button>
               </>
             )}
@@ -312,7 +318,7 @@ const MainLayout = () => {
                       fontWeight: 600
                     }}
                   >
-                    LOGIN
+                    Become Owner
                   </Button>
                 )}
 
