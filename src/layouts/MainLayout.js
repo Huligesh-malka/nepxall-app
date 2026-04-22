@@ -279,7 +279,7 @@ const MainLayout = () => {
                     fontWeight: 600
                   }}
                 >
-                  Login
+                  ADD Pg/coliving/Tolet
                 </Button>
 
                 <Button
@@ -292,7 +292,7 @@ const MainLayout = () => {
                     fontWeight: 600
                   }}
                 >
-                  Add Pg/CoLiving/Tolet
+                  LOGIN
                 </Button>
               </>
             )}
@@ -312,7 +312,7 @@ const MainLayout = () => {
                       fontWeight: 600
                     }}
                   >
-                    Add Pg/CoLiving/Tolet
+                    LOGIN
                   </Button>
                 )}
 
