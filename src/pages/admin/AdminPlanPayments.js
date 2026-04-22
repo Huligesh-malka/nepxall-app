@@ -131,7 +131,7 @@ export default function AdminPlanPayments() {
 
                     {/* 🔥 PLAN + EXPIRY */}
                     <td style={tdStyle}>
-                      {p.plan.toUpperCase()}
+                      {String(p.plan || "basic").toUpperCase()}
                       {p.status === "paid" && getExpiryText(p.plan_expiry)}
                     </td>
 
