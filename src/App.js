@@ -286,6 +286,9 @@ function App() {
       <Route element={<MainLayout />}>
         <Route path="/" element={<UserPGSearch />} />
         <Route path="/pg/:id" element={<PGDetails />} />
+          {/* ✅ ADD HERE */}
+  <Route path="/add-pg" element={<AddPGPublic />} />
+
       </Route>
 
       <Route path="/scan/:id" element={<ScanPG />} />

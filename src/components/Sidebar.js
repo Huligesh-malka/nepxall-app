@@ -134,6 +134,15 @@ const Sidebar = ({ role, user }) => {
             <Link style={linkStyle(isActive("/user/my-stay"))} to="/user/my-stay" onClick={closeSidebar} className="sidebar-link"><FiHome size={16} /> My Stay</Link>
             <Link style={linkStyle(isActive("/user/bookings"))} to="/user/bookings" onClick={closeSidebar} className="sidebar-link"><FiCalendar size={16} /> My Bookings</Link>
             <Link style={linkStyle(isActive("/"))} to="/" onClick={closeSidebar} className="sidebar-link"><FiSearch size={16} /> Browse Properties</Link>
+            <Link 
+      style={linkStyle(isActive("/add-pg"))} 
+      to="/add-pg" 
+      onClick={closeSidebar} 
+      className="sidebar-link"
+    >
+      <FiPlusCircle size={16} /> Add PG (Free)
+    </Link>
+            
             {/* 🔥 ADD HERE */}
     <Link 
       style={linkStyle(isActive("/become-owner"))} 
