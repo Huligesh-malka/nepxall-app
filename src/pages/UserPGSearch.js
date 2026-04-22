@@ -3457,7 +3457,7 @@ function UserPGSearch() {
           </h2>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ color: "#6b7280", fontSize: 14 }}>
-              Showing {pgs.length} properties
+              
               {filters.minBudget > 0 && filters.maxBudget < 50000 && 
                 ` within ₹${formatPrice(filters.minBudget)} - ₹${formatPrice(filters.maxBudget)}`}
             </span>
