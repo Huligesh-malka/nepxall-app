@@ -21,6 +21,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 /* USER */
 import UserPGSearch from "./pages/UserPGSearch";   
+import AddPGPublic from "./pages/AddPGPublic";
 import PGDetails from "./pages/PGDetails";
 import BookingForm from "./pages/BookingForm";
 import UserBookingHistory from "./pages/UserBookingHistory";   
