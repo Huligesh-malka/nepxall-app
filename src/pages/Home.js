@@ -6,12 +6,14 @@ export default function Home() {
   const navigate = useNavigate();
   const [pgs, setPgs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const limit = 10;
 
   useEffect(() => {
     setLoading(true);
-
+    
     api.get(`/pg/search/advanced?page=${page}&limit=${limit}`)
       .then(res => {
         if (res.data?.data) {
@@ -20,17 +22,31 @@ export default function Home() {
           } else {
             setPgs(prev => [...prev, ...res.data.data]);
           }
+          
+          // ✅ Check if more data exists
+          setHasMore(res.data.hasMore || (res.data.data.length === limit));
         }
         setLoading(false);
+        setLoadingMore(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setLoading(false);
+        setLoadingMore(false);
+      });
   }, [page]);
 
-  if (loading && page === 1) return <div>Loading...</div>;
+  const loadMore = () => {
+    if (!loadingMore && hasMore) {
+      setLoadingMore(true);
+      setPage(prev => prev + 1);
+    }
+  };
+
+  if (loading && page === 1) return <div style={{ padding: 20, textAlign: "center" }}>Loading properties...</div>;
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Properties</h1>
+      <h1 style={{ marginBottom: 20 }}>Properties</h1>
       
       <div style={{ display: "grid", gap: 20 }}>
         {pgs.map(pg => (
@@ -41,34 +57,69 @@ export default function Home() {
               border: "1px solid #ccc", 
               padding: 15, 
               cursor: "pointer",
-              borderRadius: 10
+              borderRadius: 10,
+              transition: "all 0.3s ease",
+              backgroundColor: "white"
             }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
+            onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
           >
-            <h3>{pg.pg_name}</h3>
-            <p>{pg.location}</p>
-            <p>₹{pg.rent_amount}</p>
+            <h3 style={{ margin: "0 0 10px 0" }}>{pg.pg_name}</h3>
+            <p style={{ margin: "5px 0", color: "#666" }}>📍 {pg.location}</p>
+            <p style={{ margin: "5px 0", fontSize: 18, fontWeight: "bold", color: "#2563eb" }}>
+              ₹{pg.rent_amount}/month
+            </p>
           </div>
         ))}
       </div>
 
-      {/* ✅ View More Button */}
-      <div style={{ textAlign: "center", marginTop: 20 }}>
-        <button
-          onClick={() => setPage(prev => prev + 1)}
-          disabled={loading}
-          style={{
-            padding: "12px 24px",
-            background: loading ? "#9ca3af" : "#2563eb",
-            color: "white",
-            border: "none",
-            borderRadius: 10,
-            cursor: loading ? "not-allowed" : "pointer",
-            fontWeight: "bold",
-            fontSize: 16
-          }}
-        >
-          {loading ? "Loading..." : "View More"}
-        </button>
+      {/* ✅ View More Button with better visibility */}
+      <div style={{ textAlign: "center", marginTop: 50, marginBottom: 30 }}>
+        {hasMore ? (
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            style={{
+              padding: "14px 28px",
+              background: loadingMore ? "#9ca3af" : "#dc2626", // 🔴 RED for visibility
+              color: "white",
+              border: "none",
+              borderRadius: 12,
+              cursor: loadingMore ? "not-allowed" : "pointer",
+              fontWeight: "bold",
+              fontSize: 16,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              transition: "all 0.2s ease"
+            }}
+            onMouseEnter={(e) => {
+              if (!loadingMore) e.currentTarget.style.transform = "scale(1.02)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
+            }}
+          >
+            {loadingMore ? "Loading more..." : "🔽 VIEW MORE PROPERTIES"}
+          </button>
+        ) : (
+          <div style={{ 
+            padding: "20px", 
+            textAlign: "center", 
+            color: "#666",
+            borderTop: "1px solid #eee"
+          }}>
+            ✨ You've seen all {pgs.length} properties ✨
+          </div>
+        )}
+        
+        {/* ✅ Show count */}
+        <p style={{ 
+          marginTop: 15, 
+          fontSize: 14, 
+          color: "#666",
+          fontWeight: "500"
+        }}>
+          Showing {pgs.length} properties
+        </p>
       </div>
     </div>
   );
