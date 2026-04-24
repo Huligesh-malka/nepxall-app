@@ -1251,8 +1251,8 @@ export default function PGDetails() {
 
         const data = res.data.data;
         console.log("PG data received:", data.pg_name);
-        console.log("Co-living triple sharing price:", data.co_living_triple_sharing);
-        console.log("Co-living four sharing price:", data.co_living_four_sharing);
+        console.log("Co-living triple sharing price:", data.coliving_three_sharing);
+        console.log("Co-living four sharing price:", data.coliving_four_sharing);
         console.log("Min stay months:", data.min_stay_months);
 
         const photos = Array.isArray(data.photos)
