@@ -88,7 +88,7 @@ const PhoneLogin = () => {
         if (userData.name && userData.name.trim() !== "") {
           redirectInProgress.current = true;
           setTimeout(() => {
-            redirect("owner"); // 🔥 FORCE OWNER
+            redirect("user"); // 🔥 CHANGED: Force USER dashboard first
           }, 500);
         }
       } catch (e) {
@@ -97,7 +97,7 @@ const PhoneLogin = () => {
     } else if (user && user.name && user.name.trim() !== "" && user.role) {
       redirectInProgress.current = true;
       setTimeout(() => {
-        redirect("owner"); // 🔥 FORCE OWNER
+        redirect("user"); // 🔥 CHANGED: Force USER dashboard first
       }, 500);
     }
   }, [user, authLoading, registrationComplete]);
@@ -164,12 +164,11 @@ const PhoneLogin = () => {
     }
   };
 
-  /* ================= REDIRECT ================= */
+  /* ================= REDIRECT - MODIFIED ================= */
   const redirect = (role) => {
     if (role === "admin") navigate("/admin/dashboard");
     else if (role === "owner") navigate("/owner/dashboard");
-    else if (role === "vendor") navigate("/vendor/dashboard");
-    else navigate("/");
+    else navigate("/"); // Changed: Only admin, owner, or home (user dashboard)
   };
 
   /* ================= SAVE AUTH DATA ================= */
@@ -241,7 +240,7 @@ const PhoneLogin = () => {
     }
   };
 
-  /* ================= VERIFY OTP - MODIFIED FOR DIRECT LOGIN ================= */
+  /* ================= VERIFY OTP - MODIFIED FOR USER ROLE FIRST ================= */
   const verifyOtp = async () => {
     if (verificationInProgress.current) {
       return;
@@ -266,10 +265,10 @@ const PhoneLogin = () => {
       // Get Firebase ID token
       const idToken = await result.user.getIdToken(true);
       
-      // 🔥 CHANGE: Force role to "owner" always
+      // 🔥 CHANGE: Set role to "user" initially (not owner)
       const checkResponse = await userAPI.post("/auth/firebase", {
         idToken,
-        role: "owner", // 🔥 FORCE OWNER ROLE
+        role: "user", // 🔥 CHANGED: Force USER role first
         phone: phone
       });
       
@@ -281,15 +280,15 @@ const PhoneLogin = () => {
           saveAuthData(checkResponse.data.token, checkResponse.data.user);
         }
         
-        // 🔥 CHANGE: Always login directly - NO NAME STEP
-        console.log("Direct login - redirecting to Owner Dashboard");
+        // 🔥 CHANGE: Always login directly - redirect to USER Dashboard
+        console.log("Direct login - redirecting to User Dashboard");
         setRegistrationComplete(true);
         setSnackbarMessage(checkResponse.data.message || "Welcome! 🚀");
         setSnackbarOpen(true);
         
-        // 🔥 CHANGE: Force redirect to owner dashboard
+        // 🔥 CHANGE: Force redirect to user dashboard (home page)
         setTimeout(() => {
-          redirect("owner"); // 🔥 FORCE OWNER
+          redirect("user"); // 🔥 CHANGED: Force USER dashboard first
         }, 1000);
       } else {
         setError(checkResponse.data.message || "Authentication failed");
