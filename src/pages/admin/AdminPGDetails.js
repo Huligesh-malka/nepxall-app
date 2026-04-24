@@ -1,4 +1,4 @@
-// AdminPGDetails.js - Fixed with edit fields not getting stuck
+// AdminPGDetails.js - Fixed with proper image handling and edit fields
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { adminPGAPI } from "../../api/api";
@@ -56,22 +56,42 @@ const FILES_BASE =
   API_CONFIG?.FILES_URL ||
   "https://nepxall-backend.onrender.com";
 
-const getCorrectImageUrl = (photo) => {
-  if (!photo) return null;
-
-  if (photo.startsWith('http')) {
-    return photo;
+// ✅ STEP 1: CORRECT getCorrectImageUrl function (SAME as owner side)
+const getCorrectImageUrl = (path) => {
+  if (!path) {
+    return "https://via.placeholder.com/400x300?text=No+Image";
   }
 
-  if (photo.includes('/uploads/')) {
-    const uploadsIndex = photo.indexOf('/uploads/');
+  // cloudinary
+  if (path.startsWith("http")) {
+    return path;
+  }
+
+  // local uploads
+  if (path.includes("/uploads/")) {
+    const uploadsIndex = path.indexOf("/uploads/");
+
     if (uploadsIndex !== -1) {
-      const relativePath = photo.substring(uploadsIndex);
+      const relativePath = path.substring(uploadsIndex);
+
       return `${FILES_BASE}${relativePath}`;
     }
   }
 
-  const normalizedPath = photo.startsWith('/') ? photo : `/${photo}`;
+  // render absolute path
+  if (path.includes("/opt/render/")) {
+    const uploadsMatch = path.match(/\/uploads\/.*/);
+
+    if (uploadsMatch) {
+      return `${FILES_BASE}${uploadsMatch[0]}`;
+    }
+  }
+
+  // default
+  const normalizedPath = path.startsWith("/")
+    ? path
+    : `/${path}`;
+
   return `${FILES_BASE}${normalizedPath}`;
 };
 
@@ -465,6 +485,14 @@ const AdminPGDetails = () => {
     );
   }
 
+  // ✅ STEP 2: FILTER BAD PHOTOS
+  const validPhotos = photos.filter(
+    (photo) =>
+      photo &&
+      typeof photo === "string" &&
+      !photo.includes("fakepath")
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {showSuccessToast && (
@@ -650,6 +678,7 @@ const AdminPGDetails = () => {
             </div>
           </Section>
 
+          {/* ✅ STEP 3 & 4: PHOTOS SECTION WITH PROPER FILTERING AND ERROR HANDLING */}
           <Section title="Photos" icon={Image}>
             <div className="col-span-full">
               <div className="mb-4">
@@ -666,14 +695,14 @@ const AdminPGDetails = () => {
                   />
                 </label>
               </div>
-              {photos.length === 0 ? (
+              {validPhotos.length === 0 ? (
                 <div className="text-center py-12 bg-gray-50 rounded-xl">
                   <Image size={48} className="text-gray-400 mx-auto mb-3" />
                   <p className="text-gray-500">No photos uploaded</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {photos.map((img, i) => (
+                  {validPhotos.map((img, i) => (
                     <div key={i} className="relative group">
                       <div
                         onClick={() => setSelectedPhoto(img)}
@@ -683,6 +712,15 @@ const AdminPGDetails = () => {
                           src={getCorrectImageUrl(img)}
                           alt={`Property ${i + 1}`}
                           className="h-48 w-full object-cover rounded-xl transition-transform duration-300 group-hover:scale-105"
+                          onError={(e) => {
+                            console.error(
+                              "Image failed:",
+                              img,
+                              getCorrectImageUrl(img)
+                            );
+                            e.target.src =
+                              "https://via.placeholder.com/400x300?text=Image+Error";
+                          }}
                         />
                       </div>
                       <button
