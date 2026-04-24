@@ -271,16 +271,7 @@ const MainLayout = () => {
             {/* ✅ IF USER NOT LOGGED IN */}
             {!user && (
               <>
-                <Button
-                  variant="outlined"
-                  onClick={() => navigate("/login")}
-                  sx={{
-                    borderRadius: "8px",
-                    fontWeight: 600
-                  }}
-                >
-                 
-                </Button>
+                
 
                 <Button
                   variant="contained"
