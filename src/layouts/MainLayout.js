@@ -227,7 +227,7 @@ const MainLayout = () => {
     if (location.pathname === "/pg") return "PG Listings";
     if (location.pathname.startsWith("/pg/")) return "PG Details";
     if (location.pathname === "/booking") return "My Bookings";
-    if (location.pathname === "/owner/dashboard") return "Owner Dashboard";
+    if (location.pathname === "/owner/dashboard") return "Dashboard"; // Changed from "Owner Dashboard" to "Dashboard"
     if (location.pathname === "/profile") return "My Profile";
     const path = location.pathname.split("/").pop();
     return path ? path.replace("-", " ").toUpperCase() : "PAGE";
@@ -273,7 +273,7 @@ const MainLayout = () => {
               <>
                 <Button
                   variant="outlined"
-                  onClick={() => navigate("/login")}
+                  onClick={() => navigate("/")}
                   sx={{
                     borderRadius: "8px",
                     fontWeight: 600
@@ -284,7 +284,7 @@ const MainLayout = () => {
 
                 <Button
                   variant="contained"
-                  onClick={() => navigate("/become-owner")}
+                  onClick={() => navigate("/")}
                   sx={{
                     background: "#4CAF50",
                     "&:hover": { background: "#43a047" },
@@ -304,7 +304,7 @@ const MainLayout = () => {
                 {role !== "owner" && (
                   <Button
                     variant="contained"
-                    onClick={() => navigate("/become-owner")}
+                    onClick={() => navigate("/")}
                     sx={{
                       background: "#4CAF50",
                       "&:hover": { background: "#43a047" },
@@ -312,7 +312,7 @@ const MainLayout = () => {
                       fontWeight: 600
                     }}
                   >
-                    LOGIN
+                    USER DASHBOARD
                   </Button>
                 )}
 
