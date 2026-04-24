@@ -133,6 +133,9 @@ const initialForm = {
   loud_music_restricted: false,
   lock_in_period: false,
   min_stay_months: "0",
+  // NEW: Minimum stay fields
+  min_stay_available: false,
+  min_stay_days: "",
   notice_period: "1",
   agreement_mandatory: true,
   id_proof_mandatory: false,
@@ -166,6 +169,9 @@ const initialRoomRates = {
   price_4bhk: "",
   co_living_single_room: "",
   co_living_double_room: "",
+  // NEW: Coliving sharing types
+  coliving_three_sharing: "",
+  coliving_four_sharing: "",
 };
 
 const initialBhkConfig = {
@@ -425,175 +431,181 @@ function OwnerAddPG() {
     }
   };
 
-const handleSubmit = async () => {
-  if (!user) {
-    alert("Please log in to add a property");
-    navigate("/login");
-    return;
-  }
-  
-  const missingFields = getMissingFieldsList();
-  if (missingFields.length > 0) {
-    alert(`⚠️ Cannot create property. Please complete the following required fields:\n\n• ${missingFields.join('\n• ')}`);
-    const errors = {};
-    if (!form.pg_name?.trim()) errors.pg_name = true;
-    if (!selectedLocation.address?.trim()) errors.address = true;
-    if (!form.contact_person?.trim()) errors.contact_person = true;
-    if (!form.contact_phone?.trim()) errors.contact_phone = true;
-    if (photos.length === 0) errors.photos = true;
-    if (form.contact_email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
-      errors.contact_email = true;
+  const handleSubmit = async () => {
+    if (!user) {
+      alert("Please log in to add a property");
+      navigate("/login");
+      return;
     }
-    if (form.contact_phone?.trim() && !/^[0-9]{10,15}$/.test(form.contact_phone.replace(/\D/g, ''))) {
-      errors.contact_phone = true;
+    
+    const missingFields = getMissingFieldsList();
+    if (missingFields.length > 0) {
+      alert(`⚠️ Cannot create property. Please complete the following required fields:\n\n• ${missingFields.join('\n• ')}`);
+      const errors = {};
+      if (!form.pg_name?.trim()) errors.pg_name = true;
+      if (!selectedLocation.address?.trim()) errors.address = true;
+      if (!form.contact_person?.trim()) errors.contact_person = true;
+      if (!form.contact_phone?.trim()) errors.contact_phone = true;
+      if (photos.length === 0) errors.photos = true;
+      if (form.contact_email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
+        errors.contact_email = true;
+      }
+      if (form.contact_phone?.trim() && !/^[0-9]{10,15}$/.test(form.contact_phone.replace(/\D/g, ''))) {
+        errors.contact_phone = true;
+      }
+      setValidationErrors(errors);
+      return;
     }
-    setValidationErrors(errors);
-    return;
-  }
-  
-  if (!validateForm()) {
-    alert("Please fill all required fields (marked in red)");
-    return;
-  }
+    
+    if (!validateForm()) {
+      alert("Please fill all required fields (marked in red)");
+      return;
+    }
 
-  try {
-    setLoading(true);
-    const formData = new FormData();
-    
-    // Basic info
-    formData.append("pg_name", form.pg_name);
-    formData.append("pg_category", form.pg_category);
-    formData.append("pg_type", form.pg_type);
-    formData.append("owner_id", user.uid);
-    
-    // Location details
-    formData.append("address", selectedLocation.address);
-    formData.append("area", selectedLocation.area);
-    appendIfValue(formData, "road", selectedLocation.road);
-    appendIfValue(formData, "landmark", selectedLocation.landmark);
-    formData.append("city", selectedLocation.city);
-    appendIfValue(formData, "state", selectedLocation.state);
-    appendIfValue(formData, "pincode", selectedLocation.pincode);
-    appendIfValue(formData, "country", selectedLocation.country);
-    
-    // Coordinates
-    const lat = parseFloat(selectedLocation.lat);
-    const lng = parseFloat(selectedLocation.lng);
-    if (!isNaN(lat) && lat !== 0) formData.append("latitude", lat.toString());
-    if (!isNaN(lng) && lng !== 0) formData.append("longitude", lng.toString());
-    
-    // BHK config for to_let
-    if (isToLet) {
-      formData.append("bhk_type", form.bhk_type);
-      formData.append("furnishing_type", form.furnishing_type);
-      appendIfValue(formData, "price_1bhk", roomRates.price_1bhk);
-      appendIfValue(formData, "price_2bhk", roomRates.price_2bhk);
-      appendIfValue(formData, "price_3bhk", roomRates.price_3bhk);
-      appendIfValue(formData, "price_4bhk", roomRates.price_4bhk);
-      Object.entries(bhkConfig).forEach(([k, v]) => appendIfValue(formData, k, v));
-    }
-    
-    // PG room rates
-    if (isPG) {
-      Object.entries(roomRates).forEach(([k, v]) => {
-        if (k.startsWith("single_") || k.startsWith("double_") || k.startsWith("triple_") || k.startsWith("four_")) {
-          appendIfValue(formData, k, v);
-        }
+    try {
+      setLoading(true);
+      const formData = new FormData();
+      
+      // Basic info
+      formData.append("pg_name", form.pg_name);
+      formData.append("pg_category", form.pg_category);
+      formData.append("pg_type", form.pg_type);
+      formData.append("owner_id", user.uid);
+      
+      // Location details
+      formData.append("address", selectedLocation.address);
+      formData.append("area", selectedLocation.area);
+      appendIfValue(formData, "road", selectedLocation.road);
+      appendIfValue(formData, "landmark", selectedLocation.landmark);
+      formData.append("city", selectedLocation.city);
+      appendIfValue(formData, "state", selectedLocation.state);
+      appendIfValue(formData, "pincode", selectedLocation.pincode);
+      appendIfValue(formData, "country", selectedLocation.country);
+      
+      // Coordinates
+      const lat = parseFloat(selectedLocation.lat);
+      const lng = parseFloat(selectedLocation.lng);
+      if (!isNaN(lat) && lat !== 0) formData.append("latitude", lat.toString());
+      if (!isNaN(lng) && lng !== 0) formData.append("longitude", lng.toString());
+      
+      // BHK config for to_let
+      if (isToLet) {
+        formData.append("bhk_type", form.bhk_type);
+        formData.append("furnishing_type", form.furnishing_type);
+        appendIfValue(formData, "price_1bhk", roomRates.price_1bhk);
+        appendIfValue(formData, "price_2bhk", roomRates.price_2bhk);
+        appendIfValue(formData, "price_3bhk", roomRates.price_3bhk);
+        appendIfValue(formData, "price_4bhk", roomRates.price_4bhk);
+        Object.entries(bhkConfig).forEach(([k, v]) => appendIfValue(formData, k, v));
+      }
+      
+      // PG room rates
+      if (isPG) {
+        Object.entries(roomRates).forEach(([k, v]) => {
+          if (k.startsWith("single_") || k.startsWith("double_") || k.startsWith("triple_") || k.startsWith("four_")) {
+            appendIfValue(formData, k, v);
+          }
+        });
+      }
+      
+      // Co-living rates (including new sharing types)
+      if (isCoLiving) {
+        appendIfValue(formData, "co_living_single_room", roomRates.co_living_single_room);
+        appendIfValue(formData, "co_living_double_room", roomRates.co_living_double_room);
+        appendIfValue(formData, "coliving_three_sharing", roomRates.coliving_three_sharing);
+        appendIfValue(formData, "coliving_four_sharing", roomRates.coliving_four_sharing);
+      }
+      
+      // Facilities (booleans) - convert to "true"/"false" strings
+      const facilities = [
+        "food_available", "ac_available", "wifi_available", "tv",
+        "parking_available", "bike_parking", "laundry_available",
+        "washing_machine", "refrigerator", "microwave", "geyser",
+        "power_backup", "lift_elevator", "cctv", "security_guard",
+        "gym", "housekeeping", "water_purifier", "fire_safety",
+        "study_room", "common_tv_lounge", "balcony_open_space",
+        "water_24x7", "cupboard_available", "table_chair_available",
+        "dining_table_available", "attached_bathroom", "balcony_available",
+        "wall_mounted_clothes_hook", "bed_with_mattress", "fan_light", "kitchen_room"
+      ];
+      facilities.forEach(key => formData.append(key, form[key] ? "true" : "false"));
+      
+      appendIfValue(formData, "food_type", form.food_type);
+      appendIfValue(formData, "meals_per_day", form.meals_per_day);
+      appendIfValue(formData, "water_type", form.water_type);
+      
+      // Co-living inclusions
+      formData.append("co_living_fully_furnished", form.co_living_fully_furnished ? "true" : "false");
+      formData.append("co_living_food_included", form.co_living_food_included ? "true" : "false");
+      formData.append("co_living_wifi_included", form.co_living_wifi_included ? "true" : "false");
+      formData.append("co_living_housekeeping", form.co_living_housekeeping ? "true" : "false");
+      formData.append("co_living_power_backup", form.co_living_power_backup ? "true" : "false");
+      formData.append("co_living_maintenance", form.co_living_maintenance ? "true" : "false");
+      
+      // Rules
+      const rules = [
+        "visitor_allowed", "visitor_time_restricted", "couple_allowed",
+        "family_allowed", "smoking_allowed", "drinking_allowed",
+        "pets_allowed", "late_night_entry_allowed", "outside_food_allowed",
+        "parties_allowed", "loud_music_restricted", "lock_in_period",
+        "agreement_mandatory", "id_proof_mandatory", "office_going_only",
+        "students_only", "subletting_allowed"
+      ];
+      rules.forEach(key => formData.append(key, form[key] ? "true" : "false"));
+      formData.append("boys_only", form.boys_only ? "true" : "false");
+      formData.append("girls_only", form.girls_only ? "true" : "false");
+      formData.append("co_living_allowed", form.co_living_allowed ? "true" : "false");
+      
+      // NEW: Minimum stay fields
+      formData.append("min_stay_available", form.min_stay_available ? "true" : "false");
+      appendIfValue(formData, "min_stay_days", form.min_stay_days);
+      
+      appendIfValue(formData, "visitors_allowed_till", form.visitors_allowed_till);
+      appendIfValue(formData, "entry_curfew_time", form.entry_curfew_time);
+      appendIfValue(formData, "min_stay_months", form.min_stay_months);
+      formData.append("notice_period", form.notice_period);
+      
+      appendIfValue(formData, "security_deposit", form.security_deposit);
+      appendIfValue(formData, "maintenance_amount", form.maintenance_amount);
+      appendIfValue(formData, "total_rooms", form.total_rooms);
+      appendIfValue(formData, "available_rooms", form.available_rooms);
+      
+      formData.append("description", form.description);
+      formData.append("contact_person", form.contact_person);
+      appendIfValue(formData, "contact_email", form.contact_email);
+      formData.append("contact_phone", form.contact_phone);
+      
+      photos.forEach(photo => formData.append("photos", photo));
+      
+      // Use the correct API endpoint - /pg/add
+      const response = await api.post("/pg/add", formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
+      
+      if (response.data && response.data.success) {
+        alert(`✅ ${isToLet ? 'House/Flat' : 'Property'} Created Successfully!`);
+        navigate("/owner/dashboard");
+        // Reset form
+        setForm({ ...initialForm, owner_id: user.uid });
+        setRoomRates(initialRoomRates);
+        setBhkConfig(initialBhkConfig);
+        setPhotos([]);
+        setSelectedLocation(initialLocation);
+        setUserLocation(null);
+        setValidationErrors({});
+      } else {
+        alert(`❌ Failed: ${response.data?.message || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error("Error:", err.response?.data || err.message);
+      let errorMessage = err.response?.data?.message || err.message || "Unknown error";
+      alert(`❌ Failed to create property: ${errorMessage}`);
+    } finally {
+      setLoading(false);
     }
-    
-    // Co-living rates
-    if (isCoLiving) {
-      appendIfValue(formData, "co_living_single_room", roomRates.co_living_single_room);
-      appendIfValue(formData, "co_living_double_room", roomRates.co_living_double_room);
-    }
-    
-    // Facilities (booleans) - convert to "true"/"false" strings
-    const facilities = [
-      "food_available", "ac_available", "wifi_available", "tv",
-      "parking_available", "bike_parking", "laundry_available",
-      "washing_machine", "refrigerator", "microwave", "geyser",
-      "power_backup", "lift_elevator", "cctv", "security_guard",
-      "gym", "housekeeping", "water_purifier", "fire_safety",
-      "study_room", "common_tv_lounge", "balcony_open_space",
-      "water_24x7", "cupboard_available", "table_chair_available",
-      "dining_table_available", "attached_bathroom", "balcony_available",
-      "wall_mounted_clothes_hook", "bed_with_mattress", "fan_light", "kitchen_room"
-    ];
-    facilities.forEach(key => formData.append(key, form[key] ? "true" : "false"));
-    
-    appendIfValue(formData, "food_type", form.food_type);
-    appendIfValue(formData, "meals_per_day", form.meals_per_day);
-    appendIfValue(formData, "water_type", form.water_type);
-    
-    // Co-living inclusions
-    formData.append("co_living_fully_furnished", form.co_living_fully_furnished ? "true" : "false");
-    formData.append("co_living_food_included", form.co_living_food_included ? "true" : "false");
-    formData.append("co_living_wifi_included", form.co_living_wifi_included ? "true" : "false");
-    formData.append("co_living_housekeeping", form.co_living_housekeeping ? "true" : "false");
-    formData.append("co_living_power_backup", form.co_living_power_backup ? "true" : "false");
-    formData.append("co_living_maintenance", form.co_living_maintenance ? "true" : "false");
-    
-    // Rules
-    const rules = [
-      "visitor_allowed", "visitor_time_restricted", "couple_allowed",
-      "family_allowed", "smoking_allowed", "drinking_allowed",
-      "pets_allowed", "late_night_entry_allowed", "outside_food_allowed",
-      "parties_allowed", "loud_music_restricted", "lock_in_period",
-      "agreement_mandatory", "id_proof_mandatory", "office_going_only",
-      "students_only", "subletting_allowed"
-    ];
-    rules.forEach(key => formData.append(key, form[key] ? "true" : "false"));
-    formData.append("boys_only", form.boys_only ? "true" : "false");
-    formData.append("girls_only", form.girls_only ? "true" : "false");
-    formData.append("co_living_allowed", form.co_living_allowed ? "true" : "false");
-    
-    appendIfValue(formData, "visitors_allowed_till", form.visitors_allowed_till);
-    appendIfValue(formData, "entry_curfew_time", form.entry_curfew_time);
-    appendIfValue(formData, "min_stay_months", form.min_stay_months);
-    formData.append("notice_period", form.notice_period);
-    
-    appendIfValue(formData, "security_deposit", form.security_deposit);
-    appendIfValue(formData, "maintenance_amount", form.maintenance_amount);
-    appendIfValue(formData, "total_rooms", form.total_rooms);
-    appendIfValue(formData, "available_rooms", form.available_rooms);
-    
-    formData.append("description", form.description);
-    formData.append("contact_person", form.contact_person);
-    appendIfValue(formData, "contact_email", form.contact_email);
-    formData.append("contact_phone", form.contact_phone);
-    
-    photos.forEach(photo => formData.append("photos", photo));
-    
-    // Use the correct API endpoint - /pg/add (not pgAPI.addProperty)
-    const response = await api.post("/pg/add", formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    
-    if (response.data && response.data.success) {
-      alert(`✅ ${isToLet ? 'House/Flat' : 'Property'} Created Successfully!`);
-      navigate("/owner/dashboard");
-      // Reset form
-      setForm({ ...initialForm, owner_id: user.uid });
-      setRoomRates(initialRoomRates);
-      setBhkConfig(initialBhkConfig);
-      setPhotos([]);
-      setSelectedLocation(initialLocation);
-      setUserLocation(null);
-      setValidationErrors({});
-    } else {
-      alert(`❌ Failed: ${response.data?.message || "Unknown error"}`);
-    }
-  } catch (err) {
-    console.error("Error:", err.response?.data || err.message);
-    let errorMessage = err.response?.data?.message || err.message || "Unknown error";
-    alert(`❌ Failed to create property: ${errorMessage}`);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const getErrorStyle = (fieldName) => validationErrors[fieldName] ? { border: "2px solid #f44336", backgroundColor: "#ffebee" } : {};
 
@@ -777,9 +789,11 @@ const handleSubmit = async () => {
               {parseInt(form.bhk_type) >= 4 && <div style={styles.inputGroup}><label>4 BHK Rent</label><input type="number" name="price_4bhk" placeholder="₹" value={roomRates.price_4bhk} onChange={handleRateChange} style={styles.input} min="0" /></div>}
             </div>
           ) : isCoLiving ? (
-            <div style={styles.grid}>
+            <div style={styles.ratesGrid}>
               <div style={styles.inputGroup}><label>Co-Living Single Room *</label><input type="number" name="co_living_single_room" placeholder="₹" value={roomRates.co_living_single_room} onChange={handleRateChange} style={styles.input} min="0" required /></div>
               <div style={styles.inputGroup}><label>Co-Living Double Room</label><input type="number" name="co_living_double_room" placeholder="₹" value={roomRates.co_living_double_room} onChange={handleRateChange} style={styles.input} min="0" /></div>
+              <div style={styles.inputGroup}><label>Co-Living 3 Sharing (NEW)</label><input type="number" name="coliving_three_sharing" placeholder="₹" value={roomRates.coliving_three_sharing} onChange={handleRateChange} style={styles.input} min="0" /></div>
+              <div style={styles.inputGroup}><label>Co-Living 4 Sharing (NEW)</label><input type="number" name="coliving_four_sharing" placeholder="₹" value={roomRates.coliving_four_sharing} onChange={handleRateChange} style={styles.input} min="0" /></div>
             </div>
           ) : (
             <div style={styles.ratesGrid}>
@@ -915,6 +929,32 @@ const handleSubmit = async () => {
                 {rule === "subletting_allowed" && "🔄 Sub-letting Allowed"}
               </label>
             ))}
+            
+            {/* NEW: Minimum Stay Section */}
+            <div style={{ gridColumn: "1 / -1", marginTop: 15, padding: "15px", background: "#f0f8ff", borderRadius: "8px", border: "1px solid #b0d4ff" }}>
+              <h4 style={{ margin: "0 0 10px 0", color: "#1976d2" }}>⏱️ Minimum Stay Options (NEW)</h4>
+              <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", alignItems: "center" }}>
+                <label style={styles.checkboxLabel}>
+                  <input type="checkbox" name="min_stay_available" checked={form.min_stay_available} onChange={handleChange} style={styles.checkbox} />
+                  Enable Minimum Stay Requirement
+                </label>
+                {form.min_stay_available && (
+                  <div style={styles.inputGroup} style={{ width: "200px" }}>
+                    <label>Minimum Stay Days</label>
+                    <input 
+                      type="number" 
+                      name="min_stay_days" 
+                      placeholder="e.g., 30, 60, 90" 
+                      value={form.min_stay_days} 
+                      onChange={handleChange} 
+                      style={styles.input} 
+                      min="1"
+                    />
+                    <small style={{ fontSize: "11px", color: "#666" }}}>Minimum number of days tenant must stay</small>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           <div style={{...styles.grid, marginTop: 15}}>
             {form.visitor_time_restricted && <div style={styles.inputGroup}><label>Visitors Allowed Till</label><input type="time" name="visitors_allowed_till" value={form.visitors_allowed_till} onChange={handleChange} style={styles.input} /></div>}
@@ -1026,7 +1066,7 @@ const handleSubmit = async () => {
   );
 }
 
-// Styles
+// Styles (same as before, keeping all existing styles)
 const styles = {
   container: { minHeight: "100vh", background: "linear-gradient(135deg, #667eea, #764ba2)", padding: "20px", display: "flex", justifyContent: "center", alignItems: "flex-start" },
   card: { background: "#ffffff", width: "100%", maxWidth: "1200px", padding: "30px", borderRadius: "20px", boxShadow: "0 25px 50px rgba(0, 0, 0, 0.2)", margin: "20px 0" },
