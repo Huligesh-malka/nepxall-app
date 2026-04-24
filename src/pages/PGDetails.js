@@ -160,8 +160,8 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
     } else if (pg?.pg_category === "coliving") {
       if (pg.co_living_single_room) return "Single Room";
       if (pg.co_living_double_room) return "Double Room";
-      if (pg.co_living_triple_sharing) return "Triple Sharing";
-      if (pg.co_living_four_sharing) return "Four Sharing";
+      if (pg.coliving_three_sharing) return "Triple Sharing";
+      if (pg.coliving_four_sharing) return "Four Sharing";
     } else if (pg?.pg_category === "to_let") {
       if (pg.price_1bhk) return "1BHK";
       if (pg.price_2bhk) return "2BHK";
@@ -218,13 +218,13 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
         value: "Double Room", 
         label: `Co-Living Double Room - ₹${formatPrice(pg.co_living_double_room)}` 
       });
-      if (pg.co_living_triple_sharing && Number(pg.co_living_triple_sharing) > 0) types.push({ 
+      if (pg.coliving_three_sharing && Number(pg.coliving_three_sharing) > 0) types.push({ 
         value: "Triple Sharing", 
-        label: `Co-Living Triple Sharing - ₹${formatPrice(pg.co_living_triple_sharing)}` 
+        label: `Co-Living Triple Sharing - ₹${formatPrice(pg.coliving_three_sharing)}` 
       });
-      if (pg.co_living_four_sharing && Number(pg.co_living_four_sharing) > 0) types.push({ 
+      if (pg.coliving_four_sharing && Number(pg.coliving_four_sharing) > 0) types.push({ 
         value: "Four Sharing", 
-        label: `Co-Living Four Sharing - ₹${formatPrice(pg.co_living_four_sharing)}` 
+        label: `Co-Living Four Sharing - ₹${formatPrice(pg.coliving_four_sharing)}` 
       });
     } else if (pg?.pg_category === "to_let") {
       if (pg.price_1bhk && Number(pg.price_1bhk) > 0) types.push({ 
@@ -261,8 +261,8 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
     } else if (pg?.pg_category === "coliving") {
       if (bookingData.roomType === "Single Room") return pg.co_living_single_room;
       if (bookingData.roomType === "Double Room") return pg.co_living_double_room;
-      if (bookingData.roomType === "Triple Sharing") return pg.co_living_triple_sharing;
-      if (bookingData.roomType === "Four Sharing") return pg.co_living_four_sharing;
+      if (bookingData.roomType === "Triple Sharing") return pg.coliving_three_sharing;
+      if (bookingData.roomType === "Four Sharing") return pg.coliving_four_sharing;
     } else if (pg?.pg_category === "to_let") {
       if (bookingData.roomType === "1BHK") return pg.price_1bhk;
       if (bookingData.roomType === "2BHK") return pg.price_2bhk;
@@ -516,7 +516,7 @@ const PriceDetails = ({ pg }) => {
       return pg.price_1bhk || pg.price_2bhk || pg.price_3bhk || pg.price_4bhk;
     } else if (isCoLiving) {
       return pg.co_living_single_room || pg.co_living_double_room || 
-             pg.co_living_triple_sharing || pg.co_living_four_sharing;
+             pg.coliving_three_sharing || pg.coliving_four_sharing;
     } else {
       return pg.single_sharing || pg.double_sharing || pg.triple_sharing || 
              pg.four_sharing || pg.single_room || pg.double_room || pg.triple_room;
@@ -635,11 +635,11 @@ const PriceDetails = ({ pg }) => {
                 )}
               </div>
             )}
-            {pg.co_living_triple_sharing && pg.co_living_triple_sharing !== "0" && pg.co_living_triple_sharing !== "" && (
+            {pg.coliving_three_sharing && pg.coliving_three_sharing !== "0" && pg.coliving_three_sharing !== "" && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>Triple Sharing</div>
                 <div style={modernStyles.priceValue}>
-                  {formatPriceLocal(pg.co_living_triple_sharing)}/month
+                  {formatPriceLocal(pg.coliving_three_sharing)}/month
                 </div>
                 {pg.co_living_security_deposit && pg.co_living_security_deposit !== "0" && pg.co_living_security_deposit !== "" && (
                   <div style={modernStyles.depositAmount}>
@@ -648,11 +648,11 @@ const PriceDetails = ({ pg }) => {
                 )}
               </div>
             )}
-            {pg.co_living_four_sharing && pg.co_living_four_sharing !== "0" && pg.co_living_four_sharing !== "" && (
+            {pg.coliving_four_sharing && pg.coliving_four_sharing !== "0" && pg.coliving_four_sharing !== "" && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>Four Sharing</div>
                 <div style={modernStyles.priceValue}>
-                  {formatPriceLocal(pg.co_living_four_sharing)}/month
+                  {formatPriceLocal(pg.coliving_four_sharing)}/month
                 </div>
                 {pg.co_living_security_deposit && pg.co_living_security_deposit !== "0" && pg.co_living_security_deposit !== "" && (
                   <div style={modernStyles.depositAmount}>
@@ -882,8 +882,8 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
     } else if (isCoLiving) {
       if (pg.co_living_single_room && parseInt(pg.co_living_single_room) > 0) return pg.co_living_single_room;
       if (pg.co_living_double_room && parseInt(pg.co_living_double_room) > 0) return pg.co_living_double_room;
-      if (pg.co_living_triple_sharing && parseInt(pg.co_living_triple_sharing) > 0) return pg.co_living_triple_sharing;
-      if (pg.co_living_four_sharing && parseInt(pg.co_living_four_sharing) > 0) return pg.co_living_four_sharing;
+      if (pg.coliving_three_sharing && parseInt(pg.coliving_three_sharing) > 0) return pg.coliving_three_sharing;
+      if (pg.coliving_four_sharing && parseInt(pg.coliving_four_sharing) > 0) return pg.coliving_four_sharing;
       return "—";
     } else {
       if (pg.single_sharing && parseInt(pg.single_sharing) > 0) return pg.single_sharing;
@@ -1553,8 +1553,8 @@ export default function PGDetails() {
     } else if (isCoLiving) {
       if (pg.co_living_single_room && parseInt(pg.co_living_single_room) > 0) return pg.co_living_single_room;
       if (pg.co_living_double_room && parseInt(pg.co_living_double_room) > 0) return pg.co_living_double_room;
-      if (pg.co_living_triple_sharing && parseInt(pg.co_living_triple_sharing) > 0) return pg.co_living_triple_sharing;
-      if (pg.co_living_four_sharing && parseInt(pg.co_living_four_sharing) > 0) return pg.co_living_four_sharing;
+      if (pg.coliving_three_sharing && parseInt(pg.coliving_three_sharing) > 0) return pg.coliving_three_sharing;
+      if (pg.coliving_four_sharing && parseInt(pg.coliving_four_sharing) > 0) return pg.coliving_four_sharing;
       return "—";
     } else {
       if (pg.single_sharing && parseInt(pg.single_sharing) > 0) return pg.single_sharing;
@@ -1772,7 +1772,7 @@ export default function PGDetails() {
       return pg.price_1bhk || pg.price_2bhk || pg.price_3bhk || pg.price_4bhk;
     } else if (isCoLiving) {
       return pg.co_living_single_room || pg.co_living_double_room || 
-             pg.co_living_triple_sharing || pg.co_living_four_sharing;
+             pg.coliving_three_sharing || pg.coliving_four_sharing;
     } else {
       return pg.single_sharing || pg.double_sharing || pg.triple_sharing || 
              pg.four_sharing || pg.single_room || pg.double_room || pg.triple_room;
