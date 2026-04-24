@@ -1,3 +1,4 @@
+// AdminAllPGs.js
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -35,11 +36,31 @@ import {
   Camera,
   Video,
   Lock,
-  Shield
+  Shield,
+  Loader2
 } from "lucide-react";
 
 const API_BASE = "https://nepxall-backend.onrender.com/api";
 const FILES_BASE = "https://nepxall-backend.onrender.com";
+
+const getCorrectImageUrl = (photo) => {
+  if (!photo) return "https://via.placeholder.com/600x400?text=No+Image";
+
+  if (photo.startsWith('http')) {
+    return photo;
+  }
+
+  if (photo.includes('/uploads/')) {
+    const uploadsIndex = photo.indexOf('/uploads/');
+    if (uploadsIndex !== -1) {
+      const relativePath = photo.substring(uploadsIndex);
+      return `${FILES_BASE}${relativePath}`;
+    }
+  }
+
+  const normalizedPath = photo.startsWith('/') ? photo : `/${photo}`;
+  return `${FILES_BASE}${normalizedPath}`;
+};
 
 const AdminAllPGs = () => {
   const navigate = useNavigate();
@@ -100,10 +121,8 @@ const AdminAllPGs = () => {
       console.log("API Response:", data);
 
       if (data.success && Array.isArray(data.data)) {
-        // Log first item to check structure
         if (data.data.length > 0) {
           console.log("First PG item structure:", data.data[0]);
-          console.log("PG ID example:", data.data[0].id);
         }
         setPgs(data.data);
         calculateStats(data.data);
@@ -248,7 +267,6 @@ const AdminAllPGs = () => {
     }
   };
 
-  // ✅ FIXED: Safe navigation to details page
   const handleViewDetails = (pgId, pgName) => {
     if (!pgId) {
       console.error("Cannot view details: PG ID is missing", { pgId, pgName });
@@ -377,7 +395,6 @@ const AdminAllPGs = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Toast Notification */}
       {showSuccessToast && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in">
           <div className="bg-gray-900 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-2">
@@ -387,7 +404,6 @@ const AdminAllPGs = () => {
         </div>
       )}
 
-      {/* Reject Modal */}
       {showRejectModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowRejectModal(null)}>
           <div className="bg-white rounded-2xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
@@ -414,7 +430,7 @@ const AdminAllPGs = () => {
                 disabled={actionLoading === showRejectModal}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all disabled:opacity-50"
               >
-                {actionLoading === showRejectModal ? "Processing..." : "Reject"}
+                {actionLoading === showRejectModal ? <Loader2 size={16} className="animate-spin mx-auto" /> : "Reject"}
               </button>
             </div>
           </div>
@@ -422,13 +438,11 @@ const AdminAllPGs = () => {
       )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Property Management Dashboard</h1>
           <p className="text-gray-600">Manage all PG properties, approvals, and owner information</p>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
           <StatCard 
             title="Total Properties" 
@@ -481,7 +495,6 @@ const AdminAllPGs = () => {
           />
         </div>
 
-        {/* Filters and Actions */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1 relative">
@@ -556,7 +569,6 @@ const AdminAllPGs = () => {
           </div>
         </div>
 
-        {/* Results Count */}
         <div className="mb-4 flex justify-between items-center">
           <p className="text-sm text-gray-600">
             Showing {filteredPGs.length} of {pgs.length} properties
@@ -566,7 +578,6 @@ const AdminAllPGs = () => {
           </div>
         </div>
 
-        {/* PG Cards/List Grid */}
         {filteredPGs.length === 0 ? (
           <div className="bg-white rounded-xl p-12 text-center">
             <Building size={48} className="text-gray-400 mx-auto mb-4" />
@@ -576,26 +587,26 @@ const AdminAllPGs = () => {
         ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {filteredPGs.map((pg) => {
-              // ✅ Skip rendering if no ID (safety check)
               if (!pg.id) {
                 console.warn("PG missing ID:", pg);
                 return null;
               }
+              
+              const firstPhoto = pg.photos && pg.photos.length > 0 ? pg.photos[0] : null;
               
               return (
                 <div
                   key={pg.id}
                   className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-300"
                 >
-                  {/* Card Header with Image Preview */}
                   <div className="relative h-48 bg-gray-100">
-                    {pg.photos && pg.photos.length > 0 ? (
+                    {firstPhoto ? (
                       <img
-                        src={`${FILES_BASE}${pg.photos[0]}`}
+                        src={getCorrectImageUrl(firstPhoto)}
                         alt={pg.pg_name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.target.src = "/images/no-image.png";
+                          e.target.src = "https://via.placeholder.com/600x400?text=No+Image";
                         }}
                       />
                     ) : (
@@ -622,7 +633,6 @@ const AdminAllPGs = () => {
                     </div>
                   </div>
 
-                  {/* Card Content */}
                   <div className="p-5">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex-1">
@@ -634,7 +644,6 @@ const AdminAllPGs = () => {
                       </div>
                     </div>
                     
-                    {/* Quick Info */}
                     <div className="flex flex-wrap items-center gap-4 text-sm mt-3">
                       <div className="flex items-center gap-1 text-gray-600">
                         <DollarSign size={14} />
@@ -652,7 +661,6 @@ const AdminAllPGs = () => {
                     </div>
                   </div>
 
-                  {/* Owner Info */}
                   <div className="px-5 py-3 bg-gray-50 border-t border-gray-100">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2">
@@ -676,7 +684,6 @@ const AdminAllPGs = () => {
                     </div>
                   </div>
 
-                  {/* Expandable Details */}
                   <button
                     onClick={() => setExpandedPG(expandedPG === pg.id ? null : pg.id)}
                     className="w-full px-5 py-3 text-left text-sm text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-between"
@@ -708,7 +715,6 @@ const AdminAllPGs = () => {
                         </div>
                       </div>
 
-                      {/* Key Amenities Preview */}
                       <div className="mt-4">
                         <h4 className="font-semibold text-gray-800 mb-2 text-sm">Key Amenities</h4>
                         <div className="flex flex-wrap gap-1">
@@ -721,7 +727,6 @@ const AdminAllPGs = () => {
                         </div>
                       </div>
 
-                      {/* Description Preview */}
                       {pg.description && (
                         <div className="mt-4">
                           <h4 className="font-semibold text-gray-800 mb-2 text-sm">Description</h4>
@@ -729,7 +734,6 @@ const AdminAllPGs = () => {
                         </div>
                       )}
 
-                      {/* Photos Preview */}
                       {pg.photos && pg.photos.length > 0 && (
                         <div className="mt-4">
                           <h4 className="font-semibold text-gray-800 mb-2 text-sm flex items-center gap-2">
@@ -740,10 +744,10 @@ const AdminAllPGs = () => {
                             {pg.photos.slice(0, 4).map((photo, idx) => (
                               <img
                                 key={idx}
-                                src={`${FILES_BASE}${photo}`}
+                                src={getCorrectImageUrl(photo)}
                                 alt={`Property ${idx + 1}`}
                                 className="h-16 w-16 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
-                                onClick={() => window.open(`${FILES_BASE}${photo}`, '_blank')}
+                                onClick={() => window.open(getCorrectImageUrl(photo), '_blank')}
                               />
                             ))}
                             {pg.photos.length > 4 && (
@@ -755,7 +759,6 @@ const AdminAllPGs = () => {
                         </div>
                       )}
 
-                      {/* System Info */}
                       <div className="mt-4 pt-3 border-t border-gray-200">
                         <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
                           <span>Created: {pg.created_at ? new Date(pg.created_at).toLocaleString() : "—"}</span>
@@ -765,7 +768,6 @@ const AdminAllPGs = () => {
                     </div>
                   )}
 
-                  {/* Action Buttons */}
                   <div className="px-5 py-4 bg-gray-50 border-t border-gray-100 flex gap-3">
                     {pg.status === "pending" && (
                       <>
@@ -775,7 +777,7 @@ const AdminAllPGs = () => {
                           className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                           {actionLoading === pg.id ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            <Loader2 size={16} className="animate-spin" />
                           ) : (
                             <>
                               <ThumbsUp size={16} />
@@ -793,7 +795,6 @@ const AdminAllPGs = () => {
                         </button>
                       </>
                     )}
-                    {/* ✅ FIXED: Safe navigation with ID check */}
                     <button
                       onClick={() => {
                         if (pg.id) {
@@ -814,7 +815,6 @@ const AdminAllPGs = () => {
             })}
           </div>
         ) : (
-          // List View
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
