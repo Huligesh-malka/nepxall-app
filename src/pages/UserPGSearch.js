@@ -127,12 +127,10 @@ const formatPrice = (price) => {
 const getCorrectImageUrl = (photo) => {
   if (!photo) return null;
   
-  // If it's already a full URL
   if (photo.startsWith('http')) {
     return photo;
   }
   
-  // If it's a path containing /uploads/
   if (photo.includes('/uploads/')) {
     const uploadsIndex = photo.indexOf('/uploads/');
     if (uploadsIndex !== -1) {
@@ -141,7 +139,6 @@ const getCorrectImageUrl = (photo) => {
     }
   }
   
-  // If it's a path starting with /opt/render
   if (photo.includes('/opt/render/')) {
     const uploadsMatch = photo.match(/\/uploads\/.*/);
     if (uploadsMatch) {
@@ -149,12 +146,11 @@ const getCorrectImageUrl = (photo) => {
     }
   }
   
-  // Default: prepend backend URL
   const normalizedPath = photo.startsWith('/') ? photo : `/${photo}`;
   return `${BACKEND_URL}${normalizedPath}`;
 };
 
-/* ================= HELPER: GET PRICE RANGE BY PROPERTY TYPE ================= */
+/* ================= HELPER: GET PRICE RANGE BY PROPERTY TYPE (UPDATED) ================= */
 const getPriceRangeByType = (pg) => {
   const prices = [];
   
@@ -168,6 +164,8 @@ const getPriceRangeByType = (pg) => {
   } else if (pg.pg_category === "coliving") {
     if (pg.co_living_single_room > 0) prices.push(pg.co_living_single_room);
     if (pg.co_living_double_room > 0) prices.push(pg.co_living_double_room);
+    if (pg.co_living_triple_sharing > 0) prices.push(pg.co_living_triple_sharing);
+    if (pg.co_living_four_sharing > 0) prices.push(pg.co_living_four_sharing);
   } else if (pg.pg_category === "to_let") {
     if (pg.price_1bhk > 0) prices.push(pg.price_1bhk);
     if (pg.price_2bhk > 0) prices.push(pg.price_2bhk);
@@ -183,15 +181,20 @@ const getPriceRangeByType = (pg) => {
   };
 };
 
-/* ================= HELPER: SINGLE PRICE GETTER ================= */
+/* ================= HELPER: SINGLE PRICE GETTER (UPDATED) ================= */
 const getEffectiveRent = (pg) => {
   return (
     pg.rent_amount ||
     pg.single_sharing ||
     pg.double_sharing ||
+    pg.triple_sharing ||
+    pg.four_sharing ||
     pg.single_room ||
+    pg.double_room ||
     pg.co_living_single_room ||
     pg.co_living_double_room ||
+    pg.co_living_triple_sharing ||
+    pg.co_living_four_sharing ||
     pg.price_1bhk ||
     pg.price_2bhk ||
     pg.price_3bhk ||
@@ -557,7 +560,7 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
   );
 };
 
-/* ================= BOOKING MODAL COMPONENT (FIXED) ================= */
+/* ================= BOOKING MODAL COMPONENT (UPDATED WITH CO-LIVING 3/4 SHARING AND MIN STAY) ================= */
 const BookingModal = ({ pg, onClose, onBook }) => {
   const [bookingData, setBookingData] = useState({
     checkInDate: "",
@@ -585,6 +588,8 @@ const BookingModal = ({ pg, onClose, onBook }) => {
     } else if (pg.pg_category === "coliving") {
       if (pg.co_living_single_room) return "Single Room";
       if (pg.co_living_double_room) return "Double Room";
+      if (pg.co_living_triple_sharing) return "Triple Sharing";
+      if (pg.co_living_four_sharing) return "Four Sharing";
     } else if (pg.pg_category === "to_let") {
       if (pg.price_1bhk) return "1BHK";
       if (pg.price_2bhk) return "2BHK";
@@ -621,53 +626,61 @@ const BookingModal = ({ pg, onClose, onBook }) => {
     const types = [];
     
     if (pg.pg_category === "pg") {
-      if (pg.single_sharing) types.push({ 
+      if (pg.single_sharing && Number(pg.single_sharing) > 0) types.push({ 
         value: "Single Sharing", 
         label: `Single Sharing - ₹${formatPrice(pg.single_sharing)}` 
       });
-      if (pg.double_sharing) types.push({ 
+      if (pg.double_sharing && Number(pg.double_sharing) > 0) types.push({ 
         value: "Double Sharing", 
         label: `Double Sharing - ₹${formatPrice(pg.double_sharing)}` 
       });
-      if (pg.triple_sharing) types.push({ 
+      if (pg.triple_sharing && Number(pg.triple_sharing) > 0) types.push({ 
         value: "Triple Sharing", 
         label: `Triple Sharing - ₹${formatPrice(pg.triple_sharing)}` 
       });
-      if (pg.four_sharing) types.push({ 
+      if (pg.four_sharing && Number(pg.four_sharing) > 0) types.push({ 
         value: "Four Sharing", 
         label: `Four Sharing - ₹${formatPrice(pg.four_sharing)}` 
       });
-      if (pg.single_room) types.push({ 
+      if (pg.single_room && Number(pg.single_room) > 0) types.push({ 
         value: "Single Room", 
         label: `Single Room - ₹${formatPrice(pg.single_room)}` 
       });
-      if (pg.double_room) types.push({ 
+      if (pg.double_room && Number(pg.double_room) > 0) types.push({ 
         value: "Double Room", 
         label: `Double Room - ₹${formatPrice(pg.double_room)}` 
       });
     } else if (pg.pg_category === "coliving") {
-      if (pg.co_living_single_room) types.push({ 
+      if (pg.co_living_single_room && Number(pg.co_living_single_room) > 0) types.push({ 
         value: "Single Room", 
         label: `Co-Living Single Room - ₹${formatPrice(pg.co_living_single_room)}` 
       });
-      if (pg.co_living_double_room) types.push({ 
+      if (pg.co_living_double_room && Number(pg.co_living_double_room) > 0) types.push({ 
         value: "Double Room", 
         label: `Co-Living Double Room - ₹${formatPrice(pg.co_living_double_room)}` 
       });
+      if (pg.co_living_triple_sharing && Number(pg.co_living_triple_sharing) > 0) types.push({ 
+        value: "Triple Sharing", 
+        label: `Co-Living Triple Sharing - ₹${formatPrice(pg.co_living_triple_sharing)}` 
+      });
+      if (pg.co_living_four_sharing && Number(pg.co_living_four_sharing) > 0) types.push({ 
+        value: "Four Sharing", 
+        label: `Co-Living Four Sharing - ₹${formatPrice(pg.co_living_four_sharing)}` 
+      });
     } else if (pg.pg_category === "to_let") {
-      if (pg.price_1bhk) types.push({ 
+      if (pg.price_1bhk && Number(pg.price_1bhk) > 0) types.push({ 
         value: "1BHK", 
         label: `1 BHK - ₹${formatPrice(pg.price_1bhk)}` 
       });
-      if (pg.price_2bhk) types.push({ 
+      if (pg.price_2bhk && Number(pg.price_2bhk) > 0) types.push({ 
         value: "2BHK", 
         label: `2 BHK - ₹${formatPrice(pg.price_2bhk)}` 
       });
-      if (pg.price_3bhk) types.push({ 
+      if (pg.price_3bhk && Number(pg.price_3bhk) > 0) types.push({ 
         value: "3BHK", 
         label: `3 BHK - ₹${formatPrice(pg.price_3bhk)}` 
       });
-      if (pg.price_4bhk) types.push({ 
+      if (pg.price_4bhk && Number(pg.price_4bhk) > 0) types.push({ 
         value: "4BHK", 
         label: `4 BHK - ₹${formatPrice(pg.price_4bhk)}` 
       });
@@ -689,6 +702,8 @@ const BookingModal = ({ pg, onClose, onBook }) => {
     } else if (pg.pg_category === "coliving") {
       if (bookingData.roomType === "Single Room") return pg.co_living_single_room;
       if (bookingData.roomType === "Double Room") return pg.co_living_double_room;
+      if (bookingData.roomType === "Triple Sharing") return pg.co_living_triple_sharing;
+      if (bookingData.roomType === "Four Sharing") return pg.co_living_four_sharing;
     } else if (pg.pg_category === "to_let") {
       if (bookingData.roomType === "1BHK") return pg.price_1bhk;
       if (bookingData.roomType === "2BHK") return pg.price_2bhk;
@@ -696,32 +711,6 @@ const BookingModal = ({ pg, onClose, onBook }) => {
       if (bookingData.roomType === "4BHK") return pg.price_4bhk;
     }
     return null;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!bookingData.checkInDate) {
-      alert("Please select check-in date");
-      return;
-    }
-
-    if (!bookingData.roomType) {
-      alert("Please select room type");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      await onBook(bookingData);
-      alert("✅ Booking request sent (valid for 24 hours)");
-      onClose();
-    } catch (err) {
-      alert(err?.response?.data?.message || "Booking failed");
-    }
-
-    setLoading(false);
   };
 
   const selectedPrice = getSelectedPrice();
@@ -803,7 +792,36 @@ const BookingModal = ({ pg, onClose, onBook }) => {
             ⚠️ You can only request this PG once every 24 hours
           </div>
 
-          <form onSubmit={handleSubmit}>
+          {/* Min Stay Notice */}
+          {pg.min_stay_months && pg.min_stay_months > 0 && (
+            <div style={{
+              background: "#f0fdf4",
+              padding: 12,
+              borderRadius: 8,
+              marginBottom: 15,
+              fontSize: 13,
+              color: "#065f46",
+              border: "1px solid #bbf7d0",
+              display: "flex",
+              alignItems: "center",
+              gap: 8
+            }}>
+              <Lock size={16} />
+              Minimum stay requirement: {pg.min_stay_months} months
+            </div>
+          )}
+
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            setLoading(true);
+            try {
+              await onBook(bookingData);
+            } catch (err) {
+              console.error("Booking error:", err);
+            } finally {
+              setLoading(false);
+            }
+          }}>
             <div style={{ marginBottom: 24 }}>
               <label style={{
                 display: "block",
@@ -963,26 +981,22 @@ const BookingModal = ({ pg, onClose, onBook }) => {
   );
 };
 
-/* ================= UPDATED QUICK VIEW MODAL COMPONENT - SINGLE IMAGE ONLY ================= */
+/* ================= UPDATED QUICK VIEW MODAL COMPONENT - WITH CO-LIVING 3/4 SHARING ================= */
 const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [showShareOptions, setShowShareOptions] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  // Get the main image URL (first photo only)
   const getMainImageUrl = () => {
-    // If there's a main_photo field, use it first
     if (pg.main_photo && pg.main_photo !== "") {
       return getCorrectImageUrl(pg.main_photo);
     }
     
-    // Otherwise use the first photo from photos array
     if (Array.isArray(pg.photos) && pg.photos.length > 0 && pg.photos[0]) {
       return getCorrectImageUrl(pg.photos[0]);
     }
     
-    // Fallback to no-image
     return "/no-image.png";
   };
 
@@ -1047,7 +1061,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
       label: "Dining Table", 
       color: "#ec4899" 
     });
-    
     if (pg.wall_mounted_clothes_hook) roomAmenities.push({ 
       icon: <Key size={16} />, 
       label: "Wall-mounted Clothes Hook", 
@@ -1124,7 +1137,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
       if (pg.co_living_single_room && pg.co_living_single_room > 0) priceDetails.push({ 
         label: "Co-Living Single Room", 
         value: `₹${formatPrice(pg.co_living_single_room)}`,
-        icon: <Users size={16} />,
+        icon: <UserCheck size={16} />,
         color: "#8b5cf6"
       });
       if (pg.co_living_double_room && pg.co_living_double_room > 0) priceDetails.push({ 
@@ -1132,6 +1145,18 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
         value: `₹${formatPrice(pg.co_living_double_room)}`,
         icon: <Users size={16} />,
         color: "#a855f7"
+      });
+      if (pg.co_living_triple_sharing && pg.co_living_triple_sharing > 0) priceDetails.push({ 
+        label: "Co-Living Triple Sharing", 
+        value: `₹${formatPrice(pg.co_living_triple_sharing)}`,
+        icon: <Hash size={16} />,
+        color: "#c084fc"
+      });
+      if (pg.co_living_four_sharing && pg.co_living_four_sharing > 0) priceDetails.push({ 
+        label: "Co-Living Four Sharing", 
+        value: `₹${formatPrice(pg.co_living_four_sharing)}`,
+        icon: <Building size={16} />,
+        color: "#e879f9"
       });
       
       if (pg.co_living_food_included) priceDetails.push({ 
@@ -1434,9 +1459,8 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
           </div>
         )}
 
-        {/* SINGLE IMAGE SECTION - NO CAROUSEL */}
+        {/* SINGLE IMAGE SECTION */}
         <div style={{ position: "relative", height: 300, background: "#f3f4f6" }}>
-          {/* Loading skeleton */}
           {!imageLoaded && !imageError && (
             <div style={{
               position: "absolute",
@@ -1497,7 +1521,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
             {getTypeLabel()}
           </div>
           
-          {/* Optional: Photo count badge */}
           {totalPhotos > 1 && (
             <div style={{
               position: "absolute",
@@ -2273,10 +2296,13 @@ function UserPGSearch() {
       price_4bhk: Number(pg.price_4bhk) || 0,
       co_living_single_room: Number(pg.co_living_single_room) || 0,
       co_living_double_room: Number(pg.co_living_double_room) || 0,
+      co_living_triple_sharing: Number(pg.co_living_triple_sharing) || 0,
+      co_living_four_sharing: Number(pg.co_living_four_sharing) || 0,
       security_deposit: Number(pg.security_deposit) || 0,
       maintenance_amount: Number(pg.maintenance_amount) || 0,
       available_rooms: Number(pg.available_rooms) || 0,
       total_rooms: Number(pg.total_rooms) || 0,
+      min_stay_months: Number(pg.min_stay_months) || 0,
       bedrooms_1bhk: Number(pg.bedrooms_1bhk) || 0,
       bathrooms_1bhk: Number(pg.bathrooms_1bhk) || 0,
       bedrooms_2bhk: Number(pg.bedrooms_2bhk) || 0,
@@ -2674,7 +2700,7 @@ function UserPGSearch() {
       });
     } else if (pg.pg_category === "coliving") {
       if (pg.co_living_single_room > 0) info.push({ 
-        icon: <Users size={12} />, 
+        icon: <UserCheck size={12} />, 
         label: "Single", 
         value: `₹${formatCardPrice(pg.co_living_single_room)}`,
         color: "#8b5cf6" 
@@ -2684,6 +2710,18 @@ function UserPGSearch() {
         label: "Double", 
         value: `₹${formatCardPrice(pg.co_living_double_room)}`,
         color: "#a855f7" 
+      });
+      if (pg.co_living_triple_sharing > 0) info.push({ 
+        icon: <Hash size={12} />, 
+        label: "3-Sharing", 
+        value: `₹${formatCardPrice(pg.co_living_triple_sharing)}`,
+        color: "#c084fc" 
+      });
+      if (pg.co_living_four_sharing > 0) info.push({ 
+        icon: <Building size={12} />, 
+        label: "4-Sharing", 
+        value: `₹${formatCardPrice(pg.co_living_four_sharing)}`,
+        color: "#e879f9" 
       });
       if (pg.co_living_food_included) info.push({ 
         icon: <Utensils size={12} />, 
@@ -2703,6 +2741,18 @@ function UserPGSearch() {
         label: "Double", 
         value: `₹${formatCardPrice(pg.double_sharing)}`,
         color: "#3b82f6" 
+      });
+      if (pg.triple_sharing > 0) info.push({ 
+        icon: <Hash size={12} />, 
+        label: "3-Sharing", 
+        value: `₹${formatCardPrice(pg.triple_sharing)}`,
+        color: "#8b5cf6" 
+      });
+      if (pg.four_sharing > 0) info.push({ 
+        icon: <Building size={12} />, 
+        label: "4-Sharing", 
+        value: `₹${formatCardPrice(pg.four_sharing)}`,
+        color: "#f97316" 
       });
       if (pg.single_room > 0) info.push({ 
         icon: <DoorOpen size={12} />, 
