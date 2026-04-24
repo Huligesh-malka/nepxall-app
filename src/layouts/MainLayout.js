@@ -279,7 +279,7 @@ const MainLayout = () => {
                     fontWeight: 600
                   }}
                 >
-                  ADD Pg/coliving/Tolet
+                 
                 </Button>
 
                 <Button
