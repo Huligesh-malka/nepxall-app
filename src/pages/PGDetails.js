@@ -160,6 +160,8 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
     } else if (pg?.pg_category === "coliving") {
       if (pg.co_living_single_room) return "Single Room";
       if (pg.co_living_double_room) return "Double Room";
+      if (pg.co_living_triple_sharing) return "Triple Sharing";
+      if (pg.co_living_four_sharing) return "Four Sharing";
     } else if (pg?.pg_category === "to_let") {
       if (pg.price_1bhk) return "1BHK";
       if (pg.price_2bhk) return "2BHK";
@@ -216,6 +218,14 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
         value: "Double Room", 
         label: `Co-Living Double Room - ₹${formatPrice(pg.co_living_double_room)}` 
       });
+      if (pg.co_living_triple_sharing && Number(pg.co_living_triple_sharing) > 0) types.push({ 
+        value: "Triple Sharing", 
+        label: `Co-Living Triple Sharing - ₹${formatPrice(pg.co_living_triple_sharing)}` 
+      });
+      if (pg.co_living_four_sharing && Number(pg.co_living_four_sharing) > 0) types.push({ 
+        value: "Four Sharing", 
+        label: `Co-Living Four Sharing - ₹${formatPrice(pg.co_living_four_sharing)}` 
+      });
     } else if (pg?.pg_category === "to_let") {
       if (pg.price_1bhk && Number(pg.price_1bhk) > 0) types.push({ 
         value: "1BHK", 
@@ -251,6 +261,8 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
     } else if (pg?.pg_category === "coliving") {
       if (bookingData.roomType === "Single Room") return pg.co_living_single_room;
       if (bookingData.roomType === "Double Room") return pg.co_living_double_room;
+      if (bookingData.roomType === "Triple Sharing") return pg.co_living_triple_sharing;
+      if (bookingData.roomType === "Four Sharing") return pg.co_living_four_sharing;
     } else if (pg?.pg_category === "to_let") {
       if (bookingData.roomType === "1BHK") return pg.price_1bhk;
       if (bookingData.roomType === "2BHK") return pg.price_2bhk;
@@ -503,7 +515,8 @@ const PriceDetails = ({ pg }) => {
     if (isToLet) {
       return pg.price_1bhk || pg.price_2bhk || pg.price_3bhk || pg.price_4bhk;
     } else if (isCoLiving) {
-      return pg.co_living_single_room || pg.co_living_double_room;
+      return pg.co_living_single_room || pg.co_living_double_room || 
+             pg.co_living_triple_sharing || pg.co_living_four_sharing;
     } else {
       return pg.single_sharing || pg.double_sharing || pg.triple_sharing || 
              pg.four_sharing || pg.single_room || pg.double_room || pg.triple_room;
@@ -614,6 +627,32 @@ const PriceDetails = ({ pg }) => {
                 <div style={modernStyles.priceType}>Double Room</div>
                 <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.co_living_double_room)}/month
+                </div>
+                {pg.co_living_security_deposit && pg.co_living_security_deposit !== "0" && pg.co_living_security_deposit !== "" && (
+                  <div style={modernStyles.depositAmount}>
+                    Security: {formatPriceLocal(pg.co_living_security_deposit)}
+                  </div>
+                )}
+              </div>
+            )}
+            {pg.co_living_triple_sharing && pg.co_living_triple_sharing !== "0" && pg.co_living_triple_sharing !== "" && (
+              <div style={modernStyles.priceItem}>
+                <div style={modernStyles.priceType}>Triple Sharing</div>
+                <div style={modernStyles.priceValue}>
+                  {formatPriceLocal(pg.co_living_triple_sharing)}/month
+                </div>
+                {pg.co_living_security_deposit && pg.co_living_security_deposit !== "0" && pg.co_living_security_deposit !== "" && (
+                  <div style={modernStyles.depositAmount}>
+                    Security: {formatPriceLocal(pg.co_living_security_deposit)}
+                  </div>
+                )}
+              </div>
+            )}
+            {pg.co_living_four_sharing && pg.co_living_four_sharing !== "0" && pg.co_living_four_sharing !== "" && (
+              <div style={modernStyles.priceItem}>
+                <div style={modernStyles.priceType}>Four Sharing</div>
+                <div style={modernStyles.priceValue}>
+                  {formatPriceLocal(pg.co_living_four_sharing)}/month
                 </div>
                 {pg.co_living_security_deposit && pg.co_living_security_deposit !== "0" && pg.co_living_security_deposit !== "" && (
                   <div style={modernStyles.depositAmount}>
@@ -843,6 +882,8 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
     } else if (isCoLiving) {
       if (pg.co_living_single_room && parseInt(pg.co_living_single_room) > 0) return pg.co_living_single_room;
       if (pg.co_living_double_room && parseInt(pg.co_living_double_room) > 0) return pg.co_living_double_room;
+      if (pg.co_living_triple_sharing && parseInt(pg.co_living_triple_sharing) > 0) return pg.co_living_triple_sharing;
+      if (pg.co_living_four_sharing && parseInt(pg.co_living_four_sharing) > 0) return pg.co_living_four_sharing;
       return "—";
     } else {
       if (pg.single_sharing && parseInt(pg.single_sharing) > 0) return pg.single_sharing;
@@ -1210,6 +1251,9 @@ export default function PGDetails() {
 
         const data = res.data.data;
         console.log("PG data received:", data.pg_name);
+        console.log("Co-living triple sharing price:", data.co_living_triple_sharing);
+        console.log("Co-living four sharing price:", data.co_living_four_sharing);
+        console.log("Min stay months:", data.min_stay_months);
 
         const photos = Array.isArray(data.photos)
           ? data.photos.map(p => ({ 
@@ -1509,6 +1553,8 @@ export default function PGDetails() {
     } else if (isCoLiving) {
       if (pg.co_living_single_room && parseInt(pg.co_living_single_room) > 0) return pg.co_living_single_room;
       if (pg.co_living_double_room && parseInt(pg.co_living_double_room) > 0) return pg.co_living_double_room;
+      if (pg.co_living_triple_sharing && parseInt(pg.co_living_triple_sharing) > 0) return pg.co_living_triple_sharing;
+      if (pg.co_living_four_sharing && parseInt(pg.co_living_four_sharing) > 0) return pg.co_living_four_sharing;
       return "—";
     } else {
       if (pg.single_sharing && parseInt(pg.single_sharing) > 0) return pg.single_sharing;
@@ -1700,11 +1746,12 @@ export default function PGDetails() {
       'drinking_allowed', 'outside_food_allowed', 'parties_allowed', 'pets_allowed',
       'late_night_entry_allowed', 'loud_music_restricted', 'office_going_only',
       'students_only', 'boys_only', 'girls_only', 'subletting_allowed', 
-      'lock_in_period', 'agreement_mandatory', 'id_proof_mandatory'
+      'lock_in_period', 'agreement_mandatory', 'id_proof_mandatory', 'min_stay_months'
     ];
     
     return rulesToCheck.some(rule => 
-      pg[rule] === true || pg[rule] === "true" || pg[rule] === "false"
+      pg[rule] === true || pg[rule] === "true" || pg[rule] === "false" || 
+      (pg[rule] && pg[rule] !== "" && pg[rule] !== "0")
     );
   };
 
@@ -1724,7 +1771,8 @@ export default function PGDetails() {
     if (isToLet) {
       return pg.price_1bhk || pg.price_2bhk || pg.price_3bhk || pg.price_4bhk;
     } else if (isCoLiving) {
-      return pg.co_living_single_room || pg.co_living_double_room;
+      return pg.co_living_single_room || pg.co_living_double_room || 
+             pg.co_living_triple_sharing || pg.co_living_four_sharing;
     } else {
       return pg.single_sharing || pg.double_sharing || pg.triple_sharing || 
              pg.four_sharing || pg.single_room || pg.double_room || pg.triple_room;
@@ -2592,7 +2640,7 @@ const modernStyles = {
     boxShadow: "0 8px 20px rgba(99,102,241,0.3)",
   },
 
-  // Breadcrumb
+  // Breadcrumb - keep existing styles
   breadcrumb: {
     display: "flex",
     alignItems: "center",
