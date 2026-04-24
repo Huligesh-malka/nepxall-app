@@ -931,31 +931,31 @@ function OwnerAddPG() {
             ))}
             
             {/* NEW: Minimum Stay Section */}
-<div style={{ gridColumn: "1 / -1", marginTop: 15, padding: "15px", background: "#f0f8ff", borderRadius: "8px", border: "1px solid #b0d4ff" }}>
-  <h4 style={{ margin: "0 0 10px 0", color: "#1976d2" }}>⏱️ Minimum Stay Options (NEW)</h4>
-  <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", alignItems: "center" }}>
-    <label style={styles.checkboxLabel}>
-      <input type="checkbox" name="min_stay_available" checked={form.min_stay_available} onChange={handleChange} style={styles.checkbox} />
-      Enable Minimum Stay Requirement
-    </label>
-    {form.min_stay_available && (
-      <div style={styles.inputGroup} style={{ width: "200px" }}>
-        <label>Minimum Stay Days</label>
-        <input 
-          type="number" 
-          name="min_stay_days" 
-          placeholder="e.g., 30, 60, 90" 
-          value={form.min_stay_days} 
-          onChange={handleChange} 
-          style={styles.input} 
-          min="1"
-        />
-        <small style={{ fontSize: "11px", color: "#666" }}>Minimum number of days tenant must stay</small>
-      </div>
-    )}
-  </div>
-</div>
-
+            <div style={{ gridColumn: "1 / -1", marginTop: 15, padding: "15px", background: "#f0f8ff", borderRadius: "8px", border: "1px solid #b0d4ff" }}>
+              <h4 style={{ margin: "0 0 10px 0", color: "#1976d2" }}>⏱️ Minimum Stay Options (NEW)</h4>
+              <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", alignItems: "center" }}>
+                <label style={styles.checkboxLabel}>
+                  <input type="checkbox" name="min_stay_available" checked={form.min_stay_available} onChange={handleChange} style={styles.checkbox} />
+                  Enable Minimum Stay Requirement
+                </label>
+                {form.min_stay_available && (
+                  <div style={{ ...styles.inputGroup, width: "200px" }}>
+                    <label>Minimum Stay Days</label>
+                    <input 
+                      type="number" 
+                      name="min_stay_days" 
+                      placeholder="e.g., 30, 60, 90" 
+                      value={form.min_stay_days} 
+                      onChange={handleChange} 
+                      style={styles.input} 
+                      min="1"
+                    />
+                    <small style={{ fontSize: "11px", color: "#666" }}>Minimum number of days tenant must stay</small>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
           <div style={{...styles.grid, marginTop: 15}}>
             {form.visitor_time_restricted && <div style={styles.inputGroup}><label>Visitors Allowed Till</label><input type="time" name="visitors_allowed_till" value={form.visitors_allowed_till} onChange={handleChange} style={styles.input} /></div>}
             {!form.late_night_entry_allowed && <div style={styles.inputGroup}><label>Entry Curfew Time</label><input type="time" name="entry_curfew_time" value={form.entry_curfew_time} onChange={handleChange} style={styles.input} /></div>}
@@ -1066,7 +1066,7 @@ function OwnerAddPG() {
   );
 }
 
-// Styles (same as before, keeping all existing styles)
+// Styles
 const styles = {
   container: { minHeight: "100vh", background: "linear-gradient(135deg, #667eea, #764ba2)", padding: "20px", display: "flex", justifyContent: "center", alignItems: "flex-start" },
   card: { background: "#ffffff", width: "100%", maxWidth: "1200px", padding: "30px", borderRadius: "20px", boxShadow: "0 25px 50px rgba(0, 0, 0, 0.2)", margin: "20px 0" },
