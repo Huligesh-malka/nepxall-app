@@ -152,7 +152,7 @@ const UserBookingHistory = () => {
     setShowAgreementDialog(true);
   }, []);
 
-  // ✅ UPDATED: Create payment with Cashfree
+  // ✅ UPDATED: Create payment with Cashfree (TOKEN SYSTEM)
   const handlePayNow = useCallback(async (includeAgreement) => {
     if (!selectedBookingForPayment) return;
 
@@ -166,19 +166,25 @@ const UserBookingHistory = () => {
       const deposit = Number(booking.security_deposit || 0);
       const maintenance = Number(booking.maintenance_amount || 0);
 
-      let total = rent + deposit + maintenance;
+      // ✅ TOKEN SYSTEM AMOUNTS
+      const tokenAmount = 1000;
+      const platformFee = 99;
+      const total = 1099; // Token + Platform Fee
+      const remainingAmount = (rent + deposit + maintenance) - tokenAmount;
+
+      let amountToPay = total;
 
       if (includeAgreement) {
-        total += 500; // Agreement fee
+        amountToPay += 500; // Agreement fee
       }
 
-      if (!total || total <= 0) {
+      if (!amountToPay || amountToPay <= 0) {
         throw new Error("Invalid payment amount");
       }
 
       // 🔥 Create Cashfree order
       const res = await api.post("/payments/create-cashfree-order", {
-        amount: total,
+        amount: amountToPay,
         customerId: String(user.uid),
         customerPhone: user.phoneNumber || "9999999999",
         bookingId: booking.id,
@@ -407,7 +413,12 @@ const UserBookingHistory = () => {
             const rent = Number(booking.rent_amount || booking.rent || 0);
             const deposit = Number(booking.security_deposit || 0);
             const maintenance = Number(booking.maintenance_amount || 0);
-            const total = Number(booking.total_amount) || rent + deposit + maintenance;
+            
+            // ✅ TOKEN SYSTEM CALCULATIONS
+            const tokenAmount = 1000;
+            const platformFee = 99;
+            const total = 1099;
+            const remainingAmount = (rent + deposit + maintenance) - tokenAmount;
             
             const paymentDisplay = getPaymentStatusDisplay(booking.id, booking.status);
             
@@ -526,7 +537,7 @@ const UserBookingHistory = () => {
                     </div>
                   )}
 
-                  {/* Price Breakdown */}
+                  {/* ✅ UPDATED PRICE SECTION - TOKEN SYSTEM */}
                   <div style={styles.priceSection}>
                     {rent > 0 && (
                       <div style={styles.priceRow}>
@@ -549,9 +560,24 @@ const UserBookingHistory = () => {
                       </div>
                     )}
 
+                    <div style={styles.priceRow}>
+                      <span>Booking Token</span>
+                      <span>₹1000</span>
+                    </div>
+
+                    <div style={styles.priceRow}>
+                      <span>Platform Fee</span>
+                      <span>₹99</span>
+                    </div>
+
+                    <div style={styles.priceRow}>
+                      <span>Remaining Amount</span>
+                      <span>₹{remainingAmount.toLocaleString()}</span>
+                    </div>
+
                     <div style={styles.totalPrice}>
-                      <span>Total Amount</span>
-                      <span>₹{total.toLocaleString()}</span>
+                      <span>Total Paid Online</span>
+                      <span>₹1099</span>
                     </div>
                   </div>
 
@@ -567,11 +593,13 @@ const UserBookingHistory = () => {
                       fontWeight: 600,
                       marginBottom: 16
                     }}>
-                      Payment completed
-
-If you are not interested in joining the PG after making the payment, you can request a refund (only if you have not completed check-in/joining).
-
-For any queries, please contact support.
+                      ✅ Payment completed! You have paid the booking token of ₹1000.
+                      <br />
+                      Remaining amount of ₹{remainingAmount.toLocaleString()} to be paid at check-in.
+                      <br /><br />
+                      If you are not interested in joining the PG after making the payment, you can request a refund (only if you have not completed check-in/joining).
+                      <br /><br />
+                      For any queries, please contact support.
                     </div>
                   )}
 
@@ -646,7 +674,8 @@ For any queries, please contact support.
                           ) : (
                             <>
                               <span>💳</span>
-                              Pay ₹{total.toLocaleString()}
+                              {/* ✅ UPDATED BUTTON TEXT */}
+                              Pay ₹1099
                             </>
                           )}
                         </button>
@@ -686,7 +715,7 @@ For any queries, please contact support.
                   {booking.status === "confirmed" && paymentStatuses[booking.id] === "paid" && (
                     <div style={styles.confirmedBadge}>
                       <span>✅</span>
-                      <span>Booking Confirmed</span>
+                      <span>Booking Confirmed (Token Paid)</span>
                     </div>
                   )}
                 </div>
@@ -712,6 +741,9 @@ For any queries, please contact support.
               </p>
               <p style={styles.agreementFeeText}>
                 Agreement fee: <strong>₹500</strong> (one-time)
+              </p>
+              <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 24 }}>
+                Total with agreement: ₹1599 (₹1099 + ₹500)
               </p>
               <div style={styles.agreementButtons}>
                 <button
@@ -848,7 +880,7 @@ const styles = {
   
   bookingsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))",
     gap: 24,
   },
   
