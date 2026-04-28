@@ -21,7 +21,11 @@ import {
   Close as CloseIcon
 } from "@mui/icons-material";
 import { motion, AnimatePresence } from "framer-motion";
-import { auth } from "../firebase";
+
+import {
+  auth,
+  requestNotificationPermission
+} from "../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { userAPI } from "../api/api";
 import { useNavigate } from "react-router-dom";
@@ -264,6 +268,10 @@ const PhoneLogin = () => {
       
       // Get Firebase ID token
       const idToken = await result.user.getIdToken(true);
+      //////////////////////////////////////////////////////
+// 🔥 ENABLE PUSH NOTIFICATIONS
+//////////////////////////////////////////////////////
+await requestNotificationPermission();
       
       // 🔥 CHANGE: Set role to "user" initially (not owner)
       const checkResponse = await userAPI.post("/auth/firebase", {
