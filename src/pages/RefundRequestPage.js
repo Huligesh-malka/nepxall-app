@@ -43,9 +43,9 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
   
   const isJoined = selectedStay?.is_joined > 0;
   
-  // ✅ FIXED: Using total_paid instead of full_refund_amount
+  // ✅ CHANGE 1: Fixed refund amount to ₹1000
   const refundStatus = (selectedStay?.full_refund_status || "").toLowerCase();
-  const refundAmount = selectedStay?.total_paid || 0;
+  const refundAmount = 1000; // Fixed ₹1000 refund
   const isCompleted = refundStatus === "completed";
   const showRefundAmount = refundAmount > 0 && !isJoined;
 
@@ -80,7 +80,8 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
         upi_id: formData.upiId
       });
       if (res.data.success) {
-        alert("✅ Refund request submitted successfully.");
+        // ✅ CHANGE 4: Updated success message
+        alert("✅ ₹1000 refund request submitted successfully.");
         
         await loadBookings();
         
@@ -184,26 +185,21 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
 
             <div style={styles.divider} />
 
-            {/* ✅ CORRECTED BREAKDOWN SECTION */}
+            {/* ✅ CHANGE 3: Simplified breakdown - No rent/deposit calculation */}
             <div style={styles.breakdownSection}>
               <div style={styles.breakdownHeader}>
                 <span style={styles.breakdownIcon}>📊</span>
-                <span style={styles.breakdownTitle}>Payment Breakdown</span>
+                <span style={styles.breakdownTitle}>Refund Details</span>
               </div>
               
               <div style={styles.breakdownRow}>
-                <span style={styles.breakdownLabel}>Monthly Rent</span>
-                <span style={styles.breakdownValue}>{formatCurrency(selectedStay.rent_amount)}</span>
+                <span style={styles.breakdownLabel}>Refund Policy</span>
+                <span style={styles.breakdownValue}>₹1000 Fixed Refund</span>
               </div>
               
               <div style={styles.breakdownRow}>
-                <span style={styles.breakdownLabel}>Maintenance</span>
-                <span style={styles.breakdownValue}>{formatCurrency(selectedStay.maintenance_amount)}</span>
-              </div>
-              
-              <div style={styles.breakdownRow}>
-                <span style={styles.breakdownLabel}>Security Deposit</span>
-                <span style={styles.breakdownValue}>{formatCurrency(selectedStay.deposit_amount)}</span>
+                <span style={styles.breakdownLabel}>Platform Fee</span>
+                <span style={styles.breakdownValue}>Non Refundable</span>
               </div>
               
               {showRefundAmount && (
@@ -212,7 +208,8 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
                   <div style={styles.totalRefundRow}>
                     <div style={styles.totalRefundLabel}>
                       <span>💵</span>
-                      <span style={styles.totalRefundText}>Full Refund Amount</span>
+                      {/* ✅ CHANGE 2: Updated label text */}
+                      <span style={styles.totalRefundText}>Fixed Refund Amount</span>
                     </div>
                     <span style={styles.totalRefundValue}>{formatCurrency(refundAmount)}</span>
                   </div>
@@ -382,16 +379,17 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
               )}
             </div>
 
-            {/* Policy Card */}
+            {/* Policy Card - Updated for fixed refund */}
             <div style={styles.policyCard}>
               <div style={styles.policyHeader}>
                 <span>📋</span>
                 <span style={styles.policyTitle}>Refund Policy</span>
               </div>
               <ul style={styles.policyList}>
+                <li>Fixed refund amount of ₹1000 for eligible cancellations</li>
+                <li>Platform fee and agreement charges are non-refundable</li>
                 <li>Refund requests are reviewed within 3-5 business days</li>
                 <li>Refund amount will be credited to your provided UPI ID</li>
-                <li>Processing time may vary based on your bank</li>
                 <li>Contact support for any refund-related queries</li>
               </ul>
             </div>
@@ -421,7 +419,7 @@ const RefundRequestPage = ({ onSuccess, onCancel }) => {
                 {isSubmitting ? (
                   <span style={styles.submitSpinner}>⟳</span>
                 ) : (
-                  "Submit Refund Request"
+                  "Submit ₹1000 Refund Request"
                 )}
               </button>
             </div>
