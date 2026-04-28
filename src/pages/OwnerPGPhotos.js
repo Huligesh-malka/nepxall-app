@@ -264,60 +264,6 @@ const OwnerPGPhotos = () => {
     <div style={{ maxWidth: 1200, margin: "auto", padding: 20 }}>
       <h2 style={{ marginBottom: 20 }}>📷 Manage PG Photos</h2>
 
-      {/* Plan Info Card */}
-      {plan && (
-        <div style={{
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          borderRadius: 12,
-          padding: 16,
-          marginBottom: 24,
-          color: "white"
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-            <div>
-              <h3 style={{ margin: "0 0 8px 0", fontSize: 18 }}>💎 Current Plan: {plan.name}</h3>
-              <p style={{ margin: "4px 0", fontSize: 14 }}>
-                📸 Photos: {photos.length} / {plan.max_photos_per_pg} used
-              </p>
-              <p style={{ margin: "4px 0", fontSize: 12, opacity: 0.9 }}>
-                📅 Expires: {new Date(plan.expiry_date).toLocaleDateString("en-IN")}
-              </p>
-            </div>
-            <button 
-              onClick={() => navigate("/owner/premium")}
-              style={{
-                backgroundColor: "white",
-                color: "#667eea",
-                border: "none",
-                padding: "8px 16px",
-                borderRadius: 8,
-                fontWeight: "bold",
-                cursor: "pointer",
-                fontSize: 14
-              }}
-            >
-              🚀 Upgrade Plan
-            </button>
-          </div>
-          
-          {/* Progress bar */}
-          <div style={{
-            marginTop: 12,
-            height: 6,
-            backgroundColor: "rgba(255,255,255,0.3)",
-            borderRadius: 3,
-            overflow: "hidden"
-          }}>
-            <div style={{
-              width: `${(photos.length / plan.max_photos_per_pg) * 100}%`,
-              height: "100%",
-              backgroundColor: photos.length >= plan.max_photos_per_pg ? "#ef4444" : "#4ade80",
-              borderRadius: 3
-            }} />
-          </div>
-        </div>
-      )}
-
       {/* Limit reached warning */}
       {isLimitReached && (
         <div style={{
