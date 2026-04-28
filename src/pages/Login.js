@@ -272,6 +272,8 @@ const PhoneLogin = () => {
 // 🔥 ENABLE PUSH NOTIFICATIONS
 //////////////////////////////////////////////////////
 await requestNotificationPermission();
+
+
       
       // 🔥 CHANGE: Set role to "user" initially (not owner)
       const checkResponse = await userAPI.post("/auth/firebase", {
@@ -287,6 +289,23 @@ await requestNotificationPermission();
         if (checkResponse.data.token) {
           saveAuthData(checkResponse.data.token, checkResponse.data.user);
         }
+
+
+        const fcmToken =
+localStorage.getItem("fcm_token");
+
+await userAPI.post(
+  "/notifications/save-fcm-token",
+  {
+    token: fcmToken
+  },
+  {
+    headers: {
+      Authorization:
+      `Bearer ${checkResponse.data.token}`
+    }
+  }
+);
         
         // 🔥 CHANGE: Always login directly - redirect to USER Dashboard
         console.log("Direct login - redirecting to User Dashboard");
