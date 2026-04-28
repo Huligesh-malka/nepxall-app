@@ -234,25 +234,22 @@ export default function OwnerPayments() {
           <p style="font-weight: 700; margin: 0 0 16px 0; font-size: 16px; color: ${BRAND_DARK};">💰 Payment Summary</p>
           <div style="background: ${BRAND_LIGHT_BG}; border-radius: 16px; padding: 20px; border: 1px solid #e2e8f0;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-              <span style="color: ${BRAND_GRAY};">Rent</span>
-              <span style="font-weight: 600; color: ${BRAND_DARK};">₹${receiptInfo?.rent_amount || '2999.00'}</span>
+              <span style="color: ${BRAND_GRAY};">Booking Token</span>
+              <span style="font-weight: 600; color: ${BRAND_DARK};">₹1000</span>
             </div>
-            ${(receiptInfo?.security_deposit > 0 || !receiptInfo) ? `
             <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-              <span style="color: ${BRAND_GRAY};">Security Deposit</span>
-              <span style="font-weight: 600; color: ${BRAND_DARK};">₹${receiptInfo?.security_deposit || '2000.00'}</span>
+              <span style="color: ${BRAND_GRAY};">Platform Fee</span>
+              <span style="font-weight: 600; color: ${BRAND_DARK};">₹99</span>
             </div>
-            ` : ''}
-            ${(receiptInfo?.maintenance_amount > 0 || !receiptInfo) ? `
-            <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-              <span style="color: ${BRAND_GRAY};">Maintenance</span>
-              <span style="font-weight: 600; color: ${BRAND_DARK};">₹${receiptInfo?.maintenance_amount || '250.00'}</span>
-            </div>
-            ` : ''}
             <div style="margin: 16px 0; border-top: 1px dashed #cbd5e1;"></div>
             <div style="display: flex; justify-content: space-between;">
-              <span style="font-weight: 700; font-size: 16px; color: ${BRAND_DARK};">TOTAL PAID</span>
-              <span style="font-weight: 800; font-size: 18px; color: ${BRAND_BLUE};">₹${receiptInfo?.total_amount || '5249.00'}</span>
+              <span style="font-weight: 700; font-size: 16px; color: ${BRAND_DARK};">Total Paid Online</span>
+              <span style="font-weight: 800; font-size: 18px; color: ${BRAND_BLUE};">₹1099</span>
+            </div>
+            <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+              <p style="margin: 0; font-size: 11px; color: ${BRAND_GRAY}; font-style: italic;">
+                Remaining rent and deposit must be collected directly from tenant during check-in.
+              </p>
             </div>
           </div>
         </div>
@@ -490,6 +487,7 @@ export default function OwnerPayments() {
     return { totalAmount, paidCount, pendingCount, signedCount, total: bookings.length };
   };
 
+  // Updated summary calculations
   const joinedAmount = data
     .filter(item => item.owner_settlement === "DONE" && item.join_status === "JOINED")
     .reduce((sum, item) => sum + Number(item.owner_amount || item.amount || 0), 0);
@@ -530,12 +528,22 @@ export default function OwnerPayments() {
         </Button>
       </Box>
 
-      {/* Summary Cards */}
+      {/* Important Note Alert */}
+      <Alert
+        severity="info"
+        sx={{ mb: 3, borderRadius: 2 }}
+      >
+        Only booking token payments are handled online.
+        Remaining rent and deposit should be collected
+        directly from tenant during check-in.
+      </Alert>
+
+      {/* Summary Cards - Updated Titles */}
       <Grid container spacing={2} mb={3}>
         <Grid item xs={6} sm={6} md={3}>
           <Card sx={{ borderRadius: 3, bgcolor: "#ecfdf5" }}>
             <CardContent sx={{ p: { xs: 1.5, md: 2 } }}>
-              <Typography variant="caption" sx={{ color: BRAND_GRAY }}>Joined Earnings</Typography>
+              <Typography variant="caption" sx={{ color: BRAND_GRAY }}>Joined Token Earnings</Typography>
               <Typography variant="h6" fontWeight="bold" sx={{ color: BRAND_GREEN, fontSize: { xs: '1rem', md: '1.25rem' } }}>
                 ₹{joinedAmount.toLocaleString()}
               </Typography>
@@ -545,7 +553,7 @@ export default function OwnerPayments() {
         <Grid item xs={6} sm={6} md={3}>
           <Card sx={{ borderRadius: 3, bgcolor: "#fff7ed" }}>
             <CardContent sx={{ p: { xs: 1.5, md: 2 } }}>
-              <Typography variant="caption" sx={{ color: BRAND_GRAY }}>Not Joined</Typography>
+              <Typography variant="caption" sx={{ color: BRAND_GRAY }}>Not Joined Tokens</Typography>
               <Typography variant="h6" fontWeight="bold" sx={{ color: "#ea580c", fontSize: { xs: '1rem', md: '1.25rem' } }}>
                 ₹{notJoinedAmount.toLocaleString()}
               </Typography>
@@ -555,7 +563,7 @@ export default function OwnerPayments() {
         <Grid item xs={6} sm={6} md={3}>
           <Card sx={{ borderRadius: 3, bgcolor: "#eff6ff" }}>
             <CardContent sx={{ p: { xs: 1.5, md: 2 } }}>
-              <Typography variant="caption" sx={{ color: BRAND_GRAY }}>Total Paid</Typography>
+              <Typography variant="caption" sx={{ color: BRAND_GRAY }}>Total Token Paid</Typography>
               <Typography variant="h6" fontWeight="bold" sx={{ color: BRAND_BLUE, fontSize: { xs: '1rem', md: '1.25rem' } }}>
                 ₹{totalPaid.toLocaleString()}
               </Typography>
@@ -565,7 +573,7 @@ export default function OwnerPayments() {
         <Grid item xs={6} sm={6} md={3}>
           <Card sx={{ borderRadius: 3, bgcolor: "#fef9c3" }}>
             <CardContent sx={{ p: { xs: 1.5, md: 2 } }}>
-              <Typography variant="caption" sx={{ color: BRAND_GRAY }}>Pending Amount</Typography>
+              <Typography variant="caption" sx={{ color: BRAND_GRAY }}>Pending Tokens</Typography>
               <Typography variant="h6" fontWeight="bold" sx={{ color: "#ca8a04", fontSize: { xs: '1rem', md: '1.25rem' } }}>
                 ₹{pendingAmount.toLocaleString()}
               </Typography>
@@ -582,7 +590,7 @@ export default function OwnerPayments() {
               <TableCell sx={{ fontWeight: 700, width: '40px', p: { xs: 1, md: 2 } }}></TableCell>
               <TableCell sx={{ fontWeight: 700, p: { xs: 1, md: 2 } }}>Booking ID</TableCell>
               <TableCell sx={{ fontWeight: 700, p: { xs: 1, md: 2 } }}>Tenant Name</TableCell>
-              <TableCell sx={{ fontWeight: 700, p: { xs: 1, md: 2 } }}>Amount</TableCell>
+              <TableCell sx={{ fontWeight: 700, p: { xs: 1, md: 2 } }}>Token Amount</TableCell>
               <TableCell align="center" sx={{ fontWeight: 700, p: { xs: 1, md: 2 } }}>Sharing</TableCell>
               <TableCell align="center" sx={{ fontWeight: 700, p: { xs: 1, md: 2 } }}>Agreement</TableCell>
               <TableCell align="center" sx={{ fontWeight: 700, p: { xs: 1, md: 2 } }}>Payment</TableCell>
@@ -654,7 +662,22 @@ export default function OwnerPayments() {
                                   </TableCell>
                                   <TableCell sx={{ p: { xs: 1, md: 2 }, fontSize: { xs: '0.8rem', md: '0.9rem' } }}>{item.tenant_name}</TableCell>
                                   <TableCell sx={{ p: { xs: 1, md: 2 } }}>
-                                    <Typography fontWeight="bold" color="primary.main" sx={{ fontSize: { xs: '0.8rem', md: '0.9rem' } }}>₹{item.owner_amount}</Typography>
+                                    <Box>
+                                      <Typography
+                                        fontWeight="bold"
+                                        color="primary.main"
+                                        sx={{ fontSize: { xs: '0.8rem', md: '0.9rem' } }}
+                                      >
+                                        ₹{item.owner_amount}
+                                      </Typography>
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                        sx={{ display: 'block', fontSize: { xs: '0.65rem', md: '0.7rem' } }}
+                                      >
+                                        + ₹99 Platform Fee
+                                      </Typography>
+                                    </Box>
                                   </TableCell>
                                   <TableCell align="center" sx={{ p: { xs: 1, md: 2 } }}>
                                     <Chip 
@@ -720,7 +743,7 @@ export default function OwnerPayments() {
                                       </Stack>
                                     ) : item.admin_settlement === "DONE" ? (
                                       <Stack direction="row" spacing={1} justifyContent="center">
-                                        <Chip label="💰 Settled" color="info" size="small" sx={{ fontWeight: "bold" }} />
+                                        <Chip label="💰 Token Ready" color="info" size="small" sx={{ fontWeight: "bold" }} />
                                         <Button
                                           variant="contained"
                                           color="success"
@@ -732,7 +755,7 @@ export default function OwnerPayments() {
                                         </Button>
                                       </Stack>
                                     ) : (
-                                      <Chip label="⏳ Waiting Admin" color="warning" size="small" sx={{ fontWeight: "bold" }} />
+                                      <Chip label="⏳ Settlement Pending" color="warning" size="small" sx={{ fontWeight: "bold" }} />
                                     )}
                                   </TableCell>
                                   <TableCell align="center" sx={{ p: { xs: 1, md: 2 } }}>
@@ -850,26 +873,22 @@ export default function OwnerPayments() {
                         <Typography variant="caption" sx={{ color: BRAND_GRAY }}>Payment Summary</Typography>
                       </Box>
                       <Box display="flex" justifyContent="space-between" mb={1}>
-                        <Typography variant="caption">Rent</Typography>
-                        <Typography variant="body2" fontWeight="500">₹{receiptData?.rent_amount || '2999.00'}</Typography>
+                        <Typography variant="caption">Booking Token</Typography>
+                        <Typography variant="body2" fontWeight="500">₹1000</Typography>
                       </Box>
-                      {(receiptData?.security_deposit > 0 || !receiptData) && (
-                        <Box display="flex" justifyContent="space-between" mb={1}>
-                          <Typography variant="caption">Security Deposit</Typography>
-                          <Typography variant="body2">₹{receiptData?.security_deposit || '2000.00'}</Typography>
-                        </Box>
-                      )}
-                      {(receiptData?.maintenance_amount > 0 || !receiptData) && (
-                        <Box display="flex" justifyContent="space-between" mb={1}>
-                          <Typography variant="caption">Maintenance</Typography>
-                          <Typography variant="body2">₹{receiptData?.maintenance_amount || '250.00'}</Typography>
-                        </Box>
-                      )}
+                      <Box display="flex" justifyContent="space-between" mb={1}>
+                        <Typography variant="caption">Platform Fee</Typography>
+                        <Typography variant="body2">₹99</Typography>
+                      </Box>
                       <Divider sx={{ my: 1.5 }} />
                       <Box display="flex" justifyContent="space-between">
-                        <Typography variant="subtitle2" fontWeight="bold">TOTAL PAID</Typography>
-                        <Typography variant="subtitle2" fontWeight="bold" sx={{ color: BRAND_BLUE }}>₹{receiptData?.total_amount || '5249.00'}</Typography>
+                        <Typography variant="subtitle2" fontWeight="bold">Total Paid Online</Typography>
+                        <Typography variant="subtitle2" fontWeight="bold" sx={{ color: BRAND_BLUE }}>₹1099</Typography>
                       </Box>
+                      <Divider sx={{ my: 1.5 }} />
+                      <Typography variant="caption" sx={{ color: BRAND_GRAY, fontStyle: 'italic', display: 'block', textAlign: 'center' }}>
+                        Remaining rent and deposit must be collected directly from tenant during check-in.
+                      </Typography>
                     </CardContent>
                   </Card>
                 </Grid>
