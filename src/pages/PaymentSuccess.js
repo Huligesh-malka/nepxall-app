@@ -3,37 +3,65 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import api from "../api/api";
 
 export default function PaymentSuccess() {
+
   const [params] = useSearchParams();
   const navigate = useNavigate();
 
   useEffect(() => {
+
     const verifyPayment = async () => {
+
       try {
+
         const orderId = params.get("order_id");
 
+        console.log("ORDER ID:", orderId);
+
         if (!orderId) {
+
           alert("Invalid payment");
+
           return navigate("/user/bookings");
+
         }
 
-        const res = await api.get(`/payments/verify-payment/${orderId}`);
+        // VERIFY PAYMENT
+        const res = await api.get(
+          `/payments/verify/${orderId}`
+        );
 
-        if (res.data.data.order_status === "PAID") {
+        console.log("VERIFY RESPONSE:", res.data);
+
+        if (res.data.success && res.data.isPaid) {
+
           alert("✅ Payment successful");
+
         } else {
+
           alert("❌ Payment not completed");
+
         }
 
       } catch (err) {
-        console.error(err);
-        alert("Payment verification failed");
+
+        console.error("VERIFY ERROR:", err);
+
+        alert("❌ Payment verification failed");
+
       }
 
       navigate("/user/bookings");
+
     };
 
     verifyPayment();
-  }, []);
 
-  return <h2 style={{ padding: 40 }}>Processing payment...</h2>;
+  }, [params, navigate]);
+
+  return (
+    <h2 style={{ padding: 40 }}>
+      Processing payment...
+    </h2>
+  );
+
 }
