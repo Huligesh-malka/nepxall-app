@@ -170,7 +170,6 @@ const UserBookingHistory = () => {
       const tokenAmount = 1000;
       const platformFee = 99;
       const total = 1099; // Token + Platform Fee
-      const remainingAmount = (rent + deposit + maintenance) - tokenAmount;
 
       let amountToPay = total;
 
@@ -246,8 +245,8 @@ const UserBookingHistory = () => {
           showPayButton: false,
           // Only show agreement button if user paid WITH agreement
           showAgreementButton: hasAgreement === true,
-          message: "✅ Payment verified!",
-          badge: { text: "Payment Verified", style: "paid" },
+          message: "✅ Token payment verified!",
+          badge: { text: "Token Paid", style: "paid" },
           canPay: false
         };
       
@@ -581,25 +580,28 @@ const UserBookingHistory = () => {
                     </div>
                   </div>
 
-                  {/* Payment completed message */}
+                  {/* Payment completed message - UPDATED for clarity */}
                   {paymentStatus === "paid" && (
                     <div style={{
                       background: "#d1fae5",
                       color: "#065f46",
-                      padding: "10px",
-                      borderRadius: 10,
+                      padding: "14px",
+                      borderRadius: 12,
                       fontSize: 13,
                       textAlign: "center",
-                      fontWeight: 600,
-                      marginBottom: 16
+                      fontWeight: 500,
+                      marginBottom: 16,
+                      lineHeight: 1.5
                     }}>
-                      ✅ Payment completed! You have paid the booking token of ₹1000.
-                      <br />
-                      Remaining amount of ₹{remainingAmount.toLocaleString()} to be paid at check-in.
-                      <br /><br />
-                      If you are not interested in joining the PG after making the payment, you can request a refund (only if you have not completed check-in/joining).
-                      <br /><br />
-                      For any queries, please contact support.
+                      <div style={{ fontWeight: 700, marginBottom: 8 }}>
+                        ✅ Token Payment Completed! (₹1099)
+                      </div>
+                      <div style={{ fontSize: 12 }}>
+                        Remaining amount of <strong>₹{remainingAmount.toLocaleString()}</strong> needs to be paid directly to the owner during check-in.
+                      </div>
+                      <div style={{ fontSize: 12, marginTop: 8, color: "#047857" }}>
+                        💡 Tip: Contact the owner via chat to coordinate check-in and remaining payment.
+                      </div>
                     </div>
                   )}
 
@@ -674,8 +676,7 @@ const UserBookingHistory = () => {
                           ) : (
                             <>
                               <span>💳</span>
-                              {/* ✅ UPDATED BUTTON TEXT */}
-                              Pay ₹1099
+                              Pay ₹1099 (Booking Token)
                             </>
                           )}
                         </button>
@@ -711,7 +712,7 @@ const UserBookingHistory = () => {
                     </div>
                   )}
 
-                  {/* Confirmed Badge */}
+                  {/* Confirmed Badge - UPDATED */}
                   {booking.status === "confirmed" && paymentStatuses[booking.id] === "paid" && (
                     <div style={styles.confirmedBadge}>
                       <span>✅</span>
@@ -804,7 +805,7 @@ const UserBookingHistory = () => {
   );
 };
 
-// Modern Styles (Updated - removed QR modal styles)
+// Modern Styles (same as before)
 const styles = {
   container: {
     maxWidth: 1200,
