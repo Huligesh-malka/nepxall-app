@@ -68,7 +68,7 @@ export const requestNotificationPermission = async () => {
         ////////////////////////////////////////////////////
         // 🔥 PUT YOUR FIREBASE VAPID KEY
         ////////////////////////////////////////////////////
-        vapidKey: "YOUR_VAPID_KEY"
+       vapidKey: "X6CF0hOtIOL7Fu5-y6RDEfOSugEKkfVqkpw-ObRRHSU"
 
       });
 
