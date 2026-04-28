@@ -154,6 +154,29 @@ export default function OwnerPayments() {
     }
   };
 
+  const handleFullPaymentReceived = async (bookingId) => {
+    try {
+      const token = await user.getIdToken();
+      await axios.post(
+        `${API}/mark-full-payment`,
+        {
+          booking_id: bookingId,
+          payment_mode: "CASH"
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      alert("Full payment updated ✅");
+      fetchPayments();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update payment");
+    }
+  };
+
   const generateAndDownloadPDF = async (receiptInfo) => {
     const tempDiv = document.createElement('div');
     tempDiv.style.position = 'absolute';
@@ -584,23 +607,24 @@ export default function OwnerPayments() {
 
       {/* Main Table */}
       <Paper elevation={0} sx={{ borderRadius: 3, overflow: 'auto', border: '1px solid #e0e0e0' }}>
-        <Table sx={{ minWidth: isMobile ? 900 : '100%' }}>
-          <TableHead sx={{ bgcolor: '#f8f9fa' }}>
+        <Table sx={{ tableLayout: "fixed", minWidth: isMobile ? 1200 : '100%' }}>
+          <TableHead sx={{ bgcolor: "#f8fafc" }}>
             <TableRow>
-              <TableCell sx={{ fontWeight: 700, width: '40px', p: { xs: 1, md: 2 } }}></TableCell>
-              <TableCell sx={{ fontWeight: 700, p: { xs: 1, md: 2 } }}>Booking ID</TableCell>
-              <TableCell sx={{ fontWeight: 700, p: { xs: 1, md: 2 } }}>Tenant Name</TableCell>
-              <TableCell sx={{ fontWeight: 700, p: { xs: 1, md: 2 } }}>Token Amount</TableCell>
-              <TableCell align="center" sx={{ fontWeight: 700, p: { xs: 1, md: 2 } }}>Sharing</TableCell>
-              <TableCell align="center" sx={{ fontWeight: 700, p: { xs: 1, md: 2 } }}>Agreement</TableCell>
-              <TableCell align="center" sx={{ fontWeight: 700, p: { xs: 1, md: 2 } }}>Payment</TableCell>
-              <TableCell align="center" sx={{ fontWeight: 700, p: { xs: 1, md: 2 } }}>Join Status</TableCell>
+              <TableCell width={40} sx={{ p: 1.5 }}></TableCell>
+              <TableCell align="center" width={180} sx={{ fontWeight: 700, p: 1.5 }}>Booking ID</TableCell>
+              <TableCell align="center" width={180} sx={{ fontWeight: 700, p: 1.5 }}>Tenant Name</TableCell>
+              <TableCell align="center" width={140} sx={{ fontWeight: 700, p: 1.5 }}>Token Amount</TableCell>
+              <TableCell align="center" width={120} sx={{ fontWeight: 700, p: 1.5 }}>Sharing</TableCell>
+              <TableCell align="center" width={200} sx={{ fontWeight: 700, p: 1.5 }}>Agreement</TableCell>
+              <TableCell align="center" width={200} sx={{ fontWeight: 700, p: 1.5 }}>Payment</TableCell>
+              <TableCell align="center" width={150} sx={{ fontWeight: 700, p: 1.5 }}>Join Status</TableCell>
+              <TableCell align="center" width={150} sx={{ fontWeight: 700, p: 1.5 }}>Full Payment</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                   No active settlements found.
                 </TableCell>
               </TableRow>
@@ -619,10 +643,10 @@ export default function OwnerPayments() {
                       }}
                       onClick={() => togglePGExpand(pgName)}
                     >
-                      <TableCell sx={{ p: 1, width: '40px' }}>
+                      <TableCell sx={{ p: 1, width: 40, verticalAlign: "middle" }}>
                         {isExpanded ? <ExpandLess sx={{ color: BRAND_BLUE }} /> : <ExpandMore sx={{ color: BRAND_BLUE }} />}
                       </TableCell>
-                      <TableCell colSpan={7} sx={{ fontWeight: "bold", py: 1.5 }}>
+                      <TableCell colSpan={8} sx={{ fontWeight: "bold", py: 1.5, verticalAlign: "middle" }}>
                         <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
                           <Box display="flex" alignItems="center" gap={1}>
                             <span style={{ fontSize: '20px' }}>🏠</span>
@@ -639,7 +663,7 @@ export default function OwnerPayments() {
                     </TableRow>
 
                     <TableRow>
-                      <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
+                      <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={9}>
                         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                           <Box sx={{ margin: 0 }}>
                             {groupedData[pgName].map(item => {
@@ -649,53 +673,53 @@ export default function OwnerPayments() {
                               
                               return (
                                 <TableRow key={item.booking_id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 }, bgcolor: '#ffffff' }}>
-                                  <TableCell sx={{ width: '40px', p: { xs: 1, md: 2 } }}></TableCell>
-                                  <TableCell sx={{ p: { xs: 1, md: 2 } }}>
+                                  <TableCell sx={{ width: 40, p: 1.5, verticalAlign: "middle" }}></TableCell>
+                                  <TableCell align="center" sx={{ p: 1.5, verticalAlign: "middle" }}>
                                     <Box>
-                                      <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.8rem', md: '0.9rem' } }}>
+                                      <Typography sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
                                         #{item.booking_id}
                                       </Typography>
-                                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}>
+                                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                                         {item.order_id}
                                       </Typography>
                                     </Box>
                                   </TableCell>
-                                  <TableCell sx={{ p: { xs: 1, md: 2 }, fontSize: { xs: '0.8rem', md: '0.9rem' } }}>{item.tenant_name}</TableCell>
-                                  <TableCell sx={{ p: { xs: 1, md: 2 } }}>
+                                  <TableCell align="center" sx={{ p: 1.5, verticalAlign: "middle", fontSize: '0.9rem' }}>{item.tenant_name}</TableCell>
+                                  <TableCell align="center" sx={{ p: 1.5, verticalAlign: "middle" }}>
                                     <Box>
                                       <Typography
                                         fontWeight="bold"
                                         color="primary.main"
-                                        sx={{ fontSize: { xs: '0.8rem', md: '0.9rem' } }}
+                                        sx={{ fontSize: '0.9rem' }}
                                       >
                                         ₹{item.owner_amount}
                                       </Typography>
                                       <Typography
                                         variant="caption"
                                         color="text.secondary"
-                                        sx={{ display: 'block', fontSize: { xs: '0.65rem', md: '0.7rem' } }}
+                                        sx={{ display: 'block', fontSize: '0.7rem' }}
                                       >
                                         + ₹99 Platform Fee
                                       </Typography>
                                     </Box>
                                   </TableCell>
-                                  <TableCell align="center" sx={{ p: { xs: 1, md: 2 } }}>
+                                  <TableCell align="center" sx={{ p: 1.5, verticalAlign: "middle" }}>
                                     <Chip 
                                       label={item.room_type || "N/A"} 
                                       size="small" 
                                       color={getSharingColor(item.room_type)} 
                                       variant="filled" 
-                                      sx={{ fontWeight: '600', textTransform: 'capitalize', fontSize: { xs: '0.7rem', md: '0.75rem' } }}
+                                      sx={{ fontWeight: '600', textTransform: 'capitalize', whiteSpace: "nowrap" }}
                                     />
                                   </TableCell>
-                                  <TableCell align="center" sx={{ p: { xs: 1, md: 2 } }}>
+                                  <TableCell align="center" sx={{ p: 1.5, verticalAlign: "middle" }}>
                                     {isSigned ? (
                                       <Button 
                                         color="success"
                                         variant="contained"
                                         size="small"
                                         onClick={() => handleViewPdf(item.booking_id, item.signed_pdf)}
-                                        sx={{ borderRadius: 2, textTransform: 'none', minWidth: 'auto', px: 2 }}
+                                        sx={{ borderRadius: 2, textTransform: 'none', whiteSpace: "nowrap", minWidth: 'auto', px: 2 }}
                                       >
                                         VIEW PDF
                                       </Button>
@@ -705,7 +729,7 @@ export default function OwnerPayments() {
                                           variant="outlined"
                                           size="small"
                                           onClick={() => handleViewPdf(item.booking_id, item.final_pdf)}
-                                          sx={{ borderRadius: 2, textTransform: 'none', minWidth: 'auto', px: 2 }}
+                                          sx={{ borderRadius: 2, textTransform: 'none', whiteSpace: "nowrap", minWidth: 'auto', px: 2 }}
                                         >
                                           DRAFT
                                         </Button>
@@ -715,20 +739,20 @@ export default function OwnerPayments() {
                                             color="warning"
                                             size="small"
                                             onClick={() => handleOpenSign(item)}
-                                            sx={{ borderRadius: 2, textTransform: 'none', minWidth: 'auto', px: 2 }}
+                                            sx={{ borderRadius: 2, textTransform: 'none', whiteSpace: "nowrap", minWidth: 'auto', px: 2 }}
                                           >
                                             SIGN
                                           </Button>
                                         )}
                                       </Stack>
                                     ) : (
-                                      <Chip label="Processing..." variant="outlined" size="small" />
+                                      <Chip label="Processing..." variant="outlined" size="small" sx={{ whiteSpace: "nowrap" }} />
                                     )}
                                   </TableCell>
-                                  <TableCell align="center" sx={{ p: { xs: 1, md: 2 } }}>
+                                  <TableCell align="center" sx={{ p: 1.5, verticalAlign: "middle" }}>
                                     {item.owner_settlement === "DONE" ? (
                                       <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
-                                        <Chip label="✅ Paid" color="success" size="small" sx={{ fontWeight: "bold" }} />
+                                        <Chip label="✅ Paid" color="success" size="small" sx={{ fontWeight: "bold", whiteSpace: "nowrap" }} />
                                         <Button
                                           variant="contained"
                                           color="primary"
@@ -736,33 +760,60 @@ export default function OwnerPayments() {
                                           startIcon={<Receipt />}
                                           onClick={() => handleDirectDownload(item.booking_id)}
                                           disabled={isSubmitting}
-                                          sx={{ borderRadius: 2, textTransform: 'none', minWidth: 'auto', p: { xs: '4px 8px', md: '6px 12px' } }}
+                                          sx={{ borderRadius: 2, textTransform: 'none', whiteSpace: "nowrap", minWidth: 'auto', p: '6px 12px' }}
                                         >
                                           Receipt
                                         </Button>
                                       </Stack>
                                     ) : item.admin_settlement === "DONE" ? (
                                       <Stack direction="row" spacing={1} justifyContent="center">
-                                        <Chip label="💰 Token Ready" color="info" size="small" sx={{ fontWeight: "bold" }} />
+                                        <Chip label="💰 Token Ready" color="info" size="small" sx={{ fontWeight: "bold", whiteSpace: "nowrap" }} />
                                         <Button
                                           variant="contained"
                                           color="success"
                                           size="small"
                                           onClick={() => handleMarkPaid(item.booking_id)}
-                                          sx={{ borderRadius: 2, textTransform: 'none', p: { xs: '4px 8px', md: '6px 12px' } }}
+                                          sx={{ borderRadius: 2, textTransform: 'none', whiteSpace: "nowrap", p: '6px 12px' }}
                                         >
                                           Mark Paid
                                         </Button>
                                       </Stack>
                                     ) : (
-                                      <Chip label="⏳ Settlement Pending" color="warning" size="small" sx={{ fontWeight: "bold" }} />
+                                      <Chip label="⏳ Settlement Pending" color="warning" size="small" sx={{ fontWeight: "bold", whiteSpace: "nowrap" }} />
                                     )}
                                   </TableCell>
-                                  <TableCell align="center" sx={{ p: { xs: 1, md: 2 } }}>
+                                  <TableCell align="center" sx={{ p: 1.5, verticalAlign: "middle" }}>
                                     {item.join_status === "JOINED" ? (
-                                      <Chip label="✅ Joined" color="success" size="small" sx={{ fontWeight: "bold" }} />
+                                      <Chip label="✅ Joined" color="success" size="small" sx={{ fontWeight: "bold", whiteSpace: "nowrap" }} />
                                     ) : (
-                                      <Chip label="⏳ Not Joined" color="warning" size="small" sx={{ fontWeight: "bold" }} />
+                                      <Chip label="⏳ Not Joined" color="warning" size="small" sx={{ fontWeight: "bold", whiteSpace: "nowrap" }} />
+                                    )}
+                                  </TableCell>
+                                  <TableCell align="center" sx={{ p: 1.5, verticalAlign: "middle" }}>
+                                    {item.full_payment_completed ? (
+                                      <Chip
+                                        label="✅ Full Paid"
+                                        color="success"
+                                        size="small"
+                                        sx={{ fontWeight: "bold", whiteSpace: "nowrap" }}
+                                      />
+                                    ) : item.join_status === "JOINED" ? (
+                                      <Button
+                                        variant="contained"
+                                        color="success"
+                                        size="small"
+                                        sx={{ borderRadius: 2, textTransform: "none", whiteSpace: "nowrap" }}
+                                        onClick={() => handleFullPaymentReceived(item.booking_id)}
+                                      >
+                                        Mark Full Paid
+                                      </Button>
+                                    ) : (
+                                      <Chip
+                                        label="Waiting Check-in"
+                                        size="small"
+                                        color="warning"
+                                        sx={{ whiteSpace: "nowrap" }}
+                                      />
                                     )}
                                   </TableCell>
                                 </TableRow>
