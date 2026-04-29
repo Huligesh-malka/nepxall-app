@@ -1,43 +1,30 @@
-import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Navigate } from "react-router-dom";
-import PropTypes from "prop-types";
 import api from "../api/api";
 import { load } from "@cashfreepayments/cashfree-js";
 
 const UserBookingHistory = () => {
   const navigate = useNavigate();
   
-  // ✅ USE ONLY THIS - No localStorage.getItem("user_id")
-  const { user, role, loading: authLoading } = useAuth();
-
-  // ✅ ADDED: Store MySQL user from backend
+  const { user, loading: authLoading } = useAuth();
   const [me, setMe] = useState(null);
-
-  // State management
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [payingId, setPayingId] = useState(null);
   const [paymentStatuses, setPaymentStatuses] = useState({});
-  const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
-  const [showAgreementDialog, setShowAgreementDialog] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [selectedBookingForPayment, setSelectedBookingForPayment] = useState(null);
-  
-  // Track which bookings had agreement paid
-  const [agreementPaidBookings, setAgreementPaidBookings] = useState({});
-  
-  // Track submitted payments to prevent multiple submissions
-  const [submittedPayments, setSubmittedPayments] = useState({});
 
-  // ✅ ADDED: Load user from backend (converts Firebase UID to MySQL ID)
+  // Load user from backend
   useEffect(() => {
     const loadMe = async () => {
       try {
         const res = await api.get("/private-chat/me");
-        setMe(res.data); // ✅ contains MySQL id
+        setMe(res.data);
         console.log("✅ User loaded from backend:", res.data);
       } catch (err) {
         console.error("Failed to load user from backend:", err);
@@ -59,24 +46,23 @@ const UserBookingHistory = () => {
     return bookings;
   }, [bookings, activeTab]);
 
-  // Load bookings
-  const loadBookings = useCallback(async (showLoading = true) => {
+  // Load bookings only once
+  const loadBookings = useCallback(async () => {
     try {
-      if (showLoading) setLoading(true);
+      setLoading(true);
       setError("");
       
       const res = await api.get("/bookings/user/history");
       setBookings(res.data || []);
       
       if (res.data && res.data.length > 0) {
-        await checkAllPaymentStatuses([...res.data]);
-        await checkAgreementStatus([...res.data]);
+        await checkAllPaymentStatuses(res.data);
       }
     } catch (err) {
       console.error("Error loading bookings:", err);
       setError(err.response?.data?.message || "Failed to load booking history");
     } finally {
-      if (showLoading) setLoading(false);
+      setLoading(false);
     }
   }, []);
 
@@ -102,58 +88,19 @@ const UserBookingHistory = () => {
     }
   }, [paymentStatuses]);
 
-  // Check which bookings had agreement included in payment
-  const checkAgreementStatus = useCallback(async (bookingsList) => {
-    try {
-      const agreementMap = { ...agreementPaidBookings };
-
-      await Promise.all(
-        bookingsList.map(async (booking) => {
-          try {
-            const res = await api.get(
-              `/payments/agreement-status/${booking.id}`
-            );
-
-            if (res.data.success) {
-              agreementMap[booking.id] = res.data.hasAgreement;
-            }
-          } catch (err) {
-            console.log(`No agreement info for booking ${booking.id}`);
-          }
-        })
-      );
-
-      setAgreementPaidBookings({ ...agreementMap });
-    } catch (err) {
-      console.error("Error checking agreement status:", err);
-    }
-  }, [agreementPaidBookings]);
-
-  // 🔥 AUTO REFRESH PAYMENT STATUS
-  useEffect(() => {
-    if (!bookings.length) return;
-
-    const interval = setInterval(() => {
-      checkAllPaymentStatuses(bookings);
-      checkAgreementStatus(bookings);
-    }, 5000); // every 5 seconds
-
-    return () => clearInterval(interval);
-  }, [bookings, checkAllPaymentStatuses, checkAgreementStatus]);
-
-  // Initial load
+  // Initial load - only once
   useEffect(() => {
     loadBookings();
   }, [loadBookings]);
 
-  // Show agreement dialog before payment
+  // Show payment dialog
   const handleShowPaymentDialog = useCallback((booking) => {
     setSelectedBookingForPayment(booking);
-    setShowAgreementDialog(true);
+    setShowPaymentDialog(true);
   }, []);
 
-  // ✅ UPDATED: Create payment with Cashfree (TOKEN SYSTEM)
-  const handlePayNow = useCallback(async (includeAgreement) => {
+  // Create payment with Cashfree
+  const handlePayNow = useCallback(async () => {
     if (!selectedBookingForPayment) return;
 
     try {
@@ -162,32 +109,16 @@ const UserBookingHistory = () => {
 
       const booking = selectedBookingForPayment;
 
-      const rent = Number(booking.rent_amount || 0);
-      const deposit = Number(booking.security_deposit || 0);
-      const maintenance = Number(booking.maintenance_amount || 0);
+      // Fixed amounts
+      const total = 1099; // 1000 token + 99 platform fee
 
-      // ✅ TOKEN SYSTEM AMOUNTS
-      const tokenAmount = 1000;
-      const platformFee = 99;
-      const total = 1099; // Token + Platform Fee
-
-      let amountToPay = total;
-
-      if (includeAgreement) {
-        amountToPay += 500; // Agreement fee
-      }
-
-      if (!amountToPay || amountToPay <= 0) {
-        throw new Error("Invalid payment amount");
-      }
-
-      // 🔥 Create Cashfree order
+      // Create Cashfree order
       const res = await api.post("/payments/create-cashfree-order", {
-        amount: amountToPay,
+        amount: total,
         customerId: String(user.uid),
         customerPhone: user.phoneNumber || "9999999999",
         bookingId: booking.id,
-        includeAgreement: includeAgreement
+        includeAgreement: false
       });
 
       if (!res.data.success) {
@@ -196,17 +127,14 @@ const UserBookingHistory = () => {
 
       // Initialize Cashfree
       const cashfree = await load({
-        mode: "production" // Use "sandbox" for testing
+        mode: "production"
       });
 
-      // Redirect to Cashfree checkout page
+      // Redirect to Cashfree checkout
       await cashfree.checkout({
         paymentSessionId: res.data.payment_session_id,
-        redirectTarget: "_self" // Use "_blank" to open in new tab
+        redirectTarget: "_self"
       });
-
-      // Note: After successful payment, user will be redirected back
-      // You should handle webhook on backend to update payment status
       
     } catch (err) {
       console.error("PAYMENT ERROR:", err);
@@ -214,28 +142,25 @@ const UserBookingHistory = () => {
     } finally {
       setPayingId(null);
       setSelectedBookingForPayment(null);
-      setShowAgreementDialog(false);
+      setShowPaymentDialog(false);
     }
   }, [selectedBookingForPayment, user]);
 
-  // Close agreement dialog
-  const closeAgreementDialog = useCallback(() => {
-    setShowAgreementDialog(false);
+  // Close payment dialog
+  const closePaymentDialog = useCallback(() => {
+    setShowPaymentDialog(false);
     setSelectedBookingForPayment(null);
   }, []);
 
   // Get payment status
   const getPaymentStatusDisplay = useCallback((bookingId, bookingStatus) => {
     const status = paymentStatuses[bookingId];
-    const hasAgreement = agreementPaidBookings[bookingId];
     
     if (!status) {
       return {
         showPayButton: bookingStatus === "approved",
-        showAgreementButton: false,
         message: null,
-        badge: null,
-        canPay: bookingStatus === "approved"
+        badge: null
       };
     }
 
@@ -243,91 +168,59 @@ const UserBookingHistory = () => {
       case "paid":
         return {
           showPayButton: false,
-          // Only show agreement button if user paid WITH agreement
-          showAgreementButton: hasAgreement === true,
-          message: "✅ Token payment verified!",
-          badge: { text: "Token Paid", style: "paid" },
-          canPay: false
+          message: "✅ Payment verified successfully!",
+          badge: { text: "Paid", style: "paid" }
         };
       
       case "submitted":
         return {
           showPayButton: false,
-          showAgreementButton: false,
-          message: "⏳ Payment submitted! Waiting for admin verification (5-10 minutes).",
-          badge: { text: "Pending Verification", style: "submitted" },
-          canPay: false
+          message: "⏳ Payment submitted! Waiting for verification.",
+          badge: { text: "Pending Verification", style: "submitted" }
         };
       
       case "rejected":
         return {
           showPayButton: true,
-          showAgreementButton: false,
           message: "❌ Payment was rejected. Please try again.",
-          badge: { text: "Payment Rejected", style: "rejected" },
-          canPay: true
+          badge: { text: "Rejected", style: "rejected" }
         };
       
       case "pending":
         return {
           showPayButton: true,
-          showAgreementButton: false,
-          message: "Complete payment using Cashfree. Status will update automatically.",
-          badge: { text: "Payment Pending", style: "pending" },
-          canPay: true
+          message: "Complete payment using Cashfree.",
+          badge: { text: "Pending", style: "pending" }
         };
       
       default:
         return {
           showPayButton: bookingStatus === "approved",
-          showAgreementButton: false,
           message: null,
-          badge: null,
-          canPay: bookingStatus === "approved"
+          badge: null
         };
     }
-  }, [paymentStatuses, agreementPaidBookings]);
-
-  // Handle agreement form navigation
-  const handleFillAgreement = useCallback((bookingId) => {
-    navigate(`/agreement-form/${bookingId}`);
-  }, [navigate]);
+  }, [paymentStatuses]);
 
   // Handle chat navigation
   const handleChatNavigation = useCallback(async (booking) => {
     try {
-      if (!booking.pg_id) {
-        console.log("No pg_id for this booking");
-        return;
-      }
-
-      if (!me?.id) {
-        console.log("User MySQL ID not loaded yet");
-        return;
-      }
-
-      console.log("Chat navigation - Using MySQL ID:", me.id);
-      console.log("PG ID:", booking.pg_id);
+      if (!booking.pg_id || !me?.id) return;
 
       const res = await api.get(
         `/private-chat/user/${me.id}?pg_id=${booking.pg_id}`
       );
 
       const ownerId = res.data?.id;
-
-      if (!ownerId) {
-        console.log("No owner found");
-        return;
-      }
+      if (!ownerId) return;
 
       navigate(`/chat/private/${ownerId}/${booking.pg_id}`);
-
     } catch (err) {
       console.error("Chat error:", err);
     }
   }, [navigate, me]);
 
-  // PROTECTION
+  // Protect route
   if (authLoading) {
     return (
       <div style={styles.loadingContainer}>
@@ -341,7 +234,6 @@ const UserBookingHistory = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // Loading state
   if (loading) {
     return (
       <div style={styles.loadingContainer}>
@@ -351,7 +243,6 @@ const UserBookingHistory = () => {
     );
   }
 
-  // Error state
   if (error && !bookings.length) {
     return (
       <div style={styles.errorContainer}>
@@ -413,20 +304,15 @@ const UserBookingHistory = () => {
             const deposit = Number(booking.security_deposit || 0);
             const maintenance = Number(booking.maintenance_amount || 0);
             
-            // ✅ TOKEN SYSTEM CALCULATIONS
             const tokenAmount = 1000;
             const platformFee = 99;
-            const total = 1099;
             const remainingAmount = (rent + deposit + maintenance) - tokenAmount;
             
             const paymentDisplay = getPaymentStatusDisplay(booking.id, booking.status);
-            
-            // Simple Pay Button Logic
             const paymentStatus = paymentStatuses[booking.id];
             
-            const showPayButton =
-              booking.status === "approved" &&
-              paymentStatus !== "paid" &&
+            const showPayButton = booking.status === "approved" &&
+              paymentStatus !== "paid" && 
               paymentStatus !== "submitted";
 
             return (
@@ -536,7 +422,7 @@ const UserBookingHistory = () => {
                     </div>
                   )}
 
-                  {/* ✅ UPDATED PRICE SECTION - REMOVED BOOKING TOKEN ROW */}
+                  {/* Price Section */}
                   <div style={styles.priceSection}>
                     {rent > 0 && (
                       <div style={styles.priceRow}>
@@ -559,8 +445,6 @@ const UserBookingHistory = () => {
                       </div>
                     )}
 
-                    {/* BOOKING TOKEN ROW REMOVED */}
-
                     <div style={styles.priceRow}>
                       <span>Platform Fee</span>
                       <span>₹99</span>
@@ -577,7 +461,7 @@ const UserBookingHistory = () => {
                     </div>
                   </div>
 
-                  {/* Payment completed message - UPDATED for clarity */}
+                  {/* Payment completed message */}
                   {paymentStatus === "paid" && (
                     <div style={{
                       background: "#d1fae5",
@@ -591,13 +475,10 @@ const UserBookingHistory = () => {
                       lineHeight: 1.5
                     }}>
                       <div style={{ fontWeight: 700, marginBottom: 8 }}>
-                        ✅ Token Payment Completed! (₹1099)
+                        ✅ Payment Completed! (₹1099)
                       </div>
                       <div style={{ fontSize: 12 }}>
                         Remaining amount of <strong>₹{remainingAmount.toLocaleString()}</strong> needs to be paid directly to the owner during check-in.
-                      </div>
-                      <div style={{ fontSize: 12, marginTop: 8, color: "#047857" }}>
-                        💡 Tip: Contact the owner via chat to coordinate check-in and remaining payment.
                       </div>
                     </div>
                   )}
@@ -633,12 +514,8 @@ const UserBookingHistory = () => {
                         disabled={!me?.id}
                         title="Chat with Owner"
                       >
-                        <span style={styles.buttonIcon}>
-                          {!me?.id ? "⏳" : "💬"}
-                        </span>
-                        <span>
-                          {!me?.id ? "Loading..." : "Chat"}
-                        </span>
+                        <span style={styles.buttonIcon}>💬</span>
+                        <span>{!me?.id ? "Loading..." : "Chat"}</span>
                       </button>
                       <button
                         style={styles.iconButton}
@@ -658,39 +535,25 @@ const UserBookingHistory = () => {
                       </button>
                     </div>
 
-                    <div style={styles.actionRow}>
-                      {showPayButton && (
-                        <button
-                          style={styles.payButton}
-                          onClick={() => handleShowPaymentDialog(booking)}
-                          disabled={payingId === booking.id}
-                        >
-                          {payingId === booking.id ? (
-                            <>
-                              <span style={styles.buttonSpinner}></span>
-                              Processing...
-                            </>
-                          ) : (
-                            <>
-                              <span>💳</span>
-                              Pay ₹1099 (Booking Token)
-                            </>
-                          )}
-                        </button>
-                      )}
-
-                      {/* Fill Agreement Button - Shows only when payment is verified AND user paid WITH agreement */}
-                      {paymentDisplay.showAgreementButton && (
-                        <button
-                          style={styles.agreementButton}
-                          onClick={() => handleFillAgreement(booking.id)}
-                          title="Fill Agreement Form"
-                        >
-                          <span style={styles.buttonIcon}>📝</span>
-                          <span>Fill Agreement</span>
-                        </button>
-                      )}
-                    </div>
+                    {showPayButton && (
+                      <button
+                        style={styles.payButton}
+                        onClick={() => handleShowPaymentDialog(booking)}
+                        disabled={payingId === booking.id}
+                      >
+                        {payingId === booking.id ? (
+                          <>
+                            <span style={styles.buttonSpinner}></span>
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <span>💳</span>
+                            Pay ₹1099 (Booking Token)
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
 
                   {/* LEFT STATUS UI */}
@@ -709,11 +572,11 @@ const UserBookingHistory = () => {
                     </div>
                   )}
 
-                  {/* Confirmed Badge - UPDATED */}
+                  {/* Confirmed Badge */}
                   {booking.status === "confirmed" && paymentStatuses[booking.id] === "paid" && (
                     <div style={styles.confirmedBadge}>
                       <span>✅</span>
-                      <span>Booking Confirmed (Token Paid)</span>
+                      <span>Booking Confirmed (Payment Received)</span>
                     </div>
                   )}
                 </div>
@@ -723,40 +586,37 @@ const UserBookingHistory = () => {
         </div>
       )}
 
-      {/* Agreement Dialog - Yes/No Option */}
-      {showAgreementDialog && selectedBookingForPayment && (
-        <div style={styles.modalOverlay} onClick={closeAgreementDialog}>
-          <div style={styles.agreementDialogContent} onClick={(e) => e.stopPropagation()}>
+      {/* Payment Dialog */}
+      {showPaymentDialog && selectedBookingForPayment && (
+        <div style={styles.modalOverlay} onClick={closePaymentDialog}>
+          <div style={styles.paymentDialogContent} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>Agreement Option</h2>
-              <button style={styles.modalClose} onClick={closeAgreementDialog}>×</button>
+              <h2 style={styles.modalTitle}>Confirm Payment</h2>
+              <button style={styles.modalClose} onClick={closePaymentDialog}>×</button>
             </div>
             
-            <div style={styles.agreementDialogBody}>
-              <div style={styles.agreementIcon}>📄</div>
-              <p style={styles.agreementText}>
-                Do you want to include a legal agreement for this booking?
+            <div style={styles.paymentDialogBody}>
+              <div style={styles.paymentIcon}>💰</div>
+              <p style={styles.paymentText}>
+                You are about to pay <strong>₹1099</strong> for booking token.
               </p>
-              <p style={styles.agreementFeeText}>
-                Agreement fee: <strong>₹500</strong> (one-time)
+              <p style={styles.paymentBreakdown}>
+                Breakdown: ₹1000 (Token) + ₹99 (Platform Fee)
               </p>
-              <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 24 }}>
-                Total with agreement: ₹1599 (₹1099 + ₹500)
-              </p>
-              <div style={styles.agreementButtons}>
-                <button
-                  style={styles.agreementNoButton}
-                  onClick={() => handlePayNow(false)}
-                >
-                  No, Skip Agreement
-                </button>
-                <button
-                  style={styles.agreementYesButton}
-                  onClick={() => handlePayNow(true)}
-                >
-                  Yes, Include Agreement (+₹500)
-                </button>
-              </div>
+              <button
+                style={styles.confirmPayButton}
+                onClick={handlePayNow}
+                disabled={payingId === selectedBookingForPayment.id}
+              >
+                {payingId === selectedBookingForPayment.id ? (
+                  <>
+                    <span style={styles.buttonSpinner}></span>
+                    Processing...
+                  </>
+                ) : (
+                  "Confirm & Pay ₹1099"
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -771,7 +631,6 @@ const UserBookingHistory = () => {
         </div>
       )}
 
-      {/* Add keyframe animations */}
       <style>
         {`
           @keyframes spin {
@@ -802,7 +661,7 @@ const UserBookingHistory = () => {
   );
 };
 
-// Modern Styles (same as before)
+// Styles
 const styles = {
   container: {
     maxWidth: 1200,
@@ -855,10 +714,6 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: 8,
-    ":hover": {
-      background: "rgba(255,255,255,0.2)",
-      transform: "translateY(-2px)",
-    }
   },
   
   activeTab: {
@@ -891,10 +746,6 @@ const styles = {
     transition: "all 0.3s ease",
     animation: "slideIn 0.5s ease-out",
     border: "1px solid rgba(255,255,255,0.2)",
-    ":hover": {
-      transform: "translateY(-4px)",
-      boxShadow: "0 30px 60px rgba(0,0,0,0.15)",
-    }
   },
   
   cardHeader: {
@@ -1092,12 +943,6 @@ const styles = {
     gap: 8,
   },
   
-  actionRow: {
-    display: "flex",
-    gap: 8,
-    width: "100%",
-  },
-  
   iconButton: {
     padding: "10px",
     background: "#f3f4f6",
@@ -1112,10 +957,6 @@ const styles = {
     flexDirection: "column",
     alignItems: "center",
     gap: 4,
-    ":hover": {
-      background: "#e5e7eb",
-      transform: "translateY(-2px)",
-    }
   },
   
   buttonIcon: {
@@ -1123,7 +964,7 @@ const styles = {
   },
   
   payButton: {
-    flex: 1,
+    width: "100%",
     padding: "14px",
     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     border: "none",
@@ -1137,36 +978,6 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    ":hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 10px 20px rgba(102,126,234,0.3)",
-    },
-    ":disabled": {
-      opacity: 0.5,
-      cursor: "not-allowed",
-      transform: "none",
-    }
-  },
-  
-  agreementButton: {
-    flex: 1,
-    padding: "14px",
-    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-    border: "none",
-    borderRadius: 14,
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: 600,
-    cursor: "pointer",
-    transition: "all 0.3s ease",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    ":hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 10px 20px rgba(16,185,129,0.3)",
-    }
   },
   
   confirmedBadge: {
@@ -1220,10 +1031,6 @@ const styles = {
     fontWeight: 600,
     cursor: "pointer",
     transition: "all 0.3s ease",
-    ":hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 10px 20px rgba(102,126,234,0.3)",
-    }
   },
   
   loadingContainer: {
@@ -1280,10 +1087,6 @@ const styles = {
     fontSize: 14,
     fontWeight: 600,
     cursor: "pointer",
-    transition: "all 0.2s ease",
-    ":hover": {
-      background: "#2563eb",
-    }
   },
   
   modalOverlay: {
@@ -1302,7 +1105,7 @@ const styles = {
     animation: "fadeIn 0.3s ease",
   },
   
-  agreementDialogContent: {
+  paymentDialogContent: {
     background: "#fff",
     borderRadius: 32,
     width: "100%",
@@ -1311,66 +1114,44 @@ const styles = {
     animation: "slideIn 0.3s ease",
   },
   
-  agreementDialogBody: {
+  paymentDialogBody: {
     padding: "24px",
     textAlign: "center",
   },
   
-  agreementIcon: {
+  paymentIcon: {
     fontSize: 48,
     marginBottom: 16,
   },
   
-  agreementText: {
+  paymentText: {
     fontSize: 16,
     color: "#1f2937",
     marginBottom: 12,
     lineHeight: 1.5,
   },
   
-  agreementFeeText: {
+  paymentBreakdown: {
     fontSize: 14,
     color: "#6b7280",
     marginBottom: 24,
   },
   
-  agreementButtons: {
-    display: "flex",
-    gap: 12,
-  },
-  
-  agreementYesButton: {
-    flex: 1,
+  confirmPayButton: {
+    width: "100%",
     padding: "14px",
     background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
     border: "none",
     borderRadius: 14,
     color: "#fff",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
     transition: "all 0.3s ease",
-    ":hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 10px 20px rgba(16,185,129,0.3)",
-    }
-  },
-  
-  agreementNoButton: {
-    flex: 1,
-    padding: "14px",
-    background: "#f3f4f6",
-    border: "none",
-    borderRadius: 14,
-    color: "#4b5563",
-    fontSize: 14,
-    fontWeight: 600,
-    cursor: "pointer",
-    transition: "all 0.3s ease",
-    ":hover": {
-      background: "#e5e7eb",
-      transform: "translateY(-2px)",
-    }
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
   },
   
   modalHeader: {
@@ -1400,11 +1181,6 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    transition: "all 0.2s ease",
-    ":hover": {
-      background: "#e5e7eb",
-      color: "#1f2937",
-    }
   },
   
   buttonSpinner: {
@@ -1445,12 +1221,7 @@ const styles = {
     color: "#991b1b",
     marginLeft: "auto",
     padding: "0 4px",
-    ":hover": {
-      opacity: 0.7,
-    }
   },
 };
-
-UserBookingHistory.propTypes = {};
 
 export default UserBookingHistory;
