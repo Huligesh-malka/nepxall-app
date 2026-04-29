@@ -88,6 +88,7 @@ import AdminPlanPayments from "./pages/admin/AdminPlanPayments";
 import AdminAgreementDetails from "./pages/admin/AdminAgreementDetails";
 import AdminAddPG from "./pages/admin/AdminAddPG";
 import AdminAllPGs from "./pages/admin/AdminAllPGs";
+import AdminAllBookings from "./pages/admin/AdminAllBookings";
 
 /* VENDOR */
 import VendorDashboard from "./pages/VendorDashboard";
@@ -369,6 +370,10 @@ function App() {
         <Route index element={<Navigate to="finance" replace />} />
         <Route path="finance" element={<AdminFinanceDashboard />} />
         <Route path="payments" element={<AdminPayments />} />
+        <Route
+  path="all-bookings"
+  element={<AdminAllBookings />}
+/>
         <Route path="settlements" element={<AdminSettlements />} />
         <Route path="settlement-history" element={<SettlementHistory />} />
         <Route path="pending-pgs" element={<AdminPendingPGs />} />

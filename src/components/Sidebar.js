@@ -210,6 +210,14 @@ const Sidebar = ({ role, user }) => {
             <p style={sectionLabel}>ADMIN</p>
             <Link style={linkStyle(isActive("/admin/finance"))} to="/admin/finance" onClick={closeSidebar} className="sidebar-link"><FiBarChart2 size={16} /> Finance Dashboard</Link>
             <Link style={linkStyle(isActive("/admin/payments"))} to="/admin/payments" onClick={closeSidebar} className="sidebar-link"><FiCreditCard size={16} /> Payment Verification</Link>
+            <Link
+  style={linkStyle(isActive("/admin/all-bookings"))}
+  to="/admin/all-bookings"
+  onClick={closeSidebar}
+  className="sidebar-link"
+>
+  <FiCalendar size={16} /> All Bookings
+</Link>
             {/* ✅ ADD THIS */}
     <Link style={linkStyle(isActive("/admin/pgs"))} to="/admin/pgs">
       <FiBuilding size={16} /> All PGs
