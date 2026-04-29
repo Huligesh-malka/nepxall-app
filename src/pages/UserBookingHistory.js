@@ -23,11 +23,8 @@ const UserBookingHistory = () => {
   const [paymentStatuses, setPaymentStatuses] = useState({});
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
-  const [showAgreementDialog, setShowAgreementDialog] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [selectedBookingForPayment, setSelectedBookingForPayment] = useState(null);
-  
-  // Track which bookings had agreement paid
-  const [agreementPaidBookings, setAgreementPaidBookings] = useState({});
   
   // Track submitted payments to prevent multiple submissions
   const [submittedPayments, setSubmittedPayments] = useState({});
@@ -70,7 +67,6 @@ const UserBookingHistory = () => {
       
       if (res.data && res.data.length > 0) {
         await checkAllPaymentStatuses([...res.data]);
-        await checkAgreementStatus([...res.data]);
       }
     } catch (err) {
       console.error("Error loading bookings:", err);
@@ -102,58 +98,30 @@ const UserBookingHistory = () => {
     }
   }, [paymentStatuses]);
 
-  // Check which bookings had agreement included in payment
-  const checkAgreementStatus = useCallback(async (bookingsList) => {
-    try {
-      const agreementMap = { ...agreementPaidBookings };
-
-      await Promise.all(
-        bookingsList.map(async (booking) => {
-          try {
-            const res = await api.get(
-              `/payments/agreement-status/${booking.id}`
-            );
-
-            if (res.data.success) {
-              agreementMap[booking.id] = res.data.hasAgreement;
-            }
-          } catch (err) {
-            console.log(`No agreement info for booking ${booking.id}`);
-          }
-        })
-      );
-
-      setAgreementPaidBookings({ ...agreementMap });
-    } catch (err) {
-      console.error("Error checking agreement status:", err);
-    }
-  }, [agreementPaidBookings]);
-
   // 🔥 AUTO REFRESH PAYMENT STATUS
   useEffect(() => {
     if (!bookings.length) return;
 
     const interval = setInterval(() => {
       checkAllPaymentStatuses(bookings);
-      checkAgreementStatus(bookings);
     }, 5000); // every 5 seconds
 
     return () => clearInterval(interval);
-  }, [bookings, checkAllPaymentStatuses, checkAgreementStatus]);
+  }, [bookings, checkAllPaymentStatuses]);
 
   // Initial load
   useEffect(() => {
     loadBookings();
   }, [loadBookings]);
 
-  // Show agreement dialog before payment
+  // Show payment dialog
   const handleShowPaymentDialog = useCallback((booking) => {
     setSelectedBookingForPayment(booking);
-    setShowAgreementDialog(true);
+    setShowPaymentDialog(true);
   }, []);
 
-  // ✅ UPDATED: Create payment with Cashfree (TOKEN SYSTEM)
-  const handlePayNow = useCallback(async (includeAgreement) => {
+  // ✅ SIMPLIFIED: Create payment with Cashfree (Fixed amount ₹1099)
+  const handlePayNow = useCallback(async () => {
     if (!selectedBookingForPayment) return;
 
     try {
@@ -162,24 +130,8 @@ const UserBookingHistory = () => {
 
       const booking = selectedBookingForPayment;
 
-      const rent = Number(booking.rent_amount || 0);
-      const deposit = Number(booking.security_deposit || 0);
-      const maintenance = Number(booking.maintenance_amount || 0);
-
-      // ✅ TOKEN SYSTEM AMOUNTS
-      const tokenAmount = 1000;
-      const platformFee = 99;
-      const total = 1099; // Token + Platform Fee
-
-      let amountToPay = total;
-
-      if (includeAgreement) {
-        amountToPay += 500; // Agreement fee
-      }
-
-      if (!amountToPay || amountToPay <= 0) {
-        throw new Error("Invalid payment amount");
-      }
+      // Fixed payment amount: ₹1099 (Token + Platform Fee)
+      const amountToPay = 1099;
 
       // 🔥 Create Cashfree order
       const res = await api.post("/payments/create-cashfree-order", {
@@ -187,7 +139,7 @@ const UserBookingHistory = () => {
         customerId: String(user.uid),
         customerPhone: user.phoneNumber || "9999999999",
         bookingId: booking.id,
-        includeAgreement: includeAgreement
+        includeAgreement: false // Agreement removed
       });
 
       if (!res.data.success) {
@@ -202,11 +154,8 @@ const UserBookingHistory = () => {
       // Redirect to Cashfree checkout page
       await cashfree.checkout({
         paymentSessionId: res.data.payment_session_id,
-        redirectTarget: "_self" // Use "_blank" to open in new tab
+        redirectTarget: "_self"
       });
-
-      // Note: After successful payment, user will be redirected back
-      // You should handle webhook on backend to update payment status
       
     } catch (err) {
       console.error("PAYMENT ERROR:", err);
@@ -214,28 +163,25 @@ const UserBookingHistory = () => {
     } finally {
       setPayingId(null);
       setSelectedBookingForPayment(null);
-      setShowAgreementDialog(false);
+      setShowPaymentDialog(false);
     }
   }, [selectedBookingForPayment, user]);
 
-  // Close agreement dialog
-  const closeAgreementDialog = useCallback(() => {
-    setShowAgreementDialog(false);
+  // Close payment dialog
+  const closePaymentDialog = useCallback(() => {
+    setShowPaymentDialog(false);
     setSelectedBookingForPayment(null);
   }, []);
 
-  // Get payment status
+  // Get payment status and button visibility
   const getPaymentStatusDisplay = useCallback((bookingId, bookingStatus) => {
     const status = paymentStatuses[bookingId];
-    const hasAgreement = agreementPaidBookings[bookingId];
     
     if (!status) {
       return {
         showPayButton: bookingStatus === "approved",
-        showAgreementButton: false,
         message: null,
-        badge: null,
-        canPay: bookingStatus === "approved"
+        badge: null
       };
     }
 
@@ -243,55 +189,39 @@ const UserBookingHistory = () => {
       case "paid":
         return {
           showPayButton: false,
-          // Only show agreement button if user paid WITH agreement
-          showAgreementButton: hasAgreement === true,
-          message: "✅ Token payment verified!",
-          badge: { text: "Token Paid", style: "paid" },
-          canPay: false
+          message: "✅ Payment completed!",
+          badge: { text: "Paid", style: "paid" }
         };
       
       case "submitted":
         return {
           showPayButton: false,
-          showAgreementButton: false,
-          message: "⏳ Payment submitted! Waiting for admin verification (5-10 minutes).",
-          badge: { text: "Pending Verification", style: "submitted" },
-          canPay: false
+          message: "⏳ Payment submitted! Waiting for verification.",
+          badge: { text: "Pending Verification", style: "submitted" }
         };
       
       case "rejected":
         return {
           showPayButton: true,
-          showAgreementButton: false,
           message: "❌ Payment was rejected. Please try again.",
-          badge: { text: "Payment Rejected", style: "rejected" },
-          canPay: true
+          badge: { text: "Rejected", style: "rejected" }
         };
       
       case "pending":
         return {
           showPayButton: true,
-          showAgreementButton: false,
-          message: "Complete payment using Cashfree. Status will update automatically.",
-          badge: { text: "Payment Pending", style: "pending" },
-          canPay: true
+          message: "Complete payment to confirm your booking.",
+          badge: { text: "Payment Pending", style: "pending" }
         };
       
       default:
         return {
           showPayButton: bookingStatus === "approved",
-          showAgreementButton: false,
           message: null,
-          badge: null,
-          canPay: bookingStatus === "approved"
+          badge: null
         };
     }
-  }, [paymentStatuses, agreementPaidBookings]);
-
-  // Handle agreement form navigation
-  const handleFillAgreement = useCallback((bookingId) => {
-    navigate(`/agreement-form/${bookingId}`);
-  }, [navigate]);
+  }, [paymentStatuses]);
 
   // Handle chat navigation
   const handleChatNavigation = useCallback(async (booking) => {
@@ -305,9 +235,6 @@ const UserBookingHistory = () => {
         console.log("User MySQL ID not loaded yet");
         return;
       }
-
-      console.log("Chat navigation - Using MySQL ID:", me.id);
-      console.log("PG ID:", booking.pg_id);
 
       const res = await api.get(
         `/private-chat/user/${me.id}?pg_id=${booking.pg_id}`
@@ -364,6 +291,17 @@ const UserBookingHistory = () => {
     );
   }
 
+  // Calculate remaining amount for display
+  const calculateRemainingAmount = (booking) => {
+    const rent = Number(booking.rent_amount || booking.rent || 0);
+    const deposit = Number(booking.security_deposit || 0);
+    const maintenance = Number(booking.maintenance_amount || 0);
+    const total = rent + deposit + maintenance;
+    const paid = 1099;
+    const remaining = total - paid;
+    return remaining > 0 ? remaining : 0;
+  };
+
   return (
     <div style={styles.container}>
       {/* Header */}
@@ -412,22 +350,13 @@ const UserBookingHistory = () => {
             const rent = Number(booking.rent_amount || booking.rent || 0);
             const deposit = Number(booking.security_deposit || 0);
             const maintenance = Number(booking.maintenance_amount || 0);
-            
-            // ✅ TOKEN SYSTEM CALCULATIONS
-            const tokenAmount = 1000;
-            const platformFee = 99;
-            const total = 1099;
-            const remainingAmount = (rent + deposit + maintenance) - tokenAmount;
+            const totalAmount = rent + deposit + maintenance;
+            const remainingAmount = calculateRemainingAmount(booking);
             
             const paymentDisplay = getPaymentStatusDisplay(booking.id, booking.status);
-            
-            // Simple Pay Button Logic
             const paymentStatus = paymentStatuses[booking.id];
             
-            const showPayButton =
-              booking.status === "approved" &&
-              paymentStatus !== "paid" &&
-              paymentStatus !== "submitted";
+            const showPayButton = paymentDisplay.showPayButton;
 
             return (
               <div key={booking.id} style={styles.card}>
@@ -536,71 +465,29 @@ const UserBookingHistory = () => {
                     </div>
                   )}
 
-                  {/* ✅ UPDATED PRICE SECTION - TOKEN SYSTEM */}
-                  <div style={styles.priceSection}>
-                    {rent > 0 && (
-                      <div style={styles.priceRow}>
-                        <span>Rent</span>
-                        <span>₹{rent.toLocaleString()}</span>
-                      </div>
-                    )}
-
-                    {deposit > 0 && (
-                      <div style={styles.priceRow}>
-                        <span>Security Deposit</span>
-                        <span>₹{deposit.toLocaleString()}</span>
-                      </div>
-                    )}
-
-                    {maintenance > 0 && (
-                      <div style={styles.priceRow}>
-                        <span>Maintenance</span>
-                        <span>₹{maintenance.toLocaleString()}</span>
-                      </div>
-                    )}
-
-                    <div style={styles.priceRow}>
-                      <span>Booking Token</span>
-                      <span>₹1000</span>
-                    </div>
-
-                    <div style={styles.priceRow}>
-                      <span>Platform Fee</span>
-                      <span>₹99</span>
-                    </div>
-
-                    <div style={styles.priceRow}>
-                      <span>Remaining Amount</span>
-                      <span>₹{remainingAmount.toLocaleString()}</span>
-                    </div>
-
-                    <div style={styles.totalPrice}>
-                      <span>Total Paid Online</span>
-                      <span>₹1099</span>
-                    </div>
-                  </div>
-
-                  {/* Payment completed message - UPDATED for clarity */}
+                  {/* ✅ SIMPLIFIED PAYMENT SECTION - Clean & User Friendly */}
                   {paymentStatus === "paid" && (
-                    <div style={{
-                      background: "#d1fae5",
-                      color: "#065f46",
-                      padding: "14px",
-                      borderRadius: 12,
-                      fontSize: 13,
-                      textAlign: "center",
-                      fontWeight: 500,
-                      marginBottom: 16,
-                      lineHeight: 1.5
-                    }}>
-                      <div style={{ fontWeight: 700, marginBottom: 8 }}>
-                        ✅ Token Payment Completed! (₹1099)
+                    <div style={styles.paymentConfirmedSection}>
+                      <div style={styles.confirmedIcon}>✅</div>
+                      <div style={styles.confirmedTitle}>Booking Confirmed!</div>
+                      <div style={styles.paidOnline}>
+                        💳 Paid Online: ₹1,099
                       </div>
-                      <div style={{ fontSize: 12 }}>
-                        Remaining amount of <strong>₹{remainingAmount.toLocaleString()}</strong> needs to be paid directly to the owner during check-in.
+                      <div style={styles.remainingPaymentMessage}>
+                        🏠 Remaining amount of <strong>₹{remainingAmount.toLocaleString()}</strong> to be paid directly to the owner during check-in
                       </div>
-                      <div style={{ fontSize: 12, marginTop: 8, color: "#047857" }}>
-                        💡 Tip: Contact the owner via chat to coordinate check-in and remaining payment.
+                    </div>
+                  )}
+
+                  {/* Show simplified price summary for unpaid bookings */}
+                  {paymentStatus !== "paid" && booking.status === "approved" && (
+                    <div style={styles.paymentCardSection}>
+                      <div style={styles.paymentAmount}>
+                        <span>Payment Required:</span>
+                        <strong>₹1,099</strong>
+                      </div>
+                      <div style={styles.paymentNote}>
+                        One-time online payment to confirm your booking
                       </div>
                     </div>
                   )}
@@ -645,14 +532,6 @@ const UserBookingHistory = () => {
                       </button>
                       <button
                         style={styles.iconButton}
-                        onClick={() => window.open("/e-stamp.jpg", "_blank")}
-                        title="Preview Agreement"
-                      >
-                        <span style={styles.buttonIcon}>📑</span>
-                        <span>Preview</span>
-                      </button>
-                      <button
-                        style={styles.iconButton}
                         onClick={() => navigate(`/user/services/${booking.id}`)}
                         title="Add Services"
                       >
@@ -676,21 +555,9 @@ const UserBookingHistory = () => {
                           ) : (
                             <>
                               <span>💳</span>
-                              Pay ₹1099 (Booking Token)
+                              Pay ₹1,099 & Confirm Booking
                             </>
                           )}
-                        </button>
-                      )}
-
-                      {/* Fill Agreement Button - Shows only when payment is verified AND user paid WITH agreement */}
-                      {paymentDisplay.showAgreementButton && (
-                        <button
-                          style={styles.agreementButton}
-                          onClick={() => handleFillAgreement(booking.id)}
-                          title="Fill Agreement Form"
-                        >
-                          <span style={styles.buttonIcon}>📝</span>
-                          <span>Fill Agreement</span>
                         </button>
                       )}
                     </div>
@@ -712,11 +579,11 @@ const UserBookingHistory = () => {
                     </div>
                   )}
 
-                  {/* Confirmed Badge - UPDATED */}
-                  {booking.status === "confirmed" && paymentStatuses[booking.id] === "paid" && (
+                  {/* Confirmed Badge */}
+                  {booking.status === "confirmed" && paymentStatus === "paid" && (
                     <div style={styles.confirmedBadge}>
                       <span>✅</span>
-                      <span>Booking Confirmed (Token Paid)</span>
+                      <span>Booking Confirmed</span>
                     </div>
                   )}
                 </div>
@@ -726,40 +593,44 @@ const UserBookingHistory = () => {
         </div>
       )}
 
-      {/* Agreement Dialog - Yes/No Option */}
-      {showAgreementDialog && selectedBookingForPayment && (
-        <div style={styles.modalOverlay} onClick={closeAgreementDialog}>
-          <div style={styles.agreementDialogContent} onClick={(e) => e.stopPropagation()}>
+      {/* Payment Dialog - Simplified (No Agreement Option) */}
+      {showPaymentDialog && selectedBookingForPayment && (
+        <div style={styles.modalOverlay} onClick={closePaymentDialog}>
+          <div style={styles.paymentDialogContent} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>Agreement Option</h2>
-              <button style={styles.modalClose} onClick={closeAgreementDialog}>×</button>
+              <h2 style={styles.modalTitle}>Confirm Booking</h2>
+              <button style={styles.modalClose} onClick={closePaymentDialog}>×</button>
             </div>
             
-            <div style={styles.agreementDialogBody}>
-              <div style={styles.agreementIcon}>📄</div>
-              <p style={styles.agreementText}>
-                Do you want to include a legal agreement for this booking?
+            <div style={styles.paymentDialogBody}>
+              <div style={styles.paymentDialogIcon}>💳</div>
+              <p style={styles.paymentDialogText}>
+                Complete your booking payment of
               </p>
-              <p style={styles.agreementFeeText}>
-                Agreement fee: <strong>₹500</strong> (one-time)
+              <div style={styles.paymentDialogAmount}>₹1,099</div>
+              <p style={styles.paymentDialogNote}>
+                This confirms your booking. Remaining amount will be paid directly to the owner during check-in.
               </p>
-              <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 24 }}>
-                Total with agreement: ₹1599 (₹1099 + ₹500)
-              </p>
-              <div style={styles.agreementButtons}>
-                <button
-                  style={styles.agreementNoButton}
-                  onClick={() => handlePayNow(false)}
-                >
-                  No, Skip Agreement
-                </button>
-                <button
-                  style={styles.agreementYesButton}
-                  onClick={() => handlePayNow(true)}
-                >
-                  Yes, Include Agreement (+₹500)
-                </button>
-              </div>
+              <button
+                style={styles.confirmPayButton}
+                onClick={handlePayNow}
+                disabled={payingId === selectedBookingForPayment.id}
+              >
+                {payingId === selectedBookingForPayment.id ? (
+                  <>
+                    <span style={styles.buttonSpinner}></span>
+                    Processing...
+                  </>
+                ) : (
+                  "Proceed to Pay ₹1,099"
+                )}
+              </button>
+              <button
+                style={styles.cancelPayButton}
+                onClick={closePaymentDialog}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
@@ -805,7 +676,7 @@ const UserBookingHistory = () => {
   );
 };
 
-// Modern Styles (same as before)
+// Modern Styles
 const styles = {
   container: {
     maxWidth: 1200,
@@ -1030,31 +901,71 @@ const styles = {
     color: "#1f2937",
   },
   
-  priceSection: {
-    background: "#f9fafb",
+  paymentConfirmedSection: {
+    background: "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    textAlign: "center",
+    border: "1px solid #10b981",
+  },
+  
+  confirmedIcon: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
+  
+  confirmedTitle: {
+    fontSize: 20,
+    fontWeight: 800,
+    color: "#065f46",
+    marginBottom: 12,
+  },
+  
+  paidOnline: {
+    fontSize: 16,
+    fontWeight: 600,
+    color: "#047857",
+    marginBottom: 12,
+    padding: "8px 12px",
+    background: "rgba(255,255,255,0.5)",
+    borderRadius: 10,
+    display: "inline-block",
+  },
+  
+  remainingPaymentMessage: {
+    fontSize: 14,
+    color: "#065f46",
+    padding: "8px",
+    background: "rgba(255,255,255,0.3)",
+    borderRadius: 10,
+    marginTop: 8,
+  },
+  
+  paymentCardSection: {
+    background: "#fef3c7",
     borderRadius: 16,
     padding: 16,
     marginBottom: 20,
+    textAlign: "center",
+    border: "1px solid #f59e0b",
   },
   
-  priceRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    padding: "8px 0",
-    color: "#4b5563",
-    fontSize: 14,
-    borderBottom: "1px dashed #e5e7eb",
-  },
-  
-  totalPrice: {
-    display: "flex",
-    justifyContent: "space-between",
-    marginTop: 8,
-    paddingTop: 8,
-    borderTop: "2px solid #e5e7eb",
-    fontSize: 16,
+  paymentAmount: {
+    fontSize: 18,
     fontWeight: 700,
-    color: "#1f2937",
+    color: "#92400e",
+    marginBottom: 8,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "0 16px",
+  },
+  
+  paymentNote: {
+    fontSize: 12,
+    color: "#b45309",
+    marginTop: 8,
   },
   
   messageBox: {
@@ -1091,7 +1002,7 @@ const styles = {
   
   actionButtons: {
     display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
+    gridTemplateColumns: "repeat(3, 1fr)",
     gap: 8,
   },
   
@@ -1148,27 +1059,6 @@ const styles = {
       opacity: 0.5,
       cursor: "not-allowed",
       transform: "none",
-    }
-  },
-  
-  agreementButton: {
-    flex: 1,
-    padding: "14px",
-    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-    border: "none",
-    borderRadius: 14,
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: 600,
-    cursor: "pointer",
-    transition: "all 0.3s ease",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    ":hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 10px 20px rgba(16,185,129,0.3)",
     }
   },
   
@@ -1305,7 +1195,7 @@ const styles = {
     animation: "fadeIn 0.3s ease",
   },
   
-  agreementDialogContent: {
+  paymentDialogContent: {
     background: "#fff",
     borderRadius: 32,
     width: "100%",
@@ -1314,65 +1204,72 @@ const styles = {
     animation: "slideIn 0.3s ease",
   },
   
-  agreementDialogBody: {
+  paymentDialogBody: {
     padding: "24px",
     textAlign: "center",
   },
   
-  agreementIcon: {
+  paymentDialogIcon: {
     fontSize: 48,
     marginBottom: 16,
   },
   
-  agreementText: {
+  paymentDialogText: {
     fontSize: 16,
-    color: "#1f2937",
+    color: "#6b7280",
     marginBottom: 12,
+  },
+  
+  paymentDialogAmount: {
+    fontSize: 36,
+    fontWeight: 800,
+    color: "#667eea",
+    marginBottom: 16,
+  },
+  
+  paymentDialogNote: {
+    fontSize: 13,
+    color: "#6b7280",
+    marginBottom: 24,
     lineHeight: 1.5,
   },
   
-  agreementFeeText: {
-    fontSize: 14,
-    color: "#6b7280",
-    marginBottom: 24,
-  },
-  
-  agreementButtons: {
-    display: "flex",
-    gap: 12,
-  },
-  
-  agreementYesButton: {
-    flex: 1,
+  confirmPayButton: {
+    width: "100%",
     padding: "14px",
-    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     border: "none",
     borderRadius: 14,
     color: "#fff",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
     transition: "all 0.3s ease",
+    marginBottom: 12,
     ":hover": {
       transform: "translateY(-2px)",
-      boxShadow: "0 10px 20px rgba(16,185,129,0.3)",
+      boxShadow: "0 10px 20px rgba(102,126,234,0.3)",
+    },
+    ":disabled": {
+      opacity: 0.5,
+      cursor: "not-allowed",
+      transform: "none",
     }
   },
   
-  agreementNoButton: {
-    flex: 1,
-    padding: "14px",
+  cancelPayButton: {
+    width: "100%",
+    padding: "12px",
     background: "#f3f4f6",
     border: "none",
     borderRadius: 14,
     color: "#4b5563",
     fontSize: 14,
-    fontWeight: 600,
+    fontWeight: 500,
     cursor: "pointer",
-    transition: "all 0.3s ease",
+    transition: "all 0.2s ease",
     ":hover": {
       background: "#e5e7eb",
-      transform: "translateY(-2px)",
     }
   },
   
