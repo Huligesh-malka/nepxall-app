@@ -80,7 +80,36 @@ export default function OwnerPremiumPlans() {
     }
   }, [user, authLoading, navigate]);
 
-  // 🔥 NEW CASHFREE PAYMENT FLOW
+  /* ================= AUTO VERIFY AFTER PAYMENT ================= */
+  useEffect(() => {
+    const verifyPayment = async () => {
+      try {
+        const orderId = new URLSearchParams(window.location.search).get("order_id");
+        if (!orderId) return;
+        
+        const res = await api.get(`/plan/verify/${orderId}`);
+        console.log("VERIFY RESPONSE:", res.data);
+        
+        if (res.data.success && res.data.isPaid) {
+          alert("✅ Plan activated successfully");
+          // reload current plan
+          loadCurrentPlan();
+          // remove order_id from URL
+          window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname
+          );
+        }
+      } catch (err) {
+        console.error("VERIFY ERROR:", err);
+      }
+    };
+    
+    verifyPayment();
+  }, []); // Runs once on component mount
+
+  /* ================= CASHFREE PAYMENT FLOW ================= */
   const buyPlan = async (planId) => {
     if (planId === currentPlan) return;
 
