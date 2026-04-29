@@ -3,6 +3,7 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { Box, CircularProgress } from "@mui/material";
 import api from "../../api/api";
+import { load } from "@cashfreepayments/cashfree-js";
 
 /* ================= PLAN DATA ================= */
 
@@ -30,7 +31,7 @@ const plans = [
     featured: "30 Days Featured",
     icon: "🚀",
     color: "#3b82f6",
-    highlight: true // MOST POPULAR
+    highlight: true
   },
   {
     id: "pro",
@@ -53,13 +54,6 @@ export default function OwnerPremiumPlans() {
   const [currentPlan, setCurrentPlan] = useState("free");
   const [pageLoading, setPageLoading] = useState(false);
   const [hoveredPlan, setHoveredPlan] = useState(null);
-  const [selectedPlan, setSelectedPlan] = useState(null);
-
-  // 🔥 NEW STATES FOR QR PAYMENT FLOW
-  const [qr, setQr] = useState(null);
-  const [orderId, setOrderId] = useState(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState("pending"); // pending, waiting, approved
 
   useEffect(() => {
     loadCurrentPlan();
@@ -71,12 +65,9 @@ export default function OwnerPremiumPlans() {
     try {
       setPageLoading(true);
       const res = await api.get("/pg/plan");
-
       setCurrentPlan(res.data.name || "free");
-setSelectedPlan(res.data.name || "free");
     } catch {
       setCurrentPlan("free");
-      setSelectedPlan("free");
     } finally {
       setPageLoading(false);
     }
@@ -89,85 +80,44 @@ setSelectedPlan(res.data.name || "free");
     }
   }, [user, authLoading, navigate]);
 
-  // 🔥 REPLACED: QR Payment Flow (not old buy-plan)
+  // 🔥 NEW CASHFREE PAYMENT FLOW
   const buyPlan = async (planId) => {
     if (planId === currentPlan) return;
 
     try {
       setPageLoading(true);
       
-      // Call new endpoint to create payment order and get QR
-      const res = await api.post("/plan/create", { plan: planId });
+      // Create Cashfree order
+      const res = await api.post("/plan/create-cashfree-order", {
+        plan: planId
+      });
 
-      setQr(res.data.qr);
-      setOrderId(res.data.orderId);
-      setPaymentStatus("pending");
-      setShowPaymentModal(true);
+      if (!res.data.success) {
+        throw new Error(res.data.message || "Failed to create order");
+      }
 
-      // Start polling for payment confirmation (every 10 sec)
-      startPaymentPolling(res.data.orderId, planId);
+      // Load Cashfree SDK
+      const cashfree = await load({
+        mode: "production" // Use "sandbox" for testing
+      });
+
+      // Initiate checkout
+      await cashfree.checkout({
+        paymentSessionId: res.data.payment_session_id,
+        redirectTarget: "_self"
+      });
 
     } catch (err) {
-      alert("❌ Failed to start payment. Please try again.");
+      console.error("Payment error:", err);
+      alert(err.response?.data?.message || "❌ Failed to start payment. Please try again.");
     } finally {
       setPageLoading(false);
     }
   };
 
-  // 🔥 Polling function to check admin approval
-  const startPaymentPolling = (orderId, planId) => {
-    const interval = setInterval(async () => {
-      try {
-        const res = await api.get(`/plan/status/${orderId}`);
-        
-        if (res.data.status === "approved") {
-          clearInterval(interval);
-          setPaymentStatus("approved");
-          
-          // Update current plan
-          const plan = plans.find(p => p.id === planId);
-          setCurrentPlan(planId);
-          setSelectedPlan(planId);
-          
-          // Show success and close modal after 2 seconds
-          setTimeout(() => {
-            setShowPaymentModal(false);
-            setQr(null);
-            setOrderId(null);
-            setPaymentStatus("pending");
-            showNotification(`✨ ${plan.name} activated successfully!`, "success");
-          }, 2000);
-        } else if (res.data.status === "failed") {
-          clearInterval(interval);
-          setPaymentStatus("failed");
-          showNotification("❌ Payment verification failed. Please contact support.", "error");
-        }
-      } catch (err) {
-        console.error("Polling error:", err);
-      }
-    }, 10000); // Check every 10 seconds
-
-    // Store interval ID to clear on modal close
-    window.paymentInterval = interval;
-  };
-
-  const showNotification = (message, type) => {
-    alert(message);
-  };
-
   const getSavingsBadge = (planId) => {
     if (planId === "pro") return "Save 20%";
     return null;
-  };
-
-  const closePaymentModal = () => {
-    if (window.paymentInterval) {
-      clearInterval(window.paymentInterval);
-    }
-    setShowPaymentModal(false);
-    setQr(null);
-    setOrderId(null);
-    setPaymentStatus("pending");
   };
 
   /* ================= PROTECTION ================= */
@@ -259,7 +209,7 @@ setSelectedPlan(res.data.name || "free");
                 <span style={styles.priceSuffix}>{plan.priceSuffix}</span>
               </div>
 
-              {/* Features - UPDATED: Only Listing, Photos, Videos, Featured */}
+              {/* Features */}
               <div style={styles.features}>
                 <div style={styles.featureItem}>
                   <svg style={styles.featureIcon} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
@@ -337,8 +287,8 @@ setSelectedPlan(res.data.name || "free");
           </div>
           <div style={styles.guaranteeItem}>
             <div style={styles.guaranteeIcon}>⏱️</div>
-            <h4 style={styles.guaranteeTitle}>Cancel Anytime</h4>
-            <p style={styles.guaranteeText}>No contracts, no fees</p>
+            <h4 style={styles.guaranteeTitle}>Instant Activation</h4>
+            <p style={styles.guaranteeText}>Automatic after payment</p>
           </div>
           <div style={styles.guaranteeItem}>
             <div style={styles.guaranteeIcon}>💬</div>
@@ -347,108 +297,6 @@ setSelectedPlan(res.data.name || "free");
           </div>
         </div>
       </div>
-
-      {/* 🔥 QR PAYMENT MODAL WITH ORDER ID DISPLAY */}
-      {showPaymentModal && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContent}>
-            {paymentStatus === "approved" ? (
-              <>
-                <div style={styles.successIcon}>✅</div>
-                <h2 style={styles.modalTitle}>Payment Successful!</h2>
-                <p style={styles.modalText}>Your plan has been activated.</p>
-                <button onClick={closePaymentModal} style={styles.modalButton}>
-                  Continue
-                </button>
-              </>
-            ) : paymentStatus === "failed" ? (
-              <>
-                <div style={styles.errorIcon}>❌</div>
-                <h2 style={styles.modalTitle}>Payment Failed</h2>
-                <p style={styles.modalText}>Please try again or contact support.</p>
-                <button onClick={closePaymentModal} style={styles.modalButton}>
-                  Close
-                </button>
-              </>
-            ) : (
-              <>
-                <h2 style={styles.modalTitle}>💳 Scan & Pay</h2>
-                
-                {qr && (
-                  <img src={qr} alt="Payment QR Code" style={styles.qrImage} />
-                )}
-                
-                {/* 🔥 ORDER ID DISPLAY - ADDED HERE */}
-                {orderId && (
-                  <div style={{
-                    background: "#f1f5f9",
-                    padding: "10px",
-                    borderRadius: "10px",
-                    marginBottom: "15px"
-                  }}>
-                    <p style={{ fontSize: 12, color: "#64748b" }}>Order ID</p>
-                    <p style={{
-                      fontSize: 16,
-                      fontWeight: "bold",
-                      fontFamily: "monospace",
-                      color: "#1e293b"
-                    }}>
-                      {orderId}
-                    </p>
-
-                    <button
-                      onClick={() => navigator.clipboard.writeText(orderId)}
-                      style={{
-                        marginTop: 6,
-                        padding: "5px 10px",
-                        fontSize: 12,
-                        borderRadius: 6,
-                        border: "none",
-                        background: "#e2e8f0",
-                        cursor: "pointer"
-                      }}
-                    >
-                      📋 Copy Order ID
-                    </button>
-                  </div>
-                )}
-                
-                <div style={styles.upiContainer}>
-                  <p style={styles.upiLabel}>UPI ID:</p>
-                  <p style={styles.upiId}>huligeshmalka-1@oksbi</p>
-                  <button 
-                    onClick={() => navigator.clipboard.writeText("huligeshmalka-1@oksbi")}
-                    style={styles.copyButton}
-                  >
-                    📋 Copy UPI ID
-                  </button>
-                </div>
-
-                {paymentStatus === "waiting" ? (
-                  <div style={styles.waitingContainer}>
-                    <div style={styles.spinnerSmall}></div>
-                    <p style={styles.waitingText}>Waiting for admin approval...</p>
-                  </div>
-                ) : (
-                  <p style={styles.instructionText}>
-                    💡 After payment, enter this Order ID in your UPI app's transaction note.<br/>
-                    Admin will verify and activate your plan automatically.
-                  </p>
-                )}
-
-                <div style={styles.modalActions}>
-                  <button
-                    onClick={closePaymentModal}
-                    style={styles.closeButton}
-                  >
-                    Close
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
 
       <style jsx>{`
         @keyframes fadeInUp {
@@ -758,148 +606,5 @@ const styles = {
     fontSize: 14,
     color: "#64748b",
     margin: 0
-  },
-
-  // Modal styles
-  modalOverlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    background: "rgba(0,0,0,0.6)",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 9999
-  },
-
-  modalContent: {
-    background: "#fff",
-    padding: 30,
-    borderRadius: 24,
-    textAlign: "center",
-    width: 380,
-    maxWidth: "90%",
-    boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)"
-  },
-
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: 700,
-    marginBottom: 16,
-    color: "#1e293b"
-  },
-
-  qrImage: {
-    width: 200,
-    height: 200,
-    margin: "20px auto",
-    display: "block",
-    borderRadius: 16
-  },
-
-  upiContainer: {
-    background: "#f8fafc",
-    padding: "12px 16px",
-    borderRadius: 12,
-    marginBottom: 20
-  },
-
-  upiLabel: {
-    fontSize: 12,
-    color: "#64748b",
-    marginBottom: 4
-  },
-
-  upiId: {
-    fontSize: 18,
-    fontWeight: 600,
-    color: "#1e293b",
-    fontFamily: "monospace",
-    marginBottom: 8
-  },
-
-  copyButton: {
-    background: "#e2e8f0",
-    border: "none",
-    padding: "6px 12px",
-    borderRadius: 8,
-    fontSize: 12,
-    cursor: "pointer",
-    color: "#475569"
-  },
-
-  instructionText: {
-    color: "#666",
-    fontSize: 13,
-    marginBottom: 20,
-    lineHeight: 1.5
-  },
-
-  waitingContainer: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 20
-  },
-
-  waitingText: {
-    color: "#3b82f6",
-    fontSize: 14,
-    fontWeight: 500
-  },
-
-  spinnerSmall: {
-    width: 30,
-    height: 30,
-    border: "3px solid #e2e8f0",
-    borderTop: "3px solid #3b82f6",
-    borderRadius: "50%",
-    animation: "spin 1s linear infinite"
-  },
-
-  modalActions: {
-    display: "flex",
-    justifyContent: "center"
-  },
-
-  closeButton: {
-    padding: "10px 24px",
-    borderRadius: 10,
-    border: "none",
-    background: "#3b82f6",
-    color: "#fff",
-    cursor: "pointer",
-    fontSize: 14,
-    fontWeight: 500
-  },
-
-  modalButton: {
-    padding: "12px 24px",
-    borderRadius: 10,
-    border: "none",
-    background: "#10b981",
-    color: "#fff",
-    cursor: "pointer",
-    fontSize: 16,
-    fontWeight: 600,
-    marginTop: 16
-  },
-
-  successIcon: {
-    fontSize: 48,
-    marginBottom: 16
-  },
-
-  errorIcon: {
-    fontSize: 48,
-    marginBottom: 16
-  },
-
-  modalText: {
-    color: "#64748b",
-    fontSize: 14
   }
 };
