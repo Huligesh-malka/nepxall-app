@@ -3566,10 +3566,19 @@ function UserPGSearch() {
                     WiFi
                   </label>
 
-                  <label style={{
+                                    <label style={{
                     display: "flex",
-                    alignItems: "center"
-                                        <input
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "8px 16px",
+                    background: filters.parking ? "#f59e0b" : "#f3f4f6",
+                    color: filters.parking ? "#ffffff" : "#374151",
+                    borderRadius: 20,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}>
+                    <input
                       type="checkbox"
                       checked={filters.parking}
                       onChange={(e) => setFilters({ ...filters, parking: e.target.checked })}
