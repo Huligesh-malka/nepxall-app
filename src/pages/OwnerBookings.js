@@ -121,7 +121,6 @@ const OwnerBookings = () => {
           return (
             <div key={b.id} style={card}>
               <p><b>PG:</b> {b.pg_name}</p>
-              <p><b>Tenant:</b> {b.tenant_name}</p>
               <p><b>Phone:</b> {b.tenant_phone || "🔒 Hidden"}</p>
               <p><b>Check-in:</b> {b.check_in_date ? new Date(b.check_in_date).toDateString() : "N/A"}</p>
               <p><b>Room:</b> {b.room_type}</p>
