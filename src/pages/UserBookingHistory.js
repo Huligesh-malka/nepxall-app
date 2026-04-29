@@ -152,7 +152,7 @@ const UserBookingHistory = () => {
     setShowAgreementDialog(true);
   }, []);
 
-  // ✅ UPDATED: Create payment with Cashfree (TOKEN SYSTEM)
+  // ✅ UPDATED: Create payment with Cashfree (TOKEN SYSTEM - NO AGREEMENT FEE)
   const handlePayNow = useCallback(async (includeAgreement) => {
     if (!selectedBookingForPayment) return;
 
@@ -166,16 +166,9 @@ const UserBookingHistory = () => {
       const deposit = Number(booking.security_deposit || 0);
       const maintenance = Number(booking.maintenance_amount || 0);
 
-      // ✅ TOKEN SYSTEM AMOUNTS
+      // ✅ TOKEN SYSTEM AMOUNTS - NO PLATFORM FEE SHOWN, NO AGREEMENT FEE
       const tokenAmount = 1000;
-      const platformFee = 99;
-      const total = 1099; // Token + Platform Fee
-
-      let amountToPay = total;
-
-      if (includeAgreement) {
-        amountToPay += 500; // Agreement fee
-      }
+      const amountToPay = tokenAmount; // Just ₹1000 token amount
 
       if (!amountToPay || amountToPay <= 0) {
         throw new Error("Invalid payment amount");
@@ -187,7 +180,7 @@ const UserBookingHistory = () => {
         customerId: String(user.uid),
         customerPhone: user.phoneNumber || "9999999999",
         bookingId: booking.id,
-        includeAgreement: includeAgreement
+        includeAgreement: false // Agreement fee completely removed
       });
 
       if (!res.data.success) {
@@ -243,8 +236,7 @@ const UserBookingHistory = () => {
       case "paid":
         return {
           showPayButton: false,
-          // Only show agreement button if user paid WITH agreement
-          showAgreementButton: hasAgreement === true,
+          showAgreementButton: false, // Agreement button completely removed
           message: "✅ Token payment verified!",
           badge: { text: "Token Paid", style: "paid" },
           canPay: false
@@ -288,10 +280,10 @@ const UserBookingHistory = () => {
     }
   }, [paymentStatuses, agreementPaidBookings]);
 
-  // Handle agreement form navigation
-  const handleFillAgreement = useCallback((bookingId) => {
-    navigate(`/agreement-form/${bookingId}`);
-  }, [navigate]);
+  // Handle agreement form navigation - COMPLETELY REMOVED
+  // const handleFillAgreement = useCallback((bookingId) => {
+  //   navigate(`/agreement-form/${bookingId}`);
+  // }, [navigate]);
 
   // Handle chat navigation
   const handleChatNavigation = useCallback(async (booking) => {
@@ -413,10 +405,8 @@ const UserBookingHistory = () => {
             const deposit = Number(booking.security_deposit || 0);
             const maintenance = Number(booking.maintenance_amount || 0);
             
-            // ✅ TOKEN SYSTEM CALCULATIONS
+            // ✅ TOKEN SYSTEM CALCULATIONS - NO PLATFORM FEE SHOWN
             const tokenAmount = 1000;
-            const platformFee = 99;
-            const total = 1099;
             const remainingAmount = (rent + deposit + maintenance) - tokenAmount;
             
             const paymentDisplay = getPaymentStatusDisplay(booking.id, booking.status);
@@ -536,7 +526,7 @@ const UserBookingHistory = () => {
                     </div>
                   )}
 
-                  {/* ✅ UPDATED PRICE SECTION - TOKEN SYSTEM */}
+                  {/* ✅ UPDATED PRICE SECTION - TOKEN SYSTEM WITH NO PLATFORM FEE VISIBLE */}
                   <div style={styles.priceSection}>
                     {rent > 0 && (
                       <div style={styles.priceRow}>
@@ -561,13 +551,10 @@ const UserBookingHistory = () => {
 
                     <div style={styles.priceRow}>
                       <span>Booking Token</span>
-                      <span>₹1000</span>
+                      <span>₹{tokenAmount.toLocaleString()}</span>
                     </div>
 
-                    <div style={styles.priceRow}>
-                      <span>Platform Fee</span>
-                      <span>₹99</span>
-                    </div>
+                    {/* PLATFORM FEE IS COMPLETELY HIDDEN - NOT SHOWN TO USER */}
 
                     <div style={styles.priceRow}>
                       <span>Remaining Amount</span>
@@ -575,8 +562,8 @@ const UserBookingHistory = () => {
                     </div>
 
                     <div style={styles.totalPrice}>
-                      <span>Total Paid Online</span>
-                      <span>₹1099</span>
+                      <span>Total to Pay Now</span>
+                      <span>₹{tokenAmount.toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -594,7 +581,7 @@ const UserBookingHistory = () => {
                       lineHeight: 1.5
                     }}>
                       <div style={{ fontWeight: 700, marginBottom: 8 }}>
-                        ✅ Token Payment Completed! (₹1099)
+                        ✅ Token Payment Completed! (₹{tokenAmount.toLocaleString()})
                       </div>
                       <div style={{ fontSize: 12 }}>
                         Remaining amount of <strong>₹{remainingAmount.toLocaleString()}</strong> needs to be paid directly to the owner during check-in.
@@ -676,23 +663,13 @@ const UserBookingHistory = () => {
                           ) : (
                             <>
                               <span>💳</span>
-                              Pay ₹1099 (Booking Token)
+                              Pay ₹{tokenAmount.toLocaleString()} (Booking Token)
                             </>
                           )}
                         </button>
                       )}
 
-                      {/* Fill Agreement Button - Shows only when payment is verified AND user paid WITH agreement */}
-                      {paymentDisplay.showAgreementButton && (
-                        <button
-                          style={styles.agreementButton}
-                          onClick={() => handleFillAgreement(booking.id)}
-                          title="Fill Agreement Form"
-                        >
-                          <span style={styles.buttonIcon}>📝</span>
-                          <span>Fill Agreement</span>
-                        </button>
-                      )}
+                      {/* FILL AGREEMENT BUTTON - COMPLETELY REMOVED */}
                     </div>
                   </div>
 
@@ -726,44 +703,8 @@ const UserBookingHistory = () => {
         </div>
       )}
 
-      {/* Agreement Dialog - Yes/No Option */}
-      {showAgreementDialog && selectedBookingForPayment && (
-        <div style={styles.modalOverlay} onClick={closeAgreementDialog}>
-          <div style={styles.agreementDialogContent} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>Agreement Option</h2>
-              <button style={styles.modalClose} onClick={closeAgreementDialog}>×</button>
-            </div>
-            
-            <div style={styles.agreementDialogBody}>
-              <div style={styles.agreementIcon}>📄</div>
-              <p style={styles.agreementText}>
-                Do you want to include a legal agreement for this booking?
-              </p>
-              <p style={styles.agreementFeeText}>
-                Agreement fee: <strong>₹500</strong> (one-time)
-              </p>
-              <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 24 }}>
-                Total with agreement: ₹1599 (₹1099 + ₹500)
-              </p>
-              <div style={styles.agreementButtons}>
-                <button
-                  style={styles.agreementNoButton}
-                  onClick={() => handlePayNow(false)}
-                >
-                  No, Skip Agreement
-                </button>
-                <button
-                  style={styles.agreementYesButton}
-                  onClick={() => handlePayNow(true)}
-                >
-                  Yes, Include Agreement (+₹500)
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Agreement Dialog - COMPLETELY REMOVED - No longer showing */}
+      {/* Users will directly pay token amount without any dialog */}
 
       {/* Error Message Display */}
       {error && (
@@ -1151,27 +1092,6 @@ const styles = {
     }
   },
   
-  agreementButton: {
-    flex: 1,
-    padding: "14px",
-    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-    border: "none",
-    borderRadius: 14,
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: 600,
-    cursor: "pointer",
-    transition: "all 0.3s ease",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    ":hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 10px 20px rgba(16,185,129,0.3)",
-    }
-  },
-  
   confirmedBadge: {
     marginTop: 16,
     padding: "12px",
@@ -1286,127 +1206,6 @@ const styles = {
     transition: "all 0.2s ease",
     ":hover": {
       background: "#2563eb",
-    }
-  },
-  
-  modalOverlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: "rgba(0,0,0,0.7)",
-    backdropFilter: "blur(8px)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1000,
-    padding: 20,
-    animation: "fadeIn 0.3s ease",
-  },
-  
-  agreementDialogContent: {
-    background: "#fff",
-    borderRadius: 32,
-    width: "100%",
-    maxWidth: 400,
-    position: "relative",
-    animation: "slideIn 0.3s ease",
-  },
-  
-  agreementDialogBody: {
-    padding: "24px",
-    textAlign: "center",
-  },
-  
-  agreementIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  
-  agreementText: {
-    fontSize: 16,
-    color: "#1f2937",
-    marginBottom: 12,
-    lineHeight: 1.5,
-  },
-  
-  agreementFeeText: {
-    fontSize: 14,
-    color: "#6b7280",
-    marginBottom: 24,
-  },
-  
-  agreementButtons: {
-    display: "flex",
-    gap: 12,
-  },
-  
-  agreementYesButton: {
-    flex: 1,
-    padding: "14px",
-    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-    border: "none",
-    borderRadius: 14,
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: 600,
-    cursor: "pointer",
-    transition: "all 0.3s ease",
-    ":hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 10px 20px rgba(16,185,129,0.3)",
-    }
-  },
-  
-  agreementNoButton: {
-    flex: 1,
-    padding: "14px",
-    background: "#f3f4f6",
-    border: "none",
-    borderRadius: 14,
-    color: "#4b5563",
-    fontSize: 14,
-    fontWeight: 600,
-    cursor: "pointer",
-    transition: "all 0.3s ease",
-    ":hover": {
-      background: "#e5e7eb",
-      transform: "translateY(-2px)",
-    }
-  },
-  
-  modalHeader: {
-    padding: "24px 24px 0",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: 700,
-    color: "#1f2937",
-    margin: 0,
-  },
-  
-  modalClose: {
-    width: 40,
-    height: 40,
-    background: "#f3f4f6",
-    border: "none",
-    borderRadius: "50%",
-    fontSize: 20,
-    cursor: "pointer",
-    color: "#6b7280",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all 0.2s ease",
-    ":hover": {
-      background: "#e5e7eb",
-      color: "#1f2937",
     }
   },
   
