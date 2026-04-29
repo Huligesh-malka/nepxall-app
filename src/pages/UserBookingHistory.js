@@ -536,7 +536,7 @@ const UserBookingHistory = () => {
                     </div>
                   )}
 
-                  {/* ✅ UPDATED PRICE SECTION - TOKEN SYSTEM */}
+                  {/* ✅ UPDATED PRICE SECTION - REMOVED BOOKING TOKEN ROW */}
                   <div style={styles.priceSection}>
                     {rent > 0 && (
                       <div style={styles.priceRow}>
@@ -559,10 +559,7 @@ const UserBookingHistory = () => {
                       </div>
                     )}
 
-                    <div style={styles.priceRow}>
-                      <span>Booking Token</span>
-                      <span>₹1000</span>
-                    </div>
+                    {/* BOOKING TOKEN ROW REMOVED */}
 
                     <div style={styles.priceRow}>
                       <span>Platform Fee</span>
