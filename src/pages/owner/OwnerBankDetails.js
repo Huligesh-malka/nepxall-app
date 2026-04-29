@@ -50,7 +50,7 @@ export default function OwnerBankDetails() {
         setMessage("Failed to load bank details");
       }
       setHasBank(false); // Show form on error/no data
-      console.log("GET BANK ERROR:", err.response?.data || err.message);
+      
     } finally {
       setPageLoading(false);
     }
@@ -89,7 +89,7 @@ export default function OwnerBankDetails() {
       setMessage(
         err.response?.data?.message || "Error saving bank details"
       );
-      console.log("SAVE BANK ERROR:", err.response?.data || err.message);
+      
     } finally {
       setSaving(false);
     }

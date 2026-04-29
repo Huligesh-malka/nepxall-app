@@ -586,7 +586,7 @@ export default function PrivateChat() {
     };
 
     const onRoomJoined = (data) => {
-      console.log("✅ Successfully joined room:", data);
+      
     };
 
     socket.on("receive_private_message", onMsg);

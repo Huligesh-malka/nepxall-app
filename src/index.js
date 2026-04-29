@@ -6,8 +6,21 @@ import reportWebVitals from "./reportWebVitals";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 
+if (process.env.NODE_ENV === "production") {
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
+  console.log = () => {};
+
+  console.warn = () => {};
+
+  console.info = () => {};
+
+  console.debug = () => {};
+
+}
+
+const root = ReactDOM.createRoot(
+  document.getElementById("root")
+);
 
 root.render(
   <React.StrictMode>
@@ -23,8 +36,5 @@ root.render(
     </BrowserRouter>
   </React.StrictMode>
 );
-
-
-
 
 reportWebVitals();

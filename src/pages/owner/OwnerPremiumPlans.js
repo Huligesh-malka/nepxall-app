@@ -88,7 +88,7 @@ export default function OwnerPremiumPlans() {
         if (!orderId) return;
         
         const res = await api.get(`/plan/verify/${orderId}`);
-        console.log("VERIFY RESPONSE:", res.data);
+        
         
         if (res.data.success && res.data.isPaid) {
           alert("✅ Plan activated successfully");

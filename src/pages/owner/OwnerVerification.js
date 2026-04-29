@@ -52,7 +52,7 @@ export default function OwnerVerification() {
         setTimeout(() => navigate("/owner/bank"), 2000);
       }
     } catch {
-      console.log("Not verified yet");
+      
     } finally {
       setInitialLoading(false);
     }
