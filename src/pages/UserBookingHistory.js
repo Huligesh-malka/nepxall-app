@@ -374,7 +374,7 @@ const UserBookingHistory = () => {
                       </div>
                     </div>
                     <div style={styles.detailItem}>
-                      <span style={styles.detailIcon}>📅</span>
+                      <span style={styles.detailIcon}></span>
                       <div>
                         <span style={styles.detailLabel}>Check-in</span>
                         <span style={styles.detailValue}>

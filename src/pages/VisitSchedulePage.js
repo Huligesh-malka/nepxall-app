@@ -137,7 +137,7 @@ const VisitSchedulePage = () => {
           ← Back to Bookings
         </button>
         <h2 style={styles.title}>
-          {isEditMode ? "✏️ Edit Visit Schedule" : "📅 Apply for Visit Schedule"}
+          {isEditMode ? "✏️ Edit Visit Schedule" : " Apply for Visit Schedule"}
         </h2>
       </div>
 

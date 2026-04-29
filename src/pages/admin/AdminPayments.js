@@ -122,7 +122,7 @@ const AdminPayments = () => {
     }
 
     const userName = p.reg_name || "User";
-    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${userName}*,%0AYour payment for *${p.pg_name}* (${p.sharing || 'N/A'} Sharing) has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.total_amount || p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A📅 Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
+    const message = `*Payment Receipt - Nepxall*%0A%0AHello *${userName}*,%0AYour payment for *${p.pg_name}* (${p.sharing || 'N/A'} Sharing) has been verified successfully.%0A%0A*Details:*%0A💰 Amount: ₹${p.total_amount || p.amount}%0A🆔 Order ID: ${p.order_id}%0A✅ Status: Paid%0A Date: ${formatDate(p.submitted_at || p.created_at)}%0A%0A_Thank you for choosing Nepxall!_`;
     const whatsappUrl = `https://wa.me/${cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone}?text=${message}`;
     window.open(whatsappUrl, "_blank");
   };

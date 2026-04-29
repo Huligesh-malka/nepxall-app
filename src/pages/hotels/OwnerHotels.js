@@ -92,7 +92,7 @@ export default function OwnerHotels() {
                     📸 Photos
                   </button>
                   <button style={btn} onClick={() => navigate(`/owner/hotel-bookings/${h.id}`)}>
-                    📅 Bookings
+                     Bookings
                   </button>
                 </div>
               </div>

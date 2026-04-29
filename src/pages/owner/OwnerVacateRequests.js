@@ -317,7 +317,7 @@ const RequestCard = ({ item, loadingId, onApprove, onReject, onMarkPaid }) => {
 
       <div style={s.detailGrid}>
         <div style={s.detailBox}>
-          <span style={s.detailLabel}>📅 Move Out</span>
+          <span style={s.detailLabel}>Move Out</span>
           <span style={s.detailVal}>{formatDate(item.move_out_date)}</span>
         </div>
         <div style={s.detailBox}>

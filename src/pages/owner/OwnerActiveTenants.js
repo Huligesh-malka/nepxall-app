@@ -124,7 +124,7 @@ export default function OwnerActiveTenants() {
                 {/* CHECK-IN */}
                 <div className="text-sm text-gray-600 mb-3">
                   <p>
-                    📅 Check-in:{" "}
+                     Check-in:{" "}
                     {t.checkin_time
                       ? new Date(t.checkin_time).toLocaleDateString()
                       : "N/A"}

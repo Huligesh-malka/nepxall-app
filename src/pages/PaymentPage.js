@@ -239,7 +239,7 @@ const PaymentPage = () => {
             </div>
 
             <p>📞 {b.phone}</p>
-            <p>📅 Check-in: {new Date(b.check_in_date).toDateString()}</p>
+            <p> Check-in: {new Date(b.check_in_date).toDateString()}</p>
             <p>💰 Amount: ₹{b.rent_amount || b.rent || 1}</p>
 
             {b.status === "approved" && !paymentStatus[b.id] && (
