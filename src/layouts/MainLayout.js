@@ -211,6 +211,17 @@ const MainLayout = () => {
     setAnchorEl(null);
   };
 
+  // Get avatar display based on user role
+  const getAvatarDisplay = () => {
+    if (role === "owner") {
+      return "🏠"; // Professional icon for owners
+    } else if (role === "tenant") {
+      return "👤"; // Professional icon for tenants
+    } else {
+      return user?.displayName?.charAt(0)?.toUpperCase() || "U";
+    }
+  };
+
   // Show branded loading spinner while checking auth
   if (loading) {
     return <LoadingSpinner message="Loading your dashboard..." />;
@@ -331,13 +342,14 @@ const MainLayout = () => {
                 <IconButton onClick={openMenu}>
                   <Avatar
                     sx={{
-                      background: "#2563eb",
+                      background: role === "owner" ? "#4CAF50" : "#2563eb",
                       width: 42,
                       height: 42,
-                      fontWeight: 700
+                      fontWeight: 700,
+                      fontSize: "1.2rem"
                     }}
                   >
-                    {user?.displayName?.charAt(0)?.toUpperCase() || "U"}
+                    {getAvatarDisplay()}
                   </Avatar>
                 </IconButton>
                 <Menu
