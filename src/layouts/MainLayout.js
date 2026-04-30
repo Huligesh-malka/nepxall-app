@@ -3,7 +3,7 @@ import { Outlet, useLocation, Navigate, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
-import { Button, Box, Typography, CircularProgress } from "@mui/material";
+import { Button, Box, Typography, CircularProgress, Menu, MenuItem, Avatar, IconButton } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
 
@@ -180,6 +180,7 @@ const MainLayout = () => {
   const navigate = useNavigate();
   const { user, role, loading } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -200,6 +201,14 @@ const MainLayout = () => {
     } catch (err) {
       console.error("Logout error:", err);
     }
+  };
+
+  const openMenu = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const closeMenu = () => {
+    setAnchorEl(null);
   };
 
   // Show branded loading spinner while checking auth
@@ -318,18 +327,42 @@ const MainLayout = () => {
                   </Button>
                 )}
 
-                <Button
-                  variant="contained"
-                  onClick={handleLogout}
-                  sx={{
-                    background: "#dc2626",
-                    "&:hover": { background: "#b91c1c" },
-                    borderRadius: "8px",
-                    fontWeight: 600
-                  }}
+                {/* Profile Dropdown Menu */}
+                <IconButton onClick={openMenu}>
+                  <Avatar
+                    sx={{
+                      background: "#2563eb",
+                      width: 42,
+                      height: 42,
+                      fontWeight: 700
+                    }}
+                  >
+                    {user?.displayName?.charAt(0)?.toUpperCase() || "U"}
+                  </Avatar>
+                </IconButton>
+                <Menu
+                  anchorEl={anchorEl}
+                  open={Boolean(anchorEl)}
+                  onClose={closeMenu}
                 >
-                  Logout
-                </Button>
+                  <MenuItem
+                    onClick={() => {
+                      navigate("/profile");
+                      closeMenu();
+                    }}
+                  >
+                    👤 Profile
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => {
+                      handleLogout();
+                      closeMenu();
+                    }}
+                    sx={{ color: "red", fontWeight: 600 }}
+                  >
+                    🚪 Logout
+                  </MenuItem>
+                </Menu>
               </>
             )}
           </div>
