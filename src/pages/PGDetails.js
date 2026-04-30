@@ -2239,15 +2239,7 @@ export default function PGDetails() {
                         )}
 
 
-{/* NOTICE PERIOD */}
-{Number(pg.notice_period) > 0 && (
-  <RuleItem
-    icon="⏰"
-    label={`Notice Period: ${pg.notice_period} months`}
-    allowed={true}
-    description="Notice period before vacating"
-  />
-)}
+
 
 {/* AGREEMENT */}
 {(pg.agreement_mandatory === true ||
