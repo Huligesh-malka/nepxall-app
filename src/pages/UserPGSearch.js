@@ -615,7 +615,7 @@ const DistanceIndicator = ({ distance, showDetails = false }) => {
       {showDetails && (
         <div style={{
           display: "flex",
-          alignItems": "center",
+          alignItems: "center",
           gap: 6,
           fontSize: 11,
           color: "#6b7280"
