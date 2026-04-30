@@ -4167,7 +4167,7 @@ function UserPGSearch() {
                   color: "#666",
                   borderTop: "1px solid #eee"
                 }}>
-                  ✨ You've seen all {pgs.length} properties ✨
+                  
                 </div>
               )}
               
