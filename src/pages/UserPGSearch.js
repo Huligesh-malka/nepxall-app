@@ -84,7 +84,7 @@ import {
   FileText,
   Clock as ClockIcon,
   Headphones,
-  Gps
+  LocateFixed
 } from "lucide-react";
 import api from "../api/api";
 
