@@ -3,9 +3,14 @@ import { Outlet, useLocation, Navigate, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
-import { Button, Box, Typography, CircularProgress, Menu, MenuItem, Avatar, IconButton } from "@mui/material";
+import { Button, Box, Typography, CircularProgress, Menu, MenuItem, Avatar, IconButton, Divider, Badge, Paper } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import PersonIcon from "@mui/icons-material/Person";
+import LogoutIcon from "@mui/icons-material/Logout";
+import StorefrontIcon from "@mui/icons-material/Storefront";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 
 const SIDEBAR_WIDTH = 220;
 
@@ -14,7 +19,7 @@ const BRAND_BLUE = "#0B5ED7";
 const BRAND_GREEN = "#4CAF50";
 
 // Loading Component inside MainLayout
-const LoadingSpinner = ({ message = "Loading..." }) => (
+const LoadingSpinner = ({ message = "Loading your dashboard..." }) => (
   <Box
     sx={{
       position: "fixed",
@@ -119,7 +124,7 @@ const LoadingSpinner = ({ message = "Loading..." }) => (
             fontWeight: 500,
           }}
         >
-         
+          Premium PG Management
         </Typography>
       </Box>
 
@@ -197,7 +202,7 @@ const MainLayout = () => {
       localStorage.removeItem("token");
       localStorage.removeItem("role");
       localStorage.removeItem("user_id");
-      navigate("/", { replace: true }); // Navigate to home page after logout
+      navigate("/", { replace: true });
     } catch (err) {
       console.error("Logout error:", err);
     }
@@ -232,7 +237,7 @@ const MainLayout = () => {
   }
 
   const getTitle = () => {
-    if (location.pathname === "/") return "";
+    if (location.pathname === "/") return "Dashboard";
     if (location.pathname === "/pg") return "PG Listings";
     if (location.pathname.startsWith("/pg/")) return "PG Details";
     if (location.pathname === "/booking") return "My Bookings";
@@ -243,7 +248,7 @@ const MainLayout = () => {
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "#f8fafc" }}>
       {/* Sidebar only for logged-in users */}
       {user && <Sidebar role={role} user={user} />}
 
@@ -255,120 +260,298 @@ const MainLayout = () => {
           minHeight: "100vh",
           background: "#f8fafc",
           overflowX: "hidden",
+          transition: "margin-left 0.3s ease-in-out",
         }}
       >
-        <Box
+        <Paper
+          elevation={0}
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
+            p: 2,
             mb: 3,
-            flexWrap: "wrap",
-            gap: 2,
-            width: "100%"
+            background: "white",
+            borderRadius: "16px",
+            boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05)",
+            border: "1px solid #e2e8f0",
           }}
         >
-          {/* Hide title for public users (optional) */}
-          {user && (
-            <Typography variant="h6" sx={{ fontWeight: 800 }}>
-              {getTitle()}
-            </Typography>
-          )}
-
-          {/* RIGHT SIDE BUTTONS */}
-          <div style={{ display: "flex", gap: "10px" }}>
-            {/* ✅ IF USER NOT LOGGED IN - Show Login button only */}
-            {!user && (
-              <Button
-                variant="contained"
-                onClick={() => navigate("/login")}
-                sx={{
-                  background: "#2563eb",
-                  "&:hover": { background: "#1d4ed8" },
-                  borderRadius: "8px",
-                  fontWeight: 600
-                }}
-              >
-                Login
-              </Button>
-            )}
-
-            {/* ✅ IF USER LOGGED IN */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 2,
+              width: "100%"
+            }}
+          >
+            {/* Title Section with Icon */}
             {user && (
-              <>
-                {/* Become Owner button for logged-in users who are not already owners */}
-                {role !== "owner" && (
-                  <Button
-                    variant="contained"
-                    onClick={() => navigate("/become-owner")}
-                    sx={{
-                      background: "#4CAF50",
-                      "&:hover": { background: "#43a047" },
-                      borderRadius: "8px",
-                      fontWeight: 600
-                    }}
-                  >
-                    Become Owner
-                  </Button>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                {role === "owner" ? (
+                  <StorefrontIcon sx={{ color: BRAND_BLUE, fontSize: 28 }} />
+                ) : (
+                  <DashboardIcon sx={{ color: BRAND_GREEN, fontSize: 28 }} />
                 )}
-
-                {installable && (
-                  <Button
-                    variant="contained"
-                    onClick={installApp}
-                    sx={{
-                      background: "#2563eb",
-                      "&:hover": { background: "#1d4ed8" },
-                      borderRadius: "8px",
-                      fontWeight: 600
-                    }}
-                  >
-                    📲 Install App
-                  </Button>
-                )}
-
-                {/* Profile Dropdown Menu */}
-                <IconButton onClick={openMenu}>
-                  <Avatar
-                    sx={{
-                      background: "#2563eb",
-                      width: 42,
-                      height: 42,
-                      fontWeight: 700
-                    }}
-                  >
-                    {user?.displayName?.charAt(0)?.toUpperCase() || "U"}
-                  </Avatar>
-                </IconButton>
-                <Menu
-                  anchorEl={anchorEl}
-                  open={Boolean(anchorEl)}
-                  onClose={closeMenu}
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontWeight: 800,
+                    background: `linear-gradient(135deg, ${BRAND_BLUE}, ${BRAND_GREEN})`,
+                    backgroundClip: "text",
+                    WebkitBackgroundClip: "text",
+                    color: "transparent",
+                    letterSpacing: "-0.5px"
+                  }}
                 >
-                  <MenuItem
-                    onClick={() => {
-                      navigate("/profile");
-                      closeMenu();
+                  {getTitle()}
+                </Typography>
+                {role === "owner" && (
+                  <Badge
+                    badgeContent="OWNER"
+                    color="primary"
+                    sx={{
+                      "& .MuiBadge-badge": {
+                        background: `linear-gradient(135deg, ${BRAND_BLUE}, ${BRAND_GREEN})`,
+                        color: "white",
+                        fontWeight: 700,
+                        fontSize: "10px",
+                        px: 1,
+                      }
                     }}
-                  >
-                    👤 Profile
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      handleLogout();
-                      closeMenu();
-                    }}
-                    sx={{ color: "red", fontWeight: 600 }}
-                  >
-                    🚪 Logout
-                  </MenuItem>
-                </Menu>
-              </>
+                  />
+                )}
+              </Box>
             )}
-          </div>
-        </Box>
 
-        <Outlet />
+            {/* RIGHT SIDE BUTTONS */}
+            <Box sx={{ display: "flex", gap: 1.5, alignItems: "center" }}>
+              {/* IF USER NOT LOGGED IN - Show Login button only */}
+              {!user && (
+                <Button
+                  variant="contained"
+                  onClick={() => navigate("/login")}
+                  sx={{
+                    background: `linear-gradient(135deg, ${BRAND_BLUE}, ${BRAND_GREEN})`,
+                    "&:hover": {
+                      background: `linear-gradient(135deg, ${BRAND_BLUE}CC, ${BRAND_GREEN}CC)`,
+                      transform: "translateY(-2px)",
+                    },
+                    borderRadius: "12px",
+                    fontWeight: 700,
+                    textTransform: "none",
+                    fontSize: "14px",
+                    px: 3,
+                    py: 1,
+                    boxShadow: "0 4px 12px rgba(37, 99, 235, 0.2)",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  Login
+                </Button>
+              )}
+
+              {/* IF USER LOGGED IN */}
+              {user && (
+                <>
+                  {/* Become Owner button for logged-in users who are not already owners */}
+                  {role !== "owner" && (
+                    <Button
+                      variant="contained"
+                      onClick={() => navigate("/become-owner")}
+                      sx={{
+                        background: "linear-gradient(135deg, #4CAF50, #45a049)",
+                        "&:hover": {
+                          background: "linear-gradient(135deg, #45a049, #3d8b40)",
+                          transform: "translateY(-2px)",
+                        },
+                        borderRadius: "12px",
+                        fontWeight: 700,
+                        textTransform: "none",
+                        fontSize: "14px",
+                        px: 2.5,
+                        py: 1,
+                        boxShadow: "0 4px 12px rgba(76, 175, 80, 0.2)",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      🏪 Become Owner
+                    </Button>
+                  )}
+
+                  {installable && (
+                    <Button
+                      variant="contained"
+                      onClick={installApp}
+                      sx={{
+                        background: "linear-gradient(135deg, #2563eb, #1e40af)",
+                        "&:hover": {
+                          background: "linear-gradient(135deg, #1e40af, #1e3a8a)",
+                          transform: "translateY(-2px)",
+                        },
+                        borderRadius: "12px",
+                        fontWeight: 700,
+                        textTransform: "none",
+                        fontSize: "14px",
+                        px: 2.5,
+                        py: 1,
+                        boxShadow: "0 4px 12px rgba(37, 99, 235, 0.2)",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      📲 Install App
+                    </Button>
+                  )}
+
+                  {/* Conditional Rendering for Owner vs Normal User */}
+                  {role === "owner" ? (
+                    /* Owner gets a premium logout button */
+                    <Button
+                      variant="outlined"
+                      onClick={handleLogout}
+                      startIcon={<LogoutIcon />}
+                      sx={{
+                        borderColor: "#dc2626",
+                        color: "#dc2626",
+                        "&:hover": {
+                          borderColor: "#b91c1c",
+                          background: "rgba(220, 38, 38, 0.04)",
+                          transform: "translateY(-2px)",
+                        },
+                        borderRadius: "12px",
+                        fontWeight: 700,
+                        textTransform: "none",
+                        fontSize: "14px",
+                        px: 2.5,
+                        py: 1,
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      Logout
+                    </Button>
+                  ) : (
+                    /* Normal user gets profile dropdown with avatar */
+                    <>
+                      <IconButton 
+                        onClick={openMenu}
+                        sx={{
+                          p: 0,
+                          transition: "all 0.2s ease",
+                          "&:hover": {
+                            transform: "scale(1.05)",
+                          },
+                        }}
+                      >
+                        <Badge
+                          overlap="circular"
+                          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                          variant="dot"
+                          sx={{
+                            "& .MuiBadge-badge": {
+                              backgroundColor: "#4CAF50",
+                              boxShadow: "0 0 0 2px white",
+                            },
+                          }}
+                        >
+                          <Avatar
+                            sx={{
+                              background: `linear-gradient(135deg, ${BRAND_BLUE}, ${BRAND_GREEN})`,
+                              width: 44,
+                              height: 44,
+                              fontWeight: 700,
+                              fontSize: "18px",
+                              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                              cursor: "pointer",
+                            }}
+                          >
+                            {user?.displayName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "U"}
+                          </Avatar>
+                        </Badge>
+                      </IconButton>
+                      
+                      <Menu
+                        anchorEl={anchorEl}
+                        open={Boolean(anchorEl)}
+                        onClose={closeMenu}
+                        PaperProps={{
+                          sx: {
+                            mt: 1.5,
+                            borderRadius: "16px",
+                            boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.05)",
+                            minWidth: 220,
+                            border: "1px solid #e2e8f0",
+                            overflow: "hidden",
+                          },
+                        }}
+                        transformOrigin={{ horizontal: "right", vertical: "top" }}
+                        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+                      >
+                        {/* User Info Header */}
+                        <Box sx={{ px: 2, py: 1.5, background: "linear-gradient(135deg, #f8fafc, #f1f5f9)" }}>
+                          <Typography sx={{ fontWeight: 700, fontSize: "14px", color: "#1e293b" }}>
+                            {user?.displayName || user?.email || "User"}
+                          </Typography>
+                          <Typography sx={{ fontSize: "12px", color: "#64748b", mt: 0.5 }}>
+                            {user?.email}
+                          </Typography>
+                        </Box>
+                        <Divider />
+                        
+                        <MenuItem
+                          onClick={() => {
+                            navigate("/profile");
+                            closeMenu();
+                          }}
+                          sx={{
+                            py: 1.5,
+                            px: 2,
+                            gap: 1.5,
+                            transition: "all 0.2s ease",
+                            "&:hover": {
+                              background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
+                            },
+                          }}
+                        >
+                          <PersonIcon sx={{ color: BRAND_BLUE, fontSize: 20 }} />
+                          <Typography sx={{ fontWeight: 600, fontSize: "14px" }}>
+                            My Profile
+                          </Typography>
+                        </MenuItem>
+                        
+                        <Divider />
+                        
+                        <MenuItem
+                          onClick={() => {
+                            handleLogout();
+                            closeMenu();
+                          }}
+                          sx={{
+                            py: 1.5,
+                            px: 2,
+                            gap: 1.5,
+                            color: "#dc2626",
+                            transition: "all 0.2s ease",
+                            "&:hover": {
+                              background: "rgba(220, 38, 38, 0.04)",
+                            },
+                          }}
+                        >
+                          <LogoutIcon sx={{ fontSize: 20 }} />
+                          <Typography sx={{ fontWeight: 700, fontSize: "14px" }}>
+                            Logout
+                          </Typography>
+                        </MenuItem>
+                      </Menu>
+                    </>
+                  )}
+                </>
+              )}
+            </Box>
+          </Box>
+        </Paper>
+
+        <Box sx={{ mt: 3 }}>
+          <Outlet />
+        </Box>
       </div>
     </div>
   );
