@@ -791,7 +791,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
 
           {/* Removed the ⚠️ warning message as requested - top one zero */}
 
-          {pg.min_stay_months && pg.min_stay_months > 0 && (
+          {Number(pg.min_stay_months) > 0 && (
             <div style={{
               background: "#f0fdf4",
               padding: 12,
