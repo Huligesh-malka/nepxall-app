@@ -1663,8 +1663,10 @@ export default function PGDetails() {
     const hasValidNoticePeriod = pg.notice_period && pg.notice_period !== "" && pg.notice_period !== "0" && Number(pg.notice_period) > 0;
     
     const hasRules = rulesToCheck.some(rule => 
-      pg[rule] === true || pg[rule] === "true" || pg[rule] === "false"
-    );
+  pg[rule] === true || 
+  pg[rule] === "true" || 
+  pg[rule] === 1
+);
     
     return hasRules || hasValidMinStay || hasValidLockIn || hasValidNoticePeriod;
   };
