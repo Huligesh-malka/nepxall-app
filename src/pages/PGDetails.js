@@ -2423,40 +2423,59 @@ export default function PGDetails() {
             </div>
           )}
 
-          {(pg.total_rooms || pg.available_rooms !== undefined) && (
-            <div style={modernStyles.availabilityCard}>
-              <h3 style={modernStyles.availabilityTitle}>Availability Status</h3>
-              {pg.total_rooms && (
-                <div style={modernStyles.availabilityItem}>
-                  <div style={modernStyles.availabilityLabel}>Total {isToLet ? "Properties" : "Rooms"}</div>
-                  <div style={modernStyles.availabilityValue}>{pg.total_rooms}</div>
-                </div>
-              )}
-              {Number(pg.available_rooms) > 0 && (
-  <div style={modernStyles.availabilityItem}>
-    
-    <div style={modernStyles.availabilityLabel}>
-      Available Now
-    </div>
+          {(Number(pg.total_rooms) > 0 ||
+  Number(pg.available_rooms) > 0) && (
 
-    <div
-      style={{
-        ...modernStyles.availabilityValue,
-        color: "#10b981"
-      }}
-    >
-      {pg.available_rooms} Available
+  <div style={modernStyles.availabilityCard}>
+
+    <h3 style={modernStyles.availabilityTitle}>
+      Availability Status
+    </h3>
+
+    {/* TOTAL ROOMS */}
+    {Number(pg.total_rooms) > 0 && (
+      <div style={modernStyles.availabilityItem}>
+
+        <div style={modernStyles.availabilityLabel}>
+          Total {isToLet ? "Properties" : "Rooms"}
+        </div>
+
+        <div style={modernStyles.availabilityValue}>
+          {pg.total_rooms}
+        </div>
+
+      </div>
+    )}
+
+    {/* AVAILABLE ROOMS */}
+    {Number(pg.available_rooms) > 0 && (
+      <div style={modernStyles.availabilityItem}>
+
+        <div style={modernStyles.availabilityLabel}>
+          Available Now
+        </div>
+
+        <div
+          style={{
+            ...modernStyles.availabilityValue,
+            color: "#10b981"
+          }}
+        >
+          {pg.available_rooms} Available
+        </div>
+
+      </div>
+    )}
+
+    {/* NOTE */}
+    <div style={modernStyles.availabilityNote}>
+      {Number(pg.available_rooms) > 0
+        ? "Book now to secure your spot!"
+        : "Check back later for availability"}
     </div>
 
   </div>
 )}
-              <div style={modernStyles.availabilityNote}>
-                {pg.available_rooms > 0 
-                  ? "Book now to secure your spot!" 
-                  : "Check back later for availability"}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
