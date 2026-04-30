@@ -2259,7 +2259,7 @@ export default function PGDetails() {
 )}
 
 {/* AGREEMENT */}
-{(pg.agreement_mandatory === true ||
+{Number(pg.agreement_mandatory === true ||
   pg.agreement_mandatory === "true") && (
   <RuleItem 
     icon="📄" 
@@ -2270,7 +2270,7 @@ export default function PGDetails() {
 )}
 
 {/* ID PROOF */}
-{(pg.id_proof_mandatory === true ||
+{Number(pg.id_proof_mandatory === true ||
   pg.id_proof_mandatory === "true") && (
   <RuleItem 
     icon="🆔" 
