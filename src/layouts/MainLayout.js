@@ -272,6 +272,145 @@ const MainLayout = () => {
     return <Navigate to="/" replace />;
   }
 
+  // Premium Action Buttons Component (reused for both mobile and desktop)
+  const ActionButtons = () => (
+    <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+      {/* IF USER NOT LOGGED IN - Premium Login Button */}
+      {!user && (
+        <Button
+          variant="contained"
+          onClick={() => navigate("/login")}
+          sx={{
+            background: PREMIUM_COLORS.primary.gradient,
+            "&:hover": {
+              transform: "translateY(-2px)",
+              boxShadow: "0 10px 25px rgba(99, 102, 241, 0.3)"
+            },
+            borderRadius: "12px",
+            fontWeight: 600,
+            padding: "8px 24px",
+            transition: "all 0.3s ease",
+            textTransform: "none",
+            fontSize: "14px"
+          }}
+        >
+          Sign In
+        </Button>
+      )}
+
+      {/* IF USER LOGGED IN */}
+      {user && (
+        <Fade in={true} timeout={500}>
+          <Box sx={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            {/* Become Owner Premium Button */}
+            {role !== "owner" && (
+              <Tooltip title="Start earning as an owner" arrow TransitionComponent={Zoom}>
+                <Button
+                  variant="contained"
+                  onClick={() => navigate("/become-owner")}
+                  startIcon={<StorefrontIcon />}
+                  sx={{
+                    background: PREMIUM_COLORS.secondary.gradient,
+                    "&:hover": {
+                      transform: "translateY(-2px)",
+                      boxShadow: "0 10px 25px rgba(16, 185, 129, 0.3)"
+                    },
+                    borderRadius: "12px",
+                    fontWeight: 600,
+                    padding: "8px 20px",
+                    transition: "all 0.3s ease",
+                    textTransform: "none",
+                    fontSize: "14px"
+                  }}
+                >
+                  List Property
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* Premium Profile Dropdown */}
+            <Tooltip title="Profile" arrow TransitionComponent={Zoom}>
+              <IconButton
+                onClick={openMenu}
+                sx={{
+                  padding: 0,
+                  "&:hover": {
+                    transform: "scale(1.05)"
+                  },
+                  transition: "all 0.3s ease"
+                }}
+              >
+                <Avatar
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    background: getAvatarGradient(),
+                    boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
+                    cursor: "pointer",
+                    transition: "all 0.3s ease",
+                    "&:hover": {
+                      boxShadow: "0 6px 20px rgba(0,0,0,0.15)",
+                      transform: "scale(1.02)"
+                    }
+                  }}
+                >
+                  {getAvatarDisplay()}
+                </Avatar>
+              </IconButton>
+            </Tooltip>
+
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={closeMenu}
+              TransitionComponent={Zoom}
+              PaperProps={{
+                sx: {
+                  mt: 1.5,
+                  borderRadius: "16px",
+                  minWidth: 200,
+                  boxShadow: "0 20px 35px rgba(0,0,0,0.1)",
+                  border: `1px solid ${PREMIUM_COLORS.neutral[200]}`
+                }
+              }}
+            >
+              <Box sx={{ p: 2, borderBottom: `1px solid ${PREMIUM_COLORS.neutral[200]}` }}>
+                <Typography sx={{ fontWeight: 700, fontSize: 14 }}>
+                  {user?.displayName || "User"}
+                </Typography>
+                <Typography sx={{ fontSize: 12, color: PREMIUM_COLORS.neutral[500] }}>
+                  {user?.email}
+                </Typography>
+                <Box sx={{ mt: 1 }}>
+                  <Typography sx={{ fontSize: 11, fontWeight: 600, color: role === "owner" ? PREMIUM_COLORS.secondary.main : PREMIUM_COLORS.primary.main, textTransform: "uppercase" }}>
+                    {role === "owner" ? "🏠 Property Owner" : "👤 Tenant"}
+                  </Typography>
+                </Box>
+              </Box>
+              <MenuItem
+                onClick={() => {
+                  handleLogout();
+                  closeMenu();
+                }}
+                sx={{
+                  py: 1.5,
+                  gap: 1.5,
+                  color: "#ef4444",
+                  "&:hover": {
+                    background: "#ef444410"
+                  }
+                }}
+              >
+                <LogoutIcon sx={{ fontSize: 20 }} />
+                <Typography sx={{ fontWeight: 600 }}>Sign Out</Typography>
+              </MenuItem>
+            </Menu>
+          </Box>
+        </Fade>
+      )}
+    </div>
+  );
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: PREMIUM_COLORS.neutral[50] }}>
       {/* Sidebar only for logged-in users */}
@@ -287,163 +426,44 @@ const MainLayout = () => {
           overflowX: "hidden",
         }}
       >
-        {/* Premium Header */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "flex-end",
-            alignItems: "center",
-            mb: isMobile ? 1 : 4,
-            flexWrap: "wrap",
-            gap: 2,
-            position: isMobile ? "relative" : "sticky",
-            top: 0,
-            zIndex: 1100,
-            background: isMobile ? "transparent" : scrolled ? "rgba(255, 255, 255, 0.95)" : "transparent",
-            backdropFilter: scrolled ? "blur(20px)" : "none",
-            borderRadius: isMobile ? "0px" : scrolled ? "16px" : "0px",
-            padding: isMobile ? "0px" : scrolled ? "16px 24px" : "0px",
-            transition: "all 0.3s ease",
-            boxShadow: isMobile ? "none" : scrolled ? "0 4px 20px rgba(0,0,0,0.05)" : "none"
-          }}
-        >
-          {/* Premium Action Buttons */}
-          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            {/* IF USER NOT LOGGED IN - Premium Login Button */}
-            {!user && (
-              <Button
-                variant="contained"
-                onClick={() => navigate("/login")}
-                sx={{
-                  background: PREMIUM_COLORS.primary.gradient,
-                  "&:hover": {
-                    transform: "translateY(-2px)",
-                    boxShadow: "0 10px 25px rgba(99, 102, 241, 0.3)"
-                  },
-                  borderRadius: "12px",
-                  fontWeight: 600,
-                  padding: "8px 24px",
-                  transition: "all 0.3s ease",
-                  textTransform: "none",
-                  fontSize: "14px"
-                }}
-              >
-                Sign In
-              </Button>
-            )}
-
-            {/* IF USER LOGGED IN */}
-            {user && (
-              <Fade in={true} timeout={500}>
-                <Box sx={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                  {/* Become Owner Premium Button */}
-                  {role !== "owner" && (
-                    <Tooltip title="Start earning as an owner" arrow TransitionComponent={Zoom}>
-                      <Button
-                        variant="contained"
-                        onClick={() => navigate("/become-owner")}
-                        startIcon={<StorefrontIcon />}
-                        sx={{
-                          background: PREMIUM_COLORS.secondary.gradient,
-                          "&:hover": {
-                            transform: "translateY(-2px)",
-                            boxShadow: "0 10px 25px rgba(16, 185, 129, 0.3)"
-                          },
-                          borderRadius: "12px",
-                          fontWeight: 600,
-                          padding: "8px 20px",
-                          transition: "all 0.3s ease",
-                          textTransform: "none",
-                          fontSize: "14px"
-                        }}
-                      >
-                        List Property
-                      </Button>
-                    </Tooltip>
-                  )}
-
-                  {/* Premium Profile Dropdown */}
-                  <Tooltip title="Profile" arrow TransitionComponent={Zoom}>
-                    <IconButton
-                      onClick={openMenu}
-                      sx={{
-                        padding: 0,
-                        "&:hover": {
-                          transform: "scale(1.05)"
-                        },
-                        transition: "all 0.3s ease"
-                      }}
-                    >
-                      <Avatar
-                        sx={{
-                          width: 48,
-                          height: 48,
-                          background: getAvatarGradient(),
-                          boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
-                          cursor: "pointer",
-                          transition: "all 0.3s ease",
-                          "&:hover": {
-                            boxShadow: "0 6px 20px rgba(0,0,0,0.15)",
-                            transform: "scale(1.02)"
-                          }
-                        }}
-                      >
-                        {getAvatarDisplay()}
-                      </Avatar>
-                    </IconButton>
-                  </Tooltip>
-
-                  <Menu
-                    anchorEl={anchorEl}
-                    open={Boolean(anchorEl)}
-                    onClose={closeMenu}
-                    TransitionComponent={Zoom}
-                    PaperProps={{
-                      sx: {
-                        mt: 1.5,
-                        borderRadius: "16px",
-                        minWidth: 200,
-                        boxShadow: "0 20px 35px rgba(0,0,0,0.1)",
-                        border: `1px solid ${PREMIUM_COLORS.neutral[200]}`
-                      }
-                    }}
-                  >
-                    <Box sx={{ p: 2, borderBottom: `1px solid ${PREMIUM_COLORS.neutral[200]}` }}>
-                      <Typography sx={{ fontWeight: 700, fontSize: 14 }}>
-                        {user?.displayName || "User"}
-                      </Typography>
-                      <Typography sx={{ fontSize: 12, color: PREMIUM_COLORS.neutral[500] }}>
-                        {user?.email}
-                      </Typography>
-                      <Box sx={{ mt: 1 }}>
-                        <Typography sx={{ fontSize: 11, fontWeight: 600, color: role === "owner" ? PREMIUM_COLORS.secondary.main : PREMIUM_COLORS.primary.main, textTransform: "uppercase" }}>
-                          {role === "owner" ? "🏠 Property Owner" : "👤 Tenant"}
-                        </Typography>
-                      </Box>
-                    </Box>
-                    <MenuItem
-                      onClick={() => {
-                        handleLogout();
-                        closeMenu();
-                      }}
-                      sx={{
-                        py: 1.5,
-                        gap: 1.5,
-                        color: "#ef4444",
-                        "&:hover": {
-                          background: "#ef444410"
-                        }
-                      }}
-                    >
-                      <LogoutIcon sx={{ fontSize: 20 }} />
-                      <Typography sx={{ fontWeight: 600 }}>Sign Out</Typography>
-                    </MenuItem>
-                  </Menu>
-                </Box>
-              </Fade>
-            )}
+        {/* Mobile Only - Buttons at top without header container */}
+        {isMobile && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "10px",
+              marginBottom: "10px"
+            }}
+          >
+            <ActionButtons />
           </div>
-        </Box>
+        )}
+
+        {/* Desktop Only - Premium Header with sticky behavior */}
+        {!isMobile && (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              mb: 4,
+              flexWrap: "wrap",
+              gap: 2,
+              position: "sticky",
+              top: 0,
+              zIndex: 1100,
+              background: scrolled ? "rgba(255, 255, 255, 0.95)" : "transparent",
+              backdropFilter: scrolled ? "blur(20px)" : "none",
+              borderRadius: scrolled ? "16px" : "0px",
+              padding: scrolled ? "16px 24px" : "0px",
+              transition: "all 0.3s ease",
+              boxShadow: scrolled ? "0 4px 20px rgba(0,0,0,0.05)" : "none"
+            }}
+          >
+            <ActionButtons />
+          </Box>
+        )}
 
         {/* Premium Content Area with Smooth Animation */}
         <Box
