@@ -242,31 +242,6 @@ const MainLayout = () => {
     return path ? path.replace("-", " ").toUpperCase() : "PAGE";
   };
 
-  // Get avatar initials from user's display name or email
-  const getAvatarInitials = () => {
-    if (user?.displayName) {
-      return user.displayName.charAt(0).toUpperCase();
-    }
-    if (user?.email) {
-      return user.email.charAt(0).toUpperCase();
-    }
-    return "U";
-  };
-
-  // Get avatar styling based on user role
-  const getAvatarStyling = () => {
-    if (role === "owner") {
-      return {
-        background: "#7c3aed", // Purple for owners
-        "&:hover": { background: "#6d28d9" }
-      };
-    }
-    return {
-      background: "#2563eb", // Blue for regular users
-      "&:hover": { background: "#1d4ed8" }
-    };
-  };
-
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       {/* Sidebar only for logged-in users */}
@@ -353,102 +328,39 @@ const MainLayout = () => {
                 )}
 
                 {/* Profile Dropdown Menu */}
-                <IconButton onClick={openMenu} sx={{ p: 0 }}>
+                <IconButton onClick={openMenu}>
                   <Avatar
                     sx={{
-                      ...getAvatarStyling(),
+                      background: "#2563eb",
                       width: 42,
                       height: 42,
-                      fontWeight: 700,
-                      transition: "transform 0.2s ease",
-                      "&:hover": {
-                        transform: "scale(1.05)"
-                      }
+                      fontWeight: 700
                     }}
                   >
-                    {getAvatarInitials()}
+                    {user?.displayName?.charAt(0)?.toUpperCase() || "U"}
                   </Avatar>
                 </IconButton>
-                
                 <Menu
                   anchorEl={anchorEl}
                   open={Boolean(anchorEl)}
                   onClose={closeMenu}
-                  transformOrigin={{ horizontal: "right", vertical: "top" }}
-                  anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-                  PaperProps={{
-                    sx: {
-                      mt: 1,
-                      minWidth: 180,
-                      borderRadius: "12px",
-                      boxShadow: "0 4px 20px rgba(0,0,0,0.1)"
-                    }
-                  }}
                 >
-                  {/* Show role badge in dropdown */}
-                  <Box sx={{ 
-                    px: 2, 
-                    py: 1.5, 
-                    borderBottom: "1px solid #e2e8f0",
-                    mb: 0.5
-                  }}>
-                    <Typography sx={{ fontWeight: 600, fontSize: 14 }}>
-                      {user?.displayName || user?.email}
-                    </Typography>
-                    <Typography sx={{ fontSize: 12, color: "#64748b", textTransform: "capitalize" }}>
-                      {role === "owner" ? "🏢 Owner" : "👤 User"}
-                    </Typography>
-                  </Box>
-                  
                   <MenuItem
                     onClick={() => {
                       navigate("/profile");
                       closeMenu();
                     }}
-                    sx={{
-                      py: 1.5,
-                      gap: 1.5,
-                      "&:hover": { background: "#f1f5f9" }
-                    }}
                   >
-                    <span style={{ fontSize: "18px" }}>👤</span>
-                    Profile
+                    👤 Profile
                   </MenuItem>
-                  
-                  {role === "owner" && (
-                    <MenuItem
-                      onClick={() => {
-                        navigate("/owner/dashboard");
-                        closeMenu();
-                      }}
-                      sx={{
-                        py: 1.5,
-                        gap: 1.5,
-                        "&:hover": { background: "#f1f5f9" }
-                      }}
-                    >
-                      <span style={{ fontSize: "18px" }}>🏪</span>
-                      Owner Dashboard
-                    </MenuItem>
-                  )}
-                  
                   <MenuItem
                     onClick={() => {
                       handleLogout();
                       closeMenu();
                     }}
-                    sx={{
-                      py: 1.5,
-                      gap: 1.5,
-                      color: "#dc2626",
-                      fontWeight: 600,
-                      borderTop: "1px solid #e2e8f0",
-                      mt: 0.5,
-                      "&:hover": { background: "#fef2f2" }
-                    }}
+                    sx={{ color: "red", fontWeight: 600 }}
                   >
-                    <span style={{ fontSize: "18px" }}>🚪</span>
-                    Logout
+                    🚪 Logout
                   </MenuItem>
                 </Menu>
               </>
