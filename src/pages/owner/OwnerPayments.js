@@ -607,24 +607,23 @@ export default function OwnerPayments() {
 
       {/* Main Table */}
       <Paper elevation={0} sx={{ borderRadius: 3, overflow: 'auto', border: '1px solid #e0e0e0' }}>
-        <Table sx={{ tableLayout: "fixed", minWidth: isMobile ? 1200 : '100%' }}>
+        <Table sx={{ tableLayout: "fixed", width: "100%", borderCollapse: "collapse", minWidth: isMobile ? 1000 : '100%' }}>
           <TableHead sx={{ bgcolor: "#f8fafc" }}>
             <TableRow>
               <TableCell width={40} sx={{ p: 1.5 }}></TableCell>
-              <TableCell align="center" width={180} sx={{ fontWeight: 700, p: 1.5 }}>Booking ID</TableCell>
-              <TableCell align="center" width={180} sx={{ fontWeight: 700, p: 1.5 }}>Tenant Name</TableCell>
-              <TableCell align="center" width={140} sx={{ fontWeight: 700, p: 1.5 }}>Token Amount</TableCell>
+              <TableCell align="center" width={140} sx={{ fontWeight: 700, p: 1.5 }}>Booking ID</TableCell>
+              <TableCell align="center" width={130} sx={{ fontWeight: 700, p: 1.5 }}>Token Amount</TableCell>
               <TableCell align="center" width={120} sx={{ fontWeight: 700, p: 1.5 }}>Sharing</TableCell>
-              <TableCell align="center" width={200} sx={{ fontWeight: 700, p: 1.5 }}>Agreement</TableCell>
-              <TableCell align="center" width={200} sx={{ fontWeight: 700, p: 1.5 }}>Payment</TableCell>
-              <TableCell align="center" width={150} sx={{ fontWeight: 700, p: 1.5 }}>Join Status</TableCell>
+              <TableCell align="center" width={180} sx={{ fontWeight: 700, p: 1.5 }}>Agreement</TableCell>
+              <TableCell align="center" width={180} sx={{ fontWeight: 700, p: 1.5 }}>Payment</TableCell>
+              <TableCell align="center" width={140} sx={{ fontWeight: 700, p: 1.5 }}>Join Status</TableCell>
               <TableCell align="center" width={150} sx={{ fontWeight: 700, p: 1.5 }}>Full Payment</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
+                <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
                   No active settlements found.
                 </TableCell>
               </TableRow>
@@ -663,7 +662,7 @@ export default function OwnerPayments() {
                     </TableRow>
 
                     <TableRow>
-                      <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={9}>
+                      <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
                         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                           <Box sx={{ margin: 0 }}>
                             {groupedData[pgName].map(item => {
@@ -684,7 +683,6 @@ export default function OwnerPayments() {
                                       </Typography>
                                     </Box>
                                   </TableCell>
-                                  <TableCell align="center" sx={{ p: 1.5, verticalAlign: "middle", fontSize: '0.9rem' }}>{item.tenant_name}</TableCell>
                                   <TableCell align="center" sx={{ p: 1.5, verticalAlign: "middle" }}>
                                     <Box>
                                       <Typography
