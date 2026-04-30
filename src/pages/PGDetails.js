@@ -929,19 +929,30 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
         </p>
         
         <div style={modernStyles.nearbyPgStats}>
-          <div style={modernStyles.nearbyPgStat}>
-            <span style={modernStyles.nearbyPgStatIcon}>💰</span>
-            <span style={modernStyles.nearbyPgStatText}>
-              {startingPrice ? `₹${startingPrice.toLocaleString('en-IN')}/month` : "Price on request"}
-            </span>
-          </div>
-          <div style={modernStyles.nearbyPgStat}>
-            <span style={modernStyles.nearbyPgStatIcon}>🏠</span>
-            <span style={modernStyles.nearbyPgStatText}>
-              {pg.available_rooms || pg.total_rooms || 0} rooms
-            </span>
-          </div>
-        </div>
+
+  {/* PRICE */}
+  <div style={modernStyles.nearbyPgStat}>
+    <span style={modernStyles.nearbyPgStatIcon}>💰</span>
+
+    <span style={modernStyles.nearbyPgStatText}>
+      {startingPrice
+        ? `₹${Number(startingPrice).toLocaleString("en-IN")}/month`
+        : "Price on request"}
+    </span>
+  </div>
+
+  {/* SHOW ROOMS ONLY IF > 0 */}
+  {Number(pg.available_rooms || pg.total_rooms) > 0 && (
+    <div style={modernStyles.nearbyPgStat}>
+      <span style={modernStyles.nearbyPgStatIcon}>🏠</span>
+
+      <span style={modernStyles.nearbyPgStatText}>
+        {pg.available_rooms || pg.total_rooms} rooms
+      </span>
+    </div>
+  )}
+
+</div>
         
         <div style={modernStyles.nearbyPgFacilities}>
           {pg.ac_available && <span style={modernStyles.nearbyPgFacility}>❄️</span>}
