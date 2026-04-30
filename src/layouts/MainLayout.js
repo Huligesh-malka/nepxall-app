@@ -11,7 +11,6 @@ import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import GetAppIcon from '@mui/icons-material/GetApp';
-import MenuIcon from '@mui/icons-material/Menu';
 
 const SIDEBAR_WIDTH = 260;
 
@@ -197,7 +196,6 @@ const MainLayout = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [scrolled, setScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -289,17 +287,15 @@ const MainLayout = () => {
           overflowX: "hidden",
         }}
       >
-        {/* Premium Header - Fixed Layout for Centering */}
+        {/* Premium Header */}
         <Box
           sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "auto 1fr auto",
-              sm: "auto 1fr auto"
-            },
+            display: "flex",
+            justifyContent: "flex-end",
             alignItems: "center",
-            gap: 2,
             mb: 4,
+            flexWrap: "wrap",
+            gap: 2,
             position: "sticky",
             top: 0,
             zIndex: 1100,
@@ -311,60 +307,8 @@ const MainLayout = () => {
             boxShadow: scrolled ? "0 4px 20px rgba(0,0,0,0.05)" : "none"
           }}
         >
-          {/* Left spacer - empty but takes up space for balance */}
-          <Box sx={{ visibility: "hidden" }}>
-            <Box sx={{ width: 40 }} />
-          </Box>
-
-          {/* Center - Welcome Back Message */}
-          {user && (
-            <Box sx={{ 
-              textAlign: "center",
-              justifySelf: "center",
-              width: "100%"
-            }}>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 800,
-                  background: PREMIUM_COLORS.primary.gradient,
-                  backgroundClip: "text",
-                  WebkitBackgroundClip: "text",
-                  color: "transparent",
-                  letterSpacing: "-0.5px",
-                  mb: 0.5,
-                  fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" }
-                }}
-              >
-                Welcome Back!
-              </Typography>
-              <Typography sx={{ color: PREMIUM_COLORS.neutral[500], fontSize: { xs: 12, sm: 14 }, fontWeight: 500 }}>
-                {user?.displayName ? `Good to see you, ${user.displayName}` : "Good to see you again"}
-              </Typography>
-            </Box>
-          )}
-
-          {/* For non-logged in users, show empty spacer */}
-          {!user && (
-            <Box sx={{ textAlign: "center" }}>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 800,
-                  background: PREMIUM_COLORS.primary.gradient,
-                  backgroundClip: "text",
-                  WebkitBackgroundClip: "text",
-                  color: "transparent",
-                  letterSpacing: "-0.5px",
-                }}
-              >
-                
-              </Typography>
-            </Box>
-          )}
-
-          {/* Premium Action Buttons - Right aligned */}
-          <div style={{ display: "flex", gap: "12px", alignItems: "center", justifySelf: "end" }}>
+          {/* Premium Action Buttons */}
+          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
             {/* IF USER NOT LOGGED IN - Premium Login Button */}
             {!user && (
               <Button
@@ -378,10 +322,10 @@ const MainLayout = () => {
                   },
                   borderRadius: "12px",
                   fontWeight: 600,
-                  padding: { xs: "6px 16px", sm: "8px 24px" },
+                  padding: "8px 24px",
                   transition: "all 0.3s ease",
                   textTransform: "none",
-                  fontSize: { xs: "12px", sm: "14px" }
+                  fontSize: "14px"
                 }}
               >
                 Sign In
@@ -391,8 +335,8 @@ const MainLayout = () => {
             {/* IF USER LOGGED IN */}
             {user && (
               <Fade in={true} timeout={500}>
-                <Box sx={{ display: "flex", gap: { xs: "8px", sm: "12px" }, alignItems: "center" }}>
-                  {/* Become Owner Premium Button - Hide on very small screens */}
+                <Box sx={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                  {/* Become Owner Premium Button */}
                   {role !== "owner" && (
                     <Tooltip title="Start earning as an owner" arrow TransitionComponent={Zoom}>
                       <Button
@@ -401,7 +345,6 @@ const MainLayout = () => {
                         startIcon={<StorefrontIcon />}
                         sx={{
                           background: PREMIUM_COLORS.secondary.gradient,
-                          display: { xs: "none", sm: "inline-flex" },
                           "&:hover": {
                             transform: "translateY(-2px)",
                             boxShadow: "0 10px 25px rgba(16, 185, 129, 0.3)"
@@ -419,7 +362,7 @@ const MainLayout = () => {
                     </Tooltip>
                   )}
 
-                  {/* Install App Button - Hide text on mobile */}
+                  {/* Install App Button */}
                   {installable && (
                     <Tooltip title="Install our app for better experience" arrow TransitionComponent={Zoom}>
                       <Button
@@ -429,8 +372,6 @@ const MainLayout = () => {
                         sx={{
                           borderColor: PREMIUM_COLORS.primary.main,
                           color: PREMIUM_COLORS.primary.main,
-                          display: { xs: "inline-flex", sm: "inline-flex" },
-                          minWidth: { xs: "auto", sm: "auto" },
                           "&:hover": {
                             borderColor: PREMIUM_COLORS.primary.dark,
                             background: `${PREMIUM_COLORS.primary.main}10`,
@@ -439,17 +380,10 @@ const MainLayout = () => {
                           borderRadius: "12px",
                           fontWeight: 600,
                           transition: "all 0.3s ease",
-                          textTransform: "none",
-                          padding: { xs: "8px 12px", sm: "8px 20px" },
-                          "& .MuiButton-startIcon": {
-                            margin: { xs: 0, sm: "0 8px 0 -4px" }
-                          },
-                          "& span": {
-                            display: { xs: "none", sm: "inline" }
-                          }
+                          textTransform: "none"
                         }}
                       >
-                        <Box component="span">Install</Box>
+                        Install
                       </Button>
                     </Tooltip>
                   )}
@@ -468,8 +402,8 @@ const MainLayout = () => {
                     >
                       <Avatar
                         sx={{
-                          width: { xs: 40, sm: 48 },
-                          height: { xs: 40, sm: 48 },
+                          width: 48,
+                          height: 48,
                           background: getAvatarGradient(),
                           boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
                           cursor: "pointer",
