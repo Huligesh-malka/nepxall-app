@@ -2238,61 +2238,46 @@ export default function PGDetails() {
                           />
                         )}
                         
-                        {/* LOCK-IN PERIOD */}
-{pg.lock_in_period &&
-  pg.lock_in_period !== "" &&
-  pg.lock_in_period !== "0" &&
-  pg.lock_in_period !== 0 &&
-  pg.lock_in_period !== "true" &&
-  pg.lock_in_period !== "false" &&
-  Number(pg.lock_in_period) > 0 && (
-    <RuleItem
-      icon="📝"
-      label={`Lock-in Period: ${pg.lock_in_period} months`}
-      allowed={true}
-      description="Lock-in period before leaving"
-    />
+{/* LOCK IN PERIOD */}
+{Number(pg.lock_in_period) > 0 && (
+  <RuleItem 
+    icon="📝" 
+    label={`Lock-in Period: ${pg.lock_in_period} months`} 
+    allowed={true}
+    description="Lock-in period before leaving"
+  />
 )}
 
-                        
-                        {/* NOTICE PERIOD */}
-{pg.notice_period &&
-  pg.notice_period !== "" &&
-  pg.notice_period !== "0" &&
-  pg.notice_period !== 0 &&
-  pg.notice_period !== "true" &&
-  pg.notice_period !== "false" &&
-  Number(pg.notice_period) > 0 && (
-    <RuleItem
-      icon="⏰"
-      label={`Notice Period: ${pg.notice_period} months`}
-      allowed={true}
-      description="Notice period before vacating"
-    />
+{/* NOTICE PERIOD */}
+{Number(pg.notice_period) > 0 && (
+  <RuleItem 
+    icon="⏰" 
+    label={`Notice Period: ${pg.notice_period} months`} 
+    allowed={true}
+    description="Notice period before vacating"
+  />
 )}
 
-                        
-                        {/* AGREEMENT */}
+{/* AGREEMENT */}
 {(pg.agreement_mandatory === true ||
   pg.agreement_mandatory === "true") && (
-    <RuleItem
-      icon="📄"
-      label="Agreement Mandatory"
-      allowed={true}
-      description="Legal agreement required"
-    />
+  <RuleItem 
+    icon="📄" 
+    label="Agreement Mandatory" 
+    allowed={true}
+    description="Legal agreement required"
+  />
 )}
 
-                        
-                        {/* ID PROOF */}
+{/* ID PROOF */}
 {(pg.id_proof_mandatory === true ||
   pg.id_proof_mandatory === "true") && (
-    <RuleItem
-      icon="🆔"
-      label="ID Proof Mandatory"
-      allowed={true}
-      description="ID proof verification required"
-    />
+  <RuleItem 
+    icon="🆔" 
+    label="ID Proof Mandatory" 
+    allowed={true}
+    description="ID proof verification required"
+  />
 )}
                       </div>
                     )}
