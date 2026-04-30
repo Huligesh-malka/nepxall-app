@@ -16,7 +16,7 @@ const ADMIN_BASE_URL =
   process.env.REACT_APP_ADMIN_API_URL ||
   "https://nepxall-backend.onrender.com/api/admin";
 
-console.log("🌐 API CONFIG →", { USER_BASE_URL, ADMIN_BASE_URL });
+
 
 /* =====================================================
    🔥 BACKEND WAKEUP SYSTEM (IMPROVED SAFE)

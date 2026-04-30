@@ -2,7 +2,7 @@
    🔧 CONFIGURATION FILE — PRODUCTION SAFE (CRA)
 ===================================================== */
 
-console.log("🔥 CONFIG.JS LOADED");
+
 
 /* =====================================================
    🧼 URL SANITIZER
