@@ -4161,15 +4161,7 @@ function UserPGSearch() {
                   {loadingMore ? "Loading more..." : "🔽 VIEW MORE PROPERTIES"}
                 </button>
               ) : (
-                <div style={{ 
-                  padding: "20px", 
-                  textAlign: "center", 
-                  color: "#666",
-                  borderTop: "1px solid #eee"
-                }}>
-                  ✨ You've seen all {pgs.length} properties ✨
-                </div>
-              )}
+                
               
               <p style={{ 
                 marginTop: 15, 
