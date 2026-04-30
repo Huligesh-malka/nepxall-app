@@ -2623,7 +2623,7 @@ function UserPGSearch() {
     foodType: ""
   });
 
-  const limit = 10;
+  const limit = 1000;
 
   useEffect(() => {
     const permissionAsked = localStorage.getItem(LOCATION_PERMISSION_ASKED_KEY);
@@ -2734,7 +2734,7 @@ function UserPGSearch() {
           setPgs(prev => [...prev, ...processedData]);
         }
         
-        setHasMore(processedData.length === limit);
+        setHasMore(false);
       }
       
       setLoading(false);

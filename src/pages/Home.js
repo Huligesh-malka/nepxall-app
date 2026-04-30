@@ -9,7 +9,7 @@ export default function Home() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const limit = 10;
+  const limit = 1000;
 
   useEffect(() => {
     setLoading(true);
@@ -24,7 +24,7 @@ export default function Home() {
           }
           
           // ✅ Check if more data exists
-          setHasMore(res.data.hasMore || (res.data.data.length === limit));
+          setHasMore(false);
         }
         setLoading(false);
         setLoadingMore(false);
@@ -73,45 +73,8 @@ export default function Home() {
         ))}
       </div>
 
-      {/* ✅ View More Button with better visibility */}
+      {/* ✅ Show count */}
       <div style={{ textAlign: "center", marginTop: 50, marginBottom: 30 }}>
-        {hasMore ? (
-          <button
-            onClick={loadMore}
-            disabled={loadingMore}
-            style={{
-              padding: "14px 28px",
-              background: loadingMore ? "#9ca3af" : "#dc2626", // 🔴 RED for visibility
-              color: "white",
-              border: "none",
-              borderRadius: 12,
-              cursor: loadingMore ? "not-allowed" : "pointer",
-              fontWeight: "bold",
-              fontSize: 16,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-              transition: "all 0.2s ease"
-            }}
-            onMouseEnter={(e) => {
-              if (!loadingMore) e.currentTarget.style.transform = "scale(1.02)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "scale(1)";
-            }}
-          >
-            {loadingMore ? "Loading more..." : "🔽 VIEW MORE PROPERTIES"}
-          </button>
-        ) : (
-          <div style={{ 
-            padding: "20px", 
-            textAlign: "center", 
-            color: "#666",
-            borderTop: "1px solid #eee"
-          }}>
-            ✨ You've seen all {pgs.length} properties ✨
-          </div>
-        )}
-        
-        {/* ✅ Show count */}
         <p style={{ 
           marginTop: 15, 
           fontSize: 14, 
