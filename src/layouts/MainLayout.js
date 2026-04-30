@@ -119,7 +119,7 @@ const LoadingSpinner = ({ message = "Loading..." }) => (
             fontWeight: 500,
           }}
         >
-          Next Places for Living
+         
         </Typography>
       </Box>
 
@@ -268,24 +268,20 @@ const MainLayout = () => {
 
           {/* RIGHT SIDE BUTTONS */}
           <div style={{ display: "flex", gap: "10px" }}>
-            {/* ✅ IF USER NOT LOGGED IN */}
+            {/* ✅ IF USER NOT LOGGED IN - Show Login button only */}
             {!user && (
-              <>
-                
-
-                <Button
-                  variant="contained"
-                  onClick={() => navigate("/become-owner")}
-                  sx={{
-                    background: "#4CAF50",
-                    "&:hover": { background: "#43a047" },
-                    borderRadius: "8px",
-                    fontWeight: 600
-                  }}
-                >
-                  LOGIN
-                </Button>
-              </>
+              <Button
+                variant="contained"
+                onClick={() => navigate("/login")}
+                sx={{
+                  background: "#2563eb",
+                  "&:hover": { background: "#1d4ed8" },
+                  borderRadius: "8px",
+                  fontWeight: 600
+                }}
+              >
+                Login
+              </Button>
             )}
 
             {/* ✅ IF USER LOGGED IN */}
@@ -303,7 +299,7 @@ const MainLayout = () => {
                       fontWeight: 600
                     }}
                   >
-                    LOGIN
+                    Become Owner
                   </Button>
                 )}
 
