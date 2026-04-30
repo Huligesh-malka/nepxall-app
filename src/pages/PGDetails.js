@@ -2238,43 +2238,62 @@ export default function PGDetails() {
                           />
                         )}
                         
-                        {/* FIXED: lock_in_period - only show if valid and > 0 */}
-                        {pg.lock_in_period && pg.lock_in_period !== "" && pg.lock_in_period !== "0" && Number(pg.lock_in_period) > 0 && (
-                          <RuleItem 
-                            icon="📝" 
-                            label={`Lock-in Period: ${pg.lock_in_period} months`} 
-                            allowed={true}
-                            description="Lock-in period before leaving"
-                          />
-                        )}
+                        {/* LOCK-IN PERIOD */}
+{pg.lock_in_period &&
+  pg.lock_in_period !== "" &&
+  pg.lock_in_period !== "0" &&
+  pg.lock_in_period !== 0 &&
+  pg.lock_in_period !== "true" &&
+  pg.lock_in_period !== "false" &&
+  Number(pg.lock_in_period) > 0 && (
+    <RuleItem
+      icon="📝"
+      label={`Lock-in Period: ${pg.lock_in_period} months`}
+      allowed={true}
+      description="Lock-in period before leaving"
+    />
+)}
+
                         
-                        {/* FIXED: notice_period - only show if valid and > 0 */}
-                        {pg.notice_period && pg.notice_period !== "" && pg.notice_period !== "0" && Number(pg.notice_period) > 0 && (
-                          <RuleItem 
-                            icon="⏰" 
-                            label={`Notice Period: ${pg.notice_period} months`} 
-                            allowed={true}
-                            description="Notice period before vacating"
-                          />
-                        )}
+                        {/* NOTICE PERIOD */}
+{pg.notice_period &&
+  pg.notice_period !== "" &&
+  pg.notice_period !== "0" &&
+  pg.notice_period !== 0 &&
+  pg.notice_period !== "true" &&
+  pg.notice_period !== "false" &&
+  Number(pg.notice_period) > 0 && (
+    <RuleItem
+      icon="⏰"
+      label={`Notice Period: ${pg.notice_period} months`}
+      allowed={true}
+      description="Notice period before vacating"
+    />
+)}
+
                         
-                        {(pg.agreement_mandatory === true || pg.agreement_mandatory === "true" || pg.agreement_mandatory === "false") && (
-                          <RuleItem 
-                            icon="📄" 
-                            label="Agreement Mandatory" 
-                            allowed={pg.agreement_mandatory === true || pg.agreement_mandatory === "true"}
-                            description="Legal agreement required"
-                          />
-                        )}
+                        {/* AGREEMENT */}
+{(pg.agreement_mandatory === true ||
+  pg.agreement_mandatory === "true") && (
+    <RuleItem
+      icon="📄"
+      label="Agreement Mandatory"
+      allowed={true}
+      description="Legal agreement required"
+    />
+)}
+
                         
-                        {(pg.id_proof_mandatory === true || pg.id_proof_mandatory === "true" || pg.id_proof_mandatory === "false") && (
-                          <RuleItem 
-                            icon="🆔" 
-                            label="ID Proof Mandatory" 
-                            allowed={pg.id_proof_mandatory === true || pg.id_proof_mandatory === "true"}
-                            description="ID proof verification required"
-                          />
-                        )}
+                        {/* ID PROOF */}
+{(pg.id_proof_mandatory === true ||
+  pg.id_proof_mandatory === "true") && (
+    <RuleItem
+      icon="🆔"
+      label="ID Proof Mandatory"
+      allowed={true}
+      description="ID proof verification required"
+    />
+)}
                       </div>
                     )}
                   </div>
