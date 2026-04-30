@@ -94,6 +94,9 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://nepxall-backen
 // Key for localStorage to track if location permission was asked
 const LOCATION_PERMISSION_ASKED_KEY = "nepxall_location_permission_asked";
 
+/* ================= HELPER: GET MOBILE STATE ================= */
+const isMobileDevice = () => window.innerWidth < 768;
+
 /* ================= HELPERS ================= */
 const getPGCode = (id) => `PG-${String(id).padStart(5, "0")}`;
 
@@ -786,17 +789,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
             Your details will be auto-filled from your profile
           </p>
 
-          <div style={{
-            background: "#fff7ed",
-            padding: 12,
-            borderRadius: 8,
-            marginBottom: 15,
-            fontSize: 13,
-            color: "#9a3412",
-            border: "1px solid #fed7aa"
-          }}>
-            ⚠️ You can only request this PG once every 24 hours
-          </div>
+          {/* Removed the ⚠️ warning message as requested - top one zero */}
 
           {pg.min_stay_months && pg.min_stay_months > 0 && (
             <div style={{
@@ -2229,7 +2222,7 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
                           fontWeight: feature.key === 'price' ? 600 : 400
                         }}>
                           {getFeatureValue(pg, feature.key)}
-                                                </span>
+                        </span>
                       </td>
                     ))}
                   </tr>
@@ -2380,6 +2373,8 @@ const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
 
 /* ================= HERO BANNER COMPONENT ================= */
 const HeroBanner = () => {
+  const isMobile = isMobileDevice();
+  
   return (
     <div className="hero-section" style={{
       background: "linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%)",
@@ -2390,37 +2385,40 @@ const HeroBanner = () => {
       position: "relative"
     }}>
       <div style={{
-        display: "block",
-        padding: "48px 48px",
+        padding: "50px 30px 30px",
         position: "relative",
         zIndex: 2
       }}>
         <div>
+          {/* Responsive heading with mobile size 36px, desktop 52px */}
           <h1 className="hero-title" style={{
-            fontSize: 42,
+            fontSize: isMobile ? "36px" : "52px",
+            lineHeight: "1.15",
             fontWeight: 800,
             color: "#ffffff",
             marginBottom: 16,
-            lineHeight: 1.2,
             letterSpacing: "-0.02em"
           }}>
             Find Verified PGs,<br />
             Coliving & Rental Homes
           </h1>
+          {/* Responsive description text */}
           <p style={{
-            fontSize: 18,
+            fontSize: isMobile ? "16px" : "22px",
+            lineHeight: "1.4",
             color: "rgba(255,255,255,0.9)",
             marginBottom: 32,
-            lineHeight: 1.5,
             maxWidth: "90%"
           }}>
             Book trusted stays with secure payments, verified owners and instant booking support.
           </p>
           
+          {/* Feature Columns with improved alignment */}
           <div style={{
             display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
-            gap: 16,
+            gridTemplateColumns: "1fr 1fr",
+            gap: "16px",
+            alignItems: "start",
             marginBottom: 32
           }}>
             <div style={{
@@ -2501,14 +2499,14 @@ const HeroBanner = () => {
             </div>
           </div>
           
-          {/* Badges Section - Moved to left side */}
+          {/* Badges Section - Centered with flex-wrap */}
           <div className="hero-badges" style={{ 
             display: "flex", 
-            alignItems: "center", 
-            gap: 12, 
-            flexWrap: "wrap", 
-            marginTop: 20,
-            justifyContent: "flex-start"
+            alignItems: "center",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            gap: 12,
+            marginTop: 20
           }}>
             <div style={{
               background: "#10b981",
@@ -4307,4 +4305,3 @@ function UserPGSearch() {
 }
 
 export default UserPGSearch;
-                      
