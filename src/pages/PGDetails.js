@@ -2432,17 +2432,24 @@ export default function PGDetails() {
                   <div style={modernStyles.availabilityValue}>{pg.total_rooms}</div>
                 </div>
               )}
-              {(pg.available_rooms !== undefined) && (
-                <div style={modernStyles.availabilityItem}>
-                  <div style={modernStyles.availabilityLabel}>Available Now</div>
-                  <div style={{
-                    ...modernStyles.availabilityValue,
-                    color: pg.available_rooms > 0 ? "#10b981" : "#ef4444"
-                  }}>
-                    {pg.available_rooms > 0 ? `${pg.available_rooms} Available` : "Fully Occupied"}
-                  </div>
-                </div>
-              )}
+              {Number(pg.available_rooms) > 0 && (
+  <div style={modernStyles.availabilityItem}>
+    
+    <div style={modernStyles.availabilityLabel}>
+      Available Now
+    </div>
+
+    <div
+      style={{
+        ...modernStyles.availabilityValue,
+        color: "#10b981"
+      }}
+    >
+      {pg.available_rooms} Available
+    </div>
+
+  </div>
+)}
               <div style={modernStyles.availabilityNote}>
                 {pg.available_rooms > 0 
                   ? "Book now to secure your spot!" 
