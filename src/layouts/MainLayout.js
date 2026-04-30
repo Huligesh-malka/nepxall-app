@@ -3,16 +3,12 @@ import { Outlet, useLocation, Navigate, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
-import { Button, Box, Typography, CircularProgress, Menu, MenuItem, Avatar, IconButton, Badge, Tooltip, Zoom, Fade } from "@mui/material";
+import { Button, Box, Typography, CircularProgress, Menu, MenuItem, Avatar, IconButton, Tooltip, Zoom, Fade } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
-import DashboardIcon from '@mui/icons-material/Dashboard';
 import HomeIcon from '@mui/icons-material/Home';
 import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
-import SettingsIcon from '@mui/icons-material/Settings';
-import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
-import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import GetAppIcon from '@mui/icons-material/GetApp';
 
@@ -52,7 +48,7 @@ const PREMIUM_COLORS = {
 };
 
 // Premium Loading Component
-const PremiumLoadingSpinner = ({ message = "Loading your experience..." }) => (
+const PremiumLoadingSpinner = () => (
   <Box
     sx={{
       position: "fixed",
@@ -200,7 +196,6 @@ const MainLayout = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [scrolled, setScrolled] = useState(false);
-  const [notifications, setNotifications] = useState(3); // Example notification count
 
   useEffect(() => {
     const checkMobile = () => {
@@ -259,7 +254,7 @@ const MainLayout = () => {
 
   // Show branded loading spinner while checking auth
   if (loading) {
-    return <PremiumLoadingSpinner message="Loading your premium experience..." />;
+    return <PremiumLoadingSpinner />;
   }
 
   // SAFER REDIRECT LOGIC – only for non‑public routes
@@ -276,16 +271,6 @@ const MainLayout = () => {
   if (user && (location.pathname === "/login" || location.pathname === "/register")) {
     return <Navigate to="/" replace />;
   }
-
-  const getTitle = () => {
-    if (location.pathname === "/") return "Welcome Back";
-    if (location.pathname === "/pg") return "Premium PG Listings";
-    if (location.pathname.startsWith("/pg/")) return "Property Details";
-    if (location.pathname === "/booking") return "My Bookings";
-    if (location.pathname === "/owner/dashboard") return "Owner Dashboard";
-    const path = location.pathname.split("/").pop();
-    return path ? path.replace("-", " ").toUpperCase() : "Dashboard";
-  };
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: PREMIUM_COLORS.neutral[50] }}>
@@ -402,7 +387,7 @@ const MainLayout = () => {
                 <Box sx={{ display: "flex", gap: "12px", alignItems: "center" }}>
                   {/* Become Owner Premium Button */}
                   {role !== "owner" && (
-                    <Tooltip title="Start earning as an owner" arrow>
+                    <Tooltip title="Start earning as an owner" arrow TransitionComponent={Zoom}>
                       <Button
                         variant="contained"
                         onClick={() => navigate("/become-owner")}
@@ -428,7 +413,7 @@ const MainLayout = () => {
 
                   {/* Install App Button */}
                   {installable && (
-                    <Tooltip title="Install our app for better experience" arrow>
+                    <Tooltip title="Install our app for better experience" arrow TransitionComponent={Zoom}>
                       <Button
                         variant="outlined"
                         onClick={installApp}
@@ -452,26 +437,8 @@ const MainLayout = () => {
                     </Tooltip>
                   )}
 
-                  {/* Notification Bell */}
-                  <Tooltip title="Notifications" arrow>
-                    <IconButton
-                      sx={{
-                        background: PREMIUM_COLORS.neutral[100],
-                        "&:hover": {
-                          background: PREMIUM_COLORS.neutral[200],
-                          transform: "scale(1.05)"
-                        },
-                        transition: "all 0.3s ease"
-                      }}
-                    >
-                      <Badge badgeContent={notifications} color="error">
-                        <NotificationsNoneIcon sx={{ color: PREMIUM_COLORS.neutral[600] }} />
-                      </Badge>
-                    </IconButton>
-                  </Tooltip>
-
                   {/* Premium Profile Dropdown */}
-                  <Tooltip title="Profile" arrow>
+                  <Tooltip title="Profile" arrow TransitionComponent={Zoom}>
                     <IconButton
                       onClick={openMenu}
                       sx={{
@@ -553,14 +520,14 @@ const MainLayout = () => {
           </div>
         </Box>
 
-        {/* Premium Content Area with Animation */}
+        {/* Premium Content Area with Smooth Animation */}
         <Box
           sx={{
-            animation: "fadeInUp 0.6s ease-out",
+            animation: "fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
             "@keyframes fadeInUp": {
               "0%": {
                 opacity: 0,
-                transform: "translateY(20px)"
+                transform: "translateY(30px)"
               },
               "100%": {
                 opacity: 1,
