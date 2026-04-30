@@ -83,8 +83,7 @@ import {
   Gem,
   FileText,
   Clock as ClockIcon,
-  Headphones,
-  Wrench
+  Headphones
 } from "lucide-react";
 import api from "../api/api";
 
@@ -576,22 +575,10 @@ const BookingModal = ({ pg, onClose, onBook }) => {
   
   const [loading, setLoading] = useState(false);
 
-  // Get tomorrow's date for min date
-  const getTomorrowDate = () => {
-    const today = new Date();
-    today.setDate(today.getDate() + 1);
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  // Set default check-in date to tomorrow
   useEffect(() => {
     const defaultRoomType = getDefaultRoomType();
-    const tomorrowDate = getTomorrowDate();
     setBookingData({
-      checkInDate: tomorrowDate, // Set to tomorrow by default
+      checkInDate: "",
       roomType: defaultRoomType || ""
     });
   }, [pg]);
@@ -621,6 +608,15 @@ const BookingModal = ({ pg, onClose, onBook }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setBookingData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const getTomorrowDate = () => {
+    const today = new Date();
+    today.setDate(today.getDate() + 1);
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const getMaxDate = () => {
@@ -724,7 +720,6 @@ const BookingModal = ({ pg, onClose, onBook }) => {
   };
 
   const selectedPrice = getSelectedPrice();
-  const tomorrowDate = getTomorrowDate();
 
   return (
     <div style={{
@@ -821,24 +816,6 @@ const BookingModal = ({ pg, onClose, onBook }) => {
             </div>
           )}
 
-          {pg.notice_period && pg.notice_period > 0 && (
-            <div style={{
-              background: "#fef3c7",
-              padding: 12,
-              borderRadius: 8,
-              marginBottom: 15,
-              fontSize: 13,
-              color: "#92400e",
-              border: "1px solid #fde68a",
-              display: "flex",
-              alignItems: "center",
-              gap: 8
-            }}>
-              <Bell size={16} />
-              Notice Period: {pg.notice_period} month{pg.notice_period > 1 ? 's' : ''}
-            </div>
-          )}
-
           <form onSubmit={async (e) => {
             e.preventDefault();
             setLoading(true);
@@ -866,7 +843,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                 value={bookingData.checkInDate}
                 onChange={handleInputChange}
                 required
-                min={tomorrowDate}
+                min={getTomorrowDate()}
                 max={getMaxDate()}
                 style={{
                   width: "100%",
@@ -882,7 +859,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                 color: "#6b7280",
                 marginTop: 4
               }}>
-                Earliest check-in: {new Date(tomorrowDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} (24h notice required)
+                Earliest check-in: tomorrow (24h notice required)
               </p>
             </div>
 
@@ -939,12 +916,6 @@ const BookingModal = ({ pg, onClose, onBook }) => {
               <ul style={{ margin: 0, paddingLeft: 20, color: "#065f46", fontSize: 13 }}>
                 <li>You'll receive confirmation via email/SMS</li>
                 <li>Owner will contact you within 24 hours</li>
-                {pg.min_stay_months > 0 && (
-                  <li>Minimum {pg.min_stay_months} month{pg.min_stay_months > 1 ? 's' : ''} stay required</li>
-                )}
-                {pg.notice_period > 0 && (
-                  <li>{pg.notice_period} month{pg.notice_period > 1 ? 's' : ''} notice period for move-out</li>
-                )}
               </ul>
             </div>
 
@@ -1013,6 +984,1011 @@ const BookingModal = ({ pg, onClose, onBook }) => {
   );
 };
 
+/* ================= QUICK VIEW MODAL COMPONENT ================= */
+const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [showShareOptions, setShowShareOptions] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  const getMainImageUrl = () => {
+    if (pg.main_photo && pg.main_photo !== "") {
+      return getCorrectImageUrl(pg.main_photo);
+    }
+    
+    if (Array.isArray(pg.photos) && pg.photos.length > 0 && pg.photos[0]) {
+      return getCorrectImageUrl(pg.photos[0]);
+    }
+    
+    return "/no-image.png";
+  };
+
+  const mainImageUrl = getMainImageUrl();
+  const totalPhotos = Array.isArray(pg.photos) ? pg.photos.length : 0;
+
+  const toggleFavorite = () => {
+    const newState = !isFavorite;
+    setIsFavorite(newState);
+    onSaveFavorite(pg.id, newState);
+  };
+
+  const handleShare = () => {
+    setShowShareOptions(!showShareOptions);
+  };
+
+  const getTypeColor = () => {
+    if (pg.pg_category === "to_let") return "#f97316";
+    if (pg.pg_category === "coliving") return "#8b5cf6";
+    if (pg.pg_type === "boys") return "#16a34a";
+    if (pg.pg_type === "girls") return "#db2777";
+    return "#3b82f6";
+  };
+
+  const getTypeLabel = () => {
+    if (pg.pg_category === "to_let") return "🏠 To-Let Home";
+    if (pg.pg_category === "coliving") return "🤝 Co-Living";
+    if (pg.pg_type === "boys") return "👨 Boys PG";
+    if (pg.pg_type === "girls") return "👩 Girls PG";
+    return "🏢 PG/Hostel";
+  };
+
+  const hasFacility = (facility) => {
+    return pg[facility] === true || pg[facility] === 1 || pg[facility] === "true";
+  };
+
+  const renderRoomAmenities = () => {
+    const roomAmenities = [];
+    
+    if (pg.cupboard_available) roomAmenities.push({ 
+      icon: <DoorOpen size={16} />, 
+      label: "Cupboard/Wardrobe", 
+      color: "#8b5cf6" 
+    });
+    if (pg.table_chair_available) roomAmenities.push({ 
+      icon: <Coffee size={16} />, 
+      label: "Study Table & Chair", 
+      color: "#f59e0b" 
+    });
+    if (pg.attached_bathroom) roomAmenities.push({ 
+      icon: <Bath size={16} />, 
+      label: "Attached Bathroom", 
+      color: "#0ea5e9" 
+    });
+    if (pg.balcony_available) roomAmenities.push({ 
+      icon: <Sun size={16} />, 
+      label: "Balcony", 
+      color: "#10b981" 
+    });
+    if (pg.dining_table_available) roomAmenities.push({ 
+      icon: <Utensils size={16} />, 
+      label: "Dining Table", 
+      color: "#ec4899" 
+    });
+    if (pg.wall_mounted_clothes_hook) roomAmenities.push({ 
+      icon: <Key size={16} />, 
+      label: "Wall-mounted Clothes Hook", 
+      color: "#6b7280" 
+    });
+    if (pg.bed_with_mattress) roomAmenities.push({ 
+      icon: <Bed size={16} />, 
+      label: "Bed with Mattress", 
+      color: "#3b82f6" 
+    });
+    if (pg.fan_light) roomAmenities.push({ 
+      icon: <Zap size={16} />, 
+      label: "Fan & Light", 
+      color: "#f97316" 
+    });
+    if (pg.kitchen_room) roomAmenities.push({ 
+      icon: <Flame size={16} />, 
+      label: "Kitchen Room", 
+      color: "#ef4444" 
+    });
+    
+    if (pg.pg_category === "to_let" && pg.furnishing_type) {
+      roomAmenities.push({ 
+        icon: <Sofa size={16} />, 
+        label: `Furnishing: ${pg.furnishing_type.replace('_', ' ').toUpperCase()}`, 
+        color: "#f59e0b" 
+      });
+    }
+    
+    return roomAmenities;
+  };
+
+  const getPriceDetails = () => {
+    const priceDetails = [];
+    
+    if (pg.pg_category === "pg") {
+      if (pg.single_sharing && pg.single_sharing > 0) priceDetails.push({ 
+        label: "Single Sharing", 
+        value: `₹${formatPrice(pg.single_sharing)}`,
+        icon: <UserCheck size={16} />,
+        color: "#10b981"
+      });
+      if (pg.double_sharing && pg.double_sharing > 0) priceDetails.push({ 
+        label: "Double Sharing", 
+        value: `₹${formatPrice(pg.double_sharing)}`,
+        icon: <Users size={16} />,
+        color: "#3b82f6"
+      });
+      if (pg.triple_sharing && pg.triple_sharing > 0) priceDetails.push({ 
+        label: "Triple Sharing", 
+        value: `₹${formatPrice(pg.triple_sharing)}`,
+        icon: <Hash size={16} />,
+        color: "#8b5cf6"
+      });
+      if (pg.four_sharing && pg.four_sharing > 0) priceDetails.push({ 
+        label: "Four Sharing", 
+        value: `₹${formatPrice(pg.four_sharing)}`,
+        icon: <Building size={16} />,
+        color: "#f97316"
+      });
+      if (pg.single_room && pg.single_room > 0) priceDetails.push({ 
+        label: "Single Room", 
+        value: `₹${formatPrice(pg.single_room)}`,
+        icon: <DoorOpen size={16} />,
+        color: "#0ea5e9"
+      });
+      if (pg.double_room && pg.double_room > 0) priceDetails.push({ 
+        label: "Double Room", 
+        value: `₹${formatPrice(pg.double_room)}`,
+        icon: <DoorOpen size={16} />,
+        color: "#ec4899"
+      });
+    } else if (pg.pg_category === "coliving") {
+      if (pg.co_living_single_room && pg.co_living_single_room > 0) priceDetails.push({ 
+        label: "Co-Living Single Room", 
+        value: `₹${formatPrice(pg.co_living_single_room)}`,
+        icon: <UserCheck size={16} />,
+        color: "#8b5cf6"
+      });
+      if (pg.co_living_double_room && pg.co_living_double_room > 0) priceDetails.push({ 
+        label: "Co-Living Double Room", 
+        value: `₹${formatPrice(pg.co_living_double_room)}`,
+        icon: <Users size={16} />,
+        color: "#a855f7"
+      });
+      if (pg.coliving_three_sharing && pg.coliving_three_sharing > 0) priceDetails.push({ 
+        label: "Co-Living Triple Sharing", 
+        value: `₹${formatPrice(pg.coliving_three_sharing)}`,
+        icon: <Hash size={16} />,
+        color: "#c084fc"
+      });
+      if (pg.coliving_four_sharing && pg.coliving_four_sharing > 0) priceDetails.push({ 
+        label: "Co-Living Four Sharing", 
+        value: `₹${formatPrice(pg.coliving_four_sharing)}`,
+        icon: <Building size={16} />,
+        color: "#e879f9"
+      });
+      
+      if (pg.co_living_food_included) priceDetails.push({ 
+        label: "Food Included", 
+        value: "Yes",
+        icon: <Utensils size={16} />,
+        color: "#10b981"
+      });
+      if (pg.co_living_wifi_included) priceDetails.push({ 
+        label: "WiFi Included", 
+        value: "Yes",
+        icon: <Wifi size={16} />,
+        color: "#3b82f6"
+      });
+    } else if (pg.pg_category === "to_let") {
+      if (pg.price_1bhk && pg.price_1bhk > 0) priceDetails.push({ 
+        label: "1 BHK", 
+        value: `₹${formatPrice(pg.price_1bhk)}`,
+        icon: <Building size={16} />,
+        color: "#f97316"
+      });
+      if (pg.price_2bhk && pg.price_2bhk > 0) priceDetails.push({ 
+        label: "2 BHK", 
+        value: `₹${formatPrice(pg.price_2bhk)}`,
+        icon: <Building size={16} />,
+        color: "#f59e0b"
+      });
+      if (pg.price_3bhk && pg.price_3bhk > 0) priceDetails.push({ 
+        label: "3 BHK", 
+        value: `₹${formatPrice(pg.price_3bhk)}`,
+        icon: <Building size={16} />,
+        color: "#eab308"
+      });
+      if (pg.price_4bhk && pg.price_4bhk > 0) priceDetails.push({ 
+        label: "4 BHK", 
+        value: `₹${formatPrice(pg.price_4bhk)}`,
+        icon: <Building size={16} />,
+        color: "#d97706"
+      });
+      
+      if (pg.bedrooms_1bhk) priceDetails.push({ 
+        label: "1 BHK - Bedrooms", 
+        value: `${pg.bedrooms_1bhk}`,
+        icon: <Bed size={16} />,
+        color: "#0ea5e9"
+      });
+      if (pg.bathrooms_1bhk) priceDetails.push({ 
+        label: "1 BHK - Bathrooms", 
+        value: `${pg.bathrooms_1bhk}`,
+        icon: <Bath size={16} />,
+        color: "#06b6d4"
+      });
+    }
+    
+    if (pg.deposit_amount && pg.deposit_amount > 0) {
+      priceDetails.push({ 
+        label: "Deposit Amount", 
+        value: `₹${formatPrice(pg.deposit_amount)}`,
+        icon: <Shield size={16} />,
+        color: "#f59e0b"
+      });
+    }
+    
+    if (pg.security_deposit && pg.security_deposit > 0) {
+      priceDetails.push({ 
+        label: "Security Deposit", 
+        value: `₹${formatPrice(pg.security_deposit)}`,
+        icon: <Shield size={16} />,
+        color: "#f59e0b"
+      });
+    }
+    
+    if (pg.maintenance_amount && pg.maintenance_amount > 0) {
+      priceDetails.push({ 
+        label: "Maintenance", 
+        value: `₹${formatPrice(pg.maintenance_amount)}/month`,
+        icon: <Wrench size={16} />,
+        color: "#6b7280"
+      });
+    }
+    
+    return priceDetails;
+  };
+
+  const getQuickInfo = () => {
+    const quickInfo = [];
+    
+    quickInfo.push({ 
+      label: "Property Type", 
+      value: getTypeLabel().replace(/[^\w\s]/g, ''),
+      icon: <Home size={16} />,
+      color: getTypeColor()
+    });
+    
+    if (pg.available_rooms !== undefined && pg.available_rooms !== null) {
+      quickInfo.push({ 
+        label: "Available", 
+        value: `${pg.available_rooms || 0} / ${pg.total_rooms || "N/A"}`,
+        icon: <DoorOpen size={16} />,
+        color: "#3b82f6"
+      });
+    }
+    
+    if ((pg.pg_category === "pg" || pg.pg_category === "coliving") && hasFacility("food_available")) {
+      const foodLabel = pg.food_type === 'veg' ? "Vegetarian" : 
+                      pg.food_type === 'non-veg' ? "Non-Vegetarian" : 
+                      pg.food_type === 'both' ? "Veg & Non-Veg" : "Food Included";
+      const foodIcon = pg.food_type === 'veg' ? <Leaf size={16} /> : 
+                      pg.food_type === 'non-veg' ? <Flame size={16} /> : 
+                      <Utensils size={16} />;
+      quickInfo.push({ 
+        label: "Food", 
+        value: foodLabel,
+        icon: foodIcon,
+        color: pg.food_type === 'veg' ? '#10b981' : 
+              pg.food_type === 'non-veg' ? '#ef4444' : '#f97316'
+      });
+    }
+    
+    if (pg.pg_category === "to_let" && pg.bhk_type) {
+      quickInfo.push({ 
+        label: "BHK Type", 
+        value: `${pg.bhk_type} BHK`,
+        icon: <Building size={16} />,
+        color: "#f97316"
+      });
+    }
+    
+    if (pg.min_stay_months && pg.min_stay_months > 0) {
+      quickInfo.push({ 
+        label: "Min. Stay", 
+        value: `${pg.min_stay_months} months`,
+        icon: <Calendar size={16} />,
+        color: "#8b5cf6"
+      });
+    }
+    
+    if (pg.notice_period) {
+      quickInfo.push({ 
+        label: "Notice Period", 
+        value: `${pg.notice_period} month${pg.notice_period > 1 ? 's' : ''}`,
+        icon: <Bell size={16} />,
+        color: "#6b7280"
+      });
+    }
+    
+    if (pg.distance) {
+      quickInfo.push({ 
+        label: "Distance", 
+        value: `${pg.distance.toFixed(1)} km away`,
+        icon: <Navigation size={16} />,
+        color: "#10b981"
+      });
+    }
+    
+    return quickInfo;
+  };
+
+  const quickInfoItems = getQuickInfo();
+  const priceDetails = getPriceDetails();
+  const roomAmenities = renderRoomAmenities();
+
+  return (
+    <div style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0, 0, 0, 0.8)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 2000,
+      padding: 20,
+      animation: "fadeIn 0.3s ease"
+    }}>
+      <div style={{
+        background: "#ffffff",
+        borderRadius: 20,
+        width: "100%",
+        maxWidth: 1000,
+        maxHeight: "90vh",
+        overflowY: "auto",
+        position: "relative",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
+      }}>
+        <div style={{
+          position: "absolute",
+          top: 16,
+          right: 16,
+          display: "flex",
+          gap: 8,
+          zIndex: 100
+        }}>
+          <button
+            onClick={toggleFavorite}
+            style={{
+              background: "rgba(255,255,255,0.9)",
+              border: "none",
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+            }}
+            title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+          >
+            <Heart 
+              size={20} 
+              color="#ef4444" 
+              fill={isFavorite ? "#ef4444" : "none"}
+            />
+          </button>
+          
+          <button
+            onClick={handleShare}
+            style={{
+              background: "rgba(255,255,255,0.9)",
+              border: "none",
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+            }}
+            title="Share property"
+          >
+            <Share2 size={20} />
+          </button>
+          
+          <button
+            onClick={onClose}
+            style={{
+              background: "rgba(255,255,255,0.9)",
+              border: "none",
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+            }}
+            title="Close"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        {showShareOptions && (
+          <div style={{
+            position: "absolute",
+            top: 70,
+            right: 16,
+            background: "#ffffff",
+            borderRadius: 12,
+            padding: 16,
+            boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
+            zIndex: 101,
+            animation: "slideDown 0.2s ease"
+          }}>
+            <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Share Property</h4>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={() => window.open(`https://wa.me/?text=Check out this property: ${window.location.origin}/pg/${pg.id}`, '_blank')}
+                style={{
+                  padding: "8px 12px",
+                  background: "#25D366",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6
+                }}
+              >
+                <MessageCircle size={14} />
+                WhatsApp
+              </button>
+              <button
+                onClick={() => navigator.clipboard.writeText(`${window.location.origin}/pg/${pg.id}`)}
+                style={{
+                  padding: "8px 12px",
+                  background: "#3b82f6",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6
+                }}
+              >
+                <Copy size={14} />
+                Copy Link
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div style={{ position: "relative", height: 300, background: "#f3f4f6" }}>
+          {!imageLoaded && !imageError && (
+            <div style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "#f3f4f6"
+            }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                border: "4px solid #e5e7eb",
+                borderTop: "4px solid #3b82f6",
+                borderRadius: "50%",
+                animation: "spin 1s linear infinite"
+              }} />
+            </div>
+          )}
+          
+          <img
+            src={mainImageUrl}
+            alt={pg.pg_name}
+            style={{ 
+              width: "100%", 
+              height: "100%", 
+              objectFit: "cover",
+              display: imageLoaded ? "block" : "none"
+            }}
+            loading="lazy"
+            onLoad={() => setImageLoaded(true)}
+            onError={(e) => {
+              setImageError(true);
+              setImageLoaded(true);
+              e.target.onerror = null;
+              e.target.src = "/no-image.png";
+            }}
+          />
+
+          <div style={{
+            position: "absolute",
+            top: 16,
+            left: 16,
+            background: getTypeColor(),
+            color: "#fff",
+            padding: "8px 16px",
+            borderRadius: 20,
+            fontSize: 14,
+            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            zIndex: 5
+          }}>
+            {getTypeLabel()}
+          </div>
+          
+          {totalPhotos > 1 && (
+            <div style={{
+              position: "absolute",
+              bottom: 16,
+              right: 16,
+              background: "rgba(0,0,0,0.7)",
+              color: "white",
+              padding: "6px 12px",
+              borderRadius: 20,
+              fontSize: 12,
+              fontWeight: 500,
+              zIndex: 5,
+              display: "flex",
+              alignItems: "center",
+              gap: 6
+            }}>
+              <Camera size={14} />
+              {totalPhotos} photos
+            </div>
+          )}
+        </div>
+
+        <div style={{ padding: 30 }}>
+          <div style={{ 
+            display: "flex", 
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            marginBottom: 20,
+            flexWrap: "wrap",
+            gap: 16
+          }}>
+            <div>
+              <h2 style={{ 
+                fontSize: 28, 
+                fontWeight: 700, 
+                color: "#111827",
+                marginBottom: 8 
+              }}>
+                {pg.pg_name}
+                {pg.is_verified && (
+                  <span style={{
+                    marginLeft: 12,
+                    fontSize: 14,
+                    color: "#10b981",
+                    background: "#f0fdf4",
+                    padding: "4px 10px",
+                    borderRadius: 12,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4
+                  }}>
+                    <Shield size={12} />
+                    Verified
+                  </span>
+                )}
+              </h2>
+              <div style={{ 
+                display: "flex", 
+                alignItems: "center", 
+                gap: 8, 
+                marginBottom: 12,
+                color: "#4b5563",
+                flexWrap: "wrap"
+              }}>
+                <MapPin size={18} />
+                <span style={{ fontSize: 16 }}>
+                  {pg.address || `${pg.area}, ${pg.city}, ${pg.state}`}
+                </span>
+              </div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 32, fontWeight: 700, color: "#111827" }}>
+                ₹{formatPrice(getEffectiveRent(pg))}
+              </div>
+              <div style={{ fontSize: 14, color: "#6b7280" }}>
+                per month
+              </div>
+            </div>
+          </div>
+
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: 30,
+            marginBottom: 30
+          }}>
+            <div>
+              <div style={{
+                background: "#f8fafc",
+                borderRadius: 12,
+                padding: 20,
+                border: "1px solid #e5e7eb",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
+              }}>
+                <h4 style={{ 
+                  fontSize: 16, 
+                  fontWeight: 600, 
+                  marginBottom: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8
+                }}>
+                  <Info size={16} />
+                  Quick Info
+                </h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {quickInfoItems.slice(0, 8).map((item, index) => (
+                    <div 
+                      key={index} 
+                      style={{ 
+                        display: "flex", 
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "8px 0",
+                        borderBottom: index < Math.min(quickInfoItems.length - 1, 7) ? "1px solid #e5e7eb" : "none"
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ 
+                          width: 28, 
+                          height: 28, 
+                          borderRadius: 8, 
+                          background: `${item.color}20`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: item.color
+                        }}>
+                          {item.icon}
+                        </div>
+                        <span style={{ fontSize: 14, color: "#4b5563" }}>{item.label}</span>
+                      </div>
+                      <span style={{ 
+                        fontSize: 14, 
+                        fontWeight: 600, 
+                        color: item.color || "#111827" 
+                      }}>
+                        {item.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                borderRadius: 16,
+                padding: 24,
+                color: "white",
+                marginTop: 20
+              }}>
+                <h3 style={{ 
+                  fontSize: 20, 
+                  fontWeight: 700,
+                  marginBottom: 16 
+                }}>
+                  ⚡ Instant Booking
+                </h3>
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 4 }}>Available Rooms</div>
+                  <div style={{ fontSize: 32, fontWeight: 700 }}>
+                    {pg.available_rooms || 0}
+                    <span style={{ fontSize: 16, opacity: 0.9 }}> / {pg.total_rooms || "N/A"}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => onBook(pg)}
+                  style={{
+                    width: "100%",
+                    padding: "14px",
+                    background: "white",
+                    color: "#667eea",
+                    border: "none",
+                    borderRadius: 10,
+                    fontSize: 16,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 8px 25px rgba(255,255,255,0.3)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                >
+                  🏠 Book Now
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div style={{
+                background: "#f0fdf4",
+                borderRadius: 12,
+                padding: 20,
+                border: "1px solid #bbf7d0",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                marginBottom: 20
+              }}>
+                <h4 style={{ 
+                  fontSize: 16, 
+                  fontWeight: 600, 
+                  marginBottom: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  color: "#166534"
+                }}>
+                  <DollarSign size={16} />
+                  Price Details
+                </h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {priceDetails.slice(0, 8).map((item, index) => (
+                    <div 
+                      key={index} 
+                      style={{ 
+                        display: "flex", 
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "8px 0",
+                        borderBottom: index < Math.min(priceDetails.length - 1, 7) ? "1px solid #bbf7d0" : "none"
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ 
+                          width: 28, 
+                          height: 28, 
+                          borderRadius: 8, 
+                          background: `${item.color}20`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: item.color
+                        }}>
+                          {item.icon}
+                        </div>
+                        <span style={{ fontSize: 14, color: "#374151" }}>{item.label}</span>
+                      </div>
+                      <span style={{ 
+                        fontSize: 14, 
+                        fontWeight: 600, 
+                        color: item.color || "#166534" 
+                      }}>
+                        {item.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{
+                background: "#f8fafc",
+                borderRadius: 12,
+                padding: 20,
+                border: "1px solid #e5e7eb",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
+              }}>
+                <h4 style={{ 
+                  fontSize: 16, 
+                  fontWeight: 600, 
+                  marginBottom: 12,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  color: "#374151"
+                }}>
+                  <Info size={16} />
+                  Description
+                </h4>
+                <p style={{ 
+                  fontSize: 14, 
+                  color: "#4b5563",
+                  lineHeight: "1.6",
+                  maxHeight: "200px",
+                  overflowY: "auto",
+                  paddingRight: "8px"
+                }}>
+                  {pg.description || "No description available."}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <div style={{
+                background: "#f8fafc",
+                borderRadius: 12,
+                padding: 20,
+                border: "1px solid #e5e7eb",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
+              }}>
+                <h4 style={{ 
+                  fontSize: 16, 
+                  fontWeight: 600, 
+                  marginBottom: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8
+                }}>
+                  <Bed size={16} />
+                  Room Amenities
+                </h4>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr",
+                  gap: 10
+                }}>
+                  {roomAmenities.length > 0 ? (
+                    roomAmenities.map((amenity, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "10px 12px",
+                          background: `${amenity.color}10`,
+                          borderRadius: 10,
+                          fontSize: 14,
+                          color: amenity.color,
+                          fontWeight: 500
+                        }}
+                      >
+                        {amenity.icon}
+                        {amenity.label}
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{
+                      padding: "16px",
+                      textAlign: "center",
+                      color: "#6b7280",
+                      fontSize: 14,
+                      background: "#f3f4f6",
+                      borderRadius: 8
+                    }}>
+                      No room amenities listed
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{
+            display: "flex",
+            gap: 16,
+            paddingTop: 20,
+            borderTop: "1px solid #e5e7eb",
+            flexWrap: "wrap"
+          }}>
+            <button
+              onClick={() => onBook(pg)}
+              style={{
+                flex: 2,
+                minWidth: "150px",
+                padding: "16px 24px",
+                background: "#10b981",
+                color: "white",
+                border: "none",
+                borderRadius: 12,
+                fontSize: 16,
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+                transition: "all 0.2s"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 8px 20px rgba(16, 185, 129, 0.3)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              <BookOpen size={20} />
+              Book Now
+            </button>
+            
+            <button
+              onClick={() => window.open(`/pg/${pg.id}`, '_blank')}
+              style={{
+                flex: 1,
+                minWidth: "120px",
+                padding: "16px 24px",
+                background: "#3b82f6",
+                color: "white",
+                border: "none",
+                borderRadius: 12,
+                fontSize: 16,
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+                transition: "all 0.2s"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 8px 20px rgba(59, 130, 246, 0.3)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              <Eye size={20} />
+              View Details
+            </button>
+            
+            {pg.latitude && pg.longitude && (
+              <button
+                onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${pg.latitude},${pg.longitude}`, '_blank')}
+                style={{
+                  flex: 1,
+                  minWidth: "120px",
+                  padding: "16px 24px",
+                  background: "#8b5cf6",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 12,
+                  fontSize: 16,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 12,
+                  transition: "all 0.2s"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow = "0 8px 20px rgba(139, 92, 246, 0.3)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                <Map size={20} />
+                View Map
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Camera icon component
 const Camera = ({ size, color }) => (
   <svg 
@@ -1029,6 +2005,568 @@ const Camera = ({ size, color }) => (
     <circle cx="12" cy="13" r="4" />
   </svg>
 );
+
+// Wrench icon component
+const Wrench = ({ size, color }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke={color} 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+  >
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+  </svg>
+);
+
+/* ================= COMPARE MODAL COMPONENT ================= */
+const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
+  const [compareData, setCompareData] = useState([]);
+
+  useEffect(() => {
+    const propertiesToCompare = allPGs.filter(pg => selectedPGs.has(pg.id));
+    setCompareData(propertiesToCompare);
+  }, [selectedPGs, allPGs]);
+
+  if (compareData.length === 0) return null;
+
+  const getFeatureValue = (pg, feature) => {
+    switch(feature) {
+      case 'name':
+        return pg.pg_name;
+      case 'type':
+        return pg.pg_category === 'pg' ? 'PG' : 
+              pg.pg_category === 'coliving' ? 'Co-Living' : 'To-Let';
+      case 'price':
+        return `₹${formatPrice(getEffectiveRent(pg))}`;
+      case 'deposit':
+        return `₹${formatPrice(pg.deposit_amount || pg.security_deposit || 0)}`;
+      case 'location':
+        return pg.area || pg.city || 'N/A';
+      case 'food':
+        return pg.food_available ? 
+              (pg.food_type === 'veg' ? 'Vegetarian' : 
+                pg.food_type === 'non-veg' ? 'Non-Veg' : 'Both') : 'No';
+      case 'wifi':
+        return pg.wifi_available ? 'Yes' : 'No';
+      case 'ac':
+        return pg.ac_available ? 'Yes' : 'No';
+      case 'parking':
+        return pg.parking_available ? 'Yes' : 'No';
+      case 'attached_bathroom':
+        return pg.attached_bathroom ? 'Yes' : 'No';
+      case 'available_rooms':
+        return pg.available_rooms || 0;
+      case 'min_stay':
+        return pg.min_stay_months ? `${pg.min_stay_months} months` : 'N/A';
+      case 'distance':
+        return pg.distance ? `${pg.distance.toFixed(1)} km` : 'N/A';
+      default:
+        return 'N/A';
+    }
+  };
+
+  const features = [
+    { key: 'name', label: 'Property Name' },
+    { key: 'type', label: 'Type' },
+    { key: 'price', label: 'Monthly Rent' },
+    { key: 'deposit', label: 'Deposit' },
+    { key: 'location', label: 'Location' },
+    { key: 'distance', label: 'Distance' },
+    { key: 'food', label: 'Food' },
+    { key: 'wifi', label: 'WiFi' },
+    { key: 'ac', label: 'AC' },
+    { key: 'parking', label: 'Parking' },
+    { key: 'attached_bathroom', label: 'Attached Bathroom' },
+    { key: 'available_rooms', label: 'Available Rooms' },
+    { key: 'min_stay', label: 'Min Stay' }
+  ];
+
+  return (
+    <div style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0, 0, 0, 0.8)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 3000,
+      padding: 20,
+      animation: "fadeIn 0.3s ease"
+    }}>
+      <div style={{
+        background: "#ffffff",
+        borderRadius: 20,
+        width: "100%",
+        maxWidth: 1200,
+        maxHeight: "90vh",
+        overflowY: "auto",
+        position: "relative",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute",
+            top: 16,
+            right: 16,
+            background: "rgba(255,255,255,0.9)",
+            border: "none",
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            zIndex: 100,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+          }}
+        >
+          <X size={24} />
+        </button>
+
+        <div style={{ padding: 30 }}>
+          <h2 style={{ 
+            fontSize: 28, 
+            fontWeight: 700, 
+            color: "#111827",
+            marginBottom: 8,
+            display: "flex",
+            alignItems: "center",
+            gap: 12
+          }}>
+            <BarChart size={28} />
+            Compare Properties
+          </h2>
+          <p style={{ 
+            fontSize: 14, 
+            color: "#6b7280",
+            marginBottom: 30 
+          }}>
+            Comparing {compareData.length} properties
+          </p>
+
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={{ 
+                    padding: "16px", 
+                    background: "#f3f4f6",
+                    textAlign: "left",
+                    borderRadius: "10px 0 0 0"
+                  }}>
+                    Features
+                  </th>
+                  {compareData.map((pg, idx) => (
+                    <th key={pg.id} style={{ 
+                      padding: "16px", 
+                      background: "#f3f4f6",
+                      textAlign: "center",
+                      minWidth: "200px",
+                      borderRadius: idx === compareData.length - 1 ? "0 10px 0 0" : "0"
+                    }}>
+                      <div style={{ fontWeight: 600, marginBottom: 8 }}>{pg.pg_name}</div>
+                      {pg.photos && pg.photos.length > 0 && (
+                        <img 
+                          src={getCorrectImageUrl(pg.photos[0])}
+                          alt={pg.pg_name}
+                          style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 8 }}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "/no-image.png";
+                          }}
+                        />
+                      )}
+                      {pg.distance && (
+                        <div style={{
+                          marginTop: 8,
+                          fontSize: 12,
+                          color: "#10b981",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 4
+                        }}>
+                          <Navigation size={12} />
+                          {pg.distance.toFixed(1)} km away
+                        </div>
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {features.map((feature, featureIdx) => (
+                  <tr key={feature.key} style={{
+                    background: featureIdx % 2 === 0 ? "#ffffff" : "#f9fafb"
+                  }}>
+                    <td style={{ 
+                      padding: "14px 16px", 
+                      fontWeight: 600,
+                      borderBottom: "1px solid #e5e7eb"
+                    }}>
+                      {feature.label}
+                    </td>
+                    {compareData.map((pg) => (
+                      <td key={`${pg.id}-${feature.key}`} style={{ 
+                        padding: "14px 16px", 
+                        textAlign: "center",
+                        borderBottom: "1px solid #e5e7eb"
+                      }}>
+                        <span style={{
+                          background: feature.key === 'price' ? "#10b98120" : "transparent",
+                          color: feature.key === 'price' ? "#10b981" : "#374151",
+                          padding: feature.key === 'price' ? "6px 12px" : "0",
+                          borderRadius: feature.key === 'price' ? "20px" : "0",
+                          fontWeight: feature.key === 'price' ? 600 : 400
+                        }}>
+                          {getFeatureValue(pg, feature.key)}
+                                                </span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            marginTop: 24,
+            paddingTop: 16,
+            borderTop: "1px solid #e5e7eb"
+          }}>
+            <button
+              onClick={onClose}
+              style={{
+                padding: "12px 24px",
+                background: "#3b82f6",
+                color: "white",
+                border: "none",
+                borderRadius: 10,
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: "pointer"
+              }}
+            >
+              Close Comparison
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ================= LOCATION PERMISSION BANNER COMPONENT ================= */
+const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
+  return (
+    <div style={{
+      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      borderRadius: 20,
+      marginBottom: 20,
+      padding: "20px 24px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      flexWrap: "wrap",
+      gap: 16,
+      animation: "slideDown 0.3s ease",
+      boxShadow: "0 4px 20px rgba(0,0,0,0.1)"
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, flex: 1 }}>
+        <div style={{
+          background: "rgba(255,255,255,0.2)",
+          borderRadius: "50%",
+          width: 48,
+          height: 48,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}>
+          <Navigation size={24} color="white" />
+        </div>
+        <div>
+          <h3 style={{ 
+            fontSize: 16, 
+            fontWeight: 600, 
+            color: "white",
+            marginBottom: 4
+          }}>
+            📍 Find Properties Near You
+          </h3>
+          <p style={{ 
+            fontSize: 13, 
+            color: "rgba(255,255,255,0.9)",
+            margin: 0
+          }}>
+            Allow location access to see PGs, Co-living & To-Let properties within 5km of your area
+          </p>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 12 }}>
+        <button
+          onClick={onDeny}
+          style={{
+            padding: "10px 20px",
+            background: "rgba(255,255,255,0.2)",
+            color: "white",
+            border: "none",
+            borderRadius: 10,
+            fontSize: 14,
+            fontWeight: 500,
+            cursor: "pointer",
+            transition: "all 0.2s"
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,0.3)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,0.2)";
+          }}
+        >
+          Not Now
+        </button>
+        <button
+          onClick={onAllow}
+          disabled={isLoading}
+          style={{
+            padding: "10px 24px",
+            background: "white",
+            color: "#667eea",
+            border: "none",
+            borderRadius: 10,
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: isLoading ? "not-allowed" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            transition: "all 0.2s"
+          }}
+        >
+          {isLoading ? (
+            <>
+              <div style={{
+                width: 16,
+                height: 16,
+                border: "2px solid #667eea",
+                borderTop: "2px solid transparent",
+                borderRadius: "50%",
+                animation: "spin 0.8s linear infinite"
+              }} />
+              Getting location...
+            </>
+          ) : (
+            <>
+              <Navigation size={16} />
+              Allow Location
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/* ================= HERO BANNER COMPONENT ================= */
+const HeroBanner = () => {
+  return (
+    <div className="hero-section" style={{
+      background: "linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%)",
+      borderRadius: 24,
+      marginBottom: 40,
+      overflow: "hidden",
+      boxShadow: "0 20px 35px -10px rgba(0,0,0,0.15)",
+      position: "relative"
+    }}>
+      <div style={{
+        display: "block",
+        padding: "48px 48px",
+        position: "relative",
+        zIndex: 2
+      }}>
+        <div>
+          <h1 className="hero-title" style={{
+            fontSize: 42,
+            fontWeight: 800,
+            color: "#ffffff",
+            marginBottom: 16,
+            lineHeight: 1.2,
+            letterSpacing: "-0.02em"
+          }}>
+            Find Verified PGs,<br />
+            Coliving & Rental Homes
+          </h1>
+          <p style={{
+            fontSize: 18,
+            color: "rgba(255,255,255,0.9)",
+            marginBottom: 32,
+            lineHeight: 1.5,
+            maxWidth: "90%"
+          }}>
+            Book trusted stays with secure payments, verified owners and instant booking support.
+          </p>
+          
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(2, 1fr)",
+            gap: 16,
+            marginBottom: 32
+          }}>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              color: "#ffffff"
+            }}>
+              <div style={{
+                background: "rgba(255,255,255,0.15)",
+                borderRadius: "50%",
+                width: 32,
+                height: 32,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}>
+                <Shield size={18} />
+              </div>
+              <span style={{ fontSize: 15, fontWeight: 500 }}>Verified Properties</span>
+            </div>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              color: "#ffffff"
+            }}>
+              <div style={{
+                background: "rgba(255,255,255,0.15)",
+                borderRadius: "50%",
+                width: 32,
+                height: 32,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}>
+                <CreditCard size={18} />
+              </div>
+              <span style={{ fontSize: 15, fontWeight: 500 }}>Secure Online Booking</span>
+            </div>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              color: "#ffffff"
+            }}>
+              <div style={{
+                background: "rgba(255,255,255,0.15)",
+                borderRadius: "50%",
+                width: 32,
+                height: 32,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}>
+                <Headphones size={18} />
+              </div>
+              <span style={{ fontSize: 15, fontWeight: 500 }}>Direct Owner Support</span>
+            </div>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              color: "#ffffff"
+            }}>
+              <div style={{
+                background: "rgba(255,255,255,0.15)",
+                borderRadius: "50%",
+                width: 32,
+                height: 32,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}>
+                <ClockIcon size={18} />
+              </div>
+              <span style={{ fontSize: 15, fontWeight: 500 }}>Fast Move-In Process</span>
+            </div>
+          </div>
+          
+          {/* Badges Section - Moved to left side */}
+          <div className="hero-badges" style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: 12, 
+            flexWrap: "wrap", 
+            marginTop: 20,
+            justifyContent: "flex-start"
+          }}>
+            <div style={{
+              background: "#10b981",
+              color: "white",
+              padding: "10px 18px",
+              borderRadius: 30,
+              fontWeight: 600,
+              fontSize: 14
+            }}>
+              ✓ Verified
+            </div>
+            <div style={{
+              background: "#3b82f6",
+              color: "white",
+              padding: "10px 18px",
+              borderRadius: 30,
+              fontWeight: 600,
+              fontSize: 14
+            }}>
+              ✓ Secure
+            </div>
+            <div style={{
+              background: "#8b5cf6",
+              color: "white",
+              padding: "10px 18px",
+              borderRadius: 30,
+              fontWeight: 600,
+              fontSize: 14
+            }}>
+              ✓ Trusted
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div style={{
+        position: "absolute",
+        top: -50,
+        right: -50,
+        width: 200,
+        height: 200,
+        background: "rgba(255,255,255,0.05)",
+        borderRadius: "50%",
+        zIndex: 1
+      }} />
+      <div style={{
+        position: "absolute",
+        bottom: -80,
+        left: -30,
+        width: 250,
+        height: 250,
+        background: "rgba(255,255,255,0.03)",
+        borderRadius: "50%",
+        zIndex: 1
+      }} />
+    </div>
+  );
+};
 
 /* ================= MAIN COMPONENT ================= */
 function UserPGSearch() {
@@ -1052,6 +2590,7 @@ function UserPGSearch() {
   const [showLocationBanner, setShowLocationBanner] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
 
+  // Removed propertyType state and related filtering buttons - keeping only "All"
   const [compareMode, setCompareMode] = useState(false);
   const [selectedForCompare, setSelectedForCompare] = useState(new Set());
   const [showCompareModal, setShowCompareModal] = useState(false);
@@ -1102,7 +2641,6 @@ function UserPGSearch() {
       available_rooms: Number(pg.available_rooms) || 0,
       total_rooms: Number(pg.total_rooms) || 0,
       min_stay_months: Number(pg.min_stay_months) || 0,
-      notice_period: Number(pg.notice_period) || 0,
       bedrooms_1bhk: Number(pg.bedrooms_1bhk) || 0,
       bathrooms_1bhk: Number(pg.bathrooms_1bhk) || 0,
       bedrooms_2bhk: Number(pg.bedrooms_2bhk) || 0,
@@ -1322,6 +2860,8 @@ function UserPGSearch() {
 
   const applyFilters = useCallback(() => {
     let filtered = [...allPGs];
+
+    // Removed property type filter - showing all properties
 
     if (filters.location) {
       filtered = filtered.filter((pg) =>
@@ -1632,13 +3172,6 @@ function UserPGSearch() {
       label: "AC", 
       value: "Yes",
       color: "#3b82f6" 
-    });
-    
-    if (pg.min_stay_months > 0) info.push({
-      icon: <Calendar size={12} />,
-      label: "Min Stay",
-      value: `${pg.min_stay_months}m`,
-      color: "#8b5cf6"
     });
     
     return info.slice(0, 3);
@@ -2317,7 +3850,7 @@ function UserPGSearch() {
                     style={{
                       position: "absolute",
                       top: 12,
-                      right: compareMode ? 12 : 12,
+                      right: 12,
                       background: "rgba(255,255,255,0.9)",
                       border: "none",
                       padding: "8px 16px",
@@ -2482,24 +4015,6 @@ function UserPGSearch() {
                         </div>
                       </div>
                     </div>
-
-                    {/* Min Stay Badge */}
-                    {pg.min_stay_months > 0 && (
-                      <div style={{
-                        marginBottom: 12,
-                        padding: "6px 10px",
-                        background: "#f3e8ff",
-                        borderRadius: 8,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6
-                      }}>
-                        <Calendar size={12} color="#8b5cf6" />
-                        <span style={{ fontSize: 12, color: "#6d28d9", fontWeight: 500 }}>
-                          Min {pg.min_stay_months} month{pg.min_stay_months > 1 ? 's' : ''} stay
-                        </span>
-                      </div>
-                    )}
 
                     <div style={{
                       display: "grid",
@@ -2716,11 +4231,32 @@ function UserPGSearch() {
         />
       )}
 
+      {quickViewPG && (
+        <QuickViewModal
+          pg={quickViewPG}
+          onClose={() => setQuickViewPG(null)}
+          onBook={handleBookNow}
+          onSaveFavorite={handleSaveFavorite}
+        />
+      )}
+
       {bookingPG && (
         <BookingModal
           pg={bookingPG}
           onClose={() => setBookingPG(null)}
           onBook={handleBookingSubmit}
+        />
+      )}
+
+      {showCompareModal && (
+        <CompareModal
+          selectedPGs={selectedForCompare}
+          allPGs={allPGs}
+          onClose={() => {
+            setShowCompareModal(false);
+            setSelectedForCompare(new Set());
+            setCompareMode(false);
+          }}
         />
       )}
 
@@ -2771,3 +4307,4 @@ function UserPGSearch() {
 }
 
 export default UserPGSearch;
+                      
