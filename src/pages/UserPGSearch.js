@@ -2229,7 +2229,7 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
                           fontWeight: feature.key === 'price' ? 600 : 400
                         }}>
                           {getFeatureValue(pg, feature.key)}
-                        </span>
+                                                </span>
                       </td>
                     ))}
                   </tr>
@@ -2381,7 +2381,7 @@ const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
 /* ================= HERO BANNER COMPONENT ================= */
 const HeroBanner = () => {
   return (
-    <div style={{
+    <div className="hero-section" style={{
       background: "linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%)",
       borderRadius: 24,
       marginBottom: 40,
@@ -2390,16 +2390,13 @@ const HeroBanner = () => {
       position: "relative"
     }}>
       <div style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: 40,
-        alignItems: "center",
+        display: "block",
         padding: "48px 48px",
         position: "relative",
         zIndex: 2
       }}>
         <div>
-          <h1 style={{
+          <h1 className="hero-title" style={{
             fontSize: 42,
             fontWeight: 800,
             color: "#ffffff",
@@ -2503,57 +2500,45 @@ const HeroBanner = () => {
               <span style={{ fontSize: 15, fontWeight: 500 }}>Fast Move-In Process</span>
             </div>
           </div>
-        </div>
-        
-        <div style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center"
-        }}>
-          <div style={{
-            background: "rgba(255,255,255,0.1)",
-            borderRadius: 32,
-            padding: 20,
-            backdropFilter: "blur(10px)",
-            textAlign: "center"
+          
+          {/* Badges Section - Moved to left side */}
+          <div className="hero-badges" style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: 12, 
+            flexWrap: "wrap", 
+            marginTop: 20,
+            justifyContent: "flex-start"
           }}>
-            <Home size={120} strokeWidth={1} color="rgba(255,255,255,0.9)" />
             <div style={{
-              marginTop: 20,
-              display: "flex",
-              gap: 12,
-              justifyContent: "center"
+              background: "#10b981",
+              color: "white",
+              padding: "10px 18px",
+              borderRadius: 30,
+              fontWeight: 600,
+              fontSize: 14
             }}>
-              <div style={{
-                background: "#10b981",
-                padding: "8px 16px",
-                borderRadius: 30,
-                fontSize: 13,
-                fontWeight: 600,
-                color: "white"
-              }}>
-                ✓ Verified
-              </div>
-              <div style={{
-                background: "#3b82f6",
-                padding: "8px 16px",
-                borderRadius: 30,
-                fontSize: 13,
-                fontWeight: 600,
-                color: "white"
-              }}>
-                ✓ Secure
-              </div>
-              <div style={{
-                background: "#8b5cf6",
-                padding: "8px 16px",
-                borderRadius: 30,
-                fontSize: 13,
-                fontWeight: 600,
-                color: "white"
-              }}>
-                ✓ Trusted
-              </div>
+              ✓ Verified
+            </div>
+            <div style={{
+              background: "#3b82f6",
+              color: "white",
+              padding: "10px 18px",
+              borderRadius: 30,
+              fontWeight: 600,
+              fontSize: 14
+            }}>
+              ✓ Secure
+            </div>
+            <div style={{
+              background: "#8b5cf6",
+              color: "white",
+              padding: "10px 18px",
+              borderRadius: 30,
+              fontWeight: 600,
+              fontSize: 14
+            }}>
+              ✓ Trusted
             </div>
           </div>
         </div>
@@ -2605,7 +2590,7 @@ function UserPGSearch() {
   const [showLocationBanner, setShowLocationBanner] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
 
-  const [propertyType, setPropertyType] = useState("all");
+  // Removed propertyType state and related filtering buttons - keeping only "All"
   const [compareMode, setCompareMode] = useState(false);
   const [selectedForCompare, setSelectedForCompare] = useState(new Set());
   const [showCompareModal, setShowCompareModal] = useState(false);
@@ -2876,9 +2861,7 @@ function UserPGSearch() {
   const applyFilters = useCallback(() => {
     let filtered = [...allPGs];
 
-    if (propertyType !== "all") {
-      filtered = filtered.filter((pg) => pg.pg_category === propertyType);
-    }
+    // Removed property type filter - showing all properties
 
     if (filters.location) {
       filtered = filtered.filter((pg) =>
@@ -2915,7 +2898,7 @@ function UserPGSearch() {
     }
 
     setPgs(filtered);
-  }, [allPGs, filters, userLocation, propertyType]);
+  }, [allPGs, filters, userLocation]);
 
   useEffect(() => {
     applyFilters();
@@ -2943,7 +2926,6 @@ function UserPGSearch() {
       nearMe: false,
       foodType: ""
     });
-    setPropertyType("all");
     if (!userLocation) {
       setUserLocation(null);
     }
@@ -3296,107 +3278,6 @@ function UserPGSearch() {
           </button>
         </div>
       )}
-
-      {/* Property Type Quick Filter */}
-      <div style={{
-        background: "#ffffff",
-        borderRadius: 16,
-        padding: 16,
-        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
-        marginBottom: 20,
-        border: "1px solid #e5e7eb"
-      }}>
-        <div style={{
-          display: "flex",
-          gap: 10,
-          flexWrap: "wrap"
-        }}>
-          <button
-            onClick={() => setPropertyType("all")}
-            style={{
-              padding: "12px 24px",
-              background: propertyType === "all" ? "#3b82f6" : "#f3f4f6",
-              color: propertyType === "all" ? "white" : "#374151",
-              border: "none",
-              borderRadius: 30,
-              fontSize: 15,
-              fontWeight: 600,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              transition: "all 0.2s",
-              flex: "0 1 auto"
-            }}
-          >
-            <Home size={18} />
-            All
-          </button>
-          <button
-            onClick={() => setPropertyType("pg")}
-            style={{
-              padding: "12px 24px",
-              background: propertyType === "pg" ? "#3b82f6" : "#f3f4f6",
-              color: propertyType === "pg" ? "white" : "#374151",
-              border: "none",
-              borderRadius: 30,
-              fontSize: 15,
-              fontWeight: 600,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              transition: "all 0.2s",
-              flex: "0 1 auto"
-            }}
-          >
-            <DoorOpen size={18} />
-            PG
-          </button>
-          <button
-            onClick={() => setPropertyType("coliving")}
-            style={{
-              padding: "12px 24px",
-              background: propertyType === "coliving" ? "#3b82f6" : "#f3f4f6",
-              color: propertyType === "coliving" ? "white" : "#374151",
-              border: "none",
-              borderRadius: 30,
-              fontSize: 15,
-              fontWeight: 600,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              transition: "all 0.2s",
-              flex: "0 1 auto"
-            }}
-          >
-            <Users size={18} />
-            Co-Living
-          </button>
-          <button
-            onClick={() => setPropertyType("to_let")}
-            style={{
-              padding: "12px 24px",
-              background: propertyType === "to_let" ? "#3b82f6" : "#f3f4f6",
-              color: propertyType === "to_let" ? "white" : "#374151",
-              border: "none",
-              borderRadius: 30,
-              fontSize: 15,
-              fontWeight: 600,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              transition: "all 0.2s",
-              flex: "0 1 auto"
-            }}
-          >
-            <Building size={18} />
-            To-Let
-          </button>
-        </div>
-      </div>
 
       {/* Modern Filter Bar */}
       <div style={{
@@ -4406,9 +4287,18 @@ function UserPGSearch() {
           box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
         
+        /* Mobile Responsive Styles */
         @media (max-width: 768px) {
-          .filter-row {
-            flex-direction: column;
+          .hero-section {
+            padding: 25px 20px !important;
+          }
+          .hero-title {
+            font-size: 34px !important;
+            line-height: 44px !important;
+          }
+          .hero-badges {
+            justify-content: flex-start !important;
+            gap: 10px !important;
           }
         }
       `}</style>
@@ -4417,3 +4307,4 @@ function UserPGSearch() {
 }
 
 export default UserPGSearch;
+                      
