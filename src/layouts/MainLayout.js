@@ -351,7 +351,7 @@ const MainLayout = () => {
                   letterSpacing: "-0.5px",
                 }}
               >
-                Nepxall Premium Living
+                
               </Typography>
             </Box>
           )}
