@@ -39,6 +39,7 @@ import PublicAgreementPage from "./pages/PublicAgreementPage";
 import ServicesPage from "./pages/ServicesPage";
 import VacateRequestPage from "./pages/VacateRequestPage";
 import RefundRequestPage from "./pages/RefundRequestPage";
+import Settings from "./pages/Settings";
 
 /* DIGILOCKER */
 import DigiLockerVerify from "./pages/DigiLockerVerify";
@@ -209,7 +210,7 @@ const LoadingSpinner = ({ message = "Loading..." }) => (
             fontWeight: 500,
           }}
         >
-          Next Places for Living
+          
         </Typography>
       </Box>
 
@@ -307,6 +308,7 @@ function App() {
 
       {/* USER */}
       <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
+       <Route path="/settings" element={<Settings />} />
         <Route path="/booking/:pgId" element={<BookingForm />} />
         <Route path="/user/bookings" element={<UserBookingHistory />} />
         <Route path="/become-owner" element={<BecomeOwner />} />

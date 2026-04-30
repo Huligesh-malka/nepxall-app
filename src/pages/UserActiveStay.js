@@ -305,7 +305,7 @@ const UserActiveStay = () => {
                   <span style={{ color: BRAND_BLUE }}>NEP</span>
                   <span style={{ color: BRAND_GREEN }}>XALL</span>
                 </h1>
-                <p style={tagline}>Next Places for Living</p>
+                <p style={tagline}></p>
               </div>
               <div style={{ textAlign: "right" }}>
                 <h2 style={receiptTitle}>RENT RECEIPT</h2>

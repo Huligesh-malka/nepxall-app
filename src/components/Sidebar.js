@@ -109,7 +109,7 @@ const Sidebar = ({ role, user }) => {
             <span style={{ color: BRAND_BLUE }}>Nep</span>
             <span style={{ color: BRAND_GREEN }}>xall</span>
           </h2>
-          <p style={companyTagline}>Next Places for Living</p>
+          <p style={companyTagline}></p>
         </div>
       </div>
 

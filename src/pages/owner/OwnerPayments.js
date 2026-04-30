@@ -200,7 +200,7 @@ export default function OwnerPayments() {
           <div style="font-size: 42px; font-weight: 800; letter-spacing: 2px; margin-bottom: 8px;">
             <span style="color: ${BRAND_BLUE};">Nep</span><span style="color: ${BRAND_GREEN};">xall</span>
           </div>
-          <p style="margin: 0; color: ${BRAND_GRAY}; font-size: 13px; letter-spacing: 1px;">Next Places for Living</p>
+          <p style="margin: 0; color: ${BRAND_GRAY}; font-size: 13px; letter-spacing: 1px;"></p>
         </div>
 
         <div style="background: linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(16,185,129,0.05) 100%); border-radius: 100px; padding: 12px 24px; text-align: center; margin-bottom: 32px; border: 1px solid rgba(16,185,129,0.2);">
@@ -856,7 +856,7 @@ export default function OwnerPayments() {
                   <span style={{ color: BRAND_BLUE }}>Nep</span>
                   <span style={{ color: BRAND_GREEN }}>xall</span>
                 </Typography>
-                <Typography variant="body2" color="textSecondary">Next Places for Living</Typography>
+                <Typography variant="body2" color="textSecondary"></Typography>
               </Box>
 
               <Box sx={{ 

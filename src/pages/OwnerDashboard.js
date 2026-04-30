@@ -764,7 +764,7 @@ const OwnerDashboard = () => {
         
         ctx.font = "26px Arial";
         ctx.fillStyle = "#94a3b8";
-        ctx.fillText("Next Places for Living", 450, 250);
+        ctx.fillText("", 450, 250);
         
         ctx.font = "bold 36px Arial";
         ctx.fillStyle = "#111827";
