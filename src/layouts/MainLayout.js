@@ -283,7 +283,6 @@ const MainLayout = () => {
     if (location.pathname.startsWith("/pg/")) return "Property Details";
     if (location.pathname === "/booking") return "My Bookings";
     if (location.pathname === "/owner/dashboard") return "Owner Dashboard";
-    if (location.pathname === "/profile") return "Profile Settings";
     const path = location.pathname.split("/").pop();
     return path ? path.replace("-", " ").toUpperCase() : "Dashboard";
   };
@@ -323,9 +322,39 @@ const MainLayout = () => {
             boxShadow: scrolled ? "0 4px 20px rgba(0,0,0,0.05)" : "none"
           }}
         >
-          {/* Premium Title Section */}
+          {/* Welcome Back Message - Centered */}
           {user && (
-            <Box>
+            <Box sx={{ 
+              flex: 1, 
+              display: "flex", 
+              justifyContent: "center",
+              textAlign: "center"
+            }}>
+              <Box>
+                <Typography
+                  variant="h4"
+                  sx={{
+                    fontWeight: 800,
+                    background: PREMIUM_COLORS.primary.gradient,
+                    backgroundClip: "text",
+                    WebkitBackgroundClip: "text",
+                    color: "transparent",
+                    letterSpacing: "-0.5px",
+                    mb: 0.5
+                  }}
+                >
+                  Welcome Back!
+                </Typography>
+                <Typography sx={{ color: PREMIUM_COLORS.neutral[500], fontSize: 14, fontWeight: 500 }}>
+                  {user?.displayName ? `Good to see you, ${user.displayName}` : "Good to see you again"}
+                </Typography>
+              </Box>
+            </Box>
+          )}
+
+          {/* For non-logged in users, show a placeholder */}
+          {!user && (
+            <Box sx={{ flex: 1, display: "flex", justifyContent: "center" }}>
               <Typography
                 variant="h4"
                 sx={{
@@ -335,13 +364,9 @@ const MainLayout = () => {
                   WebkitBackgroundClip: "text",
                   color: "transparent",
                   letterSpacing: "-0.5px",
-                  mb: 0.5
                 }}
               >
-                {getTitle()}
-              </Typography>
-              <Typography sx={{ color: PREMIUM_COLORS.neutral[500], fontSize: 14, fontWeight: 500 }}>
-                {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                Nepxall Premium Living
               </Typography>
             </Box>
           )}
@@ -446,7 +471,7 @@ const MainLayout = () => {
                   </Tooltip>
 
                   {/* Premium Profile Dropdown */}
-                  <Tooltip title="Profile settings" arrow>
+                  <Tooltip title="Profile" arrow>
                     <IconButton
                       onClick={openMenu}
                       sx={{
@@ -506,38 +531,6 @@ const MainLayout = () => {
                     </Box>
                     <MenuItem
                       onClick={() => {
-                        navigate("/profile");
-                        closeMenu();
-                      }}
-                      sx={{
-                        py: 1.5,
-                        gap: 1.5,
-                        "&:hover": {
-                          background: `${PREMIUM_COLORS.primary.main}10`
-                        }
-                      }}
-                    >
-                      <PersonIcon sx={{ fontSize: 20, color: PREMIUM_COLORS.neutral[500] }} />
-                      <Typography sx={{ fontWeight: 500 }}>My Profile</Typography>
-                    </MenuItem>
-                    <MenuItem
-                      onClick={() => {
-                        navigate("/settings");
-                        closeMenu();
-                      }}
-                      sx={{
-                        py: 1.5,
-                        gap: 1.5,
-                        "&:hover": {
-                          background: `${PREMIUM_COLORS.primary.main}10`
-                        }
-                      }}
-                    >
-                      <SettingsIcon sx={{ fontSize: 20, color: PREMIUM_COLORS.neutral[500] }} />
-                      <Typography sx={{ fontWeight: 500 }}>Settings</Typography>
-                    </MenuItem>
-                    <MenuItem
-                      onClick={() => {
                         handleLogout();
                         closeMenu();
                       }}
@@ -545,7 +538,6 @@ const MainLayout = () => {
                         py: 1.5,
                         gap: 1.5,
                         color: "#ef4444",
-                        borderTop: `1px solid ${PREMIUM_COLORS.neutral[200]}`,
                         "&:hover": {
                           background: "#ef444410"
                         }
