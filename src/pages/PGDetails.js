@@ -2253,71 +2253,64 @@ export default function PGDetails() {
 
     {expandedRules.legal && (
       <div style={modernStyles.rulesGrid}>
+{/* Minimum Stay */}
+{!isNaN(pg.min_stay_months) &&
+  Number(pg.min_stay_months) > 0 && (
+    <RuleItem
+      icon="🔒"
+      label={`Minimum Stay: ${pg.min_stay_months} months`}
+      allowed={true}
+      description="Minimum stay requirement"
+    />
+)}
 
-        {/* Minimum Stay */}
-        {pg.min_stay_months &&
-          pg.min_stay_months !== "" &&
-          pg.min_stay_months !== "0" &&
-          Number(pg.min_stay_months) > 0 && (
-            <RuleItem
-              icon="🔒"
-              label={`Minimum Stay: ${pg.min_stay_months} months`}
-              allowed={true}
-              description="Minimum stay requirement"
-            />
-        )}
+{/* Lock In */}
+{!isNaN(pg.lock_in_period) &&
+  Number(pg.lock_in_period) > 0 && (
+    <RuleItem
+      icon="📝"
+      label={`Lock-in Period: ${pg.lock_in_period} months`}
+      allowed={true}
+      description="Lock-in period before leaving"
+    />
+)}
 
-        {/* Lock In */}
-        {pg.lock_in_period &&
-          pg.lock_in_period !== "" &&
-          pg.lock_in_period !== "0" &&
-          Number(pg.lock_in_period) > 0 && (
-            <RuleItem
-              icon="📝"
-              label={`Lock-in Period: ${pg.lock_in_period} months`}
-              allowed={true}
-              description="Lock-in period before leaving"
-            />
-        )}
+{/* Notice Period */}
+{!isNaN(pg.notice_period) &&
+  Number(pg.notice_period) > 0 && (
+    <RuleItem
+      icon="⏰"
+      label={`Notice Period: ${pg.notice_period} months`}
+      allowed={true}
+      description="Notice period before vacating"
+    />
+)}
 
-        {/* Notice Period */}
-        {pg.notice_period &&
-          pg.notice_period !== "" &&
-          pg.notice_period !== "0" &&
-          Number(pg.notice_period) > 0 && (
-            <RuleItem
-              icon="⏰"
-              label={`Notice Period: ${pg.notice_period} months`}
-              allowed={true}
-              description="Notice period before vacating"
-            />
-        )}
+{/* Agreement Mandatory */}
+{(pg.agreement_mandatory === true ||
+  pg.agreement_mandatory === "true") && (
+    <RuleItem
+      icon="📄"
+      label="Agreement Mandatory"
+      allowed={true}
+      description="Legal agreement required"
+    />
+)}
 
-        {/* Agreement Mandatory */}
-        {(pg.agreement_mandatory === true ||
-          pg.agreement_mandatory === "true") && (
-            <RuleItem
-              icon="📄"
-              label="Agreement Mandatory"
-              allowed={true}
-              description="Legal agreement required"
-            />
-        )}
+{/* ID Proof */}
+{(pg.id_proof_mandatory === true ||
+  pg.id_proof_mandatory === "true") && (
+    <RuleItem
+      icon="🆔"
+      label="ID Proof Mandatory"
+      allowed={true}
+      description="ID proof verification required"
+    />
+)}
 
-        {/* ID Proof */}
-        {(pg.id_proof_mandatory === true ||
-          pg.id_proof_mandatory === "true") && (
-            <RuleItem
-              icon="🆔"
-              label="ID Proof Mandatory"
-              allowed={true}
-              description="ID proof verification required"
-            />
-        )}
-
-      </div>
-    )}
-  </div>
+</div>
+)}
+</div>
 )}
               </div>
             </Section>
