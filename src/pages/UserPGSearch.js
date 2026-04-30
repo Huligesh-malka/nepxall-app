@@ -83,8 +83,7 @@ import {
   Gem,
   FileText,
   Clock as ClockIcon,
-  Headphones,
-  LocateFixed
+  Headphones
 } from "lucide-react";
 import api from "../api/api";
 
@@ -2294,7 +2293,7 @@ const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
           alignItems: "center",
           justifyContent: "center"
         }}>
-          <Gps size={24} color="white" />
+          <Navigation size={24} color="white" />
         </div>
         <div>
           <h3 style={{ 
@@ -2369,7 +2368,7 @@ const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
             </>
           ) : (
             <>
-              <Gps size={16} />
+              <Navigation size={16} />
               Allow Location
             </>
           )}
@@ -2399,7 +2398,6 @@ const HeroBanner = () => {
         position: "relative",
         zIndex: 2
       }}>
-        {/* Left Content */}
         <div>
           <h1 style={{
             fontSize: 42,
@@ -2422,7 +2420,6 @@ const HeroBanner = () => {
             Book trusted stays with secure payments, verified owners and instant booking support.
           </p>
           
-          {/* Trust Items */}
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(2, 1fr)",
@@ -2508,7 +2505,6 @@ const HeroBanner = () => {
           </div>
         </div>
         
-        {/* Right Illustration */}
         <div style={{
           display: "flex",
           justifyContent: "center",
@@ -2563,7 +2559,6 @@ const HeroBanner = () => {
         </div>
       </div>
       
-      {/* Decorative Elements */}
       <div style={{
         position: "absolute",
         top: -50,
@@ -2630,11 +2625,9 @@ function UserPGSearch() {
 
   const limit = 10;
 
-  // Check if location permission was already asked
   useEffect(() => {
     const permissionAsked = localStorage.getItem(LOCATION_PERMISSION_ASKED_KEY);
     if (!permissionAsked) {
-      // Show location banner on first visit
       setShowLocationBanner(true);
     }
   }, []);
@@ -2701,7 +2694,6 @@ function UserPGSearch() {
         setLoadingMore(true);
       }
       
-      // If user location is available, fetch nearby properties
       let url = `/pg/search/advanced?page=${page}&limit=${limit}`;
       
       if (userLocation && filters.nearMe) {
@@ -2713,7 +2705,6 @@ function UserPGSearch() {
       if (res.data?.success || res.data?.data) {
         let rawData = res.data?.data || [];
         
-        // Calculate distances if user location is available
         if (userLocation) {
           rawData = rawData.map(pg => {
             if (pg.latitude && pg.longitude) {
@@ -2728,7 +2719,6 @@ function UserPGSearch() {
             return pg;
           });
           
-          // Sort by distance if nearMe filter is active
           if (filters.nearMe) {
             rawData.sort((a, b) => (a.distance || 999) - (b.distance || 999));
           }
@@ -2761,7 +2751,6 @@ function UserPGSearch() {
     loadFavorites();
   }, []);
 
-  // Re-fetch properties when location changes
   useEffect(() => {
     if (userLocation && filters.nearMe) {
       setPage(1);
@@ -2834,8 +2823,6 @@ function UserPGSearch() {
         localStorage.setItem(LOCATION_PERMISSION_ASKED_KEY, "true");
         showNotification("📍 Location detected! Showing nearby properties within 5km");
         setLocationLoading(false);
-        
-        // Re-fetch properties with location
         setPage(1);
         loadPGs(false);
       },
@@ -2876,8 +2863,6 @@ function UserPGSearch() {
         setFilters(prev => ({ ...prev, nearMe: true, sort: "distance" }));
         showNotification("📍 Location detected! Showing nearby properties");
         setLocationLoading(false);
-        
-        // Re-fetch properties with location
         setPage(1);
         loadPGs(false);
       },
@@ -3251,7 +3236,7 @@ function UserPGSearch() {
         </div>
       )}
 
-      {/* ================= LOCATION PERMISSION BANNER ================= */}
+      {/* Location Permission Banner */}
       {showLocationBanner && (
         <LocationPermissionBanner
           onAllow={handleAllowLocation}
@@ -3260,10 +3245,10 @@ function UserPGSearch() {
         />
       )}
 
-      {/* ================= HERO BANNER ================= */}
+      {/* Hero Banner */}
       <HeroBanner />
 
-      {/* Location Info Bar - Shows when location is active */}
+      {/* Location Info Bar */}
       {userLocation && filters.nearMe && (
         <div style={{
           background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
@@ -3530,7 +3515,7 @@ function UserPGSearch() {
               </>
             ) : (
               <>
-                <Gps size={18} />
+                <Navigation size={18} />
                 Near Me
               </>
             )}
