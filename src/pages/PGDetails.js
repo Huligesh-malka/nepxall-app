@@ -2237,17 +2237,7 @@ export default function PGDetails() {
                             description="Minimum stay requirement"
                           />
                         )}
-{/* LOCK IN PERIOD */}
-{pg.lock_in_period &&
- pg.lock_in_period !== "0" &&
- pg.lock_in_period !== 0 && (
-  <RuleItem
-    icon="📝"
-    label={`Lock-in Period: ${Number(pg.lock_in_period) || 1} months`}
-    allowed={true}
-    description="Lock-in period before leaving"
-  />
-)}
+
 
 {/* NOTICE PERIOD */}
 {Number(pg.notice_period) > 0 && (
