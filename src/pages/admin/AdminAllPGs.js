@@ -571,7 +571,7 @@ const AdminAllPGs = () => {
 
         <div className="mb-4 flex justify-between items-center">
           <p className="text-sm text-gray-600">
-            
+            Showing {filteredPGs.length} of {pgs.length} properties
           </p>
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <span>Total Revenue: <strong className="text-green-600">₹{stats.totalRevenue.toLocaleString()}</strong></span>
