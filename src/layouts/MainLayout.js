@@ -362,7 +362,7 @@ const MainLayout = () => {
                     </Tooltip>
                   )}
 
-                  {/* Install App Button */}
+                  {/* Install App Button - Without white border */}
                   {installable && (
                     <Tooltip title="Install our app for better experience" arrow TransitionComponent={Zoom}>
                       <Button
@@ -370,11 +370,13 @@ const MainLayout = () => {
                         onClick={installApp}
                         startIcon={<GetAppIcon />}
                         sx={{
-                          borderColor: PREMIUM_COLORS.primary.main,
-                          color: PREMIUM_COLORS.primary.main,
+                          borderColor: PREMIUM_COLORS.neutral[300],
+                          color: PREMIUM_COLORS.neutral[700],
+                          backgroundColor: "transparent",
                           "&:hover": {
-                            borderColor: PREMIUM_COLORS.primary.dark,
-                            background: `${PREMIUM_COLORS.primary.main}10`,
+                            borderColor: PREMIUM_COLORS.primary.main,
+                            backgroundColor: `${PREMIUM_COLORS.primary.main}08`,
+                            color: PREMIUM_COLORS.primary.main,
                             transform: "translateY(-2px)"
                           },
                           borderRadius: "12px",
