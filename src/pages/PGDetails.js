@@ -2213,7 +2213,8 @@ export default function PGDetails() {
 
                 {/* Legal & Duration Section - FIXED: Proper null/zero checks for numeric fields */}
                 {((pg.min_stay_months && pg.min_stay_months !== "" && pg.min_stay_months !== "0" && Number(pg.min_stay_months) > 0) ||
-                  
+                  (pg.lock_in_period && pg.lock_in_period !== "" && pg.lock_in_period !== "0" && Number(pg.lock_in_period) > 0) ||
+                  (pg.notice_period && pg.notice_period !== "" && pg.notice_period !== "0" && Number(pg.notice_period) > 0) ||
                   pg.agreement_mandatory !== undefined || 
                   pg.id_proof_mandatory !== undefined) && (
                   <div style={modernStyles.rulesSection}>
