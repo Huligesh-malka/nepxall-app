@@ -3730,7 +3730,7 @@ function UserPGSearch() {
           </h2>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ color: "#6b7280", fontSize: 14 }}>
-              {pgs.length} properties found
+              
               {filters.minBudget > 0 && filters.maxBudget < 50000 && 
                 ` within ₹${formatPrice(filters.minBudget)} - ₹${formatPrice(filters.maxBudget)}`}
               {filters.nearMe && userLocation && ` within 5km of your location`}
@@ -4177,7 +4177,7 @@ function UserPGSearch() {
                 color: "#666",
                 fontWeight: "500"
               }}>
-                Showing {pgs.length} properties
+                
               </p>
             </div>
           )}

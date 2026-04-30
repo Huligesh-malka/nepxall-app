@@ -81,7 +81,7 @@ export default function Home() {
           color: "#666",
           fontWeight: "500"
         }}>
-          Showing {pgs.length} properties
+          
         </p>
       </div>
     </div>
