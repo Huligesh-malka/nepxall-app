@@ -293,18 +293,18 @@ const MainLayout = () => {
             display: "flex",
             justifyContent: "flex-end",
             alignItems: "center",
-            mb: 4,
+            mb: isMobile ? 1 : 4,
             flexWrap: "wrap",
             gap: 2,
-            position: "sticky",
+            position: isMobile ? "relative" : "sticky",
             top: 0,
             zIndex: 1100,
-            background: scrolled ? "rgba(255, 255, 255, 0.95)" : "transparent",
+            background: isMobile ? "transparent" : scrolled ? "rgba(255, 255, 255, 0.95)" : "transparent",
             backdropFilter: scrolled ? "blur(20px)" : "none",
-            borderRadius: scrolled ? "16px" : "0px",
-            padding: scrolled ? "16px 24px" : "0px",
+            borderRadius: isMobile ? "0px" : scrolled ? "16px" : "0px",
+            padding: isMobile ? "0px" : scrolled ? "16px 24px" : "0px",
             transition: "all 0.3s ease",
-            boxShadow: scrolled ? "0 4px 20px rgba(0,0,0,0.05)" : "none"
+            boxShadow: isMobile ? "none" : scrolled ? "0 4px 20px rgba(0,0,0,0.05)" : "none"
           }}
         >
           {/* Premium Action Buttons */}
@@ -358,34 +358,6 @@ const MainLayout = () => {
                         }}
                       >
                         List Property
-                      </Button>
-                    </Tooltip>
-                  )}
-
-                  {/* Install App Button - Without white border */}
-                  {installable && (
-                    <Tooltip title="Install our app for better experience" arrow TransitionComponent={Zoom}>
-                      <Button
-                        variant="outlined"
-                        onClick={installApp}
-                        startIcon={<GetAppIcon />}
-                        sx={{
-                          borderColor: PREMIUM_COLORS.neutral[300],
-                          color: PREMIUM_COLORS.neutral[700],
-                          backgroundColor: "transparent",
-                          "&:hover": {
-                            borderColor: PREMIUM_COLORS.primary.main,
-                            backgroundColor: `${PREMIUM_COLORS.primary.main}08`,
-                            color: PREMIUM_COLORS.primary.main,
-                            transform: "translateY(-2px)"
-                          },
-                          borderRadius: "12px",
-                          fontWeight: 600,
-                          transition: "all 0.3s ease",
-                          textTransform: "none"
-                        }}
-                      >
-                        Install
                       </Button>
                     </Tooltip>
                   )}
