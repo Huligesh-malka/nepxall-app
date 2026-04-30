@@ -96,7 +96,7 @@ const getCorrectImageUrl = (photo) => {
 
 // Safe price formatting function
 const formatPrice = (price) => {
-  if (price === null || price === undefined || price === "") {
+  if (price === null || price === undefined || price === "" || price === "0" || price === 0) {
     return "0";
   }
   
@@ -113,7 +113,13 @@ const formatPrice = (price) => {
   }
 };
 
-const getPGCode = (id) => `PG-${String(id).padStart(5, "0")}`;
+// Safe number formatter with null check
+const formatNumber = (value, suffix = "") => {
+  if (value === null || value === undefined || value === "" || value === "0" || value === 0) {
+    return null;
+  }
+  return `${value}${suffix}`;
+};
 
 // Get tomorrow's date for check-in
 const getTomorrowDate = () => {
@@ -151,22 +157,22 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
 
   const getDefaultRoomType = () => {
     if (pg?.pg_category === "pg") {
-      if (pg.single_sharing) return "Single Sharing";
-      if (pg.double_sharing) return "Double Sharing";
-      if (pg.triple_sharing) return "Triple Sharing";
-      if (pg.four_sharing) return "Four Sharing";
-      if (pg.single_room) return "Single Room";
-      if (pg.double_room) return "Double Room";
+      if (pg.single_sharing && Number(pg.single_sharing) > 0) return "Single Sharing";
+      if (pg.double_sharing && Number(pg.double_sharing) > 0) return "Double Sharing";
+      if (pg.triple_sharing && Number(pg.triple_sharing) > 0) return "Triple Sharing";
+      if (pg.four_sharing && Number(pg.four_sharing) > 0) return "Four Sharing";
+      if (pg.single_room && Number(pg.single_room) > 0) return "Single Room";
+      if (pg.double_room && Number(pg.double_room) > 0) return "Double Room";
     } else if (pg?.pg_category === "coliving") {
-      if (pg.co_living_single_room) return "Single Room";
-      if (pg.co_living_double_room) return "Double Room";
-      if (pg.coliving_three_sharing) return "Triple Sharing";
-      if (pg.coliving_four_sharing) return "Four Sharing";
+      if (pg.co_living_single_room && Number(pg.co_living_single_room) > 0) return "Single Room";
+      if (pg.co_living_double_room && Number(pg.co_living_double_room) > 0) return "Double Room";
+      if (pg.coliving_three_sharing && Number(pg.coliving_three_sharing) > 0) return "Triple Sharing";
+      if (pg.coliving_four_sharing && Number(pg.coliving_four_sharing) > 0) return "Four Sharing";
     } else if (pg?.pg_category === "to_let") {
-      if (pg.price_1bhk) return "1BHK";
-      if (pg.price_2bhk) return "2BHK";
-      if (pg.price_3bhk) return "3BHK";
-      if (pg.price_4bhk) return "4BHK";
+      if (pg.price_1bhk && Number(pg.price_1bhk) > 0) return "1BHK";
+      if (pg.price_2bhk && Number(pg.price_2bhk) > 0) return "2BHK";
+      if (pg.price_3bhk && Number(pg.price_3bhk) > 0) return "3BHK";
+      if (pg.price_4bhk && Number(pg.price_4bhk) > 0) return "4BHK";
     }
     return "";
   };
@@ -212,19 +218,19 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
     } else if (pg?.pg_category === "coliving") {
       if (pg.co_living_single_room && Number(pg.co_living_single_room) > 0) types.push({ 
         value: "Single Room", 
-        label: `Co-Living Single Room - ₹${formatPrice(pg.co_living_single_room)}` 
+        label: `Single Room - ₹${formatPrice(pg.co_living_single_room)}` 
       });
       if (pg.co_living_double_room && Number(pg.co_living_double_room) > 0) types.push({ 
         value: "Double Room", 
-        label: `Co-Living Double Room - ₹${formatPrice(pg.co_living_double_room)}` 
+        label: `Double Room - ₹${formatPrice(pg.co_living_double_room)}` 
       });
       if (pg.coliving_three_sharing && Number(pg.coliving_three_sharing) > 0) types.push({ 
         value: "Triple Sharing", 
-        label: `Co-Living Triple Sharing - ₹${formatPrice(pg.coliving_three_sharing)}` 
+        label: `Triple Sharing - ₹${formatPrice(pg.coliving_three_sharing)}` 
       });
       if (pg.coliving_four_sharing && Number(pg.coliving_four_sharing) > 0) types.push({ 
         value: "Four Sharing", 
-        label: `Co-Living Four Sharing - ₹${formatPrice(pg.coliving_four_sharing)}` 
+        label: `Four Sharing - ₹${formatPrice(pg.coliving_four_sharing)}` 
       });
     } else if (pg?.pg_category === "to_let") {
       if (pg.price_1bhk && Number(pg.price_1bhk) > 0) types.push({ 
@@ -283,12 +289,12 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
 
         <div style={modernStyles.modalContent}>
           <div style={modernStyles.modalHeader}>
-            <h2 style={modernStyles.modalTitle}>🏠 Reserve {pg?.pg_name}</h2>
+            <h2 style={modernStyles.modalTitle}>Reserve {pg?.pg_name}</h2>
             <p style={modernStyles.modalSubtitle}>Your details will be auto-filled from your profile</p>
           </div>
 
           <div style={modernStyles.modalWarning}>
-            ⚠️ You can only request this PG once every 24 hours
+            You can only request this property once every 24 hours
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -472,7 +478,7 @@ const RuleItem = ({ icon, label, allowed, description }) => (
           ...modernStyles.ruleStatusBadge,
           background: allowed ? '#10b981' : '#ef4444'
         }}>
-          {allowed ? '✅ Allowed' : '❌ Not Allowed'}
+          {allowed ? 'Allowed' : 'Not Allowed'}
         </span>
       </div>
     </div>
@@ -480,6 +486,7 @@ const RuleItem = ({ icon, label, allowed, description }) => (
 );
 
 const InfoRow = ({ label, value }) => {
+  // Comprehensive null/empty/zero check
   if (
     value === null ||
     value === undefined ||
@@ -493,7 +500,7 @@ const InfoRow = ({ label, value }) => {
   }
   return (
     <div style={modernStyles.infoRow}>
-      <strong>{label}:</strong> {value}
+      <strong>{label}:</strong> <span>{value}</span>
     </div>
   );
 };
@@ -505,7 +512,7 @@ const PriceDetails = ({ pg }) => {
   const isPG = !isToLet && !isCoLiving;
 
   const formatPriceLocal = (price) => {
-    if (!price || price === "" || price === "0") return "—";
+    if (!price || price === "" || price === "0" || price === 0) return null;
     return `₹${parseInt(price).toLocaleString('en-IN')}`;
   };
 
@@ -513,23 +520,28 @@ const PriceDetails = ({ pg }) => {
     if (!pg) return false;
     
     if (isToLet) {
-      return pg.price_1bhk || pg.price_2bhk || pg.price_3bhk || pg.price_4bhk;
+      return (pg.price_1bhk && pg.price_1bhk !== "0" && pg.price_1bhk !== "") ||
+             (pg.price_2bhk && pg.price_2bhk !== "0" && pg.price_2bhk !== "") ||
+             (pg.price_3bhk && pg.price_3bhk !== "0" && pg.price_3bhk !== "") ||
+             (pg.price_4bhk && pg.price_4bhk !== "0" && pg.price_4bhk !== "");
     } else if (isCoLiving) {
-      return pg.co_living_single_room || pg.co_living_double_room || 
-             pg.coliving_three_sharing || pg.coliving_four_sharing;
+      return (pg.co_living_single_room && pg.co_living_single_room !== "0" && pg.co_living_single_room !== "") ||
+             (pg.co_living_double_room && pg.co_living_double_room !== "0" && pg.co_living_double_room !== "") ||
+             (pg.coliving_three_sharing && pg.coliving_three_sharing !== "0" && pg.coliving_three_sharing !== "") ||
+             (pg.coliving_four_sharing && pg.coliving_four_sharing !== "0" && pg.coliving_four_sharing !== "");
     } else {
-      return pg.single_sharing || pg.double_sharing || pg.triple_sharing || 
-             pg.four_sharing || pg.single_room || pg.double_room || pg.triple_room;
+      return (pg.single_sharing && pg.single_sharing !== "0" && pg.single_sharing !== "") ||
+             (pg.double_sharing && pg.double_sharing !== "0" && pg.double_sharing !== "") ||
+             (pg.triple_sharing && pg.triple_sharing !== "0" && pg.triple_sharing !== "") ||
+             (pg.four_sharing && pg.four_sharing !== "0" && pg.four_sharing !== "") ||
+             (pg.single_room && pg.single_room !== "0" && pg.single_room !== "") ||
+             (pg.double_room && pg.double_room !== "0" && pg.double_room !== "") ||
+             (pg.triple_room && pg.triple_room !== "0" && pg.triple_room !== "");
     }
   };
 
   if (!hasAnyPrice()) {
-    return (
-      <div style={modernStyles.noPriceContainer}>
-        <span style={modernStyles.noPriceIcon}>💰</span>
-        <p style={modernStyles.noPriceText}>Price details not available</p>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -538,14 +550,14 @@ const PriceDetails = ({ pg }) => {
         <div style={modernStyles.priceSection}>
           <h4 style={modernStyles.priceSectionTitle}>
             <span style={modernStyles.priceSectionIcon}>🏠</span>
-            House/Flat Rental Prices
+            House & Flat Rental Prices
           </h4>
           <div style={modernStyles.priceGrid}>
             {pg.price_1bhk && pg.price_1bhk !== "0" && pg.price_1bhk !== "" && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>1 BHK</div>
                 <div style={modernStyles.priceValue}>
-                  {formatPriceLocal(pg.price_1bhk)}/month
+                  {formatPriceLocal(pg.price_1bhk)}<span style={modernStyles.pricePeriod}>/month</span>
                 </div>
                 {pg.security_deposit_1bhk && pg.security_deposit_1bhk !== "0" && pg.security_deposit_1bhk !== "" && (
                   <div style={modernStyles.depositAmount}>
@@ -558,7 +570,7 @@ const PriceDetails = ({ pg }) => {
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>2 BHK</div>
                 <div style={modernStyles.priceValue}>
-                  {formatPriceLocal(pg.price_2bhk)}/month
+                  {formatPriceLocal(pg.price_2bhk)}<span style={modernStyles.pricePeriod}>/month</span>
                 </div>
                 {pg.security_deposit_2bhk && pg.security_deposit_2bhk !== "0" && pg.security_deposit_2bhk !== "" && (
                   <div style={modernStyles.depositAmount}>
@@ -571,7 +583,7 @@ const PriceDetails = ({ pg }) => {
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>3 BHK</div>
                 <div style={modernStyles.priceValue}>
-                  {formatPriceLocal(pg.price_3bhk)}/month
+                  {formatPriceLocal(pg.price_3bhk)}<span style={modernStyles.pricePeriod}>/month</span>
                 </div>
                 {pg.security_deposit_3bhk && pg.security_deposit_3bhk !== "0" && pg.security_deposit_3bhk !== "" && (
                   <div style={modernStyles.depositAmount}>
@@ -584,7 +596,7 @@ const PriceDetails = ({ pg }) => {
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>4 BHK</div>
                 <div style={modernStyles.priceValue}>
-                  {formatPriceLocal(pg.price_4bhk)}/month
+                  {formatPriceLocal(pg.price_4bhk)}<span style={modernStyles.pricePeriod}>/month</span>
                 </div>
                 {pg.security_deposit_4bhk && pg.security_deposit_4bhk !== "0" && pg.security_deposit_4bhk !== "" && (
                   <div style={modernStyles.depositAmount}>
@@ -594,11 +606,6 @@ const PriceDetails = ({ pg }) => {
               </div>
             )}
           </div>
-          {pg.bhk_type && (
-            <div style={modernStyles.bhkInfo}>
-              Available: {pg.bhk_type === "4+" ? "4+ BHK" : `${pg.bhk_type} BHK`}
-            </div>
-          )}
         </div>
       )}
 
@@ -606,14 +613,14 @@ const PriceDetails = ({ pg }) => {
         <div style={modernStyles.priceSection}>
           <h4 style={modernStyles.priceSectionTitle}>
             <span style={modernStyles.priceSectionIcon}>🤝</span>
-            Co-Living Prices
+            Co-Living Room Prices
           </h4>
           <div style={modernStyles.priceGrid}>
             {pg.co_living_single_room && pg.co_living_single_room !== "0" && pg.co_living_single_room !== "" && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>Single Room</div>
                 <div style={modernStyles.priceValue}>
-                  {formatPriceLocal(pg.co_living_single_room)}/month
+                  {formatPriceLocal(pg.co_living_single_room)}<span style={modernStyles.pricePeriod}>/month</span>
                 </div>
                 {pg.co_living_security_deposit && pg.co_living_security_deposit !== "0" && pg.co_living_security_deposit !== "" && (
                   <div style={modernStyles.depositAmount}>
@@ -626,7 +633,7 @@ const PriceDetails = ({ pg }) => {
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>Double Room</div>
                 <div style={modernStyles.priceValue}>
-                  {formatPriceLocal(pg.co_living_double_room)}/month
+                  {formatPriceLocal(pg.co_living_double_room)}<span style={modernStyles.pricePeriod}>/month</span>
                 </div>
                 {pg.co_living_security_deposit && pg.co_living_security_deposit !== "0" && pg.co_living_security_deposit !== "" && (
                   <div style={modernStyles.depositAmount}>
@@ -639,34 +646,19 @@ const PriceDetails = ({ pg }) => {
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>Triple Sharing</div>
                 <div style={modernStyles.priceValue}>
-                  {formatPriceLocal(pg.coliving_three_sharing)}/month
+                  {formatPriceLocal(pg.coliving_three_sharing)}<span style={modernStyles.pricePeriod}>/month</span>
                 </div>
-                {pg.co_living_security_deposit && pg.co_living_security_deposit !== "0" && pg.co_living_security_deposit !== "" && (
-                  <div style={modernStyles.depositAmount}>
-                    Security: {formatPriceLocal(pg.co_living_security_deposit)}
-                  </div>
-                )}
               </div>
             )}
             {pg.coliving_four_sharing && pg.coliving_four_sharing !== "0" && pg.coliving_four_sharing !== "" && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>Four Sharing</div>
                 <div style={modernStyles.priceValue}>
-                  {formatPriceLocal(pg.coliving_four_sharing)}/month
+                  {formatPriceLocal(pg.coliving_four_sharing)}<span style={modernStyles.pricePeriod}>/month</span>
                 </div>
-                {pg.co_living_security_deposit && pg.co_living_security_deposit !== "0" && pg.co_living_security_deposit !== "" && (
-                  <div style={modernStyles.depositAmount}>
-                    Security: {formatPriceLocal(pg.co_living_security_deposit)}
-                  </div>
-                )}
               </div>
             )}
           </div>
-          {pg.co_living_includes && (
-            <div style={modernStyles.includesInfo}>
-              Includes: {pg.co_living_includes}
-            </div>
-          )}
         </div>
       )}
 
@@ -674,7 +666,7 @@ const PriceDetails = ({ pg }) => {
         <div style={modernStyles.priceSection}>
           <h4 style={modernStyles.priceSectionTitle}>
             <span style={modernStyles.priceSectionIcon}>🏢</span>
-            PG/Hostel Room Prices
+            PG & Hostel Room Prices
           </h4>
           
           {(pg.single_sharing || pg.double_sharing || pg.triple_sharing || pg.four_sharing) && (
@@ -685,7 +677,7 @@ const PriceDetails = ({ pg }) => {
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Single Sharing</div>
                     <div style={modernStyles.priceValue}>
-                      {formatPriceLocal(pg.single_sharing)}/month
+                      {formatPriceLocal(pg.single_sharing)}<span style={modernStyles.pricePeriod}>/month</span>
                     </div>
                   </div>
                 )}
@@ -693,7 +685,7 @@ const PriceDetails = ({ pg }) => {
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Double Sharing</div>
                     <div style={modernStyles.priceValue}>
-                      {formatPriceLocal(pg.double_sharing)}/month
+                      {formatPriceLocal(pg.double_sharing)}<span style={modernStyles.pricePeriod}>/month</span>
                     </div>
                   </div>
                 )}
@@ -701,7 +693,7 @@ const PriceDetails = ({ pg }) => {
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Triple Sharing</div>
                     <div style={modernStyles.priceValue}>
-                      {formatPriceLocal(pg.triple_sharing)}/month
+                      {formatPriceLocal(pg.triple_sharing)}<span style={modernStyles.pricePeriod}>/month</span>
                     </div>
                   </div>
                 )}
@@ -709,7 +701,7 @@ const PriceDetails = ({ pg }) => {
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Four Sharing</div>
                     <div style={modernStyles.priceValue}>
-                      {formatPriceLocal(pg.four_sharing)}/month
+                      {formatPriceLocal(pg.four_sharing)}<span style={modernStyles.pricePeriod}>/month</span>
                     </div>
                   </div>
                 )}
@@ -725,7 +717,7 @@ const PriceDetails = ({ pg }) => {
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Single Room</div>
                     <div style={modernStyles.priceValue}>
-                      {formatPriceLocal(pg.single_room)}/month
+                      {formatPriceLocal(pg.single_room)}<span style={modernStyles.pricePeriod}>/month</span>
                     </div>
                   </div>
                 )}
@@ -733,7 +725,7 @@ const PriceDetails = ({ pg }) => {
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Double Room</div>
                     <div style={modernStyles.priceValue}>
-                      {formatPriceLocal(pg.double_room)}/month
+                      {formatPriceLocal(pg.double_room)}<span style={modernStyles.pricePeriod}>/month</span>
                     </div>
                   </div>
                 )}
@@ -741,7 +733,7 @@ const PriceDetails = ({ pg }) => {
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Triple Room</div>
                     <div style={modernStyles.priceValue}>
-                      {formatPriceLocal(pg.triple_room)}/month
+                      {formatPriceLocal(pg.triple_room)}<span style={modernStyles.pricePeriod}>/month</span>
                     </div>
                   </div>
                 )}
@@ -749,32 +741,27 @@ const PriceDetails = ({ pg }) => {
             </div>
           )}
 
+          {/* Additional Charges Section */}
           {(pg.security_deposit || pg.maintenance_charges || pg.advance_rent) && (
             <div style={modernStyles.additionalCharges}>
               <h5 style={modernStyles.additionalChargesTitle}>Additional Charges</h5>
               <div style={modernStyles.chargesGrid}>
                 {pg.security_deposit && pg.security_deposit !== "0" && pg.security_deposit !== "" && (
                   <div style={modernStyles.chargeItem}>
-                    <span style={modernStyles.chargeLabel}>Security Deposit:</span>
+                    <span style={modernStyles.chargeLabel}>Security Deposit</span>
                     <span style={modernStyles.chargeValue}>{formatPriceLocal(pg.security_deposit)}</span>
                   </div>
                 )}
                 {pg.maintenance_charges && pg.maintenance_charges !== "0" && pg.maintenance_charges !== "" && (
                   <div style={modernStyles.chargeItem}>
-                    <span style={modernStyles.chargeLabel}>Maintenance:</span>
-                    <span style={modernStyles.chargeValue}>{formatPriceLocal(pg.maintenance_charges)}/month</span>
+                    <span style={modernStyles.chargeLabel}>Maintenance Charges</span>
+                    <span style={modernStyles.chargeValue}>{formatPriceLocal(pg.maintenance_charges)}<span style={modernStyles.pricePeriod}>/month</span></span>
                   </div>
                 )}
                 {pg.advance_rent && pg.advance_rent !== "0" && pg.advance_rent !== "" && (
                   <div style={modernStyles.chargeItem}>
-                    <span style={modernStyles.chargeLabel}>Advance Rent:</span>
+                    <span style={modernStyles.chargeLabel}>Advance Rent</span>
                     <span style={modernStyles.chargeValue}>{pg.advance_rent} months</span>
-                  </div>
-                )}
-                {pg.lock_in_period && pg.lock_in_period !== "0" && pg.lock_in_period !== "" && (
-                  <div style={modernStyles.chargeItem}>
-                    <span style={modernStyles.chargeLabel}>Lock-in Period:</span>
-                    <span style={modernStyles.chargeValue}>{pg.lock_in_period} months</span>
                   </div>
                 )}
               </div>
@@ -788,7 +775,7 @@ const PriceDetails = ({ pg }) => {
           <span style={modernStyles.foodChargesIcon}>🍽️</span>
           <div>
             <div style={modernStyles.foodChargesLabel}>Food Charges (Optional)</div>
-            <div style={modernStyles.foodChargesValue}>{formatPriceLocal(pg.food_charges)}/month</div>
+            <div style={modernStyles.foodChargesValue}>{formatPriceLocal(pg.food_charges)}<span style={modernStyles.pricePeriod}>/month</span></div>
           </div>
         </div>
       )}
@@ -844,11 +831,6 @@ const HighlightItem = ({ name, type, category, icon, onMapView, coordinates, col
     <div style={modernStyles.highlightContent}>
       <div style={modernStyles.highlightName}>{name}</div>
       <div style={modernStyles.highlightType}>{type.replace(/_/g, ' ').replace('nearby ', '')}</div>
-      {coordinates && (
-        <div style={modernStyles.highlightDistance}>
-          📏 {calculateDistance(coordinates).toFixed(1)} km away
-        </div>
-      )}
     </div>
     <button 
       style={{
@@ -860,7 +842,7 @@ const HighlightItem = ({ name, type, category, icon, onMapView, coordinates, col
         onMapView();
       }}
     >
-      🗺️ View
+      View on Map
     </button>
   </div>
 );
@@ -868,7 +850,7 @@ const HighlightItem = ({ name, type, category, icon, onMapView, coordinates, col
 // Nearby PG Card Component
 const NearbyPGCard = ({ pg, onClick, distance }) => {
   const getStartingPrice = () => {
-    if (!pg) return "—";
+    if (!pg) return null;
     
     const isToLet = pg.pg_category === "to_let";
     const isCoLiving = pg.pg_category === "coliving";
@@ -878,13 +860,13 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
       if (pg.price_2bhk && parseInt(pg.price_2bhk) > 0) return pg.price_2bhk;
       if (pg.price_3bhk && parseInt(pg.price_3bhk) > 0) return pg.price_3bhk;
       if (pg.price_4bhk && parseInt(pg.price_4bhk) > 0) return pg.price_4bhk;
-      return "—";
+      return null;
     } else if (isCoLiving) {
       if (pg.co_living_single_room && parseInt(pg.co_living_single_room) > 0) return pg.co_living_single_room;
       if (pg.co_living_double_room && parseInt(pg.co_living_double_room) > 0) return pg.co_living_double_room;
       if (pg.coliving_three_sharing && parseInt(pg.coliving_three_sharing) > 0) return pg.coliving_three_sharing;
       if (pg.coliving_four_sharing && parseInt(pg.coliving_four_sharing) > 0) return pg.coliving_four_sharing;
-      return "—";
+      return null;
     } else {
       if (pg.single_sharing && parseInt(pg.single_sharing) > 0) return pg.single_sharing;
       if (pg.double_sharing && parseInt(pg.double_sharing) > 0) return pg.double_sharing;
@@ -893,7 +875,7 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
       if (pg.single_room && parseInt(pg.single_room) > 0) return pg.single_room;
       if (pg.double_room && parseInt(pg.double_room) > 0) return pg.double_room;
       if (pg.triple_room && parseInt(pg.triple_room) > 0) return pg.triple_room;
-      return "—";
+      return null;
     }
   };
 
@@ -904,6 +886,7 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
     return null;
   };
 
+  const startingPrice = getStartingPrice();
   const imageUrl = getImageUrl();
 
   return (
@@ -927,13 +910,13 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
         </div>
         <div style={modernStyles.nearbyPgBadges}>
           <span style={modernStyles.nearbyPgTypeBadge}>
-            {pg.pg_category === "to_let" ? "🏠 House" : 
-             pg.pg_category === "coliving" ? "🤝 Co-Living" : 
-             "🏢 PG"}
+            {pg.pg_category === "to_let" ? "House" : 
+             pg.pg_category === "coliving" ? "Co-Living" : 
+             "PG"}
           </span>
-          {distance && (
+          {distance && distance > 0 && (
             <span style={modernStyles.nearbyPgDistanceBadge}>
-              📏 {distance.toFixed(1)} km
+              {distance.toFixed(1)} km away
             </span>
           )}
         </div>
@@ -942,14 +925,14 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
       <div style={modernStyles.nearbyPgContent}>
         <h4 style={modernStyles.nearbyPgTitle}>{pg.pg_name}</h4>
         <p style={modernStyles.nearbyPgAddress}>
-          📍 {pg.address ? `${pg.address.substring(0, 40)}...` : pg.area || pg.city}
+          {pg.address ? `${pg.address.substring(0, 40)}...` : pg.area || pg.city}
         </p>
         
         <div style={modernStyles.nearbyPgStats}>
           <div style={modernStyles.nearbyPgStat}>
             <span style={modernStyles.nearbyPgStatIcon}>💰</span>
             <span style={modernStyles.nearbyPgStatText}>
-              ₹{getStartingPrice()}/month
+              {startingPrice ? `₹${startingPrice.toLocaleString('en-IN')}/month` : "Price on request"}
             </span>
           </div>
           <div style={modernStyles.nearbyPgStat}>
@@ -976,15 +959,11 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
             onClick();
           }}
         >
-          View Details →
+          View Details
         </button>
       </div>
     </div>
   );
-};
-
-const calculateDistance = (coordinates) => {
-  return Math.random() * 2 + 0.5;
 };
 
 const calculateDistanceBetweenCoords = (lat1, lon1, lat2, lon2) => {
@@ -1018,15 +997,7 @@ const NearbyHighlightsPanel = ({
   }
 
   if (highlights.length === 0) {
-    return (
-      <div style={modernStyles.noHighlightsPanel}>
-        <div style={modernStyles.noHighlightsIcon}>📍</div>
-        <h4 style={modernStyles.noHighlightsTitle}>No Nearby Places Found</h4>
-        <p style={modernStyles.noHighlightsText}>
-          We couldn't find any nearby places in our database for this location.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   const filteredHighlights = selectedCategory === "all" 
@@ -1068,7 +1039,7 @@ const NearbyHighlightsPanel = ({
               background: selectedColor
             }}></span>
             {selectedCategory === "all" 
-              ? `All Nearby Places` 
+              ? "All Nearby Places" 
               : `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)}`
             }
           </h4>
@@ -1106,15 +1077,7 @@ const NearbyPGsPanel = ({ nearbyPGs, isLoading, onViewPG }) => {
   }
 
   if (nearbyPGs.length === 0) {
-    return (
-      <div style={modernStyles.noNearbyPGs}>
-        <div style={modernStyles.noNearbyPGsIcon}>🏠</div>
-        <h4 style={modernStyles.noNearbyPGsTitle}>No Nearby Properties</h4>
-        <p style={modernStyles.noNearbyPGsText}>
-          We couldn't find other properties in this area.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -1140,7 +1103,7 @@ const NearbyPGsPanel = ({ nearbyPGs, isLoading, onViewPG }) => {
       
       <div style={modernStyles.nearbyPGsFooter}>
         <button style={modernStyles.viewAllPropertiesButton} onClick={() => onViewPG('all')}>
-          View All Properties in {nearbyPGs[0]?.area || nearbyPGs[0]?.city || "Area"} →
+          View All Properties in {nearbyPGs[0]?.area || nearbyPGs[0]?.city || "Area"}
         </button>
       </div>
     </div>
@@ -1241,8 +1204,6 @@ export default function PGDetails() {
         setLoading(true);
         setError(null);
         
-        console.log("Fetching PG details for ID:", id);
-        
         const res = await api.get(`/pg/${id}`);
         
         if (!res.data?.success) {
@@ -1250,10 +1211,6 @@ export default function PGDetails() {
         }
 
         const data = res.data.data;
-        console.log("PG data received:", data.pg_name);
-        console.log("Co-living triple sharing price:", data.coliving_three_sharing);
-        console.log("Co-living four sharing price:", data.coliving_four_sharing);
-        console.log("Min stay months:", data.min_stay_months);
 
         const photos = Array.isArray(data.photos)
           ? data.photos.map(p => ({ 
@@ -1331,7 +1288,7 @@ export default function PGDetails() {
             category: typeToCategory[field] || "other",
             icon: getHighlightIcon(typeToCategory[field], field),
             source: "database",
-            coordinates: generateRandomCoordinates(pg.latitude, pg.longitude, 2)
+            coordinates: null
           });
         }
       });
@@ -1339,34 +1296,6 @@ export default function PGDetails() {
       return highlights;
     };
 
-    const generateRandomCoordinates = (lat, lon, maxDistanceKm) => {
-      const R = 6371;
-      const maxDistance = maxDistanceKm / R;
-      
-      const bearing = Math.random() * 2 * Math.PI;
-      const distance = Math.random() * maxDistance;
-      
-      const lat1 = lat * Math.PI / 180;
-      const lon1 = lon * Math.PI / 180;
-      
-      const lat2 = Math.asin(
-        Math.sin(lat1) * Math.cos(distance) +
-        Math.cos(lat1) * Math.sin(distance) * Math.cos(bearing)
-      );
-      
-      const lon2 = lon1 + Math.atan2(
-        Math.sin(bearing) * Math.sin(distance) * Math.cos(lat1),
-        Math.cos(distance) - Math.sin(lat1) * Math.sin(lat2)
-      );
-      
-      return [
-        lat2 * 180 / Math.PI,
-        lon2 * 180 / Math.PI
-      ];
-    };
-
-    const dbHighlights = processDBHighlights();
-    
     const fetchAutoHighlights = async () => {
       try {
         setLoadingHighlights(true);
@@ -1414,7 +1343,7 @@ export default function PGDetails() {
           })
           .filter(p => p.name && p.name !== "Unknown other");
 
-        const allHighlights = [...dbHighlights, ...autoPlaces];
+        const allHighlights = [...processDBHighlights(), ...autoPlaces];
         const uniqueHighlights = Array.from(
           new Map(allHighlights.map(item => [item.name, item])).values()
         );
@@ -1422,72 +1351,50 @@ export default function PGDetails() {
         setNearbyHighlights(uniqueHighlights);
       } catch (err) {
         console.error("Auto location highlights error", err);
-        setNearbyHighlights(dbHighlights);
+        setNearbyHighlights(processDBHighlights());
       } finally {
         setLoadingHighlights(false);
       }
     };
 
-    // FIXED: Nearby PGs fetch - using correct API endpoint
+    // Nearby PGs fetch
     const fetchNearbyPGs = async () => {
       try {
         setLoadingNearbyPGs(true);
-        console.log("Fetching nearby PGs for:", pg.latitude, pg.longitude);
         
         if (!id || id === "undefined") {
-          console.error("Invalid PG ID:", id);
           setNearbyPGs([]);
           return;
         }
 
-        // Try multiple endpoint formats for compatibility
         let response = null;
         let success = false;
         
-        // Try primary endpoint
         try {
           const url = `/pg/nearby/${pg.latitude}/${pg.longitude}?radius=5&exclude=${id}`;
-          console.log("Trying endpoint:", url);
           response = await api.get(url);
           if (response.data?.success) {
             success = true;
           }
         } catch (err) {
-          console.log("Primary endpoint failed, trying alternative...");
+          console.log("Primary endpoint failed");
         }
         
-        // If primary failed, try alternative endpoint
         if (!success) {
           try {
             const url = `/properties/nearby?lat=${pg.latitude}&lng=${pg.longitude}&radius=5&exclude=${id}`;
-            console.log("Trying alternative endpoint:", url);
             response = await api.get(url);
             if (response.data?.success) {
               success = true;
             }
           } catch (err) {
-            console.log("Alternative endpoint also failed");
-          }
-        }
-        
-        // If still failed, try with pagination endpoint
-        if (!success) {
-          try {
-            const url = `/pg/all?page=1&limit=10&lat=${pg.latitude}&lng=${pg.longitude}&radius=5`;
-            console.log("Trying pagination endpoint:", url);
-            response = await api.get(url);
-            if (response.data?.success) {
-              success = true;
-            }
-          } catch (err) {
-            console.log("Pagination endpoint failed");
+            console.log("Alternative endpoint failed");
           }
         }
         
         if (success && response?.data?.data) {
           let pgsList = Array.isArray(response.data.data) ? response.data.data : [];
           
-          // Filter out current PG and calculate distances
           const pgsWithDistance = pgsList
             .filter(otherPG => otherPG.id !== parseInt(id))
             .map(otherPG => {
@@ -1510,10 +1417,8 @@ export default function PGDetails() {
             .sort((a, b) => a.distance - b.distance)
             .slice(0, 4);
           
-          console.log("Found nearby PGs:", sortedPGs.length);
           setNearbyPGs(sortedPGs);
         } else {
-          console.log("No nearby PGs found or API returned no data");
           setNearbyPGs([]);
         }
       } catch (err) {
@@ -1524,13 +1429,7 @@ export default function PGDetails() {
       }
     };
 
-    if (dbHighlights.length > 0) {
-      setNearbyHighlights(dbHighlights);
-      fetchAutoHighlights();
-    } else {
-      fetchAutoHighlights();
-    }
-    
+    fetchAutoHighlights();
     fetchNearbyPGs();
   }, [pg, id]);
 
@@ -1542,20 +1441,20 @@ export default function PGDetails() {
   const hasLocation = pg?.latitude && pg?.longitude;
 
   const getStartingPrice = () => {
-    if (!pg) return "—";
+    if (!pg) return null;
     
     if (isToLet) {
       if (pg.price_1bhk && parseInt(pg.price_1bhk) > 0) return pg.price_1bhk;
       if (pg.price_2bhk && parseInt(pg.price_2bhk) > 0) return pg.price_2bhk;
       if (pg.price_3bhk && parseInt(pg.price_3bhk) > 0) return pg.price_3bhk;
       if (pg.price_4bhk && parseInt(pg.price_4bhk) > 0) return pg.price_4bhk;
-      return "—";
+      return null;
     } else if (isCoLiving) {
       if (pg.co_living_single_room && parseInt(pg.co_living_single_room) > 0) return pg.co_living_single_room;
       if (pg.co_living_double_room && parseInt(pg.co_living_double_room) > 0) return pg.co_living_double_room;
       if (pg.coliving_three_sharing && parseInt(pg.coliving_three_sharing) > 0) return pg.coliving_three_sharing;
       if (pg.coliving_four_sharing && parseInt(pg.coliving_four_sharing) > 0) return pg.coliving_four_sharing;
-      return "—";
+      return null;
     } else {
       if (pg.single_sharing && parseInt(pg.single_sharing) > 0) return pg.single_sharing;
       if (pg.double_sharing && parseInt(pg.double_sharing) > 0) return pg.double_sharing;
@@ -1564,7 +1463,7 @@ export default function PGDetails() {
       if (pg.single_room && parseInt(pg.single_room) > 0) return pg.single_room;
       if (pg.double_room && parseInt(pg.double_room) > 0) return pg.double_room;
       if (pg.triple_room && parseInt(pg.triple_room) > 0) return pg.triple_room;
-      return "—";
+      return null;
     }
   };
 
@@ -1615,16 +1514,14 @@ export default function PGDetails() {
         return;
       }
 
-      showNotificationMessage(res.data?.message || "✅ Booking request sent to owner");
+      showNotificationMessage(res.data?.message || "Booking request sent to owner");
       setShowBookingModal(false);
 
     } catch (error) {
-      console.log("BOOKING ERROR:", error?.response?.data);
-
       if (error?.response?.data?.message) {
         showNotificationMessage(error.response.data.message);
       } else {
-        showNotificationMessage("❌ Booking failed. Try again");
+        showNotificationMessage("Booking failed. Try again");
       }
     } finally {
       setBookingLoading(false);
@@ -1656,7 +1553,6 @@ export default function PGDetails() {
   };
 
   const handleViewNearbyPG = (pgId) => {
-    console.log("Navigating to PG:", pgId);
     if (pgId && pgId !== 'all') {
       navigate(`/pg/${pgId}`);
     } else if (pgId === 'all' && pg?.area) {
@@ -1677,7 +1573,7 @@ export default function PGDetails() {
 
   const getAllFacilities = () => {
     return [
-      { key: "cupboard_available", label: "Cupboard/Wardrobe", icon: "👔", category: "room" },
+      { key: "cupboard_available", label: "Cupboard / Wardrobe", icon: "👔", category: "room" },
       { key: "table_chair_available", label: "Study Table & Chair", icon: "💺", category: "room" },
       { key: "dining_table_available", label: "Dining Table", icon: "🍽️", category: "kitchen" },
       { key: "attached_bathroom", label: "Attached Bathroom", icon: "🚽", category: "room" },
@@ -1746,18 +1642,23 @@ export default function PGDetails() {
       'drinking_allowed', 'outside_food_allowed', 'parties_allowed', 'pets_allowed',
       'late_night_entry_allowed', 'loud_music_restricted', 'office_going_only',
       'students_only', 'boys_only', 'girls_only', 'subletting_allowed', 
-      'lock_in_period', 'agreement_mandatory', 'id_proof_mandatory', 'min_stay_months'
+      'agreement_mandatory', 'id_proof_mandatory'
     ];
     
-    return rulesToCheck.some(rule => 
-      pg[rule] === true || pg[rule] === "true" || pg[rule] === "false" || 
-      (pg[rule] && pg[rule] !== "" && pg[rule] !== "0")
+    // Check for valid min_stay_months and lock_in_period separately (numeric fields)
+    const hasValidMinStay = pg.min_stay_months && pg.min_stay_months !== "" && pg.min_stay_months !== "0" && pg.min_stay_months !== 0;
+    const hasValidLockIn = pg.lock_in_period && pg.lock_in_period !== "" && pg.lock_in_period !== "0" && pg.lock_in_period !== 0;
+    
+    const hasRules = rulesToCheck.some(rule => 
+      pg[rule] === true || pg[rule] === "true" || pg[rule] === "false"
     );
+    
+    return hasRules || hasValidMinStay || hasValidLockIn;
   };
 
   const hasFacilitiesContent = () => {
     const hasTrueFacilities = getFilteredFacilities().length > 0;
-    const hasWaterType = pg?.water_type;
+    const hasWaterType = pg?.water_type && pg.water_type !== "";
     const hasAnyCategoryWithFacilities = facilityCategories.some(category => 
       getTrueFacilitiesCountInCategory(category.id) > 0
     );
@@ -1769,13 +1670,23 @@ export default function PGDetails() {
     if (!pg) return false;
     
     if (isToLet) {
-      return pg.price_1bhk || pg.price_2bhk || pg.price_3bhk || pg.price_4bhk;
+      return (pg.price_1bhk && pg.price_1bhk !== "0" && pg.price_1bhk !== "") ||
+             (pg.price_2bhk && pg.price_2bhk !== "0" && pg.price_2bhk !== "") ||
+             (pg.price_3bhk && pg.price_3bhk !== "0" && pg.price_3bhk !== "") ||
+             (pg.price_4bhk && pg.price_4bhk !== "0" && pg.price_4bhk !== "");
     } else if (isCoLiving) {
-      return pg.co_living_single_room || pg.co_living_double_room || 
-             pg.coliving_three_sharing || pg.coliving_four_sharing;
+      return (pg.co_living_single_room && pg.co_living_single_room !== "0" && pg.co_living_single_room !== "") ||
+             (pg.co_living_double_room && pg.co_living_double_room !== "0" && pg.co_living_double_room !== "") ||
+             (pg.coliving_three_sharing && pg.coliving_three_sharing !== "0" && pg.coliving_three_sharing !== "") ||
+             (pg.coliving_four_sharing && pg.coliving_four_sharing !== "0" && pg.coliving_four_sharing !== "");
     } else {
-      return pg.single_sharing || pg.double_sharing || pg.triple_sharing || 
-             pg.four_sharing || pg.single_room || pg.double_room || pg.triple_room;
+      return (pg.single_sharing && pg.single_sharing !== "0" && pg.single_sharing !== "") ||
+             (pg.double_sharing && pg.double_sharing !== "0" && pg.double_sharing !== "") ||
+             (pg.triple_sharing && pg.triple_sharing !== "0" && pg.triple_sharing !== "") ||
+             (pg.four_sharing && pg.four_sharing !== "0" && pg.four_sharing !== "") ||
+             (pg.single_room && pg.single_room !== "0" && pg.single_room !== "") ||
+             (pg.double_room && pg.double_room !== "0" && pg.double_room !== "") ||
+             (pg.triple_room && pg.triple_room !== "0" && pg.triple_room !== "");
     }
   };
 
@@ -1803,7 +1714,7 @@ export default function PGDetails() {
         <h2>Property Not Found</h2>
         <p>{error || "The property you're looking for doesn't exist or has been removed."}</p>
         <button style={modernStyles.backButton} onClick={() => navigate("/")}>
-          ← Back to Home
+          Back to Home
         </button>
       </div>
     );
@@ -1817,13 +1728,7 @@ export default function PGDetails() {
   const shouldShowNearbyHighlights = hasLocation && (nearbyHighlights.length > 0 || loadingHighlights);
   const shouldShowNearbyPGs = nearbyPGs.length > 0 || loadingNearbyPGs;
 
-  // Helper function to check if legal duration has valid values
-  const hasValidLegalDuration = () => {
-    if (!pg) return false;
-    // Check if either min_stay_months or lock_in_period exists and has meaningful value
-    return (pg.min_stay_months && pg.min_stay_months !== "" && pg.min_stay_months !== "0") ||
-           (pg.lock_in_period && pg.lock_in_period !== "" && pg.lock_in_period !== "0");
-  };
+  const startingPrice = getStartingPrice();
 
   return (
     <div style={modernStyles.page}>
@@ -1843,7 +1748,6 @@ export default function PGDetails() {
         <span style={modernStyles.breadcrumbLink} onClick={() => navigate("/properties")}>Properties</span>
         <span style={modernStyles.breadcrumbSeparator}>/</span>
         <span style={modernStyles.breadcrumbCurrent}>{pg.pg_name}</span>
-        <span style={modernStyles.propertyCode}></span>
       </div>
 
       {media.length > 0 ? (
@@ -1854,7 +1758,6 @@ export default function PGDetails() {
               alt={pg.pg_name} 
               style={modernStyles.media}
               onError={(e) => {
-                console.error("Image failed to load:", current.src);
                 e.target.onerror = null;
                 e.target.src = "https://via.placeholder.com/800x400?text=Image+Not+Found";
               }}
@@ -1895,7 +1798,7 @@ export default function PGDetails() {
           <div>
             <h1 style={modernStyles.title}>{pg.pg_name}</h1>
             <p style={modernStyles.address}>
-              <MapPin size={16} /> {pg.address || `${pg.area}, ${pg.city}, ${pg.state}`}
+              <MapPin size={16} /> {pg.address || `${pg.area}, ${pg.city}, ${pg.state || ''}`}
             </p>
             {pg.landmark && (
               <p style={modernStyles.landmark}>
@@ -1939,16 +1842,16 @@ export default function PGDetails() {
 
         <div style={modernStyles.badgeRow}>
           <span style={modernStyles.typeBadge}>
-            {isToLet ? "🏠 House/Flat" : 
-             isCoLiving ? "🤝 Co-Living" : 
-             "🏢 PG/Hostel"}
+            {isToLet ? "House / Flat" : 
+             isCoLiving ? "Co-Living" : 
+             "PG / Hostel"}
           </span>
           
           {!isToLet && !isCoLiving && pg.pg_type && (
             <span style={modernStyles.genderBadge}>
-              {pg.pg_type === "boys" ? "👨 Boys Only" : 
-               pg.pg_type === "girls" ? "👩 Girls Only" : 
-               pg.pg_type === "coliving" ? "🤝 Co-Living" : "Mixed"}
+              {pg.pg_type === "boys" ? "Boys Only" : 
+               pg.pg_type === "girls" ? "Girls Only" : 
+               pg.pg_type === "coliving" ? "Co-Living" : "Mixed"}
             </span>
           )}
           
@@ -1958,20 +1861,14 @@ export default function PGDetails() {
             </span>
           )}
           
-          {isToLet && pg.furnishing_type && (
-            <span style={modernStyles.furnishingBadge}>
-              {pg.furnishing_type === "fully_furnished" ? "🛋️ Fully Furnished" :
-               pg.furnishing_type === "semi_furnished" ? "🛋️ Semi-Furnished" :
-               "🛋️ Unfurnished"}
+          {pg.available_rooms !== undefined && (
+            <span style={{
+              ...modernStyles.availabilityBadge,
+              backgroundColor: pg.available_rooms > 0 ? "#10b981" : "#ef4444"
+            }}>
+              {pg.available_rooms > 0 ? `${pg.available_rooms} Available` : "Fully Occupied"}
             </span>
           )}
-          
-          <span style={{
-            ...modernStyles.availabilityBadge,
-            backgroundColor: pg.available_rooms > 0 ? "#10b981" : "#ef4444"
-          }}>
-            {pg.available_rooms > 0 ? `🟢 ${pg.available_rooms} Available` : "🔴 Fully Occupied"}
-          </span>
         </div>
 
         <div style={modernStyles.statsGrid}>
@@ -1980,7 +1877,7 @@ export default function PGDetails() {
             <div>
               <div style={modernStyles.statLabel}>Starting from</div>
               <div style={modernStyles.statValue}>
-                ₹{formatPrice(getStartingPrice())} / month
+                {startingPrice ? `₹${startingPrice.toLocaleString('en-IN')} / month` : "Price on request"}
               </div>
             </div>
           </div>
@@ -2011,20 +1908,20 @@ export default function PGDetails() {
       <div style={modernStyles.twoColumn}>
         <div style={modernStyles.leftColumn}>
           {pg.description && (
-            <Section title="📝 About this Property">
+            <Section title="About this Property">
               <p style={modernStyles.description}>{pg.description}</p>
             </Section>
           )}
 
           {hasPriceDetails() && (
-            <Section title="💰 Price Details">
+            <Section title="Price Details">
               <PriceDetails pg={pg} />
             </Section>
           )}
 
           {hasFacilitiesContent() && (
             <Section 
-              title={`🏠 Facilities & Amenities`} 
+              title="Facilities & Amenities" 
               badgeCount={availableFacilitiesCount}
             >
               <div style={modernStyles.facilityCategories}>
@@ -2081,7 +1978,7 @@ export default function PGDetails() {
                 </div>
               )}
 
-              {pg.water_type && (
+              {pg.water_type && pg.water_type !== "" && (
                 <div style={modernStyles.waterSource}>
                   <strong>💧 Water Source:</strong> {pg.water_type === "borewell" ? "Borewell" : 
                                                  pg.water_type === "kaveri" ? "Kaveri" : 
@@ -2093,9 +1990,9 @@ export default function PGDetails() {
           )}
 
           {hasRulesContent() && (
-            <Section title="📜 House Rules & Restrictions">
+            <Section title="House Rules & Restrictions">
               <div style={modernStyles.rulesContainer}>
-                {(pg.visitor_allowed || pg.couple_allowed || pg.family_allowed) && (
+                {(pg.visitor_allowed !== undefined || pg.couple_allowed !== undefined || pg.family_allowed !== undefined) && (
                   <div style={modernStyles.rulesSection}>
                     <div style={modernStyles.rulesSectionHeader} onClick={() => toggleRulesSection('visitors')}>
                       <h4 style={modernStyles.rulesSectionTitle}>
@@ -2137,7 +2034,7 @@ export default function PGDetails() {
                   </div>
                 )}
 
-                {(pg.smoking_allowed || pg.drinking_allowed || pg.outside_food_allowed || pg.parties_allowed) && (
+                {(pg.smoking_allowed !== undefined || pg.drinking_allowed !== undefined || pg.outside_food_allowed !== undefined || pg.parties_allowed !== undefined) && (
                   <div style={modernStyles.rulesSection}>
                     <div style={modernStyles.rulesSectionHeader} onClick={() => toggleRulesSection('lifestyle')}>
                       <h4 style={modernStyles.rulesSectionTitle}>
@@ -2187,7 +2084,7 @@ export default function PGDetails() {
                   </div>
                 )}
 
-                {(pg.pets_allowed || pg.late_night_entry_allowed || pg.entry_curfew_time) && (
+                {(pg.pets_allowed !== undefined || pg.late_night_entry_allowed !== undefined || pg.entry_curfew_time) && (
                   <div style={modernStyles.rulesSection}>
                     <div style={modernStyles.rulesSectionHeader} onClick={() => toggleRulesSection('pets')}>
                       <h4 style={modernStyles.rulesSectionTitle}>
@@ -2229,7 +2126,7 @@ export default function PGDetails() {
                   </div>
                 )}
 
-                {(pg.loud_music_restricted || pg.office_going_only || pg.students_only || pg.boys_only || pg.girls_only || pg.subletting_allowed) && (
+                {(pg.loud_music_restricted !== undefined || pg.office_going_only !== undefined || pg.students_only !== undefined || pg.boys_only !== undefined || pg.girls_only !== undefined || pg.subletting_allowed !== undefined) && (
                   <div style={modernStyles.rulesSection}>
                     <div style={modernStyles.rulesSectionHeader} onClick={() => toggleRulesSection('restrictions')}>
                       <h4 style={modernStyles.rulesSectionTitle}>
@@ -2299,7 +2196,8 @@ export default function PGDetails() {
                   </div>
                 )}
 
-                {hasValidLegalDuration() && (
+                {/* Legal & Duration Section - FIXED: Proper null/zero checks */}
+                {(pg.min_stay_months || pg.lock_in_period || pg.agreement_mandatory !== undefined || pg.id_proof_mandatory !== undefined) && (
                   <div style={modernStyles.rulesSection}>
                     <div style={modernStyles.rulesSectionHeader} onClick={() => toggleRulesSection('legal')}>
                       <h4 style={modernStyles.rulesSectionTitle}>
@@ -2312,7 +2210,8 @@ export default function PGDetails() {
                     </div>
                     {expandedRules.legal && (
                       <div style={modernStyles.rulesGrid}>
-                        {pg.min_stay_months && pg.min_stay_months !== "" && pg.min_stay_months !== "0" && (
+                        {/* min_stay_months - only show if valid */}
+                        {pg.min_stay_months && pg.min_stay_months !== "" && pg.min_stay_months !== "0" && pg.min_stay_months !== 0 && (
                           <RuleItem 
                             icon="🔒" 
                             label={`Minimum Stay: ${pg.min_stay_months} months`} 
@@ -2320,7 +2219,9 @@ export default function PGDetails() {
                             description="Minimum stay requirement"
                           />
                         )}
-                        {pg.lock_in_period && pg.lock_in_period !== "" && pg.lock_in_period !== "0" && (
+                        
+                        {/* lock_in_period - only show if valid */}
+                        {pg.lock_in_period && pg.lock_in_period !== "" && pg.lock_in_period !== "0" && pg.lock_in_period !== 0 && (
                           <RuleItem 
                             icon="📝" 
                             label={`Lock-in Period: ${pg.lock_in_period} months`} 
@@ -2328,6 +2229,17 @@ export default function PGDetails() {
                             description="Lock-in period before leaving"
                           />
                         )}
+                        
+                        {/* notice_period - only show if valid */}
+                        {pg.notice_period && pg.notice_period !== "" && pg.notice_period !== "0" && pg.notice_period !== 0 && (
+                          <RuleItem 
+                            icon="⏰" 
+                            label={`Notice Period: ${pg.notice_period} months`} 
+                            allowed={true}
+                            description="Notice period before vacating"
+                          />
+                        )}
+                        
                         {(pg.agreement_mandatory === true || pg.agreement_mandatory === "true" || pg.agreement_mandatory === "false") && (
                           <RuleItem 
                             icon="📄" 
@@ -2336,6 +2248,7 @@ export default function PGDetails() {
                             description="Legal agreement required"
                           />
                         )}
+                        
                         {(pg.id_proof_mandatory === true || pg.id_proof_mandatory === "true" || pg.id_proof_mandatory === "false") && (
                           <RuleItem 
                             icon="🆔" 
@@ -2355,7 +2268,7 @@ export default function PGDetails() {
 
         <div style={modernStyles.rightColumn}>
           {hasLocation && (
-            <Section title="📍 Location">
+            <Section title="Location">
               <div id="location-map" style={modernStyles.mapContainer}>
                 <MapContainer
                   center={mapCenter}
@@ -2411,7 +2324,7 @@ export default function PGDetails() {
 
           {(hasOwnerContact || hasContactPerson || pg?.contact_email) && (
             <div style={modernStyles.contactCard}>
-              <h3 style={modernStyles.contactTitle}>📞 Contact Information</h3>
+              <h3 style={modernStyles.contactTitle}>Contact Information</h3>
               {hasContactPerson && (
                 <div style={modernStyles.contactItem}>
                   <span style={modernStyles.contactIcon}>👤</span>
@@ -2473,16 +2386,16 @@ export default function PGDetails() {
             </div>
           )}
 
-          {(pg.total_rooms || pg.available_rooms) && (
+          {(pg.total_rooms || pg.available_rooms !== undefined) && (
             <div style={modernStyles.availabilityCard}>
-              <h3 style={modernStyles.availabilityTitle}>🛏 Availability Status</h3>
+              <h3 style={modernStyles.availabilityTitle}>Availability Status</h3>
               {pg.total_rooms && (
                 <div style={modernStyles.availabilityItem}>
                   <div style={modernStyles.availabilityLabel}>Total {isToLet ? "Properties" : "Rooms"}</div>
                   <div style={modernStyles.availabilityValue}>{pg.total_rooms}</div>
                 </div>
               )}
-              {(pg.available_rooms || pg.available_rooms === 0) && (
+              {(pg.available_rooms !== undefined) && (
                 <div style={modernStyles.availabilityItem}>
                   <div style={modernStyles.availabilityLabel}>Available Now</div>
                   <div style={{
@@ -2506,7 +2419,9 @@ export default function PGDetails() {
       <div style={modernStyles.stickyBar}>
         <div style={modernStyles.stickyContent}>
           <div>
-            <div style={modernStyles.stickyPrice}>₹{formatPrice(getStartingPrice())} / month</div>
+            <div style={modernStyles.stickyPrice}>
+              {startingPrice ? `₹${startingPrice.toLocaleString('en-IN')} / month` : "Price on request"}
+            </div>
             <div style={modernStyles.stickyInfo}>
               {pg.pg_name} • {pg.area || pg.city}
             </div>
@@ -2556,10 +2471,6 @@ export default function PGDetails() {
           from { transform: translateX(100%); opacity: 0; }
           to { transform: translateX(0); opacity: 1; }
         }
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-        }
         .spinner {
           width: 40px;
           height: 40px;
@@ -2588,7 +2499,7 @@ export default function PGDetails() {
   );
 }
 
-/* ================= MODERN STARTUP STYLES ================= */
+/* ================= MODERN PREMIUM STYLES ================= */
 const modernStyles = {
   // Base layout
   page: {
@@ -2640,7 +2551,7 @@ const modernStyles = {
     boxShadow: "0 8px 20px rgba(99,102,241,0.3)",
   },
 
-  // Breadcrumb - keep existing styles
+  // Breadcrumb
   breadcrumb: {
     display: "flex",
     alignItems: "center",
@@ -2664,16 +2575,6 @@ const modernStyles = {
   breadcrumbCurrent: {
     color: "#1e293b",
     fontWeight: "600",
-  },
-  propertyCode: {
-    marginLeft: "auto",
-    background: "#f1f5f9",
-    padding: "6px 12px",
-    borderRadius: "30px",
-    fontSize: "12px",
-    fontWeight: "600",
-    color: "#475569",
-    letterSpacing: "0.5px",
   },
 
   // Slider
@@ -2782,9 +2683,6 @@ const modernStyles = {
     color: "#0f172a",
     margin: "0 0 8px 0",
     lineHeight: "1.2",
-    background: "linear-gradient(135deg, #0f172a, #334155)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
     letterSpacing: "-0.02em",
   },
   address: {
@@ -2885,17 +2783,6 @@ const modernStyles = {
   },
   bhkBadge: {
     background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
-    color: "white",
-    padding: "6px 16px",
-    borderRadius: "40px",
-    fontSize: "13px",
-    fontWeight: "600",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  furnishingBadge: {
-    background: "linear-gradient(135deg, #f59e0b, #d97706)",
     color: "white",
     padding: "6px 16px",
     borderRadius: "40px",
@@ -3034,6 +2921,9 @@ const modernStyles = {
     alignItems: "center",
     gap: "12px",
   },
+  priceSectionIcon: {
+    fontSize: "20px",
+  },
   priceGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
@@ -3057,7 +2947,12 @@ const modernStyles = {
     fontSize: "20px",
     fontWeight: "700",
     color: "#10b981",
-    marginBottom: "8px",
+    marginBottom: "4px",
+  },
+  pricePeriod: {
+    fontSize: "12px",
+    fontWeight: "400",
+    color: "#64748b",
   },
   depositAmount: {
     fontSize: "12px",
@@ -3074,6 +2969,42 @@ const modernStyles = {
     backgroundColor: "#f8fafc",
     borderRadius: "20px",
   },
+  additionalChargesTitle: {
+    fontSize: "15px",
+    fontWeight: "600",
+    marginBottom: "12px",
+    color: "#475569",
+  },
+  chargesGrid: {
+    display: "grid",
+    gap: "8px",
+  },
+  chargeItem: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "8px 0",
+    borderBottom: "1px solid #e2e8f0",
+  },
+  chargeLabel: {
+    fontSize: "14px",
+    color: "#64748b",
+  },
+  chargeValue: {
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "#0f172a",
+  },
+  priceCategory: {
+    marginBottom: "20px",
+  },
+  priceCategoryTitle: {
+    fontSize: "16px",
+    fontWeight: "600",
+    marginBottom: "12px",
+    paddingLeft: "8px",
+    borderLeft: "4px solid #6366f1",
+  },
   foodCharges: {
     display: "flex",
     alignItems: "center",
@@ -3082,6 +3013,18 @@ const modernStyles = {
     backgroundColor: "#f0fdf4",
     borderRadius: "20px",
     marginTop: "20px",
+  },
+  foodChargesIcon: {
+    fontSize: "24px",
+  },
+  foodChargesLabel: {
+    fontSize: "13px",
+    color: "#047857",
+  },
+  foodChargesValue: {
+    fontSize: "16px",
+    fontWeight: "600",
+    color: "#047857",
   },
 
   // Facilities
@@ -3103,6 +3046,13 @@ const modernStyles = {
     transition: "all 0.2s ease",
     border: "1px solid #e2e8f0",
   },
+  facilityCategoryIcon: {
+    fontSize: "16px",
+  },
+  facilityCategoryLabel: {
+    fontSize: "13px",
+    fontWeight: "500",
+  },
   facilitiesGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
@@ -3117,6 +3067,12 @@ const modernStyles = {
     border: "1px solid #e2e8f0",
     transition: "all 0.2s ease",
     cursor: "pointer",
+  },
+  facilityItemActive: {
+    boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+  },
+  facilityItemInactive: {
+    opacity: 0.7,
   },
   facilityIcon: {
     fontSize: "22px",
@@ -3183,6 +3139,9 @@ const modernStyles = {
     alignItems: "center",
     gap: "10px",
   },
+  rulesSectionIcon: {
+    fontSize: "18px",
+  },
   rulesToggle: {
     fontSize: "22px",
     color: "#64748b",
@@ -3202,6 +3161,10 @@ const modernStyles = {
     borderRadius: "20px",
     border: "1px solid #e2e8f0",
   },
+  ruleIconContainer: {
+    display: "flex",
+    alignItems: "center",
+  },
   ruleIcon: {
     fontSize: "22px",
     width: "48px",
@@ -3212,10 +3175,28 @@ const modernStyles = {
     justifyContent: "center",
     color: "white",
   },
+  ruleContent: {
+    flex: 1,
+  },
   ruleLabel: {
     fontSize: "15px",
     fontWeight: "600",
     marginBottom: "4px",
+  },
+  ruleDescription: {
+    fontSize: "12px",
+    color: "#64748b",
+    marginBottom: "8px",
+  },
+  ruleStatus: {
+    marginTop: "8px",
+  },
+  ruleStatusBadge: {
+    padding: "4px 12px",
+    borderRadius: "30px",
+    fontSize: "11px",
+    fontWeight: "600",
+    color: "white",
   },
 
   // Map
@@ -3234,6 +3215,30 @@ const modernStyles = {
     borderBottom: "1px solid #e2e8f0",
     fontSize: "14px",
     color: "#475569",
+  },
+  mapPopup: {
+    padding: "12px",
+    maxWidth: "220px",
+  },
+  mapPopupTitle: {
+    fontSize: "14px",
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  mapPopupAddress: {
+    fontSize: "12px",
+    color: "#64748b",
+  },
+  mapPopupButton: {
+    padding: "6px 14px",
+    backgroundColor: "#10b981",
+    color: "white",
+    border: "none",
+    borderRadius: "30px",
+    fontSize: "12px",
+    fontWeight: "600",
+    cursor: "pointer",
+    marginTop: "8px",
   },
 
   // Nearby Highlights Panel
@@ -3264,6 +3269,25 @@ const modernStyles = {
     transition: "all 0.2s ease",
     border: "1px solid #e2e8f0",
   },
+  highlightCategoryBtnEmpty: {
+    opacity: 0.5,
+    cursor: "not-allowed",
+  },
+  highlightCategoryIcon: {
+    fontSize: "14px",
+  },
+  highlightCategoryLabel: {
+    fontSize: "13px",
+    fontWeight: "500",
+  },
+  highlightCategoryCount: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+    padding: "2px 8px",
+    borderRadius: "30px",
+    fontSize: "10px",
+    fontWeight: "600",
+    marginLeft: "4px",
+  },
   highlightsList: {
     padding: "0",
   },
@@ -3273,6 +3297,21 @@ const modernStyles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  highlightsListTitle: {
+    fontSize: "16px",
+    fontWeight: "600",
+    margin: 0,
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  highlightsCount: {
+    fontSize: "12px",
+    color: "#64748b",
+    background: "#f1f5f9",
+    padding: "4px 10px",
+    borderRadius: "30px",
   },
   highlightsItemsContainer: {
     maxHeight: "420px",
@@ -3300,11 +3339,18 @@ const modernStyles = {
     fontSize: "22px",
     color: "white",
   },
+  highlightContent: {
+    flex: 1,
+  },
   highlightName: {
     fontSize: "15px",
     fontWeight: "600",
     color: "#1e293b",
     marginBottom: "4px",
+  },
+  highlightType: {
+    fontSize: "12px",
+    color: "#64748b",
   },
   viewOnMapButton: {
     padding: "8px 16px",
@@ -3315,6 +3361,13 @@ const modernStyles = {
     fontWeight: "600",
     cursor: "pointer",
     transition: "all 0.2s ease",
+  },
+  categoryIndicator: {
+    width: "10px",
+    height: "10px",
+    borderRadius: "50%",
+    display: "inline-block",
+    marginRight: "8px",
   },
 
   // Nearby PGs
@@ -3342,6 +3395,16 @@ const modernStyles = {
     alignItems: "center",
     gap: "10px",
   },
+  nearbyPGsIcon: {
+    fontSize: "20px",
+  },
+  nearbyPGsCount: {
+    fontSize: "12px",
+    color: "#64748b",
+    background: "#f1f5f9",
+    padding: "4px 12px",
+    borderRadius: "30px",
+  },
   nearbyPGsGrid: {
     display: "flex",
     flexDirection: "column",
@@ -3360,6 +3423,49 @@ const modernStyles = {
     height: "160px",
     overflow: "hidden",
   },
+  nearbyPgImagePlaceholder: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#f1f5f9",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  nearbyPgImage: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  nearbyPgNoImage: {
+    fontSize: "40px",
+    color: "#94a3b8",
+  },
+  nearbyPgBadges: {
+    position: "absolute",
+    top: "12px",
+    left: "12px",
+    right: "12px",
+    display: "flex",
+    justifyContent: "space-between",
+  },
+  nearbyPgTypeBadge: {
+    background: "rgba(59,130,246,0.9)",
+    backdropFilter: "blur(4px)",
+    padding: "4px 12px",
+    borderRadius: "30px",
+    fontSize: "11px",
+    fontWeight: "600",
+    color: "white",
+  },
+  nearbyPgDistanceBadge: {
+    background: "rgba(16,185,129,0.9)",
+    backdropFilter: "blur(4px)",
+    padding: "4px 12px",
+    borderRadius: "30px",
+    fontSize: "11px",
+    fontWeight: "600",
+    color: "white",
+  },
   nearbyPgContent: {
     padding: "18px",
   },
@@ -3368,6 +3474,42 @@ const modernStyles = {
     fontWeight: "700",
     color: "#0f172a",
     margin: "0 0 8px 0",
+  },
+  nearbyPgAddress: {
+    fontSize: "12px",
+    color: "#64748b",
+    marginBottom: "12px",
+    lineHeight: "1.4",
+  },
+  nearbyPgStats: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginBottom: "12px",
+  },
+  nearbyPgStat: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
+  nearbyPgStatIcon: {
+    fontSize: "14px",
+  },
+  nearbyPgStatText: {
+    fontSize: "13px",
+    fontWeight: "500",
+    color: "#334155",
+  },
+  nearbyPgFacilities: {
+    display: "flex",
+    gap: "10px",
+    marginBottom: "12px",
+    flexWrap: "wrap",
+  },
+  nearbyPgFacility: {
+    fontSize: "18px",
+    backgroundColor: "#f1f5f9",
+    padding: "4px 8px",
+    borderRadius: "12px",
   },
   nearbyPgViewButton: {
     width: "100%",
@@ -3379,6 +3521,22 @@ const modernStyles = {
     border: "none",
     cursor: "pointer",
     transition: "all 0.2s ease",
+  },
+  nearbyPGsFooter: {
+    marginTop: "20px",
+    paddingTop: "16px",
+    borderTop: "1px solid #e2e8f0",
+  },
+  viewAllPropertiesButton: {
+    width: "100%",
+    padding: "12px",
+    backgroundColor: "transparent",
+    color: "#3b82f6",
+    border: "1px solid #3b82f6",
+    borderRadius: "40px",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
   },
 
   // Contact Card
@@ -3404,6 +3562,18 @@ const modernStyles = {
     gap: "14px",
     padding: "14px 0",
     borderBottom: "1px solid #f1f5f9",
+  },
+  contactIcon: {
+    fontSize: "20px",
+  },
+  contactLabel: {
+    fontSize: "12px",
+    color: "#64748b",
+  },
+  contactValue: {
+    fontSize: "15px",
+    fontWeight: "500",
+    color: "#1e293b",
   },
   contactButtons: {
     display: "flex",
@@ -3438,6 +3608,14 @@ const modernStyles = {
     gap: "8px",
     cursor: "pointer",
   },
+  phoneLink: {
+    color: "#3b82f6",
+    textDecoration: "none",
+  },
+  emailLink: {
+    color: "#3b82f6",
+    textDecoration: "none",
+  },
 
   // Availability Card
   availabilityCard: {
@@ -3459,6 +3637,15 @@ const modernStyles = {
     alignItems: "center",
     padding: "12px 0",
     borderBottom: "1px solid #f1f5f9",
+  },
+  availabilityLabel: {
+    fontSize: "14px",
+    color: "#64748b",
+  },
+  availabilityValue: {
+    fontSize: "16px",
+    fontWeight: "600",
+    color: "#0f172a",
   },
   availabilityNote: {
     marginTop: "16px",
@@ -3496,9 +3683,11 @@ const modernStyles = {
   stickyPrice: {
     fontSize: "22px",
     fontWeight: "800",
-    background: "linear-gradient(135deg, #0f172a, #334155)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
+    color: "#0f172a",
+  },
+  stickyInfo: {
+    fontSize: "13px",
+    color: "#64748b",
   },
   stickyActions: {
     display: "flex",
@@ -3592,7 +3781,7 @@ const modernStyles = {
   modalWarning: {
     background: "#fff7ed",
     padding: "14px 18px",
-    borderRadius: "20px",
+        borderRadius: "20px",
     marginBottom: "24px",
     fontSize: "13px",
     color: "#9a3412",
@@ -3630,6 +3819,11 @@ const modernStyles = {
     fontWeight: "600",
     color: "#10b981",
     fontSize: "14px",
+  },
+  formHint: {
+    fontSize: "12px",
+    color: "#64748b",
+    marginTop: "6px",
   },
   infoBox: {
     background: "#f0fdf4",
@@ -3715,6 +3909,10 @@ const modernStyles = {
     borderRadius: "20px",
     border: "1px dashed #cbd5e1",
   },
+  noFacilitiesIcon: {
+    fontSize: "48px",
+    opacity: 0.5,
+  },
   noContentText: {
     color: "#64748b",
     fontSize: "14px",
@@ -3742,6 +3940,23 @@ const modernStyles = {
     textAlign: "center",
     border: "1px dashed #cbd5e1",
   },
+  noHighlightsIcon: {
+    fontSize: "48px",
+    marginBottom: "16px",
+    opacity: 0.5,
+  },
+  noHighlightsTitle: {
+    fontSize: "16px",
+    fontWeight: "600",
+    color: "#334155",
+    marginBottom: "8px",
+  },
+  noHighlightsText: {
+    fontSize: "14px",
+    color: "#64748b",
+    maxWidth: "300px",
+    textAlign: "center",
+  },
   loadingNearbyPGs: {
     display: "flex",
     flexDirection: "column",
@@ -3764,78 +3979,23 @@ const modernStyles = {
     textAlign: "center",
     border: "1px dashed #cbd5e1",
   },
-  priceCategory: { marginBottom: "20px" },
-  priceCategoryTitle: { fontSize: "16px", fontWeight: "600", marginBottom: "12px", paddingLeft: "8px", borderLeft: "4px solid #6366f1" },
-  bhkInfo: { marginTop: "12px", fontSize: "14px", color: "#475569", backgroundColor: "#f1f5f9", padding: "8px 14px", borderRadius: "40px", display: "inline-block" },
-  includesInfo: { marginTop: "12px", fontSize: "14px", color: "#059669", backgroundColor: "#d1fae5", padding: "8px 14px", borderRadius: "40px", fontWeight: "500" },
-  chargesGrid: { display: "grid", gap: "8px" },
-  chargeItem: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #e2e8f0" },
-  chargeLabel: { fontSize: "14px", color: "#64748b" },
-  chargeValue: { fontSize: "14px", fontWeight: "600", color: "#0f172a" },
-  noPriceContainer: { textAlign: "center", padding: "40px", background: "#f8fafc", borderRadius: "20px" },
-  noPriceIcon: { fontSize: "48px", opacity: 0.5 },
-  noPriceText: { fontSize: "14px", color: "#64748b", marginTop: "12px" },
-  mapPopup: { padding: "12px", maxWidth: "220px" },
-  mapPopupTitle: { fontSize: "14px", fontWeight: "700", color: "#0f172a" },
-  mapPopupAddress: { fontSize: "12px", color: "#64748b" },
-  mapPopupButton: { padding: "6px 14px", backgroundColor: "#10b981", color: "white", border: "none", borderRadius: "30px", fontSize: "12px", fontWeight: "600", cursor: "pointer", marginTop: "8px" },
-  phoneLink: { color: "#3b82f6", textDecoration: "none" },
-  emailLink: { color: "#3b82f6", textDecoration: "none" },
-  nearbyPGsFooter: { marginTop: "20px", paddingTop: "16px", borderTop: "1px solid #e2e8f0" },
-  viewAllPropertiesButton: { width: "100%", padding: "12px", backgroundColor: "transparent", color: "#3b82f6", border: "1px solid #3b82f6", borderRadius: "40px", fontSize: "14px", fontWeight: "600", cursor: "pointer" },
-  highlightCategoryBtnEmpty: { opacity: 0.5, cursor: "not-allowed" },
-  highlightCategoryCount: { backgroundColor: "rgba(255,255,255,0.2)", padding: "2px 8px", borderRadius: "30px", fontSize: "10px", fontWeight: "600", marginLeft: "4px" },
-  categoryIndicator: { width: "10px", height: "10px", borderRadius: "50%", display: "inline-block", marginRight: "8px" },
-  ruleIconContainer: { display: "flex", alignItems: "center" },
-  ruleContent: { flex: 1 },
-  ruleStatus: { marginTop: "8px" },
-  ruleStatusBadge: { padding: "4px 12px", borderRadius: "30px", fontSize: "11px", fontWeight: "600", color: "white" },
-  ruleDescription: { fontSize: "12px", color: "#64748b", marginBottom: "8px" },
-  nearbyPgBadges: { position: "absolute", top: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between" },
-  nearbyPgTypeBadge: { background: "rgba(59,130,246,0.9)", backdropFilter: "blur(4px)", padding: "4px 12px", borderRadius: "30px", fontSize: "11px", fontWeight: "600", color: "white" },
-  nearbyPgDistanceBadge: { background: "rgba(16,185,129,0.9)", backdropFilter: "blur(4px)", padding: "4px 12px", borderRadius: "30px", fontSize: "11px", fontWeight: "600", color: "white" },
-  nearbyPgImagePlaceholder: { width: "100%", height: "100%", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" },
-  nearbyPgImage: { width: "100%", height: "100%", objectFit: "cover" },
-  nearbyPgNoImage: { fontSize: "40px", color: "#94a3b8" },
-  nearbyPgStats: { display: "flex", justifyContent: "space-between", marginBottom: "12px" },
-  nearbyPgStat: { display: "flex", alignItems: "center", gap: "6px" },
-  nearbyPgStatIcon: { fontSize: "14px" },
-  nearbyPgStatText: { fontSize: "13px", fontWeight: "500", color: "#334155" },
-  nearbyPgFacilities: { display: "flex", gap: "10px", marginBottom: "12px", flexWrap: "wrap" },
-  nearbyPgFacility: { fontSize: "18px", backgroundColor: "#f1f5f9", padding: "4px 8px", borderRadius: "12px" },
-  noHighlightsIcon: { fontSize: "48px", marginBottom: "16px", opacity: 0.5 },
-  noHighlightsTitle: { fontSize: "16px", fontWeight: "600", color: "#334155", marginBottom: "8px" },
-  noHighlightsText: { fontSize: "14px", color: "#64748b", maxWidth: "300px", textAlign: "center" },
-  noNearbyPGsIcon: { fontSize: "48px", marginBottom: "16px", opacity: 0.5 },
-  noNearbyPGsTitle: { fontSize: "16px", fontWeight: "600", color: "#334155", marginBottom: "8px" },
-  noNearbyPGsText: { fontSize: "14px", color: "#64748b", maxWidth: "300px", textAlign: "center" },
-  facilityItemActive: { boxShadow: "0 4px 12px rgba(0,0,0,0.05)" },
-  facilityItemInactive: { opacity: 0.7 },
-  priceSectionIcon: { fontSize: "20px" },
-  foodChargesIcon: { fontSize: "24px" },
-  foodChargesLabel: { fontSize: "13px", color: "#047857" },
-  foodChargesValue: { fontSize: "16px", fontWeight: "600", color: "#047857" },
-  additionalChargesTitle: { fontSize: "15px", fontWeight: "600", marginBottom: "12px", color: "#475569" },
-  facilityCategoryIcon: { fontSize: "16px" },
-  facilityCategoryLabel: { fontSize: "13px", fontWeight: "500" },
-  rulesSectionIcon: { fontSize: "18px" },
-  contactIcon: { fontSize: "20px" },
-  contactLabel: { fontSize: "12px", color: "#64748b" },
-  contactValue: { fontSize: "15px", fontWeight: "500", color: "#1e293b" },
-  availabilityLabel: { fontSize: "14px", color: "#64748b" },
-  availabilityValue: { fontSize: "16px", fontWeight: "600", color: "#0f172a" },
-  stickyInfo: { fontSize: "13px", color: "#64748b" },
-  formHint: { fontSize: "12px", color: "#64748b", marginTop: "6px" },
-  highlightCategoryIcon: { fontSize: "14px" },
-  highlightCategoryLabel: { fontSize: "13px", fontWeight: "500" },
-  highlightsCount: { fontSize: "12px", color: "#64748b", background: "#f1f5f9", padding: "4px 10px", borderRadius: "30px" },
-  highlightContent: { flex: 1 },
-  highlightType: { fontSize: "12px", color: "#64748b" },
-  highlightDistance: { fontSize: "11px", color: "#10b981", marginTop: "4px" },
-  highlightsListTitle: { fontSize: "16px", fontWeight: "600", margin: 0, display: "flex", alignItems: "center", gap: "8px" },
-  nearbyPGsIcon: { fontSize: "20px" },
-  nearbyPGsCount: { fontSize: "12px", color: "#64748b", background: "#f1f5f9", padding: "4px 12px", borderRadius: "30px" },
-  nearbyPgAddress: { fontSize: "12px", color: "#64748b", marginBottom: "12px", lineHeight: "1.4" },
+  noNearbyPGsIcon: {
+    fontSize: "48px",
+    marginBottom: "16px",
+    opacity: 0.5,
+  },
+  noNearbyPGsTitle: {
+    fontSize: "16px",
+    fontWeight: "600",
+    color: "#334155",
+    marginBottom: "8px",
+  },
+  noNearbyPGsText: {
+    fontSize: "14px",
+    color: "#64748b",
+    maxWidth: "300px",
+    textAlign: "center",
+  },
 };
 
 // Responsive media queries
@@ -3893,11 +4053,6 @@ if (typeof window !== 'undefined') {
           modernStyles.stickyCallButton.flex = "1";
           modernStyles.stickyCallButton.justifyContent = "center";
         }
-        
-        if (modernStyles.breadcrumb && modernStyles.propertyCode) {
-          modernStyles.propertyCode.marginLeft = "0";
-          modernStyles.propertyCode.marginTop = "8px";
-        }
       } else {
         // Desktop styles
         if (modernStyles.twoColumn) modernStyles.twoColumn.gridTemplateColumns = "2fr 1fr";
@@ -3946,11 +4101,6 @@ if (typeof window !== 'undefined') {
         if (modernStyles.stickyCallButton) {
           modernStyles.stickyCallButton.flex = "0";
           modernStyles.stickyCallButton.justifyContent = "center";
-        }
-        
-        if (modernStyles.breadcrumb && modernStyles.propertyCode) {
-          modernStyles.propertyCode.marginLeft = "auto";
-          modernStyles.propertyCode.marginTop = "0";
         }
       }
     } catch (err) {
