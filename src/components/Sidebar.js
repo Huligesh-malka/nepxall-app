@@ -278,12 +278,7 @@ const Sidebar = ({ role, user }) => {
 
   return (
     <>
-      {/* Mobile Menu Button - only visible on mobile */}
-      {isMobile && (
-        <button onClick={openSidebar} style={menuButton} className="mobile-menu-trigger">
-          <FiMenu size={20} />
-        </button>
-      )}
+      
 
       {/* Desktop Sidebar - always visible on desktop */}
       {!isMobile && (
