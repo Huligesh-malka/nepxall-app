@@ -345,7 +345,7 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
                 <span>Booking Information</span>
               </div>
               <ul style={modernStyles.infoList}>
-                <li>Your name and contact info will be auto-filled from your profile</li>
+                
                 <li>Register number will be automatically generated</li>
                 <li>You'll receive confirmation via email/SMS</li>
                 <li>Owner will contact you within 24 hours</li>
