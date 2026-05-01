@@ -280,7 +280,7 @@ const Sidebar = ({ role, user }) => {
     <>
       {/* Mobile Menu Button - only visible on mobile */}
       {isMobile && (
-        <button onClick={openSidebar} style={menuButton}>
+        <button onClick={openSidebar} style={menuButton} className="mobile-menu-trigger">
           <FiMenu size={20} />
         </button>
       )}
