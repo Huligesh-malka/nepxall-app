@@ -70,14 +70,7 @@ const FILE_BASE_URL = BACKEND_URL;
 
 /* =====================================================
    🧠 DEBUG LOG
-===================================================== */
-console.log("🌍 ENV:", IS_PRODUCTION ? "PRODUCTION" : "DEVELOPMENT");
-console.log("🌍 CONFIG:", {
-  BACKEND_URL,
-  USER_API_URL,
-  ADMIN_API_URL,
-  SOCKET_URL,
-});
+
 
 /* =====================================================
    🧠 MAIN CONFIG OBJECT
