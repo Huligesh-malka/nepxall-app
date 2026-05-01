@@ -3,7 +3,7 @@ import { Outlet, useLocation, Navigate, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
-import { Button, Box, Typography, CircularProgress, Menu, MenuItem, Avatar, IconButton, Tooltip, Zoom, Fade } from "@mui/material";
+import { Button, Box, Typography, CircularProgress, Menu, MenuItem, Avatar, IconButton, Tooltip, Zoom, Fade, BottomNavigation, BottomNavigationAction } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
 import HomeIcon from '@mui/icons-material/Home';
@@ -11,6 +11,11 @@ import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import GetAppIcon from '@mui/icons-material/GetApp';
+import BookmarksIcon from '@mui/icons-material/Bookmarks';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import AddBusinessIcon from '@mui/icons-material/AddBusiness';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 
 const SIDEBAR_WIDTH = 260;
 
@@ -411,15 +416,60 @@ const MainLayout = () => {
     </div>
   );
 
+  // ================= MOBILE BOTTOM NAVIGATION STYLES =================
+  const mobileBottomNav = {
+    position: "fixed",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 70,
+    background: "rgba(255,255,255,0.96)",
+    backdropFilter: "blur(12px)",
+    borderTop: "1px solid #e5e7eb",
+    display: "flex",
+    justifyContent: "space-around",
+    alignItems: "center",
+    zIndex: 2000,
+    boxShadow: "0 -4px 20px rgba(0,0,0,0.08)",
+    paddingBottom: "env(safe-area-inset-bottom)",
+  };
+
+  const bottomNavBtnStyle = (active) => ({
+    border: "none",
+    background: "transparent",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    color: active ? PREMIUM_COLORS.primary.main : PREMIUM_COLORS.neutral[500],
+    fontWeight: active ? "600" : "500",
+    fontSize: 11,
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    padding: "8px 12px",
+    borderRadius: "24px",
+    flex: 1,
+    maxWidth: 80,
+  });
+
+  // Helper function to check if a route is active
+  const isActiveRoute = (paths) => {
+    if (typeof paths === 'string') {
+      return location.pathname === paths;
+    }
+    return paths.some(path => location.pathname === path || location.pathname.startsWith(path + '/'));
+  };
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: PREMIUM_COLORS.neutral[50] }}>
-      {/* Sidebar only for logged-in users */}
-      {user && <Sidebar role={role} user={user} />}
+      {/* Sidebar only for logged-in users - Desktop only */}
+      {user && !isMobile && <Sidebar role={role} user={user} />}
 
       <div
         style={{
           marginLeft: !isMobile && user ? SIDEBAR_WIDTH : 0,
-          padding: isMobile ? "16px" : "32px",
+          padding: isMobile ? "16px 16px 90px 16px" : "32px",
           width: "100%",
           minHeight: "100vh",
           transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -484,6 +534,85 @@ const MainLayout = () => {
           <Outlet />
         </Box>
       </div>
+
+      {/* ================= MOBILE BOTTOM NAVIGATION ================= */}
+      {isMobile && user && (
+        <div style={mobileBottomNav}>
+          {/* Tenant Bottom Navigation */}
+          {role === "tenant" && (
+            <>
+              <button
+                onClick={() => navigate("/")}
+                style={bottomNavBtnStyle(isActiveRoute("/"))}
+              >
+                <HomeIcon style={{ fontSize: 22 }} />
+                <span>Home</span>
+              </button>
+
+              <button
+                onClick={() => navigate("/user/bookings")}
+                style={bottomNavBtnStyle(isActiveRoute(["/user/bookings", "/bookings"]))}
+              >
+                <CalendarMonthIcon style={{ fontSize: 20 }} />
+                <span>Bookings</span>
+              </button>
+
+              <button
+                onClick={() => navigate("/wishlist")}
+                style={bottomNavBtnStyle(isActiveRoute("/wishlist"))}
+              >
+                <FavoriteIcon style={{ fontSize: 20 }} />
+                <span>Wishlist</span>
+              </button>
+
+              <button
+                onClick={openMenu}
+                style={bottomNavBtnStyle(false)}
+              >
+                <PersonIcon style={{ fontSize: 22 }} />
+                <span>Profile</span>
+              </button>
+            </>
+          )}
+
+          {/* Owner Bottom Navigation */}
+          {role === "owner" && (
+            <>
+              <button
+                onClick={() => navigate("/owner/dashboard")}
+                style={bottomNavBtnStyle(isActiveRoute("/owner/dashboard"))}
+              >
+                <DashboardIcon style={{ fontSize: 22 }} />
+                <span>Dashboard</span>
+              </button>
+
+              <button
+                onClick={() => navigate("/owner/bookings")}
+                style={bottomNavBtnStyle(isActiveRoute("/owner/bookings"))}
+              >
+                <CalendarMonthIcon style={{ fontSize: 20 }} />
+                <span>Bookings</span>
+              </button>
+
+              <button
+                onClick={() => navigate("/owner/add-pg")}
+                style={bottomNavBtnStyle(isActiveRoute(["/owner/add-pg", "/owner/pg"]))}
+              >
+                <AddBusinessIcon style={{ fontSize: 20 }} />
+                <span>Add PG</span>
+              </button>
+
+              <button
+                onClick={openMenu}
+                style={bottomNavBtnStyle(false)}
+              >
+                <PersonIcon style={{ fontSize: 22 }} />
+                <span>Profile</span>
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 };
