@@ -259,15 +259,9 @@ const MainLayout = () => {
     }
   };
 
-  // Premium avatar display with unique role-based icons (No Home icon for users)
+  // Premium avatar display with 👤 symbol for both roles
   const getAvatarDisplay = () => {
-    if (role === "owner") {
-      return <DiamondIcon sx={{ fontSize: 22 }} />;
-    } else if (role === "tenant") {
-      return <KingBedIcon sx={{ fontSize: 22 }} />;
-    } else {
-      return <WorkspacePremiumIcon sx={{ fontSize: 22 }} />;
-    }
+    return "👤";
   };
 
   const getAvatarGradient = () => {
@@ -355,7 +349,7 @@ const MainLayout = () => {
               </Tooltip>
             )}
 
-            {/* Premium Profile Dropdown with Unique Avatar */}
+            {/* Premium Profile Dropdown with 👤 Avatar */}
             <Tooltip title="Account" arrow TransitionComponent={Zoom}>
               <IconButton
                 onClick={openMenu}
@@ -410,7 +404,7 @@ const MainLayout = () => {
                       }
                     }}
                   >
-                    {getAvatarDisplay()}
+                    <Typography sx={{ fontSize: 24 }}>{getAvatarDisplay()}</Typography>
                   </Avatar>
                 </Badge>
               </IconButton>
@@ -446,7 +440,7 @@ const MainLayout = () => {
                       border: `2px solid ${role === "owner" ? PREMIUM_COLORS.gold.main : PREMIUM_COLORS.primary.main}`
                     }}
                   >
-                    {getAvatarDisplay()}
+                    <Typography sx={{ fontSize: 26 }}>👤</Typography>
                   </Avatar>
                   <Box>
                     <Typography sx={{ fontWeight: 700, fontSize: 15, color: PREMIUM_COLORS.neutral[800] }}>
@@ -468,26 +462,11 @@ const MainLayout = () => {
                 }}>
                   {role === "owner" ? <DiamondIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.gold.main }} /> : <ShieldIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.primary.main }} />}
                   <Typography sx={{ fontSize: 11, fontWeight: 600, color: role === "owner" ? PREMIUM_COLORS.gold.main : PREMIUM_COLORS.primary.main, textTransform: "uppercase" }}>
-                    {role === "owner" ? "PREMIUM PROPERTY OWNER" : "VERIFIED TENANT"}
+                    {role === "owner" ? "PROPERTY OWNER" : "VERIFIED TENANT"}
                   </Typography>
                 </Box>
               </Box>
-              <MenuItem
-                onClick={() => {
-                  navigate("/profile");
-                  closeMenu();
-                }}
-                sx={{
-                  py: 1.5,
-                  gap: 1.5,
-                  "&:hover": {
-                    background: `${PREMIUM_COLORS.primary.main}10`
-                  }
-                }}
-              >
-                <PersonIcon sx={{ fontSize: 20, color: PREMIUM_COLORS.primary.main }} />
-                <Typography sx={{ fontWeight: 500 }}>My Profile</Typography>
-              </MenuItem>
+              {/* My Profile Menu Item Removed */}
               <MenuItem
                 onClick={() => {
                   handleLogout();
@@ -664,12 +643,12 @@ const MainLayout = () => {
                 <span>My Stay</span>
               </button>
 
-              {/* PROFILE BUTTON - Opens Sidebar Drawer - Unique Profile Icon */}
+              {/* PROFILE BUTTON - Opens Sidebar Drawer - 👤 Profile Icon */}
               <button
                 onClick={openSidebarDrawer}
                 style={bottomNavBtnStyle(false)}
               >
-                <WorkspacePremiumIcon style={{ fontSize: 22 }} />
+                <span style={{ fontSize: 22 }}>👤</span>
                 <span>Profile</span>
               </button>
             </>
@@ -702,12 +681,12 @@ const MainLayout = () => {
                 <span>Add PG</span>
               </button>
 
-              {/* PROFILE BUTTON - Opens Sidebar Drawer - Unique Profile Icon for Owner */}
+              {/* PROFILE BUTTON - Opens Sidebar Drawer - 👤 Profile Icon for Owner */}
               <button
                 onClick={openSidebarDrawer}
                 style={bottomNavBtnStyle(false)}
               >
-                <DiamondIcon style={{ fontSize: 22 }} />
+                <span style={{ fontSize: 22 }}>👤</span>
                 <span>Profile</span>
               </button>
             </>
