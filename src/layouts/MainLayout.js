@@ -348,14 +348,10 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
         },
       }}
     >
-      {/* Header with close button - COMPACT VERSION (removed profile details) */}
+      {/* Header with close button */}
       <Box
         sx={{
-          p: 1.5,
-          minHeight: 70,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-end",
+          p: 3,
           background: PREMIUM_COLORS.primary.gradient,
           color: "white",
           position: "relative",
@@ -366,6 +362,9 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
         <IconButton
           onClick={onClose}
           sx={{
+            position: "absolute",
+            right: 16,
+            top: 16,
             color: "white",
             background: "rgba(255,255,255,0.2)",
             "&:hover": {
@@ -375,6 +374,47 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
         >
           <CloseIcon />
         </IconButton>
+        
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mt: 2 }}>
+          <Avatar
+            sx={{
+              width: 80,
+              height: 80,
+              background: getAvatarGradient(),
+              border: "3px solid white",
+              boxShadow: "0 8px 25px rgba(0,0,0,0.2)",
+              mb: 2,
+            }}
+          >
+            <Typography sx={{ fontSize: 40 }}>👤</Typography>
+          </Avatar>
+          <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+            {user?.displayName || "User"}
+          </Typography>
+          <Typography sx={{ fontSize: 13, opacity: 0.9, mb: 1 }}>
+            {user?.email}
+          </Typography>
+          <Box
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 0.8,
+              px: 1.5,
+              py: 0.6,
+              borderRadius: "30px",
+              background: "rgba(255,255,255,0.2)",
+            }}
+          >
+            {role === "owner" ? (
+              <DiamondIcon sx={{ fontSize: 14 }} />
+            ) : (
+              <ShieldIcon sx={{ fontSize: 14 }} />
+            )}
+            <Typography sx={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" }}>
+              {role === "owner" ? "PROPERTY OWNER" : "VERIFIED TENANT"}
+            </Typography>
+          </Box>
+        </Box>
       </Box>
 
       {/* Scrollable Menu Items */}
@@ -504,6 +544,27 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
       </Box>
 
       <Divider sx={{ my: 1 }} />
+
+      {/* Contact Info */}
+      <Box sx={{ px: 3, py: 2, flexShrink: 0 }}>
+        <Typography sx={{ fontSize: 12, fontWeight: 600, color: PREMIUM_COLORS.neutral[500], mb: 2, letterSpacing: "0.5px" }}>
+          CONTACT INFORMATION
+        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1.5 }}>
+          <EmailIcon sx={{ fontSize: 18, color: PREMIUM_COLORS.neutral[400] }} />
+          <Typography sx={{ fontSize: 13, color: PREMIUM_COLORS.neutral[600] }}>
+            {user?.email || "user@example.com"}
+          </Typography>
+        </Box>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <PhoneIcon sx={{ fontSize: 18, color: PREMIUM_COLORS.neutral[400] }} />
+          <Typography sx={{ fontSize: 13, color: PREMIUM_COLORS.neutral[600] }}>
+            {user?.phoneNumber || "+977 9800000000"}
+          </Typography>
+        </Box>
+      </Box>
+
+      <Divider />
 
       {/* Logout Button */}
       <Box sx={{ p: 2, mb: 2, flexShrink: 0 }}>
