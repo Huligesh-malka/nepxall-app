@@ -3,7 +3,7 @@ import { Outlet, useLocation, Navigate, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
-import { Button, Box, Typography, CircularProgress, Menu, MenuItem, Avatar, IconButton, Tooltip, Zoom, Fade, BottomNavigation, BottomNavigationAction } from "@mui/material";
+import { Button, Box, Typography, CircularProgress, Menu, MenuItem, Avatar, IconButton, Tooltip, Zoom, Fade } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
 import HomeIcon from '@mui/icons-material/Home';
@@ -16,6 +16,8 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AddBusinessIcon from '@mui/icons-material/AddBusiness';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import ChatIcon from '@mui/icons-material/Chat';
+import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 
 const SIDEBAR_WIDTH = 260;
 
@@ -536,9 +538,10 @@ const MainLayout = () => {
       </div>
 
       {/* ================= MOBILE BOTTOM NAVIGATION ================= */}
+      {/* Always visible when user is logged in on mobile */}
       {isMobile && user && (
         <div style={mobileBottomNav}>
-          {/* Tenant Bottom Navigation */}
+          {/* Tenant Bottom Navigation - Modern UX like Airbnb/OYO */}
           {role === "tenant" && (
             <>
               <button
@@ -565,17 +568,18 @@ const MainLayout = () => {
                 <span>Wishlist</span>
               </button>
 
+              {/* Support/Chat instead of duplicate Profile */}
               <button
-                onClick={openMenu}
-                style={bottomNavBtnStyle(false)}
+                onClick={() => navigate("/contact")}
+                style={bottomNavBtnStyle(isActiveRoute("/contact"))}
               >
-                <PersonIcon style={{ fontSize: 22 }} />
-                <span>Profile</span>
+                <SupportAgentIcon style={{ fontSize: 20 }} />
+                <span>Support</span>
               </button>
             </>
           )}
 
-          {/* Owner Bottom Navigation */}
+          {/* Owner Bottom Navigation - Using CORRECT route /owner/add */}
           {role === "owner" && (
             <>
               <button
@@ -594,20 +598,22 @@ const MainLayout = () => {
                 <span>Bookings</span>
               </button>
 
+              {/* ✅ CORRECT ROUTE: /owner/add (matches sidebar) */}
               <button
-                onClick={() => navigate("/owner/add-pg")}
-                style={bottomNavBtnStyle(isActiveRoute(["/owner/add-pg", "/owner/pg"]))}
+                onClick={() => navigate("/owner/add")}
+                style={bottomNavBtnStyle(isActiveRoute("/owner/add"))}
               >
                 <AddBusinessIcon style={{ fontSize: 20 }} />
                 <span>Add PG</span>
               </button>
 
+              {/* Chats for owner - useful feature */}
               <button
-                onClick={openMenu}
-                style={bottomNavBtnStyle(false)}
+                onClick={() => navigate("/owner/chats")}
+                style={bottomNavBtnStyle(isActiveRoute("/owner/chats"))}
               >
-                <PersonIcon style={{ fontSize: 22 }} />
-                <span>Profile</span>
+                <ChatIcon style={{ fontSize: 20 }} />
+                <span>Chats</span>
               </button>
             </>
           )}
