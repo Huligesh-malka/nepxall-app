@@ -926,7 +926,7 @@ const MainLayout = () => {
       </div>
 
       {/* ================= PREMIUM MOBILE BOTTOM NAVIGATION ================= */}
-      {/* Only visible when user is logged in on mobile */}
+      {/* Only visible when user is logged in on mobile - FIXED FOR OWNER */}
       {isMobile && user && (
         <div style={mobileBottomNav}>
           {/* TENANT BOTTOM NAVIGATION - Premium Design */}
@@ -934,7 +934,7 @@ const MainLayout = () => {
             <>
               <button
                 onClick={() => navigate("/")}
-                style={bottomNavBtnStyle(isActiveRoute("/"))}
+                style={bottomNavBtnStyle(location.pathname === "/" || location.pathname.startsWith("/pg"))}
               >
                 <HomeIcon style={{ fontSize: 22, transition: "transform 0.2s" }} />
                 <span>Home</span>
@@ -942,7 +942,7 @@ const MainLayout = () => {
 
               <button
                 onClick={() => navigate("/user/bookings")}
-                style={bottomNavBtnStyle(isActiveRoute(["/user/bookings", "/bookings"]))}
+                style={bottomNavBtnStyle(location.pathname.startsWith("/user/bookings"))}
               >
                 <MenuBookIcon style={{ fontSize: 20 }} />
                 <span>Bookings</span>
@@ -950,7 +950,7 @@ const MainLayout = () => {
 
               <button
                 onClick={() => navigate("/user/my-stay")}
-                style={bottomNavBtnStyle(isActiveRoute("/user/my-stay"))}
+                style={bottomNavBtnStyle(location.pathname.startsWith("/user/my-stay"))}
               >
                 <KingBedIcon style={{ fontSize: 22 }} />
                 <span>My Stay</span>
@@ -966,12 +966,12 @@ const MainLayout = () => {
             </>
           )}
 
-          {/* OWNER BOTTOM NAVIGATION - Premium Design */}
+          {/* OWNER BOTTOM NAVIGATION - FIXED: Always visible on ALL /owner/* pages */}
           {role === "owner" && (
             <>
               <button
                 onClick={() => navigate("/owner/dashboard")}
-                style={bottomNavBtnStyle(isActiveRoute("/owner/dashboard"))}
+                style={bottomNavBtnStyle(location.pathname.startsWith("/owner/dashboard"))}
               >
                 <DashboardIcon style={{ fontSize: 22 }} />
                 <span>Dashboard</span>
@@ -979,7 +979,7 @@ const MainLayout = () => {
 
               <button
                 onClick={() => navigate("/owner/bookings")}
-                style={bottomNavBtnStyle(isActiveRoute("/owner/bookings"))}
+                style={bottomNavBtnStyle(location.pathname.startsWith("/owner/bookings"))}
               >
                 <CalendarMonthIcon style={{ fontSize: 20 }} />
                 <span>Bookings</span>
@@ -987,19 +987,18 @@ const MainLayout = () => {
 
               <button
                 onClick={() => navigate("/owner/add")}
-                style={bottomNavBtnStyle(isActiveRoute("/owner/add"))}
+                style={bottomNavBtnStyle(location.pathname.startsWith("/owner/add"))}
               >
                 <AddBusinessIcon style={{ fontSize: 20 }} />
                 <span>Add PG</span>
               </button>
 
-             <button
-  onClick={() => navigate("/owner/chats")}
-  style={bottomNavBtnStyle(isActiveRoute("/owner/chats"))}
->
-  <span style={{ fontSize: 22 }}>💬</span>
-  <span>Chats</span>
-</button>
+              <button                onClick={() => navigate("/owner/chats")}
+                style={bottomNavBtnStyle(location.pathname.startsWith("/owner/chats"))}
+              >
+                <span style={{ fontSize: 22 }}>💬</span>
+                <span>Chats</span>
+              </button>
             </>
           )}
         </div>
