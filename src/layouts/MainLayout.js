@@ -3,7 +3,7 @@ import { Outlet, useLocation, Navigate, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
-import { Button, Box, Typography, CircularProgress, Menu, MenuItem, Avatar, IconButton, Tooltip, Zoom, Fade } from "@mui/material";
+import { Button, Box, Typography, CircularProgress, Menu, MenuItem, Avatar, IconButton, Tooltip, Zoom, Fade, Badge } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
 import HomeIcon from '@mui/icons-material/Home';
@@ -18,22 +18,30 @@ import AddBusinessIcon from '@mui/icons-material/AddBusiness';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import ChatIcon from '@mui/icons-material/Chat';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
+import KingBedIcon from '@mui/icons-material/KingBed';
+import DiamondIcon from '@mui/icons-material/Diamond';
+import ShieldIcon from '@mui/icons-material/Shield';
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import StarIcon from '@mui/icons-material/Star';
 
-const SIDEBAR_WIDTH = 260;
+const SIDEBAR_WIDTH = 280;
 
-/* ================= PREMIUM DESIGN SYSTEM ================= */
+/* ================= PREMIUM DESIGN SYSTEM v2.0 ================= */
 const PREMIUM_COLORS = {
   primary: {
     main: "#6366f1",
     light: "#818cf8",
     dark: "#4f46e5",
-    gradient: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)"
+    gradient: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+    gradientHover: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)"
   },
   secondary: {
     main: "#10b981",
     light: "#34d399",
     dark: "#059669",
-    gradient: "linear-gradient(135deg, #10b981 0%, #14b8a6 100%)"
+    gradient: "linear-gradient(135deg, #10b981 0%, #14b8a6 100%)",
+    gradientHover: "linear-gradient(135deg, #059669 0%, #0d9488 100%)"
   },
   accent: {
     main: "#f59e0b",
@@ -51,6 +59,10 @@ const PREMIUM_COLORS = {
     700: "#374151",
     800: "#1f2937",
     900: "#111827"
+  },
+  gold: {
+    main: "#fbbf24",
+    gradient: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)"
   }
 };
 
@@ -80,7 +92,6 @@ const PremiumLoadingSpinner = () => (
         p: 4,
       }}
     >
-      {/* Premium Animated Logo */}
       <Box sx={{ position: "relative" }}>
         <Box
           sx={{
@@ -133,7 +144,6 @@ const PremiumLoadingSpinner = () => (
         </Box>
       </Box>
 
-      {/* Premium Brand Text */}
       <Box sx={{ textAlign: "center" }}>
         <Typography
           sx={{
@@ -162,7 +172,6 @@ const PremiumLoadingSpinner = () => (
         </Typography>
       </Box>
 
-      {/* Loading Animation */}
       <Box sx={{ position: "relative", mt: 2 }}>
         <CircularProgress
           size={48}
@@ -250,19 +259,19 @@ const MainLayout = () => {
     }
   };
 
-  // Premium avatar display with role-based styling
+  // Premium avatar display with unique role-based icons (No Home icon for users)
   const getAvatarDisplay = () => {
     if (role === "owner") {
-      return <StorefrontIcon sx={{ fontSize: 24 }} />;
+      return <DiamondIcon sx={{ fontSize: 22 }} />;
     } else if (role === "tenant") {
-      return <HomeIcon sx={{ fontSize: 24 }} />;
+      return <KingBedIcon sx={{ fontSize: 22 }} />;
     } else {
-      return user?.displayName?.charAt(0)?.toUpperCase() || <PersonIcon />;
+      return <WorkspacePremiumIcon sx={{ fontSize: 22 }} />;
     }
   };
 
   const getAvatarGradient = () => {
-    if (role === "owner") return PREMIUM_COLORS.secondary.gradient;
+    if (role === "owner") return PREMIUM_COLORS.gold.gradient;
     if (role === "tenant") return PREMIUM_COLORS.primary.gradient;
     return "linear-gradient(135deg, #6b7280, #9ca3af)";
   };
@@ -299,14 +308,16 @@ const MainLayout = () => {
             background: PREMIUM_COLORS.primary.gradient,
             "&:hover": {
               transform: "translateY(-2px)",
-              boxShadow: "0 10px 25px rgba(99, 102, 241, 0.3)"
+              boxShadow: "0 10px 25px rgba(99, 102, 241, 0.3)",
+              background: PREMIUM_COLORS.primary.gradientHover,
             },
-            borderRadius: "12px",
+            borderRadius: "14px",
             fontWeight: 600,
             padding: "8px 24px",
             transition: "all 0.3s ease",
             textTransform: "none",
-            fontSize: "14px"
+            fontSize: "14px",
+            boxShadow: "0 4px 10px rgba(99, 102, 241, 0.2)"
           }}
         >
           Sign In
@@ -323,14 +334,15 @@ const MainLayout = () => {
                 <Button
                   variant="contained"
                   onClick={() => navigate("/become-owner")}
-                  startIcon={<StorefrontIcon />}
+                  startIcon={<DiamondIcon />}
                   sx={{
                     background: PREMIUM_COLORS.secondary.gradient,
                     "&:hover": {
                       transform: "translateY(-2px)",
-                      boxShadow: "0 10px 25px rgba(16, 185, 129, 0.3)"
+                      boxShadow: "0 10px 25px rgba(16, 185, 129, 0.3)",
+                      background: PREMIUM_COLORS.secondary.gradientHover,
                     },
-                    borderRadius: "12px",
+                    borderRadius: "14px",
                     fontWeight: 600,
                     padding: "8px 20px",
                     transition: "all 0.3s ease",
@@ -343,8 +355,8 @@ const MainLayout = () => {
               </Tooltip>
             )}
 
-            {/* Premium Profile Dropdown */}
-            <Tooltip title="Profile" arrow TransitionComponent={Zoom}>
+            {/* Premium Profile Dropdown with Unique Avatar */}
+            <Tooltip title="Account" arrow TransitionComponent={Zoom}>
               <IconButton
                 onClick={openMenu}
                 sx={{
@@ -355,22 +367,52 @@ const MainLayout = () => {
                   transition: "all 0.3s ease"
                 }}
               >
-                <Avatar
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    background: getAvatarGradient(),
-                    boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
-                    cursor: "pointer",
-                    transition: "all 0.3s ease",
-                    "&:hover": {
-                      boxShadow: "0 6px 20px rgba(0,0,0,0.15)",
-                      transform: "scale(1.02)"
-                    }
-                  }}
+                <Badge
+                  overlap="circular"
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                  badgeContent={
+                    role === "owner" ? (
+                      <Box sx={{ 
+                        bgcolor: PREMIUM_COLORS.gold.main, 
+                        width: 14, 
+                        height: 14, 
+                        borderRadius: "50%",
+                        border: "2px solid white",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}>
+                        <StarIcon sx={{ fontSize: 8, color: "white" }} />
+                      </Box>
+                    ) : role === "tenant" ? (
+                      <Box sx={{ 
+                        bgcolor: PREMIUM_COLORS.primary.main, 
+                        width: 14, 
+                        height: 14, 
+                        borderRadius: "50%",
+                        border: "2px solid white"
+                      }} />
+                    ) : null
+                  }
                 >
-                  {getAvatarDisplay()}
-                </Avatar>
+                  <Avatar
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      background: getAvatarGradient(),
+                      boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
+                      cursor: "pointer",
+                      transition: "all 0.3s ease",
+                      border: `2px solid ${role === "owner" ? PREMIUM_COLORS.gold.main : PREMIUM_COLORS.primary.light}`,
+                      "&:hover": {
+                        boxShadow: "0 12px 28px rgba(0,0,0,0.2)",
+                        transform: "scale(1.02)"
+                      }
+                    }}
+                  >
+                    {getAvatarDisplay()}
+                  </Avatar>
+                </Badge>
               </IconButton>
             </Tooltip>
 
@@ -382,26 +424,70 @@ const MainLayout = () => {
               PaperProps={{
                 sx: {
                   mt: 1.5,
-                  borderRadius: "16px",
-                  minWidth: 200,
-                  boxShadow: "0 20px 35px rgba(0,0,0,0.1)",
-                  border: `1px solid ${PREMIUM_COLORS.neutral[200]}`
+                  borderRadius: "20px",
+                  minWidth: 240,
+                  boxShadow: "0 25px 45px rgba(0,0,0,0.15)",
+                  border: `1px solid ${PREMIUM_COLORS.neutral[200]}`,
+                  overflow: "hidden"
                 }
               }}
             >
-              <Box sx={{ p: 2, borderBottom: `1px solid ${PREMIUM_COLORS.neutral[200]}` }}>
-                <Typography sx={{ fontWeight: 700, fontSize: 14 }}>
-                  {user?.displayName || "User"}
-                </Typography>
-                <Typography sx={{ fontSize: 12, color: PREMIUM_COLORS.neutral[500] }}>
-                  {user?.email}
-                </Typography>
-                <Box sx={{ mt: 1 }}>
-                  <Typography sx={{ fontSize: 11, fontWeight: 600, color: role === "owner" ? PREMIUM_COLORS.secondary.main : PREMIUM_COLORS.primary.main, textTransform: "uppercase" }}>
-                    {role === "owner" ? "🏠 Property Owner" : "👤 Tenant"}
+              <Box sx={{ 
+                p: 2.5, 
+                background: `linear-gradient(135deg, ${PREMIUM_COLORS.neutral[100]} 0%, white 100%)`,
+                borderBottom: `1px solid ${PREMIUM_COLORS.neutral[200]}`
+              }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1.5 }}>
+                  <Avatar
+                    sx={{
+                      width: 50,
+                      height: 50,
+                      background: getAvatarGradient(),
+                      border: `2px solid ${role === "owner" ? PREMIUM_COLORS.gold.main : PREMIUM_COLORS.primary.main}`
+                    }}
+                  >
+                    {getAvatarDisplay()}
+                  </Avatar>
+                  <Box>
+                    <Typography sx={{ fontWeight: 700, fontSize: 15, color: PREMIUM_COLORS.neutral[800] }}>
+                      {user?.displayName || "User"}
+                    </Typography>
+                    <Typography sx={{ fontSize: 12, color: PREMIUM_COLORS.neutral[500] }}>
+                      {user?.email}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Box sx={{ 
+                  display: "inline-flex", 
+                  alignItems: "center", 
+                  gap: 0.8,
+                  px: 1.5,
+                  py: 0.6,
+                  borderRadius: "30px",
+                  background: role === "owner" ? `${PREMIUM_COLORS.gold.main}15` : `${PREMIUM_COLORS.primary.main}15`,
+                }}>
+                  {role === "owner" ? <DiamondIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.gold.main }} /> : <ShieldIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.primary.main }} />}
+                  <Typography sx={{ fontSize: 11, fontWeight: 600, color: role === "owner" ? PREMIUM_COLORS.gold.main : PREMIUM_COLORS.primary.main, textTransform: "uppercase" }}>
+                    {role === "owner" ? "PREMIUM PROPERTY OWNER" : "VERIFIED TENANT"}
                   </Typography>
                 </Box>
               </Box>
+              <MenuItem
+                onClick={() => {
+                  navigate("/profile");
+                  closeMenu();
+                }}
+                sx={{
+                  py: 1.5,
+                  gap: 1.5,
+                  "&:hover": {
+                    background: `${PREMIUM_COLORS.primary.main}10`
+                  }
+                }}
+              >
+                <PersonIcon sx={{ fontSize: 20, color: PREMIUM_COLORS.primary.main }} />
+                <Typography sx={{ fontWeight: 500 }}>My Profile</Typography>
+              </MenuItem>
               <MenuItem
                 onClick={() => {
                   handleLogout();
@@ -417,7 +503,7 @@ const MainLayout = () => {
                 }}
               >
                 <LogoutIcon sx={{ fontSize: 20 }} />
-                <Typography sx={{ fontWeight: 600 }}>Sign Out</Typography>
+                <Typography sx={{ fontWeight: 500 }}>Sign Out</Typography>
               </MenuItem>
             </Menu>
           </Box>
@@ -432,15 +518,15 @@ const MainLayout = () => {
     bottom: 0,
     left: 0,
     right: 0,
-    height: 70,
-    background: "rgba(255,255,255,0.96)",
-    backdropFilter: "blur(12px)",
-    borderTop: "1px solid #e5e7eb",
+    height: 72,
+    background: "rgba(255,255,255,0.98)",
+    backdropFilter: "blur(20px)",
+    borderTop: `1px solid ${PREMIUM_COLORS.neutral[200]}`,
     display: "flex",
     justifyContent: "space-around",
     alignItems: "center",
     zIndex: 2000,
-    boxShadow: "0 -4px 20px rgba(0,0,0,0.08)",
+    boxShadow: "0 -8px 32px rgba(0,0,0,0.08)",
     paddingBottom: "env(safe-area-inset-bottom)",
   };
 
@@ -456,11 +542,12 @@ const MainLayout = () => {
     fontWeight: active ? "600" : "500",
     fontSize: 11,
     cursor: "pointer",
-    transition: "all 0.2s ease",
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
     padding: "8px 12px",
-    borderRadius: "24px",
+    borderRadius: "28px",
     flex: 1,
     maxWidth: 80,
+    transform: active ? "translateY(-2px)" : "translateY(0)",
   });
 
   // Helper function to check if a route is active
@@ -482,7 +569,7 @@ const MainLayout = () => {
           padding: isMobile ? "16px 16px 90px 16px" : "32px",
           width: "100%",
           minHeight: "100vh",
-          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          transition: "margin 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease",
           overflowX: "hidden",
         }}
       >
@@ -493,7 +580,7 @@ const MainLayout = () => {
               display: "flex",
               justifyContent: "flex-end",
               gap: "10px",
-              marginBottom: "10px"
+              marginBottom: "16px"
             }}
           >
             <ActionButtons />
@@ -513,12 +600,12 @@ const MainLayout = () => {
               position: "sticky",
               top: 0,
               zIndex: 1100,
-              background: scrolled ? "rgba(255, 255, 255, 0.95)" : "transparent",
-              backdropFilter: scrolled ? "blur(20px)" : "none",
-              borderRadius: scrolled ? "16px" : "0px",
-              padding: scrolled ? "16px 24px" : "0px",
-              transition: "all 0.3s ease",
-              boxShadow: scrolled ? "0 4px 20px rgba(0,0,0,0.05)" : "none"
+              background: scrolled ? "rgba(255, 255, 255, 0.92)" : "transparent",
+              backdropFilter: scrolled ? "blur(24px)" : "none",
+              borderRadius: scrolled ? "24px" : "0px",
+              padding: scrolled ? "16px 28px" : "0px",
+              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              boxShadow: scrolled ? "0 8px 32px rgba(0,0,0,0.06)" : "none"
             }}
           >
             <ActionButtons />
@@ -528,11 +615,11 @@ const MainLayout = () => {
         {/* Premium Content Area with Smooth Animation */}
         <Box
           sx={{
-            animation: "fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+            animation: "fadeInUp 0.6s cubic-bezier(0.2, 0.9, 0.4, 1.1)",
             "@keyframes fadeInUp": {
               "0%": {
                 opacity: 0,
-                transform: "translateY(30px)"
+                transform: "translateY(40px)"
               },
               "100%": {
                 opacity: 1,
@@ -545,18 +632,18 @@ const MainLayout = () => {
         </Box>
       </div>
 
-      {/* ================= MODERN MOBILE BOTTOM NAVIGATION ================= */}
-      {/* Always visible when user is logged in on mobile */}
+      {/* ================= PREMIUM MOBILE BOTTOM NAVIGATION ================= */}
+      {/* Only visible when user is logged in on mobile */}
       {isMobile && user && (
         <div style={mobileBottomNav}>
-          {/* TENANT BOTTOM NAVIGATION - MODERN UX LIKE YULU/OLA/AIRBNB */}
+          {/* TENANT BOTTOM NAVIGATION - Premium Design */}
           {role === "tenant" && (
             <>
               <button
                 onClick={() => navigate("/")}
                 style={bottomNavBtnStyle(isActiveRoute("/"))}
               >
-                <HomeIcon style={{ fontSize: 22 }} />
+                <HomeIcon style={{ fontSize: 22, transition: "transform 0.2s" }} />
                 <span>Home</span>
               </button>
 
@@ -564,31 +651,31 @@ const MainLayout = () => {
                 onClick={() => navigate("/user/bookings")}
                 style={bottomNavBtnStyle(isActiveRoute(["/user/bookings", "/bookings"]))}
               >
-                <CalendarMonthIcon style={{ fontSize: 20 }} />
+                <MenuBookIcon style={{ fontSize: 20 }} />
                 <span>Bookings</span>
               </button>
 
+              {/* CORRECTED MY STAY BUTTON - Fixed routing and active state */}
               <button
-  onClick={() => navigate("/user/my-stay")}
-  style={bottomNavBtnStyle(
-    isActiveRoute("/user/my-stay")
-  )}
->
-  🏠
-  <span>My Stay</span>
-</button>
-              {/* PROFILE BUTTON - Opens Sidebar Drawer */}
+                onClick={() => navigate("/user/my-stay")}
+                style={bottomNavBtnStyle(isActiveRoute("/user/my-stay"))}
+              >
+                <KingBedIcon style={{ fontSize: 22 }} />
+                <span>My Stay</span>
+              </button>
+
+              {/* PROFILE BUTTON - Opens Sidebar Drawer - Unique Profile Icon */}
               <button
                 onClick={openSidebarDrawer}
                 style={bottomNavBtnStyle(false)}
               >
-                <PersonIcon style={{ fontSize: 20 }} />
+                <WorkspacePremiumIcon style={{ fontSize: 22 }} />
                 <span>Profile</span>
               </button>
             </>
           )}
 
-          {/* OWNER BOTTOM NAVIGATION - MODERN UX */}
+          {/* OWNER BOTTOM NAVIGATION - Premium Design */}
           {role === "owner" && (
             <>
               <button
@@ -615,12 +702,12 @@ const MainLayout = () => {
                 <span>Add PG</span>
               </button>
 
-              {/* PROFILE BUTTON - Opens Sidebar Drawer */}
+              {/* PROFILE BUTTON - Opens Sidebar Drawer - Unique Profile Icon for Owner */}
               <button
                 onClick={openSidebarDrawer}
                 style={bottomNavBtnStyle(false)}
               >
-                <PersonIcon style={{ fontSize: 20 }} />
+                <DiamondIcon style={{ fontSize: 22 }} />
                 <span>Profile</span>
               </button>
             </>
