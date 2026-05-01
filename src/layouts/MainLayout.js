@@ -25,6 +25,13 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
+import FlagIcon from '@mui/icons-material/Flag';
+import PrivacyTipIcon from '@mui/icons-material/PrivacyTip';
+import PolicyIcon from '@mui/icons-material/Policy';
+import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
+import DescriptionIcon from '@mui/icons-material/Description';
+import ContactSupportIcon from '@mui/icons-material/ContactSupport';
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 
 const SIDEBAR_WIDTH = 280;
 
@@ -206,7 +213,7 @@ const PremiumLoadingSpinner = () => (
 );
 
 // ================= RIGHT SIDE PROFILE CARD COMPONENT =================
-// Shows "Refunds" for tenants and "Earnings" for owners based on role
+// Complete menu for Tenant: Become Owner, Vacate Room, My Agreements, Contact Us, Terms & Conditions, Refund Policy, Privacy Policy
 const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
   const navigate = useNavigate();
   
@@ -216,12 +223,43 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
     return "linear-gradient(135deg, #6b7280, #9ca3af)";
   };
 
-  const handleHelpSupport = () => {
+  // Navigation handlers
+  const handleBecomeOwner = () => {
+    navigate("/become-owner");
+    onClose();
+  };
+
+  const handleVacateRoom = () => {
+    navigate("/user/vacate");
+    onClose();
+  };
+
+  const handleMyAgreements = () => {
+    navigate("/user/agreements");
+    onClose();
+  };
+
+  const handleContactUs = () => {
     navigate("/contact");
     onClose();
   };
 
-  // Role-specific menu item
+  const handleTermsConditions = () => {
+    navigate("/terms");
+    onClose();
+  };
+
+  const handleRefundPolicy = () => {
+    navigate("/refund-policy");
+    onClose();
+  };
+
+  const handlePrivacyPolicy = () => {
+    navigate("/privacy-policy");
+    onClose();
+  };
+
+  // Role-specific menu item (Refunds for Tenant, Earnings for Owner)
   const handleRoleSpecificAction = () => {
     if (role === "tenant") {
       navigate("/user/refunds");
@@ -248,6 +286,44 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
     }
     return "Payments";
   };
+
+  // Tenant menu items in correct order
+  const tenantMenuItems = [
+    { 
+      label: "Become Owner", 
+      icon: <WorkspacePremiumIcon />, 
+      onClick: handleBecomeOwner,
+      showFor: "tenant"
+    },
+    { 
+      label: "Vacate Room", 
+      icon: <MeetingRoomIcon />, 
+      onClick: handleVacateRoom,
+      showFor: "tenant"
+    },
+    { 
+      label: "My Agreements", 
+      icon: <DescriptionIcon />, 
+      onClick: handleMyAgreements,
+      showFor: "tenant"
+    },
+  ];
+
+  // Common policy menu items for both roles
+  const policyMenuItems = [
+    { label: "Contact Us", icon: <ContactSupportIcon />, onClick: handleContactUs },
+    { label: "Terms & Conditions", icon: <FlagIcon />, onClick: handleTermsConditions },
+    { label: "Refund Policy", icon: <PolicyIcon />, onClick: handleRefundPolicy },
+    { label: "Privacy Policy", icon: <PrivacyTipIcon />, onClick: handlePrivacyPolicy },
+  ];
+
+  // Owner menu items
+  const ownerMenuItems = [
+    { label: "Contact Us", icon: <ContactSupportIcon />, onClick: handleContactUs },
+    { label: "Terms & Conditions", icon: <FlagIcon />, onClick: handleTermsConditions },
+    { label: "Refund Policy", icon: <PolicyIcon />, onClick: handleRefundPolicy },
+    { label: "Privacy Policy", icon: <PrivacyTipIcon />, onClick: handlePrivacyPolicy },
+  ];
 
   return (
     <Drawer
@@ -333,8 +409,8 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
         </Box>
       </Box>
 
-      {/* Role Specific Menu Item - Refunds for Tenant, Earnings for Owner */}
       <Box sx={{ p: 2 }}>
+        {/* Role Specific Menu Item - Refunds for Tenant, Earnings for Owner */}
         <ListItem
           onClick={handleRoleSpecificAction}
           sx={{
@@ -360,31 +436,69 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
           <ArrowForwardIosIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.neutral[400] }} />
         </ListItem>
 
-        {/* Help & Support Menu Item */}
-        <ListItem
-          onClick={handleHelpSupport}
-          sx={{
-            borderRadius: "16px",
-            mb: 1,
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-            "&:hover": {
-              background: `${PREMIUM_COLORS.primary.main}10`,
-              transform: "translateX(4px)",
-            },
-          }}
-        >
-          <ListItemIcon sx={{ color: PREMIUM_COLORS.primary.main, minWidth: 40 }}>
-            <HelpOutlineIcon />
-          </ListItemIcon>
-          <ListItemText
-            primary="Help & Support"
-            primaryTypographyProps={{
-              sx: { fontWeight: 500, fontSize: 14 },
+        {/* Tenant Specific Menu Items: Become Owner, Vacate Room, My Agreements */}
+        {role === "tenant" && (
+          <>
+            {tenantMenuItems.map((item, index) => (
+              <ListItem
+                key={index}
+                onClick={item.onClick}
+                sx={{
+                  borderRadius: "16px",
+                  mb: 1,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    background: `${PREMIUM_COLORS.primary.main}10`,
+                    transform: "translateX(4px)",
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ color: PREMIUM_COLORS.primary.main, minWidth: 40 }}>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{
+                    sx: { fontWeight: 500, fontSize: 14 },
+                  }}
+                />
+                <ArrowForwardIosIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.neutral[400] }} />
+              </ListItem>
+            ))}
+          </>
+        )}
+
+        <Divider sx={{ my: 1 }} />
+
+        {/* Policy Menu Items - Contact Us, Terms, Refund Policy, Privacy Policy */}
+        {(role === "tenant" ? policyMenuItems : ownerMenuItems).map((item, index) => (
+          <ListItem
+            key={index}
+            onClick={item.onClick}
+            sx={{
+              borderRadius: "16px",
+              mb: 1,
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                background: `${PREMIUM_COLORS.primary.main}10`,
+                transform: "translateX(4px)",
+              },
             }}
-          />
-          <ArrowForwardIosIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.neutral[400] }} />
-        </ListItem>
+          >
+            <ListItemIcon sx={{ color: PREMIUM_COLORS.primary.main, minWidth: 40 }}>
+              {item.icon}
+            </ListItemIcon>
+            <ListItemText
+              primary={item.label}
+              primaryTypographyProps={{
+                sx: { fontWeight: 500, fontSize: 14 },
+              }}
+            />
+            <ArrowForwardIosIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.neutral[400] }} />
+          </ListItem>
+        ))}
       </Box>
 
       <Divider sx={{ my: 1 }} />
@@ -556,7 +670,7 @@ const MainLayout = () => {
       {user && (
         <Fade in={true} timeout={500}>
           <Box sx={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            {/* Become Owner Premium Button */}
+            {/* Become Owner Premium Button - Only show for non-owners */}
             {role !== "owner" && (
               <Tooltip title="Start earning as an owner" arrow TransitionComponent={Zoom}>
                 <Button
