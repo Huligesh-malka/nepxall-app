@@ -993,13 +993,13 @@ const MainLayout = () => {
                 <span>Add PG</span>
               </button>
 
-              <button
-                onClick={openSidebarDrawer}
-                style={bottomNavBtnStyle(false)}
-              >
-                <span style={{ fontSize: 22 }}>👤</span>
-                <span>Profile</span>
-              </button>
+             <button
+  onClick={() => navigate("/owner/chats")}
+  style={bottomNavBtnStyle(isActiveRoute("/owner/chats"))}
+>
+  <span style={{ fontSize: 22 }}>💬</span>
+  <span>Chats</span>
+</button>
             </>
           )}
         </div>
