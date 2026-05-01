@@ -569,12 +569,15 @@ const MainLayout = () => {
               </button>
 
               <button
-                onClick={() => navigate("/search")}
-                style={bottomNavBtnStyle(isActiveRoute("/search"))}
-              >
-                <span style={{ fontSize: 20 }}>🔍</span>
-                <span>Search</span>
-              </button>
+  onClick={() => navigate("/user/my-stay")}
+  style={bottomNavBtnStyle(
+    isActiveRoute("/user/my-stay")
+  )}
+>
+  Bookings
+🛏️
+  <span>My Stay</span>
+</button>
 
               {/* PROFILE BUTTON - Opens Sidebar Drawer */}
               <button
