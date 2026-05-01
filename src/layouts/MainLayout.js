@@ -429,16 +429,17 @@ const MainLayout = () => {
   }}
 
   PaperProps={{
-    sx: {
-      mt: 1,
-      mr: 1,
-      borderRadius: "20px",
-      minWidth: 240,
-      boxShadow: "0 25px 45px rgba(0,0,0,0.15)",
-      border: `1px solid ${PREMIUM_COLORS.neutral[200]}`,
-      overflow: "hidden"
-    }
-  }}
+  sx: {
+    mt: 1,
+    mr: isMobile ? 0.5 : 1,
+    width: isMobile ? 210 : 240,
+    maxWidth: "calc(100vw - 24px)",
+    borderRadius: "20px",
+    boxShadow: "0 25px 45px rgba(0,0,0,0.15)",
+    border: `1px solid ${PREMIUM_COLORS.neutral[200]}`,
+    overflow: "hidden"
+  }
+}}
 >
               <Box sx={{ 
                 p: 2.5, 
