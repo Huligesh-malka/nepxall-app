@@ -202,7 +202,7 @@ const PremiumLoadingSpinner = () => (
 );
 
 // ================= RIGHT SIDE PROFILE CARD COMPONENT =================
-// No icons inside menu items - only text
+// No icons inside the card - only text for menu items and role display
 const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
   const navigate = useNavigate();
   
@@ -213,6 +213,21 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
   };
 
   // Navigation handlers for Tenant
+  const handleBookings = () => {
+    navigate("/user/bookings");
+    onClose();
+  };
+
+  const handleMyStay = () => {
+    navigate("/user/my-stay");
+    onClose();
+  };
+
+  const handleRefunds = () => {
+    navigate("/user/refunds");
+    onClose();
+  };
+
   const handleBecomeOwner = () => {
     navigate("/become-owner");
     onClose();
@@ -228,29 +243,39 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
     onClose();
   };
 
-  const handleRefunds = () => {
-    navigate("/user/refunds");
+  // Navigation handlers for Owner
+  const handleDashboard = () => {
+    navigate("/owner/dashboard");
     onClose();
   };
 
-  // Navigation handlers for Owner
+  const handleOwnerBookings = () => {
+    navigate("/owner/bookings");
+    onClose();
+  };
+
   const handleActiveTenants = () => {
     navigate("/owner/tenants");
     onClose();
   };
 
-  const handleVacateRequests = () => {
+  const handleOwnerVacateRequests = () => {
     navigate("/owner/vacate");
-    onClose();
-  };
-
-  const handleBankDetails = () => {
-    navigate("/owner/bank");
     onClose();
   };
 
   const handleEarnings = () => {
     navigate("/owner/payments");
+    onClose();
+  };
+
+  const handleAddPG = () => {
+    navigate("/owner/add");
+    onClose();
+  };
+
+  const handleBankDetails = () => {
+    navigate("/owner/bank");
     onClose();
   };
 
@@ -277,6 +302,8 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
 
   // Tenant menu items (text only)
   const tenantMenuItems = [
+    { label: "My Bookings", onClick: handleBookings },
+    { label: "My Stay", onClick: handleMyStay },
     { label: "Refunds", onClick: handleRefunds },
     { label: "Become Owner", onClick: handleBecomeOwner },
     { label: "Vacate Room", onClick: handleVacateRoom },
@@ -285,9 +312,12 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
 
   // Owner menu items (text only)
   const ownerMenuItems = [
-    { label: "Earnings", onClick: handleEarnings },
+    { label: "Dashboard", onClick: handleDashboard },
+    { label: "Bookings", onClick: handleOwnerBookings },
     { label: "Active Tenants", onClick: handleActiveTenants },
-    { label: "Vacate Requests", onClick: handleVacateRequests },
+    { label: "Vacate Requests", onClick: handleOwnerVacateRequests },
+    { label: "Earnings", onClick: handleEarnings },
+    { label: "Add PG", onClick: handleAddPG },
     { label: "Bank Details", onClick: handleBankDetails },
   ];
 
@@ -320,7 +350,7 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
         },
       }}
     >
-      {/* Header with close button */}
+      {/* Header with close button - NO ICONS inside, only text */}
       <Box
         sx={{
           p: 3,
@@ -366,22 +396,17 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
           <Typography sx={{ fontSize: 13, opacity: 0.9, mb: 1 }}>
             {user?.email}
           </Typography>
+          {/* Role display - TEXT ONLY, NO ICONS */}
           <Box
             sx={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 0.8,
               px: 1.5,
               py: 0.6,
               borderRadius: "30px",
               background: "rgba(255,255,255,0.2)",
             }}
           >
-            {role === "owner" ? (
-              <DiamondIcon sx={{ fontSize: 14 }} />
-            ) : (
-              <ShieldIcon sx={{ fontSize: 14 }} />
-            )}
             <Typography sx={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" }}>
               {role === "owner" ? "PROPERTY OWNER" : "VERIFIED TENANT"}
             </Typography>
