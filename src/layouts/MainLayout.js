@@ -242,6 +242,14 @@ const MainLayout = () => {
     setAnchorEl(null);
   };
 
+  // Function to open sidebar drawer programmatically
+  const openSidebarDrawer = () => {
+    const menuBtn = document.querySelector(".mobile-menu-trigger");
+    if (menuBtn) {
+      menuBtn.click();
+    }
+  };
+
   // Premium avatar display with role-based styling
   const getAvatarDisplay = () => {
     if (role === "owner") {
@@ -537,11 +545,11 @@ const MainLayout = () => {
         </Box>
       </div>
 
-      {/* ================= MOBILE BOTTOM NAVIGATION ================= */}
+      {/* ================= MODERN MOBILE BOTTOM NAVIGATION ================= */}
       {/* Always visible when user is logged in on mobile */}
       {isMobile && user && (
         <div style={mobileBottomNav}>
-          {/* Tenant Bottom Navigation - Modern UX like Airbnb/OYO */}
+          {/* TENANT BOTTOM NAVIGATION - MODERN UX LIKE YULU/OLA/AIRBNB */}
           {role === "tenant" && (
             <>
               <button
@@ -561,25 +569,25 @@ const MainLayout = () => {
               </button>
 
               <button
-                onClick={() => navigate("/wishlist")}
-                style={bottomNavBtnStyle(isActiveRoute("/wishlist"))}
+                onClick={() => navigate("/search")}
+                style={bottomNavBtnStyle(isActiveRoute("/search"))}
               >
-                <FavoriteIcon style={{ fontSize: 20 }} />
-                <span>Wishlist</span>
+                <span style={{ fontSize: 20 }}>🔍</span>
+                <span>Search</span>
               </button>
 
-              {/* Support/Chat instead of duplicate Profile */}
+              {/* PROFILE BUTTON - Opens Sidebar Drawer */}
               <button
-                onClick={() => navigate("/contact")}
-                style={bottomNavBtnStyle(isActiveRoute("/contact"))}
+                onClick={openSidebarDrawer}
+                style={bottomNavBtnStyle(false)}
               >
-                <SupportAgentIcon style={{ fontSize: 20 }} />
-                <span>Support</span>
+                <PersonIcon style={{ fontSize: 20 }} />
+                <span>Profile</span>
               </button>
             </>
           )}
 
-          {/* Owner Bottom Navigation - Using CORRECT route /owner/add */}
+          {/* OWNER BOTTOM NAVIGATION - MODERN UX */}
           {role === "owner" && (
             <>
               <button
@@ -598,7 +606,6 @@ const MainLayout = () => {
                 <span>Bookings</span>
               </button>
 
-              {/* ✅ CORRECT ROUTE: /owner/add (matches sidebar) */}
               <button
                 onClick={() => navigate("/owner/add")}
                 style={bottomNavBtnStyle(isActiveRoute("/owner/add"))}
@@ -607,13 +614,13 @@ const MainLayout = () => {
                 <span>Add PG</span>
               </button>
 
-              {/* Chats for owner - useful feature */}
+              {/* PROFILE BUTTON - Opens Sidebar Drawer */}
               <button
-                onClick={() => navigate("/owner/chats")}
-                style={bottomNavBtnStyle(isActiveRoute("/owner/chats"))}
+                onClick={openSidebarDrawer}
+                style={bottomNavBtnStyle(false)}
               >
-                <ChatIcon style={{ fontSize: 20 }} />
-                <span>Chats</span>
+                <PersonIcon style={{ fontSize: 20 }} />
+                <span>Profile</span>
               </button>
             </>
           )}
