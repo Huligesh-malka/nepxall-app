@@ -802,9 +802,49 @@ await userAPI.post(
                     sx={{ opacity: 0.7 }}
                   />
                 </Box>
-                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                  By continuing, you agree to our Terms of Service and Privacy Policy
-                </Typography>
+                <Typography
+  variant="caption"
+  color="text.secondary"
+  sx={{
+    display: "block",
+    textAlign: "center",
+    mt: 1,
+    lineHeight: 1.8,
+    fontSize: "12px"
+  }}
+>
+  By continuing, you agree to our{" "}
+  
+  <a
+    href="/terms"
+    target="_blank"
+    rel="noopener noreferrer"
+    style={{
+      color: "#2563eb",
+      fontWeight: 600,
+      textDecoration: "none"
+    }}
+  >
+    Terms & Conditions
+  </a>
+
+  {" "}and{" "}
+
+  <a
+    href="/privacy-policy"
+    target="_blank"
+    rel="noopener noreferrer"
+    style={{
+      color: "#2563eb",
+      fontWeight: 600,
+      textDecoration: "none"
+    }}
+  >
+    Privacy Policy
+  </a>
+
+  .
+</Typography>
               </Box>
             </Box>
 
