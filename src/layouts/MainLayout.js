@@ -739,66 +739,68 @@ const MainLayout = () => {
               </Tooltip>
             )}
 
-            {/* REDESIGNED PROFILE ICON - Modern circular icon with gradient */}
-            <Tooltip title="Account" arrow TransitionComponent={Zoom}>
-              <IconButton
-                onClick={openProfileCard}
-                sx={{
-                  padding: 0,
-                  "&:hover": {
-                    transform: "scale(1.05)"
-                  },
-                  transition: "all 0.3s ease"
-                }}
-              >
-                <Badge
-                  overlap="circular"
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                  badgeContent={
-                    role === "owner" ? (
-                      <Box sx={{ 
-                        bgcolor: PREMIUM_COLORS.gold.main, 
-                        width: 14, 
-                        height: 14, 
-                        borderRadius: "50%",
-                        border: "2px solid white",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      }}>
-                        <StarIcon sx={{ fontSize: 8, color: "white" }} />
-                      </Box>
-                    ) : role === "tenant" ? (
-                      <Box sx={{ 
-                        bgcolor: PREMIUM_COLORS.primary.main, 
-                        width: 14, 
-                        height: 14, 
-                        borderRadius: "50%",
-                        border: "2px solid white"
-                      }} />
-                    ) : null
-                  }
+            {/* REDESIGNED PROFILE ICON - Only show on desktop (not mobile) */}
+            {!isMobile && (
+              <Tooltip title="Account" arrow TransitionComponent={Zoom}>
+                <IconButton
+                  onClick={openProfileCard}
+                  sx={{
+                    padding: 0,
+                    "&:hover": {
+                      transform: "scale(1.05)"
+                    },
+                    transition: "all 0.3s ease"
+                  }}
                 >
-                  <Avatar
-                    sx={{
-                      width: 48,
-                      height: 48,
-                      background: getAvatarGradient(),
-                      boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
-                      cursor: "pointer",
-                      transition: "all 0.3s ease",
-                      border: `2px solid ${role === "owner" ? PREMIUM_COLORS.gold.main : PREMIUM_COLORS.primary.light}`,
-                      "&:hover": {
-                        boxShadow: "0 12px 28px rgba(0,0,0,0.2)",
-                        transform: "scale(1.02)"
-                      }
-                    }}
+                  <Badge
+                    overlap="circular"
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    badgeContent={
+                      role === "owner" ? (
+                        <Box sx={{ 
+                          bgcolor: PREMIUM_COLORS.gold.main, 
+                          width: 14, 
+                          height: 14, 
+                          borderRadius: "50%",
+                          border: "2px solid white",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}>
+                          <StarIcon sx={{ fontSize: 8, color: "white" }} />
+                        </Box>
+                      ) : role === "tenant" ? (
+                        <Box sx={{ 
+                          bgcolor: PREMIUM_COLORS.primary.main, 
+                          width: 14, 
+                          height: 14, 
+                          borderRadius: "50%",
+                          border: "2px solid white"
+                        }} />
+                      ) : null
+                    }
                   >
-                    <AccountCircleIcon sx={{ fontSize: 32, color: "white" }} />
-                  </Avatar>
-                </Badge>
-              </IconButton>
-            </Tooltip>
+                    <Avatar
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        background: getAvatarGradient(),
+                        boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
+                        cursor: "pointer",
+                        transition: "all 0.3s ease",
+                        border: `2px solid ${role === "owner" ? PREMIUM_COLORS.gold.main : PREMIUM_COLORS.primary.light}`,
+                        "&:hover": {
+                          boxShadow: "0 12px 28px rgba(0,0,0,0.2)",
+                          transform: "scale(1.02)"
+                        }
+                      }}
+                    >
+                      <AccountCircleIcon sx={{ fontSize: 32, color: "white" }} />
+                    </Avatar>
+                  </Badge>
+                </IconButton>
+              </Tooltip>
+            )}
           </Box>
         </Fade>
       )}
@@ -926,7 +928,7 @@ const MainLayout = () => {
       </div>
 
       {/* ================= PREMIUM MOBILE BOTTOM NAVIGATION ================= */}
-      {/* Only visible when user is logged in on mobile - FIXED FOR OWNER */}
+      {/* Only visible when user is logged in on mobile */}
       {isMobile && user && (
         <div style={mobileBottomNav}>
           {/* TENANT BOTTOM NAVIGATION - Premium Design */}
@@ -957,8 +959,8 @@ const MainLayout = () => {
               </button>
 
               <button
-                onClick={openSidebarDrawer}
-                style={bottomNavBtnStyle(false)}
+                onClick={openProfileCard}
+                style={bottomNavBtnStyle(profileCardOpen)}
               >
                 <span style={{ fontSize: 22 }}>👤</span>
                 <span>Profile</span>
@@ -966,7 +968,7 @@ const MainLayout = () => {
             </>
           )}
 
-          {/* OWNER BOTTOM NAVIGATION - FIXED: Always visible on ALL /owner/* pages */}
+          {/* OWNER BOTTOM NAVIGATION - With Profile button instead of Chats */}
           {role === "owner" && (
             <>
               <button
@@ -993,11 +995,12 @@ const MainLayout = () => {
                 <span>Add PG</span>
               </button>
 
-              <button                onClick={() => navigate("/owner/chats")}
-                style={bottomNavBtnStyle(location.pathname.startsWith("/owner/chats"))}
+              <button
+                onClick={openProfileCard}
+                style={bottomNavBtnStyle(profileCardOpen)}
               >
-                <span style={{ fontSize: 22 }}>💬</span>
-                <span>Chats</span>
+                <span style={{ fontSize: 22 }}>👤</span>
+                <span>Profile</span>
               </button>
             </>
           )}
