@@ -574,11 +574,9 @@ const MainLayout = () => {
     isActiveRoute("/user/my-stay")
   )}
 >
-  Bookings
-🛏️
+  🏠
   <span>My Stay</span>
 </button>
-
               {/* PROFILE BUTTON - Opens Sidebar Drawer */}
               <button
                 onClick={openSidebarDrawer}
