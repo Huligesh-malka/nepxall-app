@@ -427,6 +427,7 @@ const MainLayout = () => {
               PaperProps={{
                 sx: {
                   mt: 1.5,
+                  mr: 1,
                   borderRadius: "20px",
                   minWidth: 240,
                   boxShadow: "0 25px 45px rgba(0,0,0,0.15)",
