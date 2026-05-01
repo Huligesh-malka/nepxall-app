@@ -7,7 +7,6 @@ import { Button, Box, Typography, CircularProgress, Avatar, IconButton, Tooltip,
 import { useAuth } from "../context/AuthContext";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
 import HomeIcon from '@mui/icons-material/Home';
-import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AddBusinessIcon from '@mui/icons-material/AddBusiness';
@@ -23,6 +22,9 @@ import CloseIcon from '@mui/icons-material/Close';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import ReceiptIcon from '@mui/icons-material/Receipt';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 
 const SIDEBAR_WIDTH = 280;
 
@@ -204,8 +206,7 @@ const PremiumLoadingSpinner = () => (
 );
 
 // ================= RIGHT SIDE PROFILE CARD COMPONENT =================
-// Removed: My Profile and Settings menu items
-// Help & Support now navigates to /contact page
+// Shows "Refunds" for tenants and "Earnings" for owners based on role
 const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
   const navigate = useNavigate();
   
@@ -218,6 +219,34 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
   const handleHelpSupport = () => {
     navigate("/contact");
     onClose();
+  };
+
+  // Role-specific menu item
+  const handleRoleSpecificAction = () => {
+    if (role === "tenant") {
+      navigate("/user/refunds");
+    } else if (role === "owner") {
+      navigate("/owner/payments");
+    }
+    onClose();
+  };
+
+  const getRoleSpecificIcon = () => {
+    if (role === "tenant") {
+      return <ReceiptIcon />;
+    } else if (role === "owner") {
+      return <MonetizationOnIcon />;
+    }
+    return <TrendingUpIcon />;
+  };
+
+  const getRoleSpecificLabel = () => {
+    if (role === "tenant") {
+      return "Refunds";
+    } else if (role === "owner") {
+      return "Earnings";
+    }
+    return "Payments";
   };
 
   return (
@@ -304,8 +333,34 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
         </Box>
       </Box>
 
-      {/* Only Help & Support Menu Item - My Profile and Settings removed */}
+      {/* Role Specific Menu Item - Refunds for Tenant, Earnings for Owner */}
       <Box sx={{ p: 2 }}>
+        <ListItem
+          onClick={handleRoleSpecificAction}
+          sx={{
+            borderRadius: "16px",
+            mb: 1,
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+            "&:hover": {
+              background: `${PREMIUM_COLORS.primary.main}10`,
+              transform: "translateX(4px)",
+            },
+          }}
+        >
+          <ListItemIcon sx={{ color: PREMIUM_COLORS.primary.main, minWidth: 40 }}>
+            {getRoleSpecificIcon()}
+          </ListItemIcon>
+          <ListItemText
+            primary={getRoleSpecificLabel()}
+            primaryTypographyProps={{
+              sx: { fontWeight: 500, fontSize: 14 },
+            }}
+          />
+          <ArrowForwardIosIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.neutral[400] }} />
+        </ListItem>
+
+        {/* Help & Support Menu Item */}
         <ListItem
           onClick={handleHelpSupport}
           sx={{
@@ -441,11 +496,6 @@ const MainLayout = () => {
     if (menuBtn) {
       menuBtn.click();
     }
-  };
-
-  // Premium avatar display with 👤 symbol for both roles
-  const getAvatarDisplay = () => {
-    return "👤";
   };
 
   const getAvatarGradient = () => {
@@ -588,7 +638,6 @@ const MainLayout = () => {
                       }
                     }}
                   >
-                    {/* Modern profile icon - using AccountCircleIcon for cleaner look */}
                     <AccountCircleIcon sx={{ fontSize: 32, color: "white" }} />
                   </Avatar>
                 </Badge>
@@ -645,20 +694,6 @@ const MainLayout = () => {
     }
     return paths.some(path => location.pathname === path || location.pathname.startsWith(path + '/'));
   };
-
-  // Style for active link
-  const linkStyle = (isActive) => ({
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    padding: "12px 16px",
-    borderRadius: "12px",
-    textDecoration: "none",
-    color: isActive ? PREMIUM_COLORS.primary.main : PREMIUM_COLORS.neutral[700],
-    background: isActive ? `${PREMIUM_COLORS.primary.main}10` : "transparent",
-    fontWeight: isActive ? 600 : 500,
-    transition: "all 0.2s ease",
-  });
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: PREMIUM_COLORS.neutral[50] }}>
