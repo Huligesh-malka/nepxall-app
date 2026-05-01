@@ -36,6 +36,11 @@ import PeopleIcon from '@mui/icons-material/People';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import BusinessIcon from '@mui/icons-material/Business';
+import ChatIcon from '@mui/icons-material/Chat';
+import SearchIcon from '@mui/icons-material/Search';
+import PaymentsIcon from '@mui/icons-material/Payments';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import PremiumIcon from '@mui/icons-material/WorkspacePremium';
 
 const SIDEBAR_WIDTH = 280;
 
@@ -243,6 +248,21 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
     onClose();
   };
 
+  const handleBrowseProperties = () => {
+    navigate("/");
+    onClose();
+  };
+
+  const handleTenantBookings = () => {
+    navigate("/user/bookings");
+    onClose();
+  };
+
+  const handleTenantRefunds = () => {
+    navigate("/user/refunds");
+    onClose();
+  };
+
   // Navigation handlers for Owner
   const handleActiveTenants = () => {
     navigate("/owner/tenants");
@@ -256,6 +276,36 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
 
   const handleBankDetails = () => {
     navigate("/owner/bank");
+    onClose();
+  };
+
+  const handleOwnerDashboard = () => {
+    navigate("/owner/dashboard");
+    onClose();
+  };
+
+  const handleOwnerBookings = () => {
+    navigate("/owner/bookings");
+    onClose();
+  };
+
+  const handleOwnerPayments = () => {
+    navigate("/owner/payments");
+    onClose();
+  };
+
+  const handleOwnerAddPG = () => {
+    navigate("/owner/add");
+    onClose();
+  };
+
+  const handleOwnerChats = () => {
+    navigate("/owner/chats");
+    onClose();
+  };
+
+  const handleOwnerPremium = () => {
+    navigate("/owner/premium");
     onClose();
   };
 
@@ -280,46 +330,28 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
     onClose();
   };
 
-  // Role-specific menu item (Refunds for Tenant, Earnings for Owner)
-  const handleRoleSpecificAction = () => {
-    if (role === "tenant") {
-      navigate("/user/refunds");
-    } else if (role === "owner") {
-      navigate("/owner/payments");
-    }
-    onClose();
-  };
-
-  const getRoleSpecificIcon = () => {
-    if (role === "tenant") {
-      return <ReceiptIcon />;
-    } else if (role === "owner") {
-      return <MonetizationOnIcon />;
-    }
-    return <TrendingUpIcon />;
-  };
-
-  const getRoleSpecificLabel = () => {
-    if (role === "tenant") {
-      return "Refunds";
-    } else if (role === "owner") {
-      return "Earnings";
-    }
-    return "Payments";
-  };
-
   // Tenant specific menu items
   const tenantMenuItems = [
+    { label: "My Stay", icon: <KingBedIcon />, onClick: () => navigate("/user/my-stay") },
+    { label: "My Bookings", icon: <MenuBookIcon />, onClick: handleTenantBookings },
+    { label: "Browse Properties", icon: <SearchIcon />, onClick: handleBrowseProperties },
     { label: "Become Owner", icon: <WorkspacePremiumIcon />, onClick: handleBecomeOwner },
     { label: "Vacate Room", icon: <MeetingRoomIcon />, onClick: handleVacateRoom },
+    { label: "Refunds", icon: <ReceiptIcon />, onClick: handleTenantRefunds },
     { label: "My Agreements", icon: <DescriptionIcon />, onClick: handleMyAgreements },
   ];
 
-  // Owner specific menu items
+  // Owner specific menu items (COMPLETE LIST FROM SIDEBAR)
   const ownerMenuItems = [
+    { label: "Dashboard", icon: <BarChartIcon />, onClick: handleOwnerDashboard },
+    { label: "Booking Requests", icon: <CalendarMonthIcon />, onClick: handleOwnerBookings },
     { label: "Active Tenants", icon: <PeopleIcon />, onClick: handleActiveTenants },
     { label: "Vacate Requests", icon: <LogoutOutlinedIcon />, onClick: handleVacateRequests },
+    { label: "Earnings / Payments", icon: <PaymentsIcon />, onClick: handleOwnerPayments },
+    { label: "Add PG", icon: <AddBusinessIcon />, onClick: handleOwnerAddPG },
     { label: "Bank Details", icon: <AccountBalanceIcon />, onClick: handleBankDetails },
+    { label: "Chats", icon: <ChatIcon />, onClick: handleOwnerChats },
+    { label: "Premium Plans", icon: <PremiumIcon />, onClick: handleOwnerPremium },
   ];
 
   // Common policy menu items for both roles
@@ -419,35 +451,12 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
 
       {/* Scrollable Menu Items */}
       <Box sx={{ p: 2, flex: 1, overflowY: "auto", maxHeight: "calc(100vh - 400px)" }}>
-        {/* Role Specific Menu Item - Refunds for Tenant, Earnings for Owner */}
-        <ListItem
-          onClick={handleRoleSpecificAction}
-          sx={{
-            borderRadius: "16px",
-            mb: 1,
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-            "&:hover": {
-              background: `${PREMIUM_COLORS.primary.main}10`,
-              transform: "translateX(4px)",
-            },
-          }}
-        >
-          <ListItemIcon sx={{ color: PREMIUM_COLORS.primary.main, minWidth: 40 }}>
-            {getRoleSpecificIcon()}
-          </ListItemIcon>
-          <ListItemText
-            primary={getRoleSpecificLabel()}
-            primaryTypographyProps={{
-              sx: { fontWeight: 500, fontSize: 14 },
-            }}
-          />
-          <ArrowForwardIosIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.neutral[400] }} />
-        </ListItem>
-
         {/* Tenant Specific Menu Items */}
         {role === "tenant" && (
           <>
+            <Typography sx={{ fontSize: 12, fontWeight: 600, color: PREMIUM_COLORS.neutral[500], mb: 1, px: 1 }}>
+              MENU
+            </Typography>
             {tenantMenuItems.map((item, index) => (
               <ListItem
                 key={index}
@@ -478,9 +487,12 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
           </>
         )}
 
-        {/* Owner Specific Menu Items - Active Tenants, Vacate Requests, Bank Details */}
+        {/* Owner Specific Menu Items - COMPLETE LIST */}
         {role === "owner" && (
           <>
+            <Typography sx={{ fontSize: 12, fontWeight: 600, color: PREMIUM_COLORS.neutral[500], mb: 1, px: 1 }}>
+              OWNER MENU
+            </Typography>
             {ownerMenuItems.map((item, index) => (
               <ListItem
                 key={index}
@@ -511,7 +523,11 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
           </>
         )}
 
-        <Divider sx={{ my: 1 }} />
+        <Divider sx={{ my: 2 }} />
+
+        <Typography sx={{ fontSize: 12, fontWeight: 600, color: PREMIUM_COLORS.neutral[500], mb: 1, px: 1 }}>
+          SUPPORT & LEGAL
+        </Typography>
 
         {/* Policy Menu Items - Contact Us, Terms, Refund Policy, Privacy Policy */}
         {policyMenuItems.map((item, index) => (
