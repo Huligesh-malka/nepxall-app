@@ -2495,7 +2495,7 @@ const HeroBanner = () => {
               }}>
                 <ClockIcon size={18} />
               </div>
-              <span style={{ fontSize: 15, fontWeight: 500 }}>Zero Commission Booking</span>
+              <span style={{ fontSize: 15, fontWeight: 500 }}> Zero Brokerage</span>
             </div>
           </div>
           
