@@ -3,7 +3,7 @@ import { Outlet, useLocation, Navigate, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
-import { Button, Box, Typography, CircularProgress, Menu, MenuItem, Avatar, IconButton, Tooltip, Zoom, Fade, Badge } from "@mui/material";
+import { Button, Box, Typography, CircularProgress, Menu, MenuItem, Avatar, IconButton, Tooltip, Zoom, Fade, Badge, Drawer, Divider, List, ListItem, ListItemIcon, ListItemText, Paper } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
 import HomeIcon from '@mui/icons-material/Home';
@@ -24,6 +24,13 @@ import ShieldIcon from '@mui/icons-material/Shield';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import StarIcon from '@mui/icons-material/Star';
+import SettingsIcon from '@mui/icons-material/Settings';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import CloseIcon from '@mui/icons-material/Close';
+import EmailIcon from '@mui/icons-material/Email';
+import PhoneIcon from '@mui/icons-material/Phone';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 
 const SIDEBAR_WIDTH = 280;
 
@@ -204,14 +211,226 @@ const PremiumLoadingSpinner = () => (
   </Box>
 );
 
+// ================= NEW RIGHT SIDE PROFILE CARD COMPONENT =================
+const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
+  const getAvatarGradient = () => {
+    if (role === "owner") return PREMIUM_COLORS.gold.gradient;
+    if (role === "tenant") return PREMIUM_COLORS.primary.gradient;
+    return "linear-gradient(135deg, #6b7280, #9ca3af)";
+  };
+
+  const menuItems = [
+    { 
+      label: "My Profile", 
+      icon: <PersonIcon />, 
+      onClick: () => {
+        if (role === "owner") {
+          // Navigate to owner profile
+          window.location.href = "/owner/profile";
+        } else {
+          // Navigate to tenant profile
+          window.location.href = "/user/profile";
+        }
+        onClose();
+      }
+    },
+    { 
+      label: "Settings", 
+      icon: <SettingsIcon />, 
+      onClick: () => {
+        // Navigate to settings page
+        window.location.href = "/settings";
+        onClose();
+      }
+    },
+    { 
+      label: "Help & Support", 
+      icon: <HelpOutlineIcon />, 
+      onClick: () => {
+        window.location.href = "/support";
+        onClose();
+      }
+    },
+  ];
+
+  return (
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={onClose}
+      sx={{
+        "& .MuiDrawer-paper": {
+          width: { xs: "85%", sm: 380 },
+          maxWidth: "100%",
+          borderRadius: { xs: "24px 0 0 24px", sm: "32px 0 0 32px" },
+          background: `linear-gradient(145deg, ${PREMIUM_COLORS.neutral[50]} 0%, white 100%)`,
+          boxShadow: "-20px 0 60px rgba(0,0,0,0.15)",
+          overflow: "hidden",
+        },
+      }}
+    >
+      {/* Header with close button */}
+      <Box
+        sx={{
+          p: 3,
+          background: PREMIUM_COLORS.primary.gradient,
+          color: "white",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <IconButton
+          onClick={onClose}
+          sx={{
+            position: "absolute",
+            right: 16,
+            top: 16,
+            color: "white",
+            background: "rgba(255,255,255,0.2)",
+            "&:hover": {
+              background: "rgba(255,255,255,0.3)",
+            },
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+        
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mt: 2 }}>
+          <Avatar
+            sx={{
+              width: 80,
+              height: 80,
+              background: getAvatarGradient(),
+              border: "3px solid white",
+              boxShadow: "0 8px 25px rgba(0,0,0,0.2)",
+              mb: 2,
+            }}
+          >
+            <Typography sx={{ fontSize: 40 }}>👤</Typography>
+          </Avatar>
+          <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+            {user?.displayName || "User"}
+          </Typography>
+          <Typography sx={{ fontSize: 13, opacity: 0.9, mb: 1 }}>
+            {user?.email}
+          </Typography>
+          <Box
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 0.8,
+              px: 1.5,
+              py: 0.6,
+              borderRadius: "30px",
+              background: "rgba(255,255,255,0.2)",
+            }}
+          >
+            {role === "owner" ? (
+              <DiamondIcon sx={{ fontSize: 14 }} />
+            ) : (
+              <ShieldIcon sx={{ fontSize: 14 }} />
+            )}
+            <Typography sx={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" }}>
+              {role === "owner" ? "PROPERTY OWNER" : "VERIFIED TENANT"}
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Menu Items */}
+      <Box sx={{ p: 2 }}>
+        {menuItems.map((item, index) => (
+          <ListItem
+            key={index}
+            onClick={item.onClick}
+            sx={{
+              borderRadius: "16px",
+              mb: 1,
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                background: `${PREMIUM_COLORS.primary.main}10`,
+                transform: "translateX(4px)",
+              },
+            }}
+          >
+            <ListItemIcon sx={{ color: PREMIUM_COLORS.primary.main, minWidth: 40 }}>
+              {item.icon}
+            </ListItemIcon>
+            <ListItemText
+              primary={item.label}
+              primaryTypographyProps={{
+                sx: { fontWeight: 500, fontSize: 14 },
+              }}
+            />
+            <ArrowForwardIosIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.neutral[400] }} />
+          </ListItem>
+        ))}
+      </Box>
+
+      <Divider sx={{ my: 1 }} />
+
+      {/* Contact Info */}
+      <Box sx={{ px: 3, py: 2 }}>
+        <Typography sx={{ fontSize: 12, fontWeight: 600, color: PREMIUM_COLORS.neutral[500], mb: 2, letterSpacing: "0.5px" }}>
+          CONTACT INFORMATION
+        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1.5 }}>
+          <EmailIcon sx={{ fontSize: 18, color: PREMIUM_COLORS.neutral[400] }} />
+          <Typography sx={{ fontSize: 13, color: PREMIUM_COLORS.neutral[600] }}>
+            {user?.email || "user@example.com"}
+          </Typography>
+        </Box>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <PhoneIcon sx={{ fontSize: 18, color: PREMIUM_COLORS.neutral[400] }} />
+          <Typography sx={{ fontSize: 13, color: PREMIUM_COLORS.neutral[600] }}>
+            {user?.phoneNumber || "+977 9800000000"}
+          </Typography>
+        </Box>
+      </Box>
+
+      <Divider />
+
+      {/* Logout Button */}
+      <Box sx={{ p: 2, mb: 2 }}>
+        <Button
+          fullWidth
+          variant="outlined"
+          onClick={onLogout}
+          startIcon={<LogoutIcon />}
+          sx={{
+            borderRadius: "14px",
+            py: 1.2,
+            borderColor: "#ef4444",
+            color: "#ef4444",
+            "&:hover": {
+              borderColor: "#dc2626",
+              background: "#ef444410",
+            },
+          }}
+        >
+          Sign Out
+        </Button>
+      </Box>
+
+      {/* Version */}
+      <Box sx={{ textAlign: "center", py: 2, px: 3, mt: "auto" }}>
+        <Typography sx={{ fontSize: 11, color: PREMIUM_COLORS.neutral[400] }}>
+          Version 2.0.0 • © 2024 Nepxall
+        </Typography>
+      </Box>
+    </Drawer>
+  );
+};
+
 const MainLayout = () => {
   const { installable, installApp } = useInstallPrompt();
   const location = useLocation();
   const navigate = useNavigate();
   const { user, role, loading } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
-  const [anchorEl, setAnchorEl] = useState(null);
   const [scrolled, setScrolled] = useState(false);
+  const [profileCardOpen, setProfileCardOpen] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -237,18 +456,19 @@ const MainLayout = () => {
       localStorage.removeItem("token");
       localStorage.removeItem("role");
       localStorage.removeItem("user_id");
+      setProfileCardOpen(false);
       navigate("/", { replace: true });
     } catch (err) {
       console.error("Logout error:", err);
     }
   };
 
-  const openMenu = (event) => {
-    setAnchorEl(event.currentTarget);
+  const openProfileCard = () => {
+    setProfileCardOpen(true);
   };
 
-  const closeMenu = () => {
-    setAnchorEl(null);
+  const closeProfileCard = () => {
+    setProfileCardOpen(false);
   };
 
   // Function to open sidebar drawer programmatically
@@ -349,10 +569,10 @@ const MainLayout = () => {
               </Tooltip>
             )}
 
-            {/* Premium Profile Dropdown with 👤 Avatar - FIXED MENU POSITION */}
+            {/* SIMPLE PROFILE ICON - Click to open Right Side Card */}
             <Tooltip title="Account" arrow TransitionComponent={Zoom}>
               <IconButton
-                onClick={openMenu}
+                onClick={openProfileCard}
                 sx={{
                   padding: 0,
                   "&:hover": {
@@ -409,97 +629,6 @@ const MainLayout = () => {
                 </Badge>
               </IconButton>
             </Tooltip>
-
-            {/* FIXED MENU POSITION - Added anchorOrigin and transformOrigin props */}
-            <Menu
-  anchorEl={anchorEl}
-  open={Boolean(anchorEl)}
-  onClose={closeMenu}
-  TransitionComponent={Zoom}
-  disablePortal
-
-  anchorOrigin={{
-    vertical: "bottom",
-    horizontal: "right",
-  }}
-
-  transformOrigin={{
-    vertical: "top",
-    horizontal: "right",
-  }}
-
-  PaperProps={{
-  sx: {
-    mt: 1,
-    mr: isMobile ? 0.5 : 1,
-    width: isMobile ? 210 : 240,
-    maxWidth: "calc(100vw - 24px)",
-    borderRadius: "20px",
-    boxShadow: "0 25px 45px rgba(0,0,0,0.15)",
-    border: `1px solid ${PREMIUM_COLORS.neutral[200]}`,
-    overflow: "hidden"
-  }
-}}
->
-              <Box sx={{ 
-                p: 2.5, 
-                background: `linear-gradient(135deg, ${PREMIUM_COLORS.neutral[100]} 0%, white 100%)`,
-                borderBottom: `1px solid ${PREMIUM_COLORS.neutral[200]}`
-              }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1.5 }}>
-                  <Avatar
-                    sx={{
-                      width: 50,
-                      height: 50,
-                      background: getAvatarGradient(),
-                      border: `2px solid ${role === "owner" ? PREMIUM_COLORS.gold.main : PREMIUM_COLORS.primary.main}`
-                    }}
-                  >
-                    <Typography sx={{ fontSize: 26 }}>👤</Typography>
-                  </Avatar>
-                  <Box>
-                    <Typography sx={{ fontWeight: 700, fontSize: 15, color: PREMIUM_COLORS.neutral[800] }}>
-                      {user?.displayName || "User"}
-                    </Typography>
-                    <Typography sx={{ fontSize: 12, color: PREMIUM_COLORS.neutral[500] }}>
-                      {user?.email}
-                    </Typography>
-                  </Box>
-                </Box>
-                <Box sx={{ 
-                  display: "inline-flex", 
-                  alignItems: "center", 
-                  gap: 0.8,
-                  px: 1.5,
-                  py: 0.6,
-                  borderRadius: "30px",
-                  background: role === "owner" ? `${PREMIUM_COLORS.gold.main}15` : `${PREMIUM_COLORS.primary.main}15`,
-                }}>
-                  {role === "owner" ? <DiamondIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.gold.main }} /> : <ShieldIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.primary.main }} />}
-                  <Typography sx={{ fontSize: 11, fontWeight: 600, color: role === "owner" ? PREMIUM_COLORS.gold.main : PREMIUM_COLORS.primary.main, textTransform: "uppercase" }}>
-                    {role === "owner" ? "PROPERTY OWNER" : "VERIFIED TENANT"}
-                  </Typography>
-                </Box>
-              </Box>
-              {/* My Profile Menu Item Removed */}
-              <MenuItem
-                onClick={() => {
-                  handleLogout();
-                  closeMenu();
-                }}
-                sx={{
-                  py: 1.5,
-                  gap: 1.5,
-                  color: "#ef4444",
-                  "&:hover": {
-                    background: "#ef444410"
-                  }
-                }}
-              >
-                <LogoutIcon sx={{ fontSize: 20 }} />
-                <Typography sx={{ fontWeight: 500 }}>Sign Out</Typography>
-              </MenuItem>
-            </Menu>
           </Box>
         </Fade>
       )}
@@ -708,6 +837,15 @@ const MainLayout = () => {
           )}
         </div>
       )}
+
+      {/* ================= RIGHT SIDE PROFILE CARD ================= */}
+      <RightProfileCard
+        open={profileCardOpen}
+        onClose={closeProfileCard}
+        user={user}
+        role={role}
+        onLogout={handleLogout}
+      />
     </div>
   );
 };
