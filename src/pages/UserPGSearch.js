@@ -2476,7 +2476,7 @@ const HeroBanner = () => {
               }}>
                 <Headphones size={18} />
               </div>
-              <span style={{ fontSize: 15, fontWeight: 500 }}>Direct Owner Support</span>
+              <span style={{ fontSize: 15, fontWeight: 500 }}>Direct Tenant-Owner Contact</span>
             </div>
             <div style={{
               display: "flex",
@@ -2495,7 +2495,7 @@ const HeroBanner = () => {
               }}>
                 <ClockIcon size={18} />
               </div>
-              <span style={{ fontSize: 15, fontWeight: 500 }}>Fast Move-In Process</span>
+              <span style={{ fontSize: 15, fontWeight: 500 }}>Zero Commission Booking</span>
             </div>
           </div>
           
