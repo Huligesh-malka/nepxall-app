@@ -1,36 +1,28 @@
 import React, { useState, useEffect } from "react";
-import { Outlet, useLocation, Navigate, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, Navigate, useNavigate, Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
-import { Button, Box, Typography, CircularProgress, Menu, MenuItem, Avatar, IconButton, Tooltip, Zoom, Fade, Badge, Drawer, Divider, List, ListItem, ListItemIcon, ListItemText, Paper } from "@mui/material";
+import { Button, Box, Typography, CircularProgress, Avatar, IconButton, Tooltip, Zoom, Fade, Badge, Drawer, Divider, ListItem, ListItemIcon, ListItemText } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
 import HomeIcon from '@mui/icons-material/Home';
 import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
-import StorefrontIcon from '@mui/icons-material/Storefront';
-import GetAppIcon from '@mui/icons-material/GetApp';
-import BookmarksIcon from '@mui/icons-material/Bookmarks';
-import FavoriteIcon from '@mui/icons-material/Favorite';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AddBusinessIcon from '@mui/icons-material/AddBusiness';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
-import ChatIcon from '@mui/icons-material/Chat';
-import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import KingBedIcon from '@mui/icons-material/KingBed';
 import DiamondIcon from '@mui/icons-material/Diamond';
 import ShieldIcon from '@mui/icons-material/Shield';
-import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import StarIcon from '@mui/icons-material/Star';
-import SettingsIcon from '@mui/icons-material/Settings';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import CloseIcon from '@mui/icons-material/Close';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
 const SIDEBAR_WIDTH = 280;
 
@@ -211,47 +203,22 @@ const PremiumLoadingSpinner = () => (
   </Box>
 );
 
-// ================= NEW RIGHT SIDE PROFILE CARD COMPONENT =================
+// ================= RIGHT SIDE PROFILE CARD COMPONENT =================
+// Removed: My Profile and Settings menu items
+// Help & Support now navigates to /contact page
 const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
+  const navigate = useNavigate();
+  
   const getAvatarGradient = () => {
     if (role === "owner") return PREMIUM_COLORS.gold.gradient;
     if (role === "tenant") return PREMIUM_COLORS.primary.gradient;
     return "linear-gradient(135deg, #6b7280, #9ca3af)";
   };
 
-  const menuItems = [
-    { 
-      label: "My Profile", 
-      icon: <PersonIcon />, 
-      onClick: () => {
-        if (role === "owner") {
-          // Navigate to owner profile
-          window.location.href = "/owner/profile";
-        } else {
-          // Navigate to tenant profile
-          window.location.href = "/user/profile";
-        }
-        onClose();
-      }
-    },
-    { 
-      label: "Settings", 
-      icon: <SettingsIcon />, 
-      onClick: () => {
-        // Navigate to settings page
-        window.location.href = "/settings";
-        onClose();
-      }
-    },
-    { 
-      label: "Help & Support", 
-      icon: <HelpOutlineIcon />, 
-      onClick: () => {
-        window.location.href = "/support";
-        onClose();
-      }
-    },
-  ];
+  const handleHelpSupport = () => {
+    navigate("/contact");
+    onClose();
+  };
 
   return (
     <Drawer
@@ -337,35 +304,32 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
         </Box>
       </Box>
 
-      {/* Menu Items */}
+      {/* Only Help & Support Menu Item - My Profile and Settings removed */}
       <Box sx={{ p: 2 }}>
-        {menuItems.map((item, index) => (
-          <ListItem
-            key={index}
-            onClick={item.onClick}
-            sx={{
-              borderRadius: "16px",
-              mb: 1,
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-              "&:hover": {
-                background: `${PREMIUM_COLORS.primary.main}10`,
-                transform: "translateX(4px)",
-              },
+        <ListItem
+          onClick={handleHelpSupport}
+          sx={{
+            borderRadius: "16px",
+            mb: 1,
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+            "&:hover": {
+              background: `${PREMIUM_COLORS.primary.main}10`,
+              transform: "translateX(4px)",
+            },
+          }}
+        >
+          <ListItemIcon sx={{ color: PREMIUM_COLORS.primary.main, minWidth: 40 }}>
+            <HelpOutlineIcon />
+          </ListItemIcon>
+          <ListItemText
+            primary="Help & Support"
+            primaryTypographyProps={{
+              sx: { fontWeight: 500, fontSize: 14 },
             }}
-          >
-            <ListItemIcon sx={{ color: PREMIUM_COLORS.primary.main, minWidth: 40 }}>
-              {item.icon}
-            </ListItemIcon>
-            <ListItemText
-              primary={item.label}
-              primaryTypographyProps={{
-                sx: { fontWeight: 500, fontSize: 14 },
-              }}
-            />
-            <ArrowForwardIosIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.neutral[400] }} />
-          </ListItem>
-        ))}
+          />
+          <ArrowForwardIosIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.neutral[400] }} />
+        </ListItem>
       </Box>
 
       <Divider sx={{ my: 1 }} />
@@ -569,7 +533,7 @@ const MainLayout = () => {
               </Tooltip>
             )}
 
-            {/* SIMPLE PROFILE ICON - Click to open Right Side Card */}
+            {/* REDESIGNED PROFILE ICON - Modern circular icon with gradient */}
             <Tooltip title="Account" arrow TransitionComponent={Zoom}>
               <IconButton
                 onClick={openProfileCard}
@@ -624,7 +588,8 @@ const MainLayout = () => {
                       }
                     }}
                   >
-                    <Typography sx={{ fontSize: 24 }}>{getAvatarDisplay()}</Typography>
+                    {/* Modern profile icon - using AccountCircleIcon for cleaner look */}
+                    <AccountCircleIcon sx={{ fontSize: 32, color: "white" }} />
                   </Avatar>
                 </Badge>
               </IconButton>
@@ -680,6 +645,20 @@ const MainLayout = () => {
     }
     return paths.some(path => location.pathname === path || location.pathname.startsWith(path + '/'));
   };
+
+  // Style for active link
+  const linkStyle = (isActive) => ({
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "12px 16px",
+    borderRadius: "12px",
+    textDecoration: "none",
+    color: isActive ? PREMIUM_COLORS.primary.main : PREMIUM_COLORS.neutral[700],
+    background: isActive ? `${PREMIUM_COLORS.primary.main}10` : "transparent",
+    fontWeight: isActive ? 600 : 500,
+    transition: "all 0.2s ease",
+  });
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: PREMIUM_COLORS.neutral[50] }}>
@@ -778,7 +757,6 @@ const MainLayout = () => {
                 <span>Bookings</span>
               </button>
 
-              {/* CORRECTED MY STAY BUTTON - Fixed routing and active state */}
               <button
                 onClick={() => navigate("/user/my-stay")}
                 style={bottomNavBtnStyle(isActiveRoute("/user/my-stay"))}
@@ -787,7 +765,6 @@ const MainLayout = () => {
                 <span>My Stay</span>
               </button>
 
-              {/* PROFILE BUTTON - Opens Sidebar Drawer - 👤 Profile Icon */}
               <button
                 onClick={openSidebarDrawer}
                 style={bottomNavBtnStyle(false)}
@@ -825,7 +802,6 @@ const MainLayout = () => {
                 <span>Add PG</span>
               </button>
 
-              {/* PROFILE BUTTON - Opens Sidebar Drawer - 👤 Profile Icon for Owner */}
               <button
                 onClick={openSidebarDrawer}
                 style={bottomNavBtnStyle(false)}
