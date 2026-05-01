@@ -32,6 +32,10 @@ import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ContactSupportIcon from '@mui/icons-material/ContactSupport';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
+import PeopleIcon from '@mui/icons-material/People';
+import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import BusinessIcon from '@mui/icons-material/Business';
 
 const SIDEBAR_WIDTH = 280;
 
@@ -213,7 +217,7 @@ const PremiumLoadingSpinner = () => (
 );
 
 // ================= RIGHT SIDE PROFILE CARD COMPONENT =================
-// Complete menu for Tenant: Become Owner, Vacate Room, My Agreements, Contact Us, Terms & Conditions, Refund Policy, Privacy Policy
+// Complete menu for Tenant and Owner with scrollable content
 const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
   const navigate = useNavigate();
   
@@ -223,7 +227,7 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
     return "linear-gradient(135deg, #6b7280, #9ca3af)";
   };
 
-  // Navigation handlers
+  // Navigation handlers for Tenant
   const handleBecomeOwner = () => {
     navigate("/become-owner");
     onClose();
@@ -239,6 +243,23 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
     onClose();
   };
 
+  // Navigation handlers for Owner
+  const handleActiveTenants = () => {
+    navigate("/owner/tenants");
+    onClose();
+  };
+
+  const handleVacateRequests = () => {
+    navigate("/owner/vacate");
+    onClose();
+  };
+
+  const handleBankDetails = () => {
+    navigate("/owner/bank");
+    onClose();
+  };
+
+  // Common navigation handlers
   const handleContactUs = () => {
     navigate("/contact");
     onClose();
@@ -287,38 +308,22 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
     return "Payments";
   };
 
-  // Tenant menu items in correct order
+  // Tenant specific menu items
   const tenantMenuItems = [
-    { 
-      label: "Become Owner", 
-      icon: <WorkspacePremiumIcon />, 
-      onClick: handleBecomeOwner,
-      showFor: "tenant"
-    },
-    { 
-      label: "Vacate Room", 
-      icon: <MeetingRoomIcon />, 
-      onClick: handleVacateRoom,
-      showFor: "tenant"
-    },
-    { 
-      label: "My Agreements", 
-      icon: <DescriptionIcon />, 
-      onClick: handleMyAgreements,
-      showFor: "tenant"
-    },
+    { label: "Become Owner", icon: <WorkspacePremiumIcon />, onClick: handleBecomeOwner },
+    { label: "Vacate Room", icon: <MeetingRoomIcon />, onClick: handleVacateRoom },
+    { label: "My Agreements", icon: <DescriptionIcon />, onClick: handleMyAgreements },
+  ];
+
+  // Owner specific menu items
+  const ownerMenuItems = [
+    { label: "Active Tenants", icon: <PeopleIcon />, onClick: handleActiveTenants },
+    { label: "Vacate Requests", icon: <LogoutOutlinedIcon />, onClick: handleVacateRequests },
+    { label: "Bank Details", icon: <AccountBalanceIcon />, onClick: handleBankDetails },
   ];
 
   // Common policy menu items for both roles
   const policyMenuItems = [
-    { label: "Contact Us", icon: <ContactSupportIcon />, onClick: handleContactUs },
-    { label: "Terms & Conditions", icon: <FlagIcon />, onClick: handleTermsConditions },
-    { label: "Refund Policy", icon: <PolicyIcon />, onClick: handleRefundPolicy },
-    { label: "Privacy Policy", icon: <PrivacyTipIcon />, onClick: handlePrivacyPolicy },
-  ];
-
-  // Owner menu items
-  const ownerMenuItems = [
     { label: "Contact Us", icon: <ContactSupportIcon />, onClick: handleContactUs },
     { label: "Terms & Conditions", icon: <FlagIcon />, onClick: handleTermsConditions },
     { label: "Refund Policy", icon: <PolicyIcon />, onClick: handleRefundPolicy },
@@ -338,6 +343,8 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
           background: `linear-gradient(145deg, ${PREMIUM_COLORS.neutral[50]} 0%, white 100%)`,
           boxShadow: "-20px 0 60px rgba(0,0,0,0.15)",
           overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
         },
       }}
     >
@@ -349,6 +356,7 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
           color: "white",
           position: "relative",
           overflow: "hidden",
+          flexShrink: 0,
         }}
       >
         <IconButton
@@ -409,7 +417,8 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
         </Box>
       </Box>
 
-      <Box sx={{ p: 2 }}>
+      {/* Scrollable Menu Items */}
+      <Box sx={{ p: 2, flex: 1, overflowY: "auto", maxHeight: "calc(100vh - 400px)" }}>
         {/* Role Specific Menu Item - Refunds for Tenant, Earnings for Owner */}
         <ListItem
           onClick={handleRoleSpecificAction}
@@ -436,7 +445,7 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
           <ArrowForwardIosIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.neutral[400] }} />
         </ListItem>
 
-        {/* Tenant Specific Menu Items: Become Owner, Vacate Room, My Agreements */}
+        {/* Tenant Specific Menu Items */}
         {role === "tenant" && (
           <>
             {tenantMenuItems.map((item, index) => (
@@ -469,10 +478,43 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
           </>
         )}
 
+        {/* Owner Specific Menu Items - Active Tenants, Vacate Requests, Bank Details */}
+        {role === "owner" && (
+          <>
+            {ownerMenuItems.map((item, index) => (
+              <ListItem
+                key={index}
+                onClick={item.onClick}
+                sx={{
+                  borderRadius: "16px",
+                  mb: 1,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    background: `${PREMIUM_COLORS.primary.main}10`,
+                    transform: "translateX(4px)",
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ color: PREMIUM_COLORS.primary.main, minWidth: 40 }}>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{
+                    sx: { fontWeight: 500, fontSize: 14 },
+                  }}
+                />
+                <ArrowForwardIosIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.neutral[400] }} />
+              </ListItem>
+            ))}
+          </>
+        )}
+
         <Divider sx={{ my: 1 }} />
 
         {/* Policy Menu Items - Contact Us, Terms, Refund Policy, Privacy Policy */}
-        {(role === "tenant" ? policyMenuItems : ownerMenuItems).map((item, index) => (
+        {policyMenuItems.map((item, index) => (
           <ListItem
             key={index}
             onClick={item.onClick}
@@ -504,7 +546,7 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
       <Divider sx={{ my: 1 }} />
 
       {/* Contact Info */}
-      <Box sx={{ px: 3, py: 2 }}>
+      <Box sx={{ px: 3, py: 2, flexShrink: 0 }}>
         <Typography sx={{ fontSize: 12, fontWeight: 600, color: PREMIUM_COLORS.neutral[500], mb: 2, letterSpacing: "0.5px" }}>
           CONTACT INFORMATION
         </Typography>
@@ -525,7 +567,7 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
       <Divider />
 
       {/* Logout Button */}
-      <Box sx={{ p: 2, mb: 2 }}>
+      <Box sx={{ p: 2, mb: 2, flexShrink: 0 }}>
         <Button
           fullWidth
           variant="outlined"
@@ -547,7 +589,7 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
       </Box>
 
       {/* Version */}
-      <Box sx={{ textAlign: "center", py: 2, px: 3, mt: "auto" }}>
+      <Box sx={{ textAlign: "center", py: 2, px: 3, flexShrink: 0 }}>
         <Typography sx={{ fontSize: 11, color: PREMIUM_COLORS.neutral[400] }}>
           Version 2.0.0 • © 2024 Nepxall
         </Typography>
