@@ -412,30 +412,34 @@ const MainLayout = () => {
 
             {/* FIXED MENU POSITION - Added anchorOrigin and transformOrigin props */}
             <Menu
-              anchorEl={anchorEl}
-              open={Boolean(anchorEl)}
-              onClose={closeMenu}
-              TransitionComponent={Zoom}
-              anchorOrigin={{
-                vertical: "bottom",
-                horizontal: "right",
-              }}
-              transformOrigin={{
-                vertical: "top",
-                horizontal: "right",
-              }}
-              PaperProps={{
-                sx: {
-                  mt: 1,
-                  mr: 1,
-                  borderRadius: "20px",
-                  minWidth: 240,
-                  boxShadow: "0 25px 45px rgba(0,0,0,0.15)",
-                  border: `1px solid ${PREMIUM_COLORS.neutral[200]}`,
-                  overflow: "hidden"
-                }
-              }}
-            >
+  anchorEl={anchorEl}
+  open={Boolean(anchorEl)}
+  onClose={closeMenu}
+  TransitionComponent={Zoom}
+  disablePortal
+
+  anchorOrigin={{
+    vertical: "bottom",
+    horizontal: "right",
+  }}
+
+  transformOrigin={{
+    vertical: "top",
+    horizontal: "right",
+  }}
+
+  PaperProps={{
+    sx: {
+      mt: 1,
+      mr: 1,
+      borderRadius: "20px",
+      minWidth: 240,
+      boxShadow: "0 25px 45px rgba(0,0,0,0.15)",
+      border: `1px solid ${PREMIUM_COLORS.neutral[200]}`,
+      overflow: "hidden"
+    }
+  }}
+>
               <Box sx={{ 
                 p: 2.5, 
                 background: `linear-gradient(135deg, ${PREMIUM_COLORS.neutral[100]} 0%, white 100%)`,
