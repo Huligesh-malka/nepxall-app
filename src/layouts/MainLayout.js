@@ -3,7 +3,7 @@ import { Outlet, useLocation, Navigate, useNavigate, Link } from "react-router-d
 import Sidebar from "../components/Sidebar";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
-import { Button, Box, Typography, CircularProgress, Avatar, IconButton, Tooltip, Zoom, Fade, Badge, Drawer, Divider, ListItem, ListItemIcon, ListItemText } from "@mui/material";
+import { Button, Box, Typography, CircularProgress, Avatar, IconButton, Tooltip, Zoom, Fade, Badge, Drawer, Divider, ListItem, ListItemText } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
 import HomeIcon from '@mui/icons-material/Home';
@@ -16,26 +16,11 @@ import DiamondIcon from '@mui/icons-material/Diamond';
 import ShieldIcon from '@mui/icons-material/Shield';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import StarIcon from '@mui/icons-material/Star';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import CloseIcon from '@mui/icons-material/Close';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import ReceiptIcon from '@mui/icons-material/Receipt';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
-import FlagIcon from '@mui/icons-material/Flag';
-import PrivacyTipIcon from '@mui/icons-material/PrivacyTip';
-import PolicyIcon from '@mui/icons-material/Policy';
-import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
-import DescriptionIcon from '@mui/icons-material/Description';
-import ContactSupportIcon from '@mui/icons-material/ContactSupport';
-import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
-import PeopleIcon from '@mui/icons-material/People';
-import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
-import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
-import BusinessIcon from '@mui/icons-material/Business';
 
 const SIDEBAR_WIDTH = 280;
 
@@ -217,7 +202,7 @@ const PremiumLoadingSpinner = () => (
 );
 
 // ================= RIGHT SIDE PROFILE CARD COMPONENT =================
-// Complete menu for Tenant and Owner with scrollable content
+// No icons inside menu items - only text
 const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
   const navigate = useNavigate();
   
@@ -243,6 +228,11 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
     onClose();
   };
 
+  const handleRefunds = () => {
+    navigate("/user/refunds");
+    onClose();
+  };
+
   // Navigation handlers for Owner
   const handleActiveTenants = () => {
     navigate("/owner/tenants");
@@ -256,6 +246,11 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
 
   const handleBankDetails = () => {
     navigate("/owner/bank");
+    onClose();
+  };
+
+  const handleEarnings = () => {
+    navigate("/owner/payments");
     onClose();
   };
 
@@ -280,55 +275,32 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
     onClose();
   };
 
-  // Role-specific menu item (Refunds for Tenant, Earnings for Owner)
-  const handleRoleSpecificAction = () => {
-    if (role === "tenant") {
-      navigate("/user/refunds");
-    } else if (role === "owner") {
-      navigate("/owner/payments");
-    }
-    onClose();
-  };
-
-  const getRoleSpecificIcon = () => {
-    if (role === "tenant") {
-      return <ReceiptIcon />;
-    } else if (role === "owner") {
-      return <MonetizationOnIcon />;
-    }
-    return <TrendingUpIcon />;
-  };
-
-  const getRoleSpecificLabel = () => {
-    if (role === "tenant") {
-      return "Refunds";
-    } else if (role === "owner") {
-      return "Earnings";
-    }
-    return "Payments";
-  };
-
-  // Tenant specific menu items
+  // Tenant menu items (text only)
   const tenantMenuItems = [
-    { label: "Become Owner", icon: <WorkspacePremiumIcon />, onClick: handleBecomeOwner },
-    { label: "Vacate Room", icon: <MeetingRoomIcon />, onClick: handleVacateRoom },
-    { label: "My Agreements", icon: <DescriptionIcon />, onClick: handleMyAgreements },
+    { label: "Refunds", onClick: handleRefunds },
+    { label: "Become Owner", onClick: handleBecomeOwner },
+    { label: "Vacate Room", onClick: handleVacateRoom },
+    { label: "My Agreements", onClick: handleMyAgreements },
   ];
 
-  // Owner specific menu items
+  // Owner menu items (text only)
   const ownerMenuItems = [
-    { label: "Active Tenants", icon: <PeopleIcon />, onClick: handleActiveTenants },
-    { label: "Vacate Requests", icon: <LogoutOutlinedIcon />, onClick: handleVacateRequests },
-    { label: "Bank Details", icon: <AccountBalanceIcon />, onClick: handleBankDetails },
+    { label: "Earnings", onClick: handleEarnings },
+    { label: "Active Tenants", onClick: handleActiveTenants },
+    { label: "Vacate Requests", onClick: handleVacateRequests },
+    { label: "Bank Details", onClick: handleBankDetails },
   ];
 
-  // Common policy menu items for both roles
+  // Common policy menu items for both roles (text only)
   const policyMenuItems = [
-    { label: "Contact Us", icon: <ContactSupportIcon />, onClick: handleContactUs },
-    { label: "Terms & Conditions", icon: <FlagIcon />, onClick: handleTermsConditions },
-    { label: "Refund Policy", icon: <PolicyIcon />, onClick: handleRefundPolicy },
-    { label: "Privacy Policy", icon: <PrivacyTipIcon />, onClick: handlePrivacyPolicy },
+    { label: "Contact Us", onClick: handleContactUs },
+    { label: "Terms & Conditions", onClick: handleTermsConditions },
+    { label: "Refund Policy", onClick: handleRefundPolicy },
+    { label: "Privacy Policy", onClick: handlePrivacyPolicy },
   ];
+
+  // Select menu items based on role
+  const menuItems = role === "owner" ? ownerMenuItems : tenantMenuItems;
 
   return (
     <Drawer
@@ -417,103 +389,38 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
         </Box>
       </Box>
 
-      {/* Scrollable Menu Items */}
+      {/* Scrollable Menu Items - Text Only, No Icons */}
       <Box sx={{ p: 2, flex: 1, overflowY: "auto", maxHeight: "calc(100vh - 400px)" }}>
-        {/* Role Specific Menu Item - Refunds for Tenant, Earnings for Owner */}
-        <ListItem
-          onClick={handleRoleSpecificAction}
-          sx={{
-            borderRadius: "16px",
-            mb: 1,
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-            "&:hover": {
-              background: `${PREMIUM_COLORS.primary.main}10`,
-              transform: "translateX(4px)",
-            },
-          }}
-        >
-          <ListItemIcon sx={{ color: PREMIUM_COLORS.primary.main, minWidth: 40 }}>
-            {getRoleSpecificIcon()}
-          </ListItemIcon>
-          <ListItemText
-            primary={getRoleSpecificLabel()}
-            primaryTypographyProps={{
-              sx: { fontWeight: 500, fontSize: 14 },
+        {/* Role Specific Menu Items - Text Only */}
+        {menuItems.map((item, index) => (
+          <ListItem
+            key={index}
+            onClick={item.onClick}
+            sx={{
+              borderRadius: "16px",
+              mb: 1,
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              py: 1.2,
+              "&:hover": {
+                background: `${PREMIUM_COLORS.primary.main}10`,
+                transform: "translateX(4px)",
+              },
             }}
-          />
-          <ArrowForwardIosIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.neutral[400] }} />
-        </ListItem>
-
-        {/* Tenant Specific Menu Items */}
-        {role === "tenant" && (
-          <>
-            {tenantMenuItems.map((item, index) => (
-              <ListItem
-                key={index}
-                onClick={item.onClick}
-                sx={{
-                  borderRadius: "16px",
-                  mb: 1,
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  "&:hover": {
-                    background: `${PREMIUM_COLORS.primary.main}10`,
-                    transform: "translateX(4px)",
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ color: PREMIUM_COLORS.primary.main, minWidth: 40 }}>
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText
-                  primary={item.label}
-                  primaryTypographyProps={{
-                    sx: { fontWeight: 500, fontSize: 14 },
-                  }}
-                />
-                <ArrowForwardIosIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.neutral[400] }} />
-              </ListItem>
-            ))}
-          </>
-        )}
-
-        {/* Owner Specific Menu Items - Active Tenants, Vacate Requests, Bank Details */}
-        {role === "owner" && (
-          <>
-            {ownerMenuItems.map((item, index) => (
-              <ListItem
-                key={index}
-                onClick={item.onClick}
-                sx={{
-                  borderRadius: "16px",
-                  mb: 1,
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  "&:hover": {
-                    background: `${PREMIUM_COLORS.primary.main}10`,
-                    transform: "translateX(4px)",
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ color: PREMIUM_COLORS.primary.main, minWidth: 40 }}>
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText
-                  primary={item.label}
-                  primaryTypographyProps={{
-                    sx: { fontWeight: 500, fontSize: 14 },
-                  }}
-                />
-                <ArrowForwardIosIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.neutral[400] }} />
-              </ListItem>
-            ))}
-          </>
-        )}
+          >
+            <ListItemText
+              primary={item.label}
+              primaryTypographyProps={{
+                sx: { fontWeight: 500, fontSize: 14, color: PREMIUM_COLORS.neutral[700] },
+              }}
+            />
+            <ArrowForwardIosIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.neutral[400] }} />
+          </ListItem>
+        ))}
 
         <Divider sx={{ my: 1 }} />
 
-        {/* Policy Menu Items - Contact Us, Terms, Refund Policy, Privacy Policy */}
+        {/* Policy Menu Items - Text Only */}
         {policyMenuItems.map((item, index) => (
           <ListItem
             key={index}
@@ -523,19 +430,17 @@ const RightProfileCard = ({ open, onClose, user, role, onLogout }) => {
               mb: 1,
               cursor: "pointer",
               transition: "all 0.2s ease",
+              py: 1.2,
               "&:hover": {
                 background: `${PREMIUM_COLORS.primary.main}10`,
                 transform: "translateX(4px)",
               },
             }}
           >
-            <ListItemIcon sx={{ color: PREMIUM_COLORS.primary.main, minWidth: 40 }}>
-              {item.icon}
-            </ListItemIcon>
             <ListItemText
               primary={item.label}
               primaryTypographyProps={{
-                sx: { fontWeight: 500, fontSize: 14 },
+                sx: { fontWeight: 500, fontSize: 14, color: PREMIUM_COLORS.neutral[700] },
               }}
             />
             <ArrowForwardIosIcon sx={{ fontSize: 14, color: PREMIUM_COLORS.neutral[400] }} />
