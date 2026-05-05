@@ -44,7 +44,7 @@ const PhoneLogin = () => {
   // Flow control states
   const [registrationComplete, setRegistrationComplete] = useState(false);
   const [authToken, setAuthToken] = useState(null);
-  const [isRedirecting, setIsRedirecting] = useState(false); // Add this state
+  const [isRedirecting, setIsRedirecting] = useState(false);
   
   // UI states
   const [loading, setLoading] = useState(false);
@@ -60,7 +60,7 @@ const PhoneLogin = () => {
   // Refs to prevent duplicate calls
   const verificationInProgress = useRef(false);
   const redirectInProgress = useRef(false);
-  const initialCheckDone = useRef(false); // Add this to track initial check
+  const initialCheckDone = useRef(false);
 
   const navigate = useNavigate();
 
@@ -80,12 +80,12 @@ const PhoneLogin = () => {
 
   /* ================= FIXED: AUTO REDIRECT FOR EXISTING USERS ================= */
   useEffect(() => {
-    // ✅ Don't run if already redirecting, registration is complete, or auth is loading
+    // Don't run if already redirecting, registration is complete, or auth is loading
     if (authLoading || redirectInProgress.current || registrationComplete || isRedirecting) {
       return;
     }
     
-    // ✅ Prevent multiple initial checks
+    // Prevent multiple initial checks
     if (initialCheckDone.current) {
       return;
     }
@@ -117,10 +117,8 @@ const PhoneLogin = () => {
       setIsRedirecting(true);
       redirectInProgress.current = true;
       
-      // Small delay for smooth UX
-      setTimeout(() => {
-        redirect(userRole);
-      }, 500);
+      // 🔥 INSTANT REDIRECT - no delay
+      redirect(userRole);
     }
   }, [user, authLoading, registrationComplete, isRedirecting]);
 
@@ -156,7 +154,7 @@ const PhoneLogin = () => {
           }
         );
         
-        // 🔥 CRITICAL: Call render() to initialize
+        // CRITICAL: Call render() to initialize
         await window.recaptchaVerifier.render();
         console.log("reCAPTCHA initialized successfully");
       }
@@ -173,7 +171,7 @@ const PhoneLogin = () => {
     }
   };
 
-  /* ================= REDIRECT ================= */
+  /* ================= REDIRECT - INSTANT ================= */
   const redirect = (role) => {
     if (role === "admin") navigate("/admin/dashboard");
     else if (role === "owner") navigate("/owner/dashboard");
@@ -207,10 +205,10 @@ const PhoneLogin = () => {
       setOtp("");
       setFirebaseUser(null);
 
-      // Setup recaptcha (does NOT clear if already exists)
+      // Setup recaptcha
       await setupRecaptcha();
 
-      // Send OTP - using existing recaptcha
+      // Send OTP
       const confirmation = await signInWithPhoneNumber(
         auth,
         `+91${cleanPhone}`,
@@ -249,7 +247,7 @@ const PhoneLogin = () => {
     }
   };
 
-  /* ================= FIXED: VERIFY OTP ================= */
+  /* ================= FIXED: VERIFY OTP - INSTANT REDIRECT ================= */
   const verifyOtp = async () => {
     if (verificationInProgress.current) {
       return;
@@ -302,19 +300,19 @@ const PhoneLogin = () => {
           );
         }
         
-        // ✅ Set registration complete to prevent auto-redirect
+        // Set registration complete to prevent auto-redirect
         setRegistrationComplete(true);
-        setSnackbarMessage(checkResponse.data.message || "Welcome! 🚀");
-        setSnackbarOpen(true);
         
-        // ✅ Set redirecting state
+        // 🔥 FIX: IMMEDIATE REDIRECT - NO DELAY, NO SUCCESS UI
         setIsRedirecting(true);
         redirectInProgress.current = true;
         
-        // ✅ Small delay to show snackbar before redirect
-        setTimeout(() => {
-          redirect(checkResponse.data.user?.role || "user");
-        }, 1000);
+        // Show snackbar briefly (optional, but won't block redirect)
+        setSnackbarMessage(checkResponse.data.message || "Welcome! 🚀");
+        setSnackbarOpen(true);
+        
+        // 🔥 INSTANT REDIRECT - remove setTimeout completely
+        redirect(checkResponse.data.user?.role || "user");
         
       } else {
         setError(checkResponse.data.message || "Authentication failed");
@@ -352,8 +350,8 @@ const PhoneLogin = () => {
     redirectInProgress.current = false;
   };
 
-  // ✅ Show loading state while checking for existing session
-  if (authLoading || (initialCheckDone.current && !registrationComplete && !isRedirecting && !step)) {
+  // Show loading state while checking for existing session
+  if (authLoading) {
     return (
       <Box
         sx={{
@@ -369,47 +367,9 @@ const PhoneLogin = () => {
     );
   }
 
-  // ✅ If registration is complete or redirecting, show success message
-  if (registrationComplete || isRedirecting) {
-    return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.15)} 0%, ${alpha(theme.palette.secondary.main, 0.08)} 100%)`,
-        }}
-      >
-        <Paper
-          elevation={0}
-          sx={{
-            p: 4,
-            textAlign: "center",
-            borderRadius: 4,
-            background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.98)} 0%, ${alpha(theme.palette.background.paper, 0.95)} 100%)`,
-            backdropFilter: "blur(20px)",
-          }}
-        >
-          <Zoom in>
-            <CheckCircleIcon 
-              sx={{ 
-                fontSize: 80, 
-                color: "success.main",
-                mb: 2
-              }} 
-            />
-          </Zoom>
-          <Typography variant="h5" gutterBottom fontWeight="bold">
-            Login Successful!
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Redirecting you to dashboard...
-          </Typography>
-          <CircularProgress size={30} sx={{ mt: 2 }} />
-        </Paper>
-      </Box>
-    );
+  // 🔥 FIX: RETURN NULL WHEN REDIRECTING - NO UI SHOWN AT ALL
+  if (isRedirecting || registrationComplete) {
+    return null; // 👈 Direct redirect, no flash, no success screen
   }
 
   return (
@@ -588,7 +548,7 @@ const PhoneLogin = () => {
               </Typography>
             </Box>
 
-            {/* Stepper - Updated for 2 steps only */}
+            {/* Stepper */}
             {step === 2 && (
               <Box sx={{ px: 4, pt: 3 }}>
                 <Stepper activeStep={activeStep} orientation="horizontal" sx={{ mb: 2 }}>
