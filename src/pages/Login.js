@@ -44,6 +44,7 @@ const PhoneLogin = () => {
   // Flow control states
   const [registrationComplete, setRegistrationComplete] = useState(false);
   const [authToken, setAuthToken] = useState(null);
+  const [isRedirecting, setIsRedirecting] = useState(false); // Add this state
   
   // UI states
   const [loading, setLoading] = useState(false);
@@ -59,6 +60,7 @@ const PhoneLogin = () => {
   // Refs to prevent duplicate calls
   const verificationInProgress = useRef(false);
   const redirectInProgress = useRef(false);
+  const initialCheckDone = useRef(false); // Add this to track initial check
 
   const navigate = useNavigate();
 
@@ -78,8 +80,13 @@ const PhoneLogin = () => {
 
   /* ================= FIXED: AUTO REDIRECT FOR EXISTING USERS ================= */
   useEffect(() => {
-    // ✅ FIX: Removed registrationComplete from condition to prevent auto-redirect after login
-    if (authLoading || redirectInProgress.current) {
+    // ✅ Don't run if already redirecting, registration is complete, or auth is loading
+    if (authLoading || redirectInProgress.current || registrationComplete || isRedirecting) {
+      return;
+    }
+    
+    // ✅ Prevent multiple initial checks
+    if (initialCheckDone.current) {
       return;
     }
     
@@ -87,26 +94,35 @@ const PhoneLogin = () => {
     const storedToken = localStorage.getItem("token");
     const storedUser = localStorage.getItem("user");
     
+    let shouldRedirect = false;
+    let userRole = null;
+    
     if (storedToken && storedUser) {
       try {
         const userData = JSON.parse(storedUser);
         if (userData.name && userData.name.trim() !== "") {
-          redirectInProgress.current = true;
-          // Existing user redirect (keeping slight delay for smooth UX)
-          setTimeout(() => {
-            redirect(userData.role || "user");
-          }, 500);
+          shouldRedirect = true;
+          userRole = userData.role || "user";
         }
       } catch (e) {
         console.error("Error parsing user data:", e);
       }
     } else if (user && user.name && user.name.trim() !== "" && user.role) {
+      shouldRedirect = true;
+      userRole = user.role;
+    }
+    
+    if (shouldRedirect && !isRedirecting) {
+      initialCheckDone.current = true;
+      setIsRedirecting(true);
       redirectInProgress.current = true;
+      
+      // Small delay for smooth UX
       setTimeout(() => {
-        redirect(user.role);
+        redirect(userRole);
       }, 500);
     }
-  }, [user, authLoading]); // ✅ FIX: Removed registrationComplete dependency
+  }, [user, authLoading, registrationComplete, isRedirecting]);
 
   /* ================= LANGUAGE ================= */
   useEffect(() => {
@@ -286,15 +302,19 @@ const PhoneLogin = () => {
           );
         }
         
-        // ✅ FIX: Set registration complete to prevent auto-redirect
+        // ✅ Set registration complete to prevent auto-redirect
         setRegistrationComplete(true);
         setSnackbarMessage(checkResponse.data.message || "Welcome! 🚀");
         setSnackbarOpen(true);
         
-        // ✅ FIX: Remove setTimeout - redirect immediately
-        // Also set redirectInProgress to prevent any other redirects
+        // ✅ Set redirecting state
+        setIsRedirecting(true);
         redirectInProgress.current = true;
-        redirect(checkResponse.data.user?.role || "user");
+        
+        // ✅ Small delay to show snackbar before redirect
+        setTimeout(() => {
+          redirect(checkResponse.data.user?.role || "user");
+        }, 1000);
         
       } else {
         setError(checkResponse.data.message || "Authentication failed");
@@ -327,13 +347,69 @@ const PhoneLogin = () => {
     setSuccess("");
     setRegistrationComplete(false);
     setFirebaseUser(null);
+    setIsRedirecting(false);
     verificationInProgress.current = false;
     redirectInProgress.current = false;
   };
 
-  // ✅ FIX: Prevent UI flashing - if registration is complete, show nothing
-  if (registrationComplete) {
-    return null;
+  // ✅ Show loading state while checking for existing session
+  if (authLoading || (initialCheckDone.current && !registrationComplete && !isRedirecting && !step)) {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.15)} 0%, ${alpha(theme.palette.secondary.main, 0.08)} 100%)`,
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  // ✅ If registration is complete or redirecting, show success message
+  if (registrationComplete || isRedirecting) {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.15)} 0%, ${alpha(theme.palette.secondary.main, 0.08)} 100%)`,
+        }}
+      >
+        <Paper
+          elevation={0}
+          sx={{
+            p: 4,
+            textAlign: "center",
+            borderRadius: 4,
+            background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.98)} 0%, ${alpha(theme.palette.background.paper, 0.95)} 100%)`,
+            backdropFilter: "blur(20px)",
+          }}
+        >
+          <Zoom in>
+            <CheckCircleIcon 
+              sx={{ 
+                fontSize: 80, 
+                color: "success.main",
+                mb: 2
+              }} 
+            />
+          </Zoom>
+          <Typography variant="h5" gutterBottom fontWeight="bold">
+            Login Successful!
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Redirecting you to dashboard...
+          </Typography>
+          <CircularProgress size={30} sx={{ mt: 2 }} />
+        </Paper>
+      </Box>
+    );
   }
 
   return (
