@@ -21,7 +21,7 @@ import {
   Stars as StarsIcon,
   Close as CloseIcon,
   ArrowForward as ArrowForwardIcon,
-  Homes as HomesIcon,
+  Home as HomeIcon,
   Shield as ShieldIcon,
   Bolt as BoltIcon
 } from "@mui/icons-material";
