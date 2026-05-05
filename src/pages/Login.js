@@ -522,7 +522,7 @@ const PhoneLogin = () => {
                   mb: 3,
                 }}
               >
-                <HomesIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
+                <HomeIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
                 <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
                   India's Trusted PG Platform
                 </Typography>
