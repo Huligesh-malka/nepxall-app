@@ -76,9 +76,10 @@ const PhoneLogin = () => {
     tap: { scale: 0.98 }
   };
 
-  /* ================= AUTO REDIRECT FOR EXISTING USERS ================= */
+  /* ================= FIXED: AUTO REDIRECT FOR EXISTING USERS ================= */
   useEffect(() => {
-    if (authLoading || registrationComplete || redirectInProgress.current) {
+    // ✅ FIX: Removed registrationComplete from condition to prevent auto-redirect after login
+    if (authLoading || redirectInProgress.current) {
       return;
     }
     
@@ -91,6 +92,7 @@ const PhoneLogin = () => {
         const userData = JSON.parse(storedUser);
         if (userData.name && userData.name.trim() !== "") {
           redirectInProgress.current = true;
+          // Existing user redirect (keeping slight delay for smooth UX)
           setTimeout(() => {
             redirect(userData.role || "user");
           }, 500);
@@ -104,7 +106,7 @@ const PhoneLogin = () => {
         redirect(user.role);
       }, 500);
     }
-  }, [user, authLoading, registrationComplete]);
+  }, [user, authLoading]); // ✅ FIX: Removed registrationComplete dependency
 
   /* ================= LANGUAGE ================= */
   useEffect(() => {
@@ -122,9 +124,6 @@ const PhoneLogin = () => {
   }, [otpTimer]);
 
   /* ================= FIXED RECAPTCHA SETUP ================= */
-  // 🔥 IMPORTANT: Removed the cleanup useEffect that was causing issues
-  // Now recaptcha persists properly across OTP requests
-
   const setupRecaptcha = async () => {
     try {
       // Only create if it doesn't exist
@@ -175,7 +174,7 @@ const PhoneLogin = () => {
     setAuthToken(token);
   };
 
-  /* ================= SEND OTP - FIXED VERSION ================= */
+  /* ================= SEND OTP ================= */
   const sendOtp = async () => {
     const cleanPhone = phone.replace(/\D/g, "");
     if (cleanPhone.length !== 10) {
@@ -192,7 +191,7 @@ const PhoneLogin = () => {
       setOtp("");
       setFirebaseUser(null);
 
-      // 🔥 CRITICAL: Setup recaptcha (does NOT clear if already exists)
+      // Setup recaptcha (does NOT clear if already exists)
       await setupRecaptcha();
 
       // Send OTP - using existing recaptcha
@@ -234,7 +233,7 @@ const PhoneLogin = () => {
     }
   };
 
-  /* ================= VERIFY OTP ================= */
+  /* ================= FIXED: VERIFY OTP ================= */
   const verifyOtp = async () => {
     if (verificationInProgress.current) {
       return;
@@ -259,7 +258,7 @@ const PhoneLogin = () => {
       // Get Firebase ID token
       const idToken = await result.user.getIdToken(true);
       
-      // 🔥 ENABLE PUSH NOTIFICATIONS
+      // Enable push notifications
       await requestNotificationPermission();
       
       // Check if user exists in backend
@@ -287,15 +286,16 @@ const PhoneLogin = () => {
           );
         }
         
-        // Redirect based on user role
-        console.log("Login successful - redirecting to dashboard");
+        // ✅ FIX: Set registration complete to prevent auto-redirect
         setRegistrationComplete(true);
         setSnackbarMessage(checkResponse.data.message || "Welcome! 🚀");
         setSnackbarOpen(true);
         
-        setTimeout(() => {
-          redirect(checkResponse.data.user?.role || "user");
-        }, 1000);
+        // ✅ FIX: Remove setTimeout - redirect immediately
+        // Also set redirectInProgress to prevent any other redirects
+        redirectInProgress.current = true;
+        redirect(checkResponse.data.user?.role || "user");
+        
       } else {
         setError(checkResponse.data.message || "Authentication failed");
       }
@@ -330,6 +330,11 @@ const PhoneLogin = () => {
     verificationInProgress.current = false;
     redirectInProgress.current = false;
   };
+
+  // ✅ FIX: Prevent UI flashing - if registration is complete, show nothing
+  if (registrationComplete) {
+    return null;
+  }
 
   return (
     <>
