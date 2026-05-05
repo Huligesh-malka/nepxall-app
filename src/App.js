@@ -287,14 +287,7 @@ function App() {
     <Routes>
       {/* PUBLIC */}
       <Route element={<MainLayout />}>
-        <Route
-  path="/"
-  element={
-    localStorage.getItem("token")
-      ? <UserPGSearch />
-      : <Navigate to="/login" replace />
-  }
-/>
+        <Route path="/" element={<UserPGSearch />} />
         <Route path="/pg/:id" element={<PGDetails />} />
           {/* ✅ ADD HERE */}
   <Route path="/add-pg" element={<AddPGPublic />} />
