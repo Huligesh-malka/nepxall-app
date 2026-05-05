@@ -8,7 +8,7 @@ import {
 import {
   PhoneAndroid as PhoneIcon,
   VpnKey as KeyIcon,
- Send as SendIcon,
+  Send as SendIcon,
   VerifiedUser as VerifiedIcon,
   Security as ShieldIcon,
   Speed as SpeedIcon,
@@ -17,7 +17,6 @@ import {
   ArrowBack as BackIcon,
   CheckCircle as SuccessIcon,
   ErrorOutline as ErrorIcon,
-  WifiOff as OfflineIcon,
   Refresh as RefreshIcon,
   NotificationsActive as NotifIcon,
   Fingerprint as BiometricIcon
@@ -32,7 +31,6 @@ import { useAuth } from "../context/AuthContext";
 
 const PhoneLogin = () => {
   const { user, loading: authLoading, login } = useAuth();
-  const theme = useTheme();
 
   // Form states
   const [phone, setPhone] = useState("");
@@ -238,6 +236,23 @@ const PhoneLogin = () => {
       setLoading(false);
       verificationInProgress.current = false;
     }
+  };
+
+  const resendOtp = async () => {
+    if (otpTimer > 0) return;
+    setIsResending(true);
+    await sendOtp();
+    setIsResending(false);
+  };
+
+  const backToPhone = () => {
+    setStep(1);
+    setConfirmObj(null);
+    setOtp("");
+    setError("");
+    setSuccess("");
+    setIsRedirecting(false);
+    verificationInProgress.current = false;
   };
 
   const handleOtpChange = (value, index) => {
@@ -492,7 +507,7 @@ const PhoneLogin = () => {
                             onChange={(e) => handleOtpChange(e.target.value, index)}
                             onKeyDown={(e) => handleKeyDown(e, index)}
                             style={styles.otpInput}
-                            whileFocus={{ scale: 1.05, borderColor: colors.primary }}
+                            whileFocus={{ scale: 1.05 }}
                             animate={otp[index] ? { scale: [1, 1.1, 1] } : {}}
                           />
                         ))}
@@ -618,7 +633,6 @@ const styles = {
     border: "4px solid rgba(124, 58, 237, 0.2)",
     borderTop: `4px solid #7C3AED`,
     borderRight: `4px solid #06B6D4`,
-    animation: "spin 1s linear infinite",
   },
   loadingText: {
     mt: 3,
@@ -801,10 +815,6 @@ const styles = {
     borderRadius: 12,
     outline: "none",
     transition: "all 0.2s",
-    "&:focus": {
-      borderColor: "#7C3AED",
-      boxShadow: "0 0 0 3px rgba(124, 58, 237, 0.2)",
-    },
   },
   verifyButton: {
     borderRadius: 3,
@@ -898,19 +908,17 @@ const styles = {
   },
 };
 
-// Add keyframe animations to document
-const styleSheet = document.createElement("style");
-styleSheet.textContent = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  @keyframes gradientShift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
-`;
-document.head.appendChild(styleSheet);
+// Add keyframe animations
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement("style");
+  styleSheet.textContent = `
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+  `;
+  document.head.appendChild(styleSheet);
+}
 
 export default PhoneLogin;
