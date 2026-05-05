@@ -287,7 +287,14 @@ function App() {
     <Routes>
       {/* PUBLIC */}
       <Route element={<MainLayout />}>
-        <Route path="/" element={<UserPGSearch />} />
+        <Route
+  path="/"
+  element={
+    localStorage.getItem("token")
+      ? <UserPGSearch />
+      : <Navigate to="/login" replace />
+  }
+/>
         <Route path="/pg/:id" element={<PGDetails />} />
           {/* ✅ ADD HERE */}
   <Route path="/add-pg" element={<AddPGPublic />} />
@@ -303,7 +310,14 @@ function App() {
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
       {/* AUTH */}
-      <Route path="/login" element={<Login />} />
+      <Route
+  path="/login"
+  element={
+    localStorage.getItem("token")
+      ? <Navigate to="/" replace />
+      : <Login />
+  }
+/>
       <Route path="/register" element={<Register />} />
 
       {/* USER */}
