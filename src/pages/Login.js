@@ -92,7 +92,7 @@ const PhoneLogin = () => {
         if (userData.name && userData.name.trim() !== "") {
           redirectInProgress.current = true;
           setTimeout(() => {
-            redirect("user"); // 🔥 CHANGED: Force USER dashboard first
+            redirect(userData.role || "user");
           }, 500);
         }
       } catch (e) {
@@ -101,7 +101,7 @@ const PhoneLogin = () => {
     } else if (user && user.name && user.name.trim() !== "" && user.role) {
       redirectInProgress.current = true;
       setTimeout(() => {
-        redirect("user"); // 🔥 CHANGED: Force USER dashboard first
+        redirect(user.role);
       }, 500);
     }
   }, [user, authLoading, registrationComplete]);
@@ -121,58 +121,48 @@ const PhoneLogin = () => {
     }
   }, [otpTimer]);
 
-  /* ================= CLEANUP RECAPTCHA ================= */
-  useEffect(() => {
-    return () => {
-      if (window.recaptchaVerifier) {
-        try {
-          window.recaptchaVerifier.clear();
-        } catch (err) {
-          console.error("Error clearing recaptcha:", err);
-        }
-      }
-    };
-  }, []);
+  /* ================= FIXED RECAPTCHA SETUP ================= */
+  // 🔥 IMPORTANT: Removed the cleanup useEffect that was causing issues
+  // Now recaptcha persists properly across OTP requests
 
-  /* ================= RECAPTCHA SETUP - FIXED VERSION ================= */
   const setupRecaptcha = async () => {
     try {
-      // Clear existing verifier if present
-      if (window.recaptchaVerifier) {
-        await window.recaptchaVerifier.clear();
-        window.recaptchaVerifier = null;
+      // Only create if it doesn't exist
+      if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(
+          auth,
+          "recaptcha-container",
+          {
+            size: "invisible",
+            "expired-callback": () => {
+              console.log("reCAPTCHA expired");
+              window.recaptchaVerifier = null;
+            },
+          }
+        );
+        
+        // 🔥 CRITICAL: Call render() to initialize
+        await window.recaptchaVerifier.render();
+        console.log("reCAPTCHA initialized successfully");
       }
-
-      // Create new verifier
-      window.recaptchaVerifier = new RecaptchaVerifier(
-        auth,
-        "recaptcha-container",
-        {
-          size: "invisible",
-          "expired-callback": () => {
-            console.log("reCAPTCHA expired");
-            window.recaptchaVerifier = null;
-          },
-        }
-      );
-
-      // 🔥 CRITICAL: Call render() to initialize
-      await window.recaptchaVerifier.render();
-      
-      console.log("reCAPTCHA initialized successfully");
-      
     } catch (err) {
       console.error("Recaptcha setup error:", err);
-      window.recaptchaVerifier = null;
+      // Clean up on error
+      if (window.recaptchaVerifier) {
+        try {
+          await window.recaptchaVerifier.clear();
+        } catch (e) {}
+        window.recaptchaVerifier = null;
+      }
       throw new Error("Failed to initialize security verification");
     }
   };
 
-  /* ================= REDIRECT - MODIFIED ================= */
+  /* ================= REDIRECT ================= */
   const redirect = (role) => {
     if (role === "admin") navigate("/admin/dashboard");
     else if (role === "owner") navigate("/owner/dashboard");
-    else navigate("/"); // Changed: Only admin, owner, or home (user dashboard)
+    else navigate("/"); // User dashboard
   };
 
   /* ================= SAVE AUTH DATA ================= */
@@ -202,10 +192,10 @@ const PhoneLogin = () => {
       setOtp("");
       setFirebaseUser(null);
 
-      // 🔥 CRITICAL: Await and setup recaptcha properly
+      // 🔥 CRITICAL: Setup recaptcha (does NOT clear if already exists)
       await setupRecaptcha();
 
-      // Send OTP
+      // Send OTP - using existing recaptcha
       const confirmation = await signInWithPhoneNumber(
         auth,
         `+91${cleanPhone}`,
@@ -221,7 +211,7 @@ const PhoneLogin = () => {
     } catch (err) {
       console.error("Send OTP error:", err);
       
-      // Clear recaptcha on error
+      // Only clear recaptcha on error to reset state
       if (window.recaptchaVerifier) {
         try {
           await window.recaptchaVerifier.clear();
@@ -244,7 +234,7 @@ const PhoneLogin = () => {
     }
   };
 
-  /* ================= VERIFY OTP - MODIFIED FOR USER ROLE FIRST ================= */
+  /* ================= VERIFY OTP ================= */
   const verifyOtp = async () => {
     if (verificationInProgress.current) {
       return;
@@ -268,17 +258,14 @@ const PhoneLogin = () => {
       
       // Get Firebase ID token
       const idToken = await result.user.getIdToken(true);
-      //////////////////////////////////////////////////////
-// 🔥 ENABLE PUSH NOTIFICATIONS
-//////////////////////////////////////////////////////
-await requestNotificationPermission();
-
-
       
-      // 🔥 CHANGE: Set role to "user" initially (not owner)
+      // 🔥 ENABLE PUSH NOTIFICATIONS
+      await requestNotificationPermission();
+      
+      // Check if user exists in backend
       const checkResponse = await userAPI.post("/auth/firebase", {
         idToken,
-        role: "user", // 🔥 CHANGED: Force USER role first
+        role: "user",
         phone: phone
       });
       
@@ -290,32 +277,24 @@ await requestNotificationPermission();
           saveAuthData(checkResponse.data.token, checkResponse.data.user);
         }
 
-
-        const fcmToken =
-localStorage.getItem("fcm_token");
-
-await userAPI.post(
-  "/notifications/save-fcm-token",
-  {
-    token: fcmToken
-  },
-  {
-    headers: {
-      Authorization:
-      `Bearer ${checkResponse.data.token}`
-    }
-  }
-);
+        // Save FCM token
+        const fcmToken = localStorage.getItem("fcm_token");
+        if (fcmToken && checkResponse.data.token) {
+          await userAPI.post(
+            "/notifications/save-fcm-token",
+            { token: fcmToken },
+            { headers: { Authorization: `Bearer ${checkResponse.data.token}` } }
+          );
+        }
         
-        // 🔥 CHANGE: Always login directly - redirect to USER Dashboard
-        console.log("Direct login - redirecting to User Dashboard");
+        // Redirect based on user role
+        console.log("Login successful - redirecting to dashboard");
         setRegistrationComplete(true);
         setSnackbarMessage(checkResponse.data.message || "Welcome! 🚀");
         setSnackbarOpen(true);
         
-        // 🔥 CHANGE: Force redirect to user dashboard (home page)
         setTimeout(() => {
-          redirect("user"); // 🔥 CHANGED: Force USER dashboard first
+          redirect(checkResponse.data.user?.role || "user");
         }, 1000);
       } else {
         setError(checkResponse.data.message || "Authentication failed");
@@ -803,48 +782,44 @@ await userAPI.post(
                   />
                 </Box>
                 <Typography
-  variant="caption"
-  color="text.secondary"
-  sx={{
-    display: "block",
-    textAlign: "center",
-    mt: 1,
-    lineHeight: 1.8,
-    fontSize: "12px"
-  }}
->
-  By continuing, you agree to our{" "}
-  
-  <a
-    href="/terms"
-    target="_blank"
-    rel="noopener noreferrer"
-    style={{
-      color: "#2563eb",
-      fontWeight: 600,
-      textDecoration: "none"
-    }}
-  >
-    Terms & Conditions
-  </a>
-
-  {" "}and{" "}
-
-  <a
-    href="/privacy-policy"
-    target="_blank"
-    rel="noopener noreferrer"
-    style={{
-      color: "#2563eb",
-      fontWeight: 600,
-      textDecoration: "none"
-    }}
-  >
-    Privacy Policy
-  </a>
-
-  .
-</Typography>
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{
+                    display: "block",
+                    textAlign: "center",
+                    mt: 1,
+                    lineHeight: 1.8,
+                    fontSize: "12px"
+                  }}
+                >
+                  By continuing, you agree to our{" "}
+                  <a
+                    href="/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: "#2563eb",
+                      fontWeight: 600,
+                      textDecoration: "none"
+                    }}
+                  >
+                    Terms & Conditions
+                  </a>
+                  {" "}and{" "}
+                  <a
+                    href="/privacy-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: "#2563eb",
+                      fontWeight: 600,
+                      textDecoration: "none"
+                    }}
+                  >
+                    Privacy Policy
+                  </a>
+                  .
+                </Typography>
               </Box>
             </Box>
 
