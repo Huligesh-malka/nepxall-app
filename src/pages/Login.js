@@ -5,7 +5,7 @@ import {
   InputAdornment, alpha, useTheme,
   Stepper, Step, StepLabel,
   Avatar, Chip, Backdrop, Snackbar,
-  Container, Grid
+  IconButton, Divider, Stack
 } from "@mui/material";
 import {
   Phone as PhoneIcon,
@@ -21,9 +21,17 @@ import {
   Stars as StarsIcon,
   Close as CloseIcon,
   ArrowForward as ArrowForwardIcon,
-  Home as HomeIcon,
+  WhatsApp as WhatsAppIcon,
+  Apple as AppleIcon,
+  Google as GoogleIcon,
+  Fingerprint as FingerprintIcon,
   Shield as ShieldIcon,
-  Bolt as BoltIcon
+  CheckCircleOutline as CheckCircleOutlineIcon,
+  AutoAwesome as AutoAwesomeIcon,
+  Diamond as DiamondIcon,
+  RocketLaunch as RocketLaunchIcon,
+  VpnKey as VpnKeyIcon,
+  MarkEmailRead as MarkEmailReadIcon
 } from "@mui/icons-material";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -42,7 +50,7 @@ const PhoneLogin = () => {
 
   // Form states
   const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [otp, setOtp] = useState("");
   const [confirmObj, setConfirmObj] = useState(null);
   const [firebaseUser, setFirebaseUser] = useState(null);
   
@@ -57,28 +65,53 @@ const PhoneLogin = () => {
   const [success, setSuccess] = useState("");
   const [otpTimer, setOtpTimer] = useState(0);
   const [step, setStep] = useState(1);
+  const [activeStep, setActiveStep] = useState(0);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [isResending, setIsResending] = useState(false);
+  const [isSuccessGlowing, setIsSuccessGlowing] = useState(false);
   
   // Refs to prevent duplicate calls
   const verificationInProgress = useRef(false);
   const redirectInProgress = useRef(false);
   const initialCheckDone = useRef(false);
-  const otpInputRefs = useRef([]);
 
   const navigate = useNavigate();
 
+  const steps = ['Mobile Number', 'Verify OTP'];
+
   // Animation variants
   const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { duration: 0.5 } },
-    exit: { opacity: 0, transition: { duration: 0.3 } }
+    hidden: { opacity: 0, scale: 0.95, y: 30 },
+    visible: { 
+      opacity: 1, 
+      scale: 1, 
+      y: 0, 
+      transition: { 
+        duration: 0.6, 
+        type: "spring", 
+        stiffness: 100,
+        damping: 15
+      } 
+    },
+    exit: { opacity: 0, scale: 0.95, y: -30, transition: { duration: 0.4 } }
   };
 
   const buttonVariants = {
-    hover: { scale: 1.02, transition: { duration: 0.2 } },
+    hover: { 
+      scale: 1.02, 
+      transition: { duration: 0.2, type: "spring", stiffness: 400 },
+      boxShadow: "0 10px 30px rgba(0,0,0,0.15)"
+    },
     tap: { scale: 0.98 }
+  };
+
+  const glowVariants = {
+    initial: { boxShadow: "0 0 0 0 rgba(99, 102, 241, 0.4)" },
+    animate: { 
+      boxShadow: ["0 0 0 0 rgba(99, 102, 241, 0.4)", "0 0 0 20px rgba(99, 102, 241, 0)"],
+      transition: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+    }
   };
 
   /* ================= FIXED: AUTO REDIRECT FOR EXISTING USERS ================= */
@@ -134,6 +167,15 @@ const PhoneLogin = () => {
       return () => clearTimeout(timer);
     }
   }, [otpTimer]);
+
+  /* ================= SUCCESS GLOW EFFECT ================= */
+  useEffect(() => {
+    if (success) {
+      setIsSuccessGlowing(true);
+      const timer = setTimeout(() => setIsSuccessGlowing(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
 
   /* ================= FIXED RECAPTCHA SETUP ================= */
   const setupRecaptcha = async () => {
@@ -196,7 +238,7 @@ const PhoneLogin = () => {
       setSuccess("");
       
       setConfirmObj(null);
-      setOtp(["", "", "", "", "", ""]);
+      setOtp("");
       setFirebaseUser(null);
 
       await setupRecaptcha();
@@ -209,8 +251,9 @@ const PhoneLogin = () => {
 
       setConfirmObj(confirmation);
       setOtpTimer(60);
-      setSuccess("OTP sent successfully!");
+      setSuccess("✨ OTP sent successfully!");
       setStep(2);
+      setActiveStep(1);
 
     } catch (err) {
       console.error("Send OTP error:", err);
@@ -242,8 +285,7 @@ const PhoneLogin = () => {
       return;
     }
     
-    const otpString = otp.join("");
-    if (otpString.length !== 6) {
+    if (otp.length !== 6) {
       return setError("Please enter a valid 6-digit OTP");
     }
 
@@ -252,12 +294,12 @@ const PhoneLogin = () => {
     try {
       setLoading(true);
       setError("");
-      setSuccess("Verifying OTP...");
+      setSuccess("🔐 Verifying OTP...");
 
-      const result = await confirmObj.confirm(otpString);
+      const result = await confirmObj.confirm(otp);
       setFirebaseUser(result.user);
       
-      setSuccess("OTP verified successfully!");
+      setSuccess("✅ OTP verified successfully!");
       
       const idToken = await result.user.getIdToken(true);
       
@@ -286,10 +328,11 @@ const PhoneLogin = () => {
         }
         
         setRegistrationComplete(true);
+        
         setIsRedirecting(true);
         redirectInProgress.current = true;
         
-        setSnackbarMessage(checkResponse.data.message || "Welcome! 🚀");
+        setSnackbarMessage("🎉 Welcome aboard! Redirecting...");
         setSnackbarOpen(true);
         
         redirect(checkResponse.data.user?.role || "user");
@@ -318,8 +361,9 @@ const PhoneLogin = () => {
   /* ================= BACK TO PHONE ================= */
   const backToPhone = () => {
     setStep(1);
+    setActiveStep(0);
     setConfirmObj(null);
-    setOtp(["", "", "", "", "", ""]);
+    setOtp("");
     setError("");
     setSuccess("");
     setRegistrationComplete(false);
@@ -327,27 +371,6 @@ const PhoneLogin = () => {
     setIsRedirecting(false);
     verificationInProgress.current = false;
     redirectInProgress.current = false;
-  };
-
-  // Handle OTP input change
-  const handleOtpChange = (index, value) => {
-    if (value.length > 1) return;
-    
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-    
-    // Auto focus next input
-    if (value && index < 5) {
-      otpInputRefs.current[index + 1].focus();
-    }
-  };
-
-  // Handle OTP key down (backspace)
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      otpInputRefs.current[index - 1].focus();
-    }
   };
 
   // Show loading state while checking for existing session
@@ -359,15 +382,24 @@ const PhoneLogin = () => {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: `linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)`,
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
         }}
       >
-        <CircularProgress sx={{ color: "#2563eb" }} />
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+        >
+          <CircularProgress 
+            size={60} 
+            thickness={4}
+            sx={{ color: "white" }}
+          />
+        </motion.div>
       </Box>
     );
   }
 
-  // Return null when redirecting
+  // FIX: RETURN NULL WHEN REDIRECTING - NO UI SHOWN AT ALL
   if (isRedirecting || registrationComplete) {
     return null;
   }
@@ -375,10 +407,20 @@ const PhoneLogin = () => {
   return (
     <>
       <Backdrop
-        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        sx={{ 
+          color: '#fff', 
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+          backdropFilter: "blur(8px)",
+          background: "rgba(0,0,0,0.7)"
+        }}
         open={loading}
       >
-        <CircularProgress color="inherit" />
+        <motion.div
+          animate={{ scale: [1, 1.2, 1] }}
+          transition={{ duration: 1, repeat: Infinity }}
+        >
+          <CircularProgress color="inherit" size={60} thickness={4} />
+        </motion.div>
       </Backdrop>
 
       <Snackbar
@@ -387,259 +429,311 @@ const PhoneLogin = () => {
         onClose={() => setSnackbarOpen(false)}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
-        <Alert severity="success" sx={{ width: '100%', borderRadius: 2 }}>
-          {snackbarMessage}
-        </Alert>
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.8, opacity: 0 }}
+        >
+          <Alert 
+            severity="success" 
+            sx={{ 
+              width: '100%',
+              borderRadius: 3,
+              boxShadow: "0 10px 40px rgba(0,0,0,0.1)",
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              color: "white",
+              '& .MuiAlert-icon': { color: "white" }
+            }}
+          >
+            {snackbarMessage}
+          </Alert>
+        </motion.div>
       </Snackbar>
 
       <Box
         sx={{
           minHeight: "100vh",
-          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
           position: "relative",
           overflow: "hidden",
-          background: `linear-gradient(145deg, #f8fafc 0%, #eef2ff 50%, #f1f5f9 100%)`,
         }}
       >
         {/* Animated background elements */}
-        <Box
-          sx={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            overflow: "hidden",
-            zIndex: 0,
+        <motion.div
+          animate={{ 
+            y: [0, -30, 0],
+            rotate: [0, 5, 0],
+            scale: [1, 1.1, 1]
           }}
-        >
-          <Box
-            sx={{
-              position: "absolute",
-              width: "600px",
-              height: "600px",
-              borderRadius: "50%",
-              background: "radial-gradient(circle, rgba(37,99,235,0.12) 0%, transparent 70%)",
-              top: "-200px",
-              right: "-150px",
-              animation: "float1 12s ease-in-out infinite",
-            }}
-          />
-          <Box
-            sx={{
-              position: "absolute",
-              width: "500px",
-              height: "500px",
-              borderRadius: "50%",
-              background: "radial-gradient(circle, rgba(124,58,237,0.1) 0%, transparent 70%)",
-              bottom: "-200px",
-              left: "-150px",
-              animation: "float2 15s ease-in-out infinite reverse",
-            }}
-          />
-          <Box
-            sx={{
-              position: "absolute",
-              width: "300px",
-              height: "300px",
-              borderRadius: "50%",
-              background: "radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 70%)",
-              top: "40%",
-              left: "20%",
-              animation: "float3 10s ease-in-out infinite",
-            }}
-          />
-        </Box>
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+          style={{
+            position: "absolute",
+            width: "500px",
+            height: "500px",
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)",
+            top: "-150px",
+            right: "-150px",
+          }}
+        />
+        
+        <motion.div
+          animate={{ 
+            y: [0, 30, 0],
+            rotate: [0, -5, 0],
+            scale: [1, 1.05, 1]
+          }}
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+          style={{
+            position: "absolute",
+            width: "400px",
+            height: "400px",
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%)",
+            bottom: "-100px",
+            left: "-100px",
+          }}
+        />
 
+        {/* Floating particles */}
+        {[...Array(20)].map((_, i) => (
+          <motion.div
+            key={i}
+            animate={{
+              y: [0, -100, 0],
+              x: [0, (Math.random() - 0.5) * 100, 0],
+              opacity: [0, 0.5, 0]
+            }}
+            transition={{
+              duration: 5 + Math.random() * 5,
+              repeat: Infinity,
+              delay: Math.random() * 5
+            }}
+            style={{
+              position: "absolute",
+              width: "3px",
+              height: "3px",
+              background: "white",
+              borderRadius: "50%",
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+          />
+        ))}
+        
         <style>
           {`
-            @keyframes float1 {
-              0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); }
-              50% { transform: translateY(-40px) rotate(5deg) scale(1.05); }
+            @keyframes float {
+              0%, 100% { transform: translateY(0px) rotate(0deg); }
+              50% { transform: translateY(-20px) rotate(5deg); }
             }
-            @keyframes float2 {
-              0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); }
-              50% { transform: translateY(40px) rotate(-5deg) scale(1.05); }
+            @keyframes pulse {
+              0%, 100% { opacity: 0.6; }
+              50% { opacity: 1; }
             }
-            @keyframes float3 {
-              0%, 100% { transform: translateX(0px) translateY(0px); }
-              50% { transform: translateX(30px) translateY(-20px); }
+            @keyframes gradientShift {
+              0% { background-position: 0% 50%; }
+              50% { background-position: 100% 50%; }
+              100% { background-position: 0% 50%; }
             }
-            @keyframes shimmer {
-              0% { background-position: -200% 0; }
-              100% { background-position: 200% 0; }
+            @keyframes shine {
+              0% { transform: translateX(-100%) rotate(45deg); }
+              100% { transform: translateX(200%) rotate(45deg); }
             }
-            @keyframes slideUp {
-              from { transform: translateY(100%); }
-              to { transform: translateY(0); }
-            }
-            @keyframes glowPulse {
-              0%, 100% { box-shadow: 0 0 5px rgba(37,99,235,0.3); }
-              50% { box-shadow: 0 0 25px rgba(37,99,235,0.6); }
+            @keyframes ripple {
+              0% { transform: scale(0.8); opacity: 0.5; }
+              100% { transform: scale(2.5); opacity: 0; }
             }
           `}
         </style>
 
-        <Container
-          disableGutters
-          maxWidth={false}
-          sx={{
-            height: "100vh",
-            display: "flex",
-            flexDirection: "column",
-            position: "relative",
-            zIndex: 1,
-          }}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          style={{ width: "100%", display: "flex", justifyContent: "center", zIndex: 10 }}
         >
-          {/* Hero Section */}
-          <Box
+          <Paper
+            elevation={0}
             sx={{
-              flex: step === 1 ? "0.65" : "0.4",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              alignItems: "center",
-              textAlign: "center",
-              px: 3,
-              pt: { xs: 8, sm: 12 },
-              transition: "flex 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+              width: 520,
+              maxWidth: "92%",
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.98)",
+              backdropFilter: "blur(10px)",
+              border: "1px solid rgba(255,255,255,0.2)",
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+              overflow: "hidden",
+              position: "relative",
             }}
           >
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
+            {/* Premium gradient border animation */}
+            <Box
+              sx={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                height: "4px",
+                background: "linear-gradient(90deg, #667eea, #764ba2, #f093fb, #4facfe, #667eea)",
+                backgroundSize: "200% 100%",
+                animation: "gradientShift 3s linear infinite",
+              }}
+            />
+
+            {/* Success glow overlay */}
+            {isSuccessGlowing && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: "radial-gradient(circle, rgba(102,126,234,0.1) 0%, transparent 70%)",
+                  pointerEvents: "none",
+                }}
+              />
+            )}
+
+            {/* Header Section */}
+            <Box
+              sx={{
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                padding: "40px 32px 35px",
+                textAlign: "center",
+                position: "relative",
+                overflow: "hidden",
+              }}
             >
+              {/* Shine effect */}
               <Box
                 sx={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 1,
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  px: 2,
-                  py: 0.75,
-                  borderRadius: 50,
-                  mb: 3,
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)",
+                  transform: "translateX(-100%)",
+                  animation: "shine 3s infinite",
                 }}
-              >
-                <HomeIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
-                <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
-                  India's Trusted PG Platform
-                </Typography>
-              </Box>
-            </motion.div>
+              />
 
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-            >
-              <Typography
-                variant="h1"
-                sx={{
-                  fontSize: { xs: 42, sm: 56, md: 64 },
-                  fontWeight: 800,
-                  background: "linear-gradient(135deg, #1e293b 0%, #2563eb 50%, #7c3aed 100%)",
-                  backgroundClip: "text",
-                  WebkitBackgroundClip: "text",
-                  color: "transparent",
-                  letterSpacing: "-0.02em",
-                  mb: 2,
-                }}
-              >
-                {step === 1 ? "Find your perfect PG 🏠" : "Verify your number"}
-              </Typography>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-            >
-              <Typography
-                variant="h6"
-                sx={{
-                  color: "text.secondary",
-                  fontWeight: 500,
-                  maxWidth: 450,
-                  mx: "auto",
-                  fontSize: { xs: 16, sm: 18 },
-                }}
-              >
-                {step === 1 
-                  ? "Safe, Verified & Affordable stays near you" 
-                  : `We've sent a 6-digit code to +91 ${phone}`}
-              </Typography>
-            </motion.div>
-
-            {step === 1 && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.6 }}
-              >
-                <Box
-                  sx={{
-                    display: "flex",
-                    gap: 3,
-                    mt: 4,
-                    justifyContent: "center",
-                  }}
+              <Zoom in timeout={600}>
+                <motion.div
+                  whileHover={{ scale: 1.1, rotate: 360 }}
+                  transition={{ type: "spring", stiffness: 300 }}
                 >
-                  <Box sx={{ textAlign: "center" }}>
-                    <ShieldIcon sx={{ color: "#10b981", fontSize: 28, mb: 0.5 }} />
-                    <Typography variant="caption" sx={{ display: "block", fontWeight: 500 }}>
-                      Verified Properties
-                    </Typography>
+                  <Box
+                    sx={{
+                      width: 90,
+                      height: 90,
+                      margin: "0 auto 25px",
+                      background: "rgba(255,255,255,0.2)",
+                      borderRadius: "30px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backdropFilter: "blur(10px)",
+                      border: "1px solid rgba(255,255,255,0.4)",
+                      boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
+                    }}
+                  >
+                    {step === 1 && (
+                      <RocketLaunchIcon sx={{ fontSize: 50, color: "white" }} />
+                    )}
+                    {step === 2 && (
+                      <VpnKeyIcon sx={{ fontSize: 50, color: "white" }} />
+                    )}
                   </Box>
-                  <Box sx={{ textAlign: "center" }}>
-                    <BoltIcon sx={{ color: "#f59e0b", fontSize: 28, mb: 0.5 }} />
-                    <Typography variant="caption" sx={{ display: "block", fontWeight: 500 }}>
-                      Instant Booking
-                    </Typography>
-                  </Box>
-                  <Box sx={{ textAlign: "center" }}>
-                    <SecurityIcon sx={{ color: "#3b82f6", fontSize: 28, mb: 0.5 }} />
-                    <Typography variant="caption" sx={{ display: "block", fontWeight: 500 }}>
-                      Safe Stay
-                    </Typography>
-                  </Box>
-                </Box>
-              </motion.div>
-            )}
-          </Box>
+                </motion.div>
+              </Zoom>
+              
+              <Typography
+                variant="h4"
+                sx={{
+                  color: "white",
+                  fontWeight: 800,
+                  mb: 1.5,
+                  letterSpacing: "-0.5px",
+                  textShadow: "0 2px 10px rgba(0,0,0,0.1)",
+                  fontSize: { xs: "1.8rem", sm: "2.2rem" }
+                }}
+              >
+                {step === 1 && "Welcome Back!"}
+                {step === 2 && "Verify Your Number"}
+              </Typography>
+              
+              <Typography
+                variant="body1"
+                sx={{
+                  color: alpha(theme.palette.common.white, 0.95),
+                  opacity: 0.95,
+                  fontWeight: 500,
+                  maxWidth: "300px",
+                  margin: "0 auto"
+                }}
+              >
+                {step === 1 && "Enter your mobile number to continue"}
+                {step === 2 && `We've sent a 6-digit code to +91 ${phone}`}
+              </Typography>
+            </Box>
 
-          {/* Bottom Glass Panel */}
-          <Box
-            sx={{
-              flex: step === 1 ? "0.35" : "0.6",
-              width: "100%",
-              bgcolor: alpha(theme.palette.background.paper, 0.85),
-              backdropFilter: "blur(20px)",
-              borderTopLeftRadius: { xs: 30, sm: 40 },
-              borderTopRightRadius: { xs: 30, sm: 40 },
-              boxShadow: `0 -10px 40px ${alpha(theme.palette.common.black, 0.08)}`,
-              borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-              transition: "flex 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
-              overflow: "auto",
-            }}
-          >
-            <Box sx={{ p: { xs: 3, sm: 4, md: 5 }, maxWidth: 500, mx: "auto", width: "100%" }}>
+            {/* Modern Stepper */}
+            {step === 2 && (
+              <Box sx={{ px: 4, pt: 4 }}>
+                <Stepper activeStep={activeStep} alternativeLabel>
+                  {steps.map((label, index) => (
+                    <Step key={label}>
+                      <StepLabel 
+                        StepIconProps={{
+                          sx: {
+                            '&.Mui-active': { 
+                              color: '#667eea',
+                              '& .MuiStepIcon-text': { fill: 'white' }
+                            },
+                            '&.Mui-completed': { color: '#4caf50' },
+                            fontSize: '2rem'
+                          }
+                        }}
+                      >
+                        <Typography variant="body2" sx={{ fontWeight: 500, color: index === activeStep ? '#667eea' : 'text.secondary' }}>
+                          {label}
+                        </Typography>
+                      </StepLabel>
+                    </Step>
+                  ))}
+                </Stepper>
+              </Box>
+            )}
+
+            {/* Content */}
+            <Box sx={{ padding: "32px 36px 40px" }}>
               <AnimatePresence mode="wait">
                 {error && (
                   <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
                   >
                     <Alert
                       severity="error"
                       sx={{
                         mb: 3,
-                        borderRadius: 2,
-                        bgcolor: alpha(theme.palette.error.main, 0.1),
+                        borderRadius: 3,
+                        animation: "shake 0.3s ease-in-out",
+                        borderLeft: "4px solid #f44336"
                       }}
                       onClose={() => setError("")}
+                      icon={<CloseIcon fontSize="small" />}
                     >
                       {error}
                     </Alert>
@@ -654,8 +748,14 @@ const PhoneLogin = () => {
                   >
                     <Alert
                       severity="success"
-                      sx={{ mb: 3, borderRadius: 2, bgcolor: alpha(theme.palette.success.main, 0.1) }}
+                      sx={{ 
+                        mb: 3, 
+                        borderRadius: 3,
+                        background: "linear-gradient(135deg, rgba(76,175,80,0.1) 0%, rgba(76,175,80,0.05) 100%)",
+                        borderLeft: "4px solid #4caf50"
+                      }}
                       onClose={() => setSuccess("")}
+                      icon={<CheckCircleOutlineIcon />}
                     >
                       {success}
                     </Alert>
@@ -665,23 +765,22 @@ const PhoneLogin = () => {
                 {/* Step 1: Phone Number */}
                 {step === 1 && (
                   <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.4 }}
                   >
-                    <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 500, color: "text.secondary" }}>
-                      Enter your mobile number
-                    </Typography>
-                    
                     <TextField
                       fullWidth
+                      label="Mobile Number"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
                       inputProps={{ maxLength: 10 }}
+                      margin="normal"
                       variant="outlined"
-                      placeholder="9876543210"
                       autoFocus
+                      placeholder="9876543210"
+                      helperText="We'll send a verification code to this number"
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
@@ -689,32 +788,28 @@ const PhoneLogin = () => {
                               label="+91" 
                               size="small" 
                               sx={{ 
-                                bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                fontWeight: 600,
-                                fontSize: "0.9rem",
-                                borderRadius: 2,
+                                bgcolor: alpha('#667eea', 0.1),
+                                fontWeight: 700,
+                                fontSize: "0.85rem",
+                                color: '#667eea'
                               }} 
                             />
                           </InputAdornment>
                         ),
                         sx: {
-                          borderRadius: 3,
-                          bgcolor: alpha(theme.palette.common.white, 0.9),
-                          transition: "all 0.2s",
+                          borderRadius: 4,
+                          transition: "all 0.3s",
                           '&:hover': {
-                            boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.1)}`,
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                           },
-                          '&.Mui-focused': {
-                            boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.2)}`,
-                            animation: "glowPulse 1.5s infinite",
-                          }
                         }
                       }}
                       sx={{
                         mb: 3,
                         '& .MuiOutlinedInput-root': {
-                          fontSize: "1.1rem",
-                          fontWeight: 500,
+                          '&.Mui-focused': {
+                            boxShadow: "0 0 0 3px rgba(102,126,234,0.2)",
+                          }
                         }
                       }}
                     />
@@ -732,85 +827,141 @@ const PhoneLogin = () => {
                         size="large"
                         endIcon={!loading && <ArrowForwardIcon />}
                         sx={{
-                          borderRadius: 3,
-                          py: 1.75,
+                          borderRadius: 4,
+                          py: 1.8,
                           textTransform: "none",
                           fontSize: "1rem",
                           fontWeight: 700,
-                          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                          backgroundSize: "200% 100%",
+                          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                           transition: "all 0.3s",
                           '&:hover': {
                             transform: "translateY(-2px)",
-                            boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.35)}`,
-                            backgroundPosition: "100% 0",
+                            boxShadow: "0 8px 25px rgba(102,126,234,0.4)",
                           },
                         }}
                       >
                         {loading ? <CircularProgress size={24} color="inherit" /> : "Continue"}
                       </Button>
                     </motion.div>
+
+                    <Divider sx={{ my: 3 }}>
+                      <Chip label="OR" size="small" />
+                    </Divider>
+
+                    {/* Social Login Options */}
+                    <Stack direction="row" spacing={2}>
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={{ flex: 1 }}>
+                        <Button
+                          fullWidth
+                          variant="outlined"
+                          startIcon={<GoogleIcon />}
+                          sx={{
+                            borderRadius: 3,
+                            py: 1.2,
+                            textTransform: "none",
+                            borderColor: alpha('#000', 0.1),
+                            '&:hover': {
+                              borderColor: '#667eea',
+                              background: alpha('#667eea', 0.05)
+                            }
+                          }}
+                        >
+                          Google
+                        </Button>
+                      </motion.div>
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={{ flex: 1 }}>
+                        <Button
+                          fullWidth
+                          variant="outlined"
+                          startIcon={<AppleIcon />}
+                          sx={{
+                            borderRadius: 3,
+                            py: 1.2,
+                            textTransform: "none",
+                            borderColor: alpha('#000', 0.1),
+                            '&:hover': {
+                              borderColor: '#667eea',
+                              background: alpha('#667eea', 0.05)
+                            }
+                          }}
+                        >
+                          Apple
+                        </Button>
+                      </motion.div>
+                    </Stack>
                   </motion.div>
                 )}
 
                 {/* Step 2: OTP Verification */}
                 {step === 2 && (
                   <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.4 }}
                   >
-                    <Typography variant="body2" sx={{ mb: 2, fontWeight: 500, color: "text.secondary", textAlign: "center" }}>
-                      Enter the 6-digit verification code
-                    </Typography>
-                    
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "center",
-                        gap: { xs: 1.5, sm: 2 },
-                        mb: 3,
-                      }}
-                    >
-                      {otp.map((digit, index) => (
+                    {/* Animated OTP Input */}
+                    <Box sx={{ position: "relative", mb: 3 }}>
+                      <TextField
+                        fullWidth
+                        label="Enter OTP"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                        inputProps={{ maxLength: 6 }}
+                        margin="normal"
+                        variant="outlined"
+                        autoFocus
+                        placeholder="123456"
+                        helperText={
+                          otpTimer > 0 ? (
+                            <motion.span
+                              animate={{ scale: [1, 1.05, 1] }}
+                              transition={{ duration: 1, repeat: Infinity }}
+                            >
+                              ⏱️ Code expires in {otpTimer}s
+                            </motion.span>
+                          ) : "Didn't receive code?"
+                        }
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <FingerprintIcon sx={{ color: '#667eea' }} />
+                            </InputAdornment>
+                          ),
+                          sx: { 
+                            borderRadius: 4,
+                            fontSize: "1.2rem",
+                            letterSpacing: "2px"
+                          }
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            '&.Mui-focused': {
+                              boxShadow: "0 0 0 3px rgba(102,126,234,0.2)",
+                            }
+                          }
+                        }}
+                      />
+                      
+                      {/* Ripple effect on OTP entry */}
+                      {otp.length === 6 && (
                         <motion.div
-                          key={index}
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: index * 0.05 }}
-                        >
-                          <TextField
-                            inputRef={(el) => (otpInputRefs.current[index] = el)}
-                            value={digit}
-                            onChange={(e) => handleOtpChange(index, e.target.value)}
-                            onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                            inputProps={{
-                              maxLength: 1,
-                              style: {
-                                textAlign: "center",
-                                fontSize: "1.75rem",
-                                fontWeight: 600,
-                                padding: "12px 0",
-                              }
-                            }}
-                            sx={{
-                              width: { xs: 48, sm: 56 },
-                              '& .MuiOutlinedInput-root': {
-                                borderRadius: 3,
-                                bgcolor: alpha(theme.palette.common.white, 0.9),
-                                transition: "all 0.2s",
-                                '&:hover': {
-                                  boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.1)}`,
-                                },
-                                '&.Mui-focused': {
-                                  boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.2)}`,
-                                }
-                              }
-                            }}
-                          />
-                        </motion.div>
-                      ))}
+                          initial={{ scale: 0 }}
+                          animate={{ scale: [0, 1.5, 2], opacity: [0.5, 0] }}
+                          transition={{ duration: 0.8 }}
+                          style={{
+                            position: "absolute",
+                            top: "50%",
+                            left: "50%",
+                            width: "100px",
+                            height: "100px",
+                            borderRadius: "50%",
+                            background: "radial-gradient(circle, rgba(102,126,234,0.3) 0%, transparent 70%)",
+                            pointerEvents: "none",
+                            transform: "translate(-50%, -50%)",
+                          }}
+                        />
+                      )}
                     </Box>
 
                     <motion.div
@@ -821,122 +972,137 @@ const PhoneLogin = () => {
                       <Button
                         fullWidth
                         onClick={verifyOtp}
-                        disabled={loading || otp.some(d => !d) || verificationInProgress.current}
+                        disabled={loading || otp.length !== 6 || verificationInProgress.current}
                         variant="contained"
                         size="large"
                         endIcon={!loading && <VerifiedUserIcon />}
                         sx={{
-                          borderRadius: 3,
-                          py: 1.75,
+                          borderRadius: 4,
+                          py: 1.8,
                           textTransform: "none",
                           fontSize: "1rem",
                           fontWeight: 700,
                           mb: 2,
-                          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                          backgroundSize: "200% 100%",
-                          transition: "all 0.3s",
-                          '&:hover': {
-                            transform: "translateY(-2px)",
-                            boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.35)}`,
-                            backgroundPosition: "100% 0",
-                          },
+                          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                          position: "relative",
+                          overflow: "hidden",
                         }}
                       >
-                        {loading ? <CircularProgress size={24} color="inherit" /> : "Verify & Continue"}
+                        {loading ? <CircularProgress size={24} color="inherit" /> : "Verify & Login"}
                       </Button>
                     </motion.div>
 
                     <Box sx={{ textAlign: "center", mt: 2 }}>
-                      {/* Timer Progress Ring */}
-                      {otpTimer > 0 && (
-                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1, mb: 1.5 }}>
-                          <Box
-                            sx={{
-                              width: 32,
-                              height: 32,
-                              borderRadius: "50%",
-                              background: `conic-gradient(${theme.palette.primary.main} ${(otpTimer / 60) * 360}deg, ${alpha(theme.palette.primary.main, 0.2)} 0deg)`,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              position: "relative",
-                              '&::before': {
-                                content: '""',
-                                position: "absolute",
-                                width: 26,
-                                height: 26,
-                                borderRadius: "50%",
-                                bgcolor: "background.paper",
-                              }
+                      <Typography variant="body2" color="text.secondary">
+                        {otpTimer > 0 ? (
+                          <Chip 
+                            label={`Resend code in ${otpTimer}s`} 
+                            size="small" 
+                            variant="outlined"
+                            sx={{ 
+                              opacity: 0.7,
+                              borderRadius: 2,
+                              borderColor: alpha('#667eea', 0.3)
                             }}
                           />
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            Resend in {otpTimer}s
-                          </Typography>
-                        </Box>
-                      )}
+                        ) : (
+                          <Button
+                            onClick={resendOtp}
+                            disabled={isResending}
+                            sx={{
+                              textTransform: "none",
+                              fontWeight: 600,
+                              color: '#667eea',
+                              '&:hover': { 
+                                background: alpha('#667eea', 0.05),
+                                transform: "translateY(-1px)"
+                              },
+                              transition: "all 0.2s"
+                            }}
+                          >
+                            {isResending ? <CircularProgress size={20} /> : "Resend OTP →"}
+                          </Button>
+                        )}
+                      </Typography>
                       
-                      <Box sx={{ display: "flex", justifyContent: "center", gap: 2 }}>
-                        <Button
-                          onClick={resendOtp}
-                          disabled={otpTimer > 0 || isResending}
-                          sx={{
-                            textTransform: "none",
-                            fontWeight: 600,
-                            color: theme.palette.primary.main,
-                            '&:hover': { background: "transparent", textDecoration: "underline" }
-                          }}
-                        >
-                          {isResending ? <CircularProgress size={20} /> : "Resend OTP"}
-                        </Button>
-                        <Button
-                          onClick={backToPhone}
-                          sx={{
-                            textTransform: "none",
-                            color: "text.secondary",
-                            '&:hover': { background: "transparent", textDecoration: "underline" }
-                          }}
-                        >
-                          Change Number
-                        </Button>
-                      </Box>
+                      <Button
+                        onClick={backToPhone}
+                        sx={{
+                          mt: 1.5,
+                          textTransform: "none",
+                          color: "text.secondary",
+                          fontSize: "0.85rem",
+                          '&:hover': { 
+                            background: "transparent",
+                            color: '#667eea'
+                          }
+                        }}
+                      >
+                        ← Change Phone Number
+                      </Button>
                     </Box>
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              {/* Terms & Trust Badges */}
+              {/* Trust badges with animations */}
               <Box sx={{ mt: 4, textAlign: "center" }}>
-                <Box sx={{ display: "flex", justifyContent: "center", gap: 1.5, flexWrap: "wrap", mb: 2 }}>
-                  <Chip 
-                    icon={<SecurityIcon sx={{ fontSize: 14 }} />} 
-                    label="Secure" 
-                    size="small" 
-                    variant="outlined"
-                    sx={{ opacity: 0.6, borderRadius: 2 }}
-                  />
-                  <Chip 
-                    icon={<SpeedIcon sx={{ fontSize: 14 }} />} 
-                    label="Fast" 
-                    size="small" 
-                    variant="outlined"
-                    sx={{ opacity: 0.6, borderRadius: 2 }}
-                  />
-                  <Chip 
-                    icon={<StarsIcon sx={{ fontSize: 14 }} />} 
-                    label="Trusted by 50k+ Users" 
-                    size="small" 
-                    variant="outlined"
-                    sx={{ opacity: 0.6, borderRadius: 2 }}
-                  />
-                </Box>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 2 }}>
+                    <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                      <Chip 
+                        icon={<ShieldIcon sx={{ fontSize: 16 }} />} 
+                        label="256-bit SSL" 
+                        size="small" 
+                        variant="outlined"
+                        sx={{ 
+                          opacity: 0.7,
+                          borderRadius: 2,
+                          borderColor: alpha('#667eea', 0.3)
+                        }}
+                      />
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                      <Chip 
+                        icon={<AutoAwesomeIcon sx={{ fontSize: 16 }} />} 
+                        label="Instant Delivery" 
+                        size="small" 
+                        variant="outlined"
+                        sx={{ 
+                          opacity: 0.7,
+                          borderRadius: 2,
+                          borderColor: alpha('#667eea', 0.3)
+                        }}
+                      />
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                      <Chip 
+                        icon={<DiamondIcon sx={{ fontSize: 16 }} />} 
+                        label="Premium Support" 
+                        size="small" 
+                        variant="outlined"
+                        sx={{ 
+                          opacity: 0.7,
+                          borderRadius: 2,
+                          borderColor: alpha('#667eea', 0.3)
+                        }}
+                      />
+                    </motion.div>
+                  </Stack>
+                </motion.div>
+                
                 <Typography
                   variant="caption"
                   color="text.secondary"
                   sx={{
                     display: "block",
                     textAlign: "center",
-                    lineHeight: 1.6,
+                    mt: 2,
+                    lineHeight: 1.8,
                     fontSize: "11px"
                   }}
                 >
@@ -946,10 +1112,13 @@ const PhoneLogin = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
-                      color: "#2563eb",
+                      color: "#667eea",
                       fontWeight: 600,
-                      textDecoration: "none"
+                      textDecoration: "none",
+                      transition: "all 0.2s"
                     }}
+                    onMouseEnter={(e) => e.target.style.textDecoration = "underline"}
+                    onMouseLeave={(e) => e.target.style.textDecoration = "none"}
                   >
                     Terms & Conditions
                   </a>
@@ -959,10 +1128,13 @@ const PhoneLogin = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
-                      color: "#2563eb",
+                      color: "#667eea",
                       fontWeight: 600,
-                      textDecoration: "none"
+                      textDecoration: "none",
+                      transition: "all 0.2s"
                     }}
+                    onMouseEnter={(e) => e.target.style.textDecoration = "underline"}
+                    onMouseLeave={(e) => e.target.style.textDecoration = "none"}
                   >
                     Privacy Policy
                   </a>
@@ -970,10 +1142,10 @@ const PhoneLogin = () => {
                 </Typography>
               </Box>
             </Box>
-          </Box>
-        </Container>
 
-        <div id="recaptcha-container"></div>
+            <div id="recaptcha-container"></div>
+          </Paper>
+        </motion.div>
       </Box>
     </>
   );
