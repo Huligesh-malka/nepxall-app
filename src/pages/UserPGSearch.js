@@ -2260,113 +2260,584 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
   );
 };
 
-/* ================= LOCATION PERMISSION BANNER COMPONENT ================= */
-const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
-  return (
-    <div style={{
-      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-      borderRadius: 20,
-      marginBottom: 20,
-      padding: "20px 24px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      flexWrap: "wrap",
-      gap: 16,
-      animation: "slideDown 0.3s ease",
-      boxShadow: "0 4px 20px rgba(0,0,0,0.1)"
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 16, flex: 1 }}>
+/* ================= PROMOTIONAL BANNERS SLIDER COMPONENT ================= */
+const PromoBannerSlider = ({ onBannerClick }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const promoBanners = [
+    {
+      id: 1,
+      title: "₹200 OFF",
+      subtitle: "On First Booking",
+      description: "Use code FIRST200",
+      color: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+      icon: "🎉",
+      gradient: "linear-gradient(135deg, #3b82f6, #1e40af)"
+    },
+    {
+      id: 2,
+      title: "Zero Brokerage",
+      subtitle: "Direct Owner Contact",
+      description: "Save on commission",
+      color: "linear-gradient(135deg, #10b981, #059669)",
+      icon: "🏠",
+      gradient: "linear-gradient(135deg, #10b981, #047857)"
+    },
+    {
+      id: 3,
+      title: "Instant Booking",
+      subtitle: "Fast Confirmation",
+      description: "Get confirmed in minutes",
+      color: "linear-gradient(135deg, #f59e0b, #d97706)",
+      icon: "⚡",
+      gradient: "linear-gradient(135deg, #f59e0b, #b45309)"
+    },
+    {
+      id: 4,
+      title: "Verified PGs",
+      subtitle: "100% Trusted Properties",
+      description: "No hidden charges",
+      color: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+      icon: "🤝",
+      gradient: "linear-gradient(135deg, #8b5cf6, #6d28d9)"
+    },
+    {
+      id: 5,
+      title: "Student Offer",
+      subtitle: "Limited Time Deal",
+      description: "Special discount for students",
+      color: "linear-gradient(135deg, #ec4899, #db2777)",
+      icon: "🔥",
+      gradient: "linear-gradient(135deg, #ec4899, #be185d)"
+    }
+  ];
+
+  // Auto-slide every 3 seconds
+  useEffect(() => {
+    if (isHovered) return;
+    
+    const interval = setInterval(() => {
+      setActiveIndex((prevIndex) => (prevIndex + 1) % promoBanners.length);
+    }, 3000);
+    
+    return () => clearInterval(interval);
+  }, [isHovered, promoBanners.length]);
+
+  const handleManualScroll = (direction) => {
+    if (direction === 'next') {
+      setActiveIndex((prev) => (prev + 1) % promoBanners.length);
+    } else {
+      setActiveIndex((prev) => (prev - 1 + promoBanners.length) % promoBanners.length);
+    }
+  };
+
+  const handleBannerClick = (banner) => {
+    if (onBannerClick) {
+      onBannerClick(banner);
+    } else {
+      // Default action based on banner type
+      if (banner.title.includes("OFF")) {
+        alert(`🎉 ${banner.title} - ${banner.subtitle}\n${banner.description}\n\nUse code: FIRST200 at checkout!`);
+      } else if (banner.title.includes("Zero")) {
+        alert(`🏠 ${banner.title}\n${banner.description}\n\nWe connect you directly with property owners - no middlemen, no brokerage!`);
+      } else if (banner.title.includes("Instant")) {
+        alert(`⚡ ${banner.title}\nBook now and get instant confirmation!\n\nYour booking will be confirmed within minutes.`);
+      } else {
+        alert(`✨ ${banner.title}\n${banner.description}\n\nClick to learn more!`);
+      }
+    }
+  };
+
+  // For mobile horizontal scroll view
+  const isMobile = window.innerWidth < 768;
+
+  if (isMobile) {
+    return (
+      <div
+        style={{
+          marginBottom: 24,
+          position: "relative",
+        }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {/* Header */}
         <div style={{
-          background: "rgba(255,255,255,0.2)",
-          borderRadius: "50%",
-          width: 48,
-          height: 48,
           display: "flex",
+          justifyContent: "space-between",
           alignItems: "center",
-          justifyContent: "center"
+          marginBottom: 12,
+          padding: "0 4px"
         }}>
-          <Navigation size={24} color="white" />
-        </div>
-        <div>
-          <h3 style={{ 
-            fontSize: 16, 
-            fontWeight: 600, 
-            color: "white",
-            marginBottom: 4
+          <div>
+            <h3 style={{
+              fontSize: 18,
+              fontWeight: 700,
+              color: "#111827",
+              marginBottom: 2
+            }}>
+              🔥 Exclusive Offers
+            </h3>
+            <p style={{
+              fontSize: 13,
+              color: "#6b7280"
+            }}>
+              Limited time deals for you
+            </p>
+          </div>
+          <div style={{
+            display: "flex",
+            gap: 8
           }}>
-            📍 Find Properties Near You
-          </h3>
-          <p style={{ 
-            fontSize: 13, 
-            color: "rgba(255,255,255,0.9)",
-            margin: 0
-          }}>
-            Allow location access to see PGs, Co-living & To-Let properties within 5km of your area
-          </p>
+            <button
+              onClick={() => handleManualScroll('prev')}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                background: "#f3f4f6",
+                border: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                transition: "all 0.2s"
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "#e5e7eb"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "#f3f4f6"}
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              onClick={() => handleManualScroll('next')}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                background: "#f3f4f6",
+                border: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                transition: "all 0.2s"
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "#e5e7eb"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "#f3f4f6"}
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
         </div>
-      </div>
-      <div style={{ display: "flex", gap: 12 }}>
-        <button
-          onClick={onDeny}
+
+        {/* Horizontal Scroll Container */}
+        <div
           style={{
-            padding: "10px 20px",
-            background: "rgba(255,255,255,0.2)",
-            color: "white",
-            border: "none",
-            borderRadius: 10,
-            fontSize: 14,
-            fontWeight: 500,
-            cursor: "pointer",
-            transition: "all 0.2s"
+            display: "flex",
+            gap: 16,
+            overflowX: "auto",
+            padding: "8px 4px 16px 4px",
+            scrollbarWidth: "thin",
+            WebkitOverflowScrolling: "touch",
+            scrollSnapType: "x mandatory"
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.3)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.2)";
-          }}
+          className="promo-scroll-container"
         >
-          Not Now
-        </button>
-        <button
-          onClick={onAllow}
-          disabled={isLoading}
-          style={{
-            padding: "10px 24px",
-            background: "white",
-            color: "#667eea",
-            border: "none",
-            borderRadius: 10,
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: isLoading ? "not-allowed" : "pointer",
+          {promoBanners.map((banner, index) => (
+            <div
+              key={banner.id}
+              onClick={() => handleBannerClick(banner)}
+              style={{
+                minWidth: 280,
+                background: banner.gradient,
+                borderRadius: 20,
+                padding: 20,
+                color: "white",
+                boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
+                cursor: "pointer",
+                flexShrink: 0,
+                transition: "all 0.3s ease",
+                scrollSnapAlign: "start",
+                position: "relative",
+                overflow: "hidden"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 12px 28px rgba(0,0,0,0.2)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 8px 20px rgba(0,0,0,0.12)";
+              }}
+            >
+              {/* Decorative circle */}
+              <div style={{
+                position: "absolute",
+                top: -30,
+                right: -30,
+                width: 100,
+                height: 100,
+                background: "rgba(255,255,255,0.1)",
+                borderRadius: "50%"
+              }} />
+              
+              <div
+                style={{
+                  fontSize: 42,
+                  marginBottom: 12,
+                  position: "relative",
+                  zIndex: 2
+                }}
+              >
+                {banner.icon}
+              </div>
+              <h3
+                style={{
+                  fontSize: 24,
+                  fontWeight: 700,
+                  marginBottom: 6,
+                  position: "relative",
+                  zIndex: 2
+                }}
+              >
+                {banner.title}
+              </h3>
+              <p
+                style={{
+                  fontSize: 14,
+                  opacity: 0.9,
+                  marginBottom: 4,
+                  position: "relative",
+                  zIndex: 2
+                }}
+              >
+                {banner.subtitle}
+              </p>
+              <p
+                style={{
+                  fontSize: 12,
+                  opacity: 0.75,
+                  position: "relative",
+                  zIndex: 2
+                }}
+              >
+                {banner.description}
+              </p>
+              
+              {/* CTA indicator */}
+              <div style={{
+                marginTop: 12,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 12,
+                opacity: 0.8,
+                position: "relative",
+                zIndex: 2
+              }}>
+                <span>Tap to claim</span>
+                <ChevronRight size={14} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Dot indicators for auto-slide */}
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: 8,
+          marginTop: 8
+        }}>
+          {promoBanners.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setActiveIndex(idx)}
+              style={{
+                width: activeIndex === idx ? 24 : 8,
+                height: 8,
+                borderRadius: 4,
+                background: activeIndex === idx ? "#3b82f6" : "#d1d5db",
+                border: "none",
+                cursor: "pointer",
+                transition: "all 0.3s ease"
+              }}
+            />
+          ))}
+        </div>
+
+        <style>{`
+          .promo-scroll-container::-webkit-scrollbar {
+            height: 4px;
+          }
+          .promo-scroll-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+          }
+          .promo-scroll-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+          }
+          .promo-scroll-container::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // Desktop view with centered cards
+  return (
+    <div
+      style={{
+        marginBottom: 32,
+        position: "relative",
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Header with navigation */}
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 20
+      }}>
+        <div>
+          <h2 style={{
+            fontSize: 24,
+            fontWeight: 700,
+            color: "#111827",
+            marginBottom: 4,
             display: "flex",
             alignItems: "center",
-            gap: 8,
-            transition: "all 0.2s"
-          }}
-        >
-          {isLoading ? (
-            <>
-              <div style={{
-                width: 16,
-                height: 16,
-                border: "2px solid #667eea",
-                borderTop: "2px solid transparent",
-                borderRadius: "50%",
-                animation: "spin 0.8s linear infinite"
-              }} />
-              Getting location...
-            </>
-          ) : (
-            <>
-              <Navigation size={16} />
-              Allow Location
-            </>
-          )}
-        </button>
+            gap: 8
+          }}>
+            <SparklesIcon size={24} color="#f59e0b" />
+            Exclusive Offers
+          </h2>
+          <p style={{
+            fontSize: 14,
+            color: "#6b7280"
+          }}>
+            Grab these limited-time deals before they're gone!
+          </p>
+        </div>
+        <div style={{
+          display: "flex",
+          gap: 12
+        }}>
+          <button
+            onClick={() => handleManualScroll('prev')}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: "#f3f4f6",
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "#e5e7eb"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "#f3f4f6"}
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <button
+            onClick={() => handleManualScroll('next')}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: "#f3f4f6",
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "#e5e7eb"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "#f3f4f6"}
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
       </div>
+
+      {/* Center-aligned cards with auto-slide */}
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        gap: 24,
+        flexWrap: "wrap"
+      }}>
+        {/* Show only 3 featured banners on desktop, centered */}
+        {promoBanners.slice(0, 3).map((banner) => (
+          <div
+            key={banner.id}
+            onClick={() => handleBannerClick(banner)}
+            style={{
+              flex: "1 1 280px",
+              maxWidth: 320,
+              background: banner.gradient,
+              borderRadius: 24,
+              padding: 24,
+              color: "white",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+              cursor: "pointer",
+              transition: "all 0.3s ease",
+              position: "relative",
+              overflow: "hidden"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-4px)";
+              e.currentTarget.style.boxShadow = "0 16px 32px rgba(0,0,0,0.2)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.12)";
+            }}
+          >
+            {/* Animated shine effect */}
+            <div style={{
+              position: "absolute",
+              top: 0,
+              left: "-100%",
+              width: "100%",
+              height: "100%",
+              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)",
+              transition: "left 0.5s ease"
+            }}
+            className="shine-effect"
+            onMouseEnter={(e) => {
+              const shine = e.currentTarget;
+              shine.style.left = "100%";
+              setTimeout(() => { shine.style.left = "-100%"; }, 500);
+            }}
+            />
+            
+            <div
+              style={{
+                fontSize: 48,
+                marginBottom: 16,
+                position: "relative",
+                zIndex: 2
+              }}
+            >
+              {banner.icon}
+            </div>
+            <h3
+              style={{
+                fontSize: 26,
+                fontWeight: 700,
+                marginBottom: 8,
+                position: "relative",
+                zIndex: 2
+              }}
+            >
+              {banner.title}
+            </h3>
+            <p
+              style={{
+                fontSize: 15,
+                opacity: 0.9,
+                marginBottom: 8,
+                position: "relative",
+                zIndex: 2
+              }}
+            >
+              {banner.subtitle}
+            </p>
+            <p
+              style={{
+                fontSize: 13,
+                opacity: 0.75,
+                marginBottom: 16,
+                position: "relative",
+                zIndex: 2
+              }}
+            >
+              {banner.description}
+            </p>
+            
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 16px",
+              background: "rgba(255,255,255,0.2)",
+              borderRadius: 30,
+              fontSize: 13,
+              fontWeight: 500,
+              position: "relative",
+              zIndex: 2
+            }}>
+              Claim Offer →
+            </div>
+
+            {/* Decorative elements */}
+            <div style={{
+              position: "absolute",
+              bottom: -20,
+              right: -20,
+              width: 80,
+              height: 80,
+              background: "rgba(255,255,255,0.08)",
+              borderRadius: "50%"
+            }} />
+            <div style={{
+              position: "absolute",
+              top: -10,
+              left: -10,
+              width: 60,
+              height: 60,
+              background: "rgba(255,255,255,0.05)",
+              borderRadius: "50%"
+            }} />
+          </div>
+        ))}
+      </div>
+
+      {/* Auto-slide indicator */}
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        gap: 10,
+        marginTop: 24
+      }}>
+        {promoBanners.map((_, idx) => (
+          <button
+            key={idx}
+            onClick={() => setActiveIndex(idx)}
+            style={{
+              width: activeIndex === idx ? 28 : 8,
+              height: 8,
+              borderRadius: 4,
+              background: activeIndex === idx ? "#3b82f6" : "#d1d5db",
+              border: "none",
+              cursor: "pointer",
+              transition: "all 0.3s ease"
+            }}
+          />
+        ))}
+      </div>
+
+      <style>{`
+        @keyframes shine {
+          0% { left: -100%; }
+          20% { left: 100%; }
+          100% { left: 100%; }
+        }
+        .shine-effect {
+          animation: shine 3s infinite;
+        }
+      `}</style>
     </div>
   );
 };
@@ -2566,6 +3037,117 @@ const HeroBanner = () => {
   );
 };
 
+/* ================= LOCATION PERMISSION BANNER COMPONENT ================= */
+const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
+  return (
+    <div style={{
+      background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+      borderRadius: 20,
+      marginBottom: 20,
+      padding: "20px 24px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      flexWrap: "wrap",
+      gap: 16,
+      animation: "slideDown 0.3s ease",
+      boxShadow: "0 4px 20px rgba(0,0,0,0.1)"
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, flex: 1 }}>
+        <div style={{
+          background: "rgba(255,255,255,0.2)",
+          borderRadius: "50%",
+          width: 48,
+          height: 48,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}>
+          <Navigation size={24} color="white" />
+        </div>
+        <div>
+          <h3 style={{ 
+            fontSize: 16, 
+            fontWeight: 600, 
+            color: "white",
+            marginBottom: 4
+          }}>
+            📍 Find Properties Near You
+          </h3>
+          <p style={{ 
+            fontSize: 13, 
+            color: "rgba(255,255,255,0.9)",
+            margin: 0
+          }}>
+            Allow location access to see PGs, Co-living & To-Let properties within 5km of your area
+          </p>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 12 }}>
+        <button
+          onClick={onDeny}
+          style={{
+            padding: "10px 20px",
+            background: "rgba(255,255,255,0.2)",
+            color: "white",
+            border: "none",
+            borderRadius: 10,
+            fontSize: 14,
+            fontWeight: 500,
+            cursor: "pointer",
+            transition: "all 0.2s"
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,0.3)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,0.2)";
+          }}
+        >
+          Not Now
+        </button>
+        <button
+          onClick={onAllow}
+          disabled={isLoading}
+          style={{
+            padding: "10px 24px",
+            background: "white",
+            color: "#3b82f6",
+            border: "none",
+            borderRadius: 10,
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: isLoading ? "not-allowed" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            transition: "all 0.2s"
+          }}
+        >
+          {isLoading ? (
+            <>
+              <div style={{
+                width: 16,
+                height: 16,
+                border: "2px solid #3b82f6",
+                borderTop: "2px solid transparent",
+                borderRadius: "50%",
+                animation: "spin 0.8s linear infinite"
+              }} />
+              Getting location...
+            </>
+          ) : (
+            <>
+              <Navigation size={16} />
+              Allow Location
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 /* ================= MAIN COMPONENT ================= */
 function UserPGSearch() {
   const navigate = useNavigate();
@@ -2614,6 +3196,19 @@ function UserPGSearch() {
       setShowLocationBanner(true);
     }
   }, []);
+
+  // Handler for promo banner clicks
+  const handlePromoBannerClick = (banner) => {
+    if (banner.title.includes("OFF")) {
+      showNotification(`🎉 ${banner.title} applied! Use code FIRST200 at checkout.`);
+    } else if (banner.title.includes("Zero")) {
+      showNotification(`🏠 ${banner.title} - No brokerage fees! Direct owner contact only.`);
+    } else if (banner.title.includes("Instant")) {
+      showNotification(`⚡ ${banner.title} - Book now for instant confirmation!`);
+    } else {
+      showNotification(`✨ ${banner.title} - ${banner.description}`);
+    }
+  };
 
   const processPGData = (data) => {
     return data.map(pg => ({
@@ -3227,6 +3822,9 @@ function UserPGSearch() {
 
       {/* Hero Banner */}
       <HeroBanner />
+
+      {/* PROMOTIONAL BANNERS SLIDER - Added between Hero and Search Bar */}
+      <PromoBannerSlider onBannerClick={handlePromoBannerClick} />
 
       {/* Location Info Bar */}
       {userLocation && filters.nearMe && (
