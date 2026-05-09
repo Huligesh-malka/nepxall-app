@@ -30,7 +30,8 @@ import {
   FiLogIn,
   FiUserPlus,
   FiSettings,
-  FiHelpCircle
+  FiHelpCircle,
+  FiPhoneCall
 } from "react-icons/fi";
 import logo from "../assets/nepxall-logo.png";
 
