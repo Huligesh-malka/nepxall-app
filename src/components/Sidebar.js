@@ -231,6 +231,16 @@ const Sidebar = ({ role, user }) => {
 >
   <FiPlusCircle size={16} /> Add PG
 </Link>
+
+
+<Link
+  style={linkStyle(isActive("/admin/ai-call"))}
+  to="/admin/ai-call"
+  onClick={closeSidebar}
+  className="sidebar-link"
+>
+  <FiPhoneCall size={16} /> AI Owner Call
+</Link>
           </>
         )}
 
