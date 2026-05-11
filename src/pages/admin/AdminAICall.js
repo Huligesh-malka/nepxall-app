@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { getAuth } from "firebase/auth"; // Assuming you are using Firebase
+import { getAuth } from "firebase/auth";
 
 const AdminAICall = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -8,18 +8,20 @@ const AdminAICall = () => {
   const [message, setMessage] = useState("");
 
   const startAICall = async () => {
-    if (!phoneNumber) return alert("Please enter a phone number");
+    if (!phoneNumber || phoneNumber.length < 10) {
+      return alert("Please enter a valid 10-digit phone number");
+    }
 
     try {
       setLoading(true);
       setMessage("");
 
-      // Get current Firebase User Token
+      // Get Firebase Token for backend middleware
       const auth = getAuth();
       const user = auth.currentUser;
       const token = user ? await user.getIdToken() : null;
 
-      console.log("📞 Initiating AI Call request...");
+      console.log("🚀 Sending request to Nepxall Backend...");
 
       const response = await fetch(
         "https://nepxall-backend.onrender.com/api/ai-call/call-owner",
@@ -27,7 +29,7 @@ const AdminAICall = () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": token ? `Bearer ${token}` : "", // Include token here
+            ...(token && { "Authorization": `Bearer ${token}` }),
           },
           body: JSON.stringify({
             phoneNumber,
@@ -39,13 +41,15 @@ const AdminAICall = () => {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setMessage("✅ AI Call Started Successfully!");
+        setMessage("✅ AI Call Initiated successfully!");
       } else {
-        setMessage(`❌ Error: ${data.error || data.message || "Failed to start call"}`);
+        // Display the specific error from MSG91 if available
+        const errorMsg = typeof data.error === 'string' ? data.error : (data.message || "Failed to start call");
+        setMessage(`❌ Error: ${errorMsg}`);
       }
     } catch (error) {
-      console.error("Request Error:", error);
-      setMessage("❌ Network error. Check console.");
+      console.error("Fetch Error:", error);
+      setMessage("❌ Network error. Check your connection.");
     } finally {
       setLoading(false);
     }
@@ -53,13 +57,13 @@ const AdminAICall = () => {
 
   return (
     <div style={styles.container}>
-      <h2 style={{ textAlign: "center" }}>📞 Admin AI Owner Call</h2>
-
+      <h2 style={styles.header}>📞 AI Owner Call Control</h2>
+      
       <div style={styles.formGroup}>
-        <label>Owner Name</label>
+        <label style={styles.label}>Owner Name</label>
         <input
           type="text"
-          placeholder="Enter name"
+          placeholder="e.g., Huli"
           value={ownerName}
           onChange={(e) => setOwnerName(e.target.value)}
           style={styles.input}
@@ -67,10 +71,10 @@ const AdminAICall = () => {
       </div>
 
       <div style={styles.formGroup}>
-        <label>Phone Number (without +91)</label>
+        <label style={styles.label}>Recipient Number</label>
         <input
-          type="text"
-          placeholder="74830..."
+          type="tel"
+          placeholder="10-digit number"
           value={phoneNumber}
           onChange={(e) => setPhoneNumber(e.target.value)}
           style={styles.input}
@@ -78,11 +82,15 @@ const AdminAICall = () => {
       </div>
 
       <button onClick={startAICall} disabled={loading} style={styles.button}>
-        {loading ? "Processing..." : "🚀 Start AI Call"}
+        {loading ? "Connecting..." : "🚀 Start AI Call"}
       </button>
 
       {message && (
-        <div style={{ ...styles.alert, color: message.includes("✅") ? "green" : "red" }}>
+        <div style={{ 
+          ...styles.alert, 
+          color: message.includes("✅") ? "#155724" : "#721c24",
+          backgroundColor: message.includes("✅") ? "#d4edda" : "#f8d7da"
+        }}>
           {message}
         </div>
       )}
@@ -92,42 +100,44 @@ const AdminAICall = () => {
 
 const styles = {
   container: {
-    padding: "30px",
-    maxWidth: "450px",
-    margin: "50px auto",
-    backgroundColor: "#f9f9f9",
-    borderRadius: "15px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-    fontFamily: "Arial, sans-serif",
+    padding: "40px",
+    maxWidth: "400px",
+    margin: "40px auto",
+    backgroundColor: "#ffffff",
+    borderRadius: "12px",
+    boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
   },
-  formGroup: { marginBottom: "15px" },
+  header: { textAlign: "center", color: "#333", marginBottom: "25px" },
+  formGroup: { marginBottom: "20px" },
+  label: { display: "block", marginBottom: "8px", fontWeight: "600", color: "#555" },
   input: {
     width: "100%",
     padding: "12px",
-    marginTop: "5px",
     borderRadius: "8px",
-    border: "1px solid #ccc",
+    border: "1px solid #ddd",
+    fontSize: "16px",
     boxSizing: "border-box",
   },
   button: {
     width: "100%",
     padding: "15px",
-    backgroundColor: "#0B5ED7",
-    color: "white",
+    backgroundColor: "#007bff",
+    color: "#fff",
     border: "none",
     borderRadius: "8px",
-    cursor: "pointer",
     fontSize: "16px",
     fontWeight: "bold",
+    cursor: "pointer",
+    transition: "background 0.3s",
   },
   alert: {
     marginTop: "20px",
-    padding: "10px",
+    padding: "12px",
     textAlign: "center",
-    fontWeight: "bold",
-    borderRadius: "5px",
-    background: "#fff",
-    border: "1px solid #eee",
+    fontWeight: "500",
+    borderRadius: "6px",
+    fontSize: "14px",
   },
 };
 
