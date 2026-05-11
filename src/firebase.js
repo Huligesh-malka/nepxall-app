@@ -1,36 +1,33 @@
 import { initializeApp } from "firebase/app";
-
 import {
   getAuth,
   setPersistence,
   browserLocalPersistence
 } from "firebase/auth";
-
 import { getFirestore } from "firebase/firestore";
-
-////////////////////////////////////////////////////////
-// 🔥 ADD THIS
-////////////////////////////////////////////////////////
 import {
   getMessaging,
   getToken,
   onMessage
 } from "firebase/messaging";
 
-
+////////////////////////////////////////////////////////
+// ✅ FIREBASE CONFIG FROM ENV
+////////////////////////////////////////////////////////
 const firebaseConfig = {
-  apiKey: "AIzaSyCf8R8ASjSFjL_k6j0dCGtuxbBS7tFjLws",
-  authDomain: "nepxall.firebaseapp.com",
-  projectId: "nepxall",
-  storageBucket: "nepxall.firebasestorage.app",
-  messagingSenderId: "512312187994",
-  appId: "1:512312187994:web:15cb222337980116ff8c63",
-  measurementId: "G-VNQM7CS5XV"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
+
 const app = initializeApp(firebaseConfig);
 
 ////////////////////////////////////////////////////////
-// ✅ AUTH + DB
+// ✅ AUTH + FIRESTORE
 ////////////////////////////////////////////////////////
 export const auth = getAuth(app);
 export const db = getFirestore(app);
@@ -41,7 +38,7 @@ export const db = getFirestore(app);
 export const messaging = getMessaging(app);
 
 ////////////////////////////////////////////////////////
-// 🔥 LOGIN PERSIST
+// ✅ LOGIN PERSIST
 ////////////////////////////////////////////////////////
 setPersistence(auth, browserLocalPersistence)
   .then(() => {
@@ -55,62 +52,32 @@ setPersistence(auth, browserLocalPersistence)
 // 🔥 REQUEST NOTIFICATION PERMISSION
 ////////////////////////////////////////////////////////
 export const requestNotificationPermission = async () => {
-
   try {
-
-    const permission =
-      await Notification.requestPermission();
-
+    const permission = await Notification.requestPermission();
+    
     if (permission === "granted") {
-
       const token = await getToken(messaging, {
-
-        ////////////////////////////////////////////////////
-        // 🔥 PUT YOUR FIREBASE VAPID KEY
-        ////////////////////////////////////////////////////
-       vapidKey: "BHug2OB6PLg0gQdHNtSinfD6rmGHC2fO32WvZKOD5u_fbVrYK-cQK4Zwkd11Y3El57XZy51vvli9WfdRrDSo1Dw"
-
+        vapidKey: process.env.REACT_APP_FIREBASE_VAPID_KEY
       });
-
+      
       console.log("✅ FCM TOKEN:", token);
-
-      ////////////////////////////////////////////////////
-      // SAVE TOKEN IN LOCAL STORAGE
-      ////////////////////////////////////////////////////
       localStorage.setItem("fcm_token", token);
-
       return token;
-
     } else {
-
       console.log("❌ Notification permission denied");
-
     }
-
   } catch (err) {
-
     console.error("❌ FCM ERROR:", err);
-
   }
-
 };
 
 ////////////////////////////////////////////////////////
 // 🔥 FOREGROUND NOTIFICATIONS
 ////////////////////////////////////////////////////////
 onMessage(messaging, (payload) => {
-
   console.log("📩 Notification received:", payload);
-
-  new Notification(
-    payload.notification.title,
-    {
-      body: payload.notification.body,
-      icon: "/logo192.png"
-    }
-  );
-
+  new Notification(payload.notification.title, {
+    body: payload.notification.body,
+    icon: "/logo192.png"
+  });
 });
-
-
-
