@@ -29,6 +29,11 @@ const BRAND_BLUE = "#0B5ED7";
 const BRAND_GREEN = "#4CAF50";
 
 const Sidebar = ({ role, user }) => {
+  if (window.innerWidth <= 768) {
+  return null;
+}
+
+
   const location = useLocation();
 
   // 🔐 BACKEND ROLE ONLY (SAFE)
