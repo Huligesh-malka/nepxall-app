@@ -31,28 +31,15 @@ const AdminAICall = () => {
 
       console.log("✅ API RESPONSE:", data);
 
-      // =====================================
-      // SUCCESS CHECK
-      // =====================================
-
-      if (
-        data.success &&
-        data.data &&
-        data.data.status !== "fail"
-      ) {
+      if (data.success) {
         setMessage("✅ AI Call Started Successfully");
       } else {
-        setMessage(
-          `❌ ${data?.data?.errors || data?.error || "Failed to start call"}`
-        );
+        setMessage("❌ Failed to start call");
       }
 
     } catch (error) {
       console.error(error);
-
-      setMessage(
-        "❌ Server Error / Network Error"
-      );
+      setMessage("❌ Error starting call");
     } finally {
       setLoading(false);
     }
