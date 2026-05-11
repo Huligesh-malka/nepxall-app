@@ -15,7 +15,6 @@ import {
   FiUsers, 
   FiTrendingUp, 
   FiStar, 
-  FiBuilding, 
   FiPlusCircle, 
   FiCreditCard, 
   FiTool, 
@@ -161,7 +160,7 @@ const Sidebar = ({ role, user }) => {
               <FiCalendar size={16} /> All Bookings
             </Link>
             <Link style={linkStyle(isActive("/admin/pgs"))} to="/admin/pgs" className="sidebar-link">
-              <FiBuilding size={16} /> All PGs
+              <FiHome size={16} /> All PGs
             </Link>
             <Link style={linkStyle(isActive("/admin/services"))} to="/admin/services" className="sidebar-link"><FiTool size={16} /> Service Requests</Link>
             <Link style={linkStyle(isActive("/admin/plan-payments"))} to="/admin/plan-payments" className="sidebar-link"><FiStar size={16} /> Plan Payments</Link>
