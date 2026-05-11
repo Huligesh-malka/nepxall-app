@@ -1,31 +1,239 @@
+/* ================= GLOBAL RESET ================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ================= ROOT ================= */
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  font-family: "Inter", sans-serif;
+  background: #f8fafc;
+  scroll-behavior: smooth;
+}
+
+/* ================= BODY ================= */
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ================= APP ================= */
 .App {
-  text-align: center;
+  width: 100%;
+  min-height: 100dvh;
+  overflow-x: hidden;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+/* ================= MEDIA ================= */
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
 }
 
+/* ================= FORMS ================= */
+input,
+textarea,
+select,
+button {
+  font: inherit;
+  outline: none;
+}
+
+/* Prevent iPhone zoom */
+input,
+textarea,
+select {
+  font-size: 16px;
+}
+
+/* ================= LINKS ================= */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* ================= BUTTONS ================= */
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+/* ================= SCROLLBAR ================= */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+/* ================= RESPONSIVE CONTAINERS ================= */
+.container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* ================= RESPONSIVE GRID ================= */
+.responsive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+/* ================= RESPONSIVE TYPOGRAPHY ================= */
+h1 {
+  font-size: clamp(24px, 5vw, 42px);
+}
+
+h2 {
+  font-size: clamp(20px, 4vw, 32px);
+}
+
+h3 {
+  font-size: clamp(18px, 3vw, 26px);
+}
+
+p,
+span,
+button,
+input {
+  font-size: clamp(13px, 2vw, 16px);
+}
+
+/* ================= MOBILE FIRST UTILITIES ================= */
+/* Hide on mobile */
+.mobile-hidden {
+  display: block;
+}
+
+/* Show on mobile only */
+.mobile-only {
+  display: none;
+}
+
+/* ================= MOBILE ================= */
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none !important;
+  }
+  
+  .mobile-only {
+    display: block !important;
+  }
+  
+  .container {
+    padding: 12px;
+  }
+  
+  /* Better touch targets for mobile */
+  button, 
+  a,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Improve form elements on mobile */
+  input, 
+  select, 
+  textarea {
+    font-size: 16px !important;
+  }
+  
+  /* Prevent horizontal scroll */
+  .App {
+    overflow-x: hidden;
+  }
+}
+
+/* ================= TABLET ================= */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .container {
+    padding: 20px;
+  }
+  
+  /* Tablet optimization */
+  .responsive-grid {
+    gap: 20px;
+  }
+}
+
+/* ================= LARGE DESKTOP ================= */
+@media (min-width: 1400px) {
+  .container {
+    max-width: 1500px;
+  }
+}
+
+/* ================= SAFE AREA SUPPORT (Notch iPhones) ================= */
+@supports (padding: max(0px)) {
+  .container {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  
+  @media (max-width: 768px) {
+    .container {
+      padding-left: max(12px, env(safe-area-inset-left));
+      padding-right: max(12px, env(safe-area-inset-right));
+    }
+  }
+}
+
+/* ================= ANIMATIONS (preserved from original) ================= */
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {
     animation: App-logo-spin infinite 20s linear;
   }
 }
 
+/* =============================================
+   COMPONENT STYLES (migrated from default template)
+   ============================================= */
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+  max-width: 100%;
+  object-fit: contain;
+}
+
 .App-header {
   background-color: #282c34;
-  min-height: 100vh;
+  min-height: 100dvh; /* Fixed: replaced 100vh with 100dvh */
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   font-size: calc(10px + 2vmin);
   color: white;
+  width: 100%;
+  padding: clamp(16px, 5vw, 32px);
 }
 
 .App-link {
   color: #61dafb;
+}
+
+/* Responsive adjustments for header */
+@media (max-width: 768px) {
+  .App-header {
+    padding: 20px;
+  }
 }
 
 @keyframes App-logo-spin {
@@ -34,5 +242,207 @@
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* ================= ADDITIONAL RESPONSIVE UTILITIES ================= */
+/* Flex utilities */
+.flex-row {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Responsive spacing */
+.responsive-padding {
+  padding: clamp(12px, 4vw, 24px);
+}
+
+.responsive-margin {
+  margin: clamp(8px, 3vw, 16px);
+}
+
+/* Card component (common pattern) */
+.card {
+  background: white;
+  border-radius: clamp(8px, 2vw, 12px);
+  padding: clamp(12px, 3vw, 20px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+/* Modal/Drawer container */
+.modal-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 4vw, 20px);
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: clamp(12px, 3vw, 16px);
+  width: 100%;
+  max-width: 500px;
+  max-height: 90dvh;
+  overflow-y: auto;
+  padding: clamp(16px, 4vw, 24px);
+}
+
+/* Bottom sheet style for mobile */
+@media (max-width: 768px) {
+  .modal-container {
+    align-items: flex-end;
+  }
+  
+  .modal-content {
+    border-radius: 20px 20px 0 0;
+    max-height: 85dvh;
+  }
+}
+
+/* List items (common for PG listings) */
+.list-item {
+  width: 100%;
+  padding: clamp(12px, 2vw, 16px);
+  border-bottom: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.list-item:active {
+  background: #f1f5f9;
+}
+
+/* Button styles with touch optimization */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(10px, 2vw, 14px) clamp(16px, 3vw, 24px);
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  width: auto;
+  min-width: 44px;
+}
+
+.btn-primary {
+  background: #0f172a;
+  color: white;
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-full {
+  width: 100%;
+}
+
+/* Image containers */
+.img-responsive {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+}
+
+/* Form groups */
+.form-group {
+  width: 100%;
+  margin-bottom: clamp(12px, 3vw, 20px);
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  font-size: clamp(12px, 2vw, 14px);
+}
+
+.form-input {
+  width: 100%;
+  padding: clamp(10px, 2vw, 12px);
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: white;
+}
+
+/* Grid systems */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(8px, 2vw, 16px);
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: clamp(8px, 2vw, 16px);
+}
+
+/* Hide scrollbar on mobile when needed */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Loading states */
+.loader {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: clamp(20px, 10vw, 40px);
+}
+
+/* Better handling of fixed position elements on mobile */
+@media (max-width: 768px) {
+  [style*="position: fixed"] {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+}
+
+/* Prevent body scroll when modal is open */
+body.modal-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+/* Small device optimization (Galaxy Fold, iPhone SE) */
+@media (max-width: 380px) {
+  .container {
+    padding: 10px;
+  }
+  
+  h1 {
+    font-size: clamp(20px, 5vw, 24px);
+  }
+  
+  .btn {
+    padding: 10px 14px;
+  }
+  
+  .responsive-grid {
+    gap: 12px;
   }
 }
