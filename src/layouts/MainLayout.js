@@ -641,7 +641,7 @@ const MainLayout = () => {
     };
   }, []);
 
-  // ✅ FIX 1: Auto close profile drawer when route changes
+  // Auto close profile drawer when route changes
   useEffect(() => {
     if (profileCardOpen) {
       setProfileCardOpen(false);
@@ -667,14 +667,6 @@ const MainLayout = () => {
 
   const closeProfileCard = () => {
     setProfileCardOpen(false);
-  };
-
-  // Function to open sidebar drawer programmatically
-  const openSidebarDrawer = () => {
-    const menuBtn = document.querySelector(".mobile-menu-trigger");
-    if (menuBtn) {
-      menuBtn.click();
-    }
   };
 
   const getAvatarGradient = () => {
@@ -868,15 +860,7 @@ const MainLayout = () => {
     transform: active ? "translateY(-2px)" : "translateY(0)",
   });
 
-  // Helper function to check if a route is active
-  const isActiveRoute = (paths) => {
-    if (typeof paths === 'string') {
-      return location.pathname === paths;
-    }
-    return paths.some(path => location.pathname === path || location.pathname.startsWith(path + '/'));
-  };
-
-  // ✅ Enhanced navigation with smooth scroll and auto-close
+  // Enhanced navigation with smooth scroll and auto-close
   const handleNavigation = (path) => {
     closeProfileCard();
     window.scrollTo({
