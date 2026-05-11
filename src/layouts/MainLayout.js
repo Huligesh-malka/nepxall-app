@@ -873,7 +873,9 @@ const MainLayout = () => {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: PREMIUM_COLORS.neutral[50] }}>
       {/* Sidebar only for logged-in users - Desktop only */}
-      {user && <Sidebar role={role} user={user} />}
+    {user && !isMobile && (
+  <Sidebar role={role} user={user} />
+)}
 
       <div
         style={{
