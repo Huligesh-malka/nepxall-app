@@ -1,4 +1,3 @@
-// Sidebar.jsx
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
@@ -66,6 +65,11 @@ const Sidebar = ({ role, user }) => {
       setIsOpen(false);
     }
   }, [isMobile]);
+
+  // ✅ FIX 2: Auto close sidebar drawer when route changes
+  useEffect(() => {
+    setIsOpen(false);
+  }, [location.pathname]);
 
   const isActive = (path) =>
     location.pathname === path ||
@@ -136,16 +140,14 @@ const Sidebar = ({ role, user }) => {
             <Link style={linkStyle(isActive("/user/bookings"))} to="/user/bookings" onClick={closeSidebar} className="sidebar-link"><FiCalendar size={16} /> My Bookings</Link>
             <Link style={linkStyle(isActive("/"))} to="/" onClick={closeSidebar} className="sidebar-link"><FiSearch size={16} /> Browse Properties</Link>
            
-            
-            {/* 🔥 ADD HERE */}
-    <Link 
-      style={linkStyle(isActive("/become-owner"))} 
-      to="/become-owner" 
-      onClick={closeSidebar} 
-      className="sidebar-link"
-    >
-      ⭐ Become Owner
-    </Link>
+            <Link 
+              style={linkStyle(isActive("/become-owner"))} 
+              to="/become-owner" 
+              onClick={closeSidebar} 
+              className="sidebar-link"
+            >
+              ⭐ Become Owner
+            </Link>
 
             <Link style={linkStyle(isActive("/user/vacate"))} to="/user/vacate" onClick={closeSidebar} className="sidebar-link"><FiLogOut size={16} /> Vacate Room</Link>
             <Link style={linkStyle(isActive("/user/refunds"))} to="/user/refunds" onClick={closeSidebar} className="sidebar-link"><FiDollarSign size={16} /> Refunds</Link>
@@ -168,19 +170,11 @@ const Sidebar = ({ role, user }) => {
             <Link style={linkStyle(isActive("/owner/tenants"))} to="/owner/tenants" onClick={closeSidebar} className="sidebar-link"><FiUsers size={16} /> Active Tenants</Link>
             <Link style={linkStyle(isActive("/owner/vacate"))} to="/owner/vacate" onClick={closeSidebar} className="sidebar-link"><FiLogOut size={16} /> Vacate Requests</Link>
             <Link style={linkStyle(isActive("/owner/payments"))} to="/owner/payments" onClick={closeSidebar} className="sidebar-link"><FiTrendingUp size={16} /> Earnings / Payments</Link>
-           
-            
-
             <Link style={linkStyle(isActive("/owner/add"))} to="/owner/add" onClick={closeSidebar} className="sidebar-link"><FiPlusCircle size={16} /> Add PG</Link>
-
             <Link style={linkStyle(isActive("/owner/bank"))} to="/owner/bank" onClick={closeSidebar} className="sidebar-link"><FiCreditCard size={16} /> Bank Details</Link>
-            
             <Link style={linkStyle(isActive("/owner/chats"))} to="/owner/chats" onClick={closeSidebar} className="sidebar-link"><FiMessageCircle size={16} /> Chats</Link>
-
-
             <Link style={linkStyle(isActive("/owner/premium"))} to="/owner/premium" onClick={closeSidebar} className="sidebar-link"><FiStar size={16} /> Premium Plans</Link>
             
-            {/* ✅ POLICY LINKS ADDED FOR OWNER */}
             <hr style={divider} />
             <Link style={linkStyle(isActive("/contact"))} to="/contact" onClick={closeSidebar} className="sidebar-link">
               <FiMail size={16} /> Contact Us
@@ -205,18 +199,16 @@ const Sidebar = ({ role, user }) => {
             <Link style={linkStyle(isActive("/admin/finance"))} to="/admin/finance" onClick={closeSidebar} className="sidebar-link"><FiBarChart2 size={16} /> Finance Dashboard</Link>
             <Link style={linkStyle(isActive("/admin/payments"))} to="/admin/payments" onClick={closeSidebar} className="sidebar-link"><FiCreditCard size={16} /> Payment Verification</Link>
             <Link
-  style={linkStyle(isActive("/admin/all-bookings"))}
-  to="/admin/all-bookings"
-  onClick={closeSidebar}
-  className="sidebar-link"
->
-  <FiCalendar size={16} /> All Bookings
-</Link>
-            {/* ✅ ADD THIS */}
-    <Link style={linkStyle(isActive("/admin/pgs"))} to="/admin/pgs">
-      <FiBuilding size={16} /> All PGs
-    </Link>
-
+              style={linkStyle(isActive("/admin/all-bookings"))}
+              to="/admin/all-bookings"
+              onClick={closeSidebar}
+              className="sidebar-link"
+            >
+              <FiCalendar size={16} /> All Bookings
+            </Link>
+            <Link style={linkStyle(isActive("/admin/pgs"))} to="/admin/pgs" onClick={closeSidebar} className="sidebar-link">
+              <FiBuilding size={16} /> All PGs
+            </Link>
             <Link style={linkStyle(isActive("/admin/services"))} to="/admin/services" onClick={closeSidebar} className="sidebar-link"><FiTool size={16} /> Service Requests</Link>
             <Link style={linkStyle(isActive("/admin/plan-payments"))} to="/admin/plan-payments" onClick={closeSidebar} className="sidebar-link"><FiStar size={16} /> Plan Payments</Link>
             <Link style={linkStyle(isActive("/admin/owner-verification"))} to="/admin/owner-verification" onClick={closeSidebar} className="sidebar-link"><FiShield size={16} /> Verify Owners</Link>
@@ -225,23 +217,21 @@ const Sidebar = ({ role, user }) => {
             <Link style={linkStyle(isActive("/admin/refunds"))} to="/admin/refunds" onClick={closeSidebar} className="sidebar-link"><FiDollarSign size={16} /> Refund Requests</Link>
             <Link style={linkStyle(isActive("/admin/agreements"))} to="/admin/agreements" onClick={closeSidebar} className="sidebar-link"><FiFileText size={16} /> Agreements</Link>
             <Link 
-  style={linkStyle(isActive("/admin/add-pg"))} 
-  to="/admin/add-pg" 
-  onClick={closeSidebar} 
-  className="sidebar-link"
->
-  <FiPlusCircle size={16} /> Add PG
-</Link>
-
-
-<Link
-  style={linkStyle(isActive("/admin/ai-call"))}
-  to="/admin/ai-call"
-  onClick={closeSidebar}
-  className="sidebar-link"
->
-  <FiPhoneCall size={16} /> AI Owner Call
-</Link>
+              style={linkStyle(isActive("/admin/add-pg"))} 
+              to="/admin/add-pg" 
+              onClick={closeSidebar} 
+              className="sidebar-link"
+            >
+              <FiPlusCircle size={16} /> Add PG
+            </Link>
+            <Link
+              style={linkStyle(isActive("/admin/ai-call"))}
+              to="/admin/ai-call"
+              onClick={closeSidebar}
+              className="sidebar-link"
+            >
+              <FiPhoneCall size={16} /> AI Owner Call
+            </Link>
           </>
         )}
 
@@ -260,7 +250,6 @@ const Sidebar = ({ role, user }) => {
           <>
             <hr style={divider} />
             <Link style={linkStyle(isActive("/login"))} to="/login" onClick={closeSidebar} className="sidebar-link"><FiLogIn size={16} /> Login</Link>
-            
           </>
         )}
       </nav>
@@ -289,8 +278,6 @@ const Sidebar = ({ role, user }) => {
 
   return (
     <>
-      
-
       {/* Desktop Sidebar - always visible on desktop */}
       {!isMobile && (
         <div style={desktopSidebar}>
@@ -362,26 +349,6 @@ const drawerSidebar = (isOpen) => ({
   transition: "transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1)",
   boxShadow: isOpen ? "4px 0 25px rgba(0, 0, 0, 0.15)" : "none",
 });
-
-// Mobile menu button (hamburger) - modern style
-const menuButton = {
-  position: "fixed",
-  top: 16,
-  left: 16,
-  zIndex: 1100,
-  background: "linear-gradient(135deg, #2563eb, #10b981)",
-  color: "#fff",
-  border: "none",
-  padding: "10px 12px",
-  borderRadius: 12,
-  cursor: "pointer",
-  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-  transition: "all 0.2s ease",
-  backdropFilter: "blur(4px)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
 
 // Close button inside mobile sidebar
 const closeBtn = {

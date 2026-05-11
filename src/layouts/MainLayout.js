@@ -641,6 +641,13 @@ const MainLayout = () => {
     };
   }, []);
 
+  // ✅ FIX 1: Auto close profile drawer when route changes
+  useEffect(() => {
+    if (profileCardOpen) {
+      setProfileCardOpen(false);
+    }
+  }, [location.pathname]);
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -869,6 +876,16 @@ const MainLayout = () => {
     return paths.some(path => location.pathname === path || location.pathname.startsWith(path + '/'));
   };
 
+  // ✅ Enhanced navigation with smooth scroll and auto-close
+  const handleNavigation = (path) => {
+    closeProfileCard();
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+    navigate(path);
+  };
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: PREMIUM_COLORS.neutral[50] }}>
       {/* Sidebar only for logged-in users - Desktop only */}
@@ -951,7 +968,7 @@ const MainLayout = () => {
           {role === "tenant" && (
             <>
               <button
-                onClick={() => navigate("/")}
+                onClick={() => handleNavigation("/")}
                 style={bottomNavBtnStyle(location.pathname === "/" || location.pathname.startsWith("/pg"))}
               >
                 <HomeIcon style={{ fontSize: 22, transition: "transform 0.2s" }} />
@@ -959,7 +976,7 @@ const MainLayout = () => {
               </button>
 
               <button
-                onClick={() => navigate("/user/bookings")}
+                onClick={() => handleNavigation("/user/bookings")}
                 style={bottomNavBtnStyle(location.pathname.startsWith("/user/bookings"))}
               >
                 <MenuBookIcon style={{ fontSize: 20 }} />
@@ -967,7 +984,7 @@ const MainLayout = () => {
               </button>
 
               <button
-                onClick={() => navigate("/user/my-stay")}
+                onClick={() => handleNavigation("/user/my-stay")}
                 style={bottomNavBtnStyle(location.pathname.startsWith("/user/my-stay"))}
               >
                 <KingBedIcon style={{ fontSize: 22 }} />
@@ -988,7 +1005,7 @@ const MainLayout = () => {
           {role === "owner" && (
             <>
               <button
-                onClick={() => navigate("/owner/dashboard")}
+                onClick={() => handleNavigation("/owner/dashboard")}
                 style={bottomNavBtnStyle(location.pathname.startsWith("/owner/dashboard"))}
               >
                 <DashboardIcon style={{ fontSize: 22 }} />
@@ -996,7 +1013,7 @@ const MainLayout = () => {
               </button>
 
               <button
-                onClick={() => navigate("/owner/bookings")}
+                onClick={() => handleNavigation("/owner/bookings")}
                 style={bottomNavBtnStyle(location.pathname.startsWith("/owner/bookings"))}
               >
                 <CalendarMonthIcon style={{ fontSize: 20 }} />
@@ -1004,7 +1021,7 @@ const MainLayout = () => {
               </button>
 
               <button
-                onClick={() => navigate("/owner/add")}
+                onClick={() => handleNavigation("/owner/add")}
                 style={bottomNavBtnStyle(location.pathname.startsWith("/owner/add"))}
               >
                 <AddBusinessIcon style={{ fontSize: 20 }} />
