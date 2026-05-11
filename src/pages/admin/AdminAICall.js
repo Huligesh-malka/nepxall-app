@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { getAuth } from "firebase/auth"; // Assuming you are using Firebase
 
 const AdminAICall = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -7,11 +8,18 @@ const AdminAICall = () => {
   const [message, setMessage] = useState("");
 
   const startAICall = async () => {
+    if (!phoneNumber) return alert("Please enter a phone number");
+
     try {
       setLoading(true);
       setMessage("");
 
-      console.log("📞 Starting AI Call...");
+      // Get current Firebase User Token
+      const auth = getAuth();
+      const user = auth.currentUser;
+      const token = user ? await user.getIdToken() : null;
+
+      console.log("📞 Initiating AI Call request...");
 
       const response = await fetch(
         "https://nepxall-backend.onrender.com/api/ai-call/call-owner",
@@ -19,6 +27,7 @@ const AdminAICall = () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "Authorization": token ? `Bearer ${token}` : "", // Include token here
           },
           body: JSON.stringify({
             phoneNumber,
@@ -29,89 +38,97 @@ const AdminAICall = () => {
 
       const data = await response.json();
 
-      console.log("✅ API RESPONSE:", data);
-
-      if (data.success) {
-        setMessage("✅ AI Call Started Successfully");
+      if (response.ok && data.success) {
+        setMessage("✅ AI Call Started Successfully!");
       } else {
-        setMessage("❌ Failed to start call");
+        setMessage(`❌ Error: ${data.error || data.message || "Failed to start call"}`);
       }
-
     } catch (error) {
-      console.error(error);
-      setMessage("❌ Error starting call");
+      console.error("Request Error:", error);
+      setMessage("❌ Network error. Check console.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div
-      style={{
-        padding: 20,
-        maxWidth: 500,
-        margin: "30px auto",
-        background: "#fff",
-        borderRadius: 12,
-        boxShadow: "0 0 10px rgba(0,0,0,0.1)",
-      }}
-    >
-      <h2>📞 Admin AI Owner Call</h2>
+    <div style={styles.container}>
+      <h2 style={{ textAlign: "center" }}>📞 Admin AI Owner Call</h2>
 
-      <input
-        type="text"
-        placeholder="Owner Name"
-        value={ownerName}
-        onChange={(e) => setOwnerName(e.target.value)}
-        style={{
-          width: "100%",
-          padding: 12,
-          marginBottom: 15,
-        }}
-      />
+      <div style={styles.formGroup}>
+        <label>Owner Name</label>
+        <input
+          type="text"
+          placeholder="Enter name"
+          value={ownerName}
+          onChange={(e) => setOwnerName(e.target.value)}
+          style={styles.input}
+        />
+      </div>
 
-      <input
-        type="text"
-        placeholder="Phone Number"
-        value={phoneNumber}
-        onChange={(e) => setPhoneNumber(e.target.value)}
-        style={{
-          width: "100%",
-          padding: 12,
-          marginBottom: 15,
-        }}
-      />
+      <div style={styles.formGroup}>
+        <label>Phone Number (without +91)</label>
+        <input
+          type="text"
+          placeholder="74830..."
+          value={phoneNumber}
+          onChange={(e) => setPhoneNumber(e.target.value)}
+          style={styles.input}
+        />
+      </div>
 
-      <button
-        onClick={startAICall}
-        disabled={loading}
-        style={{
-          width: "100%",
-          padding: 14,
-          background: "#0B5ED7",
-          color: "#fff",
-          border: "none",
-          borderRadius: 8,
-          cursor: "pointer",
-          fontSize: 16,
-          fontWeight: "bold",
-        }}
-      >
-        {loading ? "Calling..." : "📞 Start AI Call"}
+      <button onClick={startAICall} disabled={loading} style={styles.button}>
+        {loading ? "Processing..." : "🚀 Start AI Call"}
       </button>
 
       {message && (
-        <p
-          style={{
-            marginTop: 20,
-            fontWeight: "bold",
-          }}
-        >
+        <div style={{ ...styles.alert, color: message.includes("✅") ? "green" : "red" }}>
           {message}
-        </p>
+        </div>
       )}
     </div>
   );
+};
+
+const styles = {
+  container: {
+    padding: "30px",
+    maxWidth: "450px",
+    margin: "50px auto",
+    backgroundColor: "#f9f9f9",
+    borderRadius: "15px",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+    fontFamily: "Arial, sans-serif",
+  },
+  formGroup: { marginBottom: "15px" },
+  input: {
+    width: "100%",
+    padding: "12px",
+    marginTop: "5px",
+    borderRadius: "8px",
+    border: "1px solid #ccc",
+    boxSizing: "border-box",
+  },
+  button: {
+    width: "100%",
+    padding: "15px",
+    backgroundColor: "#0B5ED7",
+    color: "white",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontSize: "16px",
+    fontWeight: "bold",
+  },
+  alert: {
+    marginTop: "20px",
+    padding: "10px",
+    textAlign: "center",
+    fontWeight: "bold",
+    borderRadius: "5px",
+    background: "#fff",
+    border: "1px solid #eee",
+  },
 };
 
 export default AdminAICall;
