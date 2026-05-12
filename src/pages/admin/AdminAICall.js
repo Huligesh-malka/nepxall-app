@@ -1,42 +1,63 @@
 import React, { useState } from "react";
 import { getAuth } from "firebase/auth";
 
-const AdminAICall = () => {
-  const [phoneNumber, setPhoneNumber] = useState("");
+const AdminWhatsApp = () => {
+
+  const [ownerPhone, setOwnerPhone] = useState("");
   const [ownerName, setOwnerName] = useState("");
+
+  const [userName, setUserName] = useState("");
+  const [userPhone, setUserPhone] = useState("");
+
+  const [propertyName, setPropertyName] = useState("");
+  const [area, setArea] = useState("");
+  const [rent, setRent] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  // Note: This must be a verified Caller ID in your MSG91 Dashboard
-  const CALLER_ID = "917483090510"; 
+  //////////////////////////////////////////////////////
+  // SEND WHATSAPP
+  //////////////////////////////////////////////////////
+  const sendWhatsApp = async () => {
 
-  const startAICall = async () => {
-    if (!phoneNumber || phoneNumber.length < 10) {
-      return alert("Please enter a valid 10-digit phone number");
+    if (!ownerPhone || ownerPhone.length < 10) {
+      return alert("Enter valid owner number");
     }
 
     try {
+
       setLoading(true);
       setMessage("");
 
       const auth = getAuth();
       const user = auth.currentUser;
-      const token = user ? await user.getIdToken() : null;
 
-      console.log("🚀 Sending request to Nepxall Backend...");
+      const token =
+        user ? await user.getIdToken() : null;
 
+      //////////////////////////////////////////////////////
+      // BACKEND API
+      //////////////////////////////////////////////////////
       const response = await fetch(
-        "https://nepxall-backend.onrender.com/api/ai-call/call-owner",
+        "https://nepxall-backend.onrender.com/api/send-booking-whatsapp",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...(token && { "Authorization": `Bearer ${token}` }),
+            ...(token && {
+              Authorization: `Bearer ${token}`,
+            }),
           },
+
           body: JSON.stringify({
-            phoneNumber: phoneNumber.trim(),
-            ownerName: ownerName.trim(),
-            callerId: CALLER_ID, // Passing this to backend
+            ownerPhone,
+            ownerName,
+            userName,
+            userPhone,
+            propertyName,
+            area,
+            rent,
           }),
         }
       );
@@ -44,121 +65,185 @@ const AdminAICall = () => {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setMessage("✅ AI Call Processed Successfully!");
-        console.log("API Response:", data.data);
+
+        setMessage(
+          "✅ WhatsApp notification sent successfully"
+        );
+
       } else {
-        // Detailed error extraction from MSG91 response
-        const errorDetail = data.error?.message || data.error || data.message;
-        setMessage(`❌ Error: ${errorDetail || "Failed to start call"}`);
+
+        setMessage(
+          `❌ ${data.message || "Failed"}`
+        );
+
       }
-    } catch (error) {
-      console.error("Fetch Error:", error);
-      setMessage("❌ Network error. Check backend logs.");
+
+    } catch (err) {
+
+      console.log(err);
+
+      setMessage(
+        "❌ Network Error"
+      );
+
     } finally {
+
       setLoading(false);
+
     }
   };
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.header}>📞 AI Owner Call Control</h2>
-      <p style={styles.subtitle}>MSG91 V5 Voice Integration</p>
-      
-      <div style={styles.formGroup}>
-        <label style={styles.label}>Owner Name (Variable)</label>
-        <input
-          type="text"
-          placeholder="e.g., Huli"
-          value={ownerName}
-          onChange={(e) => setOwnerName(e.target.value)}
-          style={styles.input}
-        />
-      </div>
 
-      <div style={styles.formGroup}>
-        <label style={styles.label}>Recipient Number (Client)</label>
-        <div style={{ position: 'relative' }}>
-          <span style={styles.prefix}>+91</span>
-          <input
-            type="tel"
-            placeholder="7483090510"
-            value={phoneNumber}
-            onChange={(e) => setPhoneNumber(e.target.value)}
-            style={{ ...styles.input, paddingLeft: '45px' }}
-          />
-        </div>
-      </div>
+      <h2 style={styles.header}>
+        📲 Nepxall WhatsApp Notification
+      </h2>
 
-      <button 
-        onClick={startAICall} 
-        disabled={loading} 
-        style={{ 
-          ...styles.button, 
-          backgroundColor: loading ? "#ccc" : "#007bff",
-          cursor: loading ? "not-allowed" : "pointer"
+      <p style={styles.subtitle}>
+        MSG91 WhatsApp API Integration
+      </p>
+
+      {/* OWNER */}
+
+      <input
+        type="text"
+        placeholder="Owner Name"
+        value={ownerName}
+        onChange={(e) => setOwnerName(e.target.value)}
+        style={styles.input}
+      />
+
+      <input
+        type="tel"
+        placeholder="Owner Phone"
+        value={ownerPhone}
+        onChange={(e) => setOwnerPhone(e.target.value)}
+        style={styles.input}
+      />
+
+      {/* USER */}
+
+      <input
+        type="text"
+        placeholder="User Name"
+        value={userName}
+        onChange={(e) => setUserName(e.target.value)}
+        style={styles.input}
+      />
+
+      <input
+        type="tel"
+        placeholder="User Phone"
+        value={userPhone}
+        onChange={(e) => setUserPhone(e.target.value)}
+        style={styles.input}
+      />
+
+      {/* PROPERTY */}
+
+      <input
+        type="text"
+        placeholder="Property Name"
+        value={propertyName}
+        onChange={(e) => setPropertyName(e.target.value)}
+        style={styles.input}
+      />
+
+      <input
+        type="text"
+        placeholder="Area"
+        value={area}
+        onChange={(e) => setArea(e.target.value)}
+        style={styles.input}
+      />
+
+      <input
+        type="number"
+        placeholder="Rent"
+        value={rent}
+        onChange={(e) => setRent(e.target.value)}
+        style={styles.input}
+      />
+
+      <button
+        onClick={sendWhatsApp}
+        disabled={loading}
+        style={{
+          ...styles.button,
+          backgroundColor: loading
+            ? "#999"
+            : "#25D366",
         }}
       >
-        {loading ? "Processing..." : "🚀 Start AI Call"}
+        {loading
+          ? "Sending..."
+          : "📲 Send WhatsApp"}
       </button>
 
       {message && (
-        <div style={{ 
-          ...styles.alert, 
-          color: message.includes("✅") ? "#155724" : "#721c24",
-          backgroundColor: message.includes("✅") ? "#d4edda" : "#f8d7da",
-          border: `1px solid ${message.includes("✅") ? "#c3e6cb" : "#f5c6cb"}`
-        }}>
+        <div style={styles.message}>
           {message}
         </div>
       )}
+
     </div>
   );
 };
 
+//////////////////////////////////////////////////////
+// STYLES
+//////////////////////////////////////////////////////
+
 const styles = {
+
   container: {
-    padding: "40px",
-    maxWidth: "400px",
+    maxWidth: "450px",
     margin: "40px auto",
-    backgroundColor: "#ffffff",
+    padding: "30px",
+    background: "#fff",
     borderRadius: "16px",
-    boxShadow: "0 10px 40px rgba(0,0,0,0.08)",
-    fontFamily: "'Inter', system-ui, sans-serif",
+    boxShadow: "0 5px 25px rgba(0,0,0,0.1)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "15px",
+    fontFamily: "Arial",
   },
-  header: { textAlign: "center", color: "#1a1a1a", marginBottom: "5px", fontSize: "22px" },
-  subtitle: { textAlign: "center", color: "#666", marginBottom: "30px", fontSize: "14px" },
-  formGroup: { marginBottom: "20px" },
-  label: { display: "block", marginBottom: "8px", fontWeight: "600", color: "#444", fontSize: "14px" },
-  prefix: { position: 'absolute', left: '12px', top: '12px', color: '#888', fontWeight: '500' },
+
+  header: {
+    textAlign: "center",
+    marginBottom: "5px",
+  },
+
+  subtitle: {
+    textAlign: "center",
+    color: "#666",
+    marginBottom: "20px",
+  },
+
   input: {
-    width: "100%",
     padding: "12px",
     borderRadius: "10px",
-    border: "1px solid #e0e0e0",
-    fontSize: "16px",
-    boxSizing: "border-box",
-    outline: 'none',
+    border: "1px solid #ddd",
+    fontSize: "15px",
   },
+
   button: {
-    width: "100%",
-    padding: "15px",
-    color: "#fff",
+    padding: "14px",
     border: "none",
     borderRadius: "10px",
+    color: "#fff",
+    fontWeight: "bold",
     fontSize: "16px",
-    fontWeight: "700",
-    transition: "all 0.2s ease",
+    cursor: "pointer",
+  },
+
+  message: {
     marginTop: "10px",
-  },
-  alert: {
-    marginTop: "25px",
-    padding: "14px",
     textAlign: "center",
-    fontWeight: "500",
-    borderRadius: "10px",
-    fontSize: "14px",
-    lineHeight: "1.4",
+    fontWeight: "bold",
   },
+
 };
 
-export default AdminAICall;
+export default AdminWhatsApp;
