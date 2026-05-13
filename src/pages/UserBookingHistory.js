@@ -8,6 +8,9 @@ import { load } from "@cashfreepayments/cashfree-js";
 const UserBookingHistory = () => {
   const navigate = useNavigate();
   
+  // Add mobile detection
+  const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+  
   const { user, loading: authLoading } = useAuth();
   const [me, setMe] = useState(null);
   const [bookings, setBookings] = useState([]);
@@ -272,7 +275,8 @@ const UserBookingHistory = () => {
               onClick={() => setActiveTab(tab)}
               style={{
                 ...styles.tab,
-                ...(activeTab === tab ? styles.activeTab : {})
+                ...(activeTab === tab ? styles.activeTab : {}),
+                ...(isMobile && styles.tabMobile)
               }}
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -319,7 +323,7 @@ const UserBookingHistory = () => {
               <div key={booking.id} style={styles.card}>
                 {/* Card Header */}
                 <div style={styles.cardHeader}>
-                  <div>
+                  <div style={styles.cardHeaderLeft}>
                     <h3 style={styles.pgName}>{booking.pg_name || "Property Name"}</h3>
                     <p style={styles.pgLocation}>{booking.location || "Location not specified"}</p>
                   </div>
@@ -346,36 +350,27 @@ const UserBookingHistory = () => {
 
                 {/* Card Content */}
                 <div style={styles.cardContent}>
-                  {/* Details Grid */}
+                  {/* Details Grid - Mobile Responsive */}
                   <div style={styles.detailsGrid}>
                     <div style={styles.detailItem}>
                       <span style={styles.detailIcon}>📞</span>
-                      <div>
+                      <div style={styles.detailInfo}>
                         <span style={styles.detailLabel}>Contact</span>
                         {booking.status !== "pending" && booking.phone ? (
                           <a
                             href={`tel:${booking.phone}`}
-                            style={{
-                              display: "inline-block",
-                              padding: "6px 12px",
-                              background: "#10b981",
-                              color: "#fff",
-                              borderRadius: 8,
-                              fontSize: 13,
-                              fontWeight: 600,
-                              textDecoration: "none"
-                            }}
+                            style={styles.callButton}
                           >
                             Call Owner
                           </a>
                         ) : (
-                          <span style={{ color: "#9ca3af" }}>Not available</span>
+                          <span style={{ color: "#9ca3af", fontSize: 13 }}>Not available</span>
                         )}
                       </div>
                     </div>
                     <div style={styles.detailItem}>
-                      <span style={styles.detailIcon}></span>
-                      <div>
+                      <span style={styles.detailIcon}>📅</span>
+                      <div style={styles.detailInfo}>
                         <span style={styles.detailLabel}>Check-in</span>
                         <span style={styles.detailValue}>
                           {booking.check_in_date
@@ -390,7 +385,7 @@ const UserBookingHistory = () => {
                     </div>
                     <div style={styles.detailItem}>
                       <span style={styles.detailIcon}>🛏️</span>
-                      <div>
+                      <div style={styles.detailInfo}>
                         <span style={styles.detailLabel}>Room Type</span>
                         <span style={styles.detailValue}>{booking.room_type || "Single"}</span>
                       </div>
@@ -398,7 +393,7 @@ const UserBookingHistory = () => {
                     {booking.room_no && (
                       <div style={styles.detailItem}>
                         <span style={styles.detailIcon}>🚪</span>
-                        <div>
+                        <div style={styles.detailInfo}>
                           <span style={styles.detailLabel}>Room No</span>
                           <span style={styles.detailValue}>{booking.room_no}</span>
                         </div>
@@ -408,16 +403,7 @@ const UserBookingHistory = () => {
 
                   {/* Waiting for approval message */}
                   {booking.status === "pending" && (
-                    <div style={{
-                      background: "#fef3c7",
-                      color: "#92400e",
-                      padding: "10px",
-                      borderRadius: 10,
-                      fontSize: 13,
-                      textAlign: "center",
-                      fontWeight: 600,
-                      marginBottom: 20
-                    }}>
+                    <div style={styles.waitingMessage}>
                       ⏳ Booking requested — Waiting for owner approval
                     </div>
                   )}
@@ -463,21 +449,9 @@ const UserBookingHistory = () => {
 
                   {/* Payment completed message */}
                   {paymentStatus === "paid" && (
-                    <div style={{
-                      background: "#d1fae5",
-                      color: "#065f46",
-                      padding: "14px",
-                      borderRadius: 12,
-                      fontSize: 13,
-                      textAlign: "center",
-                      fontWeight: 500,
-                      marginBottom: 16,
-                      lineHeight: 1.5
-                    }}>
-                      <div style={{ fontWeight: 700, marginBottom: 8 }}>
-                        ✅ Payment Completed! (₹1099)
-                      </div>
-                      <div style={{ fontSize: 12 }}>
+                    <div style={styles.paidMessage}>
+                      <div style={styles.paidMessageTitle}>✅ Payment Completed! (₹1099)</div>
+                      <div style={styles.paidMessageSubtext}>
                         Remaining amount of <strong>₹{remainingAmount.toLocaleString()}</strong> needs to be paid directly to the owner during check-in.
                       </div>
                     </div>
@@ -558,16 +532,7 @@ const UserBookingHistory = () => {
 
                   {/* LEFT STATUS UI */}
                   {booking.status === "left" && (
-                    <div style={{
-                      marginTop: 16,
-                      padding: "12px",
-                      background: "#6b7280",
-                      color: "#fff",
-                      borderRadius: 12,
-                      fontSize: 14,
-                      fontWeight: 600,
-                      textAlign: "center"
-                    }}>
+                    <div style={styles.leftStatusMessage}>
                       🚪 You have vacated - You can book again
                     </div>
                   )}
@@ -655,58 +620,69 @@ const UserBookingHistory = () => {
               opacity: 1;
             }
           }
+          
+          /* Mobile Responsive Styles */
+          @media (max-width: 768px) {
+            .hero-section {
+              padding: 25px 20px !important;
+            }
+          }
         `}
       </style>
     </div>
   );
 };
 
-// Styles
+// Styles - Mobile Responsive Updated
 const styles = {
   container: {
     maxWidth: 1200,
     margin: "0 auto",
-    padding: "40px 24px",
+    padding: isMobile => isMobile ? "20px 16px" : "40px 24px",
     minHeight: "100vh",
     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     animation: "slideIn 0.5s ease-out",
+    width: "100%",
+    overflowX: "hidden",
+    boxSizing: "border-box",
   },
   
   header: {
     textAlign: "center",
-    marginBottom: 40,
+    marginBottom: isMobile => isMobile ? 24 : 40,
   },
   
   title: {
-    fontSize: "clamp(32px, 6vw, 48px)",
+    fontSize: isMobile => isMobile ? "28px" : "clamp(32px, 6vw, 48px)",
     fontWeight: 800,
     color: "#fff",
     marginBottom: 8,
     textShadow: "0 2px 4px rgba(0,0,0,0.1)",
     letterSpacing: "-0.5px",
+    wordBreak: "break-word",
   },
   
   subtitle: {
-    fontSize: 16,
+    fontSize: isMobile => isMobile ? 13 : 16,
     color: "rgba(255,255,255,0.9)",
     fontWeight: 400,
   },
   
   tabsContainer: {
     display: "flex",
-    gap: 12,
-    marginBottom: 32,
+    gap: isMobile => isMobile ? 8 : 12,
+    marginBottom: isMobile => 24 : 32,
     flexWrap: "wrap",
     justifyContent: "center",
   },
   
   tab: {
-    padding: "12px 24px",
+    padding: isMobile => isMobile ? "8px 16px" : "12px 24px",
     background: "rgba(255,255,255,0.1)",
     border: "1px solid rgba(255,255,255,0.2)",
     borderRadius: 40,
     color: "#fff",
-    fontSize: 14,
+    fontSize: isMobile => isMobile ? 12 : 14,
     fontWeight: 500,
     cursor: "pointer",
     backdropFilter: "blur(10px)",
@@ -714,6 +690,11 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: 8,
+  },
+  
+  tabMobile: {
+    padding: "6px 12px",
+    fontSize: 11,
   },
   
   activeTab: {
@@ -725,16 +706,16 @@ const styles = {
   
   tabCount: {
     background: "rgba(0,0,0,0.1)",
-    padding: "2px 8px",
+    padding: "2px 6px",
     borderRadius: 20,
-    fontSize: 12,
+    fontSize: 11,
     marginLeft: 4,
   },
   
   bookingsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))",
-    gap: 24,
+    gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+    gap: isMobile => isMobile ? 16 : 24,
   },
   
   card: {
@@ -746,10 +727,13 @@ const styles = {
     transition: "all 0.3s ease",
     animation: "slideIn 0.5s ease-out",
     border: "1px solid rgba(255,255,255,0.2)",
+    width: "100%",
+    minWidth: 0,
+    boxSizing: "border-box",
   },
   
   cardHeader: {
-    padding: "20px 24px",
+    padding: isMobile => isMobile ? "16px" : "20px 24px",
     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     color: "#fff",
     display: "flex",
@@ -759,17 +743,31 @@ const styles = {
     gap: 12,
   },
   
+  cardHeaderLeft: {
+    flex: 1,
+    minWidth: 0,
+  },
+  
   pgName: {
     margin: 0,
-    fontSize: 18,
+    fontSize: isMobile => isMobile ? 16 : 18,
     fontWeight: 600,
     marginBottom: 4,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    wordBreak: "break-word",
   },
   
   pgLocation: {
     margin: 0,
-    fontSize: 13,
+    fontSize: isMobile => isMobile ? 11 : 13,
     opacity: 0.9,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   },
   
   badgeGroup: {
@@ -779,9 +777,9 @@ const styles = {
   },
   
   statusBadge: {
-    padding: "6px 12px",
+    padding: isMobile => isMobile ? "4px 8px" : "6px 12px",
     borderRadius: 30,
-    fontSize: 12,
+    fontSize: isMobile => isMobile ? 10 : 12,
     fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: "0.5px",
@@ -808,9 +806,9 @@ const styles = {
   },
   
   paymentBadge: {
-    padding: "6px 12px",
+    padding: isMobile => isMobile ? "4px 8px" : "6px 12px",
     borderRadius: 30,
-    fontSize: 12,
+    fontSize: isMobile => isMobile ? 10 : 12,
     background: "#fff",
   },
   
@@ -835,36 +833,43 @@ const styles = {
   },
   
   cardContent: {
-    padding: 24,
+    padding: isMobile => isMobile ? 16 : 24,
   },
   
   detailsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(2, 1fr)",
-    gap: 16,
+    gap: isMobile => isMobile ? 12 : 16,
     marginBottom: 20,
   },
   
   detailItem: {
     display: "flex",
     alignItems: "center",
-    gap: 12,
+    gap: isMobile => isMobile ? 8 : 12,
+    minWidth: 0,
   },
   
   detailIcon: {
-    fontSize: 24,
+    fontSize: isMobile => isMobile ? 20 : 24,
     background: "#f3f4f6",
-    width: 40,
-    height: 40,
+    width: isMobile => isMobile ? 36 : 40,
+    height: isMobile => isMobile ? 36 : 40,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 12,
+    flexShrink: 0,
+  },
+  
+  detailInfo: {
+    flex: 1,
+    minWidth: 0,
   },
   
   detailLabel: {
     display: "block",
-    fontSize: 11,
+    fontSize: isMobile => isMobile ? 10 : 11,
     color: "#6b7280",
     textTransform: "uppercase",
     letterSpacing: "0.5px",
@@ -873,25 +878,52 @@ const styles = {
   
   detailValue: {
     display: "block",
-    fontSize: 14,
+    fontSize: isMobile => isMobile ? 12 : 14,
     fontWeight: 600,
     color: "#1f2937",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    wordBreak: "break-word",
+  },
+  
+  callButton: {
+    display: "inline-block",
+    padding: isMobile => isMobile ? "4px 10px" : "6px 12px",
+    background: "#10b981",
+    color: "#fff",
+    borderRadius: 8,
+    fontSize: isMobile => isMobile ? 11 : 13,
+    fontWeight: 600,
+    textDecoration: "none",
+  },
+  
+  waitingMessage: {
+    background: "#fef3c7",
+    color: "#92400e",
+    padding: isMobile => isMobile ? "8px" : "10px",
+    borderRadius: 10,
+    fontSize: isMobile => isMobile ? 11 : 13,
+    textAlign: "center",
+    fontWeight: 600,
+    marginBottom: 20,
   },
   
   priceSection: {
     background: "#f9fafb",
     borderRadius: 16,
-    padding: 16,
+    padding: isMobile => isMobile ? 12 : 16,
     marginBottom: 20,
   },
   
   priceRow: {
     display: "flex",
     justifyContent: "space-between",
-    padding: "8px 0",
+    padding: isMobile => isMobile ? "6px 0" : "8px 0",
     color: "#4b5563",
-    fontSize: 14,
+    fontSize: isMobile => isMobile ? 12 : 14,
     borderBottom: "1px dashed #e5e7eb",
+    flexWrap: "wrap",
+    gap: 4,
   },
   
   totalPrice: {
@@ -900,16 +932,39 @@ const styles = {
     marginTop: 8,
     paddingTop: 8,
     borderTop: "2px solid #e5e7eb",
-    fontSize: 16,
+    fontSize: isMobile => isMobile ? 14 : 16,
     fontWeight: 700,
     color: "#1f2937",
+    flexWrap: "wrap",
+    gap: 4,
+  },
+  
+  paidMessage: {
+    background: "#d1fae5",
+    color: "#065f46",
+    padding: isMobile => isMobile ? "12px" : "14px",
+    borderRadius: 12,
+    fontSize: isMobile => isMobile ? 12 : 13,
+    textAlign: "center",
+    fontWeight: 500,
+    marginBottom: 16,
+    lineHeight: 1.5,
+  },
+  
+  paidMessageTitle: {
+    fontWeight: 700,
+    marginBottom: isMobile => isMobile ? 6 : 8,
+  },
+  
+  paidMessageSubtext: {
+    fontSize: isMobile => isMobile ? 11 : 12,
   },
   
   messageBox: {
-    padding: "12px 16px",
+    padding: isMobile => isMobile ? "10px 12px" : "12px 16px",
     borderRadius: 12,
     marginBottom: 16,
-    fontSize: 13,
+    fontSize: isMobile => isMobile ? 11 : 13,
     fontWeight: 500,
   },
   
@@ -940,15 +995,15 @@ const styles = {
   actionButtons: {
     display: "grid",
     gridTemplateColumns: "repeat(4, 1fr)",
-    gap: 8,
+    gap: isMobile => isMobile ? 6 : 8,
   },
   
   iconButton: {
-    padding: "10px",
+    padding: isMobile => isMobile ? "8px 4px" : "10px",
     background: "#f3f4f6",
     border: "none",
     borderRadius: 12,
-    fontSize: 12,
+    fontSize: isMobile => isMobile ? 10 : 12,
     fontWeight: 500,
     color: "#4b5563",
     cursor: "pointer",
@@ -957,20 +1012,21 @@ const styles = {
     flexDirection: "column",
     alignItems: "center",
     gap: 4,
+    minWidth: 0,
   },
   
   buttonIcon: {
-    fontSize: 18,
+    fontSize: isMobile => isMobile ? 16 : 18,
   },
   
   payButton: {
     width: "100%",
-    padding: "14px",
+    padding: isMobile => isMobile ? "12px" : "14px",
     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     border: "none",
     borderRadius: 14,
     color: "#fff",
-    fontSize: 16,
+    fontSize: isMobile => isMobile ? 14 : 16,
     fontWeight: 600,
     cursor: "pointer",
     transition: "all 0.3s ease",
@@ -982,21 +1038,34 @@ const styles = {
   
   confirmedBadge: {
     marginTop: 16,
-    padding: "12px",
+    padding: isMobile => isMobile ? "10px" : "12px",
     background: "#10b981",
     color: "#fff",
     borderRadius: 12,
-    fontSize: 14,
+    fontSize: isMobile => isMobile ? 12 : 14,
     fontWeight: 600,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+    flexWrap: "wrap",
+    textAlign: "center",
+  },
+  
+  leftStatusMessage: {
+    marginTop: 16,
+    padding: isMobile => isMobile ? "10px" : "12px",
+    background: "#6b7280",
+    color: "#fff",
+    borderRadius: 12,
+    fontSize: isMobile => isMobile ? 12 : 14,
+    fontWeight: 600,
+    textAlign: "center",
   },
   
   emptyState: {
     textAlign: "center",
-    padding: "60px 20px",
+    padding: isMobile => isMobile ? "40px 20px" : "60px 20px",
     background: "rgba(255,255,255,0.95)",
     backdropFilter: "blur(10px)",
     borderRadius: 32,
@@ -1004,30 +1073,30 @@ const styles = {
   },
   
   emptyIcon: {
-    fontSize: 64,
+    fontSize: isMobile => isMobile ? 48 : 64,
     marginBottom: 16,
   },
   
   emptyTitle: {
-    fontSize: 24,
+    fontSize: isMobile => isMobile ? 20 : 24,
     fontWeight: 700,
     color: "#1f2937",
     marginBottom: 8,
   },
   
   emptyText: {
-    fontSize: 16,
+    fontSize: isMobile => isMobile ? 13 : 16,
     color: "#6b7280",
     marginBottom: 24,
   },
   
   browseBtn: {
-    padding: "14px 32px",
+    padding: isMobile => isMobile ? "12px 24px" : "14px 32px",
     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     border: "none",
     borderRadius: 40,
     color: "#fff",
-    fontSize: 16,
+    fontSize: isMobile => isMobile ? 14 : 16,
     fontWeight: 600,
     cursor: "pointer",
     transition: "all 0.3s ease",
@@ -1059,7 +1128,7 @@ const styles = {
   
   errorContainer: {
     textAlign: "center",
-    padding: "60px 20px",
+    padding: isMobile => isMobile ? "40px 20px" : "60px 20px",
     background: "rgba(255,255,255,0.95)",
     backdropFilter: "blur(10px)",
     borderRadius: 32,
@@ -1073,18 +1142,18 @@ const styles = {
   },
   
   errorText: {
-    fontSize: 16,
+    fontSize: isMobile => isMobile ? 13 : 16,
     color: "#ef4444",
     marginBottom: 24,
   },
   
   retryBtn: {
-    padding: "12px 24px",
+    padding: isMobile => isMobile ? "10px 20px" : "12px 24px",
     background: "#3b82f6",
     border: "none",
     borderRadius: 40,
     color: "#fff",
-    fontSize: 14,
+    fontSize: isMobile => isMobile ? 13 : 14,
     fontWeight: 600,
     cursor: "pointer",
   },
@@ -1115,36 +1184,36 @@ const styles = {
   },
   
   paymentDialogBody: {
-    padding: "24px",
+    padding: isMobile => isMobile ? 20 : 24,
     textAlign: "center",
   },
   
   paymentIcon: {
-    fontSize: 48,
+    fontSize: isMobile => isMobile ? 40 : 48,
     marginBottom: 16,
   },
   
   paymentText: {
-    fontSize: 16,
+    fontSize: isMobile => isMobile ? 14 : 16,
     color: "#1f2937",
     marginBottom: 12,
     lineHeight: 1.5,
   },
   
   paymentBreakdown: {
-    fontSize: 14,
+    fontSize: isMobile => isMobile ? 12 : 14,
     color: "#6b7280",
     marginBottom: 24,
   },
   
   confirmPayButton: {
     width: "100%",
-    padding: "14px",
+    padding: isMobile => isMobile ? "12px" : "14px",
     background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
     border: "none",
     borderRadius: 14,
     color: "#fff",
-    fontSize: 16,
+    fontSize: isMobile => isMobile ? 14 : 16,
     fontWeight: 600,
     cursor: "pointer",
     transition: "all 0.3s ease",
@@ -1163,7 +1232,7 @@ const styles = {
   },
   
   modalTitle: {
-    fontSize: 24,
+    fontSize: isMobile => isMobile ? 20 : 24,
     fontWeight: 700,
     color: "#1f2937",
     margin: 0,
@@ -1196,21 +1265,22 @@ const styles = {
   errorToast: {
     position: "fixed",
     bottom: 20,
-    right: 20,
+    right: isMobile => isMobile ? 10 : 20,
+    left: isMobile => isMobile ? 10 : "auto",
     background: "#fee2e2",
     color: "#991b1b",
-    padding: "16px 20px",
+    padding: isMobile => isMobile ? "12px 16px" : "16px 20px",
     borderRadius: 12,
     display: "flex",
     alignItems: "center",
     gap: 12,
-    fontSize: 14,
+    fontSize: isMobile => isMobile ? 12 : 14,
     fontWeight: 500,
     border: "1px solid #fecaca",
     boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
     zIndex: 1100,
     animation: "slideIn 0.3s ease",
-    maxWidth: 400,
+    maxWidth: isMobile => "calc(100% - 20px)" : 400,
   },
   
   errorToastClose: {
@@ -1223,5 +1293,38 @@ const styles = {
     padding: "0 4px",
   },
 };
+
+// Helper function to get mobile state
+const getIsMobile = () => {
+  if (typeof window !== 'undefined') {
+    return window.innerWidth < 768;
+  }
+  return false;
+};
+
+// Convert styles to functions that can use isMobile
+const finalStyles = {};
+Object.keys(styles).forEach(key => {
+  const style = styles[key];
+  if (typeof style === 'function') {
+    finalStyles[key] = style(getIsMobile());
+  } else if (typeof style === 'object' && style !== null) {
+    // Check if any nested values are functions
+    const newStyle = {};
+    Object.keys(style).forEach(subKey => {
+      if (typeof style[subKey] === 'function') {
+        newStyle[subKey] = style[subKey](getIsMobile());
+      } else {
+        newStyle[subKey] = style[subKey];
+      }
+    });
+    finalStyles[key] = newStyle;
+  } else {
+    finalStyles[key] = style;
+  }
+});
+
+// Use finalStyles for the component
+const stylesToUse = finalStyles;
 
 export default UserBookingHistory;
