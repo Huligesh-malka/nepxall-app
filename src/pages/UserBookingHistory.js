@@ -9,7 +9,7 @@ const UserBookingHistory = () => {
   const navigate = useNavigate();
   
   // Add mobile detection
-  const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+  const [isMobile, setIsMobile] = useState(false);
   
   const { user, loading: authLoading } = useAuth();
   const [me, setMe] = useState(null);
@@ -21,6 +21,16 @@ const UserBookingHistory = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [selectedBookingForPayment, setSelectedBookingForPayment] = useState(null);
+
+  // Check window size on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Load user from backend
   useEffect(() => {
@@ -258,25 +268,64 @@ const UserBookingHistory = () => {
     );
   }
 
+  // Dynamic styles based on isMobile
+  const containerPadding = isMobile ? "20px 16px" : "40px 24px";
+  const headerMarginBottom = isMobile ? 24 : 40;
+  const titleFontSize = isMobile ? "28px" : "clamp(32px, 6vw, 48px)";
+  const subtitleFontSize = isMobile ? 13 : 16;
+  const tabsGap = isMobile ? 8 : 12;
+  const tabsMarginBottom = isMobile ? 24 : 32;
+  const tabPadding = isMobile ? "8px 16px" : "12px 24px";
+  const tabFontSize = isMobile ? 12 : 14;
+  const bookingsGap = isMobile ? 16 : 24;
+  const cardHeaderPadding = isMobile ? "16px" : "20px 24px";
+  const pgNameFontSize = isMobile ? 16 : 18;
+  const pgLocationFontSize = isMobile ? 11 : 13;
+  const badgePadding = isMobile ? "4px 8px" : "6px 12px";
+  const badgeFontSize = isMobile ? 10 : 12;
+  const cardContentPadding = isMobile ? 16 : 24;
+  const detailsGap = isMobile ? 12 : 16;
+  const detailIconSize = isMobile ? 20 : 24;
+  const detailIconBoxSize = isMobile ? 36 : 40;
+  const detailLabelFontSize = isMobile ? 10 : 11;
+  const detailValueFontSize = isMobile ? 12 : 14;
+  const priceSectionPadding = isMobile ? 12 : 16;
+  const priceRowFontSize = isMobile ? 12 : 14;
+  const totalPriceFontSize = isMobile ? 14 : 16;
+  const actionButtonsGap = isMobile ? 6 : 8;
+  const iconButtonPadding = isMobile ? "8px 4px" : "10px";
+  const iconButtonFontSize = isMobile ? 10 : 12;
+  const buttonIconSize = isMobile ? 16 : 18;
+  const payButtonPadding = isMobile ? "12px" : "14px";
+  const payButtonFontSize = isMobile ? 14 : 16;
+  const emptyStatePadding = isMobile ? "40px 20px" : "60px 20px";
+  const emptyIconSize = isMobile ? 48 : 64;
+  const emptyTitleFontSize = isMobile ? 20 : 24;
+  const emptyTextFontSize = isMobile ? 13 : 16;
+  const errorToastRight = isMobile ? 10 : 20;
+  const errorToastLeft = isMobile ? 10 : "auto";
+  const errorToastMaxWidth = isMobile ? "calc(100% - 20px)" : 400;
+
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, padding: containerPadding }}>
       {/* Header */}
-      <div style={styles.header}>
-        <h1 style={styles.title}>My Bookings</h1>
-        <p style={styles.subtitle}>Manage your property bookings and payments</p>
+      <div style={{ ...styles.header, marginBottom: headerMarginBottom }}>
+        <h1 style={{ ...styles.title, fontSize: titleFontSize }}>My Bookings</h1>
+        <p style={{ ...styles.subtitle, fontSize: subtitleFontSize }}>Manage your property bookings and payments</p>
       </div>
 
       {/* Tabs */}
       {bookings.length > 0 && (
-        <div style={styles.tabsContainer}>
+        <div style={{ ...styles.tabsContainer, gap: tabsGap, marginBottom: tabsMarginBottom }}>
           {["all", "pending", "approved", "confirmed", "left"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               style={{
                 ...styles.tab,
-                ...(activeTab === tab ? styles.activeTab : {}),
-                ...(isMobile && styles.tabMobile)
+                padding: tabPadding,
+                fontSize: tabFontSize,
+                ...(activeTab === tab ? styles.activeTab : {})
               }}
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -290,10 +339,10 @@ const UserBookingHistory = () => {
 
       {/* Bookings List */}
       {filteredBookings.length === 0 ? (
-        <div style={styles.emptyState}>
-          <div style={styles.emptyIcon}>🏠</div>
-          <h3 style={styles.emptyTitle}>No bookings found</h3>
-          <p style={styles.emptyText}>Start your journey by browsing our properties</p>
+        <div style={{ ...styles.emptyState, padding: emptyStatePadding }}>
+          <div style={{ ...styles.emptyIcon, fontSize: emptyIconSize }}>🏠</div>
+          <h3 style={{ ...styles.emptyTitle, fontSize: emptyTitleFontSize }}>No bookings found</h3>
+          <p style={{ ...styles.emptyText, fontSize: emptyTextFontSize }}>Start your journey by browsing our properties</p>
           <button 
             style={styles.browseBtn} 
             onClick={() => navigate("/")}
@@ -302,7 +351,7 @@ const UserBookingHistory = () => {
           </button>
         </div>
       ) : (
-        <div style={styles.bookingsGrid}>
+        <div style={{ ...styles.bookingsGrid, gap: bookingsGap }}>
           {filteredBookings.map((booking) => {
             const rent = Number(booking.rent_amount || booking.rent || 0);
             const deposit = Number(booking.security_deposit || 0);
@@ -322,14 +371,16 @@ const UserBookingHistory = () => {
             return (
               <div key={booking.id} style={styles.card}>
                 {/* Card Header */}
-                <div style={styles.cardHeader}>
+                <div style={{ ...styles.cardHeader, padding: cardHeaderPadding }}>
                   <div style={styles.cardHeaderLeft}>
-                    <h3 style={styles.pgName}>{booking.pg_name || "Property Name"}</h3>
-                    <p style={styles.pgLocation}>{booking.location || "Location not specified"}</p>
+                    <h3 style={{ ...styles.pgName, fontSize: pgNameFontSize }}>{booking.pg_name || "Property Name"}</h3>
+                    <p style={{ ...styles.pgLocation, fontSize: pgLocationFontSize }}>{booking.location || "Location not specified"}</p>
                   </div>
                   <div style={styles.badgeGroup}>
                     <span style={{
                       ...styles.statusBadge,
+                      padding: badgePadding,
+                      fontSize: badgeFontSize,
                       ...(booking.status === "confirmed" ? styles.statusConfirmed :
                          booking.status === "approved" ? styles.statusApproved :
                          booking.status === "left" ? styles.statusLeft :
@@ -340,6 +391,8 @@ const UserBookingHistory = () => {
                     {paymentDisplay.badge && (
                       <span style={{
                         ...styles.paymentBadge,
+                        padding: badgePadding,
+                        fontSize: badgeFontSize,
                         ...styles[`paymentBadge${paymentDisplay.badge.style}`]
                       }}>
                         {paymentDisplay.badge.text}
@@ -349,13 +402,13 @@ const UserBookingHistory = () => {
                 </div>
 
                 {/* Card Content */}
-                <div style={styles.cardContent}>
+                <div style={{ ...styles.cardContent, padding: cardContentPadding }}>
                   {/* Details Grid - Mobile Responsive */}
-                  <div style={styles.detailsGrid}>
+                  <div style={{ ...styles.detailsGrid, gap: detailsGap }}>
                     <div style={styles.detailItem}>
-                      <span style={styles.detailIcon}>📞</span>
+                      <span style={{ ...styles.detailIcon, fontSize: detailIconSize, width: detailIconBoxSize, height: detailIconBoxSize }}>📞</span>
                       <div style={styles.detailInfo}>
-                        <span style={styles.detailLabel}>Contact</span>
+                        <span style={{ ...styles.detailLabel, fontSize: detailLabelFontSize }}>Contact</span>
                         {booking.status !== "pending" && booking.phone ? (
                           <a
                             href={`tel:${booking.phone}`}
@@ -369,10 +422,10 @@ const UserBookingHistory = () => {
                       </div>
                     </div>
                     <div style={styles.detailItem}>
-                      <span style={styles.detailIcon}>📅</span>
+                      <span style={{ ...styles.detailIcon, fontSize: detailIconSize, width: detailIconBoxSize, height: detailIconBoxSize }}>📅</span>
                       <div style={styles.detailInfo}>
-                        <span style={styles.detailLabel}>Check-in</span>
-                        <span style={styles.detailValue}>
+                        <span style={{ ...styles.detailLabel, fontSize: detailLabelFontSize }}>Check-in</span>
+                        <span style={{ ...styles.detailValue, fontSize: detailValueFontSize }}>
                           {booking.check_in_date
                             ? new Date(booking.check_in_date).toLocaleDateString("en-US", {
                                 day: "numeric",
@@ -384,18 +437,18 @@ const UserBookingHistory = () => {
                       </div>
                     </div>
                     <div style={styles.detailItem}>
-                      <span style={styles.detailIcon}>🛏️</span>
+                      <span style={{ ...styles.detailIcon, fontSize: detailIconSize, width: detailIconBoxSize, height: detailIconBoxSize }}>🛏️</span>
                       <div style={styles.detailInfo}>
-                        <span style={styles.detailLabel}>Room Type</span>
-                        <span style={styles.detailValue}>{booking.room_type || "Single"}</span>
+                        <span style={{ ...styles.detailLabel, fontSize: detailLabelFontSize }}>Room Type</span>
+                        <span style={{ ...styles.detailValue, fontSize: detailValueFontSize }}>{booking.room_type || "Single"}</span>
                       </div>
                     </div>
                     {booking.room_no && (
                       <div style={styles.detailItem}>
-                        <span style={styles.detailIcon}>🚪</span>
+                        <span style={{ ...styles.detailIcon, fontSize: detailIconSize, width: detailIconBoxSize, height: detailIconBoxSize }}>🚪</span>
                         <div style={styles.detailInfo}>
-                          <span style={styles.detailLabel}>Room No</span>
-                          <span style={styles.detailValue}>{booking.room_no}</span>
+                          <span style={{ ...styles.detailLabel, fontSize: detailLabelFontSize }}>Room No</span>
+                          <span style={{ ...styles.detailValue, fontSize: detailValueFontSize }}>{booking.room_no}</span>
                         </div>
                       </div>
                     )}
@@ -409,39 +462,39 @@ const UserBookingHistory = () => {
                   )}
 
                   {/* Price Section */}
-                  <div style={styles.priceSection}>
+                  <div style={{ ...styles.priceSection, padding: priceSectionPadding }}>
                     {rent > 0 && (
-                      <div style={styles.priceRow}>
+                      <div style={{ ...styles.priceRow, fontSize: priceRowFontSize }}>
                         <span>Rent</span>
                         <span>₹{rent.toLocaleString()}</span>
                       </div>
                     )}
 
                     {deposit > 0 && (
-                      <div style={styles.priceRow}>
+                      <div style={{ ...styles.priceRow, fontSize: priceRowFontSize }}>
                         <span>Security Deposit</span>
                         <span>₹{deposit.toLocaleString()}</span>
                       </div>
                     )}
 
                     {maintenance > 0 && (
-                      <div style={styles.priceRow}>
+                      <div style={{ ...styles.priceRow, fontSize: priceRowFontSize }}>
                         <span>Maintenance</span>
                         <span>₹{maintenance.toLocaleString()}</span>
                       </div>
                     )}
 
-                    <div style={styles.priceRow}>
+                    <div style={{ ...styles.priceRow, fontSize: priceRowFontSize }}>
                       <span>Platform Fee</span>
                       <span>₹99</span>
                     </div>
 
-                    <div style={styles.priceRow}>
+                    <div style={{ ...styles.priceRow, fontSize: priceRowFontSize }}>
                       <span>Remaining Amount</span>
                       <span>₹{remainingAmount.toLocaleString()}</span>
                     </div>
 
-                    <div style={styles.totalPrice}>
+                    <div style={{ ...styles.totalPrice, fontSize: totalPriceFontSize }}>
                       <span>Total Paid Online</span>
                       <span>₹1099</span>
                     </div>
@@ -469,18 +522,20 @@ const UserBookingHistory = () => {
 
                   {/* Action Buttons */}
                   <div style={styles.actionGroup}>
-                    <div style={styles.actionButtons}>
+                    <div style={{ ...styles.actionButtons, gap: actionButtonsGap }}>
                       <button
-                        style={styles.iconButton}
+                        style={{ ...styles.iconButton, padding: iconButtonPadding, fontSize: iconButtonFontSize }}
                         onClick={() => navigate(`/pg/${booking.pg_id}`)}
                         title="View Property"
                       >
-                        <span style={styles.buttonIcon}>🏠</span>
+                        <span style={{ ...styles.buttonIcon, fontSize: buttonIconSize }}>🏠</span>
                         <span>View</span>
                       </button>
                       <button
                         style={{
                           ...styles.iconButton,
+                          padding: iconButtonPadding,
+                          fontSize: iconButtonFontSize,
                           opacity: !me?.id ? 0.5 : 1,
                           cursor: !me?.id ? "not-allowed" : "pointer"
                         }}
@@ -488,30 +543,30 @@ const UserBookingHistory = () => {
                         disabled={!me?.id}
                         title="Chat with Owner"
                       >
-                        <span style={styles.buttonIcon}>💬</span>
+                        <span style={{ ...styles.buttonIcon, fontSize: buttonIconSize }}>💬</span>
                         <span>{!me?.id ? "Loading..." : "Chat"}</span>
                       </button>
                       <button
-                        style={styles.iconButton}
+                        style={{ ...styles.iconButton, padding: iconButtonPadding, fontSize: iconButtonFontSize }}
                         onClick={() => window.open("/e-stamp.jpg", "_blank")}
                         title="Preview Agreement"
                       >
-                        <span style={styles.buttonIcon}>📑</span>
+                        <span style={{ ...styles.buttonIcon, fontSize: buttonIconSize }}>📑</span>
                         <span>Preview</span>
                       </button>
                       <button
-                        style={styles.iconButton}
+                        style={{ ...styles.iconButton, padding: iconButtonPadding, fontSize: iconButtonFontSize }}
                         onClick={() => navigate(`/user/services/${booking.id}`)}
                         title="Add Services"
                       >
-                        <span style={styles.buttonIcon}>🚚</span>
+                        <span style={{ ...styles.buttonIcon, fontSize: buttonIconSize }}>🚚</span>
                         <span>Services</span>
                       </button>
                     </div>
 
                     {showPayButton && (
                       <button
-                        style={styles.payButton}
+                        style={{ ...styles.payButton, padding: payButtonPadding, fontSize: payButtonFontSize }}
                         onClick={() => handleShowPaymentDialog(booking)}
                         disabled={payingId === booking.id}
                       >
@@ -589,7 +644,7 @@ const UserBookingHistory = () => {
 
       {/* Error Message Display */}
       {error && (
-        <div style={styles.errorToast}>
+        <div style={{ ...styles.errorToast, right: errorToastRight, left: errorToastLeft, maxWidth: errorToastMaxWidth }}>
           <span>❌</span>
           <span>{error}</span>
           <button onClick={() => setError("")} style={styles.errorToastClose}>×</button>
@@ -620,25 +675,17 @@ const UserBookingHistory = () => {
               opacity: 1;
             }
           }
-          
-          /* Mobile Responsive Styles */
-          @media (max-width: 768px) {
-            .hero-section {
-              padding: 25px 20px !important;
-            }
-          }
         `}
       </style>
     </div>
   );
 };
 
-// Styles - Mobile Responsive Updated
+// Styles - Base styles without functions
 const styles = {
   container: {
     maxWidth: 1200,
     margin: "0 auto",
-    padding: isMobile => isMobile ? "20px 16px" : "40px 24px",
     minHeight: "100vh",
     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     animation: "slideIn 0.5s ease-out",
@@ -649,11 +696,9 @@ const styles = {
   
   header: {
     textAlign: "center",
-    marginBottom: isMobile => isMobile ? 24 : 40,
   },
   
   title: {
-    fontSize: isMobile => isMobile ? "28px" : "clamp(32px, 6vw, 48px)",
     fontWeight: 800,
     color: "#fff",
     marginBottom: 8,
@@ -663,26 +708,21 @@ const styles = {
   },
   
   subtitle: {
-    fontSize: isMobile => isMobile ? 13 : 16,
     color: "rgba(255,255,255,0.9)",
     fontWeight: 400,
   },
   
   tabsContainer: {
     display: "flex",
-    gap: isMobile => isMobile ? 8 : 12,
-    marginBottom: isMobile => 24 : 32,
     flexWrap: "wrap",
     justifyContent: "center",
   },
   
   tab: {
-    padding: isMobile => isMobile ? "8px 16px" : "12px 24px",
     background: "rgba(255,255,255,0.1)",
     border: "1px solid rgba(255,255,255,0.2)",
     borderRadius: 40,
     color: "#fff",
-    fontSize: isMobile => isMobile ? 12 : 14,
     fontWeight: 500,
     cursor: "pointer",
     backdropFilter: "blur(10px)",
@@ -690,11 +730,6 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: 8,
-  },
-  
-  tabMobile: {
-    padding: "6px 12px",
-    fontSize: 11,
   },
   
   activeTab: {
@@ -715,7 +750,6 @@ const styles = {
   bookingsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-    gap: isMobile => isMobile ? 16 : 24,
   },
   
   card: {
@@ -733,7 +767,6 @@ const styles = {
   },
   
   cardHeader: {
-    padding: isMobile => isMobile ? "16px" : "20px 24px",
     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     color: "#fff",
     display: "flex",
@@ -750,7 +783,6 @@ const styles = {
   
   pgName: {
     margin: 0,
-    fontSize: isMobile => isMobile ? 16 : 18,
     fontWeight: 600,
     marginBottom: 4,
     overflow: "hidden",
@@ -763,7 +795,6 @@ const styles = {
   
   pgLocation: {
     margin: 0,
-    fontSize: isMobile => isMobile ? 11 : 13,
     opacity: 0.9,
     overflow: "hidden",
     textOverflow: "ellipsis",
@@ -777,9 +808,7 @@ const styles = {
   },
   
   statusBadge: {
-    padding: isMobile => isMobile ? "4px 8px" : "6px 12px",
     borderRadius: 30,
-    fontSize: isMobile => isMobile ? 10 : 12,
     fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: "0.5px",
@@ -806,9 +835,7 @@ const styles = {
   },
   
   paymentBadge: {
-    padding: isMobile => isMobile ? "4px 8px" : "6px 12px",
     borderRadius: 30,
-    fontSize: isMobile => isMobile ? 10 : 12,
     background: "#fff",
   },
   
@@ -832,29 +859,23 @@ const styles = {
     color: "#fff",
   },
   
-  cardContent: {
-    padding: isMobile => isMobile ? 16 : 24,
-  },
+  cardContent: {},
   
   detailsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(2, 1fr)",
-    gap: isMobile => isMobile ? 12 : 16,
     marginBottom: 20,
   },
   
   detailItem: {
     display: "flex",
     alignItems: "center",
-    gap: isMobile => isMobile ? 8 : 12,
+    gap: 12,
     minWidth: 0,
   },
   
   detailIcon: {
-    fontSize: isMobile => isMobile ? 20 : 24,
     background: "#f3f4f6",
-    width: isMobile => isMobile ? 36 : 40,
-    height: isMobile => isMobile ? 36 : 40,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -869,7 +890,6 @@ const styles = {
   
   detailLabel: {
     display: "block",
-    fontSize: isMobile => isMobile ? 10 : 11,
     color: "#6b7280",
     textTransform: "uppercase",
     letterSpacing: "0.5px",
@@ -878,7 +898,6 @@ const styles = {
   
   detailValue: {
     display: "block",
-    fontSize: isMobile => isMobile ? 12 : 14,
     fontWeight: 600,
     color: "#1f2937",
     overflow: "hidden",
@@ -888,11 +907,9 @@ const styles = {
   
   callButton: {
     display: "inline-block",
-    padding: isMobile => isMobile ? "4px 10px" : "6px 12px",
     background: "#10b981",
     color: "#fff",
     borderRadius: 8,
-    fontSize: isMobile => isMobile ? 11 : 13,
     fontWeight: 600,
     textDecoration: "none",
   },
@@ -900,9 +917,7 @@ const styles = {
   waitingMessage: {
     background: "#fef3c7",
     color: "#92400e",
-    padding: isMobile => isMobile ? "8px" : "10px",
     borderRadius: 10,
-    fontSize: isMobile => isMobile ? 11 : 13,
     textAlign: "center",
     fontWeight: 600,
     marginBottom: 20,
@@ -911,16 +926,13 @@ const styles = {
   priceSection: {
     background: "#f9fafb",
     borderRadius: 16,
-    padding: isMobile => isMobile ? 12 : 16,
     marginBottom: 20,
   },
   
   priceRow: {
     display: "flex",
     justifyContent: "space-between",
-    padding: isMobile => isMobile ? "6px 0" : "8px 0",
     color: "#4b5563",
-    fontSize: isMobile => isMobile ? 12 : 14,
     borderBottom: "1px dashed #e5e7eb",
     flexWrap: "wrap",
     gap: 4,
@@ -932,7 +944,6 @@ const styles = {
     marginTop: 8,
     paddingTop: 8,
     borderTop: "2px solid #e5e7eb",
-    fontSize: isMobile => isMobile ? 14 : 16,
     fontWeight: 700,
     color: "#1f2937",
     flexWrap: "wrap",
@@ -942,9 +953,7 @@ const styles = {
   paidMessage: {
     background: "#d1fae5",
     color: "#065f46",
-    padding: isMobile => isMobile ? "12px" : "14px",
     borderRadius: 12,
-    fontSize: isMobile => isMobile ? 12 : 13,
     textAlign: "center",
     fontWeight: 500,
     marginBottom: 16,
@@ -953,18 +962,16 @@ const styles = {
   
   paidMessageTitle: {
     fontWeight: 700,
-    marginBottom: isMobile => isMobile ? 6 : 8,
+    marginBottom: 8,
   },
   
   paidMessageSubtext: {
-    fontSize: isMobile => isMobile ? 11 : 12,
+    fontSize: 12,
   },
   
   messageBox: {
-    padding: isMobile => isMobile ? "10px 12px" : "12px 16px",
     borderRadius: 12,
     marginBottom: 16,
-    fontSize: isMobile => isMobile ? 11 : 13,
     fontWeight: 500,
   },
   
@@ -995,15 +1002,12 @@ const styles = {
   actionButtons: {
     display: "grid",
     gridTemplateColumns: "repeat(4, 1fr)",
-    gap: isMobile => isMobile ? 6 : 8,
   },
   
   iconButton: {
-    padding: isMobile => isMobile ? "8px 4px" : "10px",
     background: "#f3f4f6",
     border: "none",
     borderRadius: 12,
-    fontSize: isMobile => isMobile ? 10 : 12,
     fontWeight: 500,
     color: "#4b5563",
     cursor: "pointer",
@@ -1015,18 +1019,14 @@ const styles = {
     minWidth: 0,
   },
   
-  buttonIcon: {
-    fontSize: isMobile => isMobile ? 16 : 18,
-  },
+  buttonIcon: {},
   
   payButton: {
     width: "100%",
-    padding: isMobile => isMobile ? "12px" : "14px",
     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     border: "none",
     borderRadius: 14,
     color: "#fff",
-    fontSize: isMobile => isMobile ? 14 : 16,
     fontWeight: 600,
     cursor: "pointer",
     transition: "all 0.3s ease",
@@ -1038,11 +1038,9 @@ const styles = {
   
   confirmedBadge: {
     marginTop: 16,
-    padding: isMobile => isMobile ? "10px" : "12px",
     background: "#10b981",
     color: "#fff",
     borderRadius: 12,
-    fontSize: isMobile => isMobile ? 12 : 14,
     fontWeight: 600,
     display: "flex",
     alignItems: "center",
@@ -1054,18 +1052,15 @@ const styles = {
   
   leftStatusMessage: {
     marginTop: 16,
-    padding: isMobile => isMobile ? "10px" : "12px",
     background: "#6b7280",
     color: "#fff",
     borderRadius: 12,
-    fontSize: isMobile => isMobile ? 12 : 14,
     fontWeight: 600,
     textAlign: "center",
   },
   
   emptyState: {
     textAlign: "center",
-    padding: isMobile => isMobile ? "40px 20px" : "60px 20px",
     background: "rgba(255,255,255,0.95)",
     backdropFilter: "blur(10px)",
     borderRadius: 32,
@@ -1073,30 +1068,25 @@ const styles = {
   },
   
   emptyIcon: {
-    fontSize: isMobile => isMobile ? 48 : 64,
     marginBottom: 16,
   },
   
   emptyTitle: {
-    fontSize: isMobile => isMobile ? 20 : 24,
     fontWeight: 700,
     color: "#1f2937",
     marginBottom: 8,
   },
   
   emptyText: {
-    fontSize: isMobile => isMobile ? 13 : 16,
     color: "#6b7280",
     marginBottom: 24,
   },
   
   browseBtn: {
-    padding: isMobile => isMobile ? "12px 24px" : "14px 32px",
     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     border: "none",
     borderRadius: 40,
     color: "#fff",
-    fontSize: isMobile => isMobile ? 14 : 16,
     fontWeight: 600,
     cursor: "pointer",
     transition: "all 0.3s ease",
@@ -1128,7 +1118,6 @@ const styles = {
   
   errorContainer: {
     textAlign: "center",
-    padding: isMobile => isMobile ? "40px 20px" : "60px 20px",
     background: "rgba(255,255,255,0.95)",
     backdropFilter: "blur(10px)",
     borderRadius: 32,
@@ -1142,18 +1131,15 @@ const styles = {
   },
   
   errorText: {
-    fontSize: isMobile => isMobile ? 13 : 16,
     color: "#ef4444",
     marginBottom: 24,
   },
   
   retryBtn: {
-    padding: isMobile => isMobile ? "10px 20px" : "12px 24px",
     background: "#3b82f6",
     border: "none",
     borderRadius: 40,
     color: "#fff",
-    fontSize: isMobile => isMobile ? 13 : 14,
     fontWeight: 600,
     cursor: "pointer",
   },
@@ -1184,36 +1170,30 @@ const styles = {
   },
   
   paymentDialogBody: {
-    padding: isMobile => isMobile ? 20 : 24,
     textAlign: "center",
   },
   
   paymentIcon: {
-    fontSize: isMobile => isMobile ? 40 : 48,
     marginBottom: 16,
   },
   
   paymentText: {
-    fontSize: isMobile => isMobile ? 14 : 16,
     color: "#1f2937",
     marginBottom: 12,
     lineHeight: 1.5,
   },
   
   paymentBreakdown: {
-    fontSize: isMobile => isMobile ? 12 : 14,
     color: "#6b7280",
     marginBottom: 24,
   },
   
   confirmPayButton: {
     width: "100%",
-    padding: isMobile => isMobile ? "12px" : "14px",
     background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
     border: "none",
     borderRadius: 14,
     color: "#fff",
-    fontSize: isMobile => isMobile ? 14 : 16,
     fontWeight: 600,
     cursor: "pointer",
     transition: "all 0.3s ease",
@@ -1232,7 +1212,6 @@ const styles = {
   },
   
   modalTitle: {
-    fontSize: isMobile => isMobile ? 20 : 24,
     fontWeight: 700,
     color: "#1f2937",
     margin: 0,
@@ -1265,22 +1244,17 @@ const styles = {
   errorToast: {
     position: "fixed",
     bottom: 20,
-    right: isMobile => isMobile ? 10 : 20,
-    left: isMobile => isMobile ? 10 : "auto",
     background: "#fee2e2",
     color: "#991b1b",
-    padding: isMobile => isMobile ? "12px 16px" : "16px 20px",
     borderRadius: 12,
     display: "flex",
     alignItems: "center",
     gap: 12,
-    fontSize: isMobile => isMobile ? 12 : 14,
     fontWeight: 500,
     border: "1px solid #fecaca",
     boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
     zIndex: 1100,
     animation: "slideIn 0.3s ease",
-    maxWidth: isMobile => "calc(100% - 20px)" : 400,
   },
   
   errorToastClose: {
@@ -1293,38 +1267,5 @@ const styles = {
     padding: "0 4px",
   },
 };
-
-// Helper function to get mobile state
-const getIsMobile = () => {
-  if (typeof window !== 'undefined') {
-    return window.innerWidth < 768;
-  }
-  return false;
-};
-
-// Convert styles to functions that can use isMobile
-const finalStyles = {};
-Object.keys(styles).forEach(key => {
-  const style = styles[key];
-  if (typeof style === 'function') {
-    finalStyles[key] = style(getIsMobile());
-  } else if (typeof style === 'object' && style !== null) {
-    // Check if any nested values are functions
-    const newStyle = {};
-    Object.keys(style).forEach(subKey => {
-      if (typeof style[subKey] === 'function') {
-        newStyle[subKey] = style[subKey](getIsMobile());
-      } else {
-        newStyle[subKey] = style[subKey];
-      }
-    });
-    finalStyles[key] = newStyle;
-  } else {
-    finalStyles[key] = style;
-  }
-});
-
-// Use finalStyles for the component
-const stylesToUse = finalStyles;
 
 export default UserBookingHistory;
