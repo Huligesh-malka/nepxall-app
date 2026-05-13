@@ -462,18 +462,19 @@ const PhoneLogin = () => {
           exit="exit"
           style={{ width: "100%", display: "flex", justifyContent: "center" }}
         >
-          {/* FIX 2: Changed overflow from "hidden" to "visible" */}
+          {/* MOST IMPORTANT FIX: Fully responsive Paper with all mobile fixes */}
           <Paper
             elevation={0}
             sx={{
-              width: 500,
-              maxWidth: "92%",
-              borderRadius: 6,
+              width: "100%",
+              maxWidth: "420px",
+              mx: 2,
+              borderRadius: { xs: 4, sm: 6 },
               background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.98)} 0%, ${alpha(theme.palette.background.paper, 0.95)} 100%)`,
               backdropFilter: "blur(20px)",
               border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
               boxShadow: `0 25px 50px -12px ${alpha(theme.palette.common.black, 0.3)}`,
-              overflow: "visible", // ✅ FIXED: Changed from "hidden" to "visible"
+              overflow: "visible",
               position: "relative",
             }}
           >
@@ -490,10 +491,11 @@ const PhoneLogin = () => {
               }}
             />
 
+            {/* CHANGE 2: Responsive header padding */}
             <Box
               sx={{
                 background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.95)} 0%, ${alpha(theme.palette.secondary.main, 0.95)} 100%)`,
-                padding: "35px 32px 25px",
+                padding: { xs: "24px 16px 20px", sm: "35px 32px 25px" },
                 textAlign: "center",
                 position: "relative",
               }}
@@ -523,6 +525,7 @@ const PhoneLogin = () => {
                 </motion.div>
               </Zoom>
               
+              {/* CHANGE 5: Responsive title size */}
               <Typography
                 variant="h4"
                 sx={{
@@ -531,6 +534,7 @@ const PhoneLogin = () => {
                   mb: 1,
                   letterSpacing: "-0.5px",
                   textShadow: "0 2px 10px rgba(0,0,0,0.1)",
+                  fontSize: { xs: "2rem", sm: "2.5rem" },
                 }}
               >
                 {step === 1 && "Welcome Back!"}
@@ -551,7 +555,7 @@ const PhoneLogin = () => {
 
             {/* Stepper */}
             {step === 2 && (
-              <Box sx={{ px: 4, pt: 3 }}>
+              <Box sx={{ px: { xs: 2, sm: 4 }, pt: 3 }}>
                 <Stepper activeStep={activeStep} orientation="horizontal" sx={{ mb: 2 }}>
                   {steps.map((label, index) => (
                     <Step key={label}>
@@ -573,8 +577,8 @@ const PhoneLogin = () => {
               </Box>
             )}
 
-            {/* Content */}
-            <Box sx={{ padding: "24px 32px 32px" }}>
+            {/* CHANGE 3: Responsive content padding */}
+            <Box sx={{ padding: { xs: "20px 16px 24px", sm: "24px 32px 32px" } }}>
               <AnimatePresence mode="wait">
                 {error && (
                   <motion.div
@@ -649,6 +653,7 @@ const PhoneLogin = () => {
                         sx: {
                           borderRadius: 3,
                           transition: "all 0.2s",
+                          width: "100%",
                           '&:hover': {
                             boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.1)}`,
                           },
@@ -680,7 +685,7 @@ const PhoneLogin = () => {
                           borderRadius: 3,
                           py: 1.5,
                           textTransform: "none",
-                          fontSize: "1rem",
+                          fontSize: { xs: "0.9rem", sm: "1rem" },
                           fontWeight: 700,
                           background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
                           transition: "all 0.3s",
@@ -721,7 +726,7 @@ const PhoneLogin = () => {
                             <SecurityIcon color="primary" />
                           </InputAdornment>
                         ),
-                        sx: { borderRadius: 3 }
+                        sx: { borderRadius: 3, width: "100%" }
                       }}
                       sx={{
                         mb: 2,
@@ -749,7 +754,7 @@ const PhoneLogin = () => {
                           borderRadius: 3,
                           py: 1.5,
                           textTransform: "none",
-                          fontSize: "1rem",
+                          fontSize: { xs: "0.9rem", sm: "1rem" },
                           fontWeight: 700,
                           mb: 2,
                           background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
@@ -798,9 +803,9 @@ const PhoneLogin = () => {
                 )}
               </AnimatePresence>
 
-              {/* Trust badges */}
+              {/* Trust badges - CHANGE 4: Fixed chips overflow with flexWrap */}
               <Box sx={{ mt: 3, textAlign: "center" }}>
-                <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mb: 2 }}>
+                <Box sx={{ display: "flex", justifyContent: "center", gap: 1, flexWrap: "wrap", mb: 2 }}>
                   <Chip 
                     icon={<SecurityIcon sx={{ fontSize: 16 }} />} 
                     label="Secure" 
@@ -831,7 +836,7 @@ const PhoneLogin = () => {
                     textAlign: "center",
                     mt: 1,
                     lineHeight: 1.8,
-                    fontSize: "12px"
+                    fontSize: { xs: "10px", sm: "12px" }
                   }}
                 >
                   By continuing, you agree to our{" "}
@@ -865,7 +870,7 @@ const PhoneLogin = () => {
               </Box>
             </Box>
 
-            {/* FIX 1: Updated reCAPTCHA container with proper styling */}
+            {/* reCAPTCHA container */}
             <div
               id="recaptcha-container"
               style={{
