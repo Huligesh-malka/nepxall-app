@@ -3647,55 +3647,153 @@ function UserPGSearch() {
 
     setBookingPG(pg);
   };
+const handleBookingSubmit = async (bookingData) => {
 
-  const handleBookingSubmit = async (bookingData) => {
-    try {
-      if (!user) {
-        showNotification("Please register or login to continue");
-        navigate("/register");
-        return;
+  try {
+
+    /*
+    =========================================
+    LOGIN CHECK
+    =========================================
+    */
+
+    if (!user) {
+      showNotification("Please register or login to continue");
+      navigate("/register");
+      return;
+    }
+
+    /*
+    =========================================
+    USER TOKEN
+    =========================================
+    */
+
+    const token = await user.getIdToken(true);
+
+    /*
+    =========================================
+    BOOKING PAYLOAD
+    =========================================
+    */
+
+    const payload = {
+      check_in_date: bookingData.checkInDate,
+      room_type: bookingData.roomType
+    };
+
+    /*
+    =========================================
+    SAVE BOOKING
+    =========================================
+    */
+
+    const res = await api.post(
+      `/bookings/${bookingPG.id}`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       }
+    );
 
-      const token = await user.getIdToken(true);
+    /*
+    =========================================
+    ALREADY BOOKED
+    =========================================
+    */
 
-      const payload = {
-        check_in_date: bookingData.checkInDate,
-        room_type: bookingData.roomType
-      };
+    if (res.data?.alreadyBooked) {
 
-      const res = await api.post(
-        `/bookings/${bookingPG.id}`,
-        payload,
+      showNotification(res.data.message);
+
+      setBookingPG(null);
+
+      return;
+    }
+
+    /*
+    =========================================
+    TRACK EVENT
+    =========================================
+    */
+
+    trackEvent("booking_success", {
+      booking_id: res.data?.bookingId || res.data?.booking?.id,
+      pg_id: bookingPG.id,
+    });
+
+    /*
+    =========================================
+    SEND WHATSAPP TO OWNER
+    =========================================
+    */
+
+    try {
+
+      await api.post(
+        "/api/whatsapp/send-booking-whatsapp",
         {
-          headers: { Authorization: `Bearer ${token}` }
+          ownerPhone: bookingPG.owner_phone,
+          ownerName: bookingPG.owner_name || "Owner",
+
+          userName: user.displayName || "Customer",
+
+          userPhone:
+            user.phoneNumber ||
+            bookingPG.user_phone ||
+            "No Phone",
+
+          propertyName: bookingPG.pg_name,
+
+          area:
+            bookingPG.area ||
+            bookingPG.city ||
+            "Location",
+
+          rent: getEffectiveRent(bookingPG)
         }
       );
 
-      if (res.data?.alreadyBooked) {
-        showNotification(res.data.message);
-        setBookingPG(null);
-        return;
-      }
+      console.log("✅ WhatsApp Sent To Owner");
 
-      // Track booking success
-      trackEvent("booking_success", {
-        booking_id: res.data?.bookingId || res.data?.booking?.id,
-        pg_id: bookingPG.id,
-      });
-      
-      showNotification(res.data.message || "✅ Booking request sent to owner");
-      setBookingPG(null);
+    } catch (whatsappError) {
 
-    } catch (error) {
-      console.log("BOOKING ERROR:", error.response?.data);
+      console.log("❌ WhatsApp Error");
 
-      if (error.response?.data?.message) {
-        showNotification(error.response.data.message, true);
-      } else {
-        showNotification("❌ Something went wrong. Try again", true);
-      }
+      console.log(whatsappError.response?.data || whatsappError.message);
     }
-  };
+
+    /*
+    =========================================
+    SUCCESS MESSAGE
+    =========================================
+    */
+
+    showNotification(
+      res.data.message || "✅ Booking request sent to owner"
+    );
+
+    setBookingPG(null);
+
+  } catch (error) {
+
+    console.log("BOOKING ERROR:", error.response?.data);
+
+    if (error.response?.data?.message) {
+
+      showNotification(error.response.data.message, true);
+
+    } else {
+
+      showNotification(
+        "❌ Something went wrong. Try again",
+        true
+      );
+    }
+  }
+};
   
   const handleSaveFavorite = (pgId, isFavorite) => {
     const newFavorites = new Set(favorites);
@@ -4987,13 +5085,13 @@ function UserPGSearch() {
         />
       )}
 
-      {bookingPG && (
-        <BookingModal
-          pg={bookingPG}
-          onClose={() => setBookingPG(null)}
-          onBook={handleBookingSubmit}
-        />
-      )}
+      <BookingModal
+  pg={selectedPG}
+  onClose={() => setShowBookingModal(false)}
+  onBook={(bookingData) =>
+    handleBookingSubmit(bookingData, selectedPG)
+  }
+/>
 
       {showCompareModal && (
         <CompareModal
