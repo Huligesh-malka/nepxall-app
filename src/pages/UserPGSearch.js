@@ -94,6 +94,17 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://nepxall-backen
 // Key for localStorage to track if location permission was asked
 const LOCATION_PERMISSION_ASKED_KEY = "nepxall_location_permission_asked";
 
+// ================= TRACKING FUNCTION =================
+const trackEvent = (eventName, data = {}) => {
+  if (window.gtag) {
+    window.gtag("event", eventName, {
+      ...data,
+      timestamp: new Date().toISOString(),
+    });
+  }
+  console.log("Tracked:", eventName, data);
+};
+
 /* ================= HELPER: GET MOBILE STATE ================= */
 const isMobileDevice = () => window.innerWidth < 768;
 
@@ -982,6 +993,14 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
+  useEffect(() => {
+    // Track quick view open
+    trackEvent("quick_view_open", {
+      pg_id: pg.id,
+      pg_name: pg.pg_name,
+    });
+  }, [pg.id, pg.pg_name]);
+
   const getMainImageUrl = () => {
     if (pg.main_photo && pg.main_photo !== "") {
       return getCorrectImageUrl(pg.main_photo);
@@ -1001,10 +1020,31 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
     const newState = !isFavorite;
     setIsFavorite(newState);
     onSaveFavorite(pg.id, newState);
+    // Track favorite click
+    trackEvent("favorite_click", {
+      pg_id: pg.id,
+      favorite: newState,
+    });
   };
 
   const handleShare = () => {
     setShowShareOptions(!showShareOptions);
+  };
+
+  const handleWhatsAppShare = () => {
+    trackEvent("whatsapp_share_click", {
+      pg_id: pg.id,
+      pg_name: pg.pg_name,
+    });
+    window.open(`https://wa.me/?text=Check out this property: ${window.location.origin}/pg/${pg.id}`, '_blank');
+  };
+
+  const handleCopyLink = () => {
+    trackEvent("copy_link_click", {
+      pg_id: pg.id,
+    });
+    navigator.clipboard.writeText(`${window.location.origin}/pg/${pg.id}`);
+    alert("Link copied to clipboard!");
   };
 
   const getTypeColor = () => {
@@ -1313,6 +1353,31 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   const priceDetails = getPriceDetails();
   const roomAmenities = renderRoomAmenities();
 
+  const handleViewDetails = () => {
+    trackEvent("view_details_click", {
+      pg_id: pg.id,
+      pg_name: pg.pg_name,
+    });
+    window.open(`/pg/${pg.id}`, '_blank');
+  };
+
+  const handleMapClick = () => {
+    trackEvent("view_map_click", {
+      pg_id: pg.id,
+      pg_name: pg.pg_name,
+    });
+    window.open(`https://www.google.com/maps/search/?api=1&query=${pg.latitude},${pg.longitude}`, '_blank');
+  };
+
+  const handleBookNow = () => {
+    trackEvent("book_now_click", {
+      pg_id: pg.id,
+      pg_name: pg.pg_name,
+      category: pg.pg_category,
+    });
+    onBook(pg);
+  };
+
   return (
     <div style={{
       position: "fixed",
@@ -1423,7 +1488,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
             <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Share Property</h4>
             <div style={{ display: "flex", gap: 12 }}>
               <button
-                onClick={() => window.open(`https://wa.me/?text=Check out this property: ${window.location.origin}/pg/${pg.id}`, '_blank')}
+                onClick={handleWhatsAppShare}
                 style={{
                   padding: "8px 12px",
                   background: "#25D366",
@@ -1441,7 +1506,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
                 WhatsApp
               </button>
               <button
-                onClick={() => navigator.clipboard.writeText(`${window.location.origin}/pg/${pg.id}`)}
+                onClick={handleCopyLink}
                 style={{
                   padding: "8px 12px",
                   background: "#3b82f6",
@@ -1689,7 +1754,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
                   </div>
                 </div>
                 <button
-                  onClick={() => onBook(pg)}
+                  onClick={handleBookNow}
                   style={{
                     width: "100%",
                     padding: "14px",
@@ -1877,7 +1942,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
             flexWrap: "wrap"
           }}>
             <button
-              onClick={() => onBook(pg)}
+              onClick={handleBookNow}
               style={{
                 flex: 2,
                 minWidth: "150px",
@@ -1909,7 +1974,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
             </button>
             
             <button
-              onClick={() => window.open(`/pg/${pg.id}`, '_blank')}
+              onClick={handleViewDetails}
               style={{
                 flex: 1,
                 minWidth: "120px",
@@ -1942,7 +2007,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
             
             {pg.latitude && pg.longitude && (
               <button
-                onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${pg.latitude},${pg.longitude}`, '_blank')}
+                onClick={handleMapClick}
                 style={{
                   flex: 1,
                   minWidth: "120px",
@@ -2844,6 +2909,11 @@ const PromoBannerSlider = ({ onBannerClick }) => {
 const HeroBanner = () => {
   const isMobile = isMobileDevice();
   
+  useEffect(() => {
+    // Track homepage visit
+    trackEvent("homepage_visit");
+  }, []);
+  
   return (
     <div className="hero-section" style={{
       background: "linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%)",
@@ -3372,6 +3442,8 @@ function UserPGSearch() {
   const toggleFavorite = (pgId, e) => {
     e.stopPropagation();
     const newFavorites = new Set(favorites);
+    const isFavorite = !newFavorites.has(pgId);
+    
     if (newFavorites.has(pgId)) {
       newFavorites.delete(pgId);
       showNotification("Removed from favorites");
@@ -3379,6 +3451,13 @@ function UserPGSearch() {
       newFavorites.add(pgId);
       showNotification("Added to favorites");
     }
+    
+    // Track favorite click
+    trackEvent("favorite_click", {
+      pg_id: pgId,
+      favorite: isFavorite,
+    });
+    
     setFavorites(newFavorites);
     saveFavorites(newFavorites);
   };
@@ -3428,6 +3507,12 @@ function UserPGSearch() {
     setShowLocationBanner(false);
     localStorage.setItem(LOCATION_PERMISSION_ASKED_KEY, "true");
     showNotification("You can enable location from the 'Near Me' button anytime", false);
+  };
+
+  const handleSearchClick = () => {
+    trackEvent("search_click", {
+      search_term: filters.location,
+    });
   };
 
   const detectLocation = () => {
@@ -3504,6 +3589,13 @@ function UserPGSearch() {
       minBudget: min,
       maxBudget: max
     }));
+    
+    // Track filter apply
+    trackEvent("filter_apply", {
+      min_budget: min,
+      max_budget: max,
+    });
+    
     showNotification(`Budget set: ₹${formatPrice(min)} - ₹${formatPrice(max)}`);
   };
 
@@ -3540,6 +3632,13 @@ function UserPGSearch() {
   };
 
   const handleBookNow = (pg) => {
+    // Track book now click
+    trackEvent("book_now_click", {
+      pg_id: pg.id,
+      pg_name: pg.pg_name,
+      category: pg.pg_category,
+    });
+    
     if (!user) {
       showNotification("Please register or login to book this property");
       navigate("/login");
@@ -3578,6 +3677,12 @@ function UserPGSearch() {
         return;
       }
 
+      // Track booking success
+      trackEvent("booking_success", {
+        booking_id: res.data?.bookingId || res.data?.booking?.id,
+        pg_id: bookingPG.id,
+      });
+      
       showNotification(res.data.message || "✅ Booking request sent to owner");
       setBookingPG(null);
 
