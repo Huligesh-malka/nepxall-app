@@ -789,8 +789,6 @@ const BookingModal = ({ pg, onClose, onBook }) => {
             Your details will be auto-filled from your profile
           </p>
 
-          {/* Removed the ⚠️ warning message as requested - top one zero */}
-
           {Number(pg.min_stay_months) > 0 && (
             <div style={{
               background: "#f0fdf4",
@@ -3150,6 +3148,9 @@ const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
 
 /* ================= MAIN COMPONENT ================= */
 function UserPGSearch() {
+  // ADD THIS LINE - MOBILE DETECTION AT TOP OF COMPONENT
+  const isMobile = window.innerWidth < 768;
+  
   const navigate = useNavigate();
   
   const { user, role, loading: authLoading } = useAuth();
@@ -3788,7 +3789,16 @@ function UserPGSearch() {
   }
   
   return (
-    <div style={{ padding: 20, maxWidth: 1400, margin: "auto", minHeight: "100vh" }}>
+    <div style={{ 
+      width: "100%", 
+      overflowX: "hidden", 
+      paddingLeft: 8, 
+      paddingRight: 8, 
+      boxSizing: "border-box",
+      maxWidth: 1400, 
+      margin: "auto", 
+      minHeight: "100vh" 
+    }}>
       {/* Notification Toast */}
       {notification && (
         <div style={{
@@ -4398,11 +4408,14 @@ function UserPGSearch() {
                     borderRadius: 16,
                     overflow: "hidden",
                     background: "#fff",
-                    boxShadow: "0 2px 12px rgba(0,0,0,.08)",
                     cursor: "pointer",
                     transition: "all 0.3s ease",
                     border: isSelectedForCompare ? "2px solid #8b5cf6" : "1px solid #e5e7eb",
-                    position: "relative"
+                    position: "relative",
+                    width: "100%",
+                    maxWidth: isMobile ? "100%" : "380px",
+                    minWidth: 0,
+                    boxSizing: "border-box"
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = "translateY(-4px)";
@@ -4505,7 +4518,12 @@ function UserPGSearch() {
                     <img
                       src={getImageUrl(pg)}
                       alt={pg.pg_name}
-                      style={{ width: "100%", height: 200, objectFit: "cover" }}
+                      style={{ 
+                        width: "100%", 
+                        height: isMobile ? 180 : 240, 
+                        objectFit: "cover", 
+                        display: "block" 
+                      }}
                       onError={(e) => {
                         e.target.onerror = null;
                         e.target.src = "/no-image.png";
@@ -4612,10 +4630,11 @@ function UserPGSearch() {
                       </div>
                     </div>
 
+                    {/* FIX PRICE BOXES - Replace grid with this */}
                     <div style={{
                       display: "grid",
                       gridTemplateColumns: "repeat(3, 1fr)",
-                      gap: 8,
+                      gap: 6,
                       marginBottom: 12
                     }}>
                       {cardQuickInfo.map((item, index) => (
@@ -4626,10 +4645,13 @@ function UserPGSearch() {
                             flexDirection: "column",
                             alignItems: "center",
                             gap: 4,
-                            padding: "8px 4px",
+                            padding: 8,
                             background: `${item.color}10`,
                             borderRadius: 8,
-                            textAlign: "center"
+                            textAlign: "center",
+                            minWidth: 0,
+                            overflow: "hidden",
+                            fontSize: 12
                           }}
                         >
                           <div style={{ color: item.color }}>
@@ -4653,9 +4675,12 @@ function UserPGSearch() {
                       ))}
                     </div>
 
+                    {/* FIX BUTTONS - Replace with this */}
                     <div style={{
                       display: "flex",
                       gap: 8,
+                      flexWrap: "nowrap",
+                      width: "100%",
                       marginTop: 12,
                       paddingTop: 12,
                       borderTop: "1px solid #e5e7eb"
@@ -4666,13 +4691,14 @@ function UserPGSearch() {
                           handleBookNow(pg);
                         }}
                         style={{
-                          flex: 2,
-                          padding: "10px 16px",
+                          flex: 1,
+                          minWidth: 0,
+                          fontSize: isMobile ? 13 : 15,
+                          padding: isMobile ? "10px 6px" : "12px",
                           background: "#10b981",
                           color: "white",
                           border: "none",
                           borderRadius: 10,
-                          fontSize: 14,
                           fontWeight: 600,
                           cursor: "pointer",
                           display: "flex",
@@ -4688,8 +4714,8 @@ function UserPGSearch() {
                           e.currentTarget.style.background = "#10b981";
                         }}
                       >
-                        <BookOpen size={16} />
-                        Book Now
+                        <BookOpen size={isMobile ? 14 : 16} />
+                        Book
                       </button>
                       
                       <button
@@ -4699,12 +4725,13 @@ function UserPGSearch() {
                         }}
                         style={{
                           flex: 1,
-                          padding: "10px 16px",
+                          minWidth: 0,
+                          fontSize: isMobile ? 13 : 15,
+                          padding: isMobile ? "10px 6px" : "12px",
                           background: "#3b82f6",
                           color: "white",
                           border: "none",
                           borderRadius: 10,
-                          fontSize: 14,
                           fontWeight: 600,
                           cursor: "pointer",
                           display: "flex",
@@ -4720,7 +4747,7 @@ function UserPGSearch() {
                           e.currentTarget.style.background = "#3b82f6";
                         }}
                       >
-                        <Info size={16} />
+                        <Info size={isMobile ? 14 : 16} />
                         Details
                       </button>
                     </div>
