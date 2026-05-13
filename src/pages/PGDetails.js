@@ -1539,7 +1539,7 @@ export default function PGDetails() {
     }
   };
 
-  // CALL OWNER
+  // CALL OWNER - function kept but button removed
   const handleCallOwner = () => {
     if (hasOwnerContact && pg?.contact_phone) {
       window.location.href = `tel:${pg.contact_phone}`;
@@ -1829,15 +1829,7 @@ export default function PGDetails() {
               <BookOpen size={18} />
               Book Now
             </button>
-            {hasOwnerContact && (
-              <button
-                style={modernStyles.callButton}
-                onClick={handleCallOwner}
-              >
-                <Phone size={18} />
-                Call Owner
-              </button>
-            )}
+            
             {hasLocation && (
               <button
                 style={modernStyles.directionButton}
@@ -2450,16 +2442,7 @@ export default function PGDetails() {
               <BookOpen size={18} />
               Book Now
             </button>
-            {hasOwnerContact && (
-              <button
-                style={modernStyles.stickyCallButton}
-                onClick={handleCallOwner}
-                disabled={bookingLoading}
-              >
-                <Phone size={18} />
-                Call Owner
-              </button>
-            )}
+            
           </div>
         </div>
       </div>
