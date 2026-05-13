@@ -4571,11 +4571,20 @@ function UserPGSearch() {
                   </div>
 
                   <div style={{ padding: 20 }}>
+                    {/* FIX PG TITLE - Replace with this */}
                     <h3 style={{ 
-                      fontSize: 18, 
-                      fontWeight: 600, 
-                      color: "#111827",
-                      marginBottom: 4 
+                      fontSize: "16px",
+                      fontWeight: "700",
+                      lineHeight: "1.3",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      wordBreak: "break-word",
+                      minWidth: 0,
+                      marginBottom: 4,
+                      color: "#111827"
                     }}>
                       {pg.pg_name}
                     </h3>
@@ -4594,10 +4603,14 @@ function UserPGSearch() {
                       </span>
                     </div>
 
+                    {/* FIX PRICE ROW - Added flexWrap and overflow */}
                     <div style={{ 
                       display: "flex", 
                       justifyContent: "space-between", 
                       alignItems: "center",
+                      flexWrap: "wrap",
+                      overflow: "hidden",
+                      minWidth: 0,
                       marginBottom: 12,
                       background: "#f0f9ff",
                       padding: "10px 12px",
@@ -4630,7 +4643,7 @@ function UserPGSearch() {
                       </div>
                     </div>
 
-                    {/* FIX PRICE BOXES - Replace grid with this */}
+                    {/* FIX PRICE BOXES */}
                     <div style={{
                       display: "grid",
                       gridTemplateColumns: "repeat(3, 1fr)",
@@ -4675,11 +4688,11 @@ function UserPGSearch() {
                       ))}
                     </div>
 
-                    {/* FIX BUTTONS - Replace with this */}
+                    {/* FIX BUTTONS - Added flexWrap and nowrap */}
                     <div style={{
                       display: "flex",
                       gap: 8,
-                      flexWrap: "nowrap",
+                      flexWrap: "wrap",
                       width: "100%",
                       marginTop: 12,
                       paddingTop: 12,
@@ -4693,8 +4706,8 @@ function UserPGSearch() {
                         style={{
                           flex: 1,
                           minWidth: 0,
-                          fontSize: isMobile ? 13 : 15,
-                          padding: isMobile ? "10px 6px" : "12px",
+                          fontSize: isMobile ? "12px" : "14px",
+                          padding: isMobile ? "10px 6px" : "12px 16px",
                           background: "#10b981",
                           color: "white",
                           border: "none",
@@ -4704,7 +4717,10 @@ function UserPGSearch() {
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          gap: 8,
+                          gap: 6,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
                           transition: "all 0.2s"
                         }}
                         onMouseEnter={(e) => {
@@ -4714,8 +4730,8 @@ function UserPGSearch() {
                           e.currentTarget.style.background = "#10b981";
                         }}
                       >
-                        <BookOpen size={isMobile ? 14 : 16} />
-                        Book
+                        <BookOpen size={isMobile ? 12 : 14} />
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Book</span>
                       </button>
                       
                       <button
@@ -4726,8 +4742,8 @@ function UserPGSearch() {
                         style={{
                           flex: 1,
                           minWidth: 0,
-                          fontSize: isMobile ? 13 : 15,
-                          padding: isMobile ? "10px 6px" : "12px",
+                          fontSize: isMobile ? "12px" : "14px",
+                          padding: isMobile ? "10px 6px" : "12px 16px",
                           background: "#3b82f6",
                           color: "white",
                           border: "none",
@@ -4737,7 +4753,10 @@ function UserPGSearch() {
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          gap: 8,
+                          gap: 6,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
                           transition: "all 0.2s"
                         }}
                         onMouseEnter={(e) => {
@@ -4747,8 +4766,8 @@ function UserPGSearch() {
                           e.currentTarget.style.background = "#3b82f6";
                         }}
                       >
-                        <Info size={isMobile ? 14 : 16} />
-                        Details
+                        <Info size={isMobile ? 12 : 14} />
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Details</span>
                       </button>
                     </div>
                   </div>
