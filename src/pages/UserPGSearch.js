@@ -582,22 +582,27 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
 
 /* ================= BOOKING MODAL COMPONENT ================= */
 const BookingModal = ({ pg, onClose, onBook }) => {
-  if (!pg) return null;
 
   const [bookingData, setBookingData] = useState({
     checkInDate: "",
     roomType: ""
   });
-  
+
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (!pg) return;
+
     const defaultRoomType = getDefaultRoomType();
+
     setBookingData({
       checkInDate: "",
       roomType: defaultRoomType || ""
     });
+
   }, [pg]);
+
+  if (!pg) return null;
 
   const getDefaultRoomType = () => {
     if (pg.pg_category === "pg") {
