@@ -37,7 +37,6 @@ import {
   TrendingUp as TrendingUpIcon,
   QrCodeScanner as QrIcon,
   Edit as EditIcon,
-  VideoCameraBack as VideoIcon,
   PhotoCamera as PhotoIcon,
   Campaign as CampaignIcon,
   Close as CloseIcon,
@@ -675,10 +674,6 @@ const OwnerDashboard = () => {
     navigate(`/owner/photos/${propertyId}`);
   };
 
-  const handleManageVideos = (propertyId) => {
-    navigate(`/owner/videos/${propertyId}`);
-  };
-
   const handleViewBooking = (bookingId) => {
     navigate(`/owner/bookings/${bookingId}`);
   };
@@ -1230,12 +1225,15 @@ const OwnerDashboard = () => {
                   background: 'linear-gradient(90deg, #4CAF50, #0B5ED7)',
                 }
               }}>
-
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <Box>
-                    
+                    <Typography sx={{ color: '#64748b', fontSize: { xs: '0.65rem', sm: '0.75rem' }, fontWeight: 500 }}>REVENUE</Typography>
+                    <Typography sx={{ fontSize: { xs: '1.2rem', sm: '1.8rem' }, fontWeight: 800, color: '#1e293b', lineHeight: 1 }}>
+                      {formatCurrency(animatedTotalEarnings)}
+                    </Typography>
                   </Box>
-                  
-                
+                  <MoneyIcon sx={{ fontSize: { xs: 28, sm: 36 }, color: '#4CAF50', opacity: 0.7 }} />
+                </Box>
               </Box>
             </Grid>
 
@@ -1512,7 +1510,7 @@ const OwnerDashboard = () => {
                                 </Alert>
                               )}
                               
-                              {/* Modern Action Buttons with text labels - Removed Chat and Announce */}
+                              {/* Modern Action Buttons - Removed Video and Chat buttons */}
                               <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 2 }}>
                                 <ActionButton 
                                   icon={<ViewIcon fontSize="small" />}
@@ -1546,14 +1544,6 @@ const OwnerDashboard = () => {
                                 />
                                 
                                 <ActionButton 
-                                  icon={<VideoIcon fontSize="small" />}
-                                  text="Videos"
-                                  onClick={() => handleManageVideos(pg.id || pg.pg_id)}
-                                  disabled={!isActive}
-                                  color="#06b6d4"
-                                />
-                                
-                                <ActionButton 
                                   icon={<QrIcon fontSize="small" />}
                                   text="QR Code"
                                   onClick={() => handleGenerateQR(pg.id || pg.pg_id)}
@@ -1581,7 +1571,7 @@ const OwnerDashboard = () => {
               </>
             )}
 
-            {/* Recent Bookings Tab - Removed View Button */}
+            {/* Recent Bookings Tab */}
             {activeTab === 1 && (
               <Box>
                 {recentBookings.length === 0 ? (
@@ -1667,7 +1657,51 @@ const OwnerDashboard = () => {
             {activeTab === 2 && (
               <Grid container spacing={3}>
                 {/* Revenue Summary */}
-                
+                <Grid item xs={12} md={6}>
+                  <Box sx={insightCardStyle}>
+                    <Typography sx={insightTitleStyle}>
+                      <MoneyIcon sx={{ color: '#4CAF50' }} /> Revenue Summary
+                    </Typography>
+                    <Divider sx={{ borderColor: '#e2e8f0', mb: 2 }} />
+                    
+                    <Row 
+                      label="Total Earnings" 
+                      value={formatCurrency(animatedTotalEarnings)} 
+                      color="#4CAF50"
+                      icon="💰"
+                    />
+                    <Row 
+                      label="Monthly Revenue" 
+                      value={formatCurrency(animatedMonthlyRevenue)} 
+                      color="#8B5CF6"
+                      icon="📊"
+                    />
+                    <Row 
+                      label="Total Rent Collected" 
+                      value={formatCurrency(stats.totalRent)} 
+                      color="#0B5ED7"
+                      icon="🏠"
+                    />
+                    <Row 
+                      label="Total Deposit Collected" 
+                      value={formatCurrency(stats.totalDeposit)} 
+                      color="#f59e0b"
+                      icon="🔒"
+                    />
+                    <Row 
+                      label="Pending Rent" 
+                      value={formatCurrency(stats.pendingRent)} 
+                      color="#dc2626"
+                      icon="⏰"
+                    />
+                    <Row 
+                      label="Pending Deposit" 
+                      value={formatCurrency(stats.pendingDeposit)} 
+                      color="#dc2626"
+                      icon="⚠️"
+                    />
+                  </Box>
+                </Grid>
 
                 {/* Booking Summary */}
                 <Grid item xs={12} md={6}>
