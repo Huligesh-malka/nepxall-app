@@ -462,6 +462,7 @@ const PhoneLogin = () => {
           exit="exit"
           style={{ width: "100%", display: "flex", justifyContent: "center" }}
         >
+          {/* FIX 2: Changed overflow from "hidden" to "visible" */}
           <Paper
             elevation={0}
             sx={{
@@ -472,7 +473,7 @@ const PhoneLogin = () => {
               backdropFilter: "blur(20px)",
               border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
               boxShadow: `0 25px 50px -12px ${alpha(theme.palette.common.black, 0.3)}`,
-              overflow: "hidden",
+              overflow: "visible", // ✅ FIXED: Changed from "hidden" to "visible"
               position: "relative",
             }}
           >
@@ -864,7 +865,16 @@ const PhoneLogin = () => {
               </Box>
             </Box>
 
-            <div id="recaptcha-container"></div>
+            {/* FIX 1: Updated reCAPTCHA container with proper styling */}
+            <div
+              id="recaptcha-container"
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                marginTop: "16px",
+                overflow: "hidden",
+              }}
+            ></div>
           </Paper>
         </motion.div>
       </Box>
