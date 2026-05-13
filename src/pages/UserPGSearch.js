@@ -582,6 +582,8 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
 
 /* ================= BOOKING MODAL COMPONENT ================= */
 const BookingModal = ({ pg, onClose, onBook }) => {
+  if (!pg) return null;
+
   const [bookingData, setBookingData] = useState({
     checkInDate: "",
     roomType: ""

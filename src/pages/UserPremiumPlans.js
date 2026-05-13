@@ -4840,12 +4840,12 @@ function UserPGSearch() {
       )}
 
       {bookingPG && (
-        <BookingModal
-          pg={bookingPG}
-          onClose={() => setBookingPG(null)}
-          onBook={handleBookingSubmit}
-        />
-      )}
+  <BookingModal
+    pg={bookingPG}
+    onClose={() => setBookingPG(null)}
+    onBook={handleBookingSubmit}
+  />
+)}
 
       {showCompareModal && (
         <CompareModal
