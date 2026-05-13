@@ -5086,11 +5086,9 @@ const handleBookingSubmit = async (bookingData) => {
       )}
 
       <BookingModal
-  pg={selectedPG}
-  onClose={() => setShowBookingModal(false)}
-  onBook={(bookingData) =>
-    handleBookingSubmit(bookingData, selectedPG)
-  }
+  pg={bookingPG}
+  onClose={() => setBookingPG(null)}
+  onBook={handleBookingSubmit}
 />
 
       {showCompareModal && (
