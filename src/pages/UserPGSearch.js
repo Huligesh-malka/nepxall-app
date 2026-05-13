@@ -3739,67 +3739,83 @@ const handleBookingSubmit = async (bookingData) => {
 
     try {
 
-      await api.post(
-  "/whatsapp/send-booking-whatsapp",
-        {
-          ownerPhone: bookingPG.owner_phone,
-          ownerName: bookingPG.owner_name || "Owner",
+  /*
+  =========================================
+  SEND WHATSAPP TO OWNER
+  =========================================
+  */
 
-          userName: user.displayName || "Customer",
+  await api.post(
+    "/whatsapp/send-booking-whatsapp",
+    {
+      ownerId: bookingPG.owner_id,
 
-          userPhone:
-            user.phoneNumber ||
-            bookingPG.user_phone ||
-            "No Phone",
+      userName:
+        user.displayName || "Customer",
 
-          propertyName: bookingPG.pg_name,
+      userPhone:
+        user.phoneNumber || "No Phone",
 
-          area:
-            bookingPG.area ||
-            bookingPG.city ||
-            "Location",
+      propertyName:
+        bookingPG.pg_name,
 
-          rent: getEffectiveRent(bookingPG)
-        }
-      );
+      area:
+        bookingPG.area ||
+        bookingPG.city ||
+        "Location",
 
-      console.log("✅ WhatsApp Sent To Owner");
-
-    } catch (whatsappError) {
-
-      console.log("❌ WhatsApp Error");
-
-      console.log(whatsappError.response?.data || whatsappError.message);
+      rent:
+        getEffectiveRent(bookingPG)
     }
+  );
 
-    /*
-    =========================================
-    SUCCESS MESSAGE
-    =========================================
-    */
+  console.log("✅ WhatsApp Sent To Owner");
 
-    showNotification(
-      res.data.message || "✅ Booking request sent to owner"
-    );
+} catch (whatsappError) {
 
-    setBookingPG(null);
+  console.log("❌ WhatsApp Error");
 
-  } catch (error) {
+  console.log(
+    whatsappError.response?.data ||
+    whatsappError.message
+  );
+}
 
-    console.log("BOOKING ERROR:", error.response?.data);
+/*
+=========================================
+SUCCESS MESSAGE
+=========================================
+*/
 
-    if (error.response?.data?.message) {
+showNotification(
+  res.data.message ||
+  "✅ Booking request sent to owner"
+);
 
-      showNotification(error.response.data.message, true);
+setBookingPG(null);
 
-    } else {
+} catch (error) {
 
-      showNotification(
-        "❌ Something went wrong. Try again",
-        true
-      );
-    }
-  }
+console.log(
+  "BOOKING ERROR:",
+  error.response?.data
+);
+
+if (error.response?.data?.message) {
+
+  showNotification(
+    error.response.data.message,
+    true
+  );
+
+} else {
+
+  showNotification(
+    "❌ Something went wrong. Try again",
+    true
+  );
+}
+}
 };
   
   const handleSaveFavorite = (pgId, isFavorite) => {
