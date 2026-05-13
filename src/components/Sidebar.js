@@ -20,7 +20,8 @@ import {
   FiTool, 
   FiLock,
   FiLogIn,
-  FiPhoneCall
+  FiPhoneCall,
+  FiInstagram
 } from "react-icons/fi";
 import logo from "../assets/nepxall-logo.png";
 
@@ -192,6 +193,13 @@ const Sidebar = ({ role, user }) => {
             >
               <FiPhoneCall size={16} /> AI Owner Call
             </Link>
+            <Link
+  style={linkStyle(isActive("/admin/instagram-ai"))}
+  to="/admin/instagram-ai"
+  className="sidebar-link"
+>
+  <FiInstagram size={16} /> Instagram AI
+</Link>
           </>
         )}
 
