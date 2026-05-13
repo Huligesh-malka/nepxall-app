@@ -2373,69 +2373,7 @@ export default function PGDetails() {
             />
           )}
 
-          {(hasOwnerContact || hasContactPerson || pg?.contact_email) && (
-            <div style={modernStyles.contactCard}>
-              <h3 style={modernStyles.contactTitle}>Contact Information</h3>
-              {hasContactPerson && (
-                <div style={modernStyles.contactItem}>
-                  <span style={modernStyles.contactIcon}>👤</span>
-                  <div>
-                    <div style={modernStyles.contactLabel}>Contact Person</div>
-                    <div style={modernStyles.contactValue}>{pg.contact_person}</div>
-                  </div>
-                </div>
-              )}
-              
-              {hasOwnerContact && (
-                <div style={modernStyles.contactItem}>
-                  <span style={modernStyles.contactIcon}>📱</span>
-                  <div>
-                    <div style={modernStyles.contactLabel}>Phone Number</div>
-                    <div style={modernStyles.contactValue}>
-                      <a href={`tel:${pg.contact_phone}`} style={modernStyles.phoneLink}>
-                        {pg.contact_phone}
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {pg.contact_email && (
-                <div style={modernStyles.contactItem}>
-                  <span style={modernStyles.contactIcon}>✉️</span>
-                  <div>
-                    <div style={modernStyles.contactLabel}>Email</div>
-                    <div style={modernStyles.contactValue}>
-                      <a href={`mailto:${pg.contact_email}`} style={modernStyles.emailLink}>
-                        {pg.contact_email}
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              <div style={modernStyles.contactButtons}>
-                <button
-                  style={modernStyles.bookButtonSmall}
-                  onClick={handleBookNow}
-                  disabled={bookingLoading}
-                >
-                  <BookOpen size={16} />
-                  Book Now
-                </button>
-                {hasOwnerContact && (
-                  <button
-                    style={modernStyles.callButtonSmall}
-                    onClick={handleCallOwner}
-                    disabled={bookingLoading}
-                  >
-                    <Phone size={16} />
-                    Call Now
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Contact Information Removed */}
 
           {(Number(pg.total_rooms) > 0 ||
   Number(pg.available_rooms) > 0) && (
@@ -2624,7 +2562,7 @@ const modernStyles = {
     cursor: "pointer",
     fontSize: "14px",
     fontWeight: "600",
-    transition: "all 0.3s ease",
+    transition: "all 0.3ease",
     boxShadow: "0 8px 20px rgba(99,102,241,0.3)",
   },
 
@@ -3614,84 +3552,6 @@ const modernStyles = {
     fontSize: "14px",
     fontWeight: "600",
     cursor: "pointer",
-  },
-
-  // Contact Card
-  contactCard: {
-    backgroundColor: "white",
-    borderRadius: "28px",
-    padding: "24px",
-    boxShadow: "0 12px 30px rgba(0,0,0,0.05)",
-    border: "1px solid #eef2ff",
-  },
-  contactTitle: {
-    fontSize: "18px",
-    fontWeight: "700",
-    color: "#0f172a",
-    margin: "0 0 20px 0",
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-  },
-  contactItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "14px",
-    padding: "14px 0",
-    borderBottom: "1px solid #f1f5f9",
-  },
-  contactIcon: {
-    fontSize: "20px",
-  },
-  contactLabel: {
-    fontSize: "12px",
-    color: "#64748b",
-  },
-  contactValue: {
-    fontSize: "15px",
-    fontWeight: "500",
-    color: "#1e293b",
-  },
-  contactButtons: {
-    display: "flex",
-    gap: "12px",
-    marginTop: "20px",
-  },
-  bookButtonSmall: {
-    flex: 1,
-    padding: "12px",
-    background: "linear-gradient(135deg, #10b981, #059669)",
-    borderRadius: "40px",
-    color: "white",
-    border: "none",
-    fontWeight: "600",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "8px",
-    cursor: "pointer",
-  },
-  callButtonSmall: {
-    flex: 1,
-    padding: "12px",
-    background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
-    borderRadius: "40px",
-    color: "white",
-    border: "none",
-    fontWeight: "600",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "8px",
-    cursor: "pointer",
-  },
-  phoneLink: {
-    color: "#3b82f6",
-    textDecoration: "none",
-  },
-  emailLink: {
-    color: "#3b82f6",
-    textDecoration: "none",
   },
 
   // Availability Card

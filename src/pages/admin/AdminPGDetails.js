@@ -645,7 +645,11 @@ const AdminPGDetails = () => {
           </Section>
 
           {/* Contact Information Section */}
-          
+          <Section title="Contact Information" icon={Phone} sectionKey="contact">
+            <EditableField label="Contact Person" field="contact_person" value={pg.contact_person} icon={User} />
+            <EditableField label="Contact Phone" field="contact_phone" value={pg.contact_phone} icon={Phone} />
+            <EditableField label="Contact Email" field="contact_email" value={pg.contact_email} icon={Mail} />
+          </Section>
 
           {/* Pricing Details Section - COMPLETE */}
           <Section title="Pricing Details" icon={DollarSign} sectionKey="pricing">
