@@ -3740,7 +3740,7 @@ const handleBookingSubmit = async (bookingData) => {
     try {
 
       await api.post(
-        "/api/whatsapp/send-booking-whatsapp",
+  "/whatsapp/send-booking-whatsapp",
         {
           ownerPhone: bookingPG.owner_phone,
           ownerName: bookingPG.owner_name || "Owner",
