@@ -1,4 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, {
+  useEffect,
+  useState
+} from "react";
+
 import axios from "axios";
 
 import {
@@ -7,6 +11,12 @@ import {
   InfoWindow,
   useLoadScript
 } from "@react-google-maps/api";
+
+/*
+--------------------------------------------------
+CONFIG
+--------------------------------------------------
+*/
 
 const API_BASE_URL =
   "https://nepxall-backend.onrender.com";
@@ -18,30 +28,50 @@ const mapContainerStyle = {
   marginBottom: "20px",
 };
 
+/*
+--------------------------------------------------
+COMPONENT
+--------------------------------------------------
+*/
+
 const NearbyPGMap = () => {
 
-  const [pgs, setPgs] = useState([]);
-  const [location, setLocation] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [pgs, setPgs] =
+    useState([]);
+
+  const [location, setLocation] =
+    useState(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
+
   const [selectedPG, setSelectedPG] =
     useState(null);
 
   /*
   --------------------------------------------------
-  GOOGLE MAP LOAD
+  LOAD GOOGLE MAP
   --------------------------------------------------
   */
-  const { isLoaded } = useLoadScript({
-    googleMapsApiKey:
-      process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
-  });
+
+  const { isLoaded } =
+    useLoadScript({
+
+      googleMapsApiKey:
+        process.env
+          .REACT_APP_GOOGLE_MAPS_API_KEY,
+
+    });
 
   /*
   --------------------------------------------------
   GET LOCATION + PGS
   --------------------------------------------------
   */
+
   useEffect(() => {
 
     if (!navigator.geolocation) {
@@ -59,25 +89,41 @@ const NearbyPGMap = () => {
 
       async (position) => {
 
-        const lat =
-          position.coords.latitude;
-
-        const lng =
-          position.coords.longitude;
-
-        setLocation({ lat, lng });
-
         try {
+
+          const lat =
+            position.coords.latitude;
+
+          const lng =
+            position.coords.longitude;
+
+          setLocation({
+            lat,
+            lng
+          });
 
           const res =
             await axios.get(
+
               `${API_BASE_URL}/api/pg/nearby?lat=${lat}&lng=${lng}&radius=5`
+
             );
+
+          console.log(
+            "Nearby PG Response:",
+            res.data
+          );
 
           if (res.data.success) {
 
             setPgs(
               res.data.pgs || []
+            );
+
+          } else {
+
+            setError(
+              "No PGs found nearby"
             );
 
           }
@@ -119,12 +165,19 @@ const NearbyPGMap = () => {
   LOADING
   --------------------------------------------------
   */
+
   if (loading || !isLoaded) {
 
     return (
+
       <div style={styles.center}>
-        <h2>Loading Nearby PGs...</h2>
+
+        <h2>
+          Loading Nearby PGs...
+        </h2>
+
       </div>
+
     );
 
   }
@@ -134,12 +187,17 @@ const NearbyPGMap = () => {
   ERROR
   --------------------------------------------------
   */
+
   if (error) {
 
     return (
+
       <div style={styles.center}>
+
         <h2>{error}</h2>
+
       </div>
+
     );
 
   }
@@ -159,53 +217,73 @@ const NearbyPGMap = () => {
       {location && (
 
         <GoogleMap
+
           zoom={13}
+
           center={location}
+
           mapContainerStyle={
             mapContainerStyle
           }
+
         >
 
           {/* USER LOCATION */}
+
           <Marker
             position={location}
           />
 
           {/* PG MARKERS */}
+
           {pgs.map((pg) => (
 
             <Marker
+
               key={pg.id}
+
               position={{
-                lat: Number(
-                  pg.latitude
-                ),
-                lng: Number(
-                  pg.longitude
-                ),
+
+                lat:
+                  Number(pg.latitude),
+
+                lng:
+                  Number(pg.longitude),
+
               }}
+
               onClick={() =>
                 setSelectedPG(pg)
               }
+
             />
 
           ))}
 
           {/* INFO WINDOW */}
+
           {selectedPG && (
 
             <InfoWindow
+
               position={{
-                lat: Number(
-                  selectedPG.latitude
-                ),
-                lng: Number(
-                  selectedPG.longitude
-                ),
+
+                lat:
+                  Number(
+                    selectedPG.latitude
+                  ),
+
+                lng:
+                  Number(
+                    selectedPG.longitude
+                  ),
+
               }}
+
               onCloseClick={() =>
                 setSelectedPG(null)
               }
+
             >
 
               <div
@@ -215,7 +293,10 @@ const NearbyPGMap = () => {
               >
 
                 <h3>
-                  {selectedPG.name}
+
+                  {selectedPG.pg_name ||
+                    selectedPG.name}
+
                 </h3>
 
                 <p>
@@ -223,10 +304,17 @@ const NearbyPGMap = () => {
                 </p>
 
                 <p>
-                  ₹{" "}
-                  {selectedPG.price ||
-                    selectedPG.rent ||
-                    "N/A"}
+
+                  ₹ {
+
+                    selectedPG.price ||
+
+                    selectedPG.rent_amount ||
+
+                    "Contact"
+
+                  }
+
                 </p>
 
               </div>
@@ -246,9 +334,11 @@ const NearbyPGMap = () => {
       {pgs.length === 0 ? (
 
         <div style={styles.center}>
+
           <h3>
             No Nearby PGs Found
           </h3>
+
         </div>
 
       ) : (
@@ -257,11 +347,47 @@ const NearbyPGMap = () => {
 
           {pgs.map((pg) => {
 
-            const image =
-              pg.main_image ||
-              pg.image ||
-              pg.photos ||
+            /*
+            --------------------------------
+            IMAGE HANDLING
+            --------------------------------
+            */
+
+            let image =
               "https://via.placeholder.com/400x250?text=No+Image";
+
+            try {
+
+              if (
+                pg.photos &&
+                typeof pg.photos === "string"
+              ) {
+
+                const parsed =
+                  JSON.parse(pg.photos);
+
+                if (
+                  Array.isArray(parsed) &&
+                  parsed.length > 0
+                ) {
+
+                  image = parsed[0];
+
+                }
+
+              } else if (pg.image) {
+
+                image = pg.image;
+
+              }
+
+            } catch (e) {
+
+              image =
+                pg.image ||
+                "https://via.placeholder.com/400x250?text=No+Image";
+
+            }
 
             return (
 
@@ -271,15 +397,31 @@ const NearbyPGMap = () => {
               >
 
                 {/* IMAGE */}
+
                 <img
+
                   src={image}
-                  alt={pg.name}
+
+                  alt={
+                    pg.pg_name ||
+                    pg.name
+                  }
+
                   style={styles.image}
+
+                  onError={(e) => {
+
+                    e.target.src =
+                      "https://via.placeholder.com/400x250?text=No+Image";
+
+                  }}
+
                 />
 
                 <div style={styles.content}>
 
                   {/* SOURCE */}
+
                   <div
                     style={{
                       marginBottom: 10,
@@ -312,24 +454,38 @@ const NearbyPGMap = () => {
                   </div>
 
                   {/* NAME */}
+
                   <h2 style={styles.name}>
-                    {pg.name}
+
+                    {pg.pg_name ||
+                      pg.name}
+
                   </h2>
 
                   {/* PRICE */}
+
                   <p style={styles.price}>
-                    ₹{" "}
-                    {pg.price ||
-                      pg.rent ||
-                      "Contact"}
+
+                    ₹ {
+
+                      pg.price ||
+
+                      pg.rent_amount ||
+
+                      "Contact"
+
+                    }
+
                   </p>
 
                   {/* ADDRESS */}
+
                   <p style={styles.address}>
                     {pg.address}
                   </p>
 
                   {/* DISTANCE */}
+
                   {pg.distance && (
 
                     <p
@@ -337,16 +493,21 @@ const NearbyPGMap = () => {
                         styles.distance
                       }
                     >
-                      📍{" "}
-                      {Number(
-                        pg.distance
-                      ).toFixed(1)}{" "}
-                      KM Away
+
+                      📍 {
+
+                        Number(
+                          pg.distance
+                        ).toFixed(1)
+
+                      } KM Away
+
                     </p>
 
                   )}
 
                   {/* RATING */}
+
                   {pg.rating && (
 
                     <p>
@@ -356,6 +517,7 @@ const NearbyPGMap = () => {
                   )}
 
                   {/* BUTTONS */}
+
                   <div
                     style={
                       styles.buttonContainer
@@ -363,18 +525,25 @@ const NearbyPGMap = () => {
                   >
 
                     {/* WEBSITE PG */}
+
                     {pg.source ===
                     "website" ? (
 
                       <a
+
                         href={`https://wa.me/${pg.phone || "919999999999"}?text=Hi,%20I%20am%20interested%20in%20your%20PG`}
+
                         target="_blank"
+
                         rel="noreferrer"
+
                         style={{
                           textDecoration:
                             "none",
                         }}
+
                       >
+
                         <button
                           style={
                             styles.bookBtn
@@ -382,21 +551,28 @@ const NearbyPGMap = () => {
                         >
                           Book Now
                         </button>
+
                       </a>
 
                     ) : (
 
                       <a
+
                         href={
                           pg.maps_url
                         }
+
                         target="_blank"
+
                         rel="noreferrer"
+
                         style={{
                           textDecoration:
                             "none",
                         }}
+
                       >
+
                         <button
                           style={
                             styles.bookBtn
@@ -404,19 +580,26 @@ const NearbyPGMap = () => {
                         >
                           View Place
                         </button>
+
                       </a>
 
                     )}
 
                     {/* NAVIGATION */}
+
                     <a
+
                       href={`https://www.google.com/maps/search/?api=1&query=${pg.latitude},${pg.longitude}`}
+
                       target="_blank"
+
                       rel="noreferrer"
+
                       style={{
                         textDecoration:
                           "none",
                       }}
+
                     >
 
                       <button
@@ -454,6 +637,7 @@ const NearbyPGMap = () => {
 STYLES
 --------------------------------------------------
 */
+
 const styles = {
 
   container: {
