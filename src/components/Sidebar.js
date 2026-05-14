@@ -21,7 +21,8 @@ import {
   FiLock,
   FiLogIn,
   FiPhoneCall,
-  FiInstagram
+  FiInstagram,
+  FiMapPin
 } from "react-icons/fi";
 import logo from "../assets/nepxall-logo.png";
 
@@ -104,6 +105,13 @@ const Sidebar = ({ role, user }) => {
             <Link style={linkStyle(isActive("/user/my-stay"))} to="/user/my-stay" className="sidebar-link"><FiHome size={16} /> My Stay</Link>
             <Link style={linkStyle(isActive("/user/bookings"))} to="/user/bookings" className="sidebar-link"><FiCalendar size={16} /> My Bookings</Link>
             <Link style={linkStyle(isActive("/"))} to="/" className="sidebar-link"><FiSearch size={16} /> Browse Properties</Link>
+            <Link
+  style={linkStyle(isActive("/nearby-pgs"))}
+  to="/nearby-pgs"
+  className="sidebar-link"
+>
+  <FiMapPin size={16} /> Nearby PGs
+</Link>
            
             <Link 
               style={linkStyle(isActive("/become-owner"))} 

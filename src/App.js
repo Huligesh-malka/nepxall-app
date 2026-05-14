@@ -21,6 +21,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 /* USER */
 import UserPGSearch from "./pages/UserPGSearch";   
+import NearbyPGMap from "./pages/NearbyPGMap";
 import AddPGPublic from "./pages/AddPGPublic";
 import PGDetails from "./pages/PGDetails";
 import BookingForm from "./pages/BookingForm";
@@ -290,6 +291,7 @@ function App() {
       {/* PUBLIC */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<UserPGSearch />} />
+        <Route path="/nearby-pgs" element={<NearbyPGMap />} />
         <Route path="/pg/:id" element={<PGDetails />} />
           {/* ✅ ADD HERE */}
   <Route path="/add-pg" element={<AddPGPublic />} />
