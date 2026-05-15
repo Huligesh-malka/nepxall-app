@@ -29,42 +29,29 @@ import {
   Bed,
   Bath,
   Wifi,
-  Wind,
-  Coffee,
-  Car,
   ShieldCheck,
   Tv,
   Zap,
-  Thermometer,
   Lock,
   Users,
-  PawPrint,
-  Music,
   Clock as ClockIcon,
   FileText,
   Calendar,
-  Eye,
   ThumbsUp,
   ThumbsDown,
-  Maximize2,
   Loader2,
   Trash2,
   Upload,
   Utensils,
   Dumbbell,
   Droplets,
-  Flame,
-  Key,
   DoorOpen,
-  Radio,
   Train,
   Bus,
   Hospital,
   School,
   Store,
-  Church,
-  Mosque,
- Landmark
+  Church
 } from "lucide-react";
 
 const FILES_BASE =
@@ -100,10 +87,6 @@ const getCorrectImageUrl = (path) => {
   return `${FILES_BASE}${normalizedPath}`;
 };
 
-
-
-
-
 // Chair icon component
 const Chair = ({ size = 16, className = "" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -119,6 +102,33 @@ const Tree = ({ size = 16, className = "" }) => (
   </svg>
 );
 
+// Bank/Landmark icon component
+const LandmarkIcon = ({ size = 16, className = "" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M3 9.5L12 3L21 9.5M5 10v7M7 10v7M9 10v7M11 10v7M13 10v7M15 10v7M17 10v7M19 10v7M4 21h16" />
+    <rect x="2" y="21" width="20" height="2" rx="1" />
+  </svg>
+);
+
+// Mosque icon component
+const MosqueIcon = ({ size = 16, className = "" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M12 2L9 7h6L12 2z" />
+    <path d="M5 7h14v2H5z" />
+    <path d="M7 9v8h10V9" />
+    <path d="M9 17v3h6v-3" />
+    <circle cx="12" cy="14" r="2" />
+  </svg>
+);
+
+// Temple icon component
+const TempleIcon = ({ size = 16, className = "" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M12 2L3 9h18L12 2z" />
+    <path d="M5 9v11h14V9" />
+    <rect x="9" y="13" width="6" height="7" rx="1" />
+  </svg>
+);
 
 const AdminPGDetails = () => {
   const { id } = useParams();
@@ -395,8 +405,6 @@ const AdminPGDetails = () => {
         displayValue = formatCurrency(value);
       } else if (type === "boolean") {
         displayValue = value ? "Yes" : "No";
-      } else if (type === "percentage" && value) {
-        displayValue = `${value}%`;
       }
     }
 
@@ -439,7 +447,7 @@ const AdminPGDetails = () => {
                 </select>
               ) : (
                 <input
-                  type={type === "number" || type === "currency" ? "text" : type}
+                  type="text"
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
                   className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-40 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -892,23 +900,13 @@ const AdminPGDetails = () => {
             <EditableField label="Nearby Grocery Store" field="nearby_grocery_store" value={pg.nearby_grocery_store} icon={Store} />
             <EditableField label="Nearby Restaurant" field="nearby_restaurant" value={pg.nearby_restaurant} icon={Utensils} />
             <EditableField label="Nearby Mall" field="nearby_mall" value={pg.nearby_mall} icon={Store} />
-            <EditableField
-  label="Nearby Bank"
-  field="nearby_bank"
-  value={pg.nearby_bank}
-  icon={Landmark}
-/>
-<EditableField
-  label="Nearby ATM"
-  field="nearby_atm"
-  value={pg.nearby_atm}
-  icon={Landmark}
-/>
+            <EditableField label="Nearby Bank" field="nearby_bank" value={pg.nearby_bank} icon={LandmarkIcon} />
+            <EditableField label="Nearby ATM" field="nearby_atm" value={pg.nearby_atm} icon={LandmarkIcon} />
             <EditableField label="Nearby Post Office" field="nearby_post_office" value={pg.nearby_post_office} icon={Building} />
             <EditableField label="Nearby Gym" field="nearby_gym" value={pg.nearby_gym} icon={Dumbbell} />
             <EditableField label="Nearby Park" field="nearby_park" value={pg.nearby_park} icon={Tree} />
-            <EditableField label="Nearby Temple" field="nearby_temple" value={pg.nearby_temple} icon={Landmark} />
-            <EditableField label="Nearby Mosque" field="nearby_mosque" value={pg.nearby_mosque} icon={Mosque} />
+            <EditableField label="Nearby Temple" field="nearby_temple" value={pg.nearby_temple} icon={TempleIcon} />
+            <EditableField label="Nearby Mosque" field="nearby_mosque" value={pg.nearby_mosque} icon={MosqueIcon} />
             <EditableField label="Nearby Church" field="nearby_church" value={pg.nearby_church} icon={Church} />
             <EditableField label="Nearby Police Station" field="nearby_police_station" value={pg.nearby_police_station} icon={Shield} />
           </Section>
