@@ -126,40 +126,11 @@ const popularAreas = [
 // Quick Filters - Easy access filters
 const quickFilters = [
   { id: "near_me", name: "📍 Near Me", icon: <Navigation size={16} />, type: "location" },
-  { id: "near_metro", name: "🚇 Near Metro", icon: <Train size={16} />, type: "tag", keyword: "metro" },
-  { id: "near_college", name: "🎓 Near College", icon: <GraduationIcon size={16} />, type: "tag", keyword: "college" },
-  { id: "near_it_park", name: "💼 Near IT Park", icon: <BriefcaseIcon size={16} />, type: "tag", keyword: "it park" },
-  { id: "veg_food", name: "🥬 Veg Food", icon: <Leaf size={16} />, type: "food", value: "veg" },
+  { id: "under_10k", name: "💰 Under ₹10k", icon: <Coins size={16} />, type: "budget", min: 0, max: 10000 },
   { id: "ac_room", name: "❄️ AC Room", icon: <Snowflake size={16} />, type: "amenity", field: "ac_available" },
   { id: "wifi", name: "📶 WiFi", icon: <Wifi size={16} />, type: "amenity", field: "wifi_available" },
   { id: "parking", name: "🅿️ Parking", icon: <Car size={16} />, type: "amenity", field: "parking_available" },
-  { id: "under_10k", name: "💰 Under ₹10k", icon: <Coins size={16} />, type: "budget", min: 0, max: 10000 },
-  { id: "filling_fast", name: "🔥 Filling Fast", icon: <Flame size={16} />, type: "special", condition: (pg) => pg.available_rooms < 5 && pg.available_rooms > 0 },
-  { id: "verified", name: "✅ Verified", icon: <Shield size={16} />, type: "verified" }
-];
-
-// Trust badges
-const trustBadges = [
-  { name: "Verified Properties", icon: <Shield size={18} />, color: "#10b981", bg: "#d1fae5" },
-  { name: "Secure Booking", icon: <Lock size={18} />, color: "#3b82f6", bg: "#dbeafe" },
-  { name: "Trusted Owners", icon: <UserCheck size={18} />, color: "#8b5cf6", bg: "#ede9fe" },
-  { name: "Zero Brokerage", icon: <BadgePercent size={18} />, color: "#ef4444", bg: "#fee2e2" },
-  { name: "Direct Contact", icon: <Phone size={18} />, color: "#f59e0b", bg: "#fed7aa" },
-  { name: "No Hidden Charges", icon: <Check size={18} />, color: "#06b6d4", bg: "#cffafe" }
-];
-
-// Smart Tags for better conversion
-const smartTags = [
-  { name: "🚇 Near Metro", icon: <Train size={14} />, filter: "metro", keyword: "metro" },
-  { name: "🎓 Near College", icon: <GraduationIcon size={14} />, filter: "college", keyword: "college" },
-  { name: "💼 Near IT Park", icon: <BriefcaseIcon size={14} />, filter: "it_park", keyword: "it park" },
-  { name: "🚌 Near Bus Stop", icon: <Bus size={14} />, filter: "bus_stop", keyword: "bus stop" },
-  { name: "🛍️ Near Mall", icon: <ShoppingBag size={14} />, filter: "mall", keyword: "mall" },
-  { name: "🏥 Near Hospital", icon: <Stethoscope size={14} />, filter: "hospital", keyword: "hospital" },
-  { name: "🏢 Manyata Tech Park", icon: <Building2 size={14} />, filter: "manyata", keyword: "manyata" },
-  { name: "💻 Electronic City", icon: <BriefcaseIcon size={14} />, filter: "electronic_city", keyword: "electronic city" },
-  { name: "🌳 Near Park", icon: <TreePine size={14} />, filter: "park", keyword: "park" },
-  { name: "☕ Near Cafe", icon: <CoffeeIcon size={14} />, filter: "cafe", keyword: "cafe" }
+  { id: "veg_food", name: "🥬 Veg Food", icon: <Leaf size={16} />, type: "food", value: "veg" },
 ];
 
 // Category sections for homepage
@@ -1793,41 +1764,6 @@ const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
   );
 };
 
-/* ================= TRUST BADGES SECTION ================= */
-const TrustBadges = () => {
-  return (
-    <div style={{
-      display: "flex",
-      flexWrap: "wrap",
-      justifyContent: "center",
-      gap: 16,
-      marginBottom: 32,
-      padding: "20px 0",
-      borderTop: "1px solid #e5e7eb",
-      borderBottom: "1px solid #e5e7eb",
-      background: "#fafafa"
-    }}>
-      {trustBadges.map((badge, index) => (
-        <div
-          key={index}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "8px 16px",
-            background: badge.bg,
-            borderRadius: 40,
-            color: badge.color
-          }}
-        >
-          {badge.icon}
-          <span style={{ fontSize: 13, fontWeight: 500 }}>{badge.name}</span>
-        </div>
-      ))}
-    </div>
-  );
-};
-
 /* ================= UPDATED PG CARD COMPONENT WITH AUTO IMAGE SLIDER ================= */
 const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, isFavorite, isSelectedForCompare, onSelectForCompare, compareMode }) => {
   const isMobile = window.innerWidth < 768;
@@ -2172,7 +2108,6 @@ function UserPGSearch() {
   const [compareMode, setCompareMode] = useState(false);
   const [selectedForCompare, setSelectedForCompare] = useState(new Set());
   const [showCompareModal, setShowCompareModal] = useState(false);
-  const [activeSmartTag, setActiveSmartTag] = useState(null);
   const [activeQuickFilters, setActiveQuickFilters] = useState(new Set());
 
   const [filters, setFilters] = useState({
@@ -2193,13 +2128,8 @@ function UserPGSearch() {
   // Auto ask for location on first load
   useEffect(() => {
     const autoAsked = localStorage.getItem(LOCATION_AUTO_ASKED_KEY);
-    if (!autoAsked) {
-      const timer = setTimeout(() => {
-        if (!userLocation && !locationLoading) {
-          autoDetectLocation();
-        }
-      }, 1000);
-      return () => clearTimeout(timer);
+    if (!autoAsked && !userLocation && !locationLoading) {
+      autoDetectLocation();
     }
   }, []);
 
@@ -2250,10 +2180,6 @@ function UserPGSearch() {
         setFilters(prev => ({ ...prev, [filter.field]: false }));
       } else if (filter.type === "budget") {
         setFilters(prev => ({ ...prev, minBudget: 0, maxBudget: 50000 }));
-      } else if (filter.type === "tag") {
-        setActiveSmartTag(null);
-      } else if (filter.type === "verified") {
-        // No action needed
       }
     } else {
       newActiveFilters.add(filter.id);
@@ -2267,16 +2193,6 @@ function UserPGSearch() {
         setFilters(prev => ({ ...prev, [filter.field]: true }));
       } else if (filter.type === "budget") {
         setFilters(prev => ({ ...prev, minBudget: filter.min, maxBudget: filter.max }));
-      } else if (filter.type === "tag" && filter.keyword) {
-        const filtered = allPGs.filter(pg => {
-          const searchText = `${pg.area || ""} ${pg.city || ""} ${pg.pg_name || ""}`.toLowerCase();
-          return searchText.includes(filter.keyword.toLowerCase());
-        });
-        setPgs(filtered);
-        setActiveSmartTag(filter.name);
-      } else if (filter.type === "special" && filter.condition) {
-        const filtered = allPGs.filter(filter.condition);
-        setPgs(filtered);
       }
     }
     
@@ -2544,7 +2460,6 @@ function UserPGSearch() {
     setFilters({
       location: "", minBudget: 0, maxBudget: 50000, food: false, ac: false, wifi: false, parking: false, sort: "", nearMe: false, foodType: ""
     });
-    setActiveSmartTag(null);
     setActiveQuickFilters(new Set());
     setPgs(allPGs);
     showNotification("All filters reset");
@@ -2725,9 +2640,6 @@ function UserPGSearch() {
       {/* Hero Banner */}
       <HeroBanner />
 
-      {/* Trust Badges Section */}
-      <TrustBadges />
-
       {/* Location Info Bar */}
       {userLocation && (
         <div style={{
@@ -2839,50 +2751,6 @@ function UserPGSearch() {
         </div>
       </div>
 
-      {/* Smart Tags Section */}
-      <div style={{ marginBottom: 32 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: "#374151" }}>🎯 Smart Filters</h3>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {smartTags.map((tag) => (
-            <button
-              key={tag.name}
-              onClick={() => {
-                if (activeSmartTag === tag.name) {
-                  setActiveSmartTag(null);
-                  setPgs(allPGs);
-                  showNotification("Showing all PGs");
-                } else {
-                  const filtered = allPGs.filter(pg => {
-                    const searchText = `${pg.area || ""} ${pg.city || ""} ${pg.pg_name || ""}`.toLowerCase();
-                    return searchText.includes(tag.keyword.toLowerCase());
-                  });
-                  setPgs(filtered);
-                  setActiveSmartTag(tag.name);
-                  showNotification(`Showing ${tag.name} PGs`);
-                }
-              }}
-              style={{
-                padding: "8px 16px",
-                borderRadius: 30,
-                background: activeSmartTag === tag.name ? "#8b5cf6" : "#f3f4f6",
-                color: activeSmartTag === tag.name ? "white" : "#374151",
-                border: "none",
-                cursor: "pointer",
-                fontSize: 13,
-                fontWeight: 500,
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                transition: "all 0.2s"
-              }}
-            >
-              {tag.icon}
-              {tag.name}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Filter Bar */}
       <div style={{ background: "#fff", borderRadius: 16, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.08)", marginBottom: 20, position: "sticky", top: 20, zIndex: 100 }}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -2899,7 +2767,7 @@ function UserPGSearch() {
           <button onClick={() => setShowFilters(!showFilters)} style={{ padding: "14px 20px", background: showFilters ? "#3b82f6" : "#f3f4f6", color: showFilters ? "white" : "#374151", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><Filter size={18} /> Filters</button>
           <button onClick={detectLocation} style={{ padding: "14px 20px", background: filters.nearMe ? "#f97316" : "#f3f4f6", color: filters.nearMe ? "white" : "#374151", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><Navigation size={18} /> Near Me</button>
           <button onClick={toggleCompareMode} style={{ padding: "14px 20px", background: compareMode ? "#8b5cf6" : "#f3f4f6", color: compareMode ? "white" : "#374151", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><BarChart size={18} /> Compare</button>
-          {(activeQuickFilters.size > 0 || filters.location || filters.minBudget > 0 || filters.maxBudget < 50000 || filters.food || filters.ac || filters.wifi || filters.parking || filters.foodType || activeSmartTag) && (
+          {(activeQuickFilters.size > 0 || filters.location || filters.minBudget > 0 || filters.maxBudget < 50000 || filters.food || filters.ac || filters.wifi || filters.parking || filters.foodType) && (
             <button onClick={resetFilters} style={{ padding: "14px 20px", background: "#ef4444", color: "white", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><X size={18} /> Clear All</button>
           )}
         </div>
@@ -2936,7 +2804,7 @@ function UserPGSearch() {
       </div>
 
       {/* Category Sections */}
-      {!filters.location && !activeSmartTag && activeQuickFilters.size === 0 && filters.minBudget === 0 && filters.maxBudget === 50000 && !filters.food && !filters.ac && !filters.wifi && !filters.parking && !filters.foodType ? (
+      {!filters.location && activeQuickFilters.size === 0 && filters.minBudget === 0 && filters.maxBudget === 50000 && !filters.food && !filters.ac && !filters.wifi && !filters.parking && !filters.foodType ? (
         <>
           {userLocation && renderCategorySection(categorySections[0], nearbyPGs)}
           {renderCategorySection(categorySections[1], trendingPGs)}
@@ -2975,7 +2843,6 @@ function UserPGSearch() {
             <h2 style={{ fontSize: 24, fontWeight: 600 }}>
               {filters.nearMe ? "📍 Properties Near You" : 
                filters.location ? `📍 Properties in ${filters.location}` : 
-               activeSmartTag ? `🎯 ${activeSmartTag}` :
                activeQuickFilters.size > 0 ? "🎯 Filtered Results" :
                "🏠 Search Results"}
             </h2>
