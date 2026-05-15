@@ -2377,7 +2377,7 @@ const PromoBannerSlider = ({ onBannerClick }) => {
               color: "#111827",
               marginBottom: 2
             }}>
-              🔥 Exclusive Offers
+              Exclusive Offers
             </h3>
             <p style={{
               fontSize: 13,

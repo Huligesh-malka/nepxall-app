@@ -2643,7 +2643,7 @@ function UserPGSearch() {
 
       {/* Quick Filters Section */}
       <div style={{ marginBottom: 28 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: "#374151" }}>⚡ Quick Filters</h3>
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: "#374151" }}>Quick Filters</h3>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           {quickFilters.map((filter) => (
             <button
