@@ -1215,7 +1215,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
               </span>
             )}
            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-  <BadgePercent size={14} color="#10b981" />
+  <Home size={14} color="#10b981" />
   Zero Brokerage
 </span>
             
@@ -2028,7 +2028,7 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
             </span>
           )}
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-  <BadgePercent size={14} color="#10b981" />
+  <Home size={14} color="#10b981" />
   Zero Brokerage
 </span>
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
