@@ -4834,7 +4834,7 @@ function UserPGSearch() {
                         }}
                       >
                         <MessageCircle size={isMobile ? 12 : 14} />
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Contact</span>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Contact Owner</span>
                       </button>
                       
                       <button
