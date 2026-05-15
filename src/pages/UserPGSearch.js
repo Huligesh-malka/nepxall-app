@@ -580,12 +580,11 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
   );
 };
 
-/* ================= BOOKING MODAL COMPONENT ================= */
+/* ================= UPDATED BOOKING MODAL COMPONENT (CONTACT OWNER) ================= */
 const BookingModal = ({ pg, onClose, onBook }) => {
 
   const [bookingData, setBookingData] = useState({
-    checkInDate: "",
-    roomType: ""
+    roomType: ""  // ✅ REMOVED checkInDate
   });
 
   const [loading, setLoading] = useState(false);
@@ -596,7 +595,6 @@ const BookingModal = ({ pg, onClose, onBook }) => {
     const defaultRoomType = getDefaultRoomType();
 
     setBookingData({
-      checkInDate: "",
       roomType: defaultRoomType || ""
     });
 
@@ -629,24 +627,6 @@ const BookingModal = ({ pg, onClose, onBook }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setBookingData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const getTomorrowDate = () => {
-    const today = new Date();
-    today.setDate(today.getDate() + 1);
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const getMaxDate = () => {
-    const max = new Date();
-    max.setMonth(max.getMonth() + 6);
-    const year = max.getFullYear();
-    const month = String(max.getMonth() + 1).padStart(2, '0');
-    const day = String(max.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
   };
 
   const getRoomTypes = () => {
@@ -797,14 +777,14 @@ const BookingModal = ({ pg, onClose, onBook }) => {
             color: "#111827",
             marginBottom: 8 
           }}>
-            🏠 Book {pg.pg_name}
+            📞 Contact Owner - {pg.pg_name}
           </h2>
           <p style={{ 
             fontSize: 14, 
             color: "#6b7280",
             marginBottom: 24 
           }}>
-            Your details will be auto-filled from your profile
+            Your details will be shared with the property owner. They will contact you shortly.
           </p>
 
           {Number(pg.min_stay_months) > 0 && (
@@ -836,41 +816,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
               setLoading(false);
             }
           }}>
-            <div style={{ marginBottom: 24 }}>
-              <label style={{
-                display: "block",
-                marginBottom: 8,
-                fontSize: 14,
-                fontWeight: 500,
-                color: "#374151"
-              }}>
-                Check-in Date *
-              </label>
-              <input
-                type="date"
-                name="checkInDate"
-                value={bookingData.checkInDate}
-                onChange={handleInputChange}
-                required
-                min={getTomorrowDate()}
-                max={getMaxDate()}
-                style={{
-                  width: "100%",
-                  padding: "12px 16px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 10,
-                  fontSize: 14,
-                  background: "#f9fafb"
-                }}
-              />
-              <p style={{
-                fontSize: 12,
-                color: "#6b7280",
-                marginTop: 4
-              }}>
-                Earliest check-in: tomorrow (24h notice required)
-              </p>
-            </div>
+            {/* ✅ REMOVED Check-in Date section */}
 
             <div style={{ marginBottom: 24 }}>
               <label style={{
@@ -919,12 +865,14 @@ const BookingModal = ({ pg, onClose, onBook }) => {
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                 <Info size={16} color="#10b981" />
                 <span style={{ fontSize: 14, fontWeight: 600, color: "#065f46" }}>
-                  Booking Information
+                  What happens next?
                 </span>
               </div>
               <ul style={{ margin: 0, paddingLeft: 20, color: "#065f46", fontSize: 13 }}>
-                <li>You'll receive confirmation via email/SMS</li>
+                <li>Owner receives your inquiry instantly</li>
+                <li>Owner gets WhatsApp notification</li>
                 <li>Owner will contact you within 24 hours</li>
+                <li>No payment required now</li>
               </ul>
             </div>
 
@@ -953,7 +901,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                 style={{
                   flex: 2,
                   padding: "14px",
-                  background: loading ? "#9ca3af" : "#10b981",
+                  background: loading ? "#9ca3af" : "#3b82f6",
                   color: "white",
                   border: "none",
                   borderRadius: 10,
@@ -980,8 +928,8 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                   </>
                 ) : (
                   <>
-                    <BookOpen size={18} />
-                    Confirm Booking
+                    <MessageCircle size={18} />
+                    Contact Owner
                   </>
                 )}
               </button>
@@ -1377,7 +1325,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   };
 
   const handleBookNow = () => {
-    trackEvent("book_now_click", {
+    trackEvent("contact_owner_click", {
       pg_id: pg.id,
       pg_name: pg.pg_name,
       category: pg.pg_category,
@@ -1751,7 +1699,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
                   fontWeight: 700,
                   marginBottom: 16 
                 }}>
-                  ⚡ Instant Booking
+                  📞 Contact Owner
                 </h3>
                 <div style={{ marginBottom: 20 }}>
                   <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 4 }}>Available Rooms</div>
@@ -1783,7 +1731,8 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
                     e.currentTarget.style.boxShadow = "none";
                   }}
                 >
-                  🏠 Book Now
+                  <MessageCircle size={18} style={{ marginRight: 8 }} />
+                  Contact Owner
                 </button>
               </div>
             </div>
@@ -1954,7 +1903,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
                 flex: 2,
                 minWidth: "150px",
                 padding: "16px 24px",
-                background: "#10b981",
+                background: "#3b82f6",
                 color: "white",
                 border: "none",
                 borderRadius: 12,
@@ -1969,15 +1918,15 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 8px 20px rgba(16, 185, 129, 0.3)";
+                e.currentTarget.style.boxShadow = "0 8px 20px rgba(59, 130, 246, 0.3)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = "translateY(0)";
                 e.currentTarget.style.boxShadow = "none";
               }}
             >
-              <BookOpen size={20} />
-              Book Now
+              <MessageCircle size={20} />
+              Contact Owner
             </button>
             
             <button
@@ -3639,184 +3588,91 @@ function UserPGSearch() {
   };
 
   const handleBookNow = (pg) => {
-    // Track book now click
-    trackEvent("book_now_click", {
+    // Track contact owner click
+    trackEvent("contact_owner_click", {
       pg_id: pg.id,
       pg_name: pg.pg_name,
       category: pg.pg_category,
     });
     
     if (!user) {
-      showNotification("Please register or login to book this property");
+      showNotification("Please register or login to contact owner");
       navigate("/login");
       return;
     }
 
     setBookingPG(pg);
   };
-const handleBookingSubmit = async (bookingData) => {
 
-  try {
-
-    /*
-    =========================================
-    LOGIN CHECK
-    =========================================
-    */
-
-    if (!user) {
-      showNotification("Please register or login to continue");
-      navigate("/register");
-      return;
-    }
-
-    /*
-    =========================================
-    USER TOKEN
-    =========================================
-    */
-
-    const token = await user.getIdToken(true);
-
-    /*
-    =========================================
-    BOOKING PAYLOAD
-    =========================================
-    */
-
-    const payload = {
-      check_in_date: bookingData.checkInDate,
-      room_type: bookingData.roomType
-    };
-
-    /*
-    =========================================
-    SAVE BOOKING
-    =========================================
-    */
-
-    const res = await api.post(
-      `/bookings/${bookingPG.id}`,
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
-
-    /*
-    =========================================
-    ALREADY BOOKED
-    =========================================
-    */
-
-    if (res.data?.alreadyBooked) {
-
-      showNotification(res.data.message);
-
-      setBookingPG(null);
-
-      return;
-    }
-
-    /*
-    =========================================
-    TRACK EVENT
-    =========================================
-    */
-
-    trackEvent("booking_success", {
-      booking_id: res.data?.bookingId || res.data?.booking?.id,
-      pg_id: bookingPG.id,
-    });
-
-    /*
-    =========================================
-    SEND WHATSAPP TO OWNER
-    =========================================
-    */
+  // ✅ UPDATED handleBookingSubmit - ONLY room_type in payload
+  const handleBookingSubmit = async (bookingData) => {
 
     try {
 
-  /*
-  =========================================
-  SEND WHATSAPP TO OWNER
-  =========================================
-  */
+      if (!user) {
+        showNotification("Please register or login to continue");
+        navigate("/register");
+        return;
+      }
 
-  await api.post(
-    "/whatsapp/send-booking-whatsapp",
-    {
-      ownerId: bookingPG.owner_id,
+      const token = await user.getIdToken(true);
 
-      userName:
-        user.displayName || "Customer",
+      // ✅ ONLY room_type in payload (NO check_in_date)
+      const payload = {
+        room_type: bookingData.roomType
+      };
 
-      userPhone:
-        user.phoneNumber || "No Phone",
+      const res = await api.post(
+        `/bookings/${bookingPG.id}`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
 
-      propertyName:
-        bookingPG.pg_name,
+      if (res.data?.alreadyBooked) {
+        showNotification(res.data.message);
+        setBookingPG(null);
+        return;
+      }
 
-      area:
-        bookingPG.area ||
-        bookingPG.city ||
-        "Location",
+      trackEvent("contact_owner_success", {
+        lead_id: res.data?.bookingId || res.data?.booking?.id,
+        pg_id: bookingPG.id,
+      });
 
-      rent:
-        getEffectiveRent(bookingPG)
+      // Send WhatsApp to owner
+      try {
+        await api.post(
+          "/whatsapp/send-booking-whatsapp",
+          {
+            ownerId: bookingPG.owner_id,
+            userName: user.displayName || "Customer",
+            userPhone: user.phoneNumber || "No Phone",
+            propertyName: bookingPG.pg_name,
+            area: bookingPG.area || bookingPG.city || "Location",
+            rent: getEffectiveRent(bookingPG)
+          }
+        );
+        console.log("✅ WhatsApp Sent To Owner");
+      } catch (whatsappError) {
+        console.log("❌ WhatsApp Error:", whatsappError.response?.data || whatsappError.message);
+      }
+
+      showNotification(res.data.message || "✅ Owner will contact you shortly");
+      setBookingPG(null);
+
+    } catch (error) {
+      console.log("CONTACT OWNER ERROR:", error.response?.data);
+      if (error.response?.data?.message) {
+        showNotification(error.response.data.message, true);
+      } else {
+        showNotification("❌ Something went wrong. Try again", true);
+      }
     }
-  );
-
-  console.log("✅ WhatsApp Sent To Owner");
-
-} catch (whatsappError) {
-
-  console.log("❌ WhatsApp Error");
-
-  console.log(
-    whatsappError.response?.data ||
-    whatsappError.message
-  );
-}
-
-/*
-=========================================
-SUCCESS MESSAGE
-=========================================
-*/
-
-showNotification(
-  res.data.message ||
-  "✅ Booking request sent to owner"
-);
-
-setBookingPG(null);
-
-} catch (error) {
-
-console.log(
-  "BOOKING ERROR:",
-  error.response?.data
-);
-
-if (error.response?.data?.message) {
-
-  showNotification(
-    error.response.data.message,
-    true
-  );
-
-} else {
-
-  showNotification(
-    "❌ Something went wrong. Try again",
-    true
-  );
-}
-}
-};
+  };
   
   const handleSaveFavorite = (pgId, isFavorite) => {
     const newFavorites = new Set(favorites);
@@ -4797,7 +4653,6 @@ if (error.response?.data?.message) {
                   </div>
 
                   <div style={{ padding: 20 }}>
-                    {/* FIX PG TITLE - Replace with this */}
                     <h3 style={{ 
                       fontSize: "16px",
                       fontWeight: "700",
@@ -4829,7 +4684,6 @@ if (error.response?.data?.message) {
                       </span>
                     </div>
 
-                    {/* FIX PRICE ROW - Added flexWrap and overflow */}
                     <div style={{ 
                       display: "flex", 
                       justifyContent: "space-between", 
@@ -4869,7 +4723,6 @@ if (error.response?.data?.message) {
                       </div>
                     </div>
 
-                    {/* FIX PRICE BOXES */}
                     <div style={{
                       display: "grid",
                       gridTemplateColumns: "repeat(3, 1fr)",
@@ -4914,7 +4767,6 @@ if (error.response?.data?.message) {
                       ))}
                     </div>
 
-                    {/* FIX BUTTONS - Added flexWrap and nowrap */}
                     <div style={{
                       display: "flex",
                       gap: 8,
@@ -4934,7 +4786,7 @@ if (error.response?.data?.message) {
                           minWidth: 0,
                           fontSize: isMobile ? "12px" : "14px",
                           padding: isMobile ? "10px 6px" : "12px 16px",
-                          background: "#10b981",
+                          background: "#3b82f6",
                           color: "white",
                           border: "none",
                           borderRadius: 10,
@@ -4950,14 +4802,14 @@ if (error.response?.data?.message) {
                           transition: "all 0.2s"
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.background = "#059669";
+                          e.currentTarget.style.background = "#2563eb";
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.background = "#10b981";
+                          e.currentTarget.style.background = "#3b82f6";
                         }}
                       >
-                        <BookOpen size={isMobile ? 12 : 14} />
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Book</span>
+                        <MessageCircle size={isMobile ? 12 : 14} />
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Contact</span>
                       </button>
                       
                       <button
@@ -5109,10 +4961,10 @@ if (error.response?.data?.message) {
       )}
 
       <BookingModal
-  pg={bookingPG}
-  onClose={() => setBookingPG(null)}
-  onBook={handleBookingSubmit}
-/>
+        pg={bookingPG}
+        onClose={() => setBookingPG(null)}
+        onBook={handleBookingSubmit}
+      />
 
       {showCompareModal && (
         <CompareModal
