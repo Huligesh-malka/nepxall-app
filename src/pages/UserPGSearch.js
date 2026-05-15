@@ -3744,27 +3744,30 @@ const handleBookingSubmit = async (bookingData) => {
   SEND WHATSAPP TO OWNER
   =========================================
   */
-await api.post(
-  "/whatsapp/send-booking-whatsapp",
-  {
 
-    ownerId: bookingPG.owner_id,
+  await api.post(
+    "/whatsapp/send-booking-whatsapp",
+    {
+      ownerId: bookingPG.owner_id,
 
-    propertyId: bookingPG.id,
+      userName:
+        user.displayName || "Customer",
 
-    propertyName:
-      bookingPG.pg_name,
+      userPhone:
+        user.phoneNumber || "No Phone",
 
-    area:
-      bookingPG.area ||
-      bookingPG.city ||
-      "Location",
+      propertyName:
+        bookingPG.pg_name,
 
-    rent:
-      getEffectiveRent(bookingPG)
+      area:
+        bookingPG.area ||
+        bookingPG.city ||
+        "Location",
 
-  }
-);
+      rent:
+        getEffectiveRent(bookingPG)
+    }
+  );
 
   console.log("✅ WhatsApp Sent To Owner");
 
