@@ -2576,7 +2576,7 @@ function UserPGSearch() {
                 {section.title}
               </h2>
               <p style={{ fontSize: 14, color: "#6b7280", margin: "4px 0 0" }}>
-                {properties.length} {section.title.split(' ')[1]} available
+                 {section.title.split(' ')[1]} available
               </p>
             </div>
           </div>
@@ -2622,7 +2622,7 @@ function UserPGSearch() {
                 transition: "all 0.2s"
               }}
             >
-              View All {properties.length} {section.title.split(' ')[1]} →
+              View All {} {section.title.split(' ')[1]} →
             </button>
           </div>
         )}
