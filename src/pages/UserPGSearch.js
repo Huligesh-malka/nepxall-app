@@ -2029,11 +2029,10 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
           )}
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
   <Home size={14} color="#10b981" />
-  Zero Brokerage by Nepxall
+Zero Brokerage by Nepxall
+
 </span>
-          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <Clock size={12} />
-          </span>
+          
         </div>
         
         <button
