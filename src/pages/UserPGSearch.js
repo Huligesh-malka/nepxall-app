@@ -4731,7 +4731,7 @@ function UserPGSearch() {
                           alignItems: "center",
                           gap: 4
                         }}>
-                          <DollarSign size={16} />
+                          <Coins size={16} />
                           {priceRange}
                         </div>
                         <div style={{ fontSize: 11, color: "#6b7280" }}>
