@@ -38,6 +38,9 @@ const GooglePropertySearch = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  
+  // STEP 1 — ADD NEW STATE
+  const [googleLink, setGoogleLink] = useState("");
 
   /*
   --------------------------------------------------
@@ -87,6 +90,73 @@ const GooglePropertySearch = () => {
 
       setError(
         "Failed To Search Properties"
+      );
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
+  };
+
+  // STEP 2 — ADD LINK SEARCH FUNCTION
+  /*
+  --------------------------------------------------
+  SEARCH GOOGLE MAPS LINK
+  --------------------------------------------------
+  */
+
+  const searchGoogleLink = async () => {
+
+    try {
+
+      if (!googleLink) {
+
+        alert("Paste Google Maps Link");
+
+        return;
+
+      }
+
+      setLoading(true);
+
+      const res =
+        await axios.post(
+
+          `${API_BASE_URL}/api/nearby-pg/google-link-search`,
+
+          {
+            url: googleLink
+          }
+
+        );
+
+      console.log(
+        "Google Link Result:",
+        res.data
+      );
+
+      if (res.data.success) {
+
+        setPgs([res.data.property]);
+
+        setError("");
+
+      } else {
+
+        setError(
+          "Property Not Found"
+        );
+
+      }
+
+    } catch (error) {
+
+      console.log(error);
+
+      setError(
+        "Failed To Search Google Link"
       );
 
     } finally {
@@ -169,6 +239,30 @@ const GooglePropertySearch = () => {
         Google Property Search
       </h1>
 
+      {/* STEP 3 — ADD GOOGLE MAPS LINK INPUT UI */}
+      {/* GOOGLE MAPS LINK */}
+
+      <div style={styles.linkContainer}>
+
+        <input
+          type="text"
+          placeholder="Paste Google Maps Property Link..."
+          value={googleLink}
+          onChange={(e) =>
+            setGoogleLink(e.target.value)
+          }
+          style={styles.searchInput}
+        />
+
+        <button
+          style={styles.linkBtn}
+          onClick={searchGoogleLink}
+        >
+          Load Link
+        </button>
+
+      </div>
+
       {/* SEARCH BAR */}
 
       <div style={styles.searchContainer}>
@@ -210,6 +304,9 @@ const GooglePropertySearch = () => {
           <h3>Search for properties above</h3>
           <p style={{ color: "#666", marginTop: 10 }}>
             Try: "Bangalore PG", "Hyderabad Coliving", "Mumbai Apartments"
+          </p>
+          <p style={{ color: "#666", marginTop: 10 }}>
+            Or paste a Google Maps link to import a specific property
           </p>
         </div>
 
@@ -399,6 +496,22 @@ const GooglePropertySearch = () => {
 
                   )}
 
+                  {/* STEP 5 — ADD GOOGLE MAPS BUTTON */}
+                  {/* MAP BUTTON */}
+
+                  {pg.maps_url && (
+
+                    <a
+                      href={pg.maps_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={styles.mapBtn}
+                    >
+                      Open In Google Maps
+                    </a>
+
+                  )}
+
                   {/* BUTTON */}
 
                   <div style={styles.buttonContainer}>
@@ -458,6 +571,23 @@ const styles = {
     alignItems: "center",
     height: "60vh",
     flexDirection: "column"
+  },
+
+  // STEP 4 — ADD NEW STYLES
+  linkContainer: {
+    display: "flex",
+    gap: 10,
+    marginBottom: 25
+  },
+
+  linkBtn: {
+    background: "#34A853",
+    color: "#fff",
+    border: "none",
+    padding: "0 25px",
+    borderRadius: 10,
+    cursor: "pointer",
+    fontWeight: "bold"
   },
 
   searchContainer: {
@@ -575,6 +705,20 @@ const styles = {
     borderRadius: 20,
     fontSize: 12,
     fontWeight: "bold"
+  },
+
+  // STEP 6 — ADD BUTTON STYLE
+  mapBtn: {
+    display: "block",
+    textAlign: "center",
+    background: "#fff",
+    border: "1px solid #0B5ED7",
+    color: "#0B5ED7",
+    padding: "10px",
+    borderRadius: 8,
+    textDecoration: "none",
+    fontWeight: "bold",
+    marginTop: 10
   }
 
 };
