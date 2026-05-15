@@ -47,6 +47,46 @@ const NearbyPGMap = () => {
 
   /*
   --------------------------------------------------
+  ACCEPT PROPERTY
+  --------------------------------------------------
+  */
+
+  const handleAcceptProperty = async (pg) => {
+
+    try {
+
+      const response = await axios.post(
+
+        `${API_BASE_URL}/api/nearby-pg/accept-google-property`,
+
+        {
+          property: pg
+        }
+
+      );
+
+      if (response.data.success) {
+
+        alert("Property Stored Successfully ✅");
+
+      } else {
+
+        alert("Failed to Store Property");
+
+      }
+
+    } catch (error) {
+
+      console.log(error);
+
+      alert("Error storing property");
+
+    }
+
+  };
+
+  /*
+  --------------------------------------------------
   GET LOCATION + PGS
   --------------------------------------------------
   */
@@ -136,90 +176,6 @@ const NearbyPGMap = () => {
     );
 
   }, []);
-
-  /*
-  --------------------------------------------------
-  CLAIM PROPERTY
-  --------------------------------------------------
-  */
-
-  const handleClaimProperty = (pg) => {
-
-    const mobile =
-      prompt(
-        "Enter Your Mobile Number"
-      );
-
-    if (!mobile) return;
-
-    if (mobile.length < 10) {
-
-      alert(
-        "Please enter valid mobile number"
-      );
-
-      return;
-
-    }
-
-    /*
-    =========================================
-    SAVE DATA
-    =========================================
-    */
-
-    localStorage.setItem(
-      "ownerMobile",
-      mobile
-    );
-
-    localStorage.setItem(
-      "claimPG",
-      JSON.stringify(pg)
-    );
-
-    /*
-    =========================================
-    PHONE MATCH CHECK
-    =========================================
-    */
-
-    if (pg.phone) {
-
-      const cleanGooglePhone =
-        pg.phone.replace(/\D/g, "");
-
-      const cleanUserPhone =
-        mobile.replace(/\D/g, "");
-
-      if (
-        cleanGooglePhone.includes(cleanUserPhone)
-      ) {
-
-        alert(
-          "Phone Number Matched Successfully ✅"
-        );
-
-      } else {
-
-        alert(
-          "Number does not match Google records. Manual verification required."
-        );
-
-      }
-
-    }
-
-    /*
-    =========================================
-    REDIRECT
-    =========================================
-    */
-
-    window.location.href =
-      `/claim-property?pgId=${pg.id}`;
-
-  };
 
   /*
   --------------------------------------------------
@@ -504,94 +460,18 @@ const NearbyPGMap = () => {
 
                   )}
 
-                  {/* BUTTONS */}
+                  {/* BUTTON */}
 
                   <div style={styles.buttonContainer}>
 
-                    {/* CLAIM */}
-
                     <button
-                      style={styles.claimBtn}
+                      style={styles.acceptBtn}
                       onClick={() =>
-                        handleClaimProperty(pg)
+                        handleAcceptProperty(pg)
                       }
                     >
-                      Claim Property
+                      Accept
                     </button>
-
-                    {/* CALL */}
-
-                    {pg.phone && (
-
-                      <a
-                        href={`tel:${pg.phone}`}
-                        style={{
-                          textDecoration: "none"
-                        }}
-                      >
-
-                        <button style={styles.callBtn}>
-                          Call Owner
-                        </button>
-
-                      </a>
-
-                    )}
-
-                    {/* WHATSAPP */}
-
-                    {pg.phone && (
-
-                      <a
-                        href={`https://wa.me/${pg.phone.replace(/\D/g, "")}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          textDecoration: "none"
-                        }}
-                      >
-
-                        <button style={styles.bookBtn}>
-                          WhatsApp
-                        </button>
-
-                      </a>
-
-                    )}
-
-                    {/* VIEW */}
-
-                    <a
-                      href={pg.maps_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{
-                        textDecoration: "none"
-                      }}
-                    >
-
-                      <button style={styles.viewBtn}>
-                        View Place
-                      </button>
-
-                    </a>
-
-                    {/* NAVIGATE */}
-
-                    <a
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${pg.latitude},${pg.longitude}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{
-                        textDecoration: "none"
-                      }}
-                    >
-
-                      <button style={styles.navBtn}>
-                        Navigate
-                      </button>
-
-                    </a>
 
                   </div>
 
@@ -701,54 +581,15 @@ const styles = {
     flexWrap: "wrap"
   },
 
-  claimBtn: {
-    background: "#FF9800",
-    color: "#fff",
-    border: "none",
-    padding: "10px 15px",
-    borderRadius: 8,
-    cursor: "pointer",
-    fontWeight: "bold"
-  },
-
-  callBtn: {
-    background: "#673AB7",
-    color: "#fff",
-    border: "none",
-    padding: "10px 15px",
-    borderRadius: 8,
-    cursor: "pointer",
-    fontWeight: "bold"
-  },
-
-  bookBtn: {
-    background: "#25D366",
-    color: "#fff",
-    border: "none",
-    padding: "10px 15px",
-    borderRadius: 8,
-    cursor: "pointer",
-    fontWeight: "bold"
-  },
-
-  viewBtn: {
-    background: "#222",
-    color: "#fff",
-    border: "none",
-    padding: "10px 15px",
-    borderRadius: 8,
-    cursor: "pointer",
-    fontWeight: "bold"
-  },
-
-  navBtn: {
+  acceptBtn: {
     background: "#0B5ED7",
     color: "#fff",
     border: "none",
-    padding: "10px 15px",
+    padding: "10px 20px",
     borderRadius: 8,
     cursor: "pointer",
-    fontWeight: "bold"
+    fontWeight: "bold",
+    width: "100%"
   },
 
   websiteBadge: {
