@@ -5,8 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { 
   Search, 
   Filter, 
-  MapPin, 
-  DollarSign, 
+  MapPin,  
   Home, 
   Utensils, 
   Snowflake,
@@ -1755,7 +1754,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
                   gap: 8,
                   color: "#166534"
                 }}>
-                  <DollarSign size={16} />
+                  <Coins size={16} />
                   Price Details
                 </h4>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
