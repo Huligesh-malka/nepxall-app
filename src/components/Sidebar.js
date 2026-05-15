@@ -202,6 +202,15 @@ const Sidebar = ({ role, user }) => {
 >
   <FiInstagram size={16} /> Instagram AI
 </Link>
+
+
+<Link
+  style={linkStyle(isActive("/nearby-pgs"))}
+  to="/nearby-pgs"
+  className="sidebar-link"
+>
+  <FiMapPin size={16} /> Nearby PGs
+</Link>
           </>
         )}
 
