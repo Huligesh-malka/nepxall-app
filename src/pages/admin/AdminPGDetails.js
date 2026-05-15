@@ -101,6 +101,26 @@ const getCorrectImageUrl = (path) => {
   return `${FILES_BASE}${normalizedPath}`;
 };
 
+
+
+
+
+// Chair icon component
+const Chair = ({ size = 16, className = "" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M7 18v4m10-4v4M5 14h14v-4a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v4Z" />
+    <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2" />
+  </svg>
+);
+
+// Tree icon component for park
+const Tree = ({ size = 16, className = "" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M12 22V12M7 12L12 7L17 12M7 12H4L9 7L7 4L12 9L17 4L15 7L20 12H17" />
+  </svg>
+);
+
+
 const AdminPGDetails = () => {
   const { id } = useParams();
   const { user, role, loading: authLoading } = useAuth();
@@ -1057,20 +1077,5 @@ const AdminPGDetails = () => {
     </div>
   );
 };
-
-// Chair icon component
-const Chair = ({ size = 16, className = "" }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M7 18v4m10-4v4M5 14h14v-4a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v4Z" />
-    <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2" />
-  </svg>
-);
-
-// Tree icon component for park
-const Tree = ({ size = 16, className = "" }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M12 22V12M7 12L12 7L17 12M7 12H4L9 7L7 4L12 9L17 4L15 7L20 12H17" />
-  </svg>
-);
 
 export default AdminPGDetails;
