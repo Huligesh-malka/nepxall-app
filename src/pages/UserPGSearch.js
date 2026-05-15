@@ -3604,7 +3604,7 @@ function UserPGSearch() {
     setBookingPG(pg);
   };
 
-  // ✅ UPDATED handleBookingSubmit - ONLY room_type in payload
+  // ✅ UPDATED handleBookingSubmit - ONLY room_type in payload + AUTO CALL
   const handleBookingSubmit = async (bookingData) => {
 
     try {
@@ -3662,6 +3662,17 @@ function UserPGSearch() {
       }
 
       showNotification(res.data.message || "✅ Owner will contact you shortly");
+      
+      // ✅ AFTER SUCCESS - OPEN CALL DIALOG WITH OWNER'S PHONE NUMBER
+      if (bookingPG.contact_phone) {
+        // Small delay to let the notification show first
+        setTimeout(() => {
+          window.location.href = `tel:${bookingPG.contact_phone}`;
+        }, 500);
+      } else {
+        console.log("⚠️ No contact phone available for this PG");
+      }
+      
       setBookingPG(null);
 
     } catch (error) {
