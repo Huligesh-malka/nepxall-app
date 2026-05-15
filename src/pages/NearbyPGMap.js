@@ -394,7 +394,7 @@ const GooglePropertySearch = () => {
                   {pg.phone && (
 
                     <p style={styles.phone}>
-                      📞 {pg.phone}
+                      📞 {pg.phone.replace(/\D/g, "")}
                     </p>
 
                   )}
