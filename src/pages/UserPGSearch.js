@@ -1224,13 +1224,10 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
               </span>
             )}
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <BadgePercent size={12} color="#ef4444" />
-              Zero Brokerage
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <Clock size={12} />
-              Owner responds in 10 mins
-            </span>
+  <span style={{ color: "#10b981", fontWeight: "700" }}>✔</span>
+  Zero Brokerage
+</span>
+            
           </div>
           
           <div style={{ display: "flex", gap: 12 }}>
@@ -1594,7 +1591,7 @@ const PromoBannerSlider = ({ onBannerClick }) => {
       title: "Student Offer",
       subtitle: "Limited Time Deal",
       description: "Special discount for students",
-      icon: "🔥",
+      icon: "",
       gradient: "linear-gradient(135deg, #ec4899, #be185d)"
     }
   ];
