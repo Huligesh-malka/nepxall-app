@@ -86,7 +86,20 @@ import {
   Train,
   Bus,
   GraduationCap as GraduationIcon,
-  Briefcase as BriefcaseIcon
+  Briefcase as BriefcaseIcon,
+  School,
+  Building2,
+  ShoppingBag,
+  TreePine,
+  Coffee as CoffeeIcon,
+  Dumbbell as GymIcon,
+  Droplets as WaterIcon,
+  WashingMachine,
+  Fan,
+  Tv as TvIcon,
+  Microwaves,
+  Fridge,
+  Stethoscope
 } from "lucide-react";
 import api from "../api/api";
 
@@ -110,16 +123,43 @@ const popularAreas = [
   { name: "MG Road", icon: "🏙️", color: "#a855f7" }
 ];
 
+// Quick Filters - Easy access filters
+const quickFilters = [
+  { id: "near_me", name: "📍 Near Me", icon: <Navigation size={16} />, type: "location" },
+  { id: "near_metro", name: "🚇 Near Metro", icon: <Train size={16} />, type: "tag", keyword: "metro" },
+  { id: "near_college", name: "🎓 Near College", icon: <GraduationIcon size={16} />, type: "tag", keyword: "college" },
+  { id: "near_it_park", name: "💼 Near IT Park", icon: <BriefcaseIcon size={16} />, type: "tag", keyword: "it park" },
+  { id: "veg_food", name: "🥬 Veg Food", icon: <Leaf size={16} />, type: "food", value: "veg" },
+  { id: "ac_room", name: "❄️ AC Room", icon: <Snowflake size={16} />, type: "amenity", field: "ac_available" },
+  { id: "wifi", name: "📶 WiFi", icon: <Wifi size={16} />, type: "amenity", field: "wifi_available" },
+  { id: "parking", name: "🅿️ Parking", icon: <Car size={16} />, type: "amenity", field: "parking_available" },
+  { id: "under_10k", name: "💰 Under ₹10k", icon: <Coins size={16} />, type: "budget", min: 0, max: 10000 },
+  { id: "filling_fast", name: "🔥 Filling Fast", icon: <Flame size={16} />, type: "special", condition: (pg) => pg.available_rooms < 5 && pg.available_rooms > 0 },
+  { id: "verified", name: "✅ Verified", icon: <Shield size={16} />, type: "verified" }
+];
+
+// Trust badges
+const trustBadges = [
+  { name: "Verified Properties", icon: <Shield size={18} />, color: "#10b981", bg: "#d1fae5" },
+  { name: "Secure Booking", icon: <Lock size={18} />, color: "#3b82f6", bg: "#dbeafe" },
+  { name: "Trusted Owners", icon: <UserCheck size={18} />, color: "#8b5cf6", bg: "#ede9fe" },
+  { name: "Zero Brokerage", icon: <BadgePercent size={18} />, color: "#ef4444", bg: "#fee2e2" },
+  { name: "Direct Contact", icon: <Phone size={18} />, color: "#f59e0b", bg: "#fed7aa" },
+  { name: "No Hidden Charges", icon: <Check size={18} />, color: "#06b6d4", bg: "#cffafe" }
+];
+
 // Smart Tags for better conversion
 const smartTags = [
-  { name: "Near Metro", icon: <Train size={14} />, filter: "metro" },
-  { name: "Near College", icon: <GraduationIcon size={14} />, filter: "college" },
-  { name: "Near IT Park", icon: <BriefcaseIcon size={14} />, filter: "it_park" },
-  { name: "Near Bus Stop", icon: <Bus size={14} />, filter: "bus_stop" },
-  { name: "🔥 Near Mall", icon: "🛍️", filter: "mall" },
-  { name: "📚 Near University", icon: "🎓", filter: "university" },
-  { name: "🏢 Manyata Tech Park", icon: "💼", filter: "manyata" },
-  { name: "💻 Electronic City", icon: "🖥️", filter: "electronic_city" }
+  { name: "🚇 Near Metro", icon: <Train size={14} />, filter: "metro", keyword: "metro" },
+  { name: "🎓 Near College", icon: <GraduationIcon size={14} />, filter: "college", keyword: "college" },
+  { name: "💼 Near IT Park", icon: <BriefcaseIcon size={14} />, filter: "it_park", keyword: "it park" },
+  { name: "🚌 Near Bus Stop", icon: <Bus size={14} />, filter: "bus_stop", keyword: "bus stop" },
+  { name: "🛍️ Near Mall", icon: <ShoppingBag size={14} />, filter: "mall", keyword: "mall" },
+  { name: "🏥 Near Hospital", icon: <Stethoscope size={14} />, filter: "hospital", keyword: "hospital" },
+  { name: "🏢 Manyata Tech Park", icon: <Building2 size={14} />, filter: "manyata", keyword: "manyata" },
+  { name: "💻 Electronic City", icon: <BriefcaseIcon size={14} />, filter: "electronic_city", keyword: "electronic city" },
+  { name: "🌳 Near Park", icon: <TreePine size={14} />, filter: "park", keyword: "park" },
+  { name: "☕ Near Cafe", icon: <CoffeeIcon size={14} />, filter: "cafe", keyword: "cafe" }
 ];
 
 // Category sections for homepage
@@ -908,7 +948,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                 <li>Owner receives your inquiry instantly</li>
                 <li>Owner gets WhatsApp notification</li>
                 <li>Owner will contact you within 24 hours</li>
-                <li>No payment required now</li>
+                <li>No payment required now - Zero Brokerage!</li>
               </ul>
             </div>
 
@@ -1208,7 +1248,8 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
             gap: 16,
             marginBottom: 24,
             fontSize: 12,
-            color: "#6b7280"
+            color: "#6b7280",
+            flexWrap: "wrap"
           }}>
             {pg.is_verified && (
               <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -1216,6 +1257,10 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
                 Verified
               </span>
             )}
+            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <BadgePercent size={12} color="#ef4444" />
+              Zero Brokerage
+            </span>
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <Clock size={12} />
               Owner responds in 10 mins
@@ -1709,6 +1754,7 @@ const HeroBanner = () => {
         <div style={{ background: "#10b981", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Verified</div>
         <div style={{ background: "#3b82f6", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Secure</div>
         <div style={{ background: "#8b5cf6", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Trusted</div>
+        <div style={{ background: "#ef4444", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Zero Brokerage</div>
       </div>
     </div>
   );
@@ -1743,6 +1789,41 @@ const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
           {isLoading ? "Getting location..." : "Allow Location"}
         </button>
       </div>
+    </div>
+  );
+};
+
+/* ================= TRUST BADGES SECTION ================= */
+const TrustBadges = () => {
+  return (
+    <div style={{
+      display: "flex",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      gap: 16,
+      marginBottom: 32,
+      padding: "20px 0",
+      borderTop: "1px solid #e5e7eb",
+      borderBottom: "1px solid #e5e7eb",
+      background: "#fafafa"
+    }}>
+      {trustBadges.map((badge, index) => (
+        <div
+          key={index}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "8px 16px",
+            background: badge.bg,
+            borderRadius: 40,
+            color: badge.color
+          }}
+        >
+          {badge.icon}
+          <span style={{ fontSize: 13, fontWeight: 500 }}>{badge.name}</span>
+        </div>
+      ))}
     </div>
   );
 };
@@ -2028,7 +2109,10 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
             </span>
           )}
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <Clock size={12} /> Owner responds in 10 mins
+            <BadgePercent size={12} color="#ef4444" /> Zero Brokerage
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <Clock size={12} /> Responds in 10 mins
           </span>
         </div>
         
@@ -2088,8 +2172,8 @@ function UserPGSearch() {
   const [compareMode, setCompareMode] = useState(false);
   const [selectedForCompare, setSelectedForCompare] = useState(new Set());
   const [showCompareModal, setShowCompareModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState("nearby");
   const [activeSmartTag, setActiveSmartTag] = useState(null);
+  const [activeQuickFilters, setActiveQuickFilters] = useState(new Set());
 
   const [filters, setFilters] = useState({
     location: "",
@@ -2110,7 +2194,6 @@ function UserPGSearch() {
   useEffect(() => {
     const autoAsked = localStorage.getItem(LOCATION_AUTO_ASKED_KEY);
     if (!autoAsked) {
-      // Auto ask for location after 1 second
       const timer = setTimeout(() => {
         if (!userLocation && !locationLoading) {
           autoDetectLocation();
@@ -2121,32 +2204,22 @@ function UserPGSearch() {
   }, []);
 
   const autoDetectLocation = () => {
-    if (!navigator.geolocation) {
-      console.log("Geolocation not supported");
-      return;
-    }
+    if (!navigator.geolocation) return;
     
     setLocationLoading(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        const location = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        };
+        const location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setUserLocation(location);
         
-        // Try to get address from coordinates
         try {
           const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.lat}&lon=${location.lng}&zoom=18&addressdetails=1`);
           const data = await response.json();
           if (data.address) {
             const area = data.address.suburb || data.address.neighbourhood || data.address.city_district || "";
             setUserAddress(area);
-            showNotification(`📍 Found you near ${area}`, false);
           }
-        } catch (err) {
-          console.log("Could not get address");
-        }
+        } catch (err) {}
         
         setFilters(prev => ({ ...prev, nearMe: true, sort: "distance" }));
         localStorage.setItem(LOCATION_AUTO_ASKED_KEY, "true");
@@ -2154,13 +2227,61 @@ function UserPGSearch() {
         setPage(1);
         loadPGs(false);
       },
-      (error) => {
-        console.log("Auto location error:", error);
+      () => {
         localStorage.setItem(LOCATION_AUTO_ASKED_KEY, "true");
         setLocationLoading(false);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
+  };
+
+  // Apply quick filter
+  const applyQuickFilter = (filter) => {
+    const newActiveFilters = new Set(activeQuickFilters);
+    
+    if (newActiveFilters.has(filter.id)) {
+      newActiveFilters.delete(filter.id);
+      // Reset the specific filter
+      if (filter.type === "location") {
+        setFilters(prev => ({ ...prev, nearMe: false }));
+      } else if (filter.type === "food") {
+        setFilters(prev => ({ ...prev, foodType: "" }));
+      } else if (filter.type === "amenity") {
+        setFilters(prev => ({ ...prev, [filter.field]: false }));
+      } else if (filter.type === "budget") {
+        setFilters(prev => ({ ...prev, minBudget: 0, maxBudget: 50000 }));
+      } else if (filter.type === "tag") {
+        setActiveSmartTag(null);
+      } else if (filter.type === "verified") {
+        // No action needed
+      }
+    } else {
+      newActiveFilters.add(filter.id);
+      // Apply the filter
+      if (filter.type === "location") {
+        setFilters(prev => ({ ...prev, nearMe: true, sort: "distance" }));
+        detectLocation();
+      } else if (filter.type === "food" && filter.value) {
+        setFilters(prev => ({ ...prev, foodType: filter.value }));
+      } else if (filter.type === "amenity" && filter.field) {
+        setFilters(prev => ({ ...prev, [filter.field]: true }));
+      } else if (filter.type === "budget") {
+        setFilters(prev => ({ ...prev, minBudget: filter.min, maxBudget: filter.max }));
+      } else if (filter.type === "tag" && filter.keyword) {
+        const filtered = allPGs.filter(pg => {
+          const searchText = `${pg.area || ""} ${pg.city || ""} ${pg.pg_name || ""}`.toLowerCase();
+          return searchText.includes(filter.keyword.toLowerCase());
+        });
+        setPgs(filtered);
+        setActiveSmartTag(filter.name);
+      } else if (filter.type === "special" && filter.condition) {
+        const filtered = allPGs.filter(filter.condition);
+        setPgs(filtered);
+      }
+    }
+    
+    setActiveQuickFilters(newActiveFilters);
+    showNotification(`${newActiveFilters.has(filter.id) ? "Applied" : "Removed"} ${filter.name}`);
   };
 
   const handlePromoBannerClick = (banner) => {
@@ -2234,28 +2355,21 @@ function UserPGSearch() {
           setAllPGs(processedData);
           setPgs(processedData);
           
-          // Populate category sections
-          // Nearby PGs (already sorted by distance if location enabled)
           const nearby = [...processedData].filter(p => p.distance && p.distance <= 5).slice(0, 8);
           setNearbyPGs(nearby);
           
-          // Trending PGs (with highest bookings or views - using available_rooms as proxy)
           const trending = [...processedData].sort((a, b) => (b.available_rooms || 0) - (a.available_rooms || 0)).slice(0, 8);
           setTrendingPGs(trending);
           
-          // Budget friendly (under 10k)
           const budget = [...processedData].filter(p => getEffectiveRent(p) < 10000).slice(0, 8);
           setBudgetPGs(budget);
           
-          // Luxury stays (above 25k)
           const luxury = [...processedData].filter(p => getEffectiveRent(p) > 25000).slice(0, 8);
           setLuxuryPGs(luxury);
           
-          // Co-living spaces
           const coliving = [...processedData].filter(p => p.pg_category === "coliving").slice(0, 8);
           setColivingPGs(coliving);
           
-          // To-Let homes
           const tolet = [...processedData].filter(p => p.pg_category === "to_let").slice(0, 8);
           setToletPGs(tolet);
         } else {
@@ -2302,7 +2416,6 @@ function UserPGSearch() {
       const saved = localStorage.getItem("pg_favorites");
       if (saved) setFavorites(new Set(JSON.parse(saved)));
     } catch (error) {
-      console.error("Error loading favorites:", error);
       setFavorites(new Set());
     }
   };
@@ -2310,9 +2423,7 @@ function UserPGSearch() {
   const saveFavorites = (newFavorites) => {
     try {
       localStorage.setItem("pg_favorites", JSON.stringify([...newFavorites]));
-    } catch (error) {
-      console.error("Error saving favorites:", error);
-    }
+    } catch (error) {}
   };
 
   const toggleFavorite = (pgId, e) => {
@@ -2338,34 +2449,6 @@ function UserPGSearch() {
     setFilters(prev => ({ ...prev, location: area, nearMe: false }));
     showNotification(`📍 Showing PGs in ${area}`);
     trackEvent("area_filter_click", { area });
-  };
-
-  const filterBySmartTag = (tag) => {
-    setActiveSmartTag(activeSmartTag === tag.name ? null : tag.name);
-    let filtered = [...allPGs];
-    
-    if (activeSmartTag !== tag.name) {
-      // Apply smart tag filtering based on area/keywords
-      const tagKeywords = {
-        "Near Metro": ["metro", "station", "railway"],
-        "Near College": ["college", "university", "campus"],
-        "Near IT Park": ["it park", "tech park", "software", "electronic city"],
-        "Near Bus Stop": ["bus stop", "bus stand"],
-        "🔥 Near Mall": ["mall", "shopping", "forum", "phoenix"],
-        "📚 Near University": ["university", "college", "campus"],
-        "🏢 Manyata Tech Park": ["manyata", "tech park"],
-        "💻 Electronic City": ["electronic city", "ecity"]
-      };
-      
-      const keywords = tagKeywords[tag.name] || [tag.name.toLowerCase()];
-      filtered = filtered.filter(pg => {
-        const searchText = `${pg.area || ""} ${pg.city || ""} ${pg.pg_name || ""}`.toLowerCase();
-        return keywords.some(keyword => searchText.includes(keyword));
-      });
-    }
-    
-    setPgs(filtered);
-    showNotification(activeSmartTag === tag.name ? `Showing all PGs` : `Showing ${tag.name} PGs`);
   };
 
   const handleAllowLocation = () => {
@@ -2462,6 +2545,7 @@ function UserPGSearch() {
       location: "", minBudget: 0, maxBudget: 50000, food: false, ac: false, wifi: false, parking: false, sort: "", nearMe: false, foodType: ""
     });
     setActiveSmartTag(null);
+    setActiveQuickFilters(new Set());
     setPgs(allPGs);
     showNotification("All filters reset");
   };
@@ -2556,7 +2640,6 @@ function UserPGSearch() {
 
   const clearCompareSelections = () => setSelectedForCompare(new Set());
 
-  // Function to render category section
   const renderCategorySection = (section, pgsData) => {
     if (pgsData.length === 0) return null;
     
@@ -2642,7 +2725,10 @@ function UserPGSearch() {
       {/* Hero Banner */}
       <HeroBanner />
 
-      {/* Location Info Bar - Shows current location */}
+      {/* Trust Badges Section */}
+      <TrustBadges />
+
+      {/* Location Info Bar */}
       {userLocation && (
         <div style={{
           background: "linear-gradient(135deg, #f0f9ff, #e0f2fe)",
@@ -2693,54 +2779,34 @@ function UserPGSearch() {
       {/* Promotional Banners */}
       <PromoBannerSlider onBannerClick={handlePromoBannerClick} />
 
-      {/* Filter Bar */}
-      <div style={{ background: "#fff", borderRadius: 16, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.08)", marginBottom: 20, position: "sticky", top: 20, zIndex: 100 }}>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 300, position: "relative" }}>
-            <Search size={20} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
-            <input 
-              placeholder="Search by area, city or property name..." 
-              value={filters.location} 
-              onChange={(e) => setFilters({ ...filters, location: e.target.value })} 
-              style={{ width: "100%", padding: "14px 14px 14px 44px", border: "1px solid #e5e7eb", borderRadius: 12, fontSize: 15 }} 
-            />
-          </div>
-          <button onClick={() => setShowBudgetFilter(true)} style={{ padding: "14px 20px", background: "#f3f4f6", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><Sliders size={18} /> Budget</button>
-          <button onClick={() => setShowFilters(!showFilters)} style={{ padding: "14px 20px", background: showFilters ? "#3b82f6" : "#f3f4f6", color: showFilters ? "white" : "#374151", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><Filter size={18} /> Filters</button>
-          <button onClick={detectLocation} style={{ padding: "14px 20px", background: filters.nearMe ? "#f97316" : "#f3f4f6", color: filters.nearMe ? "white" : "#374151", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><Navigation size={18} /> Near Me</button>
-          <button onClick={toggleCompareMode} style={{ padding: "14px 20px", background: compareMode ? "#8b5cf6" : "#f3f4f6", color: compareMode ? "white" : "#374151", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><BarChart size={18} /> Compare</button>
-          {compareMode && selectedForCompare.size >= 2 && <button onClick={handleCompare} style={{ padding: "14px 20px", background: "#10b981", color: "white", border: "none", borderRadius: 12 }}>Compare ({selectedForCompare.size}/3)</button>}
+      {/* Quick Filters Section - Easy Access */}
+      <div style={{ marginBottom: 24 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: "#374151" }}>⚡ Quick Filters</h3>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {quickFilters.map((filter) => (
+            <button
+              key={filter.id}
+              onClick={() => applyQuickFilter(filter)}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 30,
+                background: activeQuickFilters.has(filter.id) ? filter.id === "near_me" ? "#f97316" : "#3b82f6" : "#f3f4f6",
+                color: activeQuickFilters.has(filter.id) ? "white" : "#374151",
+                border: "none",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 500,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                transition: "all 0.2s"
+              }}
+            >
+              {filter.icon}
+              {filter.name}
+            </button>
+          ))}
         </div>
-
-        {showFilters && (
-          <div style={{ paddingTop: 20, marginTop: 16, borderTop: "1px solid #e5e7eb" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 600 }}>Advanced Filters</h3>
-              <button onClick={resetFilters} style={{ padding: "8px 16px", background: "transparent", color: "#ef4444", border: "1px solid #ef4444", borderRadius: 8, cursor: "pointer" }}><X size={16} /> Clear All</button>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 20 }}>
-              <select value={filters.foodType} onChange={(e) => setFilters({ ...filters, foodType: e.target.value })} style={{ padding: "12px", border: "1px solid #e5e7eb", borderRadius: 10 }}>
-                <option value="">Any Food Type</option>
-                <option value="veg">Vegetarian Only</option>
-                <option value="non-veg">Non-Vegetarian Only</option>
-                <option value="both">Both Available</option>
-              </select>
-              <select value={filters.sort} onChange={(e) => setFilters({ ...filters, sort: e.target.value })} style={{ padding: "12px", border: "1px solid #e5e7eb", borderRadius: 10 }}>
-                <option value="">Relevance</option>
-                <option value="low">Rent: Low to High</option>
-                <option value="high">Rent: High to Low</option>
-                <option value="new">Newest First</option>
-                {userLocation && <option value="distance">Distance (Nearest First)</option>}
-              </select>
-              <div style={{ display: "flex", gap: 12 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: filters.food ? "#10b981" : "#f3f4f6", borderRadius: 20, cursor: "pointer" }}><input type="checkbox" checked={filters.food} onChange={(e) => setFilters({ ...filters, food: e.target.checked })} style={{ display: "none" }} /><Utensils size={14} /> Food</label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: filters.ac ? "#3b82f6" : "#f3f4f6", borderRadius: 20, cursor: "pointer" }}><input type="checkbox" checked={filters.ac} onChange={(e) => setFilters({ ...filters, ac: e.target.checked })} style={{ display: "none" }} /><Snowflake size={14} /> AC</label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: filters.wifi ? "#8b5cf6" : "#f3f4f6", borderRadius: 20, cursor: "pointer" }}><input type="checkbox" checked={filters.wifi} onChange={(e) => setFilters({ ...filters, wifi: e.target.checked })} style={{ display: "none" }} /><Wifi size={14} /> WiFi</label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: filters.parking ? "#f59e0b" : "#f3f4f6", borderRadius: 20, cursor: "pointer" }}><input type="checkbox" checked={filters.parking} onChange={(e) => setFilters({ ...filters, parking: e.target.checked })} style={{ display: "none" }} /><Car size={14} /> Parking</label>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Popular Areas Chips */}
@@ -2775,16 +2841,30 @@ function UserPGSearch() {
 
       {/* Smart Tags Section */}
       <div style={{ marginBottom: 32 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: "#374151" }}>🎯 Quick Filters</h3>
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: "#374151" }}>🎯 Smart Filters</h3>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           {smartTags.map((tag) => (
             <button
               key={tag.name}
-              onClick={() => filterBySmartTag(tag)}
+              onClick={() => {
+                if (activeSmartTag === tag.name) {
+                  setActiveSmartTag(null);
+                  setPgs(allPGs);
+                  showNotification("Showing all PGs");
+                } else {
+                  const filtered = allPGs.filter(pg => {
+                    const searchText = `${pg.area || ""} ${pg.city || ""} ${pg.pg_name || ""}`.toLowerCase();
+                    return searchText.includes(tag.keyword.toLowerCase());
+                  });
+                  setPgs(filtered);
+                  setActiveSmartTag(tag.name);
+                  showNotification(`Showing ${tag.name} PGs`);
+                }
+              }}
               style={{
                 padding: "8px 16px",
                 borderRadius: 30,
-                background: activeSmartTag === tag.name ? "#3b82f6" : "#f3f4f6",
+                background: activeSmartTag === tag.name ? "#8b5cf6" : "#f3f4f6",
                 color: activeSmartTag === tag.name ? "white" : "#374151",
                 border: "none",
                 cursor: "pointer",
@@ -2796,15 +2876,67 @@ function UserPGSearch() {
                 transition: "all 0.2s"
               }}
             >
-              {typeof tag.icon === 'string' ? <span>{tag.icon}</span> : tag.icon}
+              {tag.icon}
               {tag.name}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Category Sections - Like Airbnb/NoBroker */}
-      {!filters.location && !activeSmartTag && filters.minBudget === 0 && filters.maxBudget === 50000 && !filters.food && !filters.ac && !filters.wifi && !filters.parking && !filters.foodType ? (
+      {/* Filter Bar */}
+      <div style={{ background: "#fff", borderRadius: 16, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.08)", marginBottom: 20, position: "sticky", top: 20, zIndex: 100 }}>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 300, position: "relative" }}>
+            <Search size={20} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
+            <input 
+              placeholder="Search by area, city or property name..." 
+              value={filters.location} 
+              onChange={(e) => setFilters({ ...filters, location: e.target.value })} 
+              style={{ width: "100%", padding: "14px 14px 14px 44px", border: "1px solid #e5e7eb", borderRadius: 12, fontSize: 15 }} 
+            />
+          </div>
+          <button onClick={() => setShowBudgetFilter(true)} style={{ padding: "14px 20px", background: "#f3f4f6", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><Sliders size={18} /> Budget</button>
+          <button onClick={() => setShowFilters(!showFilters)} style={{ padding: "14px 20px", background: showFilters ? "#3b82f6" : "#f3f4f6", color: showFilters ? "white" : "#374151", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><Filter size={18} /> Filters</button>
+          <button onClick={detectLocation} style={{ padding: "14px 20px", background: filters.nearMe ? "#f97316" : "#f3f4f6", color: filters.nearMe ? "white" : "#374151", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><Navigation size={18} /> Near Me</button>
+          <button onClick={toggleCompareMode} style={{ padding: "14px 20px", background: compareMode ? "#8b5cf6" : "#f3f4f6", color: compareMode ? "white" : "#374151", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><BarChart size={18} /> Compare</button>
+          {(activeQuickFilters.size > 0 || filters.location || filters.minBudget > 0 || filters.maxBudget < 50000 || filters.food || filters.ac || filters.wifi || filters.parking || filters.foodType || activeSmartTag) && (
+            <button onClick={resetFilters} style={{ padding: "14px 20px", background: "#ef4444", color: "white", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><X size={18} /> Clear All</button>
+          )}
+        </div>
+
+        {showFilters && (
+          <div style={{ paddingTop: 20, marginTop: 16, borderTop: "1px solid #e5e7eb" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 600 }}>Advanced Filters</h3>
+              <button onClick={resetFilters} style={{ padding: "8px 16px", background: "transparent", color: "#ef4444", border: "1px solid #ef4444", borderRadius: 8, cursor: "pointer" }}><X size={16} /> Clear All</button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 20 }}>
+              <select value={filters.foodType} onChange={(e) => setFilters({ ...filters, foodType: e.target.value })} style={{ padding: "12px", border: "1px solid #e5e7eb", borderRadius: 10 }}>
+                <option value="">Any Food Type</option>
+                <option value="veg">Vegetarian Only</option>
+                <option value="non-veg">Non-Vegetarian Only</option>
+                <option value="both">Both Available</option>
+              </select>
+              <select value={filters.sort} onChange={(e) => setFilters({ ...filters, sort: e.target.value })} style={{ padding: "12px", border: "1px solid #e5e7eb", borderRadius: 10 }}>
+                <option value="">Relevance</option>
+                <option value="low">Rent: Low to High</option>
+                <option value="high">Rent: High to Low</option>
+                <option value="new">Newest First</option>
+                {userLocation && <option value="distance">Distance (Nearest First)</option>}
+              </select>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: filters.food ? "#10b981" : "#f3f4f6", borderRadius: 20, cursor: "pointer" }}><input type="checkbox" checked={filters.food} onChange={(e) => setFilters({ ...filters, food: e.target.checked })} style={{ display: "none" }} /><Utensils size={14} /> Food</label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: filters.ac ? "#3b82f6" : "#f3f4f6", borderRadius: 20, cursor: "pointer" }}><input type="checkbox" checked={filters.ac} onChange={(e) => setFilters({ ...filters, ac: e.target.checked })} style={{ display: "none" }} /><Snowflake size={14} /> AC</label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: filters.wifi ? "#8b5cf6" : "#f3f4f6", borderRadius: 20, cursor: "pointer" }}><input type="checkbox" checked={filters.wifi} onChange={(e) => setFilters({ ...filters, wifi: e.target.checked })} style={{ display: "none" }} /><Wifi size={14} /> WiFi</label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: filters.parking ? "#f59e0b" : "#f3f4f6", borderRadius: 20, cursor: "pointer" }}><input type="checkbox" checked={filters.parking} onChange={(e) => setFilters({ ...filters, parking: e.target.checked })} style={{ display: "none" }} /><Car size={14} /> Parking</label>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Category Sections */}
+      {!filters.location && !activeSmartTag && activeQuickFilters.size === 0 && filters.minBudget === 0 && filters.maxBudget === 50000 && !filters.food && !filters.ac && !filters.wifi && !filters.parking && !filters.foodType ? (
         <>
           {userLocation && renderCategorySection(categorySections[0], nearbyPGs)}
           {renderCategorySection(categorySections[1], trendingPGs)}
@@ -2839,20 +2971,19 @@ function UserPGSearch() {
         </>
       ) : (
         <>
-          {/* Results Header when filters are active */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
             <h2 style={{ fontSize: 24, fontWeight: 600 }}>
               {filters.nearMe ? "📍 Properties Near You" : 
                filters.location ? `📍 Properties in ${filters.location}` : 
                activeSmartTag ? `🎯 ${activeSmartTag}` :
+               activeQuickFilters.size > 0 ? "🎯 Filtered Results" :
                "🏠 Search Results"}
             </h2>
             <button onClick={resetFilters} style={{ padding: "8px 16px", background: "#f3f4f6", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>
-              Clear Filters ✕
+              Clear All ✕
             </button>
           </div>
 
-          {/* Property Cards Grid */}
           {loading ? (
             <div style={{ textAlign: "center", padding: "60px 20px" }}>
               <div style={{ width: 40, height: 40, border: "4px solid #e5e7eb", borderTop: "4px solid #3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
@@ -2888,7 +3019,6 @@ function UserPGSearch() {
             </>
           )}
 
-          {/* Empty State */}
           {!loading && pgs.length === 0 && (
             <div style={{ textAlign: "center", padding: "60px 20px", background: "#f9fafb", borderRadius: 16 }}>
               <Search size={48} style={{ margin: "0 auto 16px", color: "#9ca3af" }} />
@@ -2920,7 +3050,6 @@ function UserPGSearch() {
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         
-        /* Custom scrollbar for chips */
         div::-webkit-scrollbar {
           height: 4px;
         }
