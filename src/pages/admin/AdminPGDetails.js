@@ -64,7 +64,6 @@ import {
   Store,
   Church,
   Mosque,
-  Temple,
  Landmark
 } from "lucide-react";
 
@@ -908,7 +907,7 @@ const AdminPGDetails = () => {
             <EditableField label="Nearby Post Office" field="nearby_post_office" value={pg.nearby_post_office} icon={Building} />
             <EditableField label="Nearby Gym" field="nearby_gym" value={pg.nearby_gym} icon={Dumbbell} />
             <EditableField label="Nearby Park" field="nearby_park" value={pg.nearby_park} icon={Tree} />
-            <EditableField label="Nearby Temple" field="nearby_temple" value={pg.nearby_temple} icon={Temple} />
+            <EditableField label="Nearby Temple" field="nearby_temple" value={pg.nearby_temple} icon={Landmark} />
             <EditableField label="Nearby Mosque" field="nearby_mosque" value={pg.nearby_mosque} icon={Mosque} />
             <EditableField label="Nearby Church" field="nearby_church" value={pg.nearby_church} icon={Church} />
             <EditableField label="Nearby Police Station" field="nearby_police_station" value={pg.nearby_police_station} icon={Shield} />
