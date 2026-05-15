@@ -56,7 +56,16 @@ import {
   Flame,
   Key,
   DoorOpen,
-  Radio
+  Radio,
+  Train,
+  Bus,
+  Hospital,
+  School,
+  Store,
+  Church,
+  Mosque,
+  Temple,
+  Bank
 } from "lucide-react";
 
 const FILES_BASE =
@@ -121,6 +130,8 @@ const AdminPGDetails = () => {
     bhkDetails: true,
     coLiving: true,
     minStay: true,
+    food: true,
+    nearby: true,
     system: true
   });
 
@@ -260,7 +271,6 @@ const AdminPGDetails = () => {
 
   const handleEdit = (field, currentValue) => {
     setEditingField(field);
-    // Handle boolean values properly
     let displayValue = currentValue;
     if (typeof currentValue === 'boolean') {
       displayValue = currentValue ? "true" : "false";
@@ -278,27 +288,25 @@ const AdminPGDetails = () => {
       setSaving(true);
       let valueToSend = editValue;
 
-      // Handle empty values
       if (editValue === "" || editValue === "—" || editValue === null) {
         valueToSend = null;
       }
 
-      // Convert boolean strings to proper boolean
       if (editValue === "true" || editValue === "false") {
         valueToSend = editValue === "true";
       }
 
-      // Convert numeric strings to numbers
       const numericFields = [
         "single_sharing", "double_sharing", "triple_sharing", "four_sharing",
         "single_room", "double_room", "triple_room", "price_1bhk", "price_2bhk", 
         "price_3bhk", "price_4bhk", "co_living_single_room", "co_living_double_room",
         "coliving_three_sharing", "coliving_four_sharing", "deposit_amount", 
-        "maintenance_amount", "rent_amount", "bedrooms_1bhk", "bathrooms_1bhk",
-        "bedrooms_2bhk", "bathrooms_2bhk", "bedrooms_3bhk", "bathrooms_3bhk",
-        "bedrooms_4bhk", "bathrooms_4bhk", "min_stay_days", "min_stay_months",
-        "lock_in_period", "notice_period", "total_rooms", "available_rooms", 
-        "meals_per_day", "pincode", "latitude", "longitude"
+        "maintenance_amount", "rent_amount", "brokerage_amount",
+        "bedrooms_1bhk", "bathrooms_1bhk", "bedrooms_2bhk", "bathrooms_2bhk",
+        "bedrooms_3bhk", "bathrooms_3bhk", "bedrooms_4bhk", "bathrooms_4bhk",
+        "min_stay_days", "min_stay_months", "lock_in_period", "notice_period",
+        "total_rooms", "available_rooms", "meals_per_day", "pincode", 
+        "latitude", "longitude"
       ];
 
       if (numericFields.includes(editingField) && editValue && editValue !== "") {
@@ -363,7 +371,6 @@ const AdminPGDetails = () => {
     const isEditing = editingField === field;
     let displayValue = value !== undefined && value !== null ? value : "—";
     
-    // Format display value based on type
     if (!isEditing) {
       if (type === "currency" && value && value !== "—") {
         displayValue = formatCurrency(value);
@@ -590,7 +597,6 @@ const AdminPGDetails = () => {
           </div>
         </div>
 
-        {/* Owner Info Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <InfoCard label="Owner" value={pg.owner_name} icon={User} />
           <InfoCard label="Phone" value={pg.owner_phone} icon={Phone} />
@@ -642,6 +648,7 @@ const AdminPGDetails = () => {
             <EditableField label="State" field="state" value={pg.state} icon={MapPin} />
             <EditableField label="Country" field="country" value={pg.country} icon={MapPin} />
             <EditableField label="Road/Lane" field="road" value={pg.road} icon={MapPin} />
+            <EditableField label="Location Name" field="location" value={pg.location} icon={MapPin} />
           </Section>
 
           {/* Contact Information Section */}
@@ -651,7 +658,7 @@ const AdminPGDetails = () => {
             <EditableField label="Contact Email" field="contact_email" value={pg.contact_email} icon={Mail} />
           </Section>
 
-          {/* Pricing Details Section - COMPLETE */}
+          {/* Pricing Details Section */}
           <Section title="Pricing Details" icon={DollarSign} sectionKey="pricing">
             <EditableField label="Single Sharing" field="single_sharing" value={pg.single_sharing} type="currency" icon={DollarSign} />
             <EditableField label="Double Sharing" field="double_sharing" value={pg.double_sharing} type="currency" icon={DollarSign} />
@@ -667,11 +674,16 @@ const AdminPGDetails = () => {
             <EditableField label="Deposit Amount" field="deposit_amount" value={pg.deposit_amount} type="currency" icon={DollarSign} />
             <EditableField label="Maintenance Amount" field="maintenance_amount" value={pg.maintenance_amount} type="currency" icon={DollarSign} />
             <EditableField label="Rent Amount" field="rent_amount" value={pg.rent_amount} type="currency" icon={DollarSign} />
+            <EditableField label="Brokerage Amount" field="brokerage_amount" value={pg.brokerage_amount} type="currency" icon={DollarSign} />
           </Section>
 
           {/* BHK Details Section */}
           <Section title="BHK Details" icon={Building} sectionKey="bhkDetails">
-            <EditableField label="BHK Type" field="bhk_type" value={pg.bhk_type} icon={Building} 
+            <EditableField 
+              label="BHK Type" 
+              field="bhk_type" 
+              value={pg.bhk_type} 
+              icon={Building} 
               options={[
                 { value: "1bhk", label: "1 BHK" },
                 { value: "2bhk", label: "2 BHK" },
@@ -679,7 +691,11 @@ const AdminPGDetails = () => {
                 { value: "4bhk", label: "4 BHK" }
               ]}
             />
-            <EditableField label="Furnishing Type" field="furnishing_type" value={pg.furnishing_type} icon={Home}
+            <EditableField 
+              label="Furnishing Type" 
+              field="furnishing_type" 
+              value={pg.furnishing_type} 
+              icon={Home}
               options={[
                 { value: "fully_furnished", label: "Fully Furnished" },
                 { value: "semi_furnished", label: "Semi Furnished" },
@@ -705,6 +721,7 @@ const AdminPGDetails = () => {
             <EditableField label="Dining Table" field="dining_table_available" value={pg.dining_table_available} type="boolean" icon={Utensils} />
             <EditableField label="Attached Bathroom" field="attached_bathroom" value={pg.attached_bathroom} type="boolean" icon={Bath} />
             <EditableField label="Balcony Available" field="balcony_available" value={pg.balcony_available} type="boolean" icon={Home} />
+            <EditableField label="Wall Mounted Clothes Hook" field="wall_mounted_clothes_hook" value={pg.wall_mounted_clothes_hook} type="boolean" icon={DoorOpen} />
             <EditableField label="Bed with Mattress" field="bed_with_mattress" value={pg.bed_with_mattress} type="boolean" icon={Bed} />
             <EditableField label="Fan & Light" field="fan_light" value={pg.fan_light} type="boolean" icon={Zap} />
             <EditableField label="Kitchen Room" field="kitchen_room" value={pg.kitchen_room} type="boolean" icon={Utensils} />
@@ -733,10 +750,14 @@ const AdminPGDetails = () => {
             <EditableField label="Notice Period" field="notice_period" value={pg.notice_period} type="number" icon={Calendar} />
           </Section>
 
-          {/* Food Details */}
+          {/* Food Details Section */}
           <Section title="Food Details" icon={Utensils} sectionKey="food">
             <EditableField label="Food Available" field="food_available" value={pg.food_available} type="boolean" icon={Utensils} />
-            <EditableField label="Food Type" field="food_type" value={pg.food_type} icon={Utensils}
+            <EditableField 
+              label="Food Type" 
+              field="food_type" 
+              value={pg.food_type} 
+              icon={Utensils}
               options={[
                 { value: "veg", label: "Vegetarian" },
                 { value: "non-veg", label: "Non-Vegetarian" },
@@ -746,7 +767,7 @@ const AdminPGDetails = () => {
             <EditableField label="Meals Per Day" field="meals_per_day" value={pg.meals_per_day} type="number" icon={Utensils} />
           </Section>
 
-          {/* Location Section */}
+          {/* Location Coordinates Section */}
           <Section title="Location Coordinates" icon={MapPin} sectionKey="location">
             <EditableField label="Latitude" field="latitude" value={pg.latitude} type="number" icon={MapPin} />
             <EditableField label="Longitude" field="longitude" value={pg.longitude} type="number" icon={MapPin} />
@@ -765,7 +786,7 @@ const AdminPGDetails = () => {
             )}
           </Section>
 
-          {/* Amenities & Facilities Section - COMPLETE */}
+          {/* Amenities & Facilities Section */}
           <Section title="Amenities & Facilities" icon={ShieldCheck} sectionKey="amenities">
             <div className="col-span-full">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -791,10 +812,13 @@ const AdminPGDetails = () => {
                 <AmenityBadge label="Common TV Lounge" value={pg.common_tv_lounge} />
                 <AmenityBadge label="Balcony/Open Space" value={pg.balcony_open_space} />
                 <AmenityBadge label="24x7 Water" value={pg.water_24x7} />
-                <AmenityBadge label="Water Type" value={pg.water_type} />
               </div>
             </div>
-            <EditableField label="Water Type" field="water_type" value={pg.water_type} icon={Droplets}
+            <EditableField 
+              label="Water Type" 
+              field="water_type" 
+              value={pg.water_type} 
+              icon={Droplets}
               options={[
                 { value: "borewell", label: "Borewell" },
                 { value: "corporation", label: "Corporation" },
@@ -803,7 +827,7 @@ const AdminPGDetails = () => {
             />
           </Section>
 
-          {/* Rules & Restrictions Section - COMPLETE */}
+          {/* Rules & Restrictions Section */}
           <Section title="Rules & Restrictions" icon={Shield} sectionKey="rules">
             <div className="col-span-full">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -830,6 +854,34 @@ const AdminPGDetails = () => {
             </div>
             <EditableField label="Visitors Allowed Till" field="visitors_allowed_till" value={pg.visitors_allowed_till} icon={ClockIcon} />
             <EditableField label="Entry Curfew Time" field="entry_curfew_time" value={pg.entry_curfew_time} icon={ClockIcon} />
+          </Section>
+
+          {/* Nearby Places Section */}
+          <Section title="Nearby Places" icon={MapPin} sectionKey="nearby">
+            <EditableField label="Nearby College" field="nearby_college" value={pg.nearby_college} icon={School} />
+            <EditableField label="Nearby School" field="nearby_school" value={pg.nearby_school} icon={School} />
+            <EditableField label="Nearby IT Park" field="nearby_it_park" value={pg.nearby_it_park} icon={Building} />
+            <EditableField label="Nearby Office Hub" field="nearby_office_hub" value={pg.nearby_office_hub} icon={Building} />
+            <EditableField label="Nearby Metro" field="nearby_metro" value={pg.nearby_metro} icon={Train} />
+            <EditableField label="Nearby Bus Stop" field="nearby_bus_stop" value={pg.nearby_bus_stop} icon={Bus} />
+            <EditableField label="Nearby Railway Station" field="nearby_railway_station" value={pg.nearby_railway_station} icon={Train} />
+            <EditableField label="Distance from Main Road" field="distance_main_road" value={pg.distance_main_road} icon={MapPin} />
+            <EditableField label="Nearby Hospital" field="nearby_hospital" value={pg.nearby_hospital} icon={Hospital} />
+            <EditableField label="Nearby Clinic" field="nearby_clinic" value={pg.nearby_clinic} icon={Hospital} />
+            <EditableField label="Nearby Pharmacy" field="nearby_pharmacy" value={pg.nearby_pharmacy} icon={Hospital} />
+            <EditableField label="Nearby Supermarket" field="nearby_supermarket" value={pg.nearby_supermarket} icon={Store} />
+            <EditableField label="Nearby Grocery Store" field="nearby_grocery_store" value={pg.nearby_grocery_store} icon={Store} />
+            <EditableField label="Nearby Restaurant" field="nearby_restaurant" value={pg.nearby_restaurant} icon={Utensils} />
+            <EditableField label="Nearby Mall" field="nearby_mall" value={pg.nearby_mall} icon={Store} />
+            <EditableField label="Nearby Bank" field="nearby_bank" value={pg.nearby_bank} icon={Bank} />
+            <EditableField label="Nearby ATM" field="nearby_atm" value={pg.nearby_atm} icon={Bank} />
+            <EditableField label="Nearby Post Office" field="nearby_post_office" value={pg.nearby_post_office} icon={Building} />
+            <EditableField label="Nearby Gym" field="nearby_gym" value={pg.nearby_gym} icon={Dumbbell} />
+            <EditableField label="Nearby Park" field="nearby_park" value={pg.nearby_park} icon={Tree} />
+            <EditableField label="Nearby Temple" field="nearby_temple" value={pg.nearby_temple} icon={Temple} />
+            <EditableField label="Nearby Mosque" field="nearby_mosque" value={pg.nearby_mosque} icon={Mosque} />
+            <EditableField label="Nearby Church" field="nearby_church" value={pg.nearby_church} icon={Church} />
+            <EditableField label="Nearby Police Station" field="nearby_police_station" value={pg.nearby_police_station} icon={Shield} />
           </Section>
 
           {/* Description Section */}
@@ -1001,6 +1053,13 @@ const Chair = ({ size = 16, className = "" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="M7 18v4m10-4v4M5 14h14v-4a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v4Z" />
     <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2" />
+  </svg>
+);
+
+// Tree icon component for park
+const Tree = ({ size = 16, className = "" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M12 22V12M7 12L12 7L17 12M7 12H4L9 7L7 4L12 9L17 4L15 7L20 12H17" />
   </svg>
 );
 
