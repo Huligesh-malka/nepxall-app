@@ -123,24 +123,20 @@ const popularAreas = [
   { name: "MG Road", icon: "🏙️", color: "#a855f7" }
 ];
 
-// Quick Filters - Easy access filters
+// Quick Filters - Easy access filters (removed budget 10k)
 const quickFilters = [
   { id: "near_me", name: "📍 Near Me", icon: <Navigation size={16} />, type: "location" },
-  { id: "under_10k", name: "💰 Under ₹10k", icon: <Coins size={16} />, type: "budget", min: 0, max: 10000 },
   { id: "ac_room", name: "❄️ AC Room", icon: <Snowflake size={16} />, type: "amenity", field: "ac_available" },
   { id: "wifi", name: "📶 WiFi", icon: <Wifi size={16} />, type: "amenity", field: "wifi_available" },
   { id: "parking", name: "🅿️ Parking", icon: <Car size={16} />, type: "amenity", field: "parking_available" },
   { id: "veg_food", name: "🥬 Veg Food", icon: <Leaf size={16} />, type: "food", value: "veg" },
 ];
 
-// Category sections for homepage
+// Category sections for homepage - now only PG, Co-Living, To-Let
 const categorySections = [
-  { id: "nearby", title: "📍 PGs Near You", icon: <Navigation size={20} />, color: "#3b82f6" },
-  { id: "trending", title: "🔥 Trending PGs", icon: <TrendingUp size={20} />, color: "#ef4444" },
-  { id: "budget", title: "💰 Budget Friendly (Under ₹10k)", icon: <Coins size={20} />, color: "#10b981" },
-  { id: "luxury", title: "✨ Luxury Stays", icon: <Crown size={20} />, color: "#8b5cf6" },
-  { id: "coliving", title: "🤝 Co-Living Spaces", icon: <Users size={20} />, color: "#f59e0b" },
-  { id: "tolet", title: "🏠 To-Let Homes", icon: <Home size={20} />, color: "#ec4899" }
+  { id: "pg", title: "🏘️ PG Accommodations", icon: <Home size={22} />, color: "#3b82f6", type: "pg" },
+  { id: "coliving", title: "🤝 Co-Living Spaces", icon: <Users size={22} />, color: "#8b5cf6", type: "coliving" },
+  { id: "tolet", title: "🏠 To-Let Homes", icon: <Building2 size={22} />, color: "#10b981", type: "to_let" }
 ];
 
 // ================= TRACKING FUNCTION =================
@@ -2084,13 +2080,13 @@ function UserPGSearch() {
   const { user, loading: authLoading } = useAuth();
 
   const [allPGs, setAllPGs] = useState([]);
-  const [pgs, setPgs] = useState([]);
-  const [nearbyPGs, setNearbyPGs] = useState([]);
-  const [trendingPGs, setTrendingPGs] = useState([]);
-  const [budgetPGs, setBudgetPGs] = useState([]);
-  const [luxuryPGs, setLuxuryPGs] = useState([]);
-  const [colivingPGs, setColivingPGs] = useState([]);
-  const [toletPGs, setToletPGs] = useState([]);
+  const [filteredPGs, setFilteredPGs] = useState([]);
+  
+  // Category filtered lists
+  const [pgProperties, setPgProperties] = useState([]);
+  const [colivingProperties, setColivingProperties] = useState([]);
+  const [toletProperties, setToletProperties] = useState([]);
+  
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
@@ -2178,8 +2174,6 @@ function UserPGSearch() {
         setFilters(prev => ({ ...prev, foodType: "" }));
       } else if (filter.type === "amenity") {
         setFilters(prev => ({ ...prev, [filter.field]: false }));
-      } else if (filter.type === "budget") {
-        setFilters(prev => ({ ...prev, minBudget: 0, maxBudget: 50000 }));
       }
     } else {
       newActiveFilters.add(filter.id);
@@ -2191,8 +2185,6 @@ function UserPGSearch() {
         setFilters(prev => ({ ...prev, foodType: filter.value }));
       } else if (filter.type === "amenity" && filter.field) {
         setFilters(prev => ({ ...prev, [filter.field]: true }));
-      } else if (filter.type === "budget") {
-        setFilters(prev => ({ ...prev, minBudget: filter.min, maxBudget: filter.max }));
       }
     }
     
@@ -2269,28 +2261,24 @@ function UserPGSearch() {
         
         if (!isLoadMore || page === 1) {
           setAllPGs(processedData);
-          setPgs(processedData);
+          setFilteredPGs(processedData);
           
-          const nearby = [...processedData].filter(p => p.distance && p.distance <= 5).slice(0, 8);
-          setNearbyPGs(nearby);
+          // Filter by category
+          const pgs = processedData.filter(p => p.pg_category === "pg");
+          const colivings = processedData.filter(p => p.pg_category === "coliving");
+          const tolets = processedData.filter(p => p.pg_category === "to_let");
           
-          const trending = [...processedData].sort((a, b) => (b.available_rooms || 0) - (a.available_rooms || 0)).slice(0, 8);
-          setTrendingPGs(trending);
-          
-          const budget = [...processedData].filter(p => getEffectiveRent(p) < 10000).slice(0, 8);
-          setBudgetPGs(budget);
-          
-          const luxury = [...processedData].filter(p => getEffectiveRent(p) > 25000).slice(0, 8);
-          setLuxuryPGs(luxury);
-          
-          const coliving = [...processedData].filter(p => p.pg_category === "coliving").slice(0, 8);
-          setColivingPGs(coliving);
-          
-          const tolet = [...processedData].filter(p => p.pg_category === "to_let").slice(0, 8);
-          setToletPGs(tolet);
+          setPgProperties(pgs);
+          setColivingProperties(colivings);
+          setToletProperties(tolets);
         } else {
           setAllPGs(prev => [...prev, ...processedData]);
-          setPgs(prev => [...prev, ...processedData]);
+          setFilteredPGs(prev => [...prev, ...processedData]);
+          
+          // Update category lists
+          setPgProperties(prev => [...prev, ...processedData.filter(p => p.pg_category === "pg")]);
+          setColivingProperties(prev => [...prev, ...processedData.filter(p => p.pg_category === "coliving")]);
+          setToletProperties(prev => [...prev, ...processedData.filter(p => p.pg_category === "to_let")]);
         }
         
         setHasMore(false);
@@ -2363,7 +2351,7 @@ function UserPGSearch() {
 
   const filterByArea = (area) => {
     setFilters(prev => ({ ...prev, location: area, nearMe: false }));
-    showNotification(`📍 Showing PGs in ${area}`);
+    showNotification(`📍 Showing properties in ${area}`);
     trackEvent("area_filter_click", { area });
   };
 
@@ -2444,7 +2432,12 @@ function UserPGSearch() {
       filtered.sort((a, b) => (a.distance || 999) - (b.distance || 999));
     }
 
-    setPgs(filtered);
+    setFilteredPGs(filtered);
+    
+    // Update category filtered lists
+    setPgProperties(filtered.filter(p => p.pg_category === "pg"));
+    setColivingProperties(filtered.filter(p => p.pg_category === "coliving"));
+    setToletProperties(filtered.filter(p => p.pg_category === "to_let"));
   }, [allPGs, filters, userLocation]);
 
   useEffect(() => {
@@ -2461,7 +2454,10 @@ function UserPGSearch() {
       location: "", minBudget: 0, maxBudget: 50000, food: false, ac: false, wifi: false, parking: false, sort: "", nearMe: false, foodType: ""
     });
     setActiveQuickFilters(new Set());
-    setPgs(allPGs);
+    setFilteredPGs(allPGs);
+    setPgProperties(allPGs.filter(p => p.pg_category === "pg"));
+    setColivingProperties(allPGs.filter(p => p.pg_category === "coliving"));
+    setToletProperties(allPGs.filter(p => p.pg_category === "to_let"));
     showNotification("All filters reset");
   };
 
@@ -2553,19 +2549,45 @@ function UserPGSearch() {
     setShowCompareModal(true);
   };
 
-  const clearCompareSelections = () => setSelectedForCompare(new Set());
-
-  const renderCategorySection = (section, pgsData) => {
-    if (pgsData.length === 0) return null;
+  const renderCategorySection = (section, properties) => {
+    if (properties.length === 0) return null;
     
     return (
-      <div key={section.id} style={{ marginBottom: 40 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <div style={{ color: section.color }}>{section.icon}</div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827" }}>{section.title}</h2>
+      <div key={section.id} style={{ marginBottom: 56 }}>
+        <div style={{ 
+          display: "flex", 
+          alignItems: "center", 
+          justifyContent: "space-between",
+          marginBottom: 24,
+          flexWrap: "wrap",
+          gap: 12
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ 
+              background: `${section.color}15`, 
+              padding: 10, 
+              borderRadius: 14,
+              color: section.color
+            }}>
+              {section.icon}
+            </div>
+            <div>
+              <h2 style={{ fontSize: 26, fontWeight: 700, color: "#111827", margin: 0 }}>
+                {section.title}
+              </h2>
+              <p style={{ fontSize: 14, color: "#6b7280", margin: "4px 0 0" }}>
+                {properties.length} {section.title.split(' ')[1]} available
+              </p>
+            </div>
+          </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 24 }}>
-          {pgsData.slice(0, 4).map((pg) => (
+        
+        <div style={{ 
+          display: "grid", 
+          gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", 
+          gap: 28 
+        }}>
+          {properties.slice(0, 6).map((pg) => (
             <PGPropertyCard
               key={pg.id}
               pg={pg}
@@ -2580,34 +2602,36 @@ function UserPGSearch() {
             />
           ))}
         </div>
-        {pgsData.length > 4 && (
-          <div style={{ textAlign: "center", marginTop: 20 }}>
+        
+        {properties.length > 6 && (
+          <div style={{ textAlign: "center", marginTop: 28 }}>
             <button
               onClick={() => {
-                if (section.id === "nearby") setFilters(prev => ({ ...prev, nearMe: true }));
-                else if (section.id === "budget") setFilters(prev => ({ ...prev, minBudget: 0, maxBudget: 10000 }));
-                else if (section.id === "luxury") setFilters(prev => ({ ...prev, minBudget: 25000, maxBudget: 100000 }));
-                else if (section.id === "coliving") setFilters(prev => ({ ...prev, location: "coliving" }));
-                else if (section.id === "tolet") setFilters(prev => ({ ...prev, location: "to-let" }));
+                // Show all properties of this category by applying category filter
+                setFilters(prev => ({ ...prev, location: section.type === "pg" ? "PG" : section.type === "coliving" ? "Co-Living" : "To-Let" }));
               }}
               style={{
-                padding: "10px 24px",
+                padding: "12px 28px",
                 background: "transparent",
                 color: section.color,
-                border: `1px solid ${section.color}`,
-                borderRadius: 30,
+                border: `2px solid ${section.color}`,
+                borderRadius: 40,
                 cursor: "pointer",
-                fontSize: 14,
-                fontWeight: 500
+                fontSize: 15,
+                fontWeight: 600,
+                transition: "all 0.2s"
               }}
             >
-              View All {section.title.split(" ").slice(1).join(" ")} →
+              View All {properties.length} {section.title.split(' ')[1]} →
             </button>
           </div>
         )}
       </div>
     );
   };
+
+  // Check if filters are active
+  const hasActiveFilters = filters.location || filters.minBudget > 0 || filters.maxBudget < 50000 || filters.food || filters.ac || filters.wifi || filters.parking || filters.foodType || activeQuickFilters.size > 0;
 
   if (authLoading) {
     return (
@@ -2619,7 +2643,7 @@ function UserPGSearch() {
   }
   
   return (
-    <div style={{ maxWidth: 1400, margin: "auto", minHeight: "100vh", padding: "0 8px" }}>
+    <div style={{ maxWidth: 1400, margin: "auto", minHeight: "100vh", padding: "0 16px" }}>
       {/* Notification Toast */}
       {notification && (
         <div style={{
@@ -2646,7 +2670,7 @@ function UserPGSearch() {
           background: "linear-gradient(135deg, #f0f9ff, #e0f2fe)",
           borderRadius: 16,
           padding: "12px 20px",
-          marginBottom: 20,
+          marginBottom: 24,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -2691,26 +2715,26 @@ function UserPGSearch() {
       {/* Promotional Banners */}
       <PromoBannerSlider onBannerClick={handlePromoBannerClick} />
 
-      {/* Quick Filters Section - Easy Access */}
-      <div style={{ marginBottom: 24 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: "#374151" }}>⚡ Quick Filters</h3>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+      {/* Quick Filters Section */}
+      <div style={{ marginBottom: 28 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: "#374151" }}>⚡ Quick Filters</h3>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           {quickFilters.map((filter) => (
             <button
               key={filter.id}
               onClick={() => applyQuickFilter(filter)}
               style={{
-                padding: "8px 16px",
-                borderRadius: 30,
+                padding: "10px 18px",
+                borderRadius: 40,
                 background: activeQuickFilters.has(filter.id) ? filter.id === "near_me" ? "#f97316" : "#3b82f6" : "#f3f4f6",
                 color: activeQuickFilters.has(filter.id) ? "white" : "#374151",
                 border: "none",
                 cursor: "pointer",
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: 500,
                 display: "flex",
                 alignItems: "center",
-                gap: 6,
+                gap: 8,
                 transition: "all 0.2s"
               }}
             >
@@ -2722,16 +2746,16 @@ function UserPGSearch() {
       </div>
 
       {/* Popular Areas Chips */}
-      <div style={{ marginBottom: 24 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: "#374151" }}>📍 Popular Areas in Bangalore</h3>
+      <div style={{ marginBottom: 28 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: "#374151" }}>📍 Popular Areas in Bangalore</h3>
         <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 10, scrollbarWidth: "thin" }}>
           {popularAreas.map((area) => (
             <button
               key={area.name}
               onClick={() => filterByArea(area.name)}
               style={{
-                padding: "10px 18px",
-                borderRadius: 30,
+                padding: "10px 20px",
+                borderRadius: 40,
                 border: filters.location === area.name ? `2px solid ${area.color}` : "1px solid #e5e7eb",
                 background: filters.location === area.name ? `${area.color}10` : "#fff",
                 color: filters.location === area.name ? area.color : "#374151",
@@ -2741,7 +2765,7 @@ function UserPGSearch() {
                 fontSize: 14,
                 display: "flex",
                 alignItems: "center",
-                gap: 6,
+                gap: 8,
                 transition: "all 0.2s"
               }}
             >
@@ -2752,146 +2776,123 @@ function UserPGSearch() {
       </div>
 
       {/* Filter Bar */}
-      <div style={{ background: "#fff", borderRadius: 16, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.08)", marginBottom: 20, position: "sticky", top: 20, zIndex: 100 }}>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 300, position: "relative" }}>
-            <Search size={20} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
+      <div style={{ 
+        background: "#fff", 
+        borderRadius: 20, 
+        padding: "20px 24px", 
+        boxShadow: "0 4px 20px rgba(0,0,0,0.06)", 
+        marginBottom: 32, 
+        position: "sticky", 
+        top: 20, 
+        zIndex: 100,
+        border: "1px solid #eef2ff"
+      }}>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ flex: 1, minWidth: 260, position: "relative" }}>
+            <Search size={18} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
             <input 
               placeholder="Search by area, city or property name..." 
               value={filters.location} 
               onChange={(e) => setFilters({ ...filters, location: e.target.value })} 
-              style={{ width: "100%", padding: "14px 14px 14px 44px", border: "1px solid #e5e7eb", borderRadius: 12, fontSize: 15 }} 
+              style={{ width: "100%", padding: "12px 14px 12px 42px", border: "1px solid #e5e7eb", borderRadius: 40, fontSize: 14, background: "#fafafa" }} 
             />
           </div>
-          <button onClick={() => setShowBudgetFilter(true)} style={{ padding: "14px 20px", background: "#f3f4f6", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><Sliders size={18} /> Budget</button>
-          <button onClick={() => setShowFilters(!showFilters)} style={{ padding: "14px 20px", background: showFilters ? "#3b82f6" : "#f3f4f6", color: showFilters ? "white" : "#374151", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><Filter size={18} /> Filters</button>
-          <button onClick={detectLocation} style={{ padding: "14px 20px", background: filters.nearMe ? "#f97316" : "#f3f4f6", color: filters.nearMe ? "white" : "#374151", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><Navigation size={18} /> Near Me</button>
-          <button onClick={toggleCompareMode} style={{ padding: "14px 20px", background: compareMode ? "#8b5cf6" : "#f3f4f6", color: compareMode ? "white" : "#374151", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><BarChart size={18} /> Compare</button>
-          {(activeQuickFilters.size > 0 || filters.location || filters.minBudget > 0 || filters.maxBudget < 50000 || filters.food || filters.ac || filters.wifi || filters.parking || filters.foodType) && (
-            <button onClick={resetFilters} style={{ padding: "14px 20px", background: "#ef4444", color: "white", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><X size={18} /> Clear All</button>
+          <button onClick={() => setShowBudgetFilter(true)} style={{ padding: "12px 20px", background: "#f3f4f6", border: "none", borderRadius: 40, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 500 }}>
+            <Coins size={16} /> Budget
+          </button>
+          <button onClick={() => setShowFilters(!showFilters)} style={{ padding: "12px 20px", background: showFilters ? "#3b82f6" : "#f3f4f6", color: showFilters ? "white" : "#374151", border: "none", borderRadius: 40, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 500 }}>
+            <Filter size={16} /> Filters
+          </button>
+          <button onClick={detectLocation} style={{ padding: "12px 20px", background: filters.nearMe ? "#f97316" : "#f3f4f6", color: filters.nearMe ? "white" : "#374151", border: "none", borderRadius: 40, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 500 }}>
+            <Navigation size={16} /> Near Me
+          </button>
+          <button onClick={toggleCompareMode} style={{ padding: "12px 20px", background: compareMode ? "#8b5cf6" : "#f3f4f6", color: compareMode ? "white" : "#374151", border: "none", borderRadius: 40, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 500 }}>
+            <BarChart size={16} /> Compare
+          </button>
+          {hasActiveFilters && (
+            <button onClick={resetFilters} style={{ padding: "12px 20px", background: "#ef4444", color: "white", border: "none", borderRadius: 40, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 500 }}>
+              <X size={16} /> Clear All
+            </button>
           )}
         </div>
 
         {showFilters && (
-          <div style={{ paddingTop: 20, marginTop: 16, borderTop: "1px solid #e5e7eb" }}>
+          <div style={{ paddingTop: 20, marginTop: 20, borderTop: "1px solid #eef2ff" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 600 }}>Advanced Filters</h3>
-              <button onClick={resetFilters} style={{ padding: "8px 16px", background: "transparent", color: "#ef4444", border: "1px solid #ef4444", borderRadius: 8, cursor: "pointer" }}><X size={16} /> Clear All</button>
+              <h3 style={{ fontSize: 16, fontWeight: 600 }}>Advanced Filters</h3>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 20 }}>
-              <select value={filters.foodType} onChange={(e) => setFilters({ ...filters, foodType: e.target.value })} style={{ padding: "12px", border: "1px solid #e5e7eb", borderRadius: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }}>
+              <select value={filters.foodType} onChange={(e) => setFilters({ ...filters, foodType: e.target.value })} style={{ padding: "10px 14px", border: "1px solid #e5e7eb", borderRadius: 30, background: "#fafafa" }}>
                 <option value="">Any Food Type</option>
                 <option value="veg">Vegetarian Only</option>
                 <option value="non-veg">Non-Vegetarian Only</option>
                 <option value="both">Both Available</option>
               </select>
-              <select value={filters.sort} onChange={(e) => setFilters({ ...filters, sort: e.target.value })} style={{ padding: "12px", border: "1px solid #e5e7eb", borderRadius: 10 }}>
-                <option value="">Relevance</option>
+              <select value={filters.sort} onChange={(e) => setFilters({ ...filters, sort: e.target.value })} style={{ padding: "10px 14px", border: "1px solid #e5e7eb", borderRadius: 30, background: "#fafafa" }}>
+                <option value="">Sort by: Relevance</option>
                 <option value="low">Rent: Low to High</option>
                 <option value="high">Rent: High to Low</option>
                 <option value="new">Newest First</option>
                 {userLocation && <option value="distance">Distance (Nearest First)</option>}
               </select>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: filters.food ? "#10b981" : "#f3f4f6", borderRadius: 20, cursor: "pointer" }}><input type="checkbox" checked={filters.food} onChange={(e) => setFilters({ ...filters, food: e.target.checked })} style={{ display: "none" }} /><Utensils size={14} /> Food</label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: filters.ac ? "#3b82f6" : "#f3f4f6", borderRadius: 20, cursor: "pointer" }}><input type="checkbox" checked={filters.ac} onChange={(e) => setFilters({ ...filters, ac: e.target.checked })} style={{ display: "none" }} /><Snowflake size={14} /> AC</label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: filters.wifi ? "#8b5cf6" : "#f3f4f6", borderRadius: 20, cursor: "pointer" }}><input type="checkbox" checked={filters.wifi} onChange={(e) => setFilters({ ...filters, wifi: e.target.checked })} style={{ display: "none" }} /><Wifi size={14} /> WiFi</label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: filters.parking ? "#f59e0b" : "#f3f4f6", borderRadius: 20, cursor: "pointer" }}><input type="checkbox" checked={filters.parking} onChange={(e) => setFilters({ ...filters, parking: e.target.checked })} style={{ display: "none" }} /><Car size={14} /> Parking</label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", background: filters.food ? "#10b981" : "#f3f4f6", borderRadius: 30, cursor: "pointer", fontSize: 13 }}>
+                  <input type="checkbox" checked={filters.food} onChange={(e) => setFilters({ ...filters, food: e.target.checked })} style={{ display: "none" }} />
+                  <Utensils size={14} /> Food
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", background: filters.ac ? "#3b82f6" : "#f3f4f6", borderRadius: 30, cursor: "pointer", fontSize: 13 }}>
+                  <input type="checkbox" checked={filters.ac} onChange={(e) => setFilters({ ...filters, ac: e.target.checked })} style={{ display: "none" }} />
+                  <Snowflake size={14} /> AC
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", background: filters.wifi ? "#8b5cf6" : "#f3f4f6", borderRadius: 30, cursor: "pointer", fontSize: 13 }}>
+                  <input type="checkbox" checked={filters.wifi} onChange={(e) => setFilters({ ...filters, wifi: e.target.checked })} style={{ display: "none" }} />
+                  <Wifi size={14} /> WiFi
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", background: filters.parking ? "#f59e0b" : "#f3f4f6", borderRadius: 30, cursor: "pointer", fontSize: 13 }}>
+                  <input type="checkbox" checked={filters.parking} onChange={(e) => setFilters({ ...filters, parking: e.target.checked })} style={{ display: "none" }} />
+                  <Car size={14} /> Parking
+                </label>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Category Sections */}
-      {!filters.location && activeQuickFilters.size === 0 && filters.minBudget === 0 && filters.maxBudget === 50000 && !filters.food && !filters.ac && !filters.wifi && !filters.parking && !filters.foodType ? (
-        <>
-          {userLocation && renderCategorySection(categorySections[0], nearbyPGs)}
-          {renderCategorySection(categorySections[1], trendingPGs)}
-          {renderCategorySection(categorySections[2], budgetPGs)}
-          {renderCategorySection(categorySections[3], luxuryPGs)}
-          {renderCategorySection(categorySections[4], colivingPGs)}
-          {renderCategorySection(categorySections[5], toletPGs)}
-          
-          {/* All Properties Section */}
-          <div style={{ marginBottom: 40 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-              <Home size={22} color="#3b82f6" />
-              <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827" }}>🏠 All Properties</h2>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 24 }}>
-              {pgs.slice(0, 8).map((pg) => (
-                <PGPropertyCard
-                  key={pg.id}
-                  pg={pg}
-                  onQuickView={handleQuickView}
-                  onFavorite={toggleFavorite}
-                  onContact={handleBookNow}
-                  onCardClick={handleCardClick}
-                  isFavorite={favorites.has(pg.id)}
-                  isSelectedForCompare={selectedForCompare.has(pg.id)}
-                  onSelectForCompare={toggleSelectForCompare}
-                  compareMode={compareMode}
-                />
-              ))}
-            </div>
-          </div>
-        </>
+      {/* Category Sections - PG, Co-Living, To-Let */}
+      {loading ? (
+        <div style={{ textAlign: "center", padding: "80px 20px" }}>
+          <div style={{ width: 50, height: 50, border: "4px solid #e5e7eb", borderTop: "4px solid #3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 20px" }} />
+          <p style={{ color: "#6b7280" }}>Loading properties...</p>
+        </div>
       ) : (
         <>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-            <h2 style={{ fontSize: 24, fontWeight: 600 }}>
-              {filters.nearMe ? "📍 Properties Near You" : 
-               filters.location ? `📍 Properties in ${filters.location}` : 
-               activeQuickFilters.size > 0 ? "🎯 Filtered Results" :
-               "🏠 Search Results"}
-            </h2>
-            <button onClick={resetFilters} style={{ padding: "8px 16px", background: "#f3f4f6", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>
-              Clear All ✕
-            </button>
-          </div>
-
-          {loading ? (
-            <div style={{ textAlign: "center", padding: "60px 20px" }}>
-              <div style={{ width: 40, height: 40, border: "4px solid #e5e7eb", borderTop: "4px solid #3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
-              <p>Loading properties...</p>
+          {/* PG Section */}
+          {pgProperties.length > 0 && renderCategorySection(categorySections[0], pgProperties)}
+          
+          {/* Co-Living Section */}
+          {colivingProperties.length > 0 && renderCategorySection(categorySections[1], colivingProperties)}
+          
+          {/* To-Let Section */}
+          {toletProperties.length > 0 && renderCategorySection(categorySections[2], toletProperties)}
+          
+          {/* No results message */}
+          {!loading && pgProperties.length === 0 && colivingProperties.length === 0 && toletProperties.length === 0 && (
+            <div style={{ textAlign: "center", padding: "80px 20px", background: "#f9fafb", borderRadius: 24, marginBottom: 40 }}>
+              <Search size={56} style={{ margin: "0 auto 20px", color: "#9ca3af" }} />
+              <h3 style={{ fontSize: 22, fontWeight: 600, color: "#374151", marginBottom: 8 }}>No properties found</h3>
+              <p style={{ color: "#6b7280", marginBottom: 28 }}>Try adjusting your filters or search for a different location</p>
+              <button onClick={resetFilters} style={{ padding: "12px 28px", background: "#3b82f6", color: "white", border: "none", borderRadius: 40, cursor: "pointer", fontWeight: 600 }}>
+                Reset All Filters
+              </button>
             </div>
-          ) : (
-            <>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 24 }}>
-                {pgs.map((pg) => (
-                  <PGPropertyCard
-                    key={pg.id}
-                    pg={pg}
-                    onQuickView={handleQuickView}
-                    onFavorite={toggleFavorite}
-                    onContact={handleBookNow}
-                    onCardClick={handleCardClick}
-                    isFavorite={favorites.has(pg.id)}
-                    isSelectedForCompare={selectedForCompare.has(pg.id)}
-                    onSelectForCompare={toggleSelectForCompare}
-                    compareMode={compareMode}
-                  />
-                ))}
-              </div>
-              {!loading && pgs.length > 0 && (
-                <div style={{ textAlign: "center", marginTop: 50 }}>
-                  {hasMore ? (
-                    <button onClick={loadMore} disabled={loadingMore} style={{ padding: "14px 28px", background: loadingMore ? "#9ca3af" : "#dc2626", color: "white", border: "none", borderRadius: 12, cursor: loadingMore ? "not-allowed" : "pointer", fontWeight: "bold", fontSize: 16 }}>
-                      {loadingMore ? "Loading more..." : "🔽 VIEW MORE PROPERTIES"}
-                    </button>
-                  ) : null}
-                </div>
-              )}
-            </>
           )}
-
-          {!loading && pgs.length === 0 && (
-            <div style={{ textAlign: "center", padding: "60px 20px", background: "#f9fafb", borderRadius: 16 }}>
-              <Search size={48} style={{ margin: "0 auto 16px", color: "#9ca3af" }} />
-              <p style={{ fontSize: 20, fontWeight: 600 }}>No properties found</p>
-              <p style={{ marginBottom: 24 }}>Try adjusting your filters or search terms</p>
-              <button onClick={resetFilters} style={{ padding: "12px 24px", background: "#3b82f6", color: "white", border: "none", borderRadius: 10, cursor: "pointer" }}>Reset All Filters</button>
+          
+          {/* Load More */}
+          {hasMore && !loading && (pgProperties.length > 0 || colivingProperties.length > 0 || toletProperties.length > 0) && (
+            <div style={{ textAlign: "center", marginTop: 20, marginBottom: 60 }}>
+              <button onClick={loadMore} disabled={loadingMore} style={{ padding: "14px 36px", background: loadingMore ? "#9ca3af" : "#1e3a5f", color: "white", border: "none", borderRadius: 50, cursor: loadingMore ? "not-allowed" : "pointer", fontWeight: 600, fontSize: 15 }}>
+                {loadingMore ? "Loading more..." : "🔽 Load More Properties"}
+              </button>
             </div>
           )}
         </>
@@ -2904,10 +2905,10 @@ function UserPGSearch() {
       {showCompareModal && <CompareModal selectedPGs={selectedForCompare} allPGs={allPGs} onClose={() => { setShowCompareModal(false); setSelectedForCompare(new Set()); setCompareMode(false); }} />}
 
       {/* Sticky Contact Button for Mobile */}
-      {isMobile && (
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#fff", padding: 12, zIndex: 999, boxShadow: "0 -4px 12px rgba(0,0,0,0.1)" }}>
-          <button onClick={() => pgs.length > 0 && handleBookNow(pgs[0])} style={{ width: "100%", padding: "14px", background: "#3b82f6", color: "white", border: "none", borderRadius: 12, fontSize: 16, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            <MessageCircle size={18} /> Contact Owner
+      {isMobile && !compareMode && pgProperties.length > 0 && (
+        <div style={{ position: "fixed", bottom: 16, left: 16, right: 16, zIndex: 999 }}>
+          <button onClick={() => handleBookNow(pgProperties[0])} style={{ width: "100%", padding: "14px", background: "#3b82f6", color: "white", border: "none", borderRadius: 60, fontSize: 16, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}>
+            <MessageCircle size={20} /> Contact Owner
           </button>
         </div>
       )}
@@ -2917,14 +2918,15 @@ function UserPGSearch() {
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         
-        div::-webkit-scrollbar {
+        *::-webkit-scrollbar {
           height: 4px;
+          width: 6px;
         }
-        div::-webkit-scrollbar-track {
+        *::-webkit-scrollbar-track {
           background: #f1f1f1;
           border-radius: 10px;
         }
-        div::-webkit-scrollbar-thumb {
+        *::-webkit-scrollbar-thumb {
           background: #cbd5e1;
           border-radius: 10px;
         }
