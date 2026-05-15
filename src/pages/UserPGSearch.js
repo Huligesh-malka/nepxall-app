@@ -1214,10 +1214,10 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
                 Verified
               </span>
             )}
-            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <span style={{ color: "#10b981", fontWeight: "700" }}>✔</span>
-              Zero Brokerage
-            </span>
+           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+  <BadgePercent size={14} color="#10b981" />
+  Zero Brokerage
+</span>
             
           </div>
           
