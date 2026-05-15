@@ -111,32 +111,31 @@ const LOCATION_AUTO_ASKED_KEY = "nepxall_location_auto_asked";
 
 // Popular Areas in Bangalore
 const popularAreas = [
-  { name: "Koramangala", icon: "📍", color: "#3b82f6" },
-  { name: "BTM Layout", icon: "📍", color: "#10b981" },
-  { name: "Jayanagar", icon: "📍", color: "#f59e0b" },
-  { name: "Electronic City", icon: "💻", color: "#8b5cf6" },
-  { name: "HSR Layout", icon: "📍", color: "#ec4899" },
-  { name: "Whitefield", icon: "🏢", color: "#06b6d4" },
-  { name: "Marathahalli", icon: "📍", color: "#ef4444" },
-  { name: "Bellandur", icon: "📍", color: "#14b8a6" },
-  { name: "Indiranagar", icon: "📍", color: "#f97316" },
-  { name: "MG Road", icon: "🏙️", color: "#a855f7" }
+  { name: "Koramangala", icon: "", color: "#3b82f6" },
+  { name: "BTM Layout", icon: "", color: "#10b981" },
+  { name: "Jayanagar", icon: "", color: "#f59e0b" },
+  { name: "Electronic City", icon: "", color: "#8b5cf6" },
+  { name: "HSR Layout", icon: "", color: "#ec4899" },
+  { name: "Whitefield", icon: "", color: "#06b6d4" },
+  { name: "Marathahalli", icon: "", color: "#ef4444" },
+  
+  
 ];
 
 // Quick Filters - Easy access filters (removed budget 10k)
 const quickFilters = [
-  { id: "near_me", name: "📍 Near Me", icon: <Navigation size={16} />, type: "location" },
-  { id: "ac_room", name: "❄️ AC Room", icon: <Snowflake size={16} />, type: "amenity", field: "ac_available" },
-  { id: "wifi", name: "📶 WiFi", icon: <Wifi size={16} />, type: "amenity", field: "wifi_available" },
-  { id: "parking", name: "🅿️ Parking", icon: <Car size={16} />, type: "amenity", field: "parking_available" },
-  { id: "veg_food", name: "🥬 Veg Food", icon: <Leaf size={16} />, type: "food", value: "veg" },
+  { id: "near_me", name: "Near Me", icon: <Navigation size={16} />, type: "location" },
+  { id: "ac_room", name: "AC Room", icon: <Snowflake size={16} />, type: "amenity", field: "ac_available" },
+  { id: "wifi", name: "WiFi", icon: <Wifi size={16} />, type: "amenity", field: "wifi_available" },
+  { id: "parking", name: "Parking", icon: <Car size={16} />, type: "amenity", field: "parking_available" },
+  { id: "veg_food", name: "Veg Food", icon: <Leaf size={16} />, type: "food", value: "veg" },
 ];
 
 // Category sections for homepage - now only PG, Co-Living, To-Let
 const categorySections = [
-  { id: "pg", title: "🏘️ PG Accommodations", icon: <Home size={22} />, color: "#3b82f6", type: "pg" },
-  { id: "coliving", title: "🤝 Co-Living Spaces", icon: <Users size={22} />, color: "#8b5cf6", type: "coliving" },
-  { id: "tolet", title: "🏠 To-Let Homes", icon: <Building2 size={22} />, color: "#10b981", type: "to_let" }
+  { id: "pg", title: " PG Accommodations", icon: <Home size={22} />, color: "#3b82f6", type: "pg" },
+  { id: "coliving", title: "Co-Living Spaces", icon: <Users size={22} />, color: "#8b5cf6", type: "coliving" },
+  { id: "tolet", title: " To-Let Homes", icon: <Building2 size={22} />, color: "#10b981", type: "to_let" }
 ];
 
 // ================= TRACKING FUNCTION =================
