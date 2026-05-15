@@ -118,24 +118,15 @@ const popularAreas = [
   { name: "HSR Layout", icon: "", color: "#ec4899" },
   { name: "Whitefield", icon: "", color: "#06b6d4" },
   { name: "Marathahalli", icon: "", color: "#ef4444" },
-  
-  
 ];
 
-// Quick Filters - Easy access filters (removed budget 10k)
+// Quick Filters - Easy access filters
 const quickFilters = [
   { id: "near_me", name: "Near Me", icon: <Navigation size={16} />, type: "location" },
   { id: "ac_room", name: "AC Room", icon: <Snowflake size={16} />, type: "amenity", field: "ac_available" },
   { id: "wifi", name: "WiFi", icon: <Wifi size={16} />, type: "amenity", field: "wifi_available" },
   { id: "parking", name: "Parking", icon: <Car size={16} />, type: "amenity", field: "parking_available" },
   { id: "veg_food", name: "Veg Food", icon: <Leaf size={16} />, type: "food", value: "veg" },
-];
-
-// Category sections for homepage - now only PG, Co-Living, To-Let
-const categorySections = [
-  { id: "pg", title: " PG Accommodations", icon: <Home size={22} />, color: "#3b82f6", type: "pg" },
-  { id: "coliving", title: "Co-Living Spaces", icon: <Users size={22} />, color: "#8b5cf6", type: "coliving" },
-  { id: "tolet", title: " To-Let Homes", icon: <Building2 size={22} />, color: "#10b981", type: "to_let" }
 ];
 
 // ================= TRACKING FUNCTION =================
@@ -1224,9 +1215,9 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
               </span>
             )}
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-  <span style={{ color: "#10b981", fontWeight: "700" }}>✔</span>
-  Zero Brokerage
-</span>
+              <span style={{ color: "#10b981", fontWeight: "700" }}>✔</span>
+              Zero Brokerage
+            </span>
             
           </div>
           
@@ -1591,7 +1582,7 @@ const PromoBannerSlider = ({ onBannerClick }) => {
       title: "Student Offer",
       subtitle: "Limited Time Deal",
       description: "Special discount for students",
-      icon: "",
+      icon: "🎓",
       gradient: "linear-gradient(135deg, #ec4899, #be185d)"
     }
   ];
@@ -2076,12 +2067,21 @@ function UserPGSearch() {
   const { user, loading: authLoading } = useAuth();
 
   const [allPGs, setAllPGs] = useState([]);
-  const [filteredPGs, setFilteredPGs] = useState([]);
   
-  // Category filtered lists
-  const [pgProperties, setPgProperties] = useState([]);
-  const [colivingProperties, setColivingProperties] = useState([]);
-  const [toletProperties, setToletProperties] = useState([]);
+  // View All PGs state
+  const INITIAL_PG_LIMIT = 12;
+  const [showAllPGs, setShowAllPGs] = useState(false);
+  
+  // Tab state - Default is "all"
+  const [activeTab, setActiveTab] = useState("all");
+  
+  // Property tabs definition
+  const propertyTabs = [
+    { id: "all", label: "All" },
+    { id: "pg", label: "PG" },
+    { id: "coliving", label: "Co-Living" },
+    { id: "to_let", label: "To-Let" }
+  ];
   
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -2257,24 +2257,8 @@ function UserPGSearch() {
         
         if (!isLoadMore || page === 1) {
           setAllPGs(processedData);
-          setFilteredPGs(processedData);
-          
-          // Filter by category
-          const pgs = processedData.filter(p => p.pg_category === "pg");
-          const colivings = processedData.filter(p => p.pg_category === "coliving");
-          const tolets = processedData.filter(p => p.pg_category === "to_let");
-          
-          setPgProperties(pgs);
-          setColivingProperties(colivings);
-          setToletProperties(tolets);
         } else {
           setAllPGs(prev => [...prev, ...processedData]);
-          setFilteredPGs(prev => [...prev, ...processedData]);
-          
-          // Update category lists
-          setPgProperties(prev => [...prev, ...processedData.filter(p => p.pg_category === "pg")]);
-          setColivingProperties(prev => [...prev, ...processedData.filter(p => p.pg_category === "coliving")]);
-          setToletProperties(prev => [...prev, ...processedData.filter(p => p.pg_category === "to_let")]);
         }
         
         setHasMore(false);
@@ -2398,6 +2382,7 @@ function UserPGSearch() {
     );
   };
 
+  // Apply filters - FIRST filter all PGs
   const applyFilters = useCallback(() => {
     let filtered = [...allPGs];
 
@@ -2428,17 +2413,34 @@ function UserPGSearch() {
       filtered.sort((a, b) => (a.distance || 999) - (b.distance || 999));
     }
 
-    setFilteredPGs(filtered);
-    
-    // Update category filtered lists
-    setPgProperties(filtered.filter(p => p.pg_category === "pg"));
-    setColivingProperties(filtered.filter(p => p.pg_category === "coliving"));
-    setToletProperties(filtered.filter(p => p.pg_category === "to_let"));
+    return filtered;
   }, [allPGs, filters, userLocation]);
 
+  // Get filtered PGs based on tab
+  const getFilteredByTab = useCallback(() => {
+    const allFiltered = applyFilters();
+    
+    if (activeTab === "all") {
+      return allFiltered;
+    }
+    return allFiltered.filter(
+      (item) => item.pg_category === activeTab
+    );
+  }, [applyFilters, activeTab]);
+
+  const filteredPGs = getFilteredByTab();
+  
+  // THEN display based on showAllPGs state
+  const displayedPGs = showAllPGs
+    ? filteredPGs
+    : filteredPGs.slice(0, INITIAL_PG_LIMIT);
+
+  const resultCount = filteredPGs.length;
+  
+  // Reset showAllPGs when filters or tab changes
   useEffect(() => {
-    applyFilters();
-  }, [applyFilters]);
+    setShowAllPGs(false);
+  }, [activeTab, filters, allPGs]);
 
   const handleBudgetChange = (min, max) => {
     setFilters(prev => ({ ...prev, minBudget: min, maxBudget: max }));
@@ -2450,10 +2452,7 @@ function UserPGSearch() {
       location: "", minBudget: 0, maxBudget: 50000, food: false, ac: false, wifi: false, parking: false, sort: "", nearMe: false, foodType: ""
     });
     setActiveQuickFilters(new Set());
-    setFilteredPGs(allPGs);
-    setPgProperties(allPGs.filter(p => p.pg_category === "pg"));
-    setColivingProperties(allPGs.filter(p => p.pg_category === "coliving"));
-    setToletProperties(allPGs.filter(p => p.pg_category === "to_let"));
+    setShowAllPGs(false);
     showNotification("All filters reset");
   };
 
@@ -2545,85 +2544,14 @@ function UserPGSearch() {
     setShowCompareModal(true);
   };
 
-  const renderCategorySection = (section, properties) => {
-    if (properties.length === 0) return null;
-    
-    return (
-      <div key={section.id} style={{ marginBottom: 56 }}>
-        <div style={{ 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: "space-between",
-          marginBottom: 24,
-          flexWrap: "wrap",
-          gap: 12
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ 
-              background: `${section.color}15`, 
-              padding: 10, 
-              borderRadius: 14,
-              color: section.color
-            }}>
-              {section.icon}
-            </div>
-            <div>
-              <h2 style={{ fontSize: 26, fontWeight: 700, color: "#111827", margin: 0 }}>
-                {section.title}
-              </h2>
-              <p style={{ fontSize: 14, color: "#6b7280", margin: "4px 0 0" }}>
-                 {section.title.split(' ')[1]} available
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div style={{ 
-          display: "grid", 
-          gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", 
-          gap: 28 
-        }}>
-          {properties.slice(0, 6).map((pg) => (
-            <PGPropertyCard
-              key={pg.id}
-              pg={pg}
-              onQuickView={handleQuickView}
-              onFavorite={toggleFavorite}
-              onContact={handleBookNow}
-              onCardClick={handleCardClick}
-              isFavorite={favorites.has(pg.id)}
-              isSelectedForCompare={selectedForCompare.has(pg.id)}
-              onSelectForCompare={toggleSelectForCompare}
-              compareMode={compareMode}
-            />
-          ))}
-        </div>
-        
-        {properties.length > 6 && (
-          <div style={{ textAlign: "center", marginTop: 28 }}>
-            <button
-              onClick={() => {
-                // Show all properties of this category by applying category filter
-                setFilters(prev => ({ ...prev, location: section.type === "pg" ? "PG" : section.type === "coliving" ? "Co-Living" : "To-Let" }));
-              }}
-              style={{
-                padding: "12px 28px",
-                background: "transparent",
-                color: section.color,
-                border: `2px solid ${section.color}`,
-                borderRadius: 40,
-                cursor: "pointer",
-                fontSize: 15,
-                fontWeight: 600,
-                transition: "all 0.2s"
-              }}
-            >
-              View All {} {section.title.split(' ')[1]} →
-            </button>
-          </div>
-        )}
-      </div>
-    );
+  // Get title based on active tab
+  const getTabTitle = () => {
+    switch(activeTab) {
+      case "pg": return "PG Accommodations";
+      case "coliving": return "Co-Living Spaces";
+      case "to_let": return "To-Let Homes";
+      default: return "All Properties";
+    }
   };
 
   // Check if filters are active
@@ -2854,44 +2782,138 @@ function UserPGSearch() {
         )}
       </div>
 
-      {/* Category Sections - PG, Co-Living, To-Let */}
+      {/* Property Tabs */}
+      <div style={{ 
+        display: "flex", 
+        gap: 8, 
+        marginBottom: 28,
+        borderBottom: "1px solid #e5e7eb",
+        paddingBottom: 12,
+        overflowX: "auto",
+        scrollbarWidth: "thin"
+      }}>
+        {propertyTabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: "12px 24px",
+              borderRadius: 40,
+              background: activeTab === tab.id ? "#1e3a5f" : "transparent",
+              color: activeTab === tab.id ? "white" : "#4b5563",
+              border: activeTab === tab.id ? "none" : "1px solid #e5e7eb",
+              cursor: "pointer",
+              fontSize: 15,
+              fontWeight: activeTab === tab.id ? 600 : 500,
+              transition: "all 0.2s ease",
+              whiteSpace: "nowrap"
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Results Header */}
+      <div style={{ 
+        display: "flex", 
+        justifyContent: "space-between", 
+        alignItems: "center",
+        marginBottom: 24,
+        flexWrap: "wrap",
+        gap: 12
+      }}>
+        <div>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>
+            {getTabTitle()}
+          </h2>
+          <p style={{ fontSize: 14, color: "#6b7280", margin: "4px 0 0" }}>
+            {resultCount} {resultCount === 1 ? "property" : "properties"} found
+          </p>
+        </div>
+        
+        {compareMode && selectedForCompare.size > 0 && (
+          <button
+            onClick={handleCompare}
+            style={{
+              padding: "10px 20px",
+              background: "#8b5cf6",
+              color: "white",
+              border: "none",
+              borderRadius: 40,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 8
+            }}
+          >
+            <BarChart size={16} />
+            Compare ({selectedForCompare.size})
+          </button>
+        )}
+      </div>
+
+      {/* Properties Grid */}
       {loading ? (
         <div style={{ textAlign: "center", padding: "80px 20px" }}>
           <div style={{ width: 50, height: 50, border: "4px solid #e5e7eb", borderTop: "4px solid #3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 20px" }} />
           <p style={{ color: "#6b7280" }}>Loading properties...</p>
         </div>
-      ) : (
+      ) : displayedPGs.length > 0 ? (
         <>
-          {/* PG Section */}
-          {pgProperties.length > 0 && renderCategorySection(categorySections[0], pgProperties)}
+          <div style={{ 
+            display: "grid", 
+            gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", 
+            gap: 28 
+          }}>
+            {displayedPGs.map((pg) => (
+              <PGPropertyCard
+                key={pg.id}
+                pg={pg}
+                onQuickView={handleQuickView}
+                onFavorite={toggleFavorite}
+                onContact={handleBookNow}
+                onCardClick={handleCardClick}
+                isFavorite={favorites.has(pg.id)}
+                isSelectedForCompare={selectedForCompare.has(pg.id)}
+                onSelectForCompare={toggleSelectForCompare}
+                compareMode={compareMode}
+              />
+            ))}
+          </div>
           
-          {/* Co-Living Section */}
-          {colivingProperties.length > 0 && renderCategorySection(categorySections[1], colivingProperties)}
-          
-          {/* To-Let Section */}
-          {toletProperties.length > 0 && renderCategorySection(categorySections[2], toletProperties)}
-          
-          {/* No results message */}
-          {!loading && pgProperties.length === 0 && colivingProperties.length === 0 && toletProperties.length === 0 && (
-            <div style={{ textAlign: "center", padding: "80px 20px", background: "#f9fafb", borderRadius: 24, marginBottom: 40 }}>
-              <Search size={56} style={{ margin: "0 auto 20px", color: "#9ca3af" }} />
-              <h3 style={{ fontSize: 22, fontWeight: 600, color: "#374151", marginBottom: 8 }}>No properties found</h3>
-              <p style={{ color: "#6b7280", marginBottom: 28 }}>Try adjusting your filters or search for a different location</p>
-              <button onClick={resetFilters} style={{ padding: "12px 28px", background: "#3b82f6", color: "white", border: "none", borderRadius: 40, cursor: "pointer", fontWeight: 600 }}>
-                Reset All Filters
-              </button>
-            </div>
-          )}
-          
-          {/* Load More */}
-          {hasMore && !loading && (pgProperties.length > 0 || colivingProperties.length > 0 || toletProperties.length > 0) && (
-            <div style={{ textAlign: "center", marginTop: 20, marginBottom: 60 }}>
-              <button onClick={loadMore} disabled={loadingMore} style={{ padding: "14px 36px", background: loadingMore ? "#9ca3af" : "#1e3a5f", color: "white", border: "none", borderRadius: 50, cursor: loadingMore ? "not-allowed" : "pointer", fontWeight: 600, fontSize: 15 }}>
-                {loadingMore ? "Loading more..." : "🔽 Load More Properties"}
+          {/* View All PGs Button - Exactly as requested */}
+          {!showAllPGs && filteredPGs.length > INITIAL_PG_LIMIT && (
+            <div style={{ textAlign: "center", marginTop: 40, marginBottom: 60 }}>
+              <button
+                onClick={() => setShowAllPGs(true)}
+                style={{
+                  padding: "14px 28px",
+                  background: "#2563eb",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 12,
+                  fontSize: 16,
+                  fontWeight: 600,
+                  cursor: "pointer"
+                }}
+              >
+                View All PGs
               </button>
             </div>
           )}
         </>
+      ) : (
+        <div style={{ textAlign: "center", padding: "80px 20px", background: "#f9fafb", borderRadius: 24, marginBottom: 40 }}>
+          <Search size={56} style={{ margin: "0 auto 20px", color: "#9ca3af" }} />
+          <h3 style={{ fontSize: 22, fontWeight: 600, color: "#374151", marginBottom: 8 }}>No properties found</h3>
+          <p style={{ color: "#6b7280", marginBottom: 28 }}>Try adjusting your filters or search for a different location</p>
+          <button onClick={resetFilters} style={{ padding: "12px 28px", background: "#3b82f6", color: "white", border: "none", borderRadius: 40, cursor: "pointer", fontWeight: 600 }}>
+            Reset All Filters
+          </button>
+        </div>
       )}
 
       {/* Modals */}
@@ -2901,9 +2923,9 @@ function UserPGSearch() {
       {showCompareModal && <CompareModal selectedPGs={selectedForCompare} allPGs={allPGs} onClose={() => { setShowCompareModal(false); setSelectedForCompare(new Set()); setCompareMode(false); }} />}
 
       {/* Sticky Contact Button for Mobile */}
-      {isMobile && !compareMode && pgProperties.length > 0 && (
+      {isMobile && !compareMode && displayedPGs.length > 0 && (
         <div style={{ position: "fixed", bottom: 16, left: 16, right: 16, zIndex: 999 }}>
-          <button onClick={() => handleBookNow(pgProperties[0])} style={{ width: "100%", padding: "14px", background: "#3b82f6", color: "white", border: "none", borderRadius: 60, fontSize: 16, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}>
+          <button onClick={() => handleBookNow(displayedPGs[0])} style={{ width: "100%", padding: "14px", background: "#3b82f6", color: "white", border: "none", borderRadius: 60, fontSize: 16, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}>
             <MessageCircle size={20} /> Contact Owner
           </button>
         </div>
