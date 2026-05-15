@@ -86,8 +86,6 @@ import {
 } from "lucide-react";
 import api from "../api/api";
 
-import { useInstallPrompt } from "../hooks/useInstallPrompt";
-
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://nepxall-backend.onrender.com";
 
 // Key for localStorage to track if location permission was asked
@@ -938,6 +936,335 @@ const BookingModal = ({ pg, onClose, onBook }) => {
   );
 };
 
+/* ================= QUICK VIEW MODAL COMPONENT (SIMPLIFIED) ================= */
+const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [currentImage, setCurrentImage] = useState(0);
+  
+  // Get photos array for auto-slider
+  const photosArray = React.useMemo(() => {
+    if (pg.photos && Array.isArray(pg.photos) && pg.photos.length > 0) {
+      return pg.photos.filter(photo => photo && photo.trim() !== "");
+    }
+    return [];
+  }, [pg.photos]);
+  
+  const hasMultipleImages = photosArray.length > 1;
+  
+  // Auto image slider effect
+  useEffect(() => {
+    if (hasMultipleImages) {
+      const interval = setInterval(() => {
+        setCurrentImage((prev) => (prev + 1) % photosArray.length);
+      }, 2500);
+      return () => clearInterval(interval);
+    }
+  }, [hasMultipleImages, photosArray.length]);
+  
+  const currentPhotoUrl = React.useMemo(() => {
+    if (hasMultipleImages && photosArray[currentImage]) {
+      return getCorrectImageUrl(photosArray[currentImage]);
+    }
+    if (pg.main_photo) {
+      return getCorrectImageUrl(pg.main_photo);
+    }
+    if (photosArray.length > 0) {
+      return getCorrectImageUrl(photosArray[0]);
+    }
+    return "/no-image.png";
+  }, [hasMultipleImages, photosArray, currentImage, pg.main_photo]);
+  
+  // Get starting price
+  const startingPrice = React.useMemo(() => {
+    const range = getPriceRangeByType(pg);
+    return range.min || getEffectiveRent(pg);
+  }, [pg]);
+  
+  const toggleFavorite = () => {
+    const newState = !isFavorite;
+    setIsFavorite(newState);
+    onSaveFavorite(pg.id, newState);
+  };
+  
+  const handleWhatsApp = () => {
+    const phone = pg.contact_phone || "";
+    window.open(`https://wa.me/${phone}?text=Hi, I'm interested in ${pg.pg_name}`, '_blank');
+  };
+  
+  const handleCall = () => {
+    const phone = pg.contact_phone || "";
+    window.location.href = `tel:${phone}`;
+  };
+  
+  const handleBookNow = () => {
+    onBook(pg);
+    onClose();
+  };
+  
+  return (
+    <div style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0, 0, 0, 0.8)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 2000,
+      padding: 20,
+      animation: "fadeIn 0.3s ease"
+    }}>
+      <div style={{
+        background: "#ffffff",
+        borderRadius: 20,
+        width: "100%",
+        maxWidth: 500,
+        maxHeight: "90vh",
+        overflowY: "auto",
+        position: "relative",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute",
+            top: 16,
+            right: 16,
+            background: "rgba(255,255,255,0.9)",
+            border: "none",
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            zIndex: 100,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+          }}
+        >
+          <X size={24} />
+        </button>
+        
+        <button
+          onClick={toggleFavorite}
+          style={{
+            position: "absolute",
+            top: 16,
+            left: 16,
+            background: "rgba(255,255,255,0.9)",
+            border: "none",
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            zIndex: 100,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+          }}
+        >
+          <Heart size={20} color="#ef4444" fill={isFavorite ? "#ef4444" : "none"} />
+        </button>
+        
+        {/* Image Slider */}
+        <div style={{ position: "relative", height: 250, background: "#f3f4f6" }}>
+          <img
+            src={currentPhotoUrl}
+            alt={pg.pg_name}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = "/no-image.png";
+            }}
+          />
+          
+          {/* Image Slider Dots */}
+          {hasMultipleImages && (
+            <div style={{
+              position: "absolute",
+              bottom: 12,
+              left: "50%",
+              transform: "translateX(-50%)",
+              display: "flex",
+              gap: 6,
+              background: "rgba(0,0,0,0.5)",
+              padding: "4px 8px",
+              borderRadius: 20
+            }}>
+              {photosArray.map((_, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    width: currentImage === idx ? 8 : 6,
+                    height: currentImage === idx ? 8 : 6,
+                    borderRadius: "50%",
+                    background: currentImage === idx ? "#fff" : "rgba(255,255,255,0.5)",
+                    transition: "all 0.2s"
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+        
+        <div style={{ padding: 20 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4, color: "#111827" }}>
+            {pg.pg_name}
+          </h2>
+          
+          <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 16, color: "#6b7280", fontSize: 14 }}>
+            <MapPin size={14} />
+            <span>{pg.area}{pg.city ? `, ${pg.city}` : ""}</span>
+          </div>
+          
+          {/* Starting Price */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 28, fontWeight: 700, color: "#1e3a5f" }}>
+              ₹{formatPrice(startingPrice)} <span style={{ fontSize: 14, fontWeight: 400, color: "#6b7280" }}>onwards</span>
+            </div>
+            <div style={{ fontSize: 12, color: "#10b981", fontWeight: 500 }}>per month</div>
+          </div>
+          
+          {/* Beds Left */}
+          <div style={{
+            background: "#ecfdf5",
+            color: "#059669",
+            padding: "8px 12px",
+            borderRadius: 12,
+            fontSize: 14,
+            fontWeight: "600",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 16
+          }}>
+            🛏️ {pg.available_rooms || 0} Beds Left
+          </div>
+          
+          {/* Food Type */}
+          {pg.food_available && (
+            <div style={{ marginBottom: 16, fontSize: 14, color: "#374151" }}>
+              🍽️ {pg.food_type === 'veg' ? 'Vegetarian' : pg.food_type === 'non-veg' ? 'Non-Vegetarian' : 'Veg & Non-Veg'}
+            </div>
+          )}
+          
+          {/* Filling Fast */}
+          {pg.available_rooms < 5 && pg.available_rooms > 0 && (
+            <div style={{
+              background: "#fef3c7",
+              color: "#d97706",
+              padding: "6px 12px",
+              borderRadius: 10,
+              fontSize: 12,
+              fontWeight: 600,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              marginBottom: 16
+            }}>
+              🔥 Filling Fast
+            </div>
+          )}
+          
+          {/* Verified + Response Time */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            marginBottom: 24,
+            fontSize: 12,
+            color: "#6b7280"
+          }}>
+            {pg.is_verified && (
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <Shield size={12} color="#10b981" />
+                Verified
+              </span>
+            )}
+            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <Clock size={12} />
+              Owner responds in 10 mins
+            </span>
+          </div>
+          
+          {/* Action Buttons */}
+          <div style={{ display: "flex", gap: 12 }}>
+            <button
+              onClick={handleCall}
+              style={{
+                flex: 1,
+                padding: "14px",
+                background: "#10b981",
+                color: "white",
+                border: "none",
+                borderRadius: 12,
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8
+              }}
+            >
+              <Phone size={16} />
+              Call
+            </button>
+            
+            <button
+              onClick={handleWhatsApp}
+              style={{
+                flex: 1,
+                padding: "14px",
+                background: "#25D366",
+                color: "white",
+                border: "none",
+                borderRadius: 12,
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8
+              }}
+            >
+              <MessageCircle size={16} />
+              WhatsApp
+            </button>
+            
+            <button
+              onClick={handleBookNow}
+              style={{
+                flex: 1,
+                padding: "14px",
+                background: "#3b82f6",
+                color: "white",
+                border: "none",
+                borderRadius: 12,
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8
+              }}
+            >
+              <Check size={16} />
+              Book Now
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Camera icon component
 const Camera = ({ size, color }) => (
   <svg 
@@ -1227,7 +1554,6 @@ const PromoBannerSlider = ({ onBannerClick }) => {
       title: "₹200 OFF",
       subtitle: "On First Booking",
       description: "Use code FIRST200",
-      color: "linear-gradient(135deg, #2563eb, #1d4ed8)",
       icon: "🎉",
       gradient: "linear-gradient(135deg, #3b82f6, #1e40af)"
     },
@@ -1236,7 +1562,6 @@ const PromoBannerSlider = ({ onBannerClick }) => {
       title: "Zero Brokerage",
       subtitle: "Direct Owner Contact",
       description: "Save on commission",
-      color: "linear-gradient(135deg, #10b981, #059669)",
       icon: "🏠",
       gradient: "linear-gradient(135deg, #10b981, #047857)"
     },
@@ -1245,7 +1570,6 @@ const PromoBannerSlider = ({ onBannerClick }) => {
       title: "Instant Booking",
       subtitle: "Fast Confirmation",
       description: "Get confirmed in minutes",
-      color: "linear-gradient(135deg, #f59e0b, #d97706)",
       icon: "⚡",
       gradient: "linear-gradient(135deg, #f59e0b, #b45309)"
     },
@@ -1254,7 +1578,6 @@ const PromoBannerSlider = ({ onBannerClick }) => {
       title: "Verified PGs",
       subtitle: "100% Trusted Properties",
       description: "No hidden charges",
-      color: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
       icon: "🤝",
       gradient: "linear-gradient(135deg, #8b5cf6, #6d28d9)"
     },
@@ -1263,20 +1586,16 @@ const PromoBannerSlider = ({ onBannerClick }) => {
       title: "Student Offer",
       subtitle: "Limited Time Deal",
       description: "Special discount for students",
-      color: "linear-gradient(135deg, #ec4899, #db2777)",
       icon: "🔥",
       gradient: "linear-gradient(135deg, #ec4899, #be185d)"
     }
   ];
 
-  // Auto-slide every 3 seconds
   useEffect(() => {
     if (isHovered) return;
-    
     const interval = setInterval(() => {
       setActiveIndex((prevIndex) => (prevIndex + 1) % promoBanners.length);
     }, 3000);
-    
     return () => clearInterval(interval);
   }, [isHovered, promoBanners.length]);
 
@@ -1291,509 +1610,71 @@ const PromoBannerSlider = ({ onBannerClick }) => {
   const handleBannerClick = (banner) => {
     if (onBannerClick) {
       onBannerClick(banner);
-    } else {
-      // Default action based on banner type
-      if (banner.title.includes("OFF")) {
-        alert(`🎉 ${banner.title} - ${banner.subtitle}\n${banner.description}\n\nUse code: FIRST200 at checkout!`);
-      } else if (banner.title.includes("Zero")) {
-        alert(`🏠 ${banner.title}\n${banner.description}\n\nWe connect you directly with property owners - no middlemen, no brokerage!`);
-      } else if (banner.title.includes("Instant")) {
-        alert(`⚡ ${banner.title}\nBook now and get instant confirmation!\n\nYour booking will be confirmed within minutes.`);
-      } else {
-        alert(`✨ ${banner.title}\n${banner.description}\n\nClick to learn more!`);
-      }
     }
   };
 
-  // For mobile horizontal scroll view
   const isMobile = window.innerWidth < 768;
 
   if (isMobile) {
     return (
-      <div
-        style={{
-          marginBottom: 24,
-          position: "relative",
-        }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        {/* Header */}
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 12,
-          padding: "0 4px"
-        }}>
+      <div style={{ marginBottom: 24, position: "relative" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <div>
-            <h3 style={{
-              fontSize: 18,
-              fontWeight: 700,
-              color: "#111827",
-              marginBottom: 2
-            }}>
-              🔥 Exclusive Offers
-            </h3>
-            <p style={{
-              fontSize: 13,
-              color: "#6b7280"
-            }}>
-              Limited time deals for you
-            </p>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: "#111827" }}>🔥 Exclusive Offers</h3>
+            <p style={{ fontSize: 13, color: "#6b7280" }}>Limited time deals for you</p>
           </div>
-          <div style={{
-            display: "flex",
-            gap: 8
-          }}>
-            <button
-              onClick={() => handleManualScroll('prev')}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: "50%",
-                background: "#f3f4f6",
-                border: "none",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                transition: "all 0.2s"
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "#e5e7eb"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "#f3f4f6"}
-            >
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => handleManualScroll('prev')} style={{ width: 32, height: 32, borderRadius: "50%", background: "#f3f4f6", border: "none", cursor: "pointer" }}>
               <ChevronLeft size={18} />
             </button>
-            <button
-              onClick={() => handleManualScroll('next')}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: "50%",
-                background: "#f3f4f6",
-                border: "none",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                transition: "all 0.2s"
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "#e5e7eb"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "#f3f4f6"}
-            >
+            <button onClick={() => handleManualScroll('next')} style={{ width: 32, height: 32, borderRadius: "50%", background: "#f3f4f6", border: "none", cursor: "pointer" }}>
               <ChevronRight size={18} />
             </button>
           </div>
         </div>
-
-        {/* Horizontal Scroll Container */}
-        <div
-          style={{
-            display: "flex",
-            gap: 16,
-            overflowX: "auto",
-            padding: "8px 4px 16px 4px",
-            scrollbarWidth: "thin",
-            WebkitOverflowScrolling: "touch",
-            scrollSnapType: "x mandatory"
-          }}
-          className="promo-scroll-container"
-        >
-          {promoBanners.map((banner, index) => (
-            <div
-              key={banner.id}
-              onClick={() => handleBannerClick(banner)}
-              style={{
-                minWidth: 280,
-                background: banner.gradient,
-                borderRadius: 20,
-                padding: 20,
-                color: "white",
-                boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
-                cursor: "pointer",
-                flexShrink: 0,
-                transition: "all 0.3s ease",
-                scrollSnapAlign: "start",
-                position: "relative",
-                overflow: "hidden"
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 12px 28px rgba(0,0,0,0.2)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 8px 20px rgba(0,0,0,0.12)";
-              }}
-            >
-              {/* Decorative circle */}
-              <div style={{
-                position: "absolute",
-                top: -30,
-                right: -30,
-                width: 100,
-                height: 100,
-                background: "rgba(255,255,255,0.1)",
-                borderRadius: "50%"
-              }} />
-              
-              <div
-                style={{
-                  fontSize: 42,
-                  marginBottom: 12,
-                  position: "relative",
-                  zIndex: 2
-                }}
-              >
-                {banner.icon}
-              </div>
-              <h3
-                style={{
-                  fontSize: 24,
-                  fontWeight: 700,
-                  marginBottom: 6,
-                  position: "relative",
-                  zIndex: 2
-                }}
-              >
-                {banner.title}
-              </h3>
-              <p
-                style={{
-                  fontSize: 14,
-                  opacity: 0.9,
-                  marginBottom: 4,
-                  position: "relative",
-                  zIndex: 2
-                }}
-              >
-                {banner.subtitle}
-              </p>
-              <p
-                style={{
-                  fontSize: 12,
-                  opacity: 0.75,
-                  position: "relative",
-                  zIndex: 2
-                }}
-              >
-                {banner.description}
-              </p>
-              
-              {/* CTA indicator */}
-              <div style={{
-                marginTop: 12,
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                fontSize: 12,
-                opacity: 0.8,
-                position: "relative",
-                zIndex: 2
-              }}>
-                <span>Tap to claim</span>
-                <ChevronRight size={14} />
-              </div>
+        <div style={{ display: "flex", gap: 16, overflowX: "auto", padding: "8px 4px 16px", scrollbarWidth: "thin" }}>
+          {promoBanners.map((banner) => (
+            <div key={banner.id} onClick={() => handleBannerClick(banner)} style={{ minWidth: 280, background: banner.gradient, borderRadius: 20, padding: 20, color: "white", cursor: "pointer" }}>
+              <div style={{ fontSize: 42, marginBottom: 12 }}>{banner.icon}</div>
+              <h3 style={{ fontSize: 24, fontWeight: 700 }}>{banner.title}</h3>
+              <p style={{ fontSize: 14, opacity: 0.9 }}>{banner.subtitle}</p>
+              <p style={{ fontSize: 12, opacity: 0.75 }}>{banner.description}</p>
             </div>
           ))}
         </div>
-
-        {/* Dot indicators for auto-slide */}
-        <div style={{
-          display: "flex",
-          justifyContent: "center",
-          gap: 8,
-          marginTop: 8
-        }}>
-          {promoBanners.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => setActiveIndex(idx)}
-              style={{
-                width: activeIndex === idx ? 24 : 8,
-                height: 8,
-                borderRadius: 4,
-                background: activeIndex === idx ? "#3b82f6" : "#d1d5db",
-                border: "none",
-                cursor: "pointer",
-                transition: "all 0.3s ease"
-              }}
-            />
-          ))}
-        </div>
-
-        <style>{`
-          .promo-scroll-container::-webkit-scrollbar {
-            height: 4px;
-          }
-          .promo-scroll-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-          }
-          .promo-scroll-container::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-          }
-          .promo-scroll-container::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-          }
-        `}</style>
       </div>
     );
   }
 
-  // Desktop view with centered cards
   return (
-    <div
-      style={{
-        marginBottom: 32,
-        position: "relative",
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* Header with navigation */}
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 20
-      }}>
+    <div style={{ marginBottom: 32 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
-          <h2 style={{
-            fontSize: 24,
-            fontWeight: 700,
-            color: "#111827",
-            marginBottom: 4,
-            display: "flex",
-            alignItems: "center",
-            gap: 8
-          }}>
-            <SparklesIcon size={24} color="#f59e0b" />
-            Exclusive Offers
-          </h2>
-          <p style={{
-            fontSize: 14,
-            color: "#6b7280"
-          }}>
-            Grab these limited-time deals before they're gone!
-          </p>
+          <h2 style={{ fontSize: 24, fontWeight: 700, color: "#111827" }}>🔥 Exclusive Offers</h2>
+          <p style={{ fontSize: 14, color: "#6b7280" }}>Grab these limited-time deals before they're gone!</p>
         </div>
-        <div style={{
-          display: "flex",
-          gap: 12
-        }}>
-          <button
-            onClick={() => handleManualScroll('prev')}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
-              background: "#f3f4f6",
-              border: "none",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              transition: "all 0.2s"
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "#e5e7eb"}
-            onMouseLeave={(e) => e.currentTarget.style.background = "#f3f4f6"}
-          >
+        <div style={{ display: "flex", gap: 12 }}>
+          <button onClick={() => handleManualScroll('prev')} style={{ width: 40, height: 40, borderRadius: "50%", background: "#f3f4f6", border: "none", cursor: "pointer" }}>
             <ChevronLeft size={20} />
           </button>
-          <button
-            onClick={() => handleManualScroll('next')}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
-              background: "#f3f4f6",
-              border: "none",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              transition: "all 0.2s"
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "#e5e7eb"}
-            onMouseLeave={(e) => e.currentTarget.style.background = "#f3f4f6"}
-          >
+          <button onClick={() => handleManualScroll('next')} style={{ width: 40, height: 40, borderRadius: "50%", background: "#f3f4f6", border: "none", cursor: "pointer" }}>
             <ChevronRight size={20} />
           </button>
         </div>
       </div>
-
-      {/* Center-aligned cards with auto-slide */}
-      <div style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        gap: 24,
-        flexWrap: "wrap"
-      }}>
-        {/* Show only 3 featured banners on desktop, centered */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 24, flexWrap: "wrap" }}>
         {promoBanners.slice(0, 3).map((banner) => (
-          <div
-            key={banner.id}
-            onClick={() => handleBannerClick(banner)}
-            style={{
-              flex: "1 1 280px",
-              maxWidth: 320,
-              background: banner.gradient,
-              borderRadius: 24,
-              padding: 24,
-              color: "white",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-              cursor: "pointer",
-              transition: "all 0.3s ease",
-              position: "relative",
-              overflow: "hidden"
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-4px)";
-              e.currentTarget.style.boxShadow = "0 16px 32px rgba(0,0,0,0.2)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.12)";
-            }}
-          >
-            {/* Animated shine effect */}
-            <div style={{
-              position: "absolute",
-              top: 0,
-              left: "-100%",
-              width: "100%",
-              height: "100%",
-              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)",
-              transition: "left 0.5s ease"
-            }}
-            className="shine-effect"
-            onMouseEnter={(e) => {
-              const shine = e.currentTarget;
-              shine.style.left = "100%";
-              setTimeout(() => { shine.style.left = "-100%"; }, 500);
-            }}
-            />
-            
-            <div
-              style={{
-                fontSize: 48,
-                marginBottom: 16,
-                position: "relative",
-                zIndex: 2
-              }}
-            >
-              {banner.icon}
-            </div>
-            <h3
-              style={{
-                fontSize: 26,
-                fontWeight: 700,
-                marginBottom: 8,
-                position: "relative",
-                zIndex: 2
-              }}
-            >
-              {banner.title}
-            </h3>
-            <p
-              style={{
-                fontSize: 15,
-                opacity: 0.9,
-                marginBottom: 8,
-                position: "relative",
-                zIndex: 2
-              }}
-            >
-              {banner.subtitle}
-            </p>
-            <p
-              style={{
-                fontSize: 13,
-                opacity: 0.75,
-                marginBottom: 16,
-                position: "relative",
-                zIndex: 2
-              }}
-            >
-              {banner.description}
-            </p>
-            
-            <div style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "8px 16px",
-              background: "rgba(255,255,255,0.2)",
-              borderRadius: 30,
-              fontSize: 13,
-              fontWeight: 500,
-              position: "relative",
-              zIndex: 2
-            }}>
+          <div key={banner.id} onClick={() => handleBannerClick(banner)} style={{ flex: "1 1 280px", maxWidth: 320, background: banner.gradient, borderRadius: 24, padding: 24, color: "white", cursor: "pointer", transition: "transform 0.3s" }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>{banner.icon}</div>
+            <h3 style={{ fontSize: 26, fontWeight: 700 }}>{banner.title}</h3>
+            <p style={{ fontSize: 15, opacity: 0.9 }}>{banner.subtitle}</p>
+            <p style={{ fontSize: 13, opacity: 0.75, marginBottom: 16 }}>{banner.description}</p>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", background: "rgba(255,255,255,0.2)", borderRadius: 30, fontSize: 13 }}>
               Claim Offer →
             </div>
-
-            {/* Decorative elements */}
-            <div style={{
-              position: "absolute",
-              bottom: -20,
-              right: -20,
-              width: 80,
-              height: 80,
-              background: "rgba(255,255,255,0.08)",
-              borderRadius: "50%"
-            }} />
-            <div style={{
-              position: "absolute",
-              top: -10,
-              left: -10,
-              width: 60,
-              height: 60,
-              background: "rgba(255,255,255,0.05)",
-              borderRadius: "50%"
-            }} />
           </div>
         ))}
       </div>
-
-      {/* Auto-slide indicator */}
-      <div style={{
-        display: "flex",
-        justifyContent: "center",
-        gap: 10,
-        marginTop: 24
-      }}>
-        {promoBanners.map((_, idx) => (
-          <button
-            key={idx}
-            onClick={() => setActiveIndex(idx)}
-            style={{
-              width: activeIndex === idx ? 28 : 8,
-              height: 8,
-              borderRadius: 4,
-              background: activeIndex === idx ? "#3b82f6" : "#d1d5db",
-              border: "none",
-              cursor: "pointer",
-              transition: "all 0.3s ease"
-            }}
-          />
-        ))}
-      </div>
-
-      <style>{`
-        @keyframes shine {
-          0% { left: -100%; }
-          20% { left: 100%; }
-          100% { left: 100%; }
-        }
-        .shine-effect {
-          animation: shine 3s infinite;
-        }
-      `}</style>
     </div>
   );
 };
@@ -1802,198 +1683,36 @@ const PromoBannerSlider = ({ onBannerClick }) => {
 const HeroBanner = () => {
   const isMobile = isMobileDevice();
   
-  useEffect(() => {
-    // Track homepage visit
-    trackEvent("homepage_visit");
-  }, []);
-  
   return (
-    <div className="hero-section" style={{
+    <div style={{
       background: "linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%)",
       borderRadius: 24,
       marginBottom: 40,
       overflow: "hidden",
-      boxShadow: "0 20px 35px -10px rgba(0,0,0,0.15)",
-      position: "relative"
+      padding: isMobile ? "40px 20px" : "60px 40px",
     }}>
-      <div style={{
-        padding: "50px 30px 30px",
-        position: "relative",
-        zIndex: 2
+      <h1 style={{
+        fontSize: isMobile ? "36px" : "52px",
+        fontWeight: 800,
+        color: "#ffffff",
+        marginBottom: 16,
       }}>
-        <div>
-          {/* Responsive heading with mobile size 36px, desktop 52px */}
-          <h1 className="hero-title" style={{
-            fontSize: isMobile ? "36px" : "52px",
-            lineHeight: "1.15",
-            fontWeight: 800,
-            color: "#ffffff",
-            marginBottom: 16,
-            letterSpacing: "-0.02em"
-          }}>
-            Find Verified PGs,<br />
-            Coliving & Rental Homes
-          </h1>
-          {/* Responsive description text */}
-          <p style={{
-            fontSize: isMobile ? "16px" : "22px",
-            lineHeight: "1.4",
-            color: "rgba(255,255,255,0.9)",
-            marginBottom: 32,
-            maxWidth: "90%"
-          }}>
-            Book trusted stays with secure payments, verified owners and instant booking support.
-          </p>
-          
-          {/* Feature Columns with improved alignment */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "16px",
-            alignItems: "start",
-            marginBottom: 32
-          }}>
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              color: "#ffffff"
-            }}>
-              <div style={{
-                background: "rgba(255,255,255,0.15)",
-                borderRadius: "50%",
-                width: 32,
-                height: 32,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}>
-                <Shield size={18} />
-              </div>
-              <span style={{ fontSize: 15, fontWeight: 500 }}>Verified Properties</span>
-            </div>
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              color: "#ffffff"
-            }}>
-              <div style={{
-                background: "rgba(255,255,255,0.15)",
-                borderRadius: "50%",
-                width: 32,
-                height: 32,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}>
-                <CreditCard size={18} />
-              </div>
-              <span style={{ fontSize: 15, fontWeight: 500 }}>Secure Online Booking</span>
-            </div>
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              color: "#ffffff"
-            }}>
-              <div style={{
-                background: "rgba(255,255,255,0.15)",
-                borderRadius: "50%",
-                width: 32,
-                height: 32,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}>
-                <Headphones size={18} />
-              </div>
-              <span style={{ fontSize: 15, fontWeight: 500 }}>Direct Tenant-Owner Contact</span>
-            </div>
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              color: "#ffffff"
-            }}>
-              <div style={{
-                background: "rgba(255,255,255,0.15)",
-                borderRadius: "50%",
-                width: 32,
-                height: 32,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}>
-                <ClockIcon size={18} />
-              </div>
-              <span style={{ fontSize: 15, fontWeight: 500 }}> Zero Brokerage</span>
-            </div>
-          </div>
-          
-          {/* Badges Section - Centered with flex-wrap */}
-          <div className="hero-badges" style={{ 
-            display: "flex", 
-            alignItems: "center",
-            flexWrap: "wrap",
-            justifyContent: "center",
-            gap: 12,
-            marginTop: 20
-          }}>
-            <div style={{
-              background: "#10b981",
-              color: "white",
-              padding: "10px 18px",
-              borderRadius: 30,
-              fontWeight: 600,
-              fontSize: 14
-            }}>
-              ✓ Verified
-            </div>
-            <div style={{
-              background: "#3b82f6",
-              color: "white",
-              padding: "10px 18px",
-              borderRadius: 30,
-              fontWeight: 600,
-              fontSize: 14
-            }}>
-              ✓ Secure
-            </div>
-            <div style={{
-              background: "#8b5cf6",
-              color: "white",
-              padding: "10px 18px",
-              borderRadius: 30,
-              fontWeight: 600,
-              fontSize: 14
-            }}>
-              ✓ Trusted
-            </div>
-          </div>
-        </div>
+        Find Verified PGs,<br />
+        Coliving & Rental Homes
+      </h1>
+      <p style={{
+        fontSize: isMobile ? "16px" : "22px",
+        color: "rgba(255,255,255,0.9)",
+        marginBottom: 32,
+        maxWidth: "90%"
+      }}>
+        Book trusted stays with secure payments, verified owners and instant booking support.
+      </p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+        <div style={{ background: "#10b981", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Verified</div>
+        <div style={{ background: "#3b82f6", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Secure</div>
+        <div style={{ background: "#8b5cf6", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Trusted</div>
       </div>
-      
-      <div style={{
-        position: "absolute",
-        top: -50,
-        right: -50,
-        width: 200,
-        height: 200,
-        background: "rgba(255,255,255,0.05)",
-        borderRadius: "50%",
-        zIndex: 1
-      }} />
-      <div style={{
-        position: "absolute",
-        bottom: -80,
-        left: -30,
-        width: 250,
-        height: 250,
-        background: "rgba(255,255,255,0.03)",
-        borderRadius: "50%",
-        zIndex: 1
-      }} />
     </div>
   );
 };
@@ -2011,98 +1730,20 @@ const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
       justifyContent: "space-between",
       flexWrap: "wrap",
       gap: 16,
-      animation: "slideDown 0.3s ease",
-      boxShadow: "0 4px 20px rgba(0,0,0,0.1)"
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 16, flex: 1 }}>
-        <div style={{
-          background: "rgba(255,255,255,0.2)",
-          borderRadius: "50%",
-          width: 48,
-          height: 48,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center"
-        }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Navigation size={24} color="white" />
         </div>
         <div>
-          <h3 style={{ 
-            fontSize: 16, 
-            fontWeight: 600, 
-            color: "white",
-            marginBottom: 4
-          }}>
-            📍 Find Properties Near You
-          </h3>
-          <p style={{ 
-            fontSize: 13, 
-            color: "rgba(255,255,255,0.9)",
-            margin: 0
-          }}>
-            Allow location access to see PGs, Co-living & To-Let properties within 5km of your area
-          </p>
+          <h3 style={{ fontSize: 16, fontWeight: 600, color: "white" }}>📍 Find Properties Near You</h3>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.9)" }}>Allow location access to see properties within 5km of your area</p>
         </div>
       </div>
       <div style={{ display: "flex", gap: 12 }}>
-        <button
-          onClick={onDeny}
-          style={{
-            padding: "10px 20px",
-            background: "rgba(255,255,255,0.2)",
-            color: "white",
-            border: "none",
-            borderRadius: 10,
-            fontSize: 14,
-            fontWeight: 500,
-            cursor: "pointer",
-            transition: "all 0.2s"
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.3)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.2)";
-          }}
-        >
-          Not Now
-        </button>
-        <button
-          onClick={onAllow}
-          disabled={isLoading}
-          style={{
-            padding: "10px 24px",
-            background: "white",
-            color: "#3b82f6",
-            border: "none",
-            borderRadius: 10,
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: isLoading ? "not-allowed" : "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            transition: "all 0.2s"
-          }}
-        >
-          {isLoading ? (
-            <>
-              <div style={{
-                width: 16,
-                height: 16,
-                border: "2px solid #3b82f6",
-                borderTop: "2px solid transparent",
-                borderRadius: "50%",
-                animation: "spin 0.8s linear infinite"
-              }} />
-              Getting location...
-            </>
-          ) : (
-            <>
-              <Navigation size={16} />
-              Allow Location
-            </>
-          )}
+        <button onClick={onDeny} style={{ padding: "10px 20px", background: "rgba(255,255,255,0.2)", color: "white", border: "none", borderRadius: 10, cursor: "pointer" }}>Not Now</button>
+        <button onClick={onAllow} disabled={isLoading} style={{ padding: "10px 24px", background: "white", color: "#3b82f6", border: "none", borderRadius: 10, fontWeight: 600, cursor: "pointer" }}>
+          {isLoading ? "Getting location..." : "Allow Location"}
         </button>
       </div>
     </div>
@@ -2110,10 +1751,9 @@ const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
 };
 
 /* ================= UPDATED PG CARD COMPONENT WITH AUTO IMAGE SLIDER ================= */
-const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, isFavorite, isSelectedForCompare, onSelectForCompare, compareMode, getImageUrl }) => {
+const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, isFavorite, isSelectedForCompare, onSelectForCompare, compareMode }) => {
   const isMobile = window.innerWidth < 768;
   const [currentImage, setCurrentImage] = useState(0);
-  const [imagesLoaded, setImagesLoaded] = useState(false);
   
   // Get photos array for auto-slider
   const photosArray = React.useMemo(() => {
@@ -2123,7 +1763,6 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
     return [];
   }, [pg.photos]);
   
-  const mainPhoto = pg.main_photo || (photosArray.length > 0 ? photosArray[0] : null);
   const hasMultipleImages = photosArray.length > 1;
   
   // Auto image slider effect
@@ -2140,11 +1779,14 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
     if (hasMultipleImages && photosArray[currentImage]) {
       return getCorrectImageUrl(photosArray[currentImage]);
     }
-    if (mainPhoto) {
-      return getCorrectImageUrl(mainPhoto);
+    if (pg.main_photo) {
+      return getCorrectImageUrl(pg.main_photo);
+    }
+    if (photosArray.length > 0) {
+      return getCorrectImageUrl(photosArray[0]);
     }
     return "/no-image.png";
-  }, [hasMultipleImages, photosArray, currentImage, mainPhoto]);
+  }, [hasMultipleImages, photosArray, currentImage, pg.main_photo]);
   
   // Get starting price (only minimum)
   const startingPrice = React.useMemo(() => {
@@ -2210,11 +1852,7 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
             boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
           }}
         >
-          {isSelectedForCompare ? (
-            <Check size={18} color="#8b5cf6" />
-          ) : (
-            <Plus size={18} color="#374151" />
-          )}
+          {isSelectedForCompare ? <Check size={18} color="#8b5cf6" /> : <Plus size={18} color="#374151" />}
         </button>
       )}
       
@@ -2237,20 +1875,10 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
           alignItems: "center",
           gap: 6,
           zIndex: 10,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-          transition: "all 0.2s"
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = "#3b82f6";
-          e.currentTarget.style.color = "white";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "rgba(255,255,255,0.9)";
-          e.currentTarget.style.color = "#374151";
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
         }}
       >
-        <Eye size={14} />
-        Quick View
+        <Eye size={14} /> Quick View
       </button>
       
       {/* Favorite Button */}
@@ -2273,11 +1901,7 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
           boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
         }}
       >
-        <Heart 
-          size={18} 
-          color="#ef4444" 
-          fill={isFavorite ? "#ef4444" : "none"}
-        />
+        <Heart size={18} color="#ef4444" fill={isFavorite ? "#ef4444" : "none"} />
       </button>
       
       {/* Image Section with Auto Slider */}
@@ -2285,12 +1909,7 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
         <img
           src={currentPhotoUrl}
           alt={pg.pg_name}
-          style={{ 
-            width: "100%", 
-            height: isMobile ? 200 : 240, 
-            objectFit: "cover", 
-            display: "block" 
-          }}
+          style={{ width: "100%", height: isMobile ? 200 : 240, objectFit: "cover", display: "block" }}
           onError={(e) => {
             e.target.onerror = null;
             e.target.src = "/no-image.png";
@@ -2302,20 +1921,14 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
           position: "absolute",
           bottom: 12,
           left: 12,
-          background: pg.pg_category === "to_let" ? "#f97316" : 
-                    pg.pg_category === "coliving" ? "#8b5cf6" :
-                    pg.pg_type === "boys" ? "#16a34a" : "#db2777",
+          background: pg.pg_category === "to_let" ? "#f97316" : pg.pg_category === "coliving" ? "#8b5cf6" : pg.pg_type === "boys" ? "#16a34a" : "#db2777",
           color: "#fff",
           padding: "6px 12px",
           borderRadius: 20,
           fontSize: 12,
           fontWeight: 600,
-          textTransform: "uppercase",
-          letterSpacing: "0.5px"
         }}>
-          {pg.pg_category === "to_let" ? "To-Let" : 
-          pg.pg_category === "coliving" ? "Co-Living" :
-          pg.pg_type ? pg.pg_type.charAt(0).toUpperCase() + pg.pg_type.slice(1) + " PG" : "PG"}
+          {pg.pg_category === "to_let" ? "To-Let" : pg.pg_category === "coliving" ? "Co-Living" : pg.pg_type ? pg.pg_type.charAt(0).toUpperCase() + pg.pg_type.slice(1) + " PG" : "PG"}
         </div>
         
         {/* Distance Badge */}
@@ -2329,17 +1942,15 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
             padding: "4px 10px",
             borderRadius: 20,
             fontSize: 11,
-            fontWeight: 600,
             display: "flex",
             alignItems: "center",
             gap: 4
           }}>
-            <Navigation size={10} />
-            {pg.distance.toFixed(1)} km
+            <Navigation size={10} /> {pg.distance.toFixed(1)} km
           </div>
         )}
         
-        {/* Image Slider Dots (only if multiple images) */}
+        {/* Image Slider Dots */}
         {hasMultipleImages && (
           <div style={{
             position: "absolute",
@@ -2353,16 +1964,12 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
             borderRadius: 20
           }}>
             {photosArray.map((_, idx) => (
-              <div
-                key={idx}
-                style={{
-                  width: currentImage === idx ? 8 : 6,
-                  height: currentImage === idx ? 8 : 6,
-                  borderRadius: "50%",
-                  background: currentImage === idx ? "#fff" : "rgba(255,255,255,0.5)",
-                  transition: "all 0.2s"
-                }}
-              />
+              <div key={idx} style={{
+                width: currentImage === idx ? 8 : 6,
+                height: currentImage === idx ? 8 : 6,
+                borderRadius: "50%",
+                background: currentImage === idx ? "#fff" : "rgba(255,255,255,0.5)",
+              }} />
             ))}
           </div>
         )}
@@ -2370,46 +1977,19 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
       
       {/* Card Content - Simplified */}
       <div style={{ padding: 16 }}>
-        {/* PG Name */}
-        <h3 style={{ 
-          fontSize: 18,
-          fontWeight: 700,
-          lineHeight: 1.3,
-          marginBottom: 4,
-          color: "#111827"
-        }}>
-          {pg.pg_name}
-        </h3>
+        <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: "#111827" }}>{pg.pg_name}</h3>
         
-        {/* Location */}
-        <div style={{ 
-          display: "flex", 
-          alignItems: "center", 
-          gap: 4, 
-          marginBottom: 12,
-          color: "#6b7280",
-          fontSize: 14
-        }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 12, color: "#6b7280", fontSize: 14 }}>
           <MapPin size={14} />
           <span>{pg.area}{pg.city ? `, ${pg.city}` : ""}</span>
         </div>
         
         {/* Starting Price - Simplified */}
         <div style={{ marginBottom: 10 }}>
-          <div style={{ 
-            fontSize: 22, 
-            fontWeight: 700, 
-            color: "#1e3a5f",
-            display: "flex",
-            alignItems: "baseline",
-            gap: 4
-          }}>
-            ₹{formatPrice(startingPrice)}
-            <span style={{ fontSize: 13, fontWeight: 400, color: "#6b7280" }}>onwards</span>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#1e3a5f", display: "flex", alignItems: "baseline", gap: 4 }}>
+            ₹{formatPrice(startingPrice)} <span style={{ fontSize: 13, fontWeight: 400, color: "#6b7280" }}>onwards</span>
           </div>
-          <div style={{ fontSize: 11, color: "#10b981", fontWeight: 500 }}>
-            per month
-          </div>
+          <div style={{ fontSize: 11, color: "#10b981", fontWeight: 500 }}>per month</div>
         </div>
         
         {/* Available Beds Left */}
@@ -2430,14 +2010,7 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
         
         {/* Food Type */}
         {foodTypeDisplay && (
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            marginBottom: 12,
-            fontSize: 13,
-            color: "#374151"
-          }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12, fontSize: 13, color: "#374151" }}>
             {foodTypeDisplay}
           </div>
         )}
@@ -2472,22 +2045,17 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
         }}>
           {pg.is_verified && (
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <Shield size={12} color="#10b981" />
-              Verified
+              <Shield size={12} color="#10b981" /> Verified
             </span>
           )}
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <Clock size={12} />
-            Owner responds in 10 mins
+            <Clock size={12} /> Owner responds in 10 mins
           </span>
         </div>
         
         {/* Contact Owner Button */}
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onContact(pg);
-          }}
+          onClick={(e) => { e.stopPropagation(); onContact(pg); }}
           style={{
             width: "100%",
             fontSize: 14,
@@ -2501,18 +2069,10 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: 8,
-            transition: "all 0.2s"
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#2563eb";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "#3b82f6";
+            gap: 8
           }}
         >
-          <MessageCircle size={16} />
-          Contact Owner
+          <MessageCircle size={16} /> Contact Owner
         </button>
       </div>
     </div>
@@ -2522,10 +2082,8 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
 /* ================= MAIN COMPONENT ================= */
 function UserPGSearch() {
   const isMobile = window.innerWidth < 768;
-  
   const navigate = useNavigate();
-  
-  const { user, role, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const [allPGs, setAllPGs] = useState([]);
   const [pgs, setPgs] = useState([]);
@@ -2568,17 +2126,8 @@ function UserPGSearch() {
     }
   }, []);
 
-  // Handler for promo banner clicks
   const handlePromoBannerClick = (banner) => {
-    if (banner.title.includes("OFF")) {
-      showNotification(`🎉 ${banner.title} applied! Use code FIRST200 at checkout.`);
-    } else if (banner.title.includes("Zero")) {
-      showNotification(`🏠 ${banner.title} - No brokerage fees! Direct owner contact only.`);
-    } else if (banner.title.includes("Instant")) {
-      showNotification(`⚡ ${banner.title} - Book now for instant confirmation!`);
-    } else {
-      showNotification(`✨ ${banner.title} - ${banner.description}`);
-    }
+    showNotification(`🎉 ${banner.title} - ${banner.description}`);
   };
 
   const processPGData = (data) => {
@@ -2605,46 +2154,20 @@ function UserPGSearch() {
       available_rooms: Number(pg.available_rooms) || 0,
       total_rooms: Number(pg.total_rooms) || 0,
       min_stay_months: Number(pg.min_stay_months) || 0,
-      bedrooms_1bhk: Number(pg.bedrooms_1bhk) || 0,
-      bathrooms_1bhk: Number(pg.bathrooms_1bhk) || 0,
-      bedrooms_2bhk: Number(pg.bedrooms_2bhk) || 0,
-      bathrooms_2bhk: Number(pg.bathrooms_2bhk) || 0,
-      bedrooms_3bhk: Number(pg.bedrooms_3bhk) || 0,
-      bathrooms_3bhk: Number(pg.bathrooms_3bhk) || 0,
-      bedrooms_4bhk: Number(pg.bedrooms_4bhk) || 0,
-      bathrooms_4bhk: Number(pg.bathrooms_4bhk) || 0,
       food_available: pg.food_available === true || pg.food_available === 1 || pg.food_available === "true",
       ac_available: pg.ac_available === true || pg.ac_available === 1 || pg.ac_available === "true",
       wifi_available: pg.wifi_available === true || pg.wifi_available === 1 || pg.wifi_available === "true",
       parking_available: pg.parking_available === true || pg.parking_available === 1 || pg.parking_available === "true",
-      cupboard_available: pg.cupboard_available === true || pg.cupboard_available === 1 || pg.cupboard_available === "true",
-      table_chair_available: pg.table_chair_available === true || pg.table_chair_available === 1 || pg.table_chair_available === "true",
-      dining_table_available: pg.dining_table_available === true || pg.dining_table_available === 1 || pg.dining_table_available === "true",
-      attached_bathroom: pg.attached_bathroom === true || pg.attached_bathroom === 1 || pg.attached_bathroom === "true",
-      balcony_available: pg.balcony_available === true || pg.balcony_available === 1 || pg.balcony_available === "true",
-      wall_mounted_clothes_hook: pg.wall_mounted_clothes_hook === true || pg.wall_mounted_clothes_hook === 1 || pg.wall_mounted_clothes_hook === "true",
-      bed_with_mattress: pg.bed_with_mattress === true || pg.bed_with_mattress === 1 || pg.bed_with_mattress === "true",
-      fan_light: pg.fan_light === true || pg.fan_light === 1 || pg.fan_light === "true",
-      kitchen_room: pg.kitchen_room === true || pg.kitchen_room === 1 || pg.kitchen_room === "true",
-      co_living_fully_furnished: pg.co_living_fully_furnished === true || pg.co_living_fully_furnished === 1 || pg.co_living_fully_furnished === "true",
-      co_living_food_included: pg.co_living_food_included === true || pg.co_living_food_included === 1 || pg.co_living_food_included === "true",
-      co_living_wifi_included: pg.co_living_wifi_included === true || pg.co_living_wifi_included === 1 || pg.co_living_wifi_included === "true",
-      co_living_housekeeping: pg.co_living_housekeeping === true || pg.co_living_housekeeping === 1 || pg.co_living_housekeeping === "true",
-      co_living_power_backup: pg.co_living_power_backup === true || pg.co_living_power_backup === 1 || pg.co_living_power_backup === "true",
-      co_living_maintenance: pg.co_living_maintenance === true || pg.co_living_maintenance === 1 || pg.co_living_maintenance === "true",
+      is_verified: pg.is_verified === true || pg.is_verified === 1 || pg.is_verified === "true",
     }));
   };
 
   const loadPGs = async (isLoadMore = false) => {
     try {
-      if (!isLoadMore) {
-        setLoading(true);
-      } else {
-        setLoadingMore(true);
-      }
+      if (!isLoadMore) setLoading(true);
+      else setLoadingMore(true);
       
       let url = `/pg/search/advanced?page=${page}&limit=${limit}`;
-      
       if (userLocation && filters.nearMe) {
         url += `&lat=${userLocation.lat}&lng=${userLocation.lng}&radius=5`;
       }
@@ -2657,12 +2180,7 @@ function UserPGSearch() {
         if (userLocation) {
           rawData = rawData.map(pg => {
             if (pg.latitude && pg.longitude) {
-              const distance = getDistanceKm(
-                userLocation.lat,
-                userLocation.lng,
-                pg.latitude,
-                pg.longitude
-              );
+              const distance = getDistanceKm(userLocation.lat, userLocation.lng, pg.latitude, pg.longitude);
               return { ...pg, distance };
             }
             return pg;
@@ -2714,17 +2232,13 @@ function UserPGSearch() {
   };
 
   useEffect(() => {
-    if (page > 1) {
-      loadPGs(true);
-    }
+    if (page > 1) loadPGs(true);
   }, [page]);
 
   const loadFavorites = () => {
     try {
       const saved = localStorage.getItem("pg_favorites");
-      if (saved) {
-        setFavorites(new Set(JSON.parse(saved)));
-      }
+      if (saved) setFavorites(new Set(JSON.parse(saved)));
     } catch (error) {
       console.error("Error loading favorites:", error);
       setFavorites(new Set());
@@ -2742,8 +2256,6 @@ function UserPGSearch() {
   const toggleFavorite = (pgId, e) => {
     e.stopPropagation();
     const newFavorites = new Set(favorites);
-    const isFavorite = !newFavorites.has(pgId);
-    
     if (newFavorites.has(pgId)) {
       newFavorites.delete(pgId);
       showNotification("Removed from favorites");
@@ -2751,12 +2263,6 @@ function UserPGSearch() {
       newFavorites.add(pgId);
       showNotification("Added to favorites");
     }
-    
-    trackEvent("favorite_click", {
-      pg_id: pgId,
-      favorite: isFavorite,
-    });
-    
     setFavorites(newFavorites);
     saveFavorites(newFavorites);
   };
@@ -2770,11 +2276,7 @@ function UserPGSearch() {
     setLocationLoading(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const location = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        };
-        setUserLocation(location);
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setFilters(prev => ({ ...prev, nearMe: true, sort: "distance" }));
         setShowLocationBanner(false);
         localStorage.setItem(LOCATION_PERMISSION_ASKED_KEY, "true");
@@ -2783,46 +2285,26 @@ function UserPGSearch() {
         setPage(1);
         loadPGs(false);
       },
-      (error) => {
-        console.error("Location error:", error);
-        let errorMessage = "❌ Unable to get your location. ";
-        if (error.code === 1) {
-          errorMessage += "Please enable location permissions in your browser settings.";
-        } else if (error.code === 2) {
-          errorMessage += "Location unavailable. Please try again.";
-        } else {
-          errorMessage += "Please check your location settings.";
-        }
-        showNotification(errorMessage, true);
+      () => {
+        showNotification("❌ Unable to get your location.", true);
         setShowLocationBanner(false);
         localStorage.setItem(LOCATION_PERMISSION_ASKED_KEY, "true");
         setLocationLoading(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      }
     );
   };
 
   const handleDenyLocation = () => {
     setShowLocationBanner(false);
     localStorage.setItem(LOCATION_PERMISSION_ASKED_KEY, "true");
-    showNotification("You can enable location from the 'Near Me' button anytime", false);
-  };
-
-  const handleSearchClick = () => {
-    trackEvent("search_click", {
-      search_term: filters.location,
-    });
+    showNotification("You can enable location from the 'Near Me' button anytime");
   };
 
   const detectLocation = () => {
     setLocationLoading(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const location = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        };
-        setUserLocation(location);
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setFilters(prev => ({ ...prev, nearMe: true, sort: "distance" }));
         showNotification("📍 Location detected! Showing nearby properties");
         setLocationLoading(false);
@@ -2830,7 +2312,7 @@ function UserPGSearch() {
         loadPGs(false);
       },
       () => {
-        showNotification("❌ Unable to get your location. Please check permissions.", true);
+        showNotification("❌ Unable to get your location.", true);
         setLocationLoading(false);
       }
     );
@@ -2841,27 +2323,20 @@ function UserPGSearch() {
 
     if (filters.location) {
       filtered = filtered.filter((pg) =>
-        `${pg.area || ""} ${pg.city || ""} ${pg.pg_name || ""}`
-          .toLowerCase()
-          .includes(filters.location.toLowerCase())
+        `${pg.area || ""} ${pg.city || ""} ${pg.pg_name || ""}`.toLowerCase().includes(filters.location.toLowerCase())
       );
     }
 
-    filtered = filtered.filter(
-      (pg) => {
-        const rent = getEffectiveRent(pg);
-        return rent >= filters.minBudget && rent <= filters.maxBudget;
-      }
-    );
+    filtered = filtered.filter((pg) => {
+      const rent = getEffectiveRent(pg);
+      return rent >= filters.minBudget && rent <= filters.maxBudget;
+    });
 
     if (filters.food) filtered = filtered.filter((pg) => pg.food_available === true);
     if (filters.ac) filtered = filtered.filter((pg) => pg.ac_available === true);
     if (filters.wifi) filtered = filtered.filter((pg) => pg.wifi_available === true);
     if (filters.parking) filtered = filtered.filter((pg) => pg.parking_available === true);
-    
-    if (filters.foodType) {
-      filtered = filtered.filter((pg) => pg.food_type === filters.foodType);
-    }
+    if (filters.foodType) filtered = filtered.filter((pg) => pg.food_type === filters.foodType);
 
     if (filters.sort === "low") {
       filtered.sort((a, b) => getEffectiveRent(a) - getEffectiveRent(b));
@@ -2881,45 +2356,16 @@ function UserPGSearch() {
   }, [applyFilters]);
 
   const handleBudgetChange = (min, max) => {
-    setFilters(prev => ({
-      ...prev,
-      minBudget: min,
-      maxBudget: max
-    }));
-    
-    trackEvent("filter_apply", {
-      min_budget: min,
-      max_budget: max,
-    });
-    
+    setFilters(prev => ({ ...prev, minBudget: min, maxBudget: max }));
     showNotification(`Budget set: ₹${formatPrice(min)} - ₹${formatPrice(max)}`);
   };
 
   const resetFilters = () => {
     setFilters({
-      location: "",
-      minBudget: 0,
-      maxBudget: 50000,
-      food: false,
-      ac: false,
-      wifi: false,
-      parking: false,
-      sort: "",
-      nearMe: false,
-      foodType: ""
+      location: "", minBudget: 0, maxBudget: 50000, food: false, ac: false, wifi: false, parking: false, sort: "", nearMe: false, foodType: ""
     });
-    if (!userLocation) {
-      setUserLocation(null);
-    }
     setPgs(allPGs);
     showNotification("All filters reset");
-  };
-
-  const getImageUrl = (pg) => {
-    if (Array.isArray(pg.photos) && pg.photos.length) {
-      return getCorrectImageUrl(pg.photos[0]);
-    }
-    return "/no-image.png";
   };
 
   const handleQuickView = (pg, e) => {
@@ -2928,18 +2374,11 @@ function UserPGSearch() {
   };
 
   const handleBookNow = (pg) => {
-    trackEvent("contact_owner_click", {
-      pg_id: pg.id,
-      pg_name: pg.pg_name,
-      category: pg.pg_category,
-    });
-    
     if (!user) {
       showNotification("Please register or login to contact owner");
       navigate("/login");
       return;
     }
-
     setBookingPG(pg);
   };
 
@@ -2952,92 +2391,36 @@ function UserPGSearch() {
       }
 
       const token = await user.getIdToken(true);
+      const payload = { room_type: bookingData.roomType };
 
-      const payload = {
-        room_type: bookingData.roomType
-      };
-
-      const res = await api.post(
-        `/bookings/${bookingPG.id}`,
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      trackEvent("contact_owner_success", {
-        lead_id: res.data?.bookingId || res.data?.booking?.id,
-        pg_id: bookingPG.id,
+      const res = await api.post(`/bookings/${bookingPG.id}`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-
-      try {
-        await api.post(
-          "/whatsapp/send-booking-whatsapp",
-          {
-            ownerId: bookingPG.owner_id,
-            userName: user.displayName || "Customer",
-            userPhone: user.phoneNumber || "No Phone",
-            propertyName: bookingPG.pg_name,
-            area: bookingPG.area || bookingPG.city || "Location",
-            rent: getEffectiveRent(bookingPG)
-          }
-        );
-        console.log("✅ WhatsApp Sent To Owner");
-      } catch (whatsappError) {
-        console.log("❌ WhatsApp Error:", whatsappError.response?.data || whatsappError.message);
-      }
 
       showNotification(res.data.message || "✅ Owner will contact you shortly");
       
       if (bookingPG.contact_phone) {
-        setTimeout(() => {
-          window.location.href = `tel:${bookingPG.contact_phone}`;
-        }, 500);
+        setTimeout(() => window.location.href = `tel:${bookingPG.contact_phone}`, 500);
       }
       
       setBookingPG(null);
-
     } catch (error) {
-      console.log("CONTACT OWNER ERROR:", error.response?.data);
-      
-      if (
-        error.response?.data?.message &&
-        (error.response.data.message.includes("already") ||
-         error.response.data.message.includes("already have"))
-      ) {
+      if (error.response?.data?.message?.includes("already")) {
         showNotification("📞 Connecting you directly to owner...");
-        
         if (bookingPG.contact_phone) {
-          setTimeout(() => {
-            window.location.href = `tel:${bookingPG.contact_phone}`;
-          }, 500);
-        } else {
-          showNotification("Owner phone number not available", true);
+          setTimeout(() => window.location.href = `tel:${bookingPG.contact_phone}`, 500);
         }
-        
         setBookingPG(null);
-        return;
-      }
-      
-      if (error.response?.data?.message) {
-        showNotification(error.response.data.message, true);
       } else {
-        showNotification("❌ Something went wrong. Try again", true);
+        showNotification(error.response?.data?.message || "❌ Something went wrong", true);
       }
     }
   };
   
   const handleSaveFavorite = (pgId, isFavorite) => {
     const newFavorites = new Set(favorites);
-    if (isFavorite) {
-      newFavorites.add(pgId);
-      showNotification("Added to favorites");
-    } else {
-      newFavorites.delete(pgId);
-      showNotification("Removed from favorites");
-    }
+    if (isFavorite) newFavorites.add(pgId);
+    else newFavorites.delete(pgId);
     setFavorites(newFavorites);
     saveFavorites(newFavorites);
   };
@@ -3048,26 +2431,20 @@ function UserPGSearch() {
 
   const toggleCompareMode = () => {
     setCompareMode(!compareMode);
-    if (compareMode) {
-      setSelectedForCompare(new Set());
-    }
+    if (compareMode) setSelectedForCompare(new Set());
   };
 
   const toggleSelectForCompare = (pgId, e) => {
     e.stopPropagation();
     const newSelected = new Set(selectedForCompare);
-    
     if (newSelected.has(pgId)) {
       newSelected.delete(pgId);
+    } else if (newSelected.size < 3) {
+      newSelected.add(pgId);
     } else {
-      if (newSelected.size < 3) {
-        newSelected.add(pgId);
-      } else {
-        showNotification("You can compare up to 3 properties at a time");
-        return;
-      }
+      showNotification("You can compare up to 3 properties at a time");
+      return;
     }
-    
     setSelectedForCompare(newSelected);
   };
 
@@ -3079,556 +2456,94 @@ function UserPGSearch() {
     setShowCompareModal(true);
   };
 
-  const clearCompareSelections = () => {
-    setSelectedForCompare(new Set());
-  };
+  const clearCompareSelections = () => setSelectedForCompare(new Set());
 
   if (authLoading) {
     return (
-      <div style={{ padding: 20, maxWidth: 1400, margin: "auto", minHeight: "100vh", textAlign: "center", paddingTop: 100 }}>
-        <div style={{ 
-          width: 50, 
-          height: 50, 
-          border: "4px solid #e5e7eb",
-          borderTop: "4px solid #3b82f6",
-          borderRadius: "50%",
-          animation: "spin 1s linear infinite",
-          margin: "0 auto 16px"
-        }} />
-        <p style={{ fontSize: 16, color: "#6b7280" }}>Loading authentication...</p>
+      <div style={{ textAlign: "center", paddingTop: 100 }}>
+        <div style={{ width: 50, height: 50, border: "4px solid #e5e7eb", borderTop: "4px solid #3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+        <p>Loading authentication...</p>
       </div>
     );
   }
   
   return (
-    <div style={{ 
-      width: "100%", 
-      overflowX: "hidden", 
-      paddingLeft: 8, 
-      paddingRight: 8, 
-      boxSizing: "border-box",
-      maxWidth: 1400, 
-      margin: "auto", 
-      minHeight: "100vh" 
-    }}>
+    <div style={{ maxWidth: 1400, margin: "auto", minHeight: "100vh", padding: "0 8px" }}>
       {/* Notification Toast */}
       {notification && (
         <div style={{
-          position: "fixed",
-          top: 20,
-          right: 20,
+          position: "fixed", top: 20, right: 20,
           background: notification.isError ? "#ef4444" : "#10b981",
-          color: "white",
-          padding: "12px 24px",
-          borderRadius: 10,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-          zIndex: 4000,
-          animation: "slideIn 0.3s ease",
-          display: "flex",
-          alignItems: "center",
-          gap: 8
+          color: "white", padding: "12px 24px", borderRadius: 10, zIndex: 4000,
+          animation: "slideIn 0.3s ease"
         }}>
-          {notification.isError ? <X size={18} /> : <Check size={18} />}
           {notification.message}
         </div>
       )}
 
       {/* Location Permission Banner */}
       {showLocationBanner && (
-        <LocationPermissionBanner
-          onAllow={handleAllowLocation}
-          onDeny={handleDenyLocation}
-          isLoading={locationLoading}
-        />
+        <LocationPermissionBanner onAllow={handleAllowLocation} onDeny={handleDenyLocation} isLoading={locationLoading} />
       )}
 
       {/* Hero Banner */}
       <HeroBanner />
 
-      {/* PROMOTIONAL BANNERS SLIDER */}
+      {/* Promotional Banners */}
       <PromoBannerSlider onBannerClick={handlePromoBannerClick} />
 
       {/* Location Info Bar */}
       {userLocation && filters.nearMe && (
-        <div style={{
-          background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-          borderRadius: 12,
-          padding: "12px 20px",
-          marginBottom: 20,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 12,
-          animation: "fadeIn 0.3s ease"
-        }}>
+        <div style={{ background: "#10b981", borderRadius: 12, padding: "12px 20px", marginBottom: 20, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <Navigation size={20} color="white" />
-            <div>
-              <span style={{ color: "white", fontWeight: 600 }}>
-                📍 Showing PGs near your location
-              </span>
-              <span style={{ color: "rgba(255,255,255,0.9)", fontSize: 13, marginLeft: 8 }}>
-                Properties within 5km radius
-              </span>
-            </div>
+            <span style={{ color: "white", fontWeight: 600 }}>📍 Showing PGs near your location (within 5km)</span>
           </div>
-          <button
-            onClick={() => {
-              setFilters(prev => ({ ...prev, nearMe: false, sort: "" }));
-              showNotification("Location filter turned off");
-            }}
-            style={{
-              padding: "6px 12px",
-              background: "rgba(255,255,255,0.2)",
-              color: "white",
-              border: "none",
-              borderRadius: 8,
-              fontSize: 12,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 6
-            }}
-          >
-            <X size={14} />
-            Clear
+          <button onClick={() => setFilters(prev => ({ ...prev, nearMe: false, sort: "" }))} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.2)", color: "white", border: "none", borderRadius: 8, cursor: "pointer" }}>
+            <X size={14} /> Clear
           </button>
         </div>
       )}
 
-      {/* Modern Filter Bar */}
-      <div style={{
-        background: "#ffffff",
-        borderRadius: 16,
-        padding: 20,
-        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
-        marginBottom: 20,
-        border: "1px solid #e5e7eb",
-        position: "sticky",
-        top: 20,
-        zIndex: 100
-      }}>
-        <div style={{
-          display: "flex",
-          gap: 12,
-          alignItems: "center",
-          marginBottom: 16,
-          flexWrap: "wrap"
-        }}>
-          <div style={{
-            flex: 1,
-            minWidth: 300,
-            position: "relative",
-            display: "flex",
-            alignItems: "center"
-          }}>
-            <Search size={20} style={{ position: "absolute", left: 14, color: "#9ca3af" }} />
-            <input
-              placeholder="Search by area, city or property name..."
-              value={filters.location}
-              onChange={(e) => setFilters({ ...filters, location: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "14px 14px 14px 44px",
-                border: "1px solid #e5e7eb",
-                borderRadius: 12,
-                fontSize: 15,
-                background: "#f9fafb",
-                transition: "all 0.2s"
-              }}
-            />
+      {/* Filter Bar */}
+      <div style={{ background: "#fff", borderRadius: 16, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.08)", marginBottom: 20, position: "sticky", top: 20, zIndex: 100 }}>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 300, position: "relative" }}>
+            <Search size={20} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
+            <input placeholder="Search by area, city or property name..." value={filters.location} onChange={(e) => setFilters({ ...filters, location: e.target.value })} style={{ width: "100%", padding: "14px 14px 14px 44px", border: "1px solid #e5e7eb", borderRadius: 12, fontSize: 15 }} />
           </div>
-
-          <button
-            onClick={() => setShowBudgetFilter(true)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "14px 20px",
-              background: filters.minBudget > 0 || filters.maxBudget < 50000 ? "#10b981" : "#f3f4f6",
-              color: filters.minBudget > 0 || filters.maxBudget < 50000 ? "#ffffff" : "#374151",
-              border: "none",
-              borderRadius: 12,
-              fontSize: 15,
-              fontWeight: 500,
-              cursor: "pointer",
-              transition: "all 0.2s"
-            }}
-          >
-            <Sliders size={18} />
-            Budget
-          </button>
-
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "14px 20px",
-              background: showFilters ? "#3b82f6" : "#f3f4f6",
-              color: showFilters ? "#ffffff" : "#374151",
-              border: "none",
-              borderRadius: 12,
-              fontSize: 15,
-              fontWeight: 500,
-              cursor: "pointer",
-              transition: "all 0.2s"
-            }}
-          >
-            <Filter size={18} />
-            Filters
-          </button>
-
-          <button
-            onClick={detectLocation}
-            disabled={locationLoading}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "14px 20px",
-              background: filters.nearMe ? "#f97316" : "#f3f4f6",
-              color: filters.nearMe ? "#ffffff" : "#374151",
-              border: "none",
-              borderRadius: 12,
-              fontSize: 15,
-              fontWeight: 500,
-              cursor: locationLoading ? "not-allowed" : "pointer",
-              transition: "all 0.2s"
-            }}
-          >
-            {locationLoading ? (
-              <>
-                <div style={{
-                  width: 16,
-                  height: 16,
-                  border: "2px solid currentColor",
-                  borderTop: "2px solid transparent",
-                  borderRadius: "50%",
-                  animation: "spin 0.8s linear infinite"
-                }} />
-                Getting...
-              </>
-            ) : (
-              <>
-                <Navigation size={18} />
-                Near Me
-              </>
-            )}
-          </button>
-
-          <button
-            onClick={toggleCompareMode}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "14px 20px",
-              background: compareMode ? "#8b5cf6" : "#f3f4f6",
-              color: compareMode ? "#ffffff" : "#374151",
-              border: "none",
-              borderRadius: 12,
-              fontSize: 15,
-              fontWeight: 500,
-              cursor: "pointer",
-              transition: "all 0.2s"
-            }}
-          >
-            <BarChart size={18} />
-            Compare
-          </button>
-
-          {compareMode && (
-            <>
-              <button
-                onClick={handleCompare}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "14px 20px",
-                  background: selectedForCompare.size >= 2 ? "#10b981" : "#9ca3af",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 12,
-                  fontSize: 15,
-                  fontWeight: 600,
-                  cursor: selectedForCompare.size >= 2 ? "pointer" : "not-allowed",
-                  transition: "all 0.2s"
-                }}
-                disabled={selectedForCompare.size < 2}
-              >
-                <Check size={18} />
-                Compare ({selectedForCompare.size}/3)
-              </button>
-              
-              {selectedForCompare.size > 0 && (
-                <button
-                  onClick={clearCompareSelections}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "14px 20px",
-                    background: "#ef4444",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 12,
-                    fontSize: 15,
-                    fontWeight: 500,
-                    cursor: "pointer",
-                    transition: "all 0.2s"
-                  }}
-                >
-                  <X size={18} />
-                  Clear
-                </button>
-              )}
-            </>
-          )}
+          <button onClick={() => setShowBudgetFilter(true)} style={{ padding: "14px 20px", background: "#f3f4f6", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><Sliders size={18} /> Budget</button>
+          <button onClick={() => setShowFilters(!showFilters)} style={{ padding: "14px 20px", background: showFilters ? "#3b82f6" : "#f3f4f6", color: showFilters ? "white" : "#374151", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><Filter size={18} /> Filters</button>
+          <button onClick={detectLocation} style={{ padding: "14px 20px", background: filters.nearMe ? "#f97316" : "#f3f4f6", color: filters.nearMe ? "white" : "#374151", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><Navigation size={18} /> Near Me</button>
+          <button onClick={toggleCompareMode} style={{ padding: "14px 20px", background: compareMode ? "#8b5cf6" : "#f3f4f6", color: compareMode ? "white" : "#374151", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><BarChart size={18} /> Compare</button>
+          {compareMode && selectedForCompare.size >= 2 && <button onClick={handleCompare} style={{ padding: "14px 20px", background: "#10b981", color: "white", border: "none", borderRadius: 12 }}>Compare ({selectedForCompare.size}/3)</button>}
         </div>
 
-        {(filters.minBudget > 0 || filters.maxBudget < 50000) && (
-          <div style={{
-            padding: "10px 16px",
-            background: "#f0fdf4",
-            borderRadius: 10,
-            marginBottom: 16,
-            border: "1px solid #bbf7d0",
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            animation: "fadeIn 0.3s ease",
-            flexWrap: "wrap"
-          }}>
-            <TrendingUp size={16} color="#059669" />
-            <span style={{ fontSize: 14, color: "#065f46", fontWeight: 500 }}>
-              Budget: ₹{formatPrice(filters.minBudget)} - ₹{formatPrice(filters.maxBudget)}
-            </span>
-            <button
-              onClick={() => handleBudgetChange(0, 50000)}
-              style={{
-                marginLeft: "auto",
-                padding: "4px 12px",
-                background: "transparent",
-                color: "#ef4444",
-                border: "1px solid #ef4444",
-                borderRadius: 6,
-                fontSize: 12,
-                cursor: "pointer"
-              }}
-            >
-              Clear
-            </button>
-          </div>
-        )}
-
         {showFilters && (
-          <div style={{
-            paddingTop: 20,
-            borderTop: "1px solid #e5e7eb",
-            animation: "fadeIn 0.3s ease"
-          }}>
-            <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 20,
-              flexWrap: "wrap",
-              gap: 12
-            }}>
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: "#111827" }}>
-                Advanced Filters
-              </h3>
-              <button
-                onClick={resetFilters}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "8px 16px",
-                  background: "transparent",
-                  color: "#ef4444",
-                  border: "1px solid #ef4444",
-                  borderRadius: 8,
-                  fontSize: 14,
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-              >
-                <X size={16} />
-                Clear All
-              </button>
+          <div style={{ paddingTop: 20, marginTop: 16, borderTop: "1px solid #e5e7eb" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 600 }}>Advanced Filters</h3>
+              <button onClick={resetFilters} style={{ padding: "8px 16px", background: "transparent", color: "#ef4444", border: "1px solid #ef4444", borderRadius: 8, cursor: "pointer" }}><X size={16} /> Clear All</button>
             </div>
-
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: 20
-            }}>
-              <div>
-                <label style={{
-                  display: "block",
-                  marginBottom: 10,
-                  color: "#4b5563",
-                  fontSize: 14,
-                  fontWeight: 500
-                }}>
-                  Food Type
-                </label>
-                <select
-                  value={filters.foodType}
-                  onChange={(e) => setFilters({ ...filters, foodType: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "12px 16px",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 10,
-                    fontSize: 14,
-                    background: "#ffffff",
-                    cursor: "pointer"
-                  }}
-                >
-                  <option value="">Any Food Type</option>
-                  <option value="veg">Vegetarian Only</option>
-                  <option value="non-veg">Non-Vegetarian Only</option>
-                  <option value="both">Both Available</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{
-                  display: "block",
-                  marginBottom: 10,
-                  color: "#4b5563",
-                  fontSize: 14,
-                  fontWeight: 500
-                }}>
-                  Sort By
-                </label>
-                <select
-                  value={filters.sort}
-                  onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "12px 16px",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 10,
-                    fontSize: 14,
-                    background: "#ffffff",
-                    cursor: "pointer"
-                  }}
-                >
-                  <option value="">Relevance</option>
-                  <option value="low">Rent: Low to High</option>
-                  <option value="high">Rent: High to Low</option>
-                  <option value="new">Newest First</option>
-                  {userLocation && <option value="distance">Distance (Nearest First)</option>}
-                </select>
-              </div>
-
-              <div style={{ gridColumn: "1 / -1" }}>
-                <label style={{
-                  display: "block",
-                  marginBottom: 10,
-                  color: "#4b5563",
-                  fontSize: 14,
-                  fontWeight: 500
-                }}>
-                  Amenities (Select multiple)
-                </label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-                  <label style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "8px 16px",
-                    background: filters.food ? "#10b981" : "#f3f4f6",
-                    color: filters.food ? "#ffffff" : "#374151",
-                    borderRadius: 20,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    transition: "all 0.2s"
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={filters.food}
-                      onChange={(e) => setFilters({ ...filters, food: e.target.checked })}
-                      style={{ display: "none" }}
-                    />
-                    <Utensils size={14} />
-                    Food Included
-                  </label>
-
-                  <label style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "8px 16px",
-                    background: filters.ac ? "#3b82f6" : "#f3f4f6",
-                    color: filters.ac ? "#ffffff" : "#374151",
-                    borderRadius: 20,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    transition: "all 0.2s"
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={filters.ac}
-                      onChange={(e) => setFilters({ ...filters, ac: e.target.checked })}
-                      style={{ display: "none" }}
-                    />
-                    <Snowflake size={14} />
-                    AC Available
-                  </label>
-
-                  <label style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "8px 16px",
-                    background: filters.wifi ? "#8b5cf6" : "#f3f4f6",
-                    color: filters.wifi ? "#ffffff" : "#374151",
-                    borderRadius: 20,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    transition: "all 0.2s"
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={filters.wifi}
-                      onChange={(e) => setFilters({ ...filters, wifi: e.target.checked })}
-                      style={{ display: "none" }}
-                    />
-                    <Wifi size={14} />
-                    WiFi
-                  </label>
-
-                  <label style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "8px 16px",
-                    background: filters.parking ? "#f59e0b" : "#f3f4f6",
-                    color: filters.parking ? "#ffffff" : "#374151",
-                    borderRadius: 20,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    transition: "all 0.2s"
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={filters.parking}
-                      onChange={(e) => setFilters({ ...filters, parking: e.target.checked })}
-                      style={{ display: "none" }}
-                    />
-                    <Car size={14} />
-                    Parking
-                  </label>
-                </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 20 }}>
+              <select value={filters.foodType} onChange={(e) => setFilters({ ...filters, foodType: e.target.value })} style={{ padding: "12px", border: "1px solid #e5e7eb", borderRadius: 10 }}>
+                <option value="">Any Food Type</option>
+                <option value="veg">Vegetarian Only</option>
+                <option value="non-veg">Non-Vegetarian Only</option>
+                <option value="both">Both Available</option>
+              </select>
+              <select value={filters.sort} onChange={(e) => setFilters({ ...filters, sort: e.target.value })} style={{ padding: "12px", border: "1px solid #e5e7eb", borderRadius: 10 }}>
+                <option value="">Relevance</option>
+                <option value="low">Rent: Low to High</option>
+                <option value="high">Rent: High to Low</option>
+                <option value="new">Newest First</option>
+                {userLocation && <option value="distance">Distance (Nearest First)</option>}
+              </select>
+              <div style={{ display: "flex", gap: 12 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: filters.food ? "#10b981" : "#f3f4f6", borderRadius: 20, cursor: "pointer" }}><input type="checkbox" checked={filters.food} onChange={(e) => setFilters({ ...filters, food: e.target.checked })} style={{ display: "none" }} /><Utensils size={14} /> Food</label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: filters.ac ? "#3b82f6" : "#f3f4f6", borderRadius: 20, cursor: "pointer" }}><input type="checkbox" checked={filters.ac} onChange={(e) => setFilters({ ...filters, ac: e.target.checked })} style={{ display: "none" }} /><Snowflake size={14} /> AC</label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: filters.wifi ? "#8b5cf6" : "#f3f4f6", borderRadius: 20, cursor: "pointer" }}><input type="checkbox" checked={filters.wifi} onChange={(e) => setFilters({ ...filters, wifi: e.target.checked })} style={{ display: "none" }} /><Wifi size={14} /> WiFi</label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: filters.parking ? "#f59e0b" : "#f3f4f6", borderRadius: 20, cursor: "pointer" }}><input type="checkbox" checked={filters.parking} onChange={(e) => setFilters({ ...filters, parking: e.target.checked })} style={{ display: "none" }} /><Car size={14} /> Parking</label>
               </div>
             </div>
           </div>
@@ -3636,75 +2551,20 @@ function UserPGSearch() {
       </div>
 
       {/* Results Header */}
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 24,
-        flexWrap: "wrap",
-        gap: 12
-      }}>
-        <div>
-          <h2 style={{ fontSize: 24, fontWeight: 600, color: "#111827", marginBottom: 4 }}>
-            {filters.nearMe ? "🏠 Properties Near You" : "🏠 Available Properties"}
-          </h2>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ color: "#6b7280", fontSize: 14 }}>
-              {filters.minBudget > 0 && filters.maxBudget < 50000 && 
-                ` within ₹${formatPrice(filters.minBudget)} - ₹${formatPrice(filters.maxBudget)}`}
-              {filters.nearMe && userLocation && ` within 5km of your location`}
-            </span>
-          </div>
-        </div>
-        <button
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          style={{
-            padding: "8px 16px",
-            background: "#f3f4f6",
-            color: "#374151",
-            border: "none",
-            borderRadius: 8,
-            fontSize: 14,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 8
-          }}
-        >
-          ↑ Top
-        </button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <h2 style={{ fontSize: 24, fontWeight: 600 }}>{filters.nearMe ? "🏠 Properties Near You" : "🏠 Available Properties"}</h2>
+        <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} style={{ padding: "8px 16px", background: "#f3f4f6", border: "none", borderRadius: 8, cursor: "pointer" }}>↑ Top</button>
       </div>
 
-      {/* Property Cards Grid - Using the new PGPropertyCard component */}
+      {/* Property Cards Grid */}
       {loading ? (
-        <div style={{ 
-          textAlign: "center", 
-          padding: "60px 20px",
-          color: "#6b7280",
-          background: "#f9fafb",
-          borderRadius: 16,
-          border: "1px dashed #e5e7eb"
-        }}>
-          <div style={{ 
-            width: 40, 
-            height: 40, 
-            border: "4px solid #e5e7eb",
-            borderTop: "4px solid #3b82f6",
-            borderRadius: "50%",
-            animation: "spin 1s linear infinite",
-            margin: "0 auto 16px"
-          }} />
-          <p style={{ fontSize: 16 }}>Loading properties...</p>
+        <div style={{ textAlign: "center", padding: "60px 20px" }}>
+          <div style={{ width: 40, height: 40, border: "4px solid #e5e7eb", borderTop: "4px solid #3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+          <p>Loading properties...</p>
         </div>
       ) : (
         <>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-              gap: 24,
-            }}
-          >
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 24 }}>
             {pgs.map((pg) => (
               <PGPropertyCard
                 key={pg.id}
@@ -3717,47 +2577,16 @@ function UserPGSearch() {
                 isSelectedForCompare={selectedForCompare.has(pg.id)}
                 onSelectForCompare={toggleSelectForCompare}
                 compareMode={compareMode}
-                getImageUrl={getImageUrl}
               />
             ))}
           </div>
-
-          {/* VIEW MORE BUTTON */}
           {!loading && pgs.length > 0 && (
-            <div style={{ textAlign: "center", marginTop: 50, marginBottom: 30 }}>
+            <div style={{ textAlign: "center", marginTop: 50 }}>
               {hasMore ? (
-                <button
-                  onClick={loadMore}
-                  disabled={loadingMore}
-                  style={{
-                    padding: "14px 28px",
-                    background: loadingMore ? "#9ca3af" : "#dc2626",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 12,
-                    cursor: loadingMore ? "not-allowed" : "pointer",
-                    fontWeight: "bold",
-                    fontSize: 16,
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                    transition: "all 0.2s ease"
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!loadingMore) e.currentTarget.style.transform = "scale(1.02)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "scale(1)";
-                  }}
-                >
+                <button onClick={loadMore} disabled={loadingMore} style={{ padding: "14px 28px", background: loadingMore ? "#9ca3af" : "#dc2626", color: "white", border: "none", borderRadius: 12, cursor: loadingMore ? "not-allowed" : "pointer", fontWeight: "bold", fontSize: 16 }}>
                   {loadingMore ? "Loading more..." : "🔽 VIEW MORE PROPERTIES"}
                 </button>
-              ) : (
-                <div style={{ 
-                  padding: "20px", 
-                  textAlign: "center", 
-                  color: "#666",
-                  borderTop: "1px solid #eee"
-                }} />
-              )}
+              ) : null}
             </div>
           )}
         </>
@@ -3765,160 +2594,33 @@ function UserPGSearch() {
 
       {/* Empty State */}
       {!loading && pgs.length === 0 && (
-        <div style={{ 
-          textAlign: "center", 
-          padding: "60px 20px",
-          color: "#6b7280",
-          background: "#f9fafb",
-          borderRadius: 16,
-          border: "1px dashed #e5e7eb"
-        }}>
+        <div style={{ textAlign: "center", padding: "60px 20px", background: "#f9fafb", borderRadius: 16 }}>
           <Search size={48} style={{ margin: "0 auto 16px", color: "#9ca3af" }} />
-          <p style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>
-            No properties found
-          </p>
-          <p style={{ fontSize: 14, marginBottom: 24 }}>
-            Try adjusting your filters or search terms
-          </p>
-          <button
-            onClick={resetFilters}
-            style={{
-              padding: "12px 24px",
-              background: "#3b82f6",
-              color: "white",
-              border: "none",
-              borderRadius: 10,
-              fontSize: 15,
-              fontWeight: 500,
-              cursor: "pointer"
-            }}
-          >
-            Reset All Filters
-          </button>
+          <p style={{ fontSize: 20, fontWeight: 600 }}>No properties found</p>
+          <p style={{ marginBottom: 24 }}>Try adjusting your filters or search terms</p>
+          <button onClick={resetFilters} style={{ padding: "12px 24px", background: "#3b82f6", color: "white", border: "none", borderRadius: 10, cursor: "pointer" }}>Reset All Filters</button>
         </div>
       )}
 
       {/* Modals */}
-      {showBudgetFilter && (
-        <BudgetFilter
-          minBudget={filters.minBudget}
-          maxBudget={filters.maxBudget}
-          onBudgetChange={handleBudgetChange}
-          onClose={() => setShowBudgetFilter(false)}
-        />
-      )}
-
-      {quickViewPG && (
-        <QuickViewModal
-          pg={quickViewPG}
-          onClose={() => setQuickViewPG(null)}
-          onBook={handleBookNow}
-          onSaveFavorite={handleSaveFavorite}
-        />
-      )}
-
-      <BookingModal
-        pg={bookingPG}
-        onClose={() => setBookingPG(null)}
-        onBook={handleBookingSubmit}
-      />
-
-      {showCompareModal && (
-        <CompareModal
-          selectedPGs={selectedForCompare}
-          allPGs={allPGs}
-          onClose={() => {
-            setShowCompareModal(false);
-            setSelectedForCompare(new Set());
-            setCompareMode(false);
-          }}
-        />
-      )}
+      {showBudgetFilter && <BudgetFilter minBudget={filters.minBudget} maxBudget={filters.maxBudget} onBudgetChange={handleBudgetChange} onClose={() => setShowBudgetFilter(false)} />}
+      {quickViewPG && <QuickViewModal pg={quickViewPG} onClose={() => setQuickViewPG(null)} onBook={handleBookNow} onSaveFavorite={handleSaveFavorite} />}
+      {bookingPG && <BookingModal pg={bookingPG} onClose={() => setBookingPG(null)} onBook={handleBookingSubmit} />}
+      {showCompareModal && <CompareModal selectedPGs={selectedForCompare} allPGs={allPGs} onClose={() => { setShowCompareModal(false); setSelectedForCompare(new Set()); setCompareMode(false); }} />}
 
       {/* Sticky Contact Button for Mobile */}
       {isMobile && (
-        <div style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: "#fff",
-          padding: 12,
-          zIndex: 999,
-          boxShadow: "0 -4px 12px rgba(0,0,0,0.1)",
-          borderTop: "1px solid #e5e7eb"
-        }}>
-          <button
-            onClick={() => {
-              if (pgs.length > 0) {
-                handleBookNow(pgs[0]);
-              } else {
-                showNotification("No properties available to contact");
-              }
-            }}
-            style={{
-              width: "100%",
-              padding: "14px",
-              background: "#3b82f6",
-              color: "white",
-              border: "none",
-              borderRadius: 12,
-              fontSize: 16,
-              fontWeight: 600,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8
-            }}
-          >
-            <MessageCircle size={18} />
-            Contact Owner
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#fff", padding: 12, zIndex: 999, boxShadow: "0 -4px 12px rgba(0,0,0,0.1)" }}>
+          <button onClick={() => pgs.length > 0 && handleBookNow(pgs[0])} style={{ width: "100%", padding: "14px", background: "#3b82f6", color: "white", border: "none", borderRadius: 12, fontSize: 16, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <MessageCircle size={18} /> Contact Owner
           </button>
         </div>
       )}
 
       <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        
-        @keyframes slideDown {
-          from { transform: translateY(-10px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        
-        input:focus, select:focus {
-          outline: none;
-          border-color: #3b82f6 !important;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-        
-        /* Mobile Responsive Styles */
-        @media (max-width: 768px) {
-          .hero-section {
-            padding: 25px 20px !important;
-          }
-          .hero-title {
-            font-size: 34px !important;
-            line-height: 44px !important;
-          }
-          .hero-badges {
-            justify-content: flex-start !important;
-            gap: 10px !important;
-          }
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
       `}</style>
     </div>
   );
