@@ -2028,8 +2028,9 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
             </span>
           )}
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <BadgePercent size={12} color="#ef4444" /> Zero Brokerage
-          </span>
+  <BadgePercent size={14} color="#10b981" />
+  Zero Brokerage
+</span>
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <Clock size={12} /> Responds in 10 mins
           </span>
