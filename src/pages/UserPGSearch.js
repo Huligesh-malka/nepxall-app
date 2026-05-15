@@ -3604,11 +3604,10 @@ function UserPGSearch() {
     setBookingPG(pg);
   };
 
-  // ✅ UPDATED handleBookingSubmit - ONLY room_type in payload + AUTO CALL
+  // ✅ SMART HANDLER: First time = create booking + WhatsApp + call
+  // ✅ Second time = only call (no duplicate)
   const handleBookingSubmit = async (bookingData) => {
-
     try {
-
       if (!user) {
         showNotification("Please register or login to continue");
         navigate("/register");
@@ -3622,6 +3621,7 @@ function UserPGSearch() {
         room_type: bookingData.roomType
       };
 
+      // Try to create booking/lead
       const res = await api.post(
         `/bookings/${bookingPG.id}`,
         payload,
@@ -3632,18 +3632,13 @@ function UserPGSearch() {
         }
       );
 
-      if (res.data?.alreadyBooked) {
-        showNotification(res.data.message);
-        setBookingPG(null);
-        return;
-      }
-
+      // ✅ FIRST TIME SUCCESS - Booking created successfully
       trackEvent("contact_owner_success", {
         lead_id: res.data?.bookingId || res.data?.booking?.id,
         pg_id: bookingPG.id,
       });
 
-      // Send WhatsApp to owner
+      // Send WhatsApp to owner (only first time)
       try {
         await api.post(
           "/whatsapp/send-booking-whatsapp",
@@ -3663,20 +3658,40 @@ function UserPGSearch() {
 
       showNotification(res.data.message || "✅ Owner will contact you shortly");
       
-      // ✅ AFTER SUCCESS - OPEN CALL DIALOG WITH OWNER'S PHONE NUMBER
+      // ✅ DIRECT CALL AFTER SUCCESS
       if (bookingPG.contact_phone) {
-        // Small delay to let the notification show first
         setTimeout(() => {
           window.location.href = `tel:${bookingPG.contact_phone}`;
         }, 500);
-      } else {
-        console.log("⚠️ No contact phone available for this PG");
       }
       
       setBookingPG(null);
 
     } catch (error) {
       console.log("CONTACT OWNER ERROR:", error.response?.data);
+      
+      // ✅ CHECK IF ALREADY CONTACTED (DUPLICATE)
+      if (
+        error.response?.data?.message &&
+        (error.response.data.message.includes("already") ||
+         error.response.data.message.includes("already have"))
+      ) {
+        // ✅ SECOND TIME + SAME PG → ONLY DIRECT CALL, NO DUPLICATE
+        showNotification("📞 Connecting you directly to owner...");
+        
+        if (bookingPG.contact_phone) {
+          setTimeout(() => {
+            window.location.href = `tel:${bookingPG.contact_phone}`;
+          }, 500);
+        } else {
+          showNotification("Owner phone number not available", true);
+        }
+        
+        setBookingPG(null);
+        return;
+      }
+      
+      // Other errors
       if (error.response?.data?.message) {
         showNotification(error.response.data.message, true);
       } else {
