@@ -6,6 +6,9 @@ import {
   InfoWindow,
   useLoadScript
 } from "@react-google-maps/api";
+import Slider from "react-slick";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
 
 /*
 --------------------------------------------------
@@ -19,6 +22,22 @@ const mapContainerStyle = {
   height: "350px",
   borderRadius: "15px",
   marginBottom: "20px",
+};
+
+/*
+--------------------------------------------------
+SLIDER SETTINGS
+--------------------------------------------------
+*/
+const sliderSettings = {
+  dots: true,
+  infinite: true,
+  speed: 500,
+  slidesToShow: 1,
+  slidesToScroll: 1,
+  autoplay: true,
+  autoplaySpeed: 2500,
+  arrows: false
 };
 
 /*
@@ -325,7 +344,15 @@ const NearbyPGMap = () => {
             let image =
               "https://via.placeholder.com/400x250?text=No+Image";
 
+            let allPhotos = [];
+
             try {
+
+              /*
+              =========================================
+              STRING PHOTOS
+              =========================================
+              */
 
               if (
                 pg.photos &&
@@ -336,25 +363,67 @@ const NearbyPGMap = () => {
                   JSON.parse(pg.photos);
 
                 if (
-                  Array.isArray(parsed) &&
-                  parsed.length > 0
+                  Array.isArray(parsed)
                 ) {
 
-                  image = parsed[0];
+                  allPhotos = parsed;
+
+                  if (parsed.length > 0) {
+
+                    image = parsed[0];
+
+                  }
 
                 }
 
-              } else if (pg.image) {
+              }
+
+              /*
+              =========================================
+              ARRAY PHOTOS
+              =========================================
+              */
+
+              else if (
+                pg.photos &&
+                Array.isArray(pg.photos)
+              ) {
+
+                allPhotos = pg.photos;
+
+                if (
+                  pg.photos.length > 0
+                ) {
+
+                  image = pg.photos[0];
+
+                }
+
+              }
+
+              /*
+              =========================================
+              SINGLE IMAGE
+              =========================================
+              */
+
+              else if (pg.image) {
 
                 image = pg.image;
+
+                allPhotos = [pg.image];
 
               }
 
             } catch (e) {
 
+              console.log(e);
+
               image =
                 pg.image ||
                 "https://via.placeholder.com/400x250?text=No+Image";
+
+              allPhotos = [image];
 
             }
 
@@ -365,19 +434,34 @@ const NearbyPGMap = () => {
                 style={styles.card}
               >
 
-                {/* IMAGE */}
+                {/* IMAGE SLIDER */}
 
-                <img
-                  src={image}
-                  alt={pg.pg_name || pg.name}
-                  style={styles.image}
-                  onError={(e) => {
+                <Slider {...sliderSettings}>
 
-                    e.target.src =
-                      "https://via.placeholder.com/400x250?text=No+Image";
+                  {(allPhotos.length > 0
+                    ? allPhotos
+                    : [image]
+                  ).map((photo, index) => (
 
-                  }}
-                />
+                    <div key={index}>
+
+                      <img
+                        src={photo}
+                        alt={`PG ${index}`}
+                        style={styles.image}
+                        onError={(e) => {
+
+                          e.target.src =
+                            "https://via.placeholder.com/400x250?text=No+Image";
+
+                        }}
+                      />
+
+                    </div>
+
+                  ))}
+
+                </Slider>
 
                 {/* CONTENT */}
 
