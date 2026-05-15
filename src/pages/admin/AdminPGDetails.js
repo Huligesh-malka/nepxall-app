@@ -642,10 +642,9 @@ const AdminPGDetails = () => {
               value={pg.pg_category}
               icon={Users}
               options={[
-                { value: "boys", label: "Boys" },
-                { value: "girls", label: "Girls" },
-                { value: "co-living", label: "Co-Living" },
-                { value: "family", label: "Family" }
+                { value: "pg", label: "PG / Hostel" },
+                { value: "coliving", label: "Co-Living" },
+                { value: "to_let", label: "House / Flat To Let" }
               ]}
             />
             <EditableField 
@@ -654,9 +653,9 @@ const AdminPGDetails = () => {
               value={pg.pg_type}
               icon={Home}
               options={[
-                { value: "normal", label: "Normal" },
-                { value: "luxury", label: "Luxury" },
-                { value: "premium", label: "Premium" }
+                { value: "boys", label: "Boys PG" },
+                { value: "girls", label: "Girls PG" },
+                { value: "coliving", label: "Co-Living" }
               ]}
             />
             <EditableField label="Status" field="status" value={pg.status} icon={Clock} 
