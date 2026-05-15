@@ -579,11 +579,11 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
   );
 };
 
-/* ================= UPDATED BOOKING MODAL COMPONENT (CONTACT OWNER) ================= */
+/* ================= SIMPLE BOOKING MODAL (CONTACT OWNER) ================= */
 const BookingModal = ({ pg, onClose, onBook }) => {
 
   const [bookingData, setBookingData] = useState({
-    roomType: ""  // ✅ REMOVED checkInDate
+    roomType: ""
   });
 
   const [loading, setLoading] = useState(false);
@@ -815,8 +815,6 @@ const BookingModal = ({ pg, onClose, onBook }) => {
               setLoading(false);
             }
           }}>
-            {/* ✅ REMOVED Check-in Date section */}
-
             <div style={{ marginBottom: 24 }}>
               <label style={{
                 display: "block",
@@ -934,1066 +932,6 @@ const BookingModal = ({ pg, onClose, onBook }) => {
               </button>
             </div>
           </form>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* ================= QUICK VIEW MODAL COMPONENT ================= */
-const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [showShareOptions, setShowShareOptions] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
-
-  useEffect(() => {
-    // Track quick view open
-    trackEvent("quick_view_open", {
-      pg_id: pg.id,
-      pg_name: pg.pg_name,
-    });
-  }, [pg.id, pg.pg_name]);
-
-  const getMainImageUrl = () => {
-    if (pg.main_photo && pg.main_photo !== "") {
-      return getCorrectImageUrl(pg.main_photo);
-    }
-    
-    if (Array.isArray(pg.photos) && pg.photos.length > 0 && pg.photos[0]) {
-      return getCorrectImageUrl(pg.photos[0]);
-    }
-    
-    return "/no-image.png";
-  };
-
-  const mainImageUrl = getMainImageUrl();
-  const totalPhotos = Array.isArray(pg.photos) ? pg.photos.length : 0;
-
-  const toggleFavorite = () => {
-    const newState = !isFavorite;
-    setIsFavorite(newState);
-    onSaveFavorite(pg.id, newState);
-    // Track favorite click
-    trackEvent("favorite_click", {
-      pg_id: pg.id,
-      favorite: newState,
-    });
-  };
-
-  const handleShare = () => {
-    setShowShareOptions(!showShareOptions);
-  };
-
-  const handleWhatsAppShare = () => {
-    trackEvent("whatsapp_share_click", {
-      pg_id: pg.id,
-      pg_name: pg.pg_name,
-    });
-    window.open(`https://wa.me/?text=Check out this property: ${window.location.origin}/pg/${pg.id}`, '_blank');
-  };
-
-  const handleCopyLink = () => {
-    trackEvent("copy_link_click", {
-      pg_id: pg.id,
-    });
-    navigator.clipboard.writeText(`${window.location.origin}/pg/${pg.id}`);
-    alert("Link copied to clipboard!");
-  };
-
-  const getTypeColor = () => {
-    if (pg.pg_category === "to_let") return "#f97316";
-    if (pg.pg_category === "coliving") return "#8b5cf6";
-    if (pg.pg_type === "boys") return "#16a34a";
-    if (pg.pg_type === "girls") return "#db2777";
-    return "#3b82f6";
-  };
-
-  const getTypeLabel = () => {
-    if (pg.pg_category === "to_let") return "🏠 To-Let Home";
-    if (pg.pg_category === "coliving") return "🤝 Co-Living";
-    if (pg.pg_type === "boys") return "👨 Boys PG";
-    if (pg.pg_type === "girls") return "👩 Girls PG";
-    return "🏢 PG/Hostel";
-  };
-
-  const hasFacility = (facility) => {
-    return pg[facility] === true || pg[facility] === 1 || pg[facility] === "true";
-  };
-
-  const renderRoomAmenities = () => {
-    const roomAmenities = [];
-    
-    if (pg.cupboard_available) roomAmenities.push({ 
-      icon: <DoorOpen size={16} />, 
-      label: "Cupboard/Wardrobe", 
-      color: "#8b5cf6" 
-    });
-    if (pg.table_chair_available) roomAmenities.push({ 
-      icon: <Coffee size={16} />, 
-      label: "Study Table & Chair", 
-      color: "#f59e0b" 
-    });
-    if (pg.attached_bathroom) roomAmenities.push({ 
-      icon: <Bath size={16} />, 
-      label: "Attached Bathroom", 
-      color: "#0ea5e9" 
-    });
-    if (pg.balcony_available) roomAmenities.push({ 
-      icon: <Sun size={16} />, 
-      label: "Balcony", 
-      color: "#10b981" 
-    });
-    if (pg.dining_table_available) roomAmenities.push({ 
-      icon: <Utensils size={16} />, 
-      label: "Dining Table", 
-      color: "#ec4899" 
-    });
-    if (pg.wall_mounted_clothes_hook) roomAmenities.push({ 
-      icon: <Key size={16} />, 
-      label: "Wall-mounted Clothes Hook", 
-      color: "#6b7280" 
-    });
-    if (pg.bed_with_mattress) roomAmenities.push({ 
-      icon: <Bed size={16} />, 
-      label: "Bed with Mattress", 
-      color: "#3b82f6" 
-    });
-    if (pg.fan_light) roomAmenities.push({ 
-      icon: <Zap size={16} />, 
-      label: "Fan & Light", 
-      color: "#f97316" 
-    });
-    if (pg.kitchen_room) roomAmenities.push({ 
-      icon: <Flame size={16} />, 
-      label: "Kitchen Room", 
-      color: "#ef4444" 
-    });
-    
-    if (pg.pg_category === "to_let" && pg.furnishing_type) {
-      roomAmenities.push({ 
-        icon: <Sofa size={16} />, 
-        label: `Furnishing: ${pg.furnishing_type.replace('_', ' ').toUpperCase()}`, 
-        color: "#f59e0b" 
-      });
-    }
-    
-    return roomAmenities;
-  };
-
-  const getPriceDetails = () => {
-    const priceDetails = [];
-    
-    if (pg.pg_category === "pg") {
-      if (pg.single_sharing && pg.single_sharing > 0) priceDetails.push({ 
-        label: "Single Sharing", 
-        value: `₹${formatPrice(pg.single_sharing)}`,
-        icon: <UserCheck size={16} />,
-        color: "#10b981"
-      });
-      if (pg.double_sharing && pg.double_sharing > 0) priceDetails.push({ 
-        label: "Double Sharing", 
-        value: `₹${formatPrice(pg.double_sharing)}`,
-        icon: <Users size={16} />,
-        color: "#3b82f6"
-      });
-      if (pg.triple_sharing && pg.triple_sharing > 0) priceDetails.push({ 
-        label: "Triple Sharing", 
-        value: `₹${formatPrice(pg.triple_sharing)}`,
-        icon: <Hash size={16} />,
-        color: "#8b5cf6"
-      });
-      if (pg.four_sharing && pg.four_sharing > 0) priceDetails.push({ 
-        label: "Four Sharing", 
-        value: `₹${formatPrice(pg.four_sharing)}`,
-        icon: <Building size={16} />,
-        color: "#f97316"
-      });
-      if (pg.single_room && pg.single_room > 0) priceDetails.push({ 
-        label: "Single Room", 
-        value: `₹${formatPrice(pg.single_room)}`,
-        icon: <DoorOpen size={16} />,
-        color: "#0ea5e9"
-      });
-      if (pg.double_room && pg.double_room > 0) priceDetails.push({ 
-        label: "Double Room", 
-        value: `₹${formatPrice(pg.double_room)}`,
-        icon: <DoorOpen size={16} />,
-        color: "#ec4899"
-      });
-    } else if (pg.pg_category === "coliving") {
-      if (pg.co_living_single_room && pg.co_living_single_room > 0) priceDetails.push({ 
-        label: "Co-Living Single Room", 
-        value: `₹${formatPrice(pg.co_living_single_room)}`,
-        icon: <UserCheck size={16} />,
-        color: "#8b5cf6"
-      });
-      if (pg.co_living_double_room && pg.co_living_double_room > 0) priceDetails.push({ 
-        label: "Co-Living Double Room", 
-        value: `₹${formatPrice(pg.co_living_double_room)}`,
-        icon: <Users size={16} />,
-        color: "#a855f7"
-      });
-      if (pg.coliving_three_sharing && pg.coliving_three_sharing > 0) priceDetails.push({ 
-        label: "Co-Living Triple Sharing", 
-        value: `₹${formatPrice(pg.coliving_three_sharing)}`,
-        icon: <Hash size={16} />,
-        color: "#c084fc"
-      });
-      if (pg.coliving_four_sharing && pg.coliving_four_sharing > 0) priceDetails.push({ 
-        label: "Co-Living Four Sharing", 
-        value: `₹${formatPrice(pg.coliving_four_sharing)}`,
-        icon: <Building size={16} />,
-        color: "#e879f9"
-      });
-      
-      if (pg.co_living_food_included) priceDetails.push({ 
-        label: "Food Included", 
-        value: "Yes",
-        icon: <Utensils size={16} />,
-        color: "#10b981"
-      });
-      if (pg.co_living_wifi_included) priceDetails.push({ 
-        label: "WiFi Included", 
-        value: "Yes",
-        icon: <Wifi size={16} />,
-        color: "#3b82f6"
-      });
-    } else if (pg.pg_category === "to_let") {
-      if (pg.price_1bhk && pg.price_1bhk > 0) priceDetails.push({ 
-        label: "1 BHK", 
-        value: `₹${formatPrice(pg.price_1bhk)}`,
-        icon: <Building size={16} />,
-        color: "#f97316"
-      });
-      if (pg.price_2bhk && pg.price_2bhk > 0) priceDetails.push({ 
-        label: "2 BHK", 
-        value: `₹${formatPrice(pg.price_2bhk)}`,
-        icon: <Building size={16} />,
-        color: "#f59e0b"
-      });
-      if (pg.price_3bhk && pg.price_3bhk > 0) priceDetails.push({ 
-        label: "3 BHK", 
-        value: `₹${formatPrice(pg.price_3bhk)}`,
-        icon: <Building size={16} />,
-        color: "#eab308"
-      });
-      if (pg.price_4bhk && pg.price_4bhk > 0) priceDetails.push({ 
-        label: "4 BHK", 
-        value: `₹${formatPrice(pg.price_4bhk)}`,
-        icon: <Building size={16} />,
-        color: "#d97706"
-      });
-      
-      if (pg.bedrooms_1bhk) priceDetails.push({ 
-        label: "1 BHK - Bedrooms", 
-        value: `${pg.bedrooms_1bhk}`,
-        icon: <Bed size={16} />,
-        color: "#0ea5e9"
-      });
-      if (pg.bathrooms_1bhk) priceDetails.push({ 
-        label: "1 BHK - Bathrooms", 
-        value: `${pg.bathrooms_1bhk}`,
-        icon: <Bath size={16} />,
-        color: "#06b6d4"
-      });
-    }
-    
-    if (pg.deposit_amount && pg.deposit_amount > 0) {
-      priceDetails.push({ 
-        label: "Deposit Amount", 
-        value: `₹${formatPrice(pg.deposit_amount)}`,
-        icon: <Shield size={16} />,
-        color: "#f59e0b"
-      });
-    }
-    
-    if (pg.security_deposit && pg.security_deposit > 0) {
-      priceDetails.push({ 
-        label: "Security Deposit", 
-        value: `₹${formatPrice(pg.security_deposit)}`,
-        icon: <Shield size={16} />,
-        color: "#f59e0b"
-      });
-    }
-    
-    if (pg.maintenance_amount && pg.maintenance_amount > 0) {
-      priceDetails.push({ 
-        label: "Maintenance", 
-        value: `₹${formatPrice(pg.maintenance_amount)}/month`,
-        icon: <Wrench size={16} />,
-        color: "#6b7280"
-      });
-    }
-    
-    return priceDetails;
-  };
-
-  const getQuickInfo = () => {
-    const quickInfo = [];
-    
-    quickInfo.push({ 
-      label: "Property Type", 
-      value: getTypeLabel().replace(/[^\w\s]/g, ''),
-      icon: <Home size={16} />,
-      color: getTypeColor()
-    });
-    
-    if (pg.available_rooms !== undefined && pg.available_rooms !== null) {
-      quickInfo.push({ 
-        label: "Available", 
-        value: `${pg.available_rooms || 0} / ${pg.total_rooms || "N/A"}`,
-        icon: <DoorOpen size={16} />,
-        color: "#3b82f6"
-      });
-    }
-    
-    if ((pg.pg_category === "pg" || pg.pg_category === "coliving") && hasFacility("food_available")) {
-      const foodLabel = pg.food_type === 'veg' ? "Vegetarian" : 
-                      pg.food_type === 'non-veg' ? "Non-Vegetarian" : 
-                      pg.food_type === 'both' ? "Veg & Non-Veg" : "Food Included";
-      const foodIcon = pg.food_type === 'veg' ? <Leaf size={16} /> : 
-                      pg.food_type === 'non-veg' ? <Flame size={16} /> : 
-                      <Utensils size={16} />;
-      quickInfo.push({ 
-        label: "Food", 
-        value: foodLabel,
-        icon: foodIcon,
-        color: pg.food_type === 'veg' ? '#10b981' : 
-              pg.food_type === 'non-veg' ? '#ef4444' : '#f97316'
-      });
-    }
-    
-    if (pg.pg_category === "to_let" && pg.bhk_type) {
-      quickInfo.push({ 
-        label: "BHK Type", 
-        value: `${pg.bhk_type} BHK`,
-        icon: <Building size={16} />,
-        color: "#f97316"
-      });
-    }
-    
-    if (pg.min_stay_months && pg.min_stay_months > 0) {
-      quickInfo.push({ 
-        label: "Min. Stay", 
-        value: `${pg.min_stay_months} months`,
-        icon: <Calendar size={16} />,
-        color: "#8b5cf6"
-      });
-    }
-    
-    if (pg.notice_period) {
-      quickInfo.push({ 
-        label: "Notice Period", 
-        value: `${pg.notice_period} month${pg.notice_period > 1 ? 's' : ''}`,
-        icon: <Bell size={16} />,
-        color: "#6b7280"
-      });
-    }
-    
-    if (pg.distance) {
-      quickInfo.push({ 
-        label: "Distance", 
-        value: `${pg.distance.toFixed(1)} km away`,
-        icon: <Navigation size={16} />,
-        color: "#10b981"
-      });
-    }
-    
-    return quickInfo;
-  };
-
-  const quickInfoItems = getQuickInfo();
-  const priceDetails = getPriceDetails();
-  const roomAmenities = renderRoomAmenities();
-
-  const handleViewDetails = () => {
-    trackEvent("view_details_click", {
-      pg_id: pg.id,
-      pg_name: pg.pg_name,
-    });
-    window.open(`/pg/${pg.id}`, '_blank');
-  };
-
-  const handleMapClick = () => {
-    trackEvent("view_map_click", {
-      pg_id: pg.id,
-      pg_name: pg.pg_name,
-    });
-    window.open(`https://www.google.com/maps/search/?api=1&query=${pg.latitude},${pg.longitude}`, '_blank');
-  };
-
-  const handleBookNow = () => {
-    trackEvent("contact_owner_click", {
-      pg_id: pg.id,
-      pg_name: pg.pg_name,
-      category: pg.pg_category,
-    });
-    onBook(pg);
-  };
-
-  return (
-    <div style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.8)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 2000,
-      padding: 20,
-      animation: "fadeIn 0.3s ease"
-    }}>
-      <div style={{
-        background: "#ffffff",
-        borderRadius: 20,
-        width: "100%",
-        maxWidth: 1000,
-        maxHeight: "90vh",
-        overflowY: "auto",
-        position: "relative",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
-      }}>
-        <div style={{
-          position: "absolute",
-          top: 16,
-          right: 16,
-          display: "flex",
-          gap: 8,
-          zIndex: 100
-        }}>
-          <button
-            onClick={toggleFavorite}
-            style={{
-              background: "rgba(255,255,255,0.9)",
-              border: "none",
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
-            }}
-            title={isFavorite ? "Remove from favorites" : "Add to favorites"}
-          >
-            <Heart 
-              size={20} 
-              color="#ef4444" 
-              fill={isFavorite ? "#ef4444" : "none"}
-            />
-          </button>
-          
-          <button
-            onClick={handleShare}
-            style={{
-              background: "rgba(255,255,255,0.9)",
-              border: "none",
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
-            }}
-            title="Share property"
-          >
-            <Share2 size={20} />
-          </button>
-          
-          <button
-            onClick={onClose}
-            style={{
-              background: "rgba(255,255,255,0.9)",
-              border: "none",
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
-            }}
-            title="Close"
-          >
-            <X size={24} />
-          </button>
-        </div>
-
-        {showShareOptions && (
-          <div style={{
-            position: "absolute",
-            top: 70,
-            right: 16,
-            background: "#ffffff",
-            borderRadius: 12,
-            padding: 16,
-            boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
-            zIndex: 101,
-            animation: "slideDown 0.2s ease"
-          }}>
-            <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Share Property</h4>
-            <div style={{ display: "flex", gap: 12 }}>
-              <button
-                onClick={handleWhatsAppShare}
-                style={{
-                  padding: "8px 12px",
-                  background: "#25D366",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 8,
-                  fontSize: 13,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6
-                }}
-              >
-                <MessageCircle size={14} />
-                WhatsApp
-              </button>
-              <button
-                onClick={handleCopyLink}
-                style={{
-                  padding: "8px 12px",
-                  background: "#3b82f6",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 8,
-                  fontSize: 13,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6
-                }}
-              >
-                <Copy size={14} />
-                Copy Link
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div style={{ position: "relative", height: 300, background: "#f3f4f6" }}>
-          {!imageLoaded && !imageError && (
-            <div style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "#f3f4f6"
-            }}>
-              <div style={{
-                width: 40,
-                height: 40,
-                border: "4px solid #e5e7eb",
-                borderTop: "4px solid #3b82f6",
-                borderRadius: "50%",
-                animation: "spin 1s linear infinite"
-              }} />
-            </div>
-          )}
-          
-          <img
-            src={mainImageUrl}
-            alt={pg.pg_name}
-            style={{ 
-              width: "100%", 
-              height: "100%", 
-              objectFit: "cover",
-              display: imageLoaded ? "block" : "none"
-            }}
-            loading="lazy"
-            onLoad={() => setImageLoaded(true)}
-            onError={(e) => {
-              setImageError(true);
-              setImageLoaded(true);
-              e.target.onerror = null;
-              e.target.src = "/no-image.png";
-            }}
-          />
-
-          <div style={{
-            position: "absolute",
-            top: 16,
-            left: 16,
-            background: getTypeColor(),
-            color: "#fff",
-            padding: "8px 16px",
-            borderRadius: 20,
-            fontSize: 14,
-            fontWeight: 600,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            zIndex: 5
-          }}>
-            {getTypeLabel()}
-          </div>
-          
-          {totalPhotos > 1 && (
-            <div style={{
-              position: "absolute",
-              bottom: 16,
-              right: 16,
-              background: "rgba(0,0,0,0.7)",
-              color: "white",
-              padding: "6px 12px",
-              borderRadius: 20,
-              fontSize: 12,
-              fontWeight: 500,
-              zIndex: 5,
-              display: "flex",
-              alignItems: "center",
-              gap: 6
-            }}>
-              <Camera size={14} />
-              {totalPhotos} photos
-            </div>
-          )}
-        </div>
-
-        <div style={{ padding: 30 }}>
-          <div style={{ 
-            display: "flex", 
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            marginBottom: 20,
-            flexWrap: "wrap",
-            gap: 16
-          }}>
-            <div>
-              <h2 style={{ 
-                fontSize: 28, 
-                fontWeight: 700, 
-                color: "#111827",
-                marginBottom: 8 
-              }}>
-                {pg.pg_name}
-                {pg.is_verified && (
-                  <span style={{
-                    marginLeft: 12,
-                    fontSize: 14,
-                    color: "#10b981",
-                    background: "#f0fdf4",
-                    padding: "4px 10px",
-                    borderRadius: 12,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4
-                  }}>
-                    <Shield size={12} />
-                    Verified
-                  </span>
-                )}
-              </h2>
-              <div style={{ 
-                display: "flex", 
-                alignItems: "center", 
-                gap: 8, 
-                marginBottom: 12,
-                color: "#4b5563",
-                flexWrap: "wrap"
-              }}>
-                <MapPin size={18} />
-                <span style={{ fontSize: 16 }}>
-                  {pg.address || `${pg.area}, ${pg.city}, ${pg.state}`}
-                </span>
-              </div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 32, fontWeight: 700, color: "#111827" }}>
-                ₹{formatPrice(getEffectiveRent(pg))}
-              </div>
-              <div style={{ fontSize: 14, color: "#6b7280" }}>
-                per month
-              </div>
-            </div>
-          </div>
-
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: 30,
-            marginBottom: 30
-          }}>
-            <div>
-              <div style={{
-                background: "#f8fafc",
-                borderRadius: 12,
-                padding: 20,
-                border: "1px solid #e5e7eb",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
-              }}>
-                <h4 style={{ 
-                  fontSize: 16, 
-                  fontWeight: 600, 
-                  marginBottom: 16,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8
-                }}>
-                  <Info size={16} />
-                  Quick Info
-                </h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {quickInfoItems.slice(0, 8).map((item, index) => (
-                    <div 
-                      key={index} 
-                      style={{ 
-                        display: "flex", 
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "8px 0",
-                        borderBottom: index < Math.min(quickInfoItems.length - 1, 7) ? "1px solid #e5e7eb" : "none"
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ 
-                          width: 28, 
-                          height: 28, 
-                          borderRadius: 8, 
-                          background: `${item.color}20`,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: item.color
-                        }}>
-                          {item.icon}
-                        </div>
-                        <span style={{ fontSize: 14, color: "#4b5563" }}>{item.label}</span>
-                      </div>
-                      <span style={{ 
-                        fontSize: 14, 
-                        fontWeight: 600, 
-                        color: item.color || "#111827" 
-                      }}>
-                        {item.value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                borderRadius: 16,
-                padding: 24,
-                color: "white",
-                marginTop: 20
-              }}>
-                <h3 style={{ 
-                  fontSize: 20, 
-                  fontWeight: 700,
-                  marginBottom: 16 
-                }}>
-                  📞 Contact Owner
-                </h3>
-                <div style={{ marginBottom: 20 }}>
-                  <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 4 }}>Available Rooms</div>
-                  <div style={{ fontSize: 32, fontWeight: 700 }}>
-                    {pg.available_rooms || 0}
-                    <span style={{ fontSize: 16, opacity: 0.9 }}> / {pg.total_rooms || "N/A"}</span>
-                  </div>
-                </div>
-                <button
-                  onClick={handleBookNow}
-                  style={{
-                    width: "100%",
-                    padding: "14px",
-                    background: "white",
-                    color: "#667eea",
-                    border: "none",
-                    borderRadius: 10,
-                    fontSize: 16,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    transition: "all 0.2s"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = "0 8px 25px rgba(255,255,255,0.3)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "none";
-                  }}
-                >
-                  <MessageCircle size={18} style={{ marginRight: 8 }} />
-                  Contact Owner
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <div style={{
-                background: "#f0fdf4",
-                borderRadius: 12,
-                padding: 20,
-                border: "1px solid #bbf7d0",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-                marginBottom: 20
-              }}>
-                <h4 style={{ 
-                  fontSize: 16, 
-                  fontWeight: 600, 
-                  marginBottom: 16,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  color: "#166534"
-                }}>
-                  
-                  Price Details
-                </h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {priceDetails.slice(0, 8).map((item, index) => (
-                    <div 
-                      key={index} 
-                      style={{ 
-                        display: "flex", 
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "8px 0",
-                        borderBottom: index < Math.min(priceDetails.length - 1, 7) ? "1px solid #bbf7d0" : "none"
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ 
-                          width: 28, 
-                          height: 28, 
-                          borderRadius: 8, 
-                          background: `${item.color}20`,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: item.color
-                        }}>
-                          {item.icon}
-                        </div>
-                        <span style={{ fontSize: 14, color: "#374151" }}>{item.label}</span>
-                      </div>
-                      <span style={{ 
-                        fontSize: 14, 
-                        fontWeight: 600, 
-                        color: item.color || "#166534" 
-                      }}>
-                        {item.value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{
-                background: "#f8fafc",
-                borderRadius: 12,
-                padding: 20,
-                border: "1px solid #e5e7eb",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
-              }}>
-                <h4 style={{ 
-                  fontSize: 16, 
-                  fontWeight: 600, 
-                  marginBottom: 12,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  color: "#374151"
-                }}>
-                  <Info size={16} />
-                  Description
-                </h4>
-                <p style={{ 
-                  fontSize: 14, 
-                  color: "#4b5563",
-                  lineHeight: "1.6",
-                  maxHeight: "200px",
-                  overflowY: "auto",
-                  paddingRight: "8px"
-                }}>
-                  {pg.description || "No description available."}
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <div style={{
-                background: "#f8fafc",
-                borderRadius: 12,
-                padding: 20,
-                border: "1px solid #e5e7eb",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
-              }}>
-                <h4 style={{ 
-                  fontSize: 16, 
-                  fontWeight: 600, 
-                  marginBottom: 16,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8
-                }}>
-                  <Bed size={16} />
-                  Room Amenities
-                </h4>
-                <div style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr",
-                  gap: 10
-                }}>
-                  {roomAmenities.length > 0 ? (
-                    roomAmenities.map((amenity, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          padding: "10px 12px",
-                          background: `${amenity.color}10`,
-                          borderRadius: 10,
-                          fontSize: 14,
-                          color: amenity.color,
-                          fontWeight: 500
-                        }}
-                      >
-                        {amenity.icon}
-                        {amenity.label}
-                      </div>
-                    ))
-                  ) : (
-                    <div style={{
-                      padding: "16px",
-                      textAlign: "center",
-                      color: "#6b7280",
-                      fontSize: 14,
-                      background: "#f3f4f6",
-                      borderRadius: 8
-                    }}>
-                      No room amenities listed
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div style={{
-            display: "flex",
-            gap: 16,
-            paddingTop: 20,
-            borderTop: "1px solid #e5e7eb",
-            flexWrap: "wrap"
-          }}>
-            <button
-              onClick={handleBookNow}
-              style={{
-                flex: 2,
-                minWidth: "150px",
-                padding: "16px 24px",
-                background: "#3b82f6",
-                color: "white",
-                border: "none",
-                borderRadius: 12,
-                fontSize: 16,
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 12,
-                transition: "all 0.2s"
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 8px 20px rgba(59, 130, 246, 0.3)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
-            >
-              <MessageCircle size={20} />
-              Contact Owner
-            </button>
-            
-            <button
-              onClick={handleViewDetails}
-              style={{
-                flex: 1,
-                minWidth: "120px",
-                padding: "16px 24px",
-                background: "#3b82f6",
-                color: "white",
-                border: "none",
-                borderRadius: 12,
-                fontSize: 16,
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 12,
-                transition: "all 0.2s"
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 8px 20px rgba(59, 130, 246, 0.3)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
-            >
-              <Eye size={20} />
-              View Details
-            </button>
-            
-            {pg.latitude && pg.longitude && (
-              <button
-                onClick={handleMapClick}
-                style={{
-                  flex: 1,
-                  minWidth: "120px",
-                  padding: "16px 24px",
-                  background: "#8b5cf6",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 12,
-                  fontSize: 16,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 12,
-                  transition: "all 0.2s"
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-2px)";
-                  e.currentTarget.style.boxShadow = "0 8px 20px rgba(139, 92, 246, 0.3)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "none";
-                }}
-              >
-                <Map size={20} />
-                View Map
-              </button>
-            )}
-          </div>
         </div>
       </div>
     </div>
@@ -3171,9 +2109,418 @@ const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
   );
 };
 
+/* ================= UPDATED PG CARD COMPONENT WITH AUTO IMAGE SLIDER ================= */
+const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, isFavorite, isSelectedForCompare, onSelectForCompare, compareMode, getImageUrl }) => {
+  const isMobile = window.innerWidth < 768;
+  const [currentImage, setCurrentImage] = useState(0);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+  
+  // Get photos array for auto-slider
+  const photosArray = React.useMemo(() => {
+    if (pg.photos && Array.isArray(pg.photos) && pg.photos.length > 0) {
+      return pg.photos.filter(photo => photo && photo.trim() !== "");
+    }
+    return [];
+  }, [pg.photos]);
+  
+  const mainPhoto = pg.main_photo || (photosArray.length > 0 ? photosArray[0] : null);
+  const hasMultipleImages = photosArray.length > 1;
+  
+  // Auto image slider effect
+  useEffect(() => {
+    if (hasMultipleImages && !compareMode) {
+      const interval = setInterval(() => {
+        setCurrentImage((prev) => (prev + 1) % photosArray.length);
+      }, 2500);
+      return () => clearInterval(interval);
+    }
+  }, [hasMultipleImages, photosArray.length, compareMode]);
+  
+  const currentPhotoUrl = React.useMemo(() => {
+    if (hasMultipleImages && photosArray[currentImage]) {
+      return getCorrectImageUrl(photosArray[currentImage]);
+    }
+    if (mainPhoto) {
+      return getCorrectImageUrl(mainPhoto);
+    }
+    return "/no-image.png";
+  }, [hasMultipleImages, photosArray, currentImage, mainPhoto]);
+  
+  // Get starting price (only minimum)
+  const startingPrice = React.useMemo(() => {
+    const range = getPriceRangeByType(pg);
+    return range.min || getEffectiveRent(pg);
+  }, [pg]);
+  
+  // Check if filling fast (less than 5 beds left)
+  const isFillingFast = pg.available_rooms < 5 && pg.available_rooms > 0;
+  
+  // Get food type display
+  const foodTypeDisplay = React.useMemo(() => {
+    if (!pg.food_available) return null;
+    if (pg.food_type === 'veg') return "🍽️ Veg";
+    if (pg.food_type === 'non-veg') return "🍽️ Non-Veg";
+    if (pg.food_type === 'both') return "🍽️ Veg & Non-Veg";
+    return "🍽️ Food Available";
+  }, [pg.food_available, pg.food_type]);
+  
+  return (
+    <div
+      onClick={() => onCardClick(pg)}
+      style={{
+        borderRadius: 16,
+        overflow: "hidden",
+        background: "#fff",
+        cursor: "pointer",
+        transition: "all 0.3s ease",
+        border: isSelectedForCompare ? "2px solid #8b5cf6" : "1px solid #e5e7eb",
+        position: "relative",
+        width: "100%",
+        maxWidth: isMobile ? "100%" : "380px",
+        minWidth: 0,
+        boxSizing: "border-box"
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-4px)";
+        e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,.12)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,.08)";
+      }}
+    >
+      {/* Compare Mode Selector */}
+      {compareMode && (
+        <button
+          onClick={(e) => onSelectForCompare(pg.id, e)}
+          style={{
+            position: "absolute",
+            top: 12,
+            left: 12,
+            background: "rgba(255,255,255,0.9)",
+            border: "none",
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            zIndex: 20,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+          }}
+        >
+          {isSelectedForCompare ? (
+            <Check size={18} color="#8b5cf6" />
+          ) : (
+            <Plus size={18} color="#374151" />
+          )}
+        </button>
+      )}
+      
+      {/* Quick View Button */}
+      <button
+        onClick={(e) => onQuickView(pg, e)}
+        style={{
+          position: "absolute",
+          top: 12,
+          right: 12,
+          background: "rgba(255,255,255,0.9)",
+          border: "none",
+          padding: "8px 16px",
+          borderRadius: 20,
+          fontSize: 13,
+          fontWeight: 500,
+          color: "#374151",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          zIndex: 10,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          transition: "all 0.2s"
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = "#3b82f6";
+          e.currentTarget.style.color = "white";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = "rgba(255,255,255,0.9)";
+          e.currentTarget.style.color = "#374151";
+        }}
+      >
+        <Eye size={14} />
+        Quick View
+      </button>
+      
+      {/* Favorite Button */}
+      <button
+        onClick={(e) => onFavorite(pg.id, e)}
+        style={{
+          position: "absolute",
+          top: 12,
+          left: compareMode ? 56 : 12,
+          background: "rgba(255,255,255,0.9)",
+          border: "none",
+          width: 36,
+          height: 36,
+          borderRadius: "50%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          zIndex: 10,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+        }}
+      >
+        <Heart 
+          size={18} 
+          color="#ef4444" 
+          fill={isFavorite ? "#ef4444" : "none"}
+        />
+      </button>
+      
+      {/* Image Section with Auto Slider */}
+      <div style={{ position: "relative" }}>
+        <img
+          src={currentPhotoUrl}
+          alt={pg.pg_name}
+          style={{ 
+            width: "100%", 
+            height: isMobile ? 200 : 240, 
+            objectFit: "cover", 
+            display: "block" 
+          }}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = "/no-image.png";
+          }}
+        />
+        
+        {/* Property Type Badge */}
+        <div style={{
+          position: "absolute",
+          bottom: 12,
+          left: 12,
+          background: pg.pg_category === "to_let" ? "#f97316" : 
+                    pg.pg_category === "coliving" ? "#8b5cf6" :
+                    pg.pg_type === "boys" ? "#16a34a" : "#db2777",
+          color: "#fff",
+          padding: "6px 12px",
+          borderRadius: 20,
+          fontSize: 12,
+          fontWeight: 600,
+          textTransform: "uppercase",
+          letterSpacing: "0.5px"
+        }}>
+          {pg.pg_category === "to_let" ? "To-Let" : 
+          pg.pg_category === "coliving" ? "Co-Living" :
+          pg.pg_type ? pg.pg_type.charAt(0).toUpperCase() + pg.pg_type.slice(1) + " PG" : "PG"}
+        </div>
+        
+        {/* Distance Badge */}
+        {pg.distance && (
+          <div style={{
+            position: "absolute",
+            bottom: 12,
+            right: 12,
+            background: "rgba(0,0,0,0.7)",
+            color: "white",
+            padding: "4px 10px",
+            borderRadius: 20,
+            fontSize: 11,
+            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            gap: 4
+          }}>
+            <Navigation size={10} />
+            {pg.distance.toFixed(1)} km
+          </div>
+        )}
+        
+        {/* Image Slider Dots (only if multiple images) */}
+        {hasMultipleImages && (
+          <div style={{
+            position: "absolute",
+            bottom: 12,
+            left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex",
+            gap: 6,
+            background: "rgba(0,0,0,0.5)",
+            padding: "4px 8px",
+            borderRadius: 20
+          }}>
+            {photosArray.map((_, idx) => (
+              <div
+                key={idx}
+                style={{
+                  width: currentImage === idx ? 8 : 6,
+                  height: currentImage === idx ? 8 : 6,
+                  borderRadius: "50%",
+                  background: currentImage === idx ? "#fff" : "rgba(255,255,255,0.5)",
+                  transition: "all 0.2s"
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+      
+      {/* Card Content - Simplified */}
+      <div style={{ padding: 16 }}>
+        {/* PG Name */}
+        <h3 style={{ 
+          fontSize: 18,
+          fontWeight: 700,
+          lineHeight: 1.3,
+          marginBottom: 4,
+          color: "#111827"
+        }}>
+          {pg.pg_name}
+        </h3>
+        
+        {/* Location */}
+        <div style={{ 
+          display: "flex", 
+          alignItems: "center", 
+          gap: 4, 
+          marginBottom: 12,
+          color: "#6b7280",
+          fontSize: 14
+        }}>
+          <MapPin size={14} />
+          <span>{pg.area}{pg.city ? `, ${pg.city}` : ""}</span>
+        </div>
+        
+        {/* Starting Price - Simplified */}
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ 
+            fontSize: 22, 
+            fontWeight: 700, 
+            color: "#1e3a5f",
+            display: "flex",
+            alignItems: "baseline",
+            gap: 4
+          }}>
+            ₹{formatPrice(startingPrice)}
+            <span style={{ fontSize: 13, fontWeight: 400, color: "#6b7280" }}>onwards</span>
+          </div>
+          <div style={{ fontSize: 11, color: "#10b981", fontWeight: 500 }}>
+            per month
+          </div>
+        </div>
+        
+        {/* Available Beds Left */}
+        <div style={{
+          background: "#ecfdf5",
+          color: "#059669",
+          padding: "6px 12px",
+          borderRadius: 20,
+          fontSize: 12,
+          fontWeight: "600",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          marginBottom: 10
+        }}>
+          🛏️ {pg.available_rooms || 0} Beds Left
+        </div>
+        
+        {/* Food Type */}
+        {foodTypeDisplay && (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            marginBottom: 12,
+            fontSize: 13,
+            color: "#374151"
+          }}>
+            {foodTypeDisplay}
+          </div>
+        )}
+        
+        {/* Filling Fast Badge */}
+        {isFillingFast && (
+          <div style={{
+            background: "#fef3c7",
+            color: "#d97706",
+            padding: "4px 10px",
+            borderRadius: 16,
+            fontSize: 11,
+            fontWeight: 600,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            marginBottom: 12
+          }}>
+            🔥 Filling Fast
+          </div>
+        )}
+        
+        {/* Verified + Response Time */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 14,
+          fontSize: 11,
+          color: "#6b7280",
+          flexWrap: "wrap"
+        }}>
+          {pg.is_verified && (
+            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <Shield size={12} color="#10b981" />
+              Verified
+            </span>
+          )}
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <Clock size={12} />
+            Owner responds in 10 mins
+          </span>
+        </div>
+        
+        {/* Contact Owner Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onContact(pg);
+          }}
+          style={{
+            width: "100%",
+            fontSize: 14,
+            padding: "12px 16px",
+            background: "#3b82f6",
+            color: "white",
+            border: "none",
+            borderRadius: 10,
+            fontWeight: 600,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            transition: "all 0.2s"
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "#2563eb";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "#3b82f6";
+          }}
+        >
+          <MessageCircle size={16} />
+          Contact Owner
+        </button>
+      </div>
+    </div>
+  );
+};
+
 /* ================= MAIN COMPONENT ================= */
 function UserPGSearch() {
-  // ADD THIS LINE - MOBILE DETECTION AT TOP OF COMPONENT
   const isMobile = window.innerWidth < 768;
   
   const navigate = useNavigate();
@@ -3195,8 +2542,6 @@ function UserPGSearch() {
   const [notification, setNotification] = useState(null);
   const [showLocationBanner, setShowLocationBanner] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
-
-  // Removed propertyType state and related filtering buttons - keeping only "All"
   const [compareMode, setCompareMode] = useState(false);
   const [selectedForCompare, setSelectedForCompare] = useState(new Set());
   const [showCompareModal, setShowCompareModal] = useState(false);
@@ -3407,7 +2752,6 @@ function UserPGSearch() {
       showNotification("Added to favorites");
     }
     
-    // Track favorite click
     trackEvent("favorite_click", {
       pg_id: pgId,
       favorite: isFavorite,
@@ -3495,8 +2839,6 @@ function UserPGSearch() {
   const applyFilters = useCallback(() => {
     let filtered = [...allPGs];
 
-    // Removed property type filter - showing all properties
-
     if (filters.location) {
       filtered = filtered.filter((pg) =>
         `${pg.area || ""} ${pg.city || ""} ${pg.pg_name || ""}`
@@ -3545,7 +2887,6 @@ function UserPGSearch() {
       maxBudget: max
     }));
     
-    // Track filter apply
     trackEvent("filter_apply", {
       min_budget: min,
       max_budget: max,
@@ -3587,7 +2928,6 @@ function UserPGSearch() {
   };
 
   const handleBookNow = (pg) => {
-    // Track contact owner click
     trackEvent("contact_owner_click", {
       pg_id: pg.id,
       pg_name: pg.pg_name,
@@ -3603,8 +2943,6 @@ function UserPGSearch() {
     setBookingPG(pg);
   };
 
-  // ✅ SMART HANDLER: First time = create booking + WhatsApp + call
-  // ✅ Second time = only call (no duplicate)
   const handleBookingSubmit = async (bookingData) => {
     try {
       if (!user) {
@@ -3615,12 +2953,10 @@ function UserPGSearch() {
 
       const token = await user.getIdToken(true);
 
-      // ✅ ONLY room_type in payload (NO check_in_date)
       const payload = {
         room_type: bookingData.roomType
       };
 
-      // Try to create booking/lead
       const res = await api.post(
         `/bookings/${bookingPG.id}`,
         payload,
@@ -3631,13 +2967,11 @@ function UserPGSearch() {
         }
       );
 
-      // ✅ FIRST TIME SUCCESS - Booking created successfully
       trackEvent("contact_owner_success", {
         lead_id: res.data?.bookingId || res.data?.booking?.id,
         pg_id: bookingPG.id,
       });
 
-      // Send WhatsApp to owner (only first time)
       try {
         await api.post(
           "/whatsapp/send-booking-whatsapp",
@@ -3657,7 +2991,6 @@ function UserPGSearch() {
 
       showNotification(res.data.message || "✅ Owner will contact you shortly");
       
-      // ✅ DIRECT CALL AFTER SUCCESS
       if (bookingPG.contact_phone) {
         setTimeout(() => {
           window.location.href = `tel:${bookingPG.contact_phone}`;
@@ -3669,13 +3002,11 @@ function UserPGSearch() {
     } catch (error) {
       console.log("CONTACT OWNER ERROR:", error.response?.data);
       
-      // ✅ CHECK IF ALREADY CONTACTED (DUPLICATE)
       if (
         error.response?.data?.message &&
         (error.response.data.message.includes("already") ||
          error.response.data.message.includes("already have"))
       ) {
-        // ✅ SECOND TIME + SAME PG → ONLY DIRECT CALL, NO DUPLICATE
         showNotification("📞 Connecting you directly to owner...");
         
         if (bookingPG.contact_phone) {
@@ -3690,7 +3021,6 @@ function UserPGSearch() {
         return;
       }
       
-      // Other errors
       if (error.response?.data?.message) {
         showNotification(error.response.data.message, true);
       } else {
@@ -3751,131 +3081,6 @@ function UserPGSearch() {
 
   const clearCompareSelections = () => {
     setSelectedForCompare(new Set());
-  };
-
-  const formatCardPrice = (value) => {
-    if (value === null || value === undefined || value === 0) {
-      return "0";
-    }
-    try {
-      return formatPrice(value);
-    } catch (error) {
-      return value.toString();
-    }
-  };
-
-  const getPriceRangeDisplay = (pg) => {
-    const range = getPriceRangeByType(pg);
-    if (range.min === 0 && range.max === 0) return "Price on request";
-    
-    if (range.min === range.max) {
-      return `₹${formatCardPrice(range.min)}`;
-    }
-    
-    return `₹${formatCardPrice(range.min)} – ₹${formatCardPrice(range.max)}`;
-  };
-
-  const getCardQuickInfo = (pg) => {
-    const info = [];
-    
-    if (pg.pg_category === "to_let") {
-      if (pg.price_1bhk > 0) info.push({ 
-        icon: <Building size={12} />, 
-        label: "1BHK", 
-        value: `₹${formatCardPrice(pg.price_1bhk)}`,
-        color: "#f97316" 
-      });
-      if (pg.price_2bhk > 0) info.push({ 
-        icon: <Building size={12} />, 
-        label: "2BHK", 
-        value: `₹${formatCardPrice(pg.price_2bhk)}`,
-        color: "#f59e0b" 
-      });
-      if (pg.bhk_type) info.push({ 
-        icon: <Hash size={12} />, 
-        label: "Type", 
-        value: `${pg.bhk_type}BHK`,
-        color: "#0ea5e9" 
-      });
-    } else if (pg.pg_category === "coliving") {
-      if (pg.co_living_single_room > 0) info.push({ 
-        icon: <UserCheck size={12} />, 
-        label: "Single", 
-        value: `₹${formatCardPrice(pg.co_living_single_room)}`,
-        color: "#8b5cf6" 
-      });
-      if (pg.co_living_double_room > 0) info.push({ 
-        icon: <Users size={12} />, 
-        label: "Double", 
-        value: `₹${formatCardPrice(pg.co_living_double_room)}`,
-        color: "#a855f7" 
-      });
-      if (pg.coliving_three_sharing > 0) info.push({ 
-        icon: <Hash size={12} />, 
-        label: "3-Sharing", 
-        value: `₹${formatCardPrice(pg.coliving_three_sharing)}`,
-        color: "#c084fc" 
-      });
-      if (pg.coliving_four_sharing > 0) info.push({ 
-        icon: <Building size={12} />, 
-        label: "4-Sharing", 
-        value: `₹${formatCardPrice(pg.coliving_four_sharing)}`,
-        color: "#e879f9" 
-      });
-      if (pg.co_living_food_included) info.push({ 
-        icon: <Utensils size={12} />, 
-        label: "Food", 
-        value: "Included",
-        color: "#10b981" 
-      });
-    } else {
-      if (pg.single_sharing > 0) info.push({ 
-        icon: <UserCheck size={12} />, 
-        label: "Single", 
-        value: `₹${formatCardPrice(pg.single_sharing)}`,
-        color: "#10b981" 
-      });
-      if (pg.double_sharing > 0) info.push({ 
-        icon: <Users size={12} />, 
-        label: "Double", 
-        value: `₹${formatCardPrice(pg.double_sharing)}`,
-        color: "#3b82f6" 
-      });
-      if (pg.triple_sharing > 0) info.push({ 
-        icon: <Hash size={12} />, 
-        label: "3-Sharing", 
-        value: `₹${formatCardPrice(pg.triple_sharing)}`,
-        color: "#8b5cf6" 
-      });
-      if (pg.four_sharing > 0) info.push({ 
-        icon: <Building size={12} />, 
-        label: "4-Sharing", 
-        value: `₹${formatCardPrice(pg.four_sharing)}`,
-        color: "#f97316" 
-      });
-      if (pg.single_room > 0) info.push({ 
-        icon: <DoorOpen size={12} />, 
-        label: "Room", 
-        value: `₹${formatCardPrice(pg.single_room)}`,
-        color: "#0ea5e9" 
-      });
-    }
-    
-    if (pg.food_available) info.push({ 
-      icon: pg.food_type === 'veg' ? <Leaf size={12} /> : <Flame size={12} />, 
-      label: "Food", 
-      value: pg.food_type === 'veg' ? 'Veg' : 'Non-Veg',
-      color: pg.food_type === 'veg' ? '#10b981' : '#ef4444' 
-    });
-    
-    if (pg.ac_available) info.push({ 
-      icon: <Snowflake size={12} />, 
-      label: "AC", 
-      value: "Yes",
-      color: "#3b82f6" 
-    });
-    
-    return info.slice(0, 3);
   };
 
   if (authLoading) {
@@ -3940,7 +3145,7 @@ function UserPGSearch() {
       {/* Hero Banner */}
       <HeroBanner />
 
-      {/* PROMOTIONAL BANNERS SLIDER - Added between Hero and Search Bar */}
+      {/* PROMOTIONAL BANNERS SLIDER */}
       <PromoBannerSlider onBannerClick={handlePromoBannerClick} />
 
       {/* Location Info Bar */}
@@ -4445,7 +3650,6 @@ function UserPGSearch() {
           </h2>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ color: "#6b7280", fontSize: 14 }}>
-              
               {filters.minBudget > 0 && filters.maxBudget < 50000 && 
                 ` within ₹${formatPrice(filters.minBudget)} - ₹${formatPrice(filters.maxBudget)}`}
               {filters.nearMe && userLocation && ` within 5km of your location`}
@@ -4471,7 +3675,7 @@ function UserPGSearch() {
         </button>
       </div>
 
-      {/* Property Cards */}
+      {/* Property Cards Grid - Using the new PGPropertyCard component */}
       {loading ? (
         <div style={{ 
           textAlign: "center", 
@@ -4501,382 +3705,21 @@ function UserPGSearch() {
               gap: 24,
             }}
           >
-            {pgs.map((pg) => {
-              const cardQuickInfo = getCardQuickInfo(pg);
-              const priceRange = getPriceRangeDisplay(pg);
-              const depositAmount = pg.deposit_amount || pg.security_deposit || 0;
-              const isSelectedForCompare = selectedForCompare.has(pg.id);
-              
-              return (
-                <div
-                  key={pg.id}
-                  onClick={() => handleCardClick(pg)}
-                  style={{
-                    borderRadius: 16,
-                    overflow: "hidden",
-                    background: "#fff",
-                    cursor: "pointer",
-                    transition: "all 0.3s ease",
-                    border: isSelectedForCompare ? "2px solid #8b5cf6" : "1px solid #e5e7eb",
-                    position: "relative",
-                    width: "100%",
-                    maxWidth: isMobile ? "100%" : "380px",
-                    minWidth: 0,
-                    boxSizing: "border-box"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-4px)";
-                    e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,.12)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,.08)";
-                  }}
-                >
-                  {compareMode && (
-                    <button
-                      onClick={(e) => toggleSelectForCompare(pg.id, e)}
-                      style={{
-                        position: "absolute",
-                        top: 12,
-                        left: 12,
-                        background: "rgba(255,255,255,0.9)",
-                        border: "none",
-                        width: 36,
-                        height: 36,
-                        borderRadius: "50%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        cursor: "pointer",
-                        zIndex: 20,
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
-                      }}
-                    >
-                      {isSelectedForCompare ? (
-                        <Check size={18} color="#8b5cf6" />
-                      ) : (
-                        <Plus size={18} color="#374151" />
-                      )}
-                    </button>
-                  )}
-
-                  <button
-                    onClick={(e) => handleQuickView(pg, e)}
-                    style={{
-                      position: "absolute",
-                      top: 12,
-                      right: 12,
-                      background: "rgba(255,255,255,0.9)",
-                      border: "none",
-                      padding: "8px 16px",
-                      borderRadius: 20,
-                      fontSize: 13,
-                      fontWeight: 500,
-                      color: "#374151",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      zIndex: 10,
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                      transition: "all 0.2s"
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#3b82f6";
-                      e.currentTarget.style.color = "white";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "rgba(255,255,255,0.9)";
-                      e.currentTarget.style.color = "#374151";
-                    }}
-                  >
-                    <Eye size={14} />
-                    Quick View
-                  </button>
-
-                  <button
-                    onClick={(e) => toggleFavorite(pg.id, e)}
-                    style={{
-                      position: "absolute",
-                      top: 12,
-                      left: compareMode ? 56 : 12,
-                      background: "rgba(255,255,255,0.9)",
-                      border: "none",
-                      width: 36,
-                      height: 36,
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                      zIndex: 10,
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
-                    }}
-                  >
-                    <Heart 
-                      size={18} 
-                      color="#ef4444" 
-                      fill={favorites.has(pg.id) ? "#ef4444" : "none"}
-                    />
-                  </button>
-
-                  <div style={{ position: "relative" }}>
-                    <img
-                      src={getImageUrl(pg)}
-                      alt={pg.pg_name}
-                      style={{ 
-                        width: "100%", 
-                        height: isMobile ? 180 : 240, 
-                        objectFit: "cover", 
-                        display: "block" 
-                      }}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = "/no-image.png";
-                      }}
-                    />
-                    <div style={{
-                      position: "absolute",
-                      bottom: 12,
-                      left: 12,
-                      background: pg.pg_category === "to_let" ? "#f97316" : 
-                                pg.pg_category === "coliving" ? "#8b5cf6" :
-                                pg.pg_type === "boys" ? "#16a34a" : "#db2777",
-                      color: "#fff",
-                      padding: "6px 12px",
-                      borderRadius: 20,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px"
-                    }}>
-                      {pg.pg_category === "to_let" ? "To-Let" : 
-                      pg.pg_category === "coliving" ? "Co-Living" :
-                      pg.pg_type ? pg.pg_type.charAt(0).toUpperCase() + pg.pg_type.slice(1) + " PG" : "PG"}
-                    </div>
-                    
-                    {pg.distance && (
-                      <div style={{
-                        position: "absolute",
-                        bottom: 12,
-                        right: 12,
-                        background: "rgba(0,0,0,0.7)",
-                        color: "white",
-                        padding: "4px 10px",
-                        borderRadius: 20,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4
-                      }}>
-                        <Navigation size={10} />
-                        {pg.distance.toFixed(1)} km
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ padding: 20 }}>
-                    <h3 style={{ 
-                      fontSize: "16px",
-                      fontWeight: "700",
-                      lineHeight: "1.3",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      wordBreak: "break-word",
-                      minWidth: 0,
-                      marginBottom: 4,
-                      color: "#111827"
-                    }}>
-                      {pg.pg_name}
-                    </h3>
-
-                    <div style={{ 
-                      display: "flex", 
-                      alignItems: "center", 
-                      gap: 6, 
-                      marginBottom: 12,
-                      color: "#4b5563" 
-                    }}>
-                      <MapPin size={14} />
-                      <span style={{ fontSize: 14 }}>
-                        {pg.area}
-                        {pg.city ? `, ${pg.city}` : ""}
-                      </span>
-                    </div>
-
-                    <div style={{ 
-                      display: "flex", 
-                      justifyContent: "space-between", 
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      overflow: "hidden",
-                      minWidth: 0,
-                      marginBottom: 12,
-                      background: "#f0f9ff",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: "1px solid #bae6fd"
-                    }}>
-                      <div>
-                        <div style={{ 
-                          fontSize: 16, 
-                          fontWeight: 600, 
-                          color: "#0369a1",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 4
-                        }}>
-                          
-                          {priceRange}
-                        </div>
-                        <div style={{ fontSize: 11, color: "#6b7280" }}>
-                          Price Range
-                        </div>
-                      </div>
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 13, color: "#4b5563" }}>
-                          Deposit
-                        </div>
-                        <div style={{ fontSize: 15, fontWeight: 600, color: "#111827" }}>
-                          ₹{formatCardPrice(depositAmount)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(3, 1fr)",
-                      gap: 6,
-                      marginBottom: 12
-                    }}>
-                      {cardQuickInfo.map((item, index) => (
-                        <div 
-                          key={index}
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            gap: 4,
-                            padding: 8,
-                            background: `${item.color}10`,
-                            borderRadius: 8,
-                            textAlign: "center",
-                            minWidth: 0,
-                            overflow: "hidden",
-                            fontSize: 12
-                          }}
-                        >
-                          <div style={{ color: item.color }}>
-                            {item.icon}
-                          </div>
-                          <div style={{ 
-                            fontSize: 10, 
-                            fontWeight: 500,
-                            color: "#4b5563"
-                          }}>
-                            {item.label}
-                          </div>
-                          <div style={{ 
-                            fontSize: 11, 
-                            fontWeight: 600,
-                            color: item.color
-                          }}>
-                            {item.value}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div style={{
-                      display: "flex",
-                      gap: 8,
-                      flexWrap: "wrap",
-                      width: "100%",
-                      marginTop: 12,
-                      paddingTop: 12,
-                      borderTop: "1px solid #e5e7eb"
-                    }}>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleBookNow(pg);
-                        }}
-                        style={{
-                          flex: 1,
-                          minWidth: 0,
-                          fontSize: isMobile ? "12px" : "14px",
-                          padding: isMobile ? "10px 6px" : "12px 16px",
-                          background: "#3b82f6",
-                          color: "white",
-                          border: "none",
-                          borderRadius: 10,
-                          fontWeight: 600,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 6,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          transition: "all 0.2s"
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = "#2563eb";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = "#3b82f6";
-                        }}
-                      >
-                        <MessageCircle size={isMobile ? 12 : 14} />
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Contact Owner</span>
-                      </button>
-                      
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCardClick(pg);
-                        }}
-                        style={{
-                          flex: 1,
-                          minWidth: 0,
-                          fontSize: isMobile ? "12px" : "14px",
-                          padding: isMobile ? "10px 6px" : "12px 16px",
-                          background: "#3b82f6",
-                          color: "white",
-                          border: "none",
-                          borderRadius: 10,
-                          fontWeight: 600,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 6,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          transition: "all 0.2s"
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = "#2563eb";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = "#3b82f6";
-                        }}
-                      >
-                        <Info size={isMobile ? 12 : 14} />
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Details</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {pgs.map((pg) => (
+              <PGPropertyCard
+                key={pg.id}
+                pg={pg}
+                onQuickView={handleQuickView}
+                onFavorite={toggleFavorite}
+                onContact={handleBookNow}
+                onCardClick={handleCardClick}
+                isFavorite={favorites.has(pg.id)}
+                isSelectedForCompare={selectedForCompare.has(pg.id)}
+                onSelectForCompare={toggleSelectForCompare}
+                compareMode={compareMode}
+                getImageUrl={getImageUrl}
+              />
+            ))}
           </div>
 
           {/* VIEW MORE BUTTON */}
@@ -4913,19 +3756,8 @@ function UserPGSearch() {
                   textAlign: "center", 
                   color: "#666",
                   borderTop: "1px solid #eee"
-                }}>
-                  
-                </div>
+                }} />
               )}
-              
-              <p style={{ 
-                marginTop: 15, 
-                fontSize: 14, 
-                color: "#666",
-                fontWeight: "500"
-              }}>
-                
-              </p>
             </div>
           )}
         </>
@@ -5001,6 +3833,49 @@ function UserPGSearch() {
             setCompareMode(false);
           }}
         />
+      )}
+
+      {/* Sticky Contact Button for Mobile */}
+      {isMobile && (
+        <div style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: "#fff",
+          padding: 12,
+          zIndex: 999,
+          boxShadow: "0 -4px 12px rgba(0,0,0,0.1)",
+          borderTop: "1px solid #e5e7eb"
+        }}>
+          <button
+            onClick={() => {
+              if (pgs.length > 0) {
+                handleBookNow(pgs[0]);
+              } else {
+                showNotification("No properties available to contact");
+              }
+            }}
+            style={{
+              width: "100%",
+              padding: "14px",
+              background: "#3b82f6",
+              color: "white",
+              border: "none",
+              borderRadius: 12,
+              fontSize: 16,
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8
+            }}
+          >
+            <MessageCircle size={18} />
+            Contact Owner
+          </button>
+        </div>
       )}
 
       <style>{`
