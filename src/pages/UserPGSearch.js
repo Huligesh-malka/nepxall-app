@@ -1708,7 +1708,9 @@ const HeroBanner = () => {
         <div style={{ background: "#10b981", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Verified</div>
         <div style={{ background: "#3b82f6", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Secure</div>
         <div style={{ background: "#8b5cf6", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Trusted</div>
-        <div style={{ background: "#ef4444", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Zero Brokerage</div>
+        <div style={{ background: "#f59e0b", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>
+  ✓ Zero Brokerage
+</div>
       </div>
     </div>
   );
