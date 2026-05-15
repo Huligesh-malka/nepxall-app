@@ -1,11 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import axios from "axios";
-import {
-  GoogleMap,
-  Marker,
-  InfoWindow,
-  useLoadScript
-} from "@react-google-maps/api";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
@@ -16,13 +10,6 @@ CONFIG
 --------------------------------------------------
 */
 const API_BASE_URL = "https://nepxall-backend.onrender.com";
-
-const mapContainerStyle = {
-  width: "100%",
-  height: "350px",
-  borderRadius: "15px",
-  marginBottom: "20px",
-};
 
 /*
 --------------------------------------------------
@@ -45,24 +32,70 @@ const sliderSettings = {
 COMPONENT
 --------------------------------------------------
 */
-const NearbyPGMap = () => {
+const GooglePropertySearch = () => {
 
   const [pgs, setPgs] = useState([]);
-  const [location, setLocation] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [selectedPG, setSelectedPG] = useState(null);
+  const [search, setSearch] = useState("");
 
   /*
   --------------------------------------------------
-  LOAD GOOGLE MAP
+  SEARCH GOOGLE PROPERTIES
   --------------------------------------------------
   */
 
-  const { isLoaded } = useLoadScript({
-    googleMapsApiKey:
-      process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
-  });
+  const searchProperties = async () => {
+
+    try {
+
+      if (!search) {
+
+        alert("Enter search");
+
+        return;
+
+      }
+
+      setLoading(true);
+
+      const res =
+        await axios.get(
+
+          `${API_BASE_URL}/api/nearby-pg/google-search?query=${search}`
+
+        );
+
+      console.log(
+        "Search Result:",
+        res.data
+      );
+
+      if (res.data.success) {
+
+        setPgs(res.data.pgs || []);
+
+      } else {
+
+        setError("No Properties Found");
+
+      }
+
+    } catch (error) {
+
+      console.log(error);
+
+      setError(
+        "Failed To Search Properties"
+      );
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
+  };
 
   /*
   --------------------------------------------------
@@ -106,126 +139,16 @@ const NearbyPGMap = () => {
 
   /*
   --------------------------------------------------
-  GET LOCATION + PGS
-  --------------------------------------------------
-  */
-
-  useEffect(() => {
-
-    if (!navigator.geolocation) {
-
-      setError("Geolocation not supported");
-      setLoading(false);
-      return;
-
-    }
-
-    navigator.geolocation.getCurrentPosition(
-
-      async (position) => {
-
-        try {
-
-          const lat =
-            position.coords.latitude;
-
-          const lng =
-            position.coords.longitude;
-
-          setLocation({ lat, lng });
-
-          const res =
-            await axios.get(
-
-              `${API_BASE_URL}/api/nearby-pg/nearby?lat=${lat}&lng=${lng}&radius=5`
-
-            );
-
-          console.log(
-            "Nearby PG Response:",
-            res.data
-          );
-
-          if (res.data.success) {
-
-            setPgs(res.data.pgs || []);
-
-          } else {
-
-            setError(
-              "No PGs found nearby"
-            );
-
-          }
-
-        } catch (err) {
-
-          console.log(
-            "Error fetching PGs:",
-            err
-          );
-
-          setError(
-            "Failed to load nearby PGs"
-          );
-
-        } finally {
-
-          setLoading(false);
-
-        }
-
-      },
-
-      (err) => {
-
-        console.log(
-          "Geolocation Error:",
-          err
-        );
-
-        setError(
-          "Location permission denied"
-        );
-
-        setLoading(false);
-
-      }
-
-    );
-
-  }, []);
-
-  /*
-  --------------------------------------------------
   LOADING
   --------------------------------------------------
   */
 
-  if (loading || !isLoaded) {
+  if (loading) {
 
     return (
 
       <div style={styles.center}>
-        <h2>Loading Nearby PGs...</h2>
-      </div>
-
-    );
-
-  }
-
-  /*
-  --------------------------------------------------
-  ERROR
-  --------------------------------------------------
-  */
-
-  if (error) {
-
-    return (
-
-      <div style={styles.center}>
-        <h2>{error}</h2>
+        <h2>Searching Properties...</h2>
       </div>
 
     );
@@ -243,96 +166,51 @@ const NearbyPGMap = () => {
     <div style={styles.container}>
 
       <h1 style={styles.heading}>
-        Nearby PGs
+        Google Property Search
       </h1>
 
-      {/* GOOGLE MAP */}
+      {/* SEARCH BAR */}
 
-      {location && (
+      <div style={styles.searchContainer}>
 
-        <GoogleMap
-          zoom={13}
-          center={location}
-          mapContainerStyle={mapContainerStyle}
+        <input
+          type="text"
+          placeholder="Search Bangalore PG, Hyderabad Coliving, Mumbai 1 BHK..."
+          value={search}
+          onChange={(e) =>
+            setSearch(e.target.value)
+          }
+          style={styles.searchInput}
+        />
+
+        <button
+          style={styles.searchBtn}
+          onClick={searchProperties}
         >
+          Search
+        </button>
 
-          {/* USER LOCATION */}
+      </div>
 
-          <Marker position={location} />
+      {/* ERROR */}
 
-          {/* PGS */}
+      {error && (
 
-          {pgs.map((pg) => (
-
-            <Marker
-              key={pg.id}
-              position={{
-                lat: Number(pg.latitude),
-                lng: Number(pg.longitude),
-              }}
-              onClick={() =>
-                setSelectedPG(pg)
-              }
-            />
-
-          ))}
-
-          {/* INFO WINDOW */}
-
-          {selectedPG && (
-
-            <InfoWindow
-              position={{
-                lat: Number(selectedPG.latitude),
-                lng: Number(selectedPG.longitude),
-              }}
-              onCloseClick={() =>
-                setSelectedPG(null)
-              }
-            >
-
-              <div style={{ maxWidth: 220 }}>
-
-                <h3>
-                  {selectedPG.pg_name || selectedPG.name}
-                </h3>
-
-                <p>
-                  {selectedPG.address}
-                </p>
-
-                <p>
-                  ₹ {
-                    selectedPG.price ||
-                    selectedPG.rent_amount ||
-                    "Contact"
-                  }
-                </p>
-
-                {selectedPG.phone && (
-
-                  <p>
-                    📞 {selectedPG.phone}
-                  </p>
-
-                )}
-
-              </div>
-
-            </InfoWindow>
-
-          )}
-
-        </GoogleMap>
+        <div style={styles.errorBox}>
+          <p>{error}</p>
+        </div>
 
       )}
 
       {/* PG LIST */}
 
-      {pgs.length === 0 ? (
+      {pgs.length === 0 && !error ? (
 
         <div style={styles.center}>
-          <h3>No Nearby PGs Found</h3>
+          <h3>Search for properties above</h3>
+          <p style={{ color: "#666", marginTop: 10 }}>
+            Try: "Bangalore PG", "Hyderabad Coliving", "Mumbai Apartments"
+          </p>
         </div>
 
       ) : (
@@ -430,7 +308,7 @@ const NearbyPGMap = () => {
             return (
 
               <div
-                key={pg.id}
+                key={pg.id || pg.place_id}
                 style={styles.card}
               >
 
@@ -447,7 +325,7 @@ const NearbyPGMap = () => {
 
                       <img
                         src={photo}
-                        alt={`PG ${index}`}
+                        alt={`Property ${index}`}
                         style={styles.image}
                         onError={(e) => {
 
@@ -471,19 +349,9 @@ const NearbyPGMap = () => {
 
                   <div style={{ marginBottom: 10 }}>
 
-                    {pg.source === "website" ? (
-
-                      <span style={styles.websiteBadge}>
-                        Verified by Nepxall
-                      </span>
-
-                    ) : (
-
-                      <span style={styles.googleBadge}>
-                        Google Nearby
-                      </span>
-
-                    )}
+                    <span style={styles.googleBadge}>
+                      Google Maps Property
+                    </span>
 
                   </div>
 
@@ -511,24 +379,11 @@ const NearbyPGMap = () => {
                     {pg.address}
                   </p>
 
-                  {/* DISTANCE */}
-
-                  {pg.distance && (
-
-                    <p style={styles.distance}>
-                      📍 {
-                        Number(pg.distance)
-                          .toFixed(1)
-                      } KM Away
-                    </p>
-
-                  )}
-
                   {/* RATING */}
 
                   {pg.rating && (
 
-                    <p>
+                    <p style={styles.rating}>
                       ⭐ {pg.rating}
                     </p>
 
@@ -554,7 +409,7 @@ const NearbyPGMap = () => {
                         handleAcceptProperty(pg)
                       }
                     >
-                      Accept
+                      Accept Property
                     </button>
 
                   </div>
@@ -605,6 +460,39 @@ const styles = {
     flexDirection: "column"
   },
 
+  searchContainer: {
+    display: "flex",
+    gap: 10,
+    marginBottom: 25
+  },
+
+  searchInput: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 10,
+    border: "1px solid #ddd",
+    fontSize: 16
+  },
+
+  searchBtn: {
+    background: "#0B5ED7",
+    color: "#fff",
+    border: "none",
+    padding: "0 25px",
+    borderRadius: 10,
+    cursor: "pointer",
+    fontWeight: "bold"
+  },
+
+  errorBox: {
+    background: "#FFE5E5",
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+    color: "#D32F2F",
+    textAlign: "center"
+  },
+
   grid: {
     display: "grid",
     gridTemplateColumns:
@@ -633,7 +521,8 @@ const styles = {
   name: {
     margin: 0,
     marginBottom: 10,
-    color: "#222"
+    color: "#222",
+    fontSize: 18
   },
 
   price: {
@@ -644,12 +533,15 @@ const styles = {
 
   address: {
     color: "#666",
-    marginBottom: 10
+    marginBottom: 10,
+    fontSize: 14,
+    lineHeight: 1.4
   },
 
-  distance: {
-    color: "#0B5ED7",
-    fontWeight: "600"
+  rating: {
+    color: "#FFA000",
+    fontWeight: "600",
+    marginTop: 5
   },
 
   phone: {
@@ -676,15 +568,6 @@ const styles = {
     width: "100%"
   },
 
-  websiteBadge: {
-    background: "#E8F5E9",
-    color: "#2E7D32",
-    padding: "5px 10px",
-    borderRadius: 20,
-    fontSize: 12,
-    fontWeight: "bold"
-  },
-
   googleBadge: {
     background: "#FFF3E0",
     color: "#EF6C00",
@@ -692,8 +575,8 @@ const styles = {
     borderRadius: 20,
     fontSize: 12,
     fontWeight: "bold"
-  },
+  }
 
 };
 
-export default NearbyPGMap;
+export default GooglePropertySearch;
