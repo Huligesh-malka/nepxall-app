@@ -1754,7 +1754,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
                   gap: 8,
                   color: "#166534"
                 }}>
-                  <Coins size={16} />
+                  
                   Price Details
                 </h4>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -4731,7 +4731,7 @@ function UserPGSearch() {
                           alignItems: "center",
                           gap: 4
                         }}>
-                          <Coins size={16} />
+                          
                           {priceRange}
                         </div>
                         <div style={{ fontSize: 11, color: "#6b7280" }}>
