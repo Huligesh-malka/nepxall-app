@@ -82,7 +82,11 @@ import {
   Gem,
   FileText,
   Clock as ClockIcon,
-  Headphones
+  Headphones,
+  Train,
+  Bus,
+  GraduationCap as GraduationIcon,
+  Briefcase as BriefcaseIcon
 } from "lucide-react";
 import api from "../api/api";
 
@@ -90,6 +94,43 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://nepxall-backen
 
 // Key for localStorage to track if location permission was asked
 const LOCATION_PERMISSION_ASKED_KEY = "nepxall_location_permission_asked";
+const LOCATION_AUTO_ASKED_KEY = "nepxall_location_auto_asked";
+
+// Popular Areas in Bangalore
+const popularAreas = [
+  { name: "Koramangala", icon: "📍", color: "#3b82f6" },
+  { name: "BTM Layout", icon: "📍", color: "#10b981" },
+  { name: "Jayanagar", icon: "📍", color: "#f59e0b" },
+  { name: "Electronic City", icon: "💻", color: "#8b5cf6" },
+  { name: "HSR Layout", icon: "📍", color: "#ec4899" },
+  { name: "Whitefield", icon: "🏢", color: "#06b6d4" },
+  { name: "Marathahalli", icon: "📍", color: "#ef4444" },
+  { name: "Bellandur", icon: "📍", color: "#14b8a6" },
+  { name: "Indiranagar", icon: "📍", color: "#f97316" },
+  { name: "MG Road", icon: "🏙️", color: "#a855f7" }
+];
+
+// Smart Tags for better conversion
+const smartTags = [
+  { name: "Near Metro", icon: <Train size={14} />, filter: "metro" },
+  { name: "Near College", icon: <GraduationIcon size={14} />, filter: "college" },
+  { name: "Near IT Park", icon: <BriefcaseIcon size={14} />, filter: "it_park" },
+  { name: "Near Bus Stop", icon: <Bus size={14} />, filter: "bus_stop" },
+  { name: "🔥 Near Mall", icon: "🛍️", filter: "mall" },
+  { name: "📚 Near University", icon: "🎓", filter: "university" },
+  { name: "🏢 Manyata Tech Park", icon: "💼", filter: "manyata" },
+  { name: "💻 Electronic City", icon: "🖥️", filter: "electronic_city" }
+];
+
+// Category sections for homepage
+const categorySections = [
+  { id: "nearby", title: "📍 PGs Near You", icon: <Navigation size={20} />, color: "#3b82f6" },
+  { id: "trending", title: "🔥 Trending PGs", icon: <TrendingUp size={20} />, color: "#ef4444" },
+  { id: "budget", title: "💰 Budget Friendly (Under ₹10k)", icon: <Coins size={20} />, color: "#10b981" },
+  { id: "luxury", title: "✨ Luxury Stays", icon: <Crown size={20} />, color: "#8b5cf6" },
+  { id: "coliving", title: "🤝 Co-Living Spaces", icon: <Users size={20} />, color: "#f59e0b" },
+  { id: "tolet", title: "🏠 To-Let Homes", icon: <Home size={20} />, color: "#ec4899" }
+];
 
 // ================= TRACKING FUNCTION =================
 const trackEvent = (eventName, data = {}) => {
@@ -941,7 +982,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
   
-  // Get photos array for auto-slider
   const photosArray = React.useMemo(() => {
     if (pg.photos && Array.isArray(pg.photos) && pg.photos.length > 0) {
       return pg.photos.filter(photo => photo && photo.trim() !== "");
@@ -951,7 +991,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   
   const hasMultipleImages = photosArray.length > 1;
   
-  // Auto image slider effect
   useEffect(() => {
     if (hasMultipleImages) {
       const interval = setInterval(() => {
@@ -974,7 +1013,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
     return "/no-image.png";
   }, [hasMultipleImages, photosArray, currentImage, pg.main_photo]);
   
-  // Get starting price
   const startingPrice = React.useMemo(() => {
     const range = getPriceRangeByType(pg);
     return range.min || getEffectiveRent(pg);
@@ -1070,7 +1108,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
           <Heart size={20} color="#ef4444" fill={isFavorite ? "#ef4444" : "none"} />
         </button>
         
-        {/* Image Slider */}
         <div style={{ position: "relative", height: 250, background: "#f3f4f6" }}>
           <img
             src={currentPhotoUrl}
@@ -1082,7 +1119,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
             }}
           />
           
-          {/* Image Slider Dots */}
           {hasMultipleImages && (
             <div style={{
               position: "absolute",
@@ -1121,7 +1157,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
             <span>{pg.area}{pg.city ? `, ${pg.city}` : ""}</span>
           </div>
           
-          {/* Starting Price */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 28, fontWeight: 700, color: "#1e3a5f" }}>
               ₹{formatPrice(startingPrice)} <span style={{ fontSize: 14, fontWeight: 400, color: "#6b7280" }}>onwards</span>
@@ -1129,7 +1164,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
             <div style={{ fontSize: 12, color: "#10b981", fontWeight: 500 }}>per month</div>
           </div>
           
-          {/* Beds Left */}
           <div style={{
             background: "#ecfdf5",
             color: "#059669",
@@ -1145,14 +1179,12 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
             🛏️ {pg.available_rooms || 0} Beds Left
           </div>
           
-          {/* Food Type */}
           {pg.food_available && (
             <div style={{ marginBottom: 16, fontSize: 14, color: "#374151" }}>
               🍽️ {pg.food_type === 'veg' ? 'Vegetarian' : pg.food_type === 'non-veg' ? 'Non-Vegetarian' : 'Veg & Non-Veg'}
             </div>
           )}
           
-          {/* Filling Fast */}
           {pg.available_rooms < 5 && pg.available_rooms > 0 && (
             <div style={{
               background: "#fef3c7",
@@ -1170,7 +1202,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
             </div>
           )}
           
-          {/* Verified + Response Time */}
           <div style={{
             display: "flex",
             alignItems: "center",
@@ -1191,7 +1222,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
             </span>
           </div>
           
-          {/* Action Buttons */}
           <div style={{ display: "flex", gap: 12 }}>
             <button
               onClick={handleCall}
@@ -1264,39 +1294,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
     </div>
   );
 };
-
-// Camera icon component
-const Camera = ({ size, color }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke={color || "currentColor"} 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round"
-  >
-    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-    <circle cx="12" cy="13" r="4" />
-  </svg>
-);
-
-// Wrench icon component
-const Wrench = ({ size, color }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke={color} 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round"
-  >
-    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-  </svg>
-);
 
 /* ================= COMPARE MODAL COMPONENT ================= */
 const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
@@ -1755,7 +1752,6 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
   const isMobile = window.innerWidth < 768;
   const [currentImage, setCurrentImage] = useState(0);
   
-  // Get photos array for auto-slider
   const photosArray = React.useMemo(() => {
     if (pg.photos && Array.isArray(pg.photos) && pg.photos.length > 0) {
       return pg.photos.filter(photo => photo && photo.trim() !== "");
@@ -1765,7 +1761,6 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
   
   const hasMultipleImages = photosArray.length > 1;
   
-  // Auto image slider effect
   useEffect(() => {
     if (hasMultipleImages && !compareMode) {
       const interval = setInterval(() => {
@@ -1788,16 +1783,13 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
     return "/no-image.png";
   }, [hasMultipleImages, photosArray, currentImage, pg.main_photo]);
   
-  // Get starting price (only minimum)
   const startingPrice = React.useMemo(() => {
     const range = getPriceRangeByType(pg);
     return range.min || getEffectiveRent(pg);
   }, [pg]);
   
-  // Check if filling fast (less than 5 beds left)
   const isFillingFast = pg.available_rooms < 5 && pg.available_rooms > 0;
   
-  // Get food type display
   const foodTypeDisplay = React.useMemo(() => {
     if (!pg.food_available) return null;
     if (pg.food_type === 'veg') return "🍽️ Veg";
@@ -1831,7 +1823,6 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
         e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,.08)";
       }}
     >
-      {/* Compare Mode Selector */}
       {compareMode && (
         <button
           onClick={(e) => onSelectForCompare(pg.id, e)}
@@ -1856,7 +1847,6 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
         </button>
       )}
       
-      {/* Quick View Button */}
       <button
         onClick={(e) => onQuickView(pg, e)}
         style={{
@@ -1881,7 +1871,6 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
         <Eye size={14} /> Quick View
       </button>
       
-      {/* Favorite Button */}
       <button
         onClick={(e) => onFavorite(pg.id, e)}
         style={{
@@ -1904,7 +1893,6 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
         <Heart size={18} color="#ef4444" fill={isFavorite ? "#ef4444" : "none"} />
       </button>
       
-      {/* Image Section with Auto Slider */}
       <div style={{ position: "relative" }}>
         <img
           src={currentPhotoUrl}
@@ -1916,7 +1904,6 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
           }}
         />
         
-        {/* Property Type Badge */}
         <div style={{
           position: "absolute",
           bottom: 12,
@@ -1931,7 +1918,6 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
           {pg.pg_category === "to_let" ? "To-Let" : pg.pg_category === "coliving" ? "Co-Living" : pg.pg_type ? pg.pg_type.charAt(0).toUpperCase() + pg.pg_type.slice(1) + " PG" : "PG"}
         </div>
         
-        {/* Distance Badge */}
         {pg.distance && (
           <div style={{
             position: "absolute",
@@ -1950,7 +1936,6 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
           </div>
         )}
         
-        {/* Image Slider Dots */}
         {hasMultipleImages && (
           <div style={{
             position: "absolute",
@@ -1975,7 +1960,6 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
         )}
       </div>
       
-      {/* Card Content - Simplified */}
       <div style={{ padding: 16 }}>
         <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: "#111827" }}>{pg.pg_name}</h3>
         
@@ -1984,7 +1968,6 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
           <span>{pg.area}{pg.city ? `, ${pg.city}` : ""}</span>
         </div>
         
-        {/* Starting Price - Simplified */}
         <div style={{ marginBottom: 10 }}>
           <div style={{ fontSize: 22, fontWeight: 700, color: "#1e3a5f", display: "flex", alignItems: "baseline", gap: 4 }}>
             ₹{formatPrice(startingPrice)} <span style={{ fontSize: 13, fontWeight: 400, color: "#6b7280" }}>onwards</span>
@@ -1992,7 +1975,6 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
           <div style={{ fontSize: 11, color: "#10b981", fontWeight: 500 }}>per month</div>
         </div>
         
-        {/* Available Beds Left */}
         <div style={{
           background: "#ecfdf5",
           color: "#059669",
@@ -2008,14 +1990,12 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
           🛏️ {pg.available_rooms || 0} Beds Left
         </div>
         
-        {/* Food Type */}
         {foodTypeDisplay && (
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12, fontSize: 13, color: "#374151" }}>
             {foodTypeDisplay}
           </div>
         )}
         
-        {/* Filling Fast Badge */}
         {isFillingFast && (
           <div style={{
             background: "#fef3c7",
@@ -2033,7 +2013,6 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
           </div>
         )}
         
-        {/* Verified + Response Time */}
         <div style={{
           display: "flex",
           alignItems: "center",
@@ -2053,7 +2032,6 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
           </span>
         </div>
         
-        {/* Contact Owner Button */}
         <button
           onClick={(e) => { e.stopPropagation(); onContact(pg); }}
           style={{
@@ -2087,11 +2065,18 @@ function UserPGSearch() {
 
   const [allPGs, setAllPGs] = useState([]);
   const [pgs, setPgs] = useState([]);
+  const [nearbyPGs, setNearbyPGs] = useState([]);
+  const [trendingPGs, setTrendingPGs] = useState([]);
+  const [budgetPGs, setBudgetPGs] = useState([]);
+  const [luxuryPGs, setLuxuryPGs] = useState([]);
+  const [colivingPGs, setColivingPGs] = useState([]);
+  const [toletPGs, setToletPGs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
+  const [userAddress, setUserAddress] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showBudgetFilter, setShowBudgetFilter] = useState(false);
   const [quickViewPG, setQuickViewPG] = useState(null);
@@ -2103,6 +2088,8 @@ function UserPGSearch() {
   const [compareMode, setCompareMode] = useState(false);
   const [selectedForCompare, setSelectedForCompare] = useState(new Set());
   const [showCompareModal, setShowCompareModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("nearby");
+  const [activeSmartTag, setActiveSmartTag] = useState(null);
 
   const [filters, setFilters] = useState({
     location: "",
@@ -2119,12 +2106,62 @@ function UserPGSearch() {
 
   const limit = 1000;
 
+  // Auto ask for location on first load
   useEffect(() => {
-    const permissionAsked = localStorage.getItem(LOCATION_PERMISSION_ASKED_KEY);
-    if (!permissionAsked) {
-      setShowLocationBanner(true);
+    const autoAsked = localStorage.getItem(LOCATION_AUTO_ASKED_KEY);
+    if (!autoAsked) {
+      // Auto ask for location after 1 second
+      const timer = setTimeout(() => {
+        if (!userLocation && !locationLoading) {
+          autoDetectLocation();
+        }
+      }, 1000);
+      return () => clearTimeout(timer);
     }
   }, []);
+
+  const autoDetectLocation = () => {
+    if (!navigator.geolocation) {
+      console.log("Geolocation not supported");
+      return;
+    }
+    
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const location = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        };
+        setUserLocation(location);
+        
+        // Try to get address from coordinates
+        try {
+          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.lat}&lon=${location.lng}&zoom=18&addressdetails=1`);
+          const data = await response.json();
+          if (data.address) {
+            const area = data.address.suburb || data.address.neighbourhood || data.address.city_district || "";
+            setUserAddress(area);
+            showNotification(`📍 Found you near ${area}`, false);
+          }
+        } catch (err) {
+          console.log("Could not get address");
+        }
+        
+        setFilters(prev => ({ ...prev, nearMe: true, sort: "distance" }));
+        localStorage.setItem(LOCATION_AUTO_ASKED_KEY, "true");
+        setLocationLoading(false);
+        setPage(1);
+        loadPGs(false);
+      },
+      (error) => {
+        console.log("Auto location error:", error);
+        localStorage.setItem(LOCATION_AUTO_ASKED_KEY, "true");
+        setLocationLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
 
   const handlePromoBannerClick = (banner) => {
     showNotification(`🎉 ${banner.title} - ${banner.description}`);
@@ -2196,6 +2233,31 @@ function UserPGSearch() {
         if (!isLoadMore || page === 1) {
           setAllPGs(processedData);
           setPgs(processedData);
+          
+          // Populate category sections
+          // Nearby PGs (already sorted by distance if location enabled)
+          const nearby = [...processedData].filter(p => p.distance && p.distance <= 5).slice(0, 8);
+          setNearbyPGs(nearby);
+          
+          // Trending PGs (with highest bookings or views - using available_rooms as proxy)
+          const trending = [...processedData].sort((a, b) => (b.available_rooms || 0) - (a.available_rooms || 0)).slice(0, 8);
+          setTrendingPGs(trending);
+          
+          // Budget friendly (under 10k)
+          const budget = [...processedData].filter(p => getEffectiveRent(p) < 10000).slice(0, 8);
+          setBudgetPGs(budget);
+          
+          // Luxury stays (above 25k)
+          const luxury = [...processedData].filter(p => getEffectiveRent(p) > 25000).slice(0, 8);
+          setLuxuryPGs(luxury);
+          
+          // Co-living spaces
+          const coliving = [...processedData].filter(p => p.pg_category === "coliving").slice(0, 8);
+          setColivingPGs(coliving);
+          
+          // To-Let homes
+          const tolet = [...processedData].filter(p => p.pg_category === "to_let").slice(0, 8);
+          setToletPGs(tolet);
         } else {
           setAllPGs(prev => [...prev, ...processedData]);
           setPgs(prev => [...prev, ...processedData]);
@@ -2272,6 +2334,40 @@ function UserPGSearch() {
     setTimeout(() => setNotification(null), 3000);
   };
 
+  const filterByArea = (area) => {
+    setFilters(prev => ({ ...prev, location: area, nearMe: false }));
+    showNotification(`📍 Showing PGs in ${area}`);
+    trackEvent("area_filter_click", { area });
+  };
+
+  const filterBySmartTag = (tag) => {
+    setActiveSmartTag(activeSmartTag === tag.name ? null : tag.name);
+    let filtered = [...allPGs];
+    
+    if (activeSmartTag !== tag.name) {
+      // Apply smart tag filtering based on area/keywords
+      const tagKeywords = {
+        "Near Metro": ["metro", "station", "railway"],
+        "Near College": ["college", "university", "campus"],
+        "Near IT Park": ["it park", "tech park", "software", "electronic city"],
+        "Near Bus Stop": ["bus stop", "bus stand"],
+        "🔥 Near Mall": ["mall", "shopping", "forum", "phoenix"],
+        "📚 Near University": ["university", "college", "campus"],
+        "🏢 Manyata Tech Park": ["manyata", "tech park"],
+        "💻 Electronic City": ["electronic city", "ecity"]
+      };
+      
+      const keywords = tagKeywords[tag.name] || [tag.name.toLowerCase()];
+      filtered = filtered.filter(pg => {
+        const searchText = `${pg.area || ""} ${pg.city || ""} ${pg.pg_name || ""}`.toLowerCase();
+        return keywords.some(keyword => searchText.includes(keyword));
+      });
+    }
+    
+    setPgs(filtered);
+    showNotification(activeSmartTag === tag.name ? `Showing all PGs` : `Showing ${tag.name} PGs`);
+  };
+
   const handleAllowLocation = () => {
     setLocationLoading(true);
     navigator.geolocation.getCurrentPosition(
@@ -2303,8 +2399,9 @@ function UserPGSearch() {
   const detectLocation = () => {
     setLocationLoading(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      async (pos) => {
+        const location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setUserLocation(location);
         setFilters(prev => ({ ...prev, nearMe: true, sort: "distance" }));
         showNotification("📍 Location detected! Showing nearby properties");
         setLocationLoading(false);
@@ -2312,7 +2409,7 @@ function UserPGSearch() {
         loadPGs(false);
       },
       () => {
-        showNotification("❌ Unable to get your location.", true);
+        showNotification("❌ Unable to get your location. Please check permissions.", true);
         setLocationLoading(false);
       }
     );
@@ -2364,6 +2461,7 @@ function UserPGSearch() {
     setFilters({
       location: "", minBudget: 0, maxBudget: 50000, food: false, ac: false, wifi: false, parking: false, sort: "", nearMe: false, foodType: ""
     });
+    setActiveSmartTag(null);
     setPgs(allPGs);
     showNotification("All filters reset");
   };
@@ -2458,6 +2556,61 @@ function UserPGSearch() {
 
   const clearCompareSelections = () => setSelectedForCompare(new Set());
 
+  // Function to render category section
+  const renderCategorySection = (section, pgsData) => {
+    if (pgsData.length === 0) return null;
+    
+    return (
+      <div key={section.id} style={{ marginBottom: 40 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+          <div style={{ color: section.color }}>{section.icon}</div>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827" }}>{section.title}</h2>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 24 }}>
+          {pgsData.slice(0, 4).map((pg) => (
+            <PGPropertyCard
+              key={pg.id}
+              pg={pg}
+              onQuickView={handleQuickView}
+              onFavorite={toggleFavorite}
+              onContact={handleBookNow}
+              onCardClick={handleCardClick}
+              isFavorite={favorites.has(pg.id)}
+              isSelectedForCompare={selectedForCompare.has(pg.id)}
+              onSelectForCompare={toggleSelectForCompare}
+              compareMode={compareMode}
+            />
+          ))}
+        </div>
+        {pgsData.length > 4 && (
+          <div style={{ textAlign: "center", marginTop: 20 }}>
+            <button
+              onClick={() => {
+                if (section.id === "nearby") setFilters(prev => ({ ...prev, nearMe: true }));
+                else if (section.id === "budget") setFilters(prev => ({ ...prev, minBudget: 0, maxBudget: 10000 }));
+                else if (section.id === "luxury") setFilters(prev => ({ ...prev, minBudget: 25000, maxBudget: 100000 }));
+                else if (section.id === "coliving") setFilters(prev => ({ ...prev, location: "coliving" }));
+                else if (section.id === "tolet") setFilters(prev => ({ ...prev, location: "to-let" }));
+              }}
+              style={{
+                padding: "10px 24px",
+                background: "transparent",
+                color: section.color,
+                border: `1px solid ${section.color}`,
+                borderRadius: 30,
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 500
+              }}
+            >
+              View All {section.title.split(" ").slice(1).join(" ")} →
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (authLoading) {
     return (
       <div style={{ textAlign: "center", paddingTop: 100 }}>
@@ -2489,28 +2642,68 @@ function UserPGSearch() {
       {/* Hero Banner */}
       <HeroBanner />
 
-      {/* Promotional Banners */}
-      <PromoBannerSlider onBannerClick={handlePromoBannerClick} />
-
-      {/* Location Info Bar */}
-      {userLocation && filters.nearMe && (
-        <div style={{ background: "#10b981", borderRadius: 12, padding: "12px 20px", marginBottom: 20, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+      {/* Location Info Bar - Shows current location */}
+      {userLocation && (
+        <div style={{
+          background: "linear-gradient(135deg, #f0f9ff, #e0f2fe)",
+          borderRadius: 16,
+          padding: "12px 20px",
+          marginBottom: 20,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 12,
+          border: "1px solid #bae6fd"
+        }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <Navigation size={20} color="white" />
-            <span style={{ color: "white", fontWeight: 600 }}>📍 Showing PGs near your location (within 5km)</span>
+            <Navigation size={20} color="#0284c7" />
+            <div>
+              <span style={{ fontWeight: 600, color: "#0369a1" }}>
+                📍 {userAddress ? `Near ${userAddress}` : "Your Location"}
+              </span>
+              <span style={{ fontSize: 12, color: "#0284c7", marginLeft: 8 }}>
+                Properties within 5km
+              </span>
+            </div>
           </div>
-          <button onClick={() => setFilters(prev => ({ ...prev, nearMe: false, sort: "" }))} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.2)", color: "white", border: "none", borderRadius: 8, cursor: "pointer" }}>
-            <X size={14} /> Clear
+          <button
+            onClick={detectLocation}
+            disabled={locationLoading}
+            style={{
+              padding: "8px 16px",
+              background: "#0284c7",
+              color: "white",
+              border: "none",
+              borderRadius: 10,
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 6
+            }}
+          >
+            <Navigation size={14} />
+            Refresh Location
           </button>
         </div>
       )}
+
+      {/* Promotional Banners */}
+      <PromoBannerSlider onBannerClick={handlePromoBannerClick} />
 
       {/* Filter Bar */}
       <div style={{ background: "#fff", borderRadius: 16, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.08)", marginBottom: 20, position: "sticky", top: 20, zIndex: 100 }}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 300, position: "relative" }}>
             <Search size={20} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
-            <input placeholder="Search by area, city or property name..." value={filters.location} onChange={(e) => setFilters({ ...filters, location: e.target.value })} style={{ width: "100%", padding: "14px 14px 14px 44px", border: "1px solid #e5e7eb", borderRadius: 12, fontSize: 15 }} />
+            <input 
+              placeholder="Search by area, city or property name..." 
+              value={filters.location} 
+              onChange={(e) => setFilters({ ...filters, location: e.target.value })} 
+              style={{ width: "100%", padding: "14px 14px 14px 44px", border: "1px solid #e5e7eb", borderRadius: 12, fontSize: 15 }} 
+            />
           </div>
           <button onClick={() => setShowBudgetFilter(true)} style={{ padding: "14px 20px", background: "#f3f4f6", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><Sliders size={18} /> Budget</button>
           <button onClick={() => setShowFilters(!showFilters)} style={{ padding: "14px 20px", background: showFilters ? "#3b82f6" : "#f3f4f6", color: showFilters ? "white" : "#374151", border: "none", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><Filter size={18} /> Filters</button>
@@ -2550,56 +2743,161 @@ function UserPGSearch() {
         )}
       </div>
 
-      {/* Results Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ fontSize: 24, fontWeight: 600 }}>{filters.nearMe ? "🏠 Properties Near You" : "🏠 Available Properties"}</h2>
-        <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} style={{ padding: "8px 16px", background: "#f3f4f6", border: "none", borderRadius: 8, cursor: "pointer" }}>↑ Top</button>
+      {/* Popular Areas Chips */}
+      <div style={{ marginBottom: 24 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: "#374151" }}>📍 Popular Areas in Bangalore</h3>
+        <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 10, scrollbarWidth: "thin" }}>
+          {popularAreas.map((area) => (
+            <button
+              key={area.name}
+              onClick={() => filterByArea(area.name)}
+              style={{
+                padding: "10px 18px",
+                borderRadius: 30,
+                border: filters.location === area.name ? `2px solid ${area.color}` : "1px solid #e5e7eb",
+                background: filters.location === area.name ? `${area.color}10` : "#fff",
+                color: filters.location === area.name ? area.color : "#374151",
+                whiteSpace: "nowrap",
+                cursor: "pointer",
+                fontWeight: 500,
+                fontSize: 14,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                transition: "all 0.2s"
+              }}
+            >
+              <span>{area.icon}</span> {area.name}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Property Cards Grid */}
-      {loading ? (
-        <div style={{ textAlign: "center", padding: "60px 20px" }}>
-          <div style={{ width: 40, height: 40, border: "4px solid #e5e7eb", borderTop: "4px solid #3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
-          <p>Loading properties...</p>
+      {/* Smart Tags Section */}
+      <div style={{ marginBottom: 32 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: "#374151" }}>🎯 Quick Filters</h3>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {smartTags.map((tag) => (
+            <button
+              key={tag.name}
+              onClick={() => filterBySmartTag(tag)}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 30,
+                background: activeSmartTag === tag.name ? "#3b82f6" : "#f3f4f6",
+                color: activeSmartTag === tag.name ? "white" : "#374151",
+                border: "none",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 500,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                transition: "all 0.2s"
+              }}
+            >
+              {typeof tag.icon === 'string' ? <span>{tag.icon}</span> : tag.icon}
+              {tag.name}
+            </button>
+          ))}
         </div>
+      </div>
+
+      {/* Category Sections - Like Airbnb/NoBroker */}
+      {!filters.location && !activeSmartTag && filters.minBudget === 0 && filters.maxBudget === 50000 && !filters.food && !filters.ac && !filters.wifi && !filters.parking && !filters.foodType ? (
+        <>
+          {userLocation && renderCategorySection(categorySections[0], nearbyPGs)}
+          {renderCategorySection(categorySections[1], trendingPGs)}
+          {renderCategorySection(categorySections[2], budgetPGs)}
+          {renderCategorySection(categorySections[3], luxuryPGs)}
+          {renderCategorySection(categorySections[4], colivingPGs)}
+          {renderCategorySection(categorySections[5], toletPGs)}
+          
+          {/* All Properties Section */}
+          <div style={{ marginBottom: 40 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+              <Home size={22} color="#3b82f6" />
+              <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827" }}>🏠 All Properties</h2>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 24 }}>
+              {pgs.slice(0, 8).map((pg) => (
+                <PGPropertyCard
+                  key={pg.id}
+                  pg={pg}
+                  onQuickView={handleQuickView}
+                  onFavorite={toggleFavorite}
+                  onContact={handleBookNow}
+                  onCardClick={handleCardClick}
+                  isFavorite={favorites.has(pg.id)}
+                  isSelectedForCompare={selectedForCompare.has(pg.id)}
+                  onSelectForCompare={toggleSelectForCompare}
+                  compareMode={compareMode}
+                />
+              ))}
+            </div>
+          </div>
+        </>
       ) : (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 24 }}>
-            {pgs.map((pg) => (
-              <PGPropertyCard
-                key={pg.id}
-                pg={pg}
-                onQuickView={handleQuickView}
-                onFavorite={toggleFavorite}
-                onContact={handleBookNow}
-                onCardClick={handleCardClick}
-                isFavorite={favorites.has(pg.id)}
-                isSelectedForCompare={selectedForCompare.has(pg.id)}
-                onSelectForCompare={toggleSelectForCompare}
-                compareMode={compareMode}
-              />
-            ))}
+          {/* Results Header when filters are active */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+            <h2 style={{ fontSize: 24, fontWeight: 600 }}>
+              {filters.nearMe ? "📍 Properties Near You" : 
+               filters.location ? `📍 Properties in ${filters.location}` : 
+               activeSmartTag ? `🎯 ${activeSmartTag}` :
+               "🏠 Search Results"}
+            </h2>
+            <button onClick={resetFilters} style={{ padding: "8px 16px", background: "#f3f4f6", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>
+              Clear Filters ✕
+            </button>
           </div>
-          {!loading && pgs.length > 0 && (
-            <div style={{ textAlign: "center", marginTop: 50 }}>
-              {hasMore ? (
-                <button onClick={loadMore} disabled={loadingMore} style={{ padding: "14px 28px", background: loadingMore ? "#9ca3af" : "#dc2626", color: "white", border: "none", borderRadius: 12, cursor: loadingMore ? "not-allowed" : "pointer", fontWeight: "bold", fontSize: 16 }}>
-                  {loadingMore ? "Loading more..." : "🔽 VIEW MORE PROPERTIES"}
-                </button>
-              ) : null}
+
+          {/* Property Cards Grid */}
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "60px 20px" }}>
+              <div style={{ width: 40, height: 40, border: "4px solid #e5e7eb", borderTop: "4px solid #3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+              <p>Loading properties...</p>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 24 }}>
+                {pgs.map((pg) => (
+                  <PGPropertyCard
+                    key={pg.id}
+                    pg={pg}
+                    onQuickView={handleQuickView}
+                    onFavorite={toggleFavorite}
+                    onContact={handleBookNow}
+                    onCardClick={handleCardClick}
+                    isFavorite={favorites.has(pg.id)}
+                    isSelectedForCompare={selectedForCompare.has(pg.id)}
+                    onSelectForCompare={toggleSelectForCompare}
+                    compareMode={compareMode}
+                  />
+                ))}
+              </div>
+              {!loading && pgs.length > 0 && (
+                <div style={{ textAlign: "center", marginTop: 50 }}>
+                  {hasMore ? (
+                    <button onClick={loadMore} disabled={loadingMore} style={{ padding: "14px 28px", background: loadingMore ? "#9ca3af" : "#dc2626", color: "white", border: "none", borderRadius: 12, cursor: loadingMore ? "not-allowed" : "pointer", fontWeight: "bold", fontSize: 16 }}>
+                      {loadingMore ? "Loading more..." : "🔽 VIEW MORE PROPERTIES"}
+                    </button>
+                  ) : null}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Empty State */}
+          {!loading && pgs.length === 0 && (
+            <div style={{ textAlign: "center", padding: "60px 20px", background: "#f9fafb", borderRadius: 16 }}>
+              <Search size={48} style={{ margin: "0 auto 16px", color: "#9ca3af" }} />
+              <p style={{ fontSize: 20, fontWeight: 600 }}>No properties found</p>
+              <p style={{ marginBottom: 24 }}>Try adjusting your filters or search terms</p>
+              <button onClick={resetFilters} style={{ padding: "12px 24px", background: "#3b82f6", color: "white", border: "none", borderRadius: 10, cursor: "pointer" }}>Reset All Filters</button>
             </div>
           )}
         </>
-      )}
-
-      {/* Empty State */}
-      {!loading && pgs.length === 0 && (
-        <div style={{ textAlign: "center", padding: "60px 20px", background: "#f9fafb", borderRadius: 16 }}>
-          <Search size={48} style={{ margin: "0 auto 16px", color: "#9ca3af" }} />
-          <p style={{ fontSize: 20, fontWeight: 600 }}>No properties found</p>
-          <p style={{ marginBottom: 24 }}>Try adjusting your filters or search terms</p>
-          <button onClick={resetFilters} style={{ padding: "12px 24px", background: "#3b82f6", color: "white", border: "none", borderRadius: 10, cursor: "pointer" }}>Reset All Filters</button>
-        </div>
       )}
 
       {/* Modals */}
@@ -2621,6 +2919,19 @@ function UserPGSearch() {
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        
+        /* Custom scrollbar for chips */
+        div::-webkit-scrollbar {
+          height: 4px;
+        }
+        div::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+        div::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 10px;
+        }
       `}</style>
     </div>
   );
