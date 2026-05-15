@@ -123,7 +123,7 @@ const popularAreas = [
   { name: "MG Road", icon: "🏙️", color: "#a855f7" }
 ];
 
-// Quick Filters - Easy access filters (removed budget 10k)
+// Quick Filters - Easy access filters
 const quickFilters = [
   { id: "near_me", name: "📍 Near Me", icon: <Navigation size={16} />, type: "location" },
   { id: "ac_room", name: "❄️ AC Room", icon: <Snowflake size={16} />, type: "amenity", field: "ac_available" },
@@ -132,11 +132,11 @@ const quickFilters = [
   { id: "veg_food", name: "🥬 Veg Food", icon: <Leaf size={16} />, type: "food", value: "veg" },
 ];
 
-// Category sections for homepage - now only PG, Co-Living, To-Let
+// Category sections for homepage - CLEAN MODERN UI WITHOUT COUNTS
 const categorySections = [
-  { id: "pg", title: "🏘️ PG Accommodations", icon: <Home size={22} />, color: "#3b82f6", type: "pg" },
-  { id: "coliving", title: "🤝 Co-Living Spaces", icon: <Users size={22} />, color: "#8b5cf6", type: "coliving" },
-  { id: "tolet", title: "🏠 To-Let Homes", icon: <Building2 size={22} />, color: "#10b981", type: "to_let" }
+  { id: "pg", title: "🏠 PG", icon: <Home size={22} />, color: "#3b82f6", type: "pg" },
+  { id: "coliving", title: "🤝 Coliving", icon: <Users size={22} />, color: "#8b5cf6", type: "coliving" },
+  { id: "tolet", title: "🔑 To-Let", icon: <Building2 size={22} />, color: "#10b981", type: "to_let" }
 ];
 
 // ================= TRACKING FUNCTION =================
@@ -2549,6 +2549,7 @@ function UserPGSearch() {
     setShowCompareModal(true);
   };
 
+  // CLEAN MODERN RENDER FUNCTION - NO COUNTS DISPLAYED
   const renderCategorySection = (section, properties) => {
     if (properties.length === 0) return null;
     
@@ -2571,21 +2572,34 @@ function UserPGSearch() {
             }}>
               {section.icon}
             </div>
-            <div>
-              <h2 style={{ fontSize: 26, fontWeight: 700, color: "#111827", margin: 0 }}>
-                {section.title}
-              </h2>
-              <p style={{ fontSize: 14, color: "#6b7280", margin: "4px 0 0" }}>
-                {properties.length} {section.title.split(' ')[1]} available
-              </p>
-            </div>
+            <h2 style={{ fontSize: 24, fontWeight: 700, color: "#111827", margin: 0 }}>
+              {section.title}
+            </h2>
           </div>
+          <button
+            onClick={() => {
+              setFilters(prev => ({ ...prev, location: section.type === "pg" ? "PG" : section.type === "coliving" ? "Coliving" : "To-Let" }));
+            }}
+            style={{
+              padding: "8px 20px",
+              background: "transparent",
+              color: section.color,
+              border: `1.5px solid ${section.color}`,
+              borderRadius: 30,
+              cursor: "pointer",
+              fontSize: 13,
+              fontWeight: 500,
+              transition: "all 0.2s"
+            }}
+          >
+            View All →
+          </button>
         </div>
         
         <div style={{ 
           display: "grid", 
-          gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", 
-          gap: 28 
+          gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", 
+          gap: 24 
         }}>
           {properties.slice(0, 6).map((pg) => (
             <PGPropertyCard
@@ -2602,30 +2616,6 @@ function UserPGSearch() {
             />
           ))}
         </div>
-        
-        {properties.length > 6 && (
-          <div style={{ textAlign: "center", marginTop: 28 }}>
-            <button
-              onClick={() => {
-                // Show all properties of this category by applying category filter
-                setFilters(prev => ({ ...prev, location: section.type === "pg" ? "PG" : section.type === "coliving" ? "Co-Living" : "To-Let" }));
-              }}
-              style={{
-                padding: "12px 28px",
-                background: "transparent",
-                color: section.color,
-                border: `2px solid ${section.color}`,
-                borderRadius: 40,
-                cursor: "pointer",
-                fontSize: 15,
-                fontWeight: 600,
-                transition: "all 0.2s"
-              }}
-            >
-              View All {properties.length} {section.title.split(' ')[1]} →
-            </button>
-          </div>
-        )}
       </div>
     );
   };
@@ -2747,7 +2737,7 @@ function UserPGSearch() {
 
       {/* Popular Areas Chips */}
       <div style={{ marginBottom: 28 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: "#374151" }}>📍 Popular Areas in Bangalore</h3>
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: "#374151" }}>📍 Popular Areas</h3>
         <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 10, scrollbarWidth: "thin" }}>
           {popularAreas.map((area) => (
             <button
@@ -2858,7 +2848,7 @@ function UserPGSearch() {
         )}
       </div>
 
-      {/* Category Sections - PG, Co-Living, To-Let */}
+      {/* Category Sections - PG, Coliving, To-Let - CLEAN MODERN UI */}
       {loading ? (
         <div style={{ textAlign: "center", padding: "80px 20px" }}>
           <div style={{ width: 50, height: 50, border: "4px solid #e5e7eb", borderTop: "4px solid #3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 20px" }} />
@@ -2869,7 +2859,7 @@ function UserPGSearch() {
           {/* PG Section */}
           {pgProperties.length > 0 && renderCategorySection(categorySections[0], pgProperties)}
           
-          {/* Co-Living Section */}
+          {/* Coliving Section */}
           {colivingProperties.length > 0 && renderCategorySection(categorySections[1], colivingProperties)}
           
           {/* To-Let Section */}
