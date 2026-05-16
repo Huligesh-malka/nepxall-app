@@ -974,7 +974,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
   );
 };
 
-/* ================= QUICK VIEW MODAL COMPONENT (SIMPLIFIED) ================= */
+/* ================= QUICK VIEW MODAL COMPONENT ================= */
 const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
@@ -1161,28 +1161,33 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
             <div style={{ fontSize: 12, color: "#10b981", fontWeight: 500 }}>per month</div>
           </div>
           
-          <div style={{
-            background: "#ecfdf5",
-            color: "#059669",
-            padding: "8px 12px",
-            borderRadius: 12,
-            fontSize: 14,
-            fontWeight: "600",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            marginBottom: 16
-          }}>
-            🛏️ {pg.available_rooms || 0} Beds Left
-          </div>
+          {/* PG ONLY: Beds Left */}
+          {pg.pg_category !== "to_let" && (
+            <div style={{
+              background: "#ecfdf5",
+              color: "#059669",
+              padding: "8px 12px",
+              borderRadius: 12,
+              fontSize: 14,
+              fontWeight: "600",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 16
+            }}>
+              🛏️ {pg.available_rooms || 0} Beds Left
+            </div>
+          )}
           
-          {pg.food_available && (
+          {/* PG ONLY: Food Available */}
+          {pg.pg_category === "pg" && pg.food_available && (
             <div style={{ marginBottom: 16, fontSize: 14, color: "#374151" }}>
               🍽️ {pg.food_type === 'veg' ? 'Vegetarian' : pg.food_type === 'non-veg' ? 'Non-Vegetarian' : 'Veg & Non-Veg'}
             </div>
           )}
           
-          {pg.available_rooms < 5 && pg.available_rooms > 0 && (
+          {/* PG ONLY: Filling Fast */}
+          {pg.pg_category !== "to_let" && pg.available_rooms < 5 && pg.available_rooms > 0 && (
             <div style={{
               background: "#fef3c7",
               color: "#d97706",
@@ -1196,6 +1201,22 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
               marginBottom: 16
             }}>
               🔥 Filling Fast
+            </div>
+          )}
+          
+          {/* TO-LET BADGES */}
+          {pg.pg_category === "to_let" && (
+            <div style={{
+              display: "flex",
+              gap: "8px",
+              flexWrap: "wrap",
+              marginBottom: 16
+            }}>
+              {pg.bhk_type && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🏠 {pg.bhk_type}</span>}
+              {pg.furnishing_type && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🛋️ {pg.furnishing_type}</span>}
+              {pg.family_allowed && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>👨‍👩‍👧 Family</span>}
+              {pg.parking_available && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🚗 Parking</span>}
+              <span style={{ background: "#10b98120", color: "#10b981", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>✔ Zero Brokerage</span>
             </div>
           )}
           
@@ -1214,11 +1235,10 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
                 Verified
               </span>
             )}
-           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-  <Home size={14} color="#10b981" />
-  Zero Brokerage
-</span>
-            
+            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <Home size={14} color="#10b981" />
+              Zero Brokerage
+            </span>
           </div>
           
           <div style={{ display: "flex", gap: 12 }}>
@@ -1749,7 +1769,7 @@ const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
   );
 };
 
-/* ================= UPDATED PG CARD COMPONENT WITH AUTO IMAGE SLIDER ================= */
+/* ================= UPDATED PG CARD COMPONENT WITH SEPARATE UI FOR PG AND TO-LET ================= */
 const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, isFavorite, isSelectedForCompare, onSelectForCompare, compareMode }) => {
   const isMobile = window.innerWidth < 768;
   const [currentImage, setCurrentImage] = useState(0);
@@ -1799,6 +1819,20 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
     if (pg.food_type === 'both') return "🍽️ Veg & Non-Veg";
     return "🍽️ Food Available";
   }, [pg.food_available, pg.food_type]);
+  
+  const getBHKDisplay = () => {
+    if (pg.bhk_type) return pg.bhk_type;
+    if (pg.price_2bhk > 0) return "2 BHK";
+    if (pg.price_3bhk > 0) return "3 BHK";
+    if (pg.price_1bhk > 0) return "1 BHK";
+    if (pg.price_4bhk > 0) return "4 BHK";
+    return "Apartment";
+  };
+  
+  const getAreaDisplay = () => {
+    if (pg.sqft_area) return `${pg.sqft_area} sqft`;
+    return "Spacious";
+  };
   
   return (
     <div
@@ -1970,49 +2004,105 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
           <span>{pg.area}{pg.city ? `, ${pg.city}` : ""}</span>
         </div>
         
-        <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 22, fontWeight: 700, color: "#1e3a5f", display: "flex", alignItems: "baseline", gap: 4 }}>
-            ₹{formatPrice(startingPrice)} <span style={{ fontSize: 13, fontWeight: 400, color: "#6b7280" }}>onwards</span>
-          </div>
-          <div style={{ fontSize: 11, color: "#10b981", fontWeight: 500 }}>per month</div>
-        </div>
-        
-        <div style={{
-          background: "#ecfdf5",
-          color: "#059669",
-          padding: "6px 12px",
-          borderRadius: 20,
-          fontSize: 12,
-          fontWeight: "600",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          marginBottom: 10
-        }}>
-          🛏️ {pg.available_rooms || 0} Beds Left
-        </div>
-        
-        {foodTypeDisplay && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12, fontSize: 13, color: "#374151" }}>
-            {foodTypeDisplay}
-          </div>
+        {/* ========== PG UI ========== */}
+        {pg.pg_category !== "to_let" && (
+          <>
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: "#1e3a5f", display: "flex", alignItems: "baseline", gap: 4 }}>
+                ₹{formatPrice(startingPrice)} <span style={{ fontSize: 13, fontWeight: 400, color: "#6b7280" }}>onwards</span>
+              </div>
+              <div style={{ fontSize: 11, color: "#10b981", fontWeight: 500 }}>per month</div>
+            </div>
+            
+            {pg.pg_category !== "to_let" && (
+              <div style={{
+                background: "#ecfdf5",
+                color: "#059669",
+                padding: "6px 12px",
+                borderRadius: 20,
+                fontSize: 12,
+                fontWeight: "600",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: 10
+              }}>
+                🛏️ {pg.available_rooms || 0} Beds Left
+              </div>
+            )}
+            
+            {pg.pg_category === "pg" && foodTypeDisplay && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12, fontSize: 13, color: "#374151" }}>
+                {foodTypeDisplay}
+              </div>
+            )}
+            
+            {pg.pg_category !== "to_let" && isFillingFast && (
+              <div style={{
+                background: "#fef3c7",
+                color: "#d97706",
+                padding: "4px 10px",
+                borderRadius: 16,
+                fontSize: 11,
+                fontWeight: 600,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                marginBottom: 12
+              }}>
+                🔥 Filling Fast
+              </div>
+            )}
+          </>
         )}
         
-        {isFillingFast && (
-          <div style={{
-            background: "#fef3c7",
-            color: "#d97706",
-            padding: "4px 10px",
-            borderRadius: 16,
-            fontSize: 11,
-            fontWeight: 600,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 4,
-            marginBottom: 12
-          }}>
-            🔥 Filling Fast
-          </div>
+        {/* ========== TO-LET UI ========== */}
+        {pg.pg_category === "to_let" && (
+          <>
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: "#1e3a5f", display: "flex", alignItems: "baseline", gap: 4 }}>
+                ₹{formatPrice(startingPrice)} <span style={{ fontSize: 13, fontWeight: 400, color: "#6b7280" }}>/month</span>
+              </div>
+            </div>
+            
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 14, color: "#374151", marginBottom: 4 }}>
+                {getBHKDisplay()} • {getAreaDisplay()}
+              </div>
+            </div>
+            
+            {/* To-Let Badges */}
+            <div style={{
+              display: "flex",
+              gap: "8px",
+              flexWrap: "wrap",
+              marginBottom: 12
+            }}>
+              {pg.bhk_type && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🏠 {pg.bhk_type}</span>}
+              {pg.furnishing_type && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🛋️ {pg.furnishing_type}</span>}
+              {pg.family_allowed && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>👨‍👩‍👧 Family</span>}
+              {pg.parking_available && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🚗 Parking</span>}
+              <span style={{ background: "#10b98120", color: "#10b981", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>✔ Zero Brokerage</span>
+            </div>
+            
+            {/* Ready to Move Badge */}
+            {pg.ready_to_move && (
+              <div style={{
+                background: "#dbeafe",
+                color: "#1e40af",
+                padding: "4px 10px",
+                borderRadius: 16,
+                fontSize: 11,
+                fontWeight: 600,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                marginBottom: 12
+              }}>
+                ✓ Ready to Move
+              </div>
+            )}
+          </>
         )}
         
         <div style={{
@@ -2030,11 +2120,9 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
             </span>
           )}
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-  <Home size={14} color="#10b981" />
-Zero Brokerage by Nepxall
-
-</span>
-          
+            <Home size={14} color="#10b981" />
+            Zero Brokerage by Nepxall
+          </span>
         </div>
         
         <button
@@ -2218,6 +2306,11 @@ function UserPGSearch() {
       available_rooms: Number(pg.available_rooms) || 0,
       total_rooms: Number(pg.total_rooms) || 0,
       min_stay_months: Number(pg.min_stay_months) || 0,
+      ready_to_move: pg.ready_to_move === true || pg.ready_to_move === 1 || pg.ready_to_move === "true",
+      family_allowed: pg.family_allowed === true || pg.family_allowed === 1 || pg.family_allowed === "true",
+      sqft_area: pg.sqft_area || null,
+      bhk_type: pg.bhk_type || null,
+      furnishing_type: pg.furnishing_type || null,
       food_available: pg.food_available === true || pg.food_available === 1 || pg.food_available === "true",
       ac_available: pg.ac_available === true || pg.ac_available === 1 || pg.ac_available === "true",
       wifi_available: pg.wifi_available === true || pg.wifi_available === 1 || pg.wifi_available === "true",
