@@ -228,7 +228,7 @@ const GooglePropertySearch = () => {
             property: {
 
               pg_name:
-                "Facebook Imported Property",
+                "Facebook Property",  // Changed from "Facebook Imported Property"
 
               address:
                 "Bengaluru",
