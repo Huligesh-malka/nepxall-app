@@ -244,7 +244,7 @@ const ModernAmenities = ({ facilities }) => {
       {Object.entries(grouped).map(([category, items]) => (
         <div key={category} style={modernAmenitiesStyles.categoryGroup}>
           <div style={modernAmenitiesStyles.categoryHeader}>
-            <span style={modernAmenitiesStyles.categoryIcon}>{categoryIcons[category] || "✨"}</span>
+            <span style={modernAmenitiesStyles.categoryIcon}>{categoryIcons[category] || ""}</span>
             <h4 style={modernAmenitiesStyles.categoryTitle}>{category}</h4>
             <span style={modernAmenitiesStyles.categoryCount}>{items.length}</span>
           </div>
