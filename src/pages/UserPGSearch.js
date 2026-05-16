@@ -975,6 +975,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
 };
 
 /* ================= QUICK VIEW MODAL COMPONENT (FIXED) ================= */
+/* ================= QUICK VIEW MODAL COMPONENT (FIXED) ================= */
 const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
