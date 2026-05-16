@@ -192,14 +192,12 @@ const Section = ({ title, icon, children, badgeCount }) =>
     </div>
   ) : null;
 
-const FacilityItem = ({ icon, label, active = true, categoryColor }) => (
+const FacilityItem = ({ icon, label, active = true }) => (
   <div 
     style={{
       ...modernStyles.facilityItem,
-      background: active 
-        ? `linear-gradient(135deg, ${categoryColor || '#f0f9ff'}10, white)` 
-        : '#f9fafb',
-      borderLeft: `4px solid ${categoryColor || '#667eea'}`,
+      background: active ? '#f8fafc' : '#f9fafb',
+      borderLeft: `4px solid #667eea`,
     }}
   >
     <span style={modernStyles.facilityIcon}>{icon}</span>
@@ -560,11 +558,9 @@ const HighlightCategoryButton = ({
   <button
     style={{
       ...modernStyles.highlightCategoryBtn,
-      background: isActive 
-        ? `linear-gradient(135deg, ${color}, ${color}dd)` 
-        : 'white',
+      background: isActive ? '#667eea' : 'white',
       color: isActive ? 'white' : '#374151',
-      boxShadow: isActive ? `0 4px 15px ${color}40` : '0 2px 10px rgba(0,0,0,0.05)',
+      boxShadow: isActive ? `0 4px 15px #667eea40` : '0 2px 10px rgba(0,0,0,0.05)',
       ...(count === 0 ? modernStyles.highlightCategoryBtnEmpty : {})
     }}
     onClick={onClick}
@@ -582,13 +578,13 @@ const HighlightItem = ({ name, type, category, icon, onMapView, coordinates, col
   <div 
     style={{
       ...modernStyles.highlightItem,
-      borderLeft: `4px solid ${color}`
+      borderLeft: `4px solid #667eea`
     }}
     onClick={onMapView}
   >
     <div style={{
       ...modernStyles.highlightIconContainer,
-      background: `linear-gradient(135deg, ${color}, ${color}dd)`
+      background: '#667eea'
     }}>
       <span style={modernStyles.highlightIcon}>{icon}</span>
     </div>
@@ -599,7 +595,7 @@ const HighlightItem = ({ name, type, category, icon, onMapView, coordinates, col
     <button 
       style={{
         ...modernStyles.viewOnMapButton,
-        background: `linear-gradient(135deg, ${color}, ${color}dd)`
+        background: '#667eea'
       }} 
       onClick={(e) => {
         e.stopPropagation();
@@ -773,8 +769,6 @@ const NearbyHighlightsPanel = ({
     ? highlights 
     : highlights.filter(h => h.category === selectedCategory);
 
-  const selectedColor = highlightCategories.find(c => c.id === selectedCategory)?.color || '#667eea';
-
   return (
     <div style={modernStyles.highlightsPanel}>
       <div style={modernStyles.categoriesPills}>
@@ -794,7 +788,7 @@ const NearbyHighlightsPanel = ({
               count={count}
               isActive={selectedCategory === category.id}
               onClick={() => onCategoryChange(category.id)}
-              color={category.color}
+              color="#667eea"
             />
           );
         })}
@@ -805,7 +799,7 @@ const NearbyHighlightsPanel = ({
           <h4 style={modernStyles.highlightsListTitle}>
             <span style={{
               ...modernStyles.categoryIndicator,
-              background: selectedColor
+              background: '#667eea'
             }}></span>
             {selectedCategory === "all" 
               ? "All Nearby Places" 
@@ -825,7 +819,7 @@ const NearbyHighlightsPanel = ({
               icon={highlight.icon}
               coordinates={highlight.coordinates}
               onMapView={() => onViewOnMap(highlight)}
-              color={highlightCategories.find(c => c.id === highlight.category)?.color || '#667eea'}
+              color="#667eea"
             />
           ))}
         </div>
@@ -897,32 +891,22 @@ export default function PGDetails() {
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState(null);
 
-  const [selectedFacilityCategory, setSelectedFacilityCategory] = useState("all");
   const [selectedHighlightCategory, setSelectedHighlightCategory] = useState("all");
   const [mapZoom, setMapZoom] = useState(15);
   const [mapCenter, setMapCenter] = useState([0, 0]);
 
-  // Color themes
+  // Color themes - single color for all
   const highlightCategories = [
     { id: "all", label: "All", icon: "📍", color: "#667eea" },
-    { id: "education", label: "Education", icon: "🎓", color: "#8b5cf6" },
-    { id: "transport", label: "Transport", icon: "🚌", color: "#3b82f6" },
-    { id: "healthcare", label: "Healthcare", icon: "🏥", color: "#ef4444" },
-    { id: "shopping", label: "Shopping", icon: "🛒", color: "#f59e0b" },
-    { id: "finance", label: "Finance", icon: "🏦", color: "#10b981" },
-    { id: "recreation", label: "Recreation", icon: "🏃", color: "#ec4899" },
-    { id: "worship", label: "Worship", icon: "🛐", color: "#8b5cf6" },
-    { id: "safety", label: "Safety", icon: "👮", color: "#6366f1" },
-    { id: "food", label: "Food", icon: "🍽️", color: "#f97316" }
-  ];
-
-  const facilityCategories = [
-    { id: "all", label: "All", icon: "🏢", color: "#667eea" },
-    { id: "room", label: "Room", icon: "🛏️", color: "#8b5cf6" },
-    { id: "kitchen", label: "Kitchen", icon: "🍳", color: "#f59e0b" },
-    { id: "safety", label: "Safety", icon: "🛡️", color: "#ef4444" },
-    { id: "common", label: "Common", icon: "🏃", color: "#10b981" },
-    { id: "basic", label: "Basic", icon: "💧", color: "#3b82f6" },
+    { id: "education", label: "Education", icon: "🎓", color: "#667eea" },
+    { id: "transport", label: "Transport", icon: "🚌", color: "#667eea" },
+    { id: "healthcare", label: "Healthcare", icon: "🏥", color: "#667eea" },
+    { id: "shopping", label: "Shopping", icon: "🛒", color: "#667eea" },
+    { id: "finance", label: "Finance", icon: "🏦", color: "#667eea" },
+    { id: "recreation", label: "Recreation", icon: "🏃", color: "#667eea" },
+    { id: "worship", label: "Worship", icon: "🛐", color: "#667eea" },
+    { id: "safety", label: "Safety", icon: "👮", color: "#667eea" },
+    { id: "food", label: "Food", icon: "🍽️", color: "#667eea" }
   ];
 
   const typeToCategory = {
@@ -1252,120 +1236,71 @@ export default function PGDetails() {
     }
   };
 
+  // Get all facilities (consolidated list)
   const getAllFacilities = () => {
-    const commonFacilities = [
-      { key: "wifi_available", label: "Wi-Fi / Internet", icon: "📶", category: "basic" },
-      { key: "parking_available", label: "Car Parking", icon: "🚗", category: "safety" },
-      { key: "bike_parking", label: "Bike Parking", icon: "🏍️", category: "safety" },
-      { key: "cctv", label: "CCTV Surveillance", icon: "📹", category: "safety" },
-      { key: "security_guard", label: "Security Guard", icon: "🛡️", category: "safety" },
-      { key: "power_backup", label: "Power Backup", icon: "🔋", category: "basic" },
-      { key: "water_24x7", label: "24×7 Water Supply", icon: "💦", category: "basic" },
-      { key: "lift_elevator", label: "Lift / Elevator", icon: "⬆️", category: "common" },
-      { key: "fire_safety", label: "Fire Safety System", icon: "🔥", category: "safety" },
-    ];
-
-    const pgFacilities = [
-      { key: "cupboard_available", label: "Cupboard / Wardrobe", icon: "👔", category: "room" },
-      { key: "table_chair_available", label: "Study Table & Chair", icon: "💺", category: "room" },
-      { key: "dining_table_available", label: "Dining Table", icon: "🍽️", category: "kitchen" },
-      { key: "attached_bathroom", label: "Attached Bathroom", icon: "🚽", category: "room" },
-      { key: "balcony_available", label: "Balcony", icon: "🌿", category: "room" },
-      { key: "wall_mounted_clothes_hook", label: "Wall-Mounted Clothes Hook", icon: "🪝", category: "room" },
-      { key: "bed_with_mattress", label: "Bed with Mattress", icon: "🛏️", category: "room" },
-      { key: "fan_light", label: "Fan & Light", icon: "💡", category: "room" },
-      { key: "kitchen_room", label: "Kitchen Room", icon: "🍳", category: "kitchen" },
-      { key: "ac_available", label: "Air Conditioner", icon: "❄️", category: "room" },
-      { key: "tv", label: "Television", icon: "📺", category: "common" },
-      { key: "laundry_available", label: "Laundry Service", icon: "🧺", category: "basic" },
-      { key: "washing_machine", label: "Washing Machine", icon: "🧼", category: "basic" },
-      { key: "refrigerator", label: "Refrigerator", icon: "🧊", category: "kitchen" },
-      { key: "microwave", label: "Microwave", icon: "🍳", category: "kitchen" },
-      { key: "geyser", label: "Geyser", icon: "🚿", category: "room" },
-      { key: "gym", label: "Gym / Fitness", icon: "🏋️", category: "common" },
-      { key: "housekeeping", label: "Housekeeping", icon: "🧹", category: "basic" },
-      { key: "water_purifier", label: "Water Purifier (RO)", icon: "💧", category: "basic" },
-      { key: "study_room", label: "Study Room", icon: "📚", category: "common" },
-      { key: "common_tv_lounge", label: "Common TV Lounge", icon: "📺", category: "common" },
-      { key: "balcony_open_space", label: "Balcony / Open Space", icon: "🌿", category: "common" },
-    ];
-
-    const toLetFacilities = [
-      { key: "ac_available", label: "Air Conditioner", icon: "❄️", category: "room" },
-      { key: "geyser", label: "Geyser", icon: "🚿", category: "room" },
-      { key: "balcony_available", label: "Balcony", icon: "🌿", category: "room" },
-      { key: "cupboard_available", label: "Cupboard / Wardrobe", icon: "👔", category: "room" },
-      { key: "refrigerator", label: "Refrigerator", icon: "🧊", category: "kitchen" },
-      { key: "washing_machine", label: "Washing Machine", icon: "🧼", category: "basic" },
-      { key: "tv", label: "Television", icon: "📺", category: "common" },
-    ];
-
-    if (isToLet) {
-      return [...commonFacilities, ...toLetFacilities];
+    const allFacilities = [];
+    
+    // Basic Amenities
+    if (pg?.wifi_available) allFacilities.push({ icon: "📶", label: "Wi-Fi / Internet" });
+    if (pg?.ac_available) allFacilities.push({ icon: "❄️", label: "Air Conditioner" });
+    if (pg?.geyser) allFacilities.push({ icon: "🚿", label: "Geyser / Water Heater" });
+    if (pg?.tv) allFacilities.push({ icon: "📺", label: "Television" });
+    if (pg?.refrigerator) allFacilities.push({ icon: "🧊", label: "Refrigerator" });
+    if (pg?.washing_machine) allFacilities.push({ icon: "🧼", label: "Washing Machine" });
+    if (pg?.microwave) allFacilities.push({ icon: "🍳", label: "Microwave" });
+    if (pg?.water_purifier) allFacilities.push({ icon: "💧", label: "Water Purifier" });
+    
+    // Furniture
+    if (pg?.bed_with_mattress) allFacilities.push({ icon: "🛏️", label: "Bed with Mattress" });
+    if (pg?.cupboard_available) allFacilities.push({ icon: "👔", label: "Cupboard / Wardrobe" });
+    if (pg?.table_chair_available) allFacilities.push({ icon: "💺", label: "Study Table & Chair" });
+    if (pg?.dining_table_available) allFacilities.push({ icon: "🍽️", label: "Dining Table" });
+    if (pg?.sofa) allFacilities.push({ icon: "🛋️", label: "Sofa" });
+    
+    // Room Features
+    if (pg?.attached_bathroom) allFacilities.push({ icon: "🚽", label: "Attached Bathroom" });
+    if (pg?.balcony_available) allFacilities.push({ icon: "🌿", label: "Balcony" });
+    if (pg?.fan_light) allFacilities.push({ icon: "💡", label: "Fan & Light" });
+    if (pg?.wall_mounted_clothes_hook) allFacilities.push({ icon: "🪝", label: "Clothes Hook" });
+    
+    // Kitchen
+    if (pg?.kitchen_room) allFacilities.push({ icon: "🍳", label: "Kitchen" });
+    if (pg?.modular_kitchen) allFacilities.push({ icon: "🏗️", label: "Modular Kitchen" });
+    
+    // Safety & Security
+    if (pg?.cctv) allFacilities.push({ icon: "📹", label: "CCTV Surveillance" });
+    if (pg?.security_guard) allFacilities.push({ icon: "🛡️", label: "Security Guard" });
+    if (pg?.fire_safety) allFacilities.push({ icon: "🔥", label: "Fire Safety System" });
+    if (pg?.lock_system) allFacilities.push({ icon: "🔒", label: "Secure Lock System" });
+    
+    // Parking
+    if (pg?.parking_available) allFacilities.push({ icon: "🚗", label: "Car Parking" });
+    if (pg?.bike_parking) allFacilities.push({ icon: "🏍️", label: "Bike Parking" });
+    
+    // Utilities
+    if (pg?.power_backup) allFacilities.push({ icon: "🔋", label: "Power Backup" });
+    if (pg?.water_24x7) allFacilities.push({ icon: "💦", label: "24×7 Water Supply" });
+    if (pg?.lift_elevator) allFacilities.push({ icon: "⬆️", label: "Lift / Elevator" });
+    
+    // Common Areas
+    if (pg?.common_tv_lounge) allFacilities.push({ icon: "📺", label: "Common TV Lounge" });
+    if (pg?.study_room) allFacilities.push({ icon: "📚", label: "Study Room" });
+    if (pg?.gym) allFacilities.push({ icon: "🏋️", label: "Gym / Fitness" });
+    if (pg?.balcony_open_space) allFacilities.push({ icon: "🌿", label: "Open Terrace / Balcony" });
+    
+    // Services
+    if (pg?.housekeeping) allFacilities.push({ icon: "🧹", label: "Housekeeping" });
+    if (pg?.laundry_available) allFacilities.push({ icon: "🧺", label: "Laundry Service" });
+    
+    // Food
+    if (pg?.food_available) {
+      allFacilities.push({ icon: "🍽️", label: `Food Available (${pg.food_type === 'veg' ? 'Veg' : pg.food_type === 'non-veg' ? 'Non-Veg' : 'Veg & Non-Veg'})` });
     }
     
-    return [...commonFacilities, ...pgFacilities];
+    return allFacilities;
   };
 
-  const getFilteredFacilities = () => {
-    const allFacilities = getAllFacilities();
-    
-    const trueFacilities = allFacilities.filter(facility => 
-      pg && (pg[facility.key] === true || pg[facility.key] === "true" || pg[facility.key] === 1)
-    );
-
-    if (selectedFacilityCategory === "all") {
-      return trueFacilities;
-    }
-    
-    return trueFacilities.filter(facility => facility.category === selectedFacilityCategory);
-  };
-
-  const getTrueFacilitiesCountInCategory = (categoryId) => {
-    const allFacilities = getAllFacilities();
-    if (categoryId === "all") {
-      return allFacilities.filter(facility => 
-        pg && (pg[facility.key] === true || pg[facility.key] === "true" || pg[facility.key] === 1)
-      ).length;
-    }
-    return allFacilities.filter(facility => 
-      facility.category === categoryId && pg && (pg[facility.key] === true || pg[facility.key] === "true" || pg[facility.key] === 1)
-    ).length;
-  };
-
-  const hasFacilitiesContent = () => {
-    const hasTrueFacilities = getFilteredFacilities().length > 0;
-    const hasWaterType = pg?.water_type && pg.water_type !== "";
-    const hasAnyCategoryWithFacilities = facilityCategories.some(category => 
-      getTrueFacilitiesCountInCategory(category.id) > 0
-    );
-    
-    return hasTrueFacilities || hasWaterType || hasAnyCategoryWithFacilities;
-  };
-
-  const hasPriceDetails = () => {
-    if (!pg) return false;
-    
-    if (isToLet) {
-      return (pg.price_1bhk && pg.price_1bhk !== "0" && pg.price_1bhk !== "") ||
-            (pg.price_2bhk && pg.price_2bhk !== "0" && pg.price_2bhk !== "") ||
-            (pg.price_3bhk && pg.price_3bhk !== "0" && pg.price_3bhk !== "") ||
-            (pg.price_4bhk && pg.price_4bhk !== "0" && pg.price_4bhk !== "");
-    } else if (isCoLiving) {
-      return (pg.co_living_single_room && pg.co_living_single_room !== "0" && pg.co_living_single_room !== "") ||
-            (pg.co_living_double_room && pg.co_living_double_room !== "0" && pg.co_living_double_room !== "") ||
-            (pg.coliving_three_sharing && pg.coliving_three_sharing !== "0" && pg.coliving_three_sharing !== "") ||
-            (pg.coliving_four_sharing && pg.coliving_four_sharing !== "0" && pg.coliving_four_sharing !== "");
-    } else {
-      return (pg.single_sharing && pg.single_sharing !== "0" && pg.single_sharing !== "") ||
-            (pg.double_sharing && pg.double_sharing !== "0" && pg.double_sharing !== "") ||
-            (pg.triple_sharing && pg.triple_sharing !== "0" && pg.triple_sharing !== "") ||
-            (pg.four_sharing && pg.four_sharing !== "0" && pg.four_sharing !== "") ||
-            (pg.single_room && pg.single_room !== "0" && pg.single_room !== "") ||
-            (pg.double_room && pg.double_room !== "0" && pg.double_room !== "") ||
-            (pg.triple_room && pg.triple_room !== "0" && pg.triple_room !== "");
-    }
-  };
+  const facilities = getAllFacilities();
 
   if (authLoading) {
     return (
@@ -1398,13 +1333,8 @@ export default function PGDetails() {
   }
 
   const current = media[index];
-  
-  const availableFacilitiesCount = getTrueFacilitiesCountInCategory("all");
-  const filteredFacilities = getFilteredFacilities();
-
   const shouldShowNearbyHighlights = hasLocation && (nearbyHighlights.length > 0 || loadingHighlights);
   const shouldShowNearbyPGs = nearbyPGs.length > 0 || loadingNearbyPGs;
-
   const startingPrice = getStartingPrice();
 
   return (
@@ -1542,43 +1472,10 @@ export default function PGDetails() {
           
           <span style={{
             ...modernStyles.availabilityBadge,
-            backgroundColor: "#8b5cf6"
+            backgroundColor: "#667eea"
           }}>
             Zero Brokerage
           </span>
-        </div>
-
-        <div style={modernStyles.statsGrid}>
-          <div style={modernStyles.statItem}>
-            <div style={modernStyles.statIcon}>💰</div>
-            <div>
-              <div style={modernStyles.statLabel}>Starting from</div>
-              <div style={modernStyles.statValue}>
-                {startingPrice ? `₹${startingPrice.toLocaleString('en-IN')} / month` : "Price on request"}
-              </div>
-            </div>
-          </div>
-          <div style={modernStyles.statItem}>
-            <div style={modernStyles.statIcon}>🏠</div>
-            <div>
-              <div style={modernStyles.statLabel}>Total {isToLet ? "Properties" : "Rooms"}</div>
-              <div style={modernStyles.statValue}>{pg.total_rooms || "—"}</div>
-            </div>
-          </div>
-          <div style={modernStyles.statItem}>
-            <div style={modernStyles.statIcon}>✅</div>
-            <div>
-              <div style={modernStyles.statLabel}>Facilities</div>
-              <div style={modernStyles.statValue}>{availableFacilitiesCount}+</div>
-            </div>
-          </div>
-          <div style={modernStyles.statItem}>
-            <div style={modernStyles.statIcon}>📍</div>
-            <div>
-              <div style={modernStyles.statLabel}>Nearby Places</div>
-              <div style={modernStyles.statValue}>{nearbyHighlights.length}+</div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -1590,72 +1487,14 @@ export default function PGDetails() {
             </Section>
           )}
 
-          {hasPriceDetails() && (
-            <Section title="Price Details" icon="💰">
-              <PriceDetails pg={pg} />
-            </Section>
-          )}
-
-          {hasFacilitiesContent() && (
-            <Section 
-              title="Facilities & Amenities" 
-              icon="✨"
-              badgeCount={availableFacilitiesCount}
-            >
-              <div style={modernStyles.facilityCategories}>
-                {facilityCategories.map(category => {
-                  const trueCount = getTrueFacilitiesCountInCategory(category.id);
-                  
-                  if (trueCount === 0 && category.id !== "all") return null;
-                  
-                  return (
-                    <button
-                      key={category.id}
-                      style={{
-                        ...modernStyles.facilityCategoryBtn,
-                        background: selectedFacilityCategory === category.id 
-                          ? `linear-gradient(135deg, ${category.color}, ${category.color}dd)` 
-                          : 'white',
-                        color: selectedFacilityCategory === category.id ? 'white' : '#374151',
-                        boxShadow: selectedFacilityCategory === category.id 
-                          ? `0 4px 15px ${category.color}40` 
-                          : '0 2px 10px rgba(0,0,0,0.05)',
-                      }}
-                      onClick={() => setSelectedFacilityCategory(category.id)}
-                    >
-                      <span style={modernStyles.facilityCategoryIcon}>{category.icon}</span>
-                      <span style={modernStyles.facilityCategoryLabel}>
-                        {category.label} {trueCount > 0 && `(${trueCount})`}
-                      </span>
-                    </button>
-                  );
-                })}
+          {facilities.length > 0 && (
+            <Section title="Amenities & Facilities" icon="✨" badgeCount={facilities.length}>
+              <div style={modernStyles.facilitiesGrid}>
+                {facilities.map((facility, index) => (
+                  <FacilityItem key={index} icon={facility.icon} label={facility.label} active={true} />
+                ))}
               </div>
-
-              {filteredFacilities.length > 0 ? (
-                <div style={modernStyles.facilitiesGrid}>
-                  {filteredFacilities.map((facility, index) => {
-                    const categoryColor = facilityCategories.find(c => c.id === facility.category)?.color;
-                    return (
-                      <FacilityItem 
-                        key={index}
-                        icon={facility.icon} 
-                        label={facility.label}
-                        active={true}
-                        categoryColor={categoryColor}
-                      />
-                    );
-                  })}
-                </div>
-              ) : (
-                <div style={modernStyles.noFacilitiesContainer}>
-                  <div style={modernStyles.noFacilitiesIcon}>🏢</div>
-                  <p style={modernStyles.noContentText}>
-                    No {selectedFacilityCategory === "all" ? "" : selectedFacilityCategory} facilities available
-                  </p>
-                </div>
-              )}
-
+              
               {pg.water_type && pg.water_type !== "" && (
                 <div style={modernStyles.waterSource}>
                   <strong>💧 Water Source:</strong> {pg.water_type === "borewell" ? "Borewell" : 
@@ -1664,6 +1503,12 @@ export default function PGDetails() {
                                                 pg.water_type === "municipal" ? "Municipal" : pg.water_type}
                 </div>
               )}
+            </Section>
+          )}
+
+          {hasPriceDetails() && (
+            <Section title="Price Details" icon="💰">
+              <PriceDetails pg={pg} />
             </Section>
           )}
         </div>
@@ -1772,7 +1617,7 @@ export default function PGDetails() {
           width: 40px;
           height: 40px;
           border: 4px solid #e5e7eb;
-          border-top: 4px solid #6366f1;
+          border-top: 4px solid #667eea;
           border-radius: 50%;
           animation: spin 1s linear infinite;
         }
@@ -1827,7 +1672,7 @@ const modernStyles = {
   backButton: {
     marginTop: "24px",
     padding: "12px 28px",
-    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    background: "linear-gradient(135deg, #667eea, #667eea)",
     color: "white",
     border: "none",
     borderRadius: "40px",
@@ -1835,7 +1680,7 @@ const modernStyles = {
     fontSize: "14px",
     fontWeight: "600",
     transition: "all 0.3ease",
-    boxShadow: "0 8px 20px rgba(99,102,241,0.3)",
+    boxShadow: "0 8px 20px rgba(102,126,234,0.3)",
   },
 
   // Breadcrumb
@@ -1850,7 +1695,7 @@ const modernStyles = {
     padding: "8px 0",
   },
   breadcrumbLink: {
-    color: "#6366f1",
+    color: "#667eea",
     cursor: "pointer",
     textDecoration: "none",
     fontWeight: "500",
@@ -1930,7 +1775,7 @@ const modernStyles = {
   },
   noMedia: {
     height: "280px",
-    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    background: "linear-gradient(135deg, #667eea, #667eea)",
     borderRadius: "28px",
     display: "flex",
     flexDirection: "column",
@@ -1938,7 +1783,7 @@ const modernStyles = {
     justifyContent: "center",
     marginBottom: "28px",
     color: "white",
-    boxShadow: "0 20px 35px -12px rgba(99,102,241,0.3)",
+    boxShadow: "0 20px 35px -12px rgba(102,126,234,0.3)",
   },
   noMediaIcon: {
     fontSize: "56px",
@@ -1995,7 +1840,7 @@ const modernStyles = {
   },
   directionButton: {
     padding: "12px 28px",
-    background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+    background: "linear-gradient(135deg, #667eea, #667eea)",
     color: "white",
     border: "none",
     borderRadius: "40px",
@@ -2006,7 +1851,7 @@ const modernStyles = {
     alignItems: "center",
     gap: "10px",
     transition: "all 0.3s ease",
-    boxShadow: "0 8px 18px rgba(139,92,246,0.3)",
+    boxShadow: "0 8px 18px rgba(102,126,234,0.3)",
   },
 
   badgeRow: {
@@ -2016,7 +1861,7 @@ const modernStyles = {
     marginBottom: "28px",
   },
   typeBadge: {
-    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    background: "linear-gradient(135deg, #667eea, #667eea)",
     color: "white",
     padding: "6px 16px",
     borderRadius: "40px",
@@ -2025,10 +1870,10 @@ const modernStyles = {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    boxShadow: "0 4px 12px rgba(99,102,241,0.25)",
+    boxShadow: "0 4px 12px rgba(102,126,234,0.25)",
   },
   genderBadge: {
-    background: "linear-gradient(135deg, #ec4899, #db2777)",
+    background: "linear-gradient(135deg, #667eea, #667eea)",
     color: "white",
     padding: "6px 16px",
     borderRadius: "40px",
@@ -2039,7 +1884,7 @@ const modernStyles = {
     gap: "8px",
   },
   bhkBadge: {
-    background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+    background: "linear-gradient(135deg, #667eea, #667eea)",
     color: "white",
     padding: "6px 16px",
     borderRadius: "40px",
@@ -2058,45 +1903,6 @@ const modernStyles = {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-  },
-
-  statsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-    gap: "20px",
-    padding: "20px",
-    background: "linear-gradient(135deg, #f8fafc, #f1f5f9)",
-    borderRadius: "24px",
-    border: "1px solid #e2e8f0",
-  },
-  statItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "16px",
-    transition: "all 0.2s ease",
-  },
-  statIcon: {
-    fontSize: "28px",
-    width: "56px",
-    height: "56px",
-    backgroundColor: "white",
-    borderRadius: "20px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    boxShadow: "0 8px 20px rgba(0,0,0,0.05)",
-  },
-  statLabel: {
-    fontSize: "13px",
-    color: "#64748b",
-    marginBottom: "4px",
-    fontWeight: "500",
-    letterSpacing: "0.3px",
-  },
-  statValue: {
-    fontSize: "22px",
-    fontWeight: "700",
-    color: "#0f172a",
   },
 
   // Two column layout - responsive
@@ -2148,7 +1954,7 @@ const modernStyles = {
     fontSize: "22px",
   },
   sectionBadge: {
-    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    background: "linear-gradient(135deg, #667eea, #667eea)",
     color: "white",
     padding: "4px 12px",
     borderRadius: "30px",
@@ -2324,35 +2130,10 @@ const modernStyles = {
     fontWeight: "600",
     marginBottom: "12px",
     paddingLeft: "8px",
-    borderLeft: "4px solid #6366f1",
+    borderLeft: "4px solid #667eea",
   },
 
   // Facilities
-  facilityCategories: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "12px",
-    marginBottom: "24px",
-  },
-  facilityCategoryBtn: {
-    padding: "8px 18px",
-    borderRadius: "40px",
-    cursor: "pointer",
-    fontSize: "13px",
-    fontWeight: "600",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    transition: "all 0.2s ease",
-    border: "1px solid #e2e8f0",
-  },
-  facilityCategoryIcon: {
-    fontSize: "16px",
-  },
-  facilityCategoryLabel: {
-    fontSize: "13px",
-    fontWeight: "500",
-  },
   facilitiesGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
@@ -2367,6 +2148,7 @@ const modernStyles = {
     border: "1px solid #e2e8f0",
     transition: "all 0.2s ease",
     cursor: "pointer",
+    background: "#f8fafc",
   },
   facilityIcon: {
     fontSize: "22px",
@@ -2642,7 +2424,7 @@ const modernStyles = {
     justifyContent: "space-between",
   },
   nearbyPgTypeBadge: {
-    background: "rgba(59,130,246,0.9)",
+    background: "rgba(102,126,234,0.9)",
     backdropFilter: "blur(4px)",
     padding: "4px 12px",
     borderRadius: "30px",
@@ -2724,8 +2506,8 @@ const modernStyles = {
     width: "100%",
     padding: "12px",
     backgroundColor: "transparent",
-    color: "#3b82f6",
-    border: "1px solid #3b82f6",
+    color: "#667eea",
+    border: "1px solid #667eea",
     borderRadius: "40px",
     fontSize: "14px",
     fontWeight: "600",
@@ -3008,7 +2790,6 @@ if (typeof window !== 'undefined') {
         if (modernStyles.mainCard) modernStyles.mainCard.padding = "20px";
         if (modernStyles.title) modernStyles.title.fontSize = "24px";
         if (modernStyles.media) modernStyles.media.height = "300px";
-        if (modernStyles.statsGrid) modernStyles.statsGrid.gridTemplateColumns = "repeat(2, 1fr)";
         if (modernStyles.facilitiesGrid) modernStyles.facilitiesGrid.gridTemplateColumns = "1fr";
         if (modernStyles.priceGrid) modernStyles.priceGrid.gridTemplateColumns = "1fr";
         if (modernStyles.modalContent) modernStyles.modalContent.padding = "20px";
@@ -3030,7 +2811,6 @@ if (typeof window !== 'undefined') {
         if (modernStyles.mainCard) modernStyles.mainCard.padding = "32px";
         if (modernStyles.title) modernStyles.title.fontSize = "32px";
         if (modernStyles.media) modernStyles.media.height = "480px";
-        if (modernStyles.statsGrid) modernStyles.statsGrid.gridTemplateColumns = "repeat(auto-fit, minmax(200px, 1fr))";
         if (modernStyles.facilitiesGrid) modernStyles.facilitiesGrid.gridTemplateColumns = "repeat(auto-fill, minmax(260px, 1fr))";
         if (modernStyles.priceGrid) modernStyles.priceGrid.gridTemplateColumns = "repeat(auto-fit, minmax(160px, 1fr))";
         if (modernStyles.modalContent) modernStyles.modalContent.padding = "32px";
