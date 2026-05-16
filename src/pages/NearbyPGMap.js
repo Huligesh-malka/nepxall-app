@@ -104,7 +104,7 @@ const GooglePropertySearch = () => {
 
   /*
   --------------------------------------------------
-  FACEBOOK IMPORT FUNCTION - ONLY PREVIEW
+  FACEBOOK IMPORT FUNCTION - PREVIEW WITH DEFAULTS
   --------------------------------------------------
   */
 
@@ -122,27 +122,49 @@ const GooglePropertySearch = () => {
 
       setFacebookLoading(true);
 
+      // Extract post ID from URL (basic extraction)
+      let postId = facebookUrl.split("/").pop();
+      if (postId.includes("?")) {
+        postId = postId.split("?")[0];
+      }
+
       /*
       =========================================
-      ONLY PREVIEW
+      PREVIEW DATA WITH DEFAULTS
       =========================================
       */
 
       const previewData = {
 
-        facebook_url:
-          facebookUrl,
-
+        facebook_url: facebookUrl,
+        
+        // Auto-generate name from URL or use default
+        pg_name: `Facebook Property ${postId.substring(0, 8)}`,
+        
+        address: "Bengaluru, Karnataka",
+        
+        area: "Whitefield",
+        
+        city: "Bengaluru",
+        
+        description: "Imported from Facebook Marketplace",
+        
+        pg_category: "to_let",
+        
+        pg_type: "boys",
+        
+        nearby_place: "Facebook Import",
+        
+        contact_phone: "",
+        
+        // Default photos for preview
         photos: [
-
-          "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2",
-
-          "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688"
-
+          "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800",
+          "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800",
+          "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800"
         ],
 
-        source:
-          "facebook"
+        source: "facebook"
 
       };
 
@@ -210,7 +232,7 @@ const GooglePropertySearch = () => {
 
   /*
   --------------------------------------------------
-  ACCEPT FACEBOOK PROPERTY - SIMPLE SAVE
+  ACCEPT FACEBOOK PROPERTY - WITH FULL DATA
   --------------------------------------------------
   */
 
@@ -227,26 +249,27 @@ const GooglePropertySearch = () => {
 
             property: {
 
-              pg_name:
-                "Facebook Property",  // Changed from "Facebook Imported Property"
+              facebook_url: facebookProperty.facebook_url,
 
-              address:
-                "Bengaluru",
+              pg_name: facebookProperty.pg_name,
 
-              area:
-                "Whitefield",
+              address: facebookProperty.address,
 
-              description:
-                "Imported From Facebook",
+              area: facebookProperty.area,
 
-              facebook_url:
-                facebookProperty.facebook_url,
+              city: facebookProperty.city,
 
-              photos:
-                facebookProperty.photos,
+              description: facebookProperty.description,
 
-              pg_category:
-                "to_let"
+              pg_category: facebookProperty.pg_category,
+
+              pg_type: facebookProperty.pg_type,
+
+              nearby_place: facebookProperty.nearby_place,
+
+              contact_phone: facebookProperty.contact_phone,
+
+              photos: facebookProperty.photos
 
             }
 
@@ -257,16 +280,17 @@ const GooglePropertySearch = () => {
       if (response.data.success) {
 
         alert(
-          "Facebook Property Accepted ✅"
+          "Facebook Property Accepted Successfully ✅"
         );
 
-        /*
-        CLEAR PREVIEW
-        */
-
+        // Clear preview
         setFacebookProperty(null);
 
         setFacebookUrl("");
+
+      } else {
+
+        alert("Failed To Accept Property");
 
       }
 
@@ -342,16 +366,20 @@ const GooglePropertySearch = () => {
             {
               facebookLoading
                 ? "Importing..."
-                : "Import"
+                : "Import & Preview"
             }
 
           </button>
 
         </div>
 
+        <p style={{ fontSize: 12, color: "#666", marginTop: 10 }}>
+          💡 Tip: Facebook import will use default values. You can edit the property details in admin panel after import.
+        </p>
+
       </div>
 
-      {/* SHOW IMPORTED FACEBOOK CARD - PREVIEW ONLY */}
+      {/* SHOW IMPORTED FACEBOOK CARD - PREVIEW */}
 
       {
         facebookProperty && (
@@ -361,7 +389,7 @@ const GooglePropertySearch = () => {
             <div style={styles.previewHeader}>
 
               <span style={styles.facebookBadge}>
-                Facebook Preview
+                Facebook Preview - Ready to Import
               </span>
 
             </div>
@@ -379,6 +407,9 @@ const GooglePropertySearch = () => {
                       src={photo}
                       alt=""
                       style={styles.previewImage}
+                      onError={(e) => {
+                        e.target.src = "https://via.placeholder.com/400x250?text=No+Image";
+                      }}
                     />
 
                   </div>
@@ -387,6 +418,21 @@ const GooglePropertySearch = () => {
               )}
 
             </Slider>
+
+            {/* PROPERTY DETAILS */}
+
+            <div style={styles.previewDetails}>
+
+              <h3>{facebookProperty.pg_name}</h3>
+              
+              <p><strong>📍 Address:</strong> {facebookProperty.address}</p>
+              <p><strong>🏠 Area:</strong> {facebookProperty.area}</p>
+              <p><strong>🏙️ City:</strong> {facebookProperty.city}</p>
+              <p><strong>📋 Category:</strong> {facebookProperty.pg_category}</p>
+              <p><strong>👥 Type:</strong> {facebookProperty.pg_type}</p>
+              <p><strong>📝 Description:</strong> {facebookProperty.description}</p>
+
+            </div>
 
             {/* LINK */}
 
@@ -397,7 +443,7 @@ const GooglePropertySearch = () => {
               style={styles.facebookLink}
             >
 
-              Open Facebook Post
+              🔗 Open Original Facebook Post
 
             </a>
 
@@ -408,7 +454,7 @@ const GooglePropertySearch = () => {
               onClick={handleAcceptFacebookProperty}
             >
 
-              Accept Property
+              ✅ Accept & Import Property
 
             </button>
 
@@ -871,7 +917,13 @@ const styles = {
   },
 
   previewHeader: {
-    padding: 15
+    padding: 15,
+    background: "#f0f2f5"
+  },
+
+  previewDetails: {
+    padding: 15,
+    borderBottom: "1px solid #eee"
   },
 
   facebookBadge: {
@@ -885,7 +937,7 @@ const styles = {
 
   previewImage: {
     width: "100%",
-    height: 250,
+    height: 300,
     objectFit: "cover"
   },
 
@@ -894,7 +946,8 @@ const styles = {
     padding: 15,
     color: "#1877F2",
     fontWeight: "bold",
-    textDecoration: "none"
+    textDecoration: "none",
+    borderBottom: "1px solid #eee"
   }
 
 };
