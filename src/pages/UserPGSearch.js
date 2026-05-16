@@ -1832,13 +1832,15 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
   }, [pg.food_available, pg.food_type]);
   
   const getBHKDisplay = () => {
-    if (pg.bhk_type) return pg.bhk_type;
-    if (pg.price_2bhk > 0) return "2 BHK";
-    if (pg.price_3bhk > 0) return "3 BHK";
-    if (pg.price_1bhk > 0) return "1 BHK";
-    if (pg.price_4bhk > 0) return "4 BHK";
-    return "Apartment";
-  };
+  if (pg.bhk_type) return pg.bhk_type;
+
+  if (pg.price_1bhk > 0) return "1 BHK";
+  if (pg.price_2bhk > 0) return "2 BHK";
+  if (pg.price_3bhk > 0) return "3 BHK";
+  if (pg.price_4bhk > 0) return "4 BHK";
+
+  return "Apartment";
+};
   
   const getAreaDisplay = () => {
     if (pg.sqft_area) return `${pg.sqft_area} sqft`;
