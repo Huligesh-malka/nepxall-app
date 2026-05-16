@@ -111,13 +111,13 @@ const LOCATION_AUTO_ASKED_KEY = "nepxall_location_auto_asked";
 
 // Popular Areas in Bangalore
 const popularAreas = [
-  { name: "Koramangala", icon: "🌆", color: "#3b82f6" },
-  { name: "BTM Layout", icon: "🏘️", color: "#10b981" },
-  { name: "Jayanagar", icon: "🌳", color: "#f59e0b" },
-  { name: "Electronic City", icon: "💻", color: "#8b5cf6" },
-  { name: "HSR Layout", icon: "🏢", color: "#ec4899" },
-  { name: "Whitefield", icon: "🏙️", color: "#06b6d4" },
-  { name: "Marathahalli", icon: "🚗", color: "#ef4444" },
+  { name: "Koramangala", icon: "", color: "#3b82f6" },
+  { name: "BTM Layout", icon: "", color: "#10b981" },
+  { name: "Jayanagar", icon: "", color: "#f59e0b" },
+  { name: "Electronic City", icon: "", color: "#8b5cf6" },
+  { name: "HSR Layout", icon: "", color: "#ec4899" },
+  { name: "Whitefield", icon: "", color: "#06b6d4" },
+  { name: "Marathahalli", icon: "", color: "#ef4444" },
 ];
 
 // Quick Filters - Easy access filters
@@ -974,13 +974,12 @@ const BookingModal = ({ pg, onClose, onBook }) => {
   );
 };
 
-/* ================= QUICK VIEW MODAL COMPONENT (FIXED) ================= */
-/* ================= QUICK VIEW MODAL COMPONENT (FIXED) ================= */
+/* ================= QUICK VIEW MODAL COMPONENT ================= */
 const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
-  
-  // FIXED: Added getBHKDisplay function for to-let properties
+
+  // ADD THIS FUNCTION HERE:
   const getBHKDisplay = () => {
     if (pg.bhk_type) return pg.bhk_type;
     if (pg.price_2bhk > 0) return "2BHK";
@@ -989,6 +988,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
     if (pg.price_4bhk > 0) return "4BHK";
     return "Apartment";
   };
+
   
   const photosArray = React.useMemo(() => {
     if (pg.photos && Array.isArray(pg.photos) && pg.photos.length > 0) {
@@ -1215,7 +1215,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
             </div>
           )}
           
-          {/* TO-LET BADGES - FIXED: Using getBHKDisplay() instead of conditional */}
+          {/* TO-LET BADGES */}
           {pg.pg_category === "to_let" && (
             <div style={{
               display: "flex",
@@ -1504,7 +1504,7 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
                       )}
                     </th>
                   ))}
-                </table>
+                </tr>
               </thead>
               <tbody>
                 {features.map((feature, featureIdx) => (
@@ -1739,7 +1739,9 @@ const HeroBanner = () => {
         <div style={{ background: "#10b981", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Verified</div>
         <div style={{ background: "#3b82f6", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Secure</div>
         <div style={{ background: "#8b5cf6", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Trusted</div>
-        <div style={{ background: "#f59e0b", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Zero Brokerage</div>
+        <div style={{ background: "#f59e0b", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>
+  ✓ Zero Brokerage
+</div>
       </div>
     </div>
   );
