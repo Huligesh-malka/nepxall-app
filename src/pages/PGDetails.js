@@ -50,7 +50,24 @@ import {
   Sparkles,
   Pill,
   Dumbbell,
-  Wrench
+  Wrench,
+  Elevator,
+  Dog,
+  Music,
+  PartyPopper,
+  Lock,
+  FileText,
+  IdCard,
+  Building2,
+  ParkingCircle,
+  Trees,
+  Train,
+  Bus,
+  GraduationCap,
+  Briefcase,
+  Stethoscope,
+  ShoppingBag,
+  Landmark
 } from "lucide-react";
 
 /* ================= LEAFLET FIX ================= */
@@ -111,14 +128,6 @@ const formatPrice = (price) => {
   } catch (error) {
     return numPrice.toString();
   }
-};
-
-// Safe number formatter with null check
-const formatNumber = (value, suffix = "") => {
-  if (value === null || value === undefined || value === "" || value === "0" || value === 0) {
-    return null;
-  }
-  return `${value}${suffix}`;
 };
 
 // Get tomorrow's date for check-in
@@ -345,7 +354,6 @@ const BookingModal = ({ pg, onClose, onBook, bookingLoading }) => {
                 <span>Booking Information</span>
               </div>
               <ul style={modernStyles.infoList}>
-                
                 <li>Register number will be automatically generated</li>
                 <li>You'll receive confirmation via email/SMS</li>
                 <li>Owner will contact you within 24 hours</li>
@@ -550,7 +558,7 @@ const PriceDetails = ({ pg }) => {
         <div style={modernStyles.priceSection}>
           <h4 style={modernStyles.priceSectionTitle}>
             <span style={modernStyles.priceSectionIcon}>🏠</span>
-            House & Flat Rental Prices
+            Rental Prices
           </h4>
           <div style={modernStyles.priceGrid}>
             {pg.price_1bhk && pg.price_1bhk !== "0" && pg.price_1bhk !== "" && (
@@ -559,9 +567,9 @@ const PriceDetails = ({ pg }) => {
                 <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.price_1bhk)}<span style={modernStyles.pricePeriod}>/month</span>
                 </div>
-                {pg.security_deposit_1bhk && pg.security_deposit_1bhk !== "0" && pg.security_deposit_1bhk !== "" && (
+                {pg.security_deposit && pg.security_deposit !== "0" && pg.security_deposit !== "" && (
                   <div style={modernStyles.depositAmount}>
-                    Security: {formatPriceLocal(pg.security_deposit_1bhk)}
+                    Deposit: {formatPriceLocal(pg.security_deposit)}
                   </div>
                 )}
               </div>
@@ -572,11 +580,6 @@ const PriceDetails = ({ pg }) => {
                 <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.price_2bhk)}<span style={modernStyles.pricePeriod}>/month</span>
                 </div>
-                {pg.security_deposit_2bhk && pg.security_deposit_2bhk !== "0" && pg.security_deposit_2bhk !== "" && (
-                  <div style={modernStyles.depositAmount}>
-                    Security: {formatPriceLocal(pg.security_deposit_2bhk)}
-                  </div>
-                )}
               </div>
             )}
             {pg.price_3bhk && pg.price_3bhk !== "0" && pg.price_3bhk !== "" && (
@@ -585,11 +588,6 @@ const PriceDetails = ({ pg }) => {
                 <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.price_3bhk)}<span style={modernStyles.pricePeriod}>/month</span>
                 </div>
-                {pg.security_deposit_3bhk && pg.security_deposit_3bhk !== "0" && pg.security_deposit_3bhk !== "" && (
-                  <div style={modernStyles.depositAmount}>
-                    Security: {formatPriceLocal(pg.security_deposit_3bhk)}
-                  </div>
-                )}
               </div>
             )}
             {pg.price_4bhk && pg.price_4bhk !== "0" && pg.price_4bhk !== "" && (
@@ -598,11 +596,58 @@ const PriceDetails = ({ pg }) => {
                 <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.price_4bhk)}<span style={modernStyles.pricePeriod}>/month</span>
                 </div>
-                {pg.security_deposit_4bhk && pg.security_deposit_4bhk !== "0" && pg.security_deposit_4bhk !== "" && (
-                  <div style={modernStyles.depositAmount}>
-                    Security: {formatPriceLocal(pg.security_deposit_4bhk)}
-                  </div>
-                )}
+              </div>
+            )}
+          </div>
+          
+          {/* Property Details for To-Let */}
+          <div style={modernStyles.propertyDetails}>
+            {pg.bhk_type && (
+              <div style={modernStyles.propertyDetailItem}>
+                <span style={modernStyles.propertyDetailIcon}>🏠</span>
+                <span>{pg.bhk_type} Apartment</span>
+              </div>
+            )}
+            {pg.furnishing_type && (
+              <div style={modernStyles.propertyDetailItem}>
+                <span style={modernStyles.propertyDetailIcon}>🛋️</span>
+                <span>{pg.furnishing_type}</span>
+              </div>
+            )}
+            {pg.sqft_area && (
+              <div style={modernStyles.propertyDetailItem}>
+                <span style={modernStyles.propertyDetailIcon}>📏</span>
+                <span>{pg.sqft_area} sqft</span>
+              </div>
+            )}
+            {pg.family_allowed && (
+              <div style={modernStyles.propertyDetailItem}>
+                <span style={modernStyles.propertyDetailIcon}>👨‍👩‍👧</span>
+                <span>Family Friendly</span>
+              </div>
+            )}
+            {pg.ready_to_move && (
+              <div style={modernStyles.propertyDetailItem}>
+                <span style={modernStyles.propertyDetailIcon}>✓</span>
+                <span>Ready to Move</span>
+              </div>
+            )}
+            {pg.parking_available && (
+              <div style={modernStyles.propertyDetailItem}>
+                <span style={modernStyles.propertyDetailIcon}>🚗</span>
+                <span>Parking Available</span>
+              </div>
+            )}
+            {pg.lift_elevator && (
+              <div style={modernStyles.propertyDetailItem}>
+                <span style={modernStyles.propertyDetailIcon}>⬆️</span>
+                <span>Lift Available</span>
+              </div>
+            )}
+            {pg.balcony_available && (
+              <div style={modernStyles.propertyDetailItem}>
+                <span style={modernStyles.propertyDetailIcon}>🌿</span>
+                <span>Balcony</span>
               </div>
             )}
           </div>
@@ -622,11 +667,6 @@ const PriceDetails = ({ pg }) => {
                 <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.co_living_single_room)}<span style={modernStyles.pricePeriod}>/month</span>
                 </div>
-                {pg.co_living_security_deposit && pg.co_living_security_deposit !== "0" && pg.co_living_security_deposit !== "" && (
-                  <div style={modernStyles.depositAmount}>
-                    Security: {formatPriceLocal(pg.co_living_security_deposit)}
-                  </div>
-                )}
               </div>
             )}
             {pg.co_living_double_room && pg.co_living_double_room !== "0" && pg.co_living_double_room !== "" && (
@@ -635,11 +675,6 @@ const PriceDetails = ({ pg }) => {
                 <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.co_living_double_room)}<span style={modernStyles.pricePeriod}>/month</span>
                 </div>
-                {pg.co_living_security_deposit && pg.co_living_security_deposit !== "0" && pg.co_living_security_deposit !== "" && (
-                  <div style={modernStyles.depositAmount}>
-                    Security: {formatPriceLocal(pg.co_living_security_deposit)}
-                  </div>
-                )}
               </div>
             )}
             {pg.coliving_three_sharing && pg.coliving_three_sharing !== "0" && pg.coliving_three_sharing !== "" && (
@@ -666,7 +701,7 @@ const PriceDetails = ({ pg }) => {
         <div style={modernStyles.priceSection}>
           <h4 style={modernStyles.priceSectionTitle}>
             <span style={modernStyles.priceSectionIcon}>🏢</span>
-            PG & Hostel Room Prices
+            Room Prices
           </h4>
           
           {(pg.single_sharing || pg.double_sharing || pg.triple_sharing || pg.four_sharing) && (
@@ -741,7 +776,32 @@ const PriceDetails = ({ pg }) => {
             </div>
           )}
 
-          {/* Additional Charges Section */}
+          {/* Food Section - ONLY for PG */}
+          {pg.food_available && (
+            <div style={modernStyles.foodSection}>
+              <h5 style={modernStyles.foodSectionTitle}>
+                <span style={modernStyles.foodSectionIcon}>🍽️</span>
+                Food Information
+              </h5>
+              <div style={modernStyles.foodDetails}>
+                <div style={modernStyles.foodType}>
+                  Food Type: {pg.food_type === 'veg' ? 'Vegetarian' : pg.food_type === 'non-veg' ? 'Non-Vegetarian' : 'Veg & Non-Veg'}
+                </div>
+                {pg.meals_per_day && (
+                  <div style={modernStyles.mealsCount}>
+                    Meals: {pg.meals_per_day} meals per day
+                  </div>
+                )}
+                {pg.food_charges && pg.food_charges !== "0" && pg.food_charges !== "" && (
+                  <div style={modernStyles.foodCharges}>
+                    Food Charges: {formatPriceLocal(pg.food_charges)}/month
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Additional Charges Section - ONLY for PG */}
           {(pg.security_deposit || pg.maintenance_charges || pg.advance_rent) && (
             <div style={modernStyles.additionalCharges}>
               <h5 style={modernStyles.additionalChargesTitle}>Additional Charges</h5>
@@ -767,16 +827,6 @@ const PriceDetails = ({ pg }) => {
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {pg.food_available && pg.food_charges && pg.food_charges !== "0" && pg.food_charges !== "" && (
-        <div style={modernStyles.foodCharges}>
-          <span style={modernStyles.foodChargesIcon}>🍽️</span>
-          <div>
-            <div style={modernStyles.foodChargesLabel}>Food Charges (Optional)</div>
-            <div style={modernStyles.foodChargesValue}>{formatPriceLocal(pg.food_charges)}<span style={modernStyles.pricePeriod}>/month</span></div>
-          </div>
         </div>
       )}
     </div>
@@ -929,30 +979,24 @@ const NearbyPGCard = ({ pg, onClick, distance }) => {
         </p>
         
         <div style={modernStyles.nearbyPgStats}>
+          <div style={modernStyles.nearbyPgStat}>
+            <span style={modernStyles.nearbyPgStatIcon}>💰</span>
+            <span style={modernStyles.nearbyPgStatText}>
+              {startingPrice
+                ? `₹${Number(startingPrice).toLocaleString("en-IN")}/month`
+                : "Price on request"}
+            </span>
+          </div>
 
-  {/* PRICE */}
-  <div style={modernStyles.nearbyPgStat}>
-    <span style={modernStyles.nearbyPgStatIcon}>💰</span>
-
-    <span style={modernStyles.nearbyPgStatText}>
-      {startingPrice
-        ? `₹${Number(startingPrice).toLocaleString("en-IN")}/month`
-        : "Price on request"}
-    </span>
-  </div>
-
-  {/* SHOW ROOMS ONLY IF > 0 */}
-  {Number(pg.available_rooms || pg.total_rooms) > 0 && (
-    <div style={modernStyles.nearbyPgStat}>
-      <span style={modernStyles.nearbyPgStatIcon}>🏠</span>
-
-      <span style={modernStyles.nearbyPgStatText}>
-        {pg.available_rooms || pg.total_rooms} rooms
-      </span>
-    </div>
-  )}
-
-</div>
+          {Number(pg.available_rooms || pg.total_rooms) > 0 && (
+            <div style={modernStyles.nearbyPgStat}>
+              <span style={modernStyles.nearbyPgStatIcon}>🏠</span>
+              <span style={modernStyles.nearbyPgStatText}>
+                {pg.available_rooms || pg.total_rooms} rooms
+              </span>
+            </div>
+          )}
+        </div>
         
         <div style={modernStyles.nearbyPgFacilities}>
           {pg.ac_available && <span style={modernStyles.nearbyPgFacility}>❄️</span>}
@@ -1539,15 +1583,6 @@ export default function PGDetails() {
     }
   };
 
-  // CALL OWNER - function kept but button removed
-  const handleCallOwner = () => {
-    if (hasOwnerContact && pg?.contact_phone) {
-      window.location.href = `tel:${pg.contact_phone}`;
-    } else {
-      showNotificationMessage("Owner contact will be visible after booking approval");
-    }
-  };
-
   const handleViewOnMap = (highlight) => {
     if (highlight.coordinates) {
       setMapCenter(highlight.coordinates);
@@ -1583,7 +1618,21 @@ export default function PGDetails() {
   };
 
   const getAllFacilities = () => {
-    return [
+    // Facilities that apply to all property types
+    const commonFacilities = [
+      { key: "wifi_available", label: "Wi-Fi / Internet", icon: "📶", category: "basic" },
+      { key: "parking_available", label: "Car Parking", icon: "🚗", category: "safety" },
+      { key: "bike_parking", label: "Bike Parking", icon: "🏍️", category: "safety" },
+      { key: "cctv", label: "CCTV Surveillance", icon: "📹", category: "safety" },
+      { key: "security_guard", label: "Security Guard", icon: "🛡️", category: "safety" },
+      { key: "power_backup", label: "Power Backup", icon: "🔋", category: "basic" },
+      { key: "water_24x7", label: "24×7 Water Supply", icon: "💦", category: "basic" },
+      { key: "lift_elevator", label: "Lift / Elevator", icon: "⬆️", category: "common" },
+      { key: "fire_safety", label: "Fire Safety System", icon: "🔥", category: "safety" },
+    ];
+
+    // PG-specific facilities
+    const pgFacilities = [
       { key: "cupboard_available", label: "Cupboard / Wardrobe", icon: "👔", category: "room" },
       { key: "table_chair_available", label: "Study Table & Chair", icon: "💺", category: "room" },
       { key: "dining_table_available", label: "Dining Table", icon: "🍽️", category: "kitchen" },
@@ -1593,30 +1642,38 @@ export default function PGDetails() {
       { key: "bed_with_mattress", label: "Bed with Mattress", icon: "🛏️", category: "room" },
       { key: "fan_light", label: "Fan & Light", icon: "💡", category: "room" },
       { key: "kitchen_room", label: "Kitchen Room", icon: "🍳", category: "kitchen" },
-      { key: "food_available", label: "Food Available", icon: "🍽️", category: "basic" },
       { key: "ac_available", label: "Air Conditioner", icon: "❄️", category: "room" },
-      { key: "wifi_available", label: "Wi-Fi / Internet", icon: "📶", category: "basic" },
       { key: "tv", label: "Television", icon: "📺", category: "common" },
-      { key: "parking_available", label: "Car Parking", icon: "🚗", category: "safety" },
-      { key: "bike_parking", label: "Bike Parking", icon: "🏍️", category: "safety" },
       { key: "laundry_available", label: "Laundry Service", icon: "🧺", category: "basic" },
       { key: "washing_machine", label: "Washing Machine", icon: "🧼", category: "basic" },
       { key: "refrigerator", label: "Refrigerator", icon: "🧊", category: "kitchen" },
       { key: "microwave", label: "Microwave", icon: "🍳", category: "kitchen" },
       { key: "geyser", label: "Geyser", icon: "🚿", category: "room" },
-      { key: "power_backup", label: "Power Backup", icon: "🔋", category: "basic" },
-      { key: "lift_elevator", label: "Lift / Elevator", icon: "⬆️", category: "common" },
-      { key: "cctv", label: "CCTV Surveillance", icon: "📹", category: "safety" },
-      { key: "security_guard", label: "Security Guard", icon: "🛡️", category: "safety" },
       { key: "gym", label: "Gym / Fitness", icon: "🏋️", category: "common" },
       { key: "housekeeping", label: "Housekeeping", icon: "🧹", category: "basic" },
       { key: "water_purifier", label: "Water Purifier (RO)", icon: "💧", category: "basic" },
-      { key: "fire_safety", label: "Fire Safety System", icon: "🔥", category: "safety" },
       { key: "study_room", label: "Study Room", icon: "📚", category: "common" },
       { key: "common_tv_lounge", label: "Common TV Lounge", icon: "📺", category: "common" },
       { key: "balcony_open_space", label: "Balcony / Open Space", icon: "🌿", category: "common" },
-      { key: "water_24x7", label: "24×7 Water Supply", icon: "💦", category: "basic" },
     ];
+
+    // To-Let specific facilities
+    const toLetFacilities = [
+      { key: "ac_available", label: "Air Conditioner", icon: "❄️", category: "room" },
+      { key: "geyser", label: "Geyser", icon: "🚿", category: "room" },
+      { key: "balcony_available", label: "Balcony", icon: "🌿", category: "room" },
+      { key: "cupboard_available", label: "Cupboard / Wardrobe", icon: "👔", category: "room" },
+      { key: "refrigerator", label: "Refrigerator", icon: "🧊", category: "kitchen" },
+      { key: "washing_machine", label: "Washing Machine", icon: "🧼", category: "basic" },
+      { key: "tv", label: "Television", icon: "📺", category: "common" },
+    ];
+
+    if (isToLet) {
+      return [...commonFacilities, ...toLetFacilities];
+    }
+    
+    // For PG and Co-living, use PG facilities
+    return [...commonFacilities, ...pgFacilities];
   };
 
   const getFilteredFacilities = () => {
@@ -1663,10 +1720,10 @@ export default function PGDetails() {
     const hasValidNoticePeriod = pg.notice_period && pg.notice_period !== "" && pg.notice_period !== "0" && Number(pg.notice_period) > 0;
     
     const hasRules = rulesToCheck.some(rule => 
-  pg[rule] === true || 
-  pg[rule] === "true" || 
-  pg[rule] === 1
-);
+      pg[rule] === true || 
+      pg[rule] === "true" || 
+      pg[rule] === 1
+    );
     
     return hasRules || hasValidMinStay || hasValidLockIn || hasValidNoticePeriod;
   };
@@ -1868,12 +1925,23 @@ export default function PGDetails() {
             </span>
           )}
           
-          {pg.available_rooms !== undefined && (
+          {/* ONLY FOR PG: Show available rooms badge */}
+          {!isToLet && pg.available_rooms !== undefined && (
             <span style={{
               ...modernStyles.availabilityBadge,
               backgroundColor: pg.available_rooms > 0 ? "#10b981" : "#ef4444"
             }}>
               {pg.available_rooms > 0 ? `${pg.available_rooms} Available` : "Fully Occupied"}
+            </span>
+          )}
+          
+          {/* ONLY FOR TO-LET: Show Ready to Move badge */}
+          {isToLet && pg.ready_to_move && (
+            <span style={{
+              ...modernStyles.availabilityBadge,
+              backgroundColor: "#f59e0b"
+            }}>
+              Ready to Move
             </span>
           )}
         </div>
@@ -1996,7 +2064,6 @@ export default function PGDetails() {
             </Section>
           )}
 
-          {/* FIXED: Rules Section with proper null/zero checks */}
           {hasRulesContent() && (
             <Section title="House Rules & Restrictions">
               <div style={modernStyles.rulesContainer}>
@@ -2204,106 +2271,70 @@ export default function PGDetails() {
                   </div>
                 )}
 
-               {/* Legal & Duration Section */}
-{(
-  (pg.min_stay_months &&
-    pg.min_stay_months !== "" &&
-    pg.min_stay_months !== "0" &&
-    Number(pg.min_stay_months) > 0) ||
-
-  (pg.lock_in_period &&
-    pg.lock_in_period !== "" &&
-    pg.lock_in_period !== "0" &&
-    Number(pg.lock_in_period) > 0) ||
-
-  (pg.notice_period &&
-    pg.notice_period !== "" &&
-    pg.notice_period !== "0" &&
-    Number(pg.notice_period) > 0) ||
-
-  pg.agreement_mandatory === true ||
-  pg.agreement_mandatory === "true" ||
-
-  pg.id_proof_mandatory === true ||
-  pg.id_proof_mandatory === "true"
-) && (
-  <div style={modernStyles.rulesSection}>
-    
-    <div
-      style={modernStyles.rulesSectionHeader}
-      onClick={() => toggleRulesSection("legal")}
-    >
-      <h4 style={modernStyles.rulesSectionTitle}>
-        <span style={modernStyles.rulesSectionIcon}>⚖️</span>
-        Legal & Duration
-      </h4>
-
-      <span style={modernStyles.rulesToggle}>
-        {expandedRules.legal ? "−" : "+"}
-      </span>
-    </div>
-
-    {expandedRules.legal && (
-      <div style={modernStyles.rulesGrid}>
-{/* Minimum Stay */}
-{!isNaN(pg.min_stay_months) &&
-  Number(pg.min_stay_months) > 0 && (
-    <RuleItem
-      icon="🔒"
-      label={`Minimum Stay: ${pg.min_stay_months} months`}
-      allowed={true}
-      description="Minimum stay requirement"
-    />
-)}
-
-{/* Lock In */}
-{!isNaN(pg.lock_in_period) &&
-  Number(pg.lock_in_period) > 0 && (
-    <RuleItem
-      icon="📝"
-      label={`Lock-in Period: ${pg.lock_in_period} months`}
-      allowed={true}
-      description="Lock-in period before leaving"
-    />
-)}
-
-{/* Notice Period */}
-{!isNaN(pg.notice_period) &&
-  Number(pg.notice_period) > 0 && (
-    <RuleItem
-      icon="⏰"
-      label={`Notice Period: ${pg.notice_period} months`}
-      allowed={true}
-      description="Notice period before vacating"
-    />
-)}
-
-{/* Agreement Mandatory */}
-{(pg.agreement_mandatory === true ||
-  pg.agreement_mandatory === "true") && (
-    <RuleItem
-      icon="📄"
-      label="Agreement Mandatory"
-      allowed={true}
-      description="Legal agreement required"
-    />
-)}
-
-{/* ID Proof */}
-{(pg.id_proof_mandatory === true ||
-  pg.id_proof_mandatory === "true") && (
-    <RuleItem
-      icon="🆔"
-      label="ID Proof Mandatory"
-      allowed={true}
-      description="ID proof verification required"
-    />
-)}
-
-</div>
-)}
-</div>
-)}
+                {/* Legal & Duration Section */}
+                {( (pg.min_stay_months && pg.min_stay_months !== "" && pg.min_stay_months !== "0" && Number(pg.min_stay_months) > 0) ||
+                  (pg.lock_in_period && pg.lock_in_period !== "" && pg.lock_in_period !== "0" && Number(pg.lock_in_period) > 0) ||
+                  (pg.notice_period && pg.notice_period !== "" && pg.notice_period !== "0" && Number(pg.notice_period) > 0) ||
+                  pg.agreement_mandatory === true ||
+                  pg.agreement_mandatory === "true" ||
+                  pg.id_proof_mandatory === true ||
+                  pg.id_proof_mandatory === "true" ) && (
+                  <div style={modernStyles.rulesSection}>
+                    <div style={modernStyles.rulesSectionHeader} onClick={() => toggleRulesSection("legal")}>
+                      <h4 style={modernStyles.rulesSectionTitle}>
+                        <span style={modernStyles.rulesSectionIcon}>⚖️</span>
+                        Legal & Duration
+                      </h4>
+                      <span style={modernStyles.rulesToggle}>
+                        {expandedRules.legal ? "−" : "+"}
+                      </span>
+                    </div>
+                    {expandedRules.legal && (
+                      <div style={modernStyles.rulesGrid}>
+                        {!isNaN(pg.min_stay_months) && Number(pg.min_stay_months) > 0 && (
+                          <RuleItem
+                            icon="🔒"
+                            label={`Minimum Stay: ${pg.min_stay_months} months`}
+                            allowed={true}
+                            description="Minimum stay requirement"
+                          />
+                        )}
+                        {!isNaN(pg.lock_in_period) && Number(pg.lock_in_period) > 0 && (
+                          <RuleItem
+                            icon="📝"
+                            label={`Lock-in Period: ${pg.lock_in_period} months`}
+                            allowed={true}
+                            description="Lock-in period before leaving"
+                          />
+                        )}
+                        {!isNaN(pg.notice_period) && Number(pg.notice_period) > 0 && (
+                          <RuleItem
+                            icon="⏰"
+                            label={`Notice Period: ${pg.notice_period} months`}
+                            allowed={true}
+                            description="Notice period before vacating"
+                          />
+                        )}
+                        {(pg.agreement_mandatory === true || pg.agreement_mandatory === "true") && (
+                          <RuleItem
+                            icon="📄"
+                            label="Agreement Mandatory"
+                            allowed={true}
+                            description="Legal agreement required"
+                          />
+                        )}
+                        {(pg.id_proof_mandatory === true || pg.id_proof_mandatory === "true") && (
+                          <RuleItem
+                            icon="🆔"
+                            label="ID Proof Mandatory"
+                            allowed={true}
+                            description="ID proof verification required"
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </Section>
           )}
@@ -2365,61 +2396,40 @@ export default function PGDetails() {
             />
           )}
 
-          {/* Contact Information Removed */}
+          {(Number(pg.total_rooms) > 0 || Number(pg.available_rooms) > 0) && !isToLet && (
+            <div style={modernStyles.availabilityCard}>
+              <h3 style={modernStyles.availabilityTitle}>Availability Status</h3>
 
-          {(Number(pg.total_rooms) > 0 ||
-  Number(pg.available_rooms) > 0) && (
+              {Number(pg.total_rooms) > 0 && (
+                <div style={modernStyles.availabilityItem}>
+                  <div style={modernStyles.availabilityLabel}>
+                    Total {isToLet ? "Properties" : "Rooms"}
+                  </div>
+                  <div style={modernStyles.availabilityValue}>
+                    {pg.total_rooms}
+                  </div>
+                </div>
+              )}
 
-  <div style={modernStyles.availabilityCard}>
+              {Number(pg.available_rooms) > 0 && (
+                <div style={modernStyles.availabilityItem}>
+                  <div style={modernStyles.availabilityLabel}>Available Now</div>
+                  <div style={{
+                    ...modernStyles.availabilityValue,
+                    color: "#10b981"
+                  }}>
+                    {pg.available_rooms} Available
+                  </div>
+                </div>
+              )}
 
-    <h3 style={modernStyles.availabilityTitle}>
-      Availability Status
-    </h3>
-
-    {/* TOTAL ROOMS */}
-    {Number(pg.total_rooms) > 0 && (
-      <div style={modernStyles.availabilityItem}>
-
-        <div style={modernStyles.availabilityLabel}>
-          Total {isToLet ? "Properties" : "Rooms"}
-        </div>
-
-        <div style={modernStyles.availabilityValue}>
-          {pg.total_rooms}
-        </div>
-
-      </div>
-    )}
-
-    {/* AVAILABLE ROOMS */}
-    {Number(pg.available_rooms) > 0 && (
-      <div style={modernStyles.availabilityItem}>
-
-        <div style={modernStyles.availabilityLabel}>
-          Available Now
-        </div>
-
-        <div
-          style={{
-            ...modernStyles.availabilityValue,
-            color: "#10b981"
-          }}
-        >
-          {pg.available_rooms} Available
-        </div>
-
-      </div>
-    )}
-
-    {/* NOTE */}
-    <div style={modernStyles.availabilityNote}>
-      {Number(pg.available_rooms) > 0
-        ? "Book now to secure your spot!"
-        : "Check back later for availability"}
-    </div>
-
-  </div>
-)}
+              <div style={modernStyles.availabilityNote}>
+                {Number(pg.available_rooms) > 0
+                  ? "Book now to secure your spot!"
+                  : "Check back later for availability"}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -2442,7 +2452,6 @@ export default function PGDetails() {
               <BookOpen size={18} />
               Book Now
             </button>
-            
           </div>
         </div>
       </div>
@@ -2719,21 +2728,6 @@ const modernStyles = {
     transition: "all 0.3s ease",
     boxShadow: "0 8px 18px rgba(16,185,129,0.3)",
   },
-  callButton: {
-    padding: "12px 28px",
-    background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
-    color: "white",
-    border: "none",
-    borderRadius: "40px",
-    fontSize: "14px",
-    fontWeight: "600",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    transition: "all 0.3s ease",
-    boxShadow: "0 8px 18px rgba(59,130,246,0.3)",
-  },
   directionButton: {
     padding: "12px 28px",
     background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
@@ -2961,6 +2955,67 @@ const modernStyles = {
     borderRadius: "30px",
     display: "inline-block",
   },
+  propertyDetails: {
+    marginTop: "20px",
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "12px",
+    padding: "16px",
+    backgroundColor: "#f8fafc",
+    borderRadius: "20px",
+  },
+  propertyDetailItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "8px 16px",
+    backgroundColor: "white",
+    borderRadius: "30px",
+    fontSize: "13px",
+    fontWeight: "500",
+    color: "#334155",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+  },
+  propertyDetailIcon: {
+    fontSize: "16px",
+  },
+  foodSection: {
+    marginTop: "24px",
+    padding: "20px",
+    backgroundColor: "#f0fdf4",
+    borderRadius: "20px",
+    border: "1px solid #dcfce7",
+  },
+  foodSectionTitle: {
+    fontSize: "15px",
+    fontWeight: "600",
+    marginBottom: "12px",
+    color: "#047857",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  foodSectionIcon: {
+    fontSize: "18px",
+  },
+  foodDetails: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  foodType: {
+    fontSize: "14px",
+    color: "#047857",
+  },
+  mealsCount: {
+    fontSize: "14px",
+    color: "#047857",
+  },
+  foodCharges: {
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "#047857",
+  },
   additionalCharges: {
     marginTop: "24px",
     padding: "20px",
@@ -3002,27 +3057,6 @@ const modernStyles = {
     marginBottom: "12px",
     paddingLeft: "8px",
     borderLeft: "4px solid #6366f1",
-  },
-  foodCharges: {
-    display: "flex",
-    alignItems: "center",
-    gap: "16px",
-    padding: "16px",
-    backgroundColor: "#f0fdf4",
-    borderRadius: "20px",
-    marginTop: "20px",
-  },
-  foodChargesIcon: {
-    fontSize: "24px",
-  },
-  foodChargesLabel: {
-    fontSize: "13px",
-    color: "#047857",
-  },
-  foodChargesValue: {
-    fontSize: "16px",
-    fontWeight: "600",
-    color: "#047857",
   },
 
   // Facilities
@@ -3626,19 +3660,6 @@ const modernStyles = {
     cursor: "pointer",
     boxShadow: "0 6px 14px rgba(16,185,129,0.3)",
   },
-  stickyCallButton: {
-    padding: "12px 28px",
-    background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
-    borderRadius: "40px",
-    color: "white",
-    border: "none",
-    fontWeight: "600",
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    cursor: "pointer",
-    boxShadow: "0 6px 14px rgba(59,130,246,0.3)",
-  },
 
   // Modal
   modalOverlay: {
@@ -3849,34 +3870,6 @@ const modernStyles = {
     textAlign: "center",
     border: "1px dashed #cbd5e1",
   },
-  noHighlightsPanel: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "48px 20px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "24px",
-    textAlign: "center",
-    border: "1px dashed #cbd5e1",
-  },
-  noHighlightsIcon: {
-    fontSize: "48px",
-    marginBottom: "16px",
-    opacity: 0.5,
-  },
-  noHighlightsTitle: {
-    fontSize: "16px",
-    fontWeight: "600",
-    color: "#334155",
-    marginBottom: "8px",
-  },
-  noHighlightsText: {
-    fontSize: "14px",
-    color: "#64748b",
-    maxWidth: "300px",
-    textAlign: "center",
-  },
   loadingNearbyPGs: {
     display: "flex",
     flexDirection: "column",
@@ -3887,34 +3880,6 @@ const modernStyles = {
     borderRadius: "24px",
     textAlign: "center",
     border: "1px dashed #cbd5e1",
-  },
-  noNearbyPGs: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "48px 20px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "24px",
-    textAlign: "center",
-    border: "1px dashed #cbd5e1",
-  },
-  noNearbyPGsIcon: {
-    fontSize: "48px",
-    marginBottom: "16px",
-    opacity: 0.5,
-  },
-  noNearbyPGsTitle: {
-    fontSize: "16px",
-    fontWeight: "600",
-    color: "#334155",
-    marginBottom: "8px",
-  },
-  noNearbyPGsText: {
-    fontSize: "14px",
-    color: "#64748b",
-    maxWidth: "300px",
-    textAlign: "center",
   },
 };
 
@@ -3947,11 +3912,6 @@ if (typeof window !== 'undefined') {
           modernStyles.bookButton.justifyContent = "center";
         }
         
-        if (modernStyles.callButton) {
-          modernStyles.callButton.width = "100%";
-          modernStyles.callButton.justifyContent = "center";
-        }
-        
         if (modernStyles.directionButton) {
           modernStyles.directionButton.width = "100%";
           modernStyles.directionButton.justifyContent = "center";
@@ -3967,11 +3927,6 @@ if (typeof window !== 'undefined') {
         if (modernStyles.stickyBookButton) {
           modernStyles.stickyBookButton.flex = "1";
           modernStyles.stickyBookButton.justifyContent = "center";
-        }
-        
-        if (modernStyles.stickyCallButton) {
-          modernStyles.stickyCallButton.flex = "1";
-          modernStyles.stickyCallButton.justifyContent = "center";
         }
       } else {
         // Desktop styles
@@ -3996,11 +3951,6 @@ if (typeof window !== 'undefined') {
           modernStyles.bookButton.justifyContent = "flex-start";
         }
         
-        if (modernStyles.callButton) {
-          modernStyles.callButton.width = "auto";
-          modernStyles.callButton.justifyContent = "flex-start";
-        }
-        
         if (modernStyles.directionButton) {
           modernStyles.directionButton.width = "auto";
           modernStyles.directionButton.justifyContent = "flex-start";
@@ -4016,11 +3966,6 @@ if (typeof window !== 'undefined') {
         if (modernStyles.stickyBookButton) {
           modernStyles.stickyBookButton.flex = "0";
           modernStyles.stickyBookButton.justifyContent = "center";
-        }
-        
-        if (modernStyles.stickyCallButton) {
-          modernStyles.stickyCallButton.flex = "0";
-          modernStyles.stickyCallButton.justifyContent = "center";
         }
       }
     } catch (err) {
