@@ -192,6 +192,81 @@ const Section = ({ title, icon, children, badgeCount }) =>
     </div>
   ) : null;
 
+// Modern Amenities Component - New Design
+const ModernAmenities = ({ facilities }) => {
+  // Group facilities by category
+  const categorizedFacilities = {
+    "Room & Comfort": ["Bed with Mattress", "Cupboard / Wardrobe", "Study Table & Chair", "Sofa", "Dining Table", "Attached Bathroom", "Balcony", "Fan & Light", "Clothes Hook"],
+    "Appliances": ["Air Conditioner", "Geyser / Water Heater", "Television", "Refrigerator", "Washing Machine", "Microwave", "Water Purifier"],
+    "Connectivity": ["Wi-Fi / Internet", "TV Lounge", "Study Room"],
+    "Safety & Security": ["CCTV Surveillance", "Security Guard", "Fire Safety System", "Secure Lock System"],
+    "Parking": ["Car Parking", "Bike Parking"],
+    "Utilities": ["Power Backup", "24×7 Water Supply", "Lift / Elevator", "Kitchen", "Modular Kitchen"],
+    "Health & Wellness": ["Gym / Fitness", "Open Terrace / Balcony"],
+    "Services": ["Housekeeping", "Laundry Service"],
+    "Food": []
+  };
+  
+  // Create a map of facility to its category
+  const facilityToCategory = {};
+  Object.entries(categorizedFacilities).forEach(([category, items]) => {
+    items.forEach(item => {
+      facilityToCategory[item] = category;
+    });
+  });
+  
+  // Group facilities
+  const grouped = {};
+  facilities.forEach(facility => {
+    const category = facilityToCategory[facility.label] || "Other Amenities";
+    if (!grouped[category]) grouped[category] = [];
+    grouped[category].push(facility);
+  });
+  
+  // Category icons
+  const categoryIcons = {
+    "Room & Comfort": "🛋️",
+    "Appliances": "🔌",
+    "Connectivity": "📡",
+    "Safety & Security": "🛡️",
+    "Parking": "🚗",
+    "Utilities": "💡",
+    "Health & Wellness": "💪",
+    "Services": "🧹",
+    "Food": "🍽️",
+    "Other Amenities": "✨"
+  };
+  
+  if (facilities.length === 0) return null;
+  
+  return (
+    <div style={modernAmenitiesStyles.container}>
+      {Object.entries(grouped).map(([category, items]) => (
+        <div key={category} style={modernAmenitiesStyles.categoryGroup}>
+          <div style={modernAmenitiesStyles.categoryHeader}>
+            <span style={modernAmenitiesStyles.categoryIcon}>{categoryIcons[category] || "✨"}</span>
+            <h4 style={modernAmenitiesStyles.categoryTitle}>{category}</h4>
+            <span style={modernAmenitiesStyles.categoryCount}>{items.length}</span>
+          </div>
+          <div style={modernAmenitiesStyles.itemsGrid}>
+            {items.map((facility, idx) => (
+              <div key={idx} style={modernAmenitiesStyles.amenityItem}>
+                <div style={modernAmenitiesStyles.amenityIconWrapper}>
+                  <span style={modernAmenitiesStyles.amenityIcon}>{facility.icon}</span>
+                </div>
+                <span style={modernAmenitiesStyles.amenityLabel}>{facility.label}</span>
+                <div style={modernAmenitiesStyles.amenityCheck}>
+                  <Check size={14} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const FacilityItem = ({ icon, label, active = true }) => (
   <div 
     style={{
@@ -233,30 +308,32 @@ const PriceDetails = ({ pg }) => {
 
   const formatPriceLocal = (price) => {
     if (!price || price === "" || price === "0" || price === 0) return null;
-    return `₹${parseInt(price).toLocaleString('en-IN')}`;
+    const numPrice = parseInt(price);
+    if (isNaN(numPrice) || numPrice <= 0) return null;
+    return `₹${numPrice.toLocaleString('en-IN')}`;
   };
 
   const hasAnyPrice = () => {
     if (!pg) return false;
     
     if (isToLet) {
-      return (pg.price_1bhk && pg.price_1bhk !== "0" && pg.price_1bhk !== "") ||
-            (pg.price_2bhk && pg.price_2bhk !== "0" && pg.price_2bhk !== "") ||
-            (pg.price_3bhk && pg.price_3bhk !== "0" && pg.price_3bhk !== "") ||
-            (pg.price_4bhk && pg.price_4bhk !== "0" && pg.price_4bhk !== "");
+      return (pg.price_1bhk && pg.price_1bhk !== "0" && pg.price_1bhk !== "" && parseInt(pg.price_1bhk) > 0) ||
+            (pg.price_2bhk && pg.price_2bhk !== "0" && pg.price_2bhk !== "" && parseInt(pg.price_2bhk) > 0) ||
+            (pg.price_3bhk && pg.price_3bhk !== "0" && pg.price_3bhk !== "" && parseInt(pg.price_3bhk) > 0) ||
+            (pg.price_4bhk && pg.price_4bhk !== "0" && pg.price_4bhk !== "" && parseInt(pg.price_4bhk) > 0);
     } else if (isCoLiving) {
-      return (pg.co_living_single_room && pg.co_living_single_room !== "0" && pg.co_living_single_room !== "") ||
-            (pg.co_living_double_room && pg.co_living_double_room !== "0" && pg.co_living_double_room !== "") ||
-            (pg.coliving_three_sharing && pg.coliving_three_sharing !== "0" && pg.coliving_three_sharing !== "") ||
-            (pg.coliving_four_sharing && pg.coliving_four_sharing !== "0" && pg.coliving_four_sharing !== "");
+      return (pg.co_living_single_room && pg.co_living_single_room !== "0" && pg.co_living_single_room !== "" && parseInt(pg.co_living_single_room) > 0) ||
+            (pg.co_living_double_room && pg.co_living_double_room !== "0" && pg.co_living_double_room !== "" && parseInt(pg.co_living_double_room) > 0) ||
+            (pg.coliving_three_sharing && pg.coliving_three_sharing !== "0" && pg.coliving_three_sharing !== "" && parseInt(pg.coliving_three_sharing) > 0) ||
+            (pg.coliving_four_sharing && pg.coliving_four_sharing !== "0" && pg.coliving_four_sharing !== "" && parseInt(pg.coliving_four_sharing) > 0);
     } else {
-      return (pg.single_sharing && pg.single_sharing !== "0" && pg.single_sharing !== "") ||
-            (pg.double_sharing && pg.double_sharing !== "0" && pg.double_sharing !== "") ||
-            (pg.triple_sharing && pg.triple_sharing !== "0" && pg.triple_sharing !== "") ||
-            (pg.four_sharing && pg.four_sharing !== "0" && pg.four_sharing !== "") ||
-            (pg.single_room && pg.single_room !== "0" && pg.single_room !== "") ||
-            (pg.double_room && pg.double_room !== "0" && pg.double_room !== "") ||
-            (pg.triple_room && pg.triple_room !== "0" && pg.triple_room !== "");
+      return (pg.single_sharing && pg.single_sharing !== "0" && pg.single_sharing !== "" && parseInt(pg.single_sharing) > 0) ||
+            (pg.double_sharing && pg.double_sharing !== "0" && pg.double_sharing !== "" && parseInt(pg.double_sharing) > 0) ||
+            (pg.triple_sharing && pg.triple_sharing !== "0" && pg.triple_sharing !== "" && parseInt(pg.triple_sharing) > 0) ||
+            (pg.four_sharing && pg.four_sharing !== "0" && pg.four_sharing !== "" && parseInt(pg.four_sharing) > 0) ||
+            (pg.single_room && pg.single_room !== "0" && pg.single_room !== "" && parseInt(pg.single_room) > 0) ||
+            (pg.double_room && pg.double_room !== "0" && pg.double_room !== "" && parseInt(pg.double_room) > 0) ||
+            (pg.triple_room && pg.triple_room !== "0" && pg.triple_room !== "" && parseInt(pg.triple_room) > 0);
     }
   };
 
@@ -273,20 +350,20 @@ const PriceDetails = ({ pg }) => {
             Rental Prices
           </h4>
           <div style={modernStyles.priceGrid}>
-            {pg.price_1bhk && pg.price_1bhk !== "0" && pg.price_1bhk !== "" && (
+            {pg.price_1bhk && pg.price_1bhk !== "0" && pg.price_1bhk !== "" && parseInt(pg.price_1bhk) > 0 && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>1 BHK</div>
                 <div style={modernStyles.priceValue}>
                   {formatPriceLocal(pg.price_1bhk)}<span style={modernStyles.pricePeriod}>/month</span>
                 </div>
-                {pg.security_deposit && pg.security_deposit !== "0" && pg.security_deposit !== "" && (
+                {pg.security_deposit && pg.security_deposit !== "0" && pg.security_deposit !== "" && parseInt(pg.security_deposit) > 0 && (
                   <div style={modernStyles.depositAmount}>
                     Deposit: {formatPriceLocal(pg.security_deposit)}
                   </div>
                 )}
               </div>
             )}
-            {pg.price_2bhk && pg.price_2bhk !== "0" && pg.price_2bhk !== "" && (
+            {pg.price_2bhk && pg.price_2bhk !== "0" && pg.price_2bhk !== "" && parseInt(pg.price_2bhk) > 0 && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>2 BHK</div>
                 <div style={modernStyles.priceValue}>
@@ -294,7 +371,7 @@ const PriceDetails = ({ pg }) => {
                 </div>
               </div>
             )}
-            {pg.price_3bhk && pg.price_3bhk !== "0" && pg.price_3bhk !== "" && (
+            {pg.price_3bhk && pg.price_3bhk !== "0" && pg.price_3bhk !== "" && parseInt(pg.price_3bhk) > 0 && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>3 BHK</div>
                 <div style={modernStyles.priceValue}>
@@ -302,7 +379,7 @@ const PriceDetails = ({ pg }) => {
                 </div>
               </div>
             )}
-            {pg.price_4bhk && pg.price_4bhk !== "0" && pg.price_4bhk !== "" && (
+            {pg.price_4bhk && pg.price_4bhk !== "0" && pg.price_4bhk !== "" && parseInt(pg.price_4bhk) > 0 && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>4 BHK</div>
                 <div style={modernStyles.priceValue}>
@@ -373,7 +450,7 @@ const PriceDetails = ({ pg }) => {
             Co-Living Room Prices
           </h4>
           <div style={modernStyles.priceGrid}>
-            {pg.co_living_single_room && pg.co_living_single_room !== "0" && pg.co_living_single_room !== "" && (
+            {pg.co_living_single_room && pg.co_living_single_room !== "0" && pg.co_living_single_room !== "" && parseInt(pg.co_living_single_room) > 0 && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>Single Room</div>
                 <div style={modernStyles.priceValue}>
@@ -381,7 +458,7 @@ const PriceDetails = ({ pg }) => {
                 </div>
               </div>
             )}
-            {pg.co_living_double_room && pg.co_living_double_room !== "0" && pg.co_living_double_room !== "" && (
+            {pg.co_living_double_room && pg.co_living_double_room !== "0" && pg.co_living_double_room !== "" && parseInt(pg.co_living_double_room) > 0 && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>Double Room</div>
                 <div style={modernStyles.priceValue}>
@@ -389,7 +466,7 @@ const PriceDetails = ({ pg }) => {
                 </div>
               </div>
             )}
-            {pg.coliving_three_sharing && pg.coliving_three_sharing !== "0" && pg.coliving_three_sharing !== "" && (
+            {pg.coliving_three_sharing && pg.coliving_three_sharing !== "0" && pg.coliving_three_sharing !== "" && parseInt(pg.coliving_three_sharing) > 0 && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>Triple Sharing</div>
                 <div style={modernStyles.priceValue}>
@@ -397,7 +474,7 @@ const PriceDetails = ({ pg }) => {
                 </div>
               </div>
             )}
-            {pg.coliving_four_sharing && pg.coliving_four_sharing !== "0" && pg.coliving_four_sharing !== "" && (
+            {pg.coliving_four_sharing && pg.coliving_four_sharing !== "0" && pg.coliving_four_sharing !== "" && parseInt(pg.coliving_four_sharing) > 0 && (
               <div style={modernStyles.priceItem}>
                 <div style={modernStyles.priceType}>Four Sharing</div>
                 <div style={modernStyles.priceValue}>
@@ -420,7 +497,7 @@ const PriceDetails = ({ pg }) => {
             <div style={modernStyles.priceCategory}>
               <div style={modernStyles.priceCategoryTitle}>Sharing Rooms</div>
               <div style={modernStyles.priceGrid}>
-                {pg.single_sharing && pg.single_sharing !== "0" && pg.single_sharing !== "" && (
+                {pg.single_sharing && pg.single_sharing !== "0" && pg.single_sharing !== "" && parseInt(pg.single_sharing) > 0 && (
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Single Sharing</div>
                     <div style={modernStyles.priceValue}>
@@ -428,7 +505,7 @@ const PriceDetails = ({ pg }) => {
                     </div>
                   </div>
                 )}
-                {pg.double_sharing && pg.double_sharing !== "0" && pg.double_sharing !== "" && (
+                {pg.double_sharing && pg.double_sharing !== "0" && pg.double_sharing !== "" && parseInt(pg.double_sharing) > 0 && (
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Double Sharing</div>
                     <div style={modernStyles.priceValue}>
@@ -436,7 +513,7 @@ const PriceDetails = ({ pg }) => {
                     </div>
                   </div>
                 )}
-                {pg.triple_sharing && pg.triple_sharing !== "0" && pg.triple_sharing !== "" && (
+                {pg.triple_sharing && pg.triple_sharing !== "0" && pg.triple_sharing !== "" && parseInt(pg.triple_sharing) > 0 && (
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Triple Sharing</div>
                     <div style={modernStyles.priceValue}>
@@ -444,7 +521,7 @@ const PriceDetails = ({ pg }) => {
                     </div>
                   </div>
                 )}
-                {pg.four_sharing && pg.four_sharing !== "0" && pg.four_sharing !== "" && (
+                {pg.four_sharing && pg.four_sharing !== "0" && pg.four_sharing !== "" && parseInt(pg.four_sharing) > 0 && (
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Four Sharing</div>
                     <div style={modernStyles.priceValue}>
@@ -460,7 +537,7 @@ const PriceDetails = ({ pg }) => {
             <div style={modernStyles.priceCategory}>
               <div style={modernStyles.priceCategoryTitle}>Private Rooms</div>
               <div style={modernStyles.priceGrid}>
-                {pg.single_room && pg.single_room !== "0" && pg.single_room !== "" && (
+                {pg.single_room && pg.single_room !== "0" && pg.single_room !== "" && parseInt(pg.single_room) > 0 && (
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Single Room</div>
                     <div style={modernStyles.priceValue}>
@@ -468,7 +545,7 @@ const PriceDetails = ({ pg }) => {
                     </div>
                   </div>
                 )}
-                {pg.double_room && pg.double_room !== "0" && pg.double_room !== "" && (
+                {pg.double_room && pg.double_room !== "0" && pg.double_room !== "" && parseInt(pg.double_room) > 0 && (
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Double Room</div>
                     <div style={modernStyles.priceValue}>
@@ -476,7 +553,7 @@ const PriceDetails = ({ pg }) => {
                     </div>
                   </div>
                 )}
-                {pg.triple_room && pg.triple_room !== "0" && pg.triple_room !== "" && (
+                {pg.triple_room && pg.triple_room !== "0" && pg.triple_room !== "" && parseInt(pg.triple_room) > 0 && (
                   <div style={modernStyles.priceItem}>
                     <div style={modernStyles.priceType}>Triple Room</div>
                     <div style={modernStyles.priceValue}>
@@ -504,7 +581,7 @@ const PriceDetails = ({ pg }) => {
                     Meals: {pg.meals_per_day} meals per day
                   </div>
                 )}
-                {pg.food_charges && pg.food_charges !== "0" && pg.food_charges !== "" && (
+                {pg.food_charges && pg.food_charges !== "0" && pg.food_charges !== "" && parseInt(pg.food_charges) > 0 && (
                   <div style={modernStyles.foodCharges}>
                     Food Charges: {formatPriceLocal(pg.food_charges)}/month
                   </div>
@@ -518,19 +595,19 @@ const PriceDetails = ({ pg }) => {
             <div style={modernStyles.additionalCharges}>
               <h5 style={modernStyles.additionalChargesTitle}>Additional Charges</h5>
               <div style={modernStyles.chargesGrid}>
-                {pg.security_deposit && pg.security_deposit !== "0" && pg.security_deposit !== "" && (
+                {pg.security_deposit && pg.security_deposit !== "0" && pg.security_deposit !== "" && parseInt(pg.security_deposit) > 0 && (
                   <div style={modernStyles.chargeItem}>
                     <span style={modernStyles.chargeLabel}>Security Deposit</span>
                     <span style={modernStyles.chargeValue}>{formatPriceLocal(pg.security_deposit)}</span>
                   </div>
                 )}
-                {pg.maintenance_charges && pg.maintenance_charges !== "0" && pg.maintenance_charges !== "" && (
+                {pg.maintenance_charges && pg.maintenance_charges !== "0" && pg.maintenance_charges !== "" && parseInt(pg.maintenance_charges) > 0 && (
                   <div style={modernStyles.chargeItem}>
                     <span style={modernStyles.chargeLabel}>Maintenance Charges</span>
                     <span style={modernStyles.chargeValue}>{formatPriceLocal(pg.maintenance_charges)}<span style={modernStyles.pricePeriod}>/month</span></span>
                   </div>
                 )}
-                {pg.advance_rent && pg.advance_rent !== "0" && pg.advance_rent !== "" && (
+                {pg.advance_rent && pg.advance_rent !== "0" && pg.advance_rent !== "" && parseInt(pg.advance_rent) > 0 && (
                   <div style={modernStyles.chargeItem}>
                     <span style={modernStyles.chargeLabel}>Advance Rent</span>
                     <span style={modernStyles.chargeValue}>{pg.advance_rent} months</span>
@@ -1308,23 +1385,23 @@ export default function PGDetails() {
     const isCoLivingLocal = pg.pg_category === "coliving";
     
     if (isToLetLocal) {
-      return (pg.price_1bhk && pg.price_1bhk !== "0" && pg.price_1bhk !== "") ||
-            (pg.price_2bhk && pg.price_2bhk !== "0" && pg.price_2bhk !== "") ||
-            (pg.price_3bhk && pg.price_3bhk !== "0" && pg.price_3bhk !== "") ||
-            (pg.price_4bhk && pg.price_4bhk !== "0" && pg.price_4bhk !== "");
+      return (pg.price_1bhk && pg.price_1bhk !== "0" && pg.price_1bhk !== "" && parseInt(pg.price_1bhk) > 0) ||
+            (pg.price_2bhk && pg.price_2bhk !== "0" && pg.price_2bhk !== "" && parseInt(pg.price_2bhk) > 0) ||
+            (pg.price_3bhk && pg.price_3bhk !== "0" && pg.price_3bhk !== "" && parseInt(pg.price_3bhk) > 0) ||
+            (pg.price_4bhk && pg.price_4bhk !== "0" && pg.price_4bhk !== "" && parseInt(pg.price_4bhk) > 0);
     } else if (isCoLivingLocal) {
-      return (pg.co_living_single_room && pg.co_living_single_room !== "0" && pg.co_living_single_room !== "") ||
-            (pg.co_living_double_room && pg.co_living_double_room !== "0" && pg.co_living_double_room !== "") ||
-            (pg.coliving_three_sharing && pg.coliving_three_sharing !== "0" && pg.coliving_three_sharing !== "") ||
-            (pg.coliving_four_sharing && pg.coliving_four_sharing !== "0" && pg.coliving_four_sharing !== "");
+      return (pg.co_living_single_room && pg.co_living_single_room !== "0" && pg.co_living_single_room !== "" && parseInt(pg.co_living_single_room) > 0) ||
+            (pg.co_living_double_room && pg.co_living_double_room !== "0" && pg.co_living_double_room !== "" && parseInt(pg.co_living_double_room) > 0) ||
+            (pg.coliving_three_sharing && pg.coliving_three_sharing !== "0" && pg.coliving_three_sharing !== "" && parseInt(pg.coliving_three_sharing) > 0) ||
+            (pg.coliving_four_sharing && pg.coliving_four_sharing !== "0" && pg.coliving_four_sharing !== "" && parseInt(pg.coliving_four_sharing) > 0);
     } else {
-      return (pg.single_sharing && pg.single_sharing !== "0" && pg.single_sharing !== "") ||
-            (pg.double_sharing && pg.double_sharing !== "0" && pg.double_sharing !== "") ||
-            (pg.triple_sharing && pg.triple_sharing !== "0" && pg.triple_sharing !== "") ||
-            (pg.four_sharing && pg.four_sharing !== "0" && pg.four_sharing !== "") ||
-            (pg.single_room && pg.single_room !== "0" && pg.single_room !== "") ||
-            (pg.double_room && pg.double_room !== "0" && pg.double_room !== "") ||
-            (pg.triple_room && pg.triple_room !== "0" && pg.triple_room !== "");
+      return (pg.single_sharing && pg.single_sharing !== "0" && pg.single_sharing !== "" && parseInt(pg.single_sharing) > 0) ||
+            (pg.double_sharing && pg.double_sharing !== "0" && pg.double_sharing !== "" && parseInt(pg.double_sharing) > 0) ||
+            (pg.triple_sharing && pg.triple_sharing !== "0" && pg.triple_sharing !== "" && parseInt(pg.triple_sharing) > 0) ||
+            (pg.four_sharing && pg.four_sharing !== "0" && pg.four_sharing !== "" && parseInt(pg.four_sharing) > 0) ||
+            (pg.single_room && pg.single_room !== "0" && pg.single_room !== "" && parseInt(pg.single_room) > 0) ||
+            (pg.double_room && pg.double_room !== "0" && pg.double_room !== "" && parseInt(pg.double_room) > 0) ||
+            (pg.triple_room && pg.triple_room !== "0" && pg.triple_room !== "" && parseInt(pg.triple_room) > 0);
     }
   };
 
@@ -1517,11 +1594,7 @@ export default function PGDetails() {
 
           {facilities.length > 0 && (
             <Section title="Amenities & Facilities" icon="✨" badgeCount={facilities.length}>
-              <div style={modernStyles.facilitiesGrid}>
-                {facilities.map((facility, index) => (
-                  <FacilityItem key={index} icon={facility.icon} label={facility.label} active={true} />
-                ))}
-              </div>
+              <ModernAmenities facilities={facilities} />
               
               {pg.water_type && pg.water_type !== "" && (
                 <div style={modernStyles.waterSource}>
@@ -1659,7 +1732,95 @@ export default function PGDetails() {
   );
 }
 
-// Styles object (modernStyles) - same as before but I'll include it
+// Modern Amenities Styles
+const modernAmenitiesStyles = {
+  container: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "28px",
+  },
+  categoryGroup: {
+    backgroundColor: "#ffffff",
+    borderRadius: "20px",
+    border: "1px solid #eef2ff",
+    overflow: "hidden",
+    transition: "all 0.3s ease",
+  },
+  categoryHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "16px 20px",
+    backgroundColor: "#f8fafc",
+    borderBottom: "1px solid #eef2ff",
+  },
+  categoryIcon: {
+    fontSize: "24px",
+  },
+  categoryTitle: {
+    fontSize: "16px",
+    fontWeight: "600",
+    color: "#1e293b",
+    margin: 0,
+    flex: 1,
+  },
+  categoryCount: {
+    fontSize: "12px",
+    fontWeight: "500",
+    color: "#64748b",
+    backgroundColor: "#e2e8f0",
+    padding: "2px 10px",
+    borderRadius: "30px",
+  },
+  itemsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+    gap: "12px",
+    padding: "20px",
+  },
+  amenityItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "10px 14px",
+    backgroundColor: "#f8fafc",
+    borderRadius: "14px",
+    transition: "all 0.2s ease",
+    border: "1px solid #eef2ff",
+    cursor: "default",
+  },
+  amenityIconWrapper: {
+    width: "36px",
+    height: "36px",
+    backgroundColor: "#ffffff",
+    borderRadius: "12px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+  },
+  amenityIcon: {
+    fontSize: "18px",
+  },
+  amenityLabel: {
+    fontSize: "14px",
+    fontWeight: "500",
+    color: "#334155",
+    flex: 1,
+  },
+  amenityCheck: {
+    width: "22px",
+    height: "22px",
+    backgroundColor: "#10b98120",
+    borderRadius: "20px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#10b981",
+  },
+};
+
+// Styles object (modernStyles)
 const modernStyles = {
   // Base layout
   page: {
@@ -2161,7 +2322,7 @@ const modernStyles = {
     borderLeft: "4px solid #667eea",
   },
 
-  // Facilities
+  // Facilities - Legacy (keep for fallback)
   facilitiesGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
@@ -2823,6 +2984,10 @@ if (typeof window !== 'undefined') {
         if (modernStyles.modalContent) modernStyles.modalContent.padding = "20px";
         if (modernStyles.modalTitle) modernStyles.modalTitle.fontSize = "22px";
         
+        if (modernAmenitiesStyles.itemsGrid) {
+          modernAmenitiesStyles.itemsGrid.gridTemplateColumns = "1fr";
+        }
+        
         if (modernStyles.actionButtons) {
           modernStyles.actionButtons.flexDirection = "column";
           modernStyles.actionButtons.width = "100%";
@@ -2843,6 +3008,10 @@ if (typeof window !== 'undefined') {
         if (modernStyles.priceGrid) modernStyles.priceGrid.gridTemplateColumns = "repeat(auto-fit, minmax(160px, 1fr))";
         if (modernStyles.modalContent) modernStyles.modalContent.padding = "32px";
         if (modernStyles.modalTitle) modernStyles.modalTitle.fontSize = "26px";
+        
+        if (modernAmenitiesStyles.itemsGrid) {
+          modernAmenitiesStyles.itemsGrid.gridTemplateColumns = "repeat(auto-fill, minmax(220px, 1fr))";
+        }
         
         if (modernStyles.actionButtons) {
           modernStyles.actionButtons.flexDirection = "row";
