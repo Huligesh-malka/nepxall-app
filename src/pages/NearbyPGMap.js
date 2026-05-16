@@ -210,7 +210,7 @@ const GooglePropertySearch = () => {
 
   /*
   --------------------------------------------------
-  HANDLE EDIT & ADD PROPERTY
+  HANDLE EDIT & ADD PROPERTY - FIXED!
   --------------------------------------------------
   */
 
@@ -220,7 +220,7 @@ const GooglePropertySearch = () => {
 
       /*
       =========================================
-      SAVE TEMP PROPERTY
+      SAVE TEMP PROPERTY OR GET EXISTING
       =========================================
       */
 
@@ -262,25 +262,35 @@ const GooglePropertySearch = () => {
 
       /*
       =========================================
-      OPEN ADMIN EDIT PAGE
+      CHECK RESPONSE HAS property_id
       =========================================
       */
 
-      if (response.data.success) {
+      if (response.data.success && response.data.property_id) {
 
-        const propertyId =
-          response.data.property_id;
+        const propertyId = response.data.property_id;
 
-        window.location.href =
-          `/admin/pg/${propertyId}`;
+        console.log("Property ID:", propertyId);
+
+        /*
+        =========================================
+        FIXED: Use /admin/pg/ route NOT /admin/add-property
+        =========================================
+        */
+
+        window.location.href = `/admin/pg/${propertyId}`;
+
+      } else {
+
+        console.error("No property_id in response:", response.data);
+        alert("Failed to get property ID. Please try again.");
 
       }
 
     } catch (error) {
 
-      console.log(error);
-
-      alert("Failed To Open Edit Page");
+      console.log("Error in handleEditAddProperty:", error);
+      alert("Failed To Open Edit Page: " + (error.response?.data?.message || error.message));
 
     }
 
@@ -405,7 +415,7 @@ const GooglePropertySearch = () => {
 
             </a>
 
-            {/* EDIT BUTTON */}
+            {/* EDIT BUTTON - FIXED ROUTE */}
 
             <button
               style={styles.acceptBtn}
