@@ -39,6 +39,11 @@ const GooglePropertySearch = () => {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
 
+  // Facebook States
+  const [facebookUrl, setFacebookUrl] = useState("");
+  const [facebookLoading, setFacebookLoading] = useState(false);
+  const [facebookProperty, setFacebookProperty] = useState(null);
+
   /*
   --------------------------------------------------
   SEARCH GOOGLE PROPERTIES
@@ -99,7 +104,101 @@ const GooglePropertySearch = () => {
 
   /*
   --------------------------------------------------
-  ACCEPT PROPERTY
+  FACEBOOK IMPORT FUNCTION
+  --------------------------------------------------
+  */
+
+  const importFacebookPost = async () => {
+
+    try {
+
+      if (!facebookUrl) {
+
+        alert("Paste Facebook URL");
+
+        return;
+
+      }
+
+      setFacebookLoading(true);
+
+      /*
+      =========================================
+      TEMP PROPERTY
+      =========================================
+      */
+
+      const property = {
+
+        pg_name:
+          "Facebook Imported Property",
+
+        address:
+          "Bengaluru",
+
+        area:
+          "Whitefield",
+
+        description:
+          "Imported from Facebook Post",
+
+        facebook_url:
+          facebookUrl,
+
+        photos: [],
+
+        pg_category:
+          "to_let"
+
+      };
+
+      /*
+      =========================================
+      SAVE TO BACKEND
+      =========================================
+      */
+
+      const response = await axios.post(
+
+        `${API_BASE_URL}/api/nearby-pg/accept-facebook-property`,
+
+        {
+          property
+        }
+
+      );
+
+      console.log(response.data);
+
+      if (response.data.success) {
+
+        alert(
+          "Facebook Property Imported ✅"
+        );
+
+        setFacebookProperty(property);
+
+      }
+
+    } catch (error) {
+
+      console.log(error);
+
+      alert(
+        "Failed To Import Facebook Property"
+      );
+
+    } finally {
+
+      setFacebookLoading(false);
+
+    }
+
+  };
+
+  /*
+  --------------------------------------------------
+  ACCEPT PROPERTY (GOOGLE)
   --------------------------------------------------
   */
 
@@ -166,8 +265,82 @@ const GooglePropertySearch = () => {
     <div style={styles.container}>
 
       <h1 style={styles.heading}>
-        Google Property Search
+        Property Management Dashboard
       </h1>
+
+      {/* FACEBOOK IMPORT SECTION */}
+      
+      <div style={styles.facebookBox}>
+
+        <h2 style={styles.facebookTitle}>
+          Import Facebook Property
+        </h2>
+
+        <div style={styles.searchContainer}>
+
+          <input
+            type="text"
+            placeholder="Paste Facebook Post URL..."
+            value={facebookUrl}
+            onChange={(e) =>
+              setFacebookUrl(e.target.value)
+            }
+            style={styles.searchInput}
+          />
+
+          <button
+            style={styles.facebookBtn}
+            onClick={importFacebookPost}
+          >
+
+            {
+              facebookLoading
+                ? "Importing..."
+                : "Import"
+            }
+
+          </button>
+
+        </div>
+
+      </div>
+
+      {/* SHOW IMPORTED FACEBOOK CARD */}
+
+      {
+        facebookProperty && (
+
+          <div style={styles.facebookCard}>
+
+            <h3>
+              Facebook Property Imported
+            </h3>
+
+            <p>
+              {facebookProperty.pg_name}
+            </p>
+
+            <a
+              href={facebookProperty.facebook_url}
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: "#1877F2", textDecoration: "none" }}
+            >
+
+              View Facebook Post
+
+            </a>
+
+          </div>
+
+        )
+      }
+
+      {/* GOOGLE SEARCH SECTION */}
+
+      <h2 style={styles.googleSectionTitle}>
+        Google Property Search
+      </h2>
 
       {/* SEARCH BAR */}
 
@@ -452,6 +625,13 @@ const styles = {
     color: "#0B5ED7"
   },
 
+  googleSectionTitle: {
+    marginTop: 30,
+    marginBottom: 15,
+    color: "#0B5ED7",
+    fontSize: 24
+  },
+
   center: {
     display: "flex",
     justifyContent: "center",
@@ -575,6 +755,37 @@ const styles = {
     borderRadius: 20,
     fontSize: 12,
     fontWeight: "bold"
+  },
+
+  // Facebook Styles
+  facebookBox: {
+    background: "#fff",
+    padding: 20,
+    borderRadius: 15,
+    marginBottom: 20,
+    boxShadow: "0 4px 15px rgba(0,0,0,0.08)"
+  },
+
+  facebookTitle: {
+    marginBottom: 15,
+    color: "#1877F2"
+  },
+
+  facebookBtn: {
+    background: "#1877F2",
+    color: "#fff",
+    border: "none",
+    padding: "0 25px",
+    borderRadius: 10,
+    cursor: "pointer",
+    fontWeight: "bold"
+  },
+
+  facebookCard: {
+    background: "#E8F0FE",
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 20
   }
 
 };
