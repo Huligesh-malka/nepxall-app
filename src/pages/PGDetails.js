@@ -1300,6 +1300,34 @@ export default function PGDetails() {
     return allFacilities;
   };
 
+  // hasPriceDetails function
+  const hasPriceDetails = () => {
+    if (!pg) return false;
+    
+    const isToLetLocal = pg.pg_category === "to_let";
+    const isCoLivingLocal = pg.pg_category === "coliving";
+    
+    if (isToLetLocal) {
+      return (pg.price_1bhk && pg.price_1bhk !== "0" && pg.price_1bhk !== "") ||
+            (pg.price_2bhk && pg.price_2bhk !== "0" && pg.price_2bhk !== "") ||
+            (pg.price_3bhk && pg.price_3bhk !== "0" && pg.price_3bhk !== "") ||
+            (pg.price_4bhk && pg.price_4bhk !== "0" && pg.price_4bhk !== "");
+    } else if (isCoLivingLocal) {
+      return (pg.co_living_single_room && pg.co_living_single_room !== "0" && pg.co_living_single_room !== "") ||
+            (pg.co_living_double_room && pg.co_living_double_room !== "0" && pg.co_living_double_room !== "") ||
+            (pg.coliving_three_sharing && pg.coliving_three_sharing !== "0" && pg.coliving_three_sharing !== "") ||
+            (pg.coliving_four_sharing && pg.coliving_four_sharing !== "0" && pg.coliving_four_sharing !== "");
+    } else {
+      return (pg.single_sharing && pg.single_sharing !== "0" && pg.single_sharing !== "") ||
+            (pg.double_sharing && pg.double_sharing !== "0" && pg.double_sharing !== "") ||
+            (pg.triple_sharing && pg.triple_sharing !== "0" && pg.triple_sharing !== "") ||
+            (pg.four_sharing && pg.four_sharing !== "0" && pg.four_sharing !== "") ||
+            (pg.single_room && pg.single_room !== "0" && pg.single_room !== "") ||
+            (pg.double_room && pg.double_room !== "0" && pg.double_room !== "") ||
+            (pg.triple_room && pg.triple_room !== "0" && pg.triple_room !== "");
+    }
+  };
+
   const facilities = getAllFacilities();
 
   if (authLoading) {
@@ -1631,7 +1659,7 @@ export default function PGDetails() {
   );
 }
 
-/* ================= MODERN PREMIUM STYLES ================= */
+// Styles object (modernStyles) - same as before but I'll include it
 const modernStyles = {
   // Base layout
   page: {
