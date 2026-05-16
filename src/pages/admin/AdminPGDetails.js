@@ -711,10 +711,11 @@ const AdminPGDetails = () => {
               value={pg.bhk_type} 
               icon={Building} 
               options={[
-                { value: "1bhk", label: "1 BHK" },
-                { value: "2bhk", label: "2 BHK" },
-                { value: "3bhk", label: "3 BHK" },
-                { value: "4bhk", label: "4 BHK" }
+                { value: "1", label: "1 BHK" },
+                { value: "2", label: "2 BHK" },
+                { value: "3", label: "3 BHK" },
+                { value: "4", label: "4 BHK" },
+                { value: "4+", label: "4+ BHK" }
               ]}
             />
             <EditableField 
