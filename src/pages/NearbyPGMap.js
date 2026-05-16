@@ -104,7 +104,7 @@ const GooglePropertySearch = () => {
 
   /*
   --------------------------------------------------
-  FACEBOOK IMPORT FUNCTION
+  FACEBOOK IMPORT FUNCTION - ONLY PREVIEW
   --------------------------------------------------
   */
 
@@ -124,69 +124,41 @@ const GooglePropertySearch = () => {
 
       /*
       =========================================
-      TEMP PROPERTY
+      ONLY PREVIEW
       =========================================
       */
 
-      const property = {
-
-        pg_name:
-          "Facebook Imported Property",
-
-        address:
-          "Bengaluru",
-
-        area:
-          "Whitefield",
-
-        description:
-          "Imported from Facebook Post",
+      const previewData = {
 
         facebook_url:
           facebookUrl,
 
-        photos: [],
+        photos: [
 
-        pg_category:
-          "to_let"
+          "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2",
+
+          "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688"
+
+        ],
+
+        source:
+          "facebook"
 
       };
 
       /*
       =========================================
-      SAVE TO BACKEND
+      SHOW PREVIEW
       =========================================
       */
 
-      const response = await axios.post(
-
-        `${API_BASE_URL}/api/nearby-pg/accept-facebook-property`,
-
-        {
-          property
-        }
-
-      );
-
-      console.log(response.data);
-
-      if (response.data.success) {
-
-        alert(
-          "Facebook Property Imported ✅"
-        );
-
-        setFacebookProperty(property);
-
-      }
+      setFacebookProperty(previewData);
 
     } catch (error) {
 
       console.log(error);
 
-      alert(
-        "Failed To Import Facebook Property"
-      );
+      alert("Import Failed");
 
     } finally {
 
@@ -305,31 +277,71 @@ const GooglePropertySearch = () => {
 
       </div>
 
-      {/* SHOW IMPORTED FACEBOOK CARD */}
+      {/* SHOW IMPORTED FACEBOOK CARD - PREVIEW ONLY */}
 
       {
         facebookProperty && (
 
-          <div style={styles.facebookCard}>
+          <div style={styles.previewCard}>
 
-            <h3>
-              Facebook Property Imported
-            </h3>
+            <div style={styles.previewHeader}>
 
-            <p>
-              {facebookProperty.pg_name}
-            </p>
+              <span style={styles.facebookBadge}>
+                Facebook Preview
+              </span>
+
+            </div>
+
+            {/* PHOTO SLIDER */}
+
+            <Slider {...sliderSettings}>
+
+              {facebookProperty.photos.map(
+                (photo, index) => (
+
+                  <div key={index}>
+
+                    <img
+                      src={photo}
+                      alt=""
+                      style={styles.previewImage}
+                    />
+
+                  </div>
+
+                )
+              )}
+
+            </Slider>
+
+            {/* LINK */}
 
             <a
               href={facebookProperty.facebook_url}
               target="_blank"
               rel="noreferrer"
-              style={{ color: "#1877F2", textDecoration: "none" }}
+              style={styles.facebookLink}
             >
 
-              View Facebook Post
+              Open Facebook Post
 
             </a>
+
+            {/* EDIT BUTTON */}
+
+            <button
+              style={styles.acceptBtn}
+              onClick={() => {
+
+                window.location.href =
+                  "/admin/add-property";
+
+              }}
+            >
+
+              Edit & Add Property
+
+            </button>
 
           </div>
 
@@ -781,11 +793,39 @@ const styles = {
     fontWeight: "bold"
   },
 
-  facebookCard: {
-    background: "#E8F0FE",
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 20
+  previewCard: {
+    background: "#fff",
+    borderRadius: 15,
+    overflow: "hidden",
+    marginBottom: 20,
+    boxShadow: "0 4px 15px rgba(0,0,0,0.08)"
+  },
+
+  previewHeader: {
+    padding: 15
+  },
+
+  facebookBadge: {
+    background: "#1877F2",
+    color: "#fff",
+    padding: "6px 12px",
+    borderRadius: 20,
+    fontSize: 12,
+    fontWeight: "bold"
+  },
+
+  previewImage: {
+    width: "100%",
+    height: 250,
+    objectFit: "cover"
+  },
+
+  facebookLink: {
+    display: "block",
+    padding: 15,
+    color: "#1877F2",
+    fontWeight: "bold",
+    textDecoration: "none"
   }
 
 };
