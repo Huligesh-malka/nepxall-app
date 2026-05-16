@@ -1,4 +1,4 @@
-// AdminPGDetails.js - Complete with ALL fields editable (matching AdminAddPG structure)
+// AdminPGDetails.js - Complete with ALL fields editable including Amenities
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { adminPGAPI } from "../../api/api";
@@ -52,11 +52,11 @@ import {
   School,
   Store,
   Church,
+  ArrowLeft,
   Coffee,
   Wind,
   Sun,
-  Moon,
-  ArrowLeft
+  Moon
 } from "lucide-react";
 
 const FILES_BASE =
@@ -145,6 +145,7 @@ const AdminPGDetails = () => {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [togglingAmenity, setTogglingAmenity] = useState(null);
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
     pricing: true,
@@ -247,6 +248,22 @@ const AdminPGDetails = () => {
     } catch (err) {
       console.error(err);
       showNotification("Delete failed", "error");
+    }
+  };
+
+  // NEW: Toggle amenity value
+  const toggleAmenity = async (field, currentValue) => {
+    setTogglingAmenity(field);
+    try {
+      const newValue = !currentValue;
+      await adminPGAPI.updatePGField(id, field, newValue);
+      showNotification(`${field.replace(/_/g, ' ')} updated successfully`, "success");
+      await loadPG();
+    } catch (err) {
+      console.error("Toggle amenity failed:", err);
+      showNotification("Update failed. Please try again.", "error");
+    } finally {
+      setTogglingAmenity(null);
     }
   };
 
@@ -534,13 +551,30 @@ const AdminPGDetails = () => {
     </div>
   );
 
-  const AmenityBadge = ({ label, value }) => {
+  // UPDATED: Editable Amenity Badge - now clickable!
+  const EditableAmenityBadge = ({ label, field, value }) => {
     const isAvailable = value === true || value === 1 || value === "1" || value === "true";
+    const isToggling = togglingAmenity === field;
+    
     return (
-      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${isAvailable ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-50 text-gray-400'}`}>
-        {isAvailable ? <CheckCircle size={14} /> : <XCircle size={14} />}
+      <button
+        onClick={() => toggleAmenity(field, isAvailable)}
+        disabled={isToggling}
+        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+          isAvailable 
+            ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' 
+            : 'bg-gray-50 text-gray-400 hover:bg-gray-100'
+        } ${isToggling ? 'opacity-50 cursor-wait' : ''}`}
+      >
+        {isToggling ? (
+          <Loader2 size={14} className="animate-spin" />
+        ) : isAvailable ? (
+          <CheckCircle size={14} />
+        ) : (
+          <XCircle size={14} />
+        )}
         <span>{label}</span>
-      </div>
+      </button>
     );
   };
 
@@ -846,32 +880,36 @@ const AdminPGDetails = () => {
             )}
           </Section>
 
-          {/* Amenities & Facilities Section */}
+          {/* Amenities & Facilities Section - NOW FULLY EDITABLE */}
           <Section title="Amenities & Facilities" icon={ShieldCheck} sectionKey="amenities">
             <div className="col-span-full">
+              <div className="mb-4 text-sm text-gray-500 flex items-center gap-2">
+                <Info size={14} />
+                <span>Click on any amenity to toggle ON/OFF</span>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <AmenityBadge label="WiFi" value={pg.wifi_available} />
-                <AmenityBadge label="AC" value={pg.ac_available} />
-                <AmenityBadge label="TV" value={pg.tv} />
-                <AmenityBadge label="Car Parking" value={pg.parking_available} />
-                <AmenityBadge label="Bike Parking" value={pg.bike_parking} />
-                <AmenityBadge label="Laundry" value={pg.laundry_available} />
-                <AmenityBadge label="Washing Machine" value={pg.washing_machine} />
-                <AmenityBadge label="Refrigerator" value={pg.refrigerator} />
-                <AmenityBadge label="Microwave" value={pg.microwave} />
-                <AmenityBadge label="Geyser" value={pg.geyser} />
-                <AmenityBadge label="Power Backup" value={pg.power_backup} />
-                <AmenityBadge label="Lift/Elevator" value={pg.lift_elevator} />
-                <AmenityBadge label="CCTV" value={pg.cctv} />
-                <AmenityBadge label="Security Guard" value={pg.security_guard} />
-                <AmenityBadge label="Gym" value={pg.gym} />
-                <AmenityBadge label="Housekeeping" value={pg.housekeeping} />
-                <AmenityBadge label="Water Purifier" value={pg.water_purifier} />
-                <AmenityBadge label="Fire Safety" value={pg.fire_safety} />
-                <AmenityBadge label="Study Room" value={pg.study_room} />
-                <AmenityBadge label="Common TV Lounge" value={pg.common_tv_lounge} />
-                <AmenityBadge label="Balcony/Open Space" value={pg.balcony_open_space} />
-                <AmenityBadge label="24x7 Water" value={pg.water_24x7} />
+                <EditableAmenityBadge label="WiFi" field="wifi_available" value={pg.wifi_available} />
+                <EditableAmenityBadge label="AC" field="ac_available" value={pg.ac_available} />
+                <EditableAmenityBadge label="TV" field="tv" value={pg.tv} />
+                <EditableAmenityBadge label="Car Parking" field="parking_available" value={pg.parking_available} />
+                <EditableAmenityBadge label="Bike Parking" field="bike_parking" value={pg.bike_parking} />
+                <EditableAmenityBadge label="Laundry" field="laundry_available" value={pg.laundry_available} />
+                <EditableAmenityBadge label="Washing Machine" field="washing_machine" value={pg.washing_machine} />
+                <EditableAmenityBadge label="Refrigerator" field="refrigerator" value={pg.refrigerator} />
+                <EditableAmenityBadge label="Microwave" field="microwave" value={pg.microwave} />
+                <EditableAmenityBadge label="Geyser" field="geyser" value={pg.geyser} />
+                <EditableAmenityBadge label="Power Backup" field="power_backup" value={pg.power_backup} />
+                <EditableAmenityBadge label="Lift/Elevator" field="lift_elevator" value={pg.lift_elevator} />
+                <EditableAmenityBadge label="CCTV" field="cctv" value={pg.cctv} />
+                <EditableAmenityBadge label="Security Guard" field="security_guard" value={pg.security_guard} />
+                <EditableAmenityBadge label="Gym" field="gym" value={pg.gym} />
+                <EditableAmenityBadge label="Housekeeping" field="housekeeping" value={pg.housekeeping} />
+                <EditableAmenityBadge label="Water Purifier" field="water_purifier" value={pg.water_purifier} />
+                <EditableAmenityBadge label="Fire Safety" field="fire_safety" value={pg.fire_safety} />
+                <EditableAmenityBadge label="Study Room" field="study_room" value={pg.study_room} />
+                <EditableAmenityBadge label="Common TV Lounge" field="common_tv_lounge" value={pg.common_tv_lounge} />
+                <EditableAmenityBadge label="Balcony/Open Space" field="balcony_open_space" value={pg.balcony_open_space} />
+                <EditableAmenityBadge label="24x7 Water" field="water_24x7" value={pg.water_24x7} />
               </div>
             </div>
             <EditableField 
@@ -888,29 +926,33 @@ const AdminPGDetails = () => {
             />
           </Section>
 
-          {/* Rules & Restrictions Section */}
+          {/* Rules & Restrictions Section - NOW FULLY EDITABLE */}
           <Section title="Rules & Restrictions" icon={Shield} sectionKey="rules">
             <div className="col-span-full">
+              <div className="mb-4 text-sm text-gray-500 flex items-center gap-2">
+                <Info size={14} />
+                <span>Click on any rule to toggle ON/OFF</span>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <AmenityBadge label="Couple Allowed" value={pg.couple_allowed} />
-                <AmenityBadge label="Family Allowed" value={pg.family_allowed} />
-                <AmenityBadge label="Smoking Allowed" value={pg.smoking_allowed} />
-                <AmenityBadge label="Drinking Allowed" value={pg.drinking_allowed} />
-                <AmenityBadge label="Pets Allowed" value={pg.pets_allowed} />
-                <AmenityBadge label="Visitors Allowed" value={pg.visitor_allowed} />
-                <AmenityBadge label="Visitor Time Restricted" value={pg.visitor_time_restricted} />
-                <AmenityBadge label="Late Night Entry" value={pg.late_night_entry_allowed} />
-                <AmenityBadge label="Outside Food" value={pg.outside_food_allowed} />
-                <AmenityBadge label="Parties Allowed" value={pg.parties_allowed} />
-                <AmenityBadge label="Loud Music Restricted" value={pg.loud_music_restricted} />
-                <AmenityBadge label="Agreement Mandatory" value={pg.agreement_mandatory} />
-                <AmenityBadge label="ID Proof Mandatory" value={pg.id_proof_mandatory} />
-                <AmenityBadge label="Office Going Only" value={pg.office_going_only} />
-                <AmenityBadge label="Students Only" value={pg.students_only} />
-                <AmenityBadge label="Boys Only" value={pg.boys_only} />
-                <AmenityBadge label="Girls Only" value={pg.girls_only} />
-                <AmenityBadge label="Co-Living Allowed" value={pg.co_living_allowed} />
-                <AmenityBadge label="Subletting Allowed" value={pg.subletting_allowed} />
+                <EditableAmenityBadge label="Couple Allowed" field="couple_allowed" value={pg.couple_allowed} />
+                <EditableAmenityBadge label="Family Allowed" field="family_allowed" value={pg.family_allowed} />
+                <EditableAmenityBadge label="Smoking Allowed" field="smoking_allowed" value={pg.smoking_allowed} />
+                <EditableAmenityBadge label="Drinking Allowed" field="drinking_allowed" value={pg.drinking_allowed} />
+                <EditableAmenityBadge label="Pets Allowed" field="pets_allowed" value={pg.pets_allowed} />
+                <EditableAmenityBadge label="Visitors Allowed" field="visitor_allowed" value={pg.visitor_allowed} />
+                <EditableAmenityBadge label="Visitor Time Restricted" field="visitor_time_restricted" value={pg.visitor_time_restricted} />
+                <EditableAmenityBadge label="Late Night Entry" field="late_night_entry_allowed" value={pg.late_night_entry_allowed} />
+                <EditableAmenityBadge label="Outside Food" field="outside_food_allowed" value={pg.outside_food_allowed} />
+                <EditableAmenityBadge label="Parties Allowed" field="parties_allowed" value={pg.parties_allowed} />
+                <EditableAmenityBadge label="Loud Music Restricted" field="loud_music_restricted" value={pg.loud_music_restricted} />
+                <EditableAmenityBadge label="Agreement Mandatory" field="agreement_mandatory" value={pg.agreement_mandatory} />
+                <EditableAmenityBadge label="ID Proof Mandatory" field="id_proof_mandatory" value={pg.id_proof_mandatory} />
+                <EditableAmenityBadge label="Office Going Only" field="office_going_only" value={pg.office_going_only} />
+                <EditableAmenityBadge label="Students Only" field="students_only" value={pg.students_only} />
+                <EditableAmenityBadge label="Boys Only" field="boys_only" value={pg.boys_only} />
+                <EditableAmenityBadge label="Girls Only" field="girls_only" value={pg.girls_only} />
+                <EditableAmenityBadge label="Co-Living Allowed" field="co_living_allowed" value={pg.co_living_allowed} />
+                <EditableAmenityBadge label="Subletting Allowed" field="subletting_allowed" value={pg.subletting_allowed} />
               </div>
             </div>
             <EditableField label="Visitors Allowed Till" field="visitors_allowed_till" value={pg.visitors_allowed_till} icon={ClockIcon} />
