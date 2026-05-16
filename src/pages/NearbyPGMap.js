@@ -210,6 +210,84 @@ const GooglePropertySearch = () => {
 
   /*
   --------------------------------------------------
+  HANDLE EDIT & ADD PROPERTY
+  --------------------------------------------------
+  */
+
+  const handleEditAddProperty = async () => {
+
+    try {
+
+      /*
+      =========================================
+      SAVE TEMP PROPERTY
+      =========================================
+      */
+
+      const response =
+        await axios.post(
+
+          `${API_BASE_URL}/api/nearby-pg/accept-facebook-property`,
+
+          {
+
+            property: {
+
+              pg_name:
+                "Facebook Imported Property",
+
+              address:
+                "Bengaluru",
+
+              area:
+                "Whitefield",
+
+              description:
+                "Imported From Facebook",
+
+              facebook_url:
+                facebookProperty.facebook_url,
+
+              photos:
+                facebookProperty.photos,
+
+              pg_category:
+                "to_let"
+
+            }
+
+          }
+
+        );
+
+      /*
+      =========================================
+      OPEN ADMIN EDIT PAGE
+      =========================================
+      */
+
+      if (response.data.success) {
+
+        const propertyId =
+          response.data.property_id;
+
+        window.location.href =
+          `/admin/pg/${propertyId}`;
+
+      }
+
+    } catch (error) {
+
+      console.log(error);
+
+      alert("Failed To Open Edit Page");
+
+    }
+
+  };
+
+  /*
+  --------------------------------------------------
   LOADING
   --------------------------------------------------
   */
@@ -331,12 +409,7 @@ const GooglePropertySearch = () => {
 
             <button
               style={styles.acceptBtn}
-              onClick={() => {
-
-                window.location.href =
-                  "/admin/add-property";
-
-              }}
+              onClick={handleEditAddProperty}
             >
 
               Edit & Add Property
