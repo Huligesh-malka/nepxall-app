@@ -1605,7 +1605,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
               gap: 8,
               marginBottom: 16
             }}>
-              🛏️ {pg.available_rooms || 0} Beds Left
+              {getBHKDisplay()}
             </div>
           )}
           
@@ -1745,6 +1745,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
 };
 
 /* ================= COMPARE MODAL COMPONENT ================= */
+/* ================= COMPARE MODAL COMPONENT ================= */
 const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
   const [compareData, setCompareData] = useState([]);
 
@@ -1883,7 +1884,8 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
                     padding: "16px", 
                     background: "#f3f4f6",
                     textAlign: "left",
-                    borderRadius: "10px 0 0 0"
+                    borderRadius: "10px 0 0 0",
+                    width: "200px"
                   }}>
                     Features
                   </th>
@@ -1892,7 +1894,7 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
                       padding: "16px", 
                       background: "#f3f4f6",
                       textAlign: "center",
-                      minWidth: "200px",
+                      minWidth: "220px",
                       borderRadius: idx === compareData.length - 1 ? "0 10px 0 0" : "0"
                     }}>
                       <div style={{ fontWeight: 600, marginBottom: 8 }}>{pg.pg_name}</div>
@@ -1948,13 +1950,14 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
                           color: feature.key === 'price' ? "#10b981" : "#374151",
                           padding: feature.key === 'price' ? "6px 12px" : "0",
                           borderRadius: feature.key === 'price' ? "20px" : "0",
-                          fontWeight: feature.key === 'price' ? 600 : 400
+                          fontWeight: feature.key === 'price' ? 600 : 400,
+                          display: "inline-block"
                         }}>
                           {getFeatureValue(pg, feature.key)}
                         </span>
                       </td>
                     ))}
-                  </table>
+                  </tr>
                 ))}
               </tbody>
             </table>
