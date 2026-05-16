@@ -331,11 +331,14 @@ const WalkingAnimation = () => {
         <p className="animation-note">Zero brokerage • Verified owners</p>
       </div>
       
-      <style jsx="true">{`
+      <style>{`
         .walking-animation-container {
           background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-          border-radius: 28px;
-          padding: 20px 16px 24px;
+          border-radius: 22px;
+          padding: 14px;
+          width: 100%;
+          max-width: 320px;
+          min-height: 420px;
           box-shadow: 0 20px 35px -12px rgba(0,0,0,0.25);
           position: sticky;
           top: 100px;
@@ -348,7 +351,7 @@ const WalkingAnimation = () => {
           align-items: center;
           justify-content: space-between;
           margin-bottom: 20px;
-          padding: 0 8px;
+          padding: 0 4px;
         }
         
         .live-badge {
@@ -370,23 +373,23 @@ const WalkingAnimation = () => {
         
         .animation-stage {
           position: relative;
-          height: 160px;
+          height: 120px;
           background: rgba(255,255,255,0.05);
-          border-radius: 24px;
+          border-radius: 20px;
           margin-bottom: 20px;
           overflow: hidden;
         }
         
         .walking-man-wrapper {
           position: absolute;
-          bottom: 20px;
+          bottom: 15px;
           left: 0;
           animation: walkAcross 4s ease-in-out infinite;
           z-index: 10;
         }
         
         .walking-man {
-          transform: scale(0.8);
+          transform: scale(0.7);
         }
         
         .person {
@@ -481,20 +484,20 @@ const WalkingAnimation = () => {
         
         .house {
           position: absolute;
-          bottom: 20px;
-          right: 20px;
+          bottom: 15px;
+          right: 15px;
           transition: all 0.3s ease;
         }
         
         .house-roof {
-          font-size: 32px;
+          font-size: 28px;
           filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
         }
         
         .house-body {
           background: #f59e0b;
-          width: 60px;
-          height: 50px;
+          width: 50px;
+          height: 42px;
           border-radius: 8px;
           position: relative;
           margin-top: -8px;
@@ -504,11 +507,11 @@ const WalkingAnimation = () => {
         .door {
           position: absolute;
           bottom: 0;
-          left: 18px;
-          width: 24px;
-          height: 32px;
+          left: 15px;
+          width: 20px;
+          height: 28px;
           background: #78350f;
-          border-radius: 12px 12px 0 0;
+          border-radius: 10px 10px 0 0;
           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
           transform-origin: left center;
         }
@@ -520,20 +523,20 @@ const WalkingAnimation = () => {
         
         .door-handle {
           position: absolute;
-          right: 4px;
-          top: 14px;
-          width: 4px;
-          height: 4px;
+          right: 3px;
+          top: 12px;
+          width: 3px;
+          height: 3px;
           background: #fcd34d;
           border-radius: 50%;
         }
         
         .window {
           position: absolute;
-          top: 10px;
-          right: 10px;
-          width: 16px;
-          height: 16px;
+          top: 8px;
+          right: 8px;
+          width: 14px;
+          height: 14px;
           background: #93c5fd;
           border-radius: 4px;
           animation: glow 2s infinite;
@@ -541,10 +544,10 @@ const WalkingAnimation = () => {
         
         .path {
           position: absolute;
-          bottom: 16px;
+          bottom: 12px;
           left: 0;
           right: 0;
-          height: 4px;
+          height: 3px;
           background: repeating-linear-gradient(90deg, #475569, #475569 10px, #334155 10px, #334155 20px);
           border-radius: 2px;
         }
@@ -601,7 +604,7 @@ const WalkingAnimation = () => {
             transform: translateX(-20px);
           }
           50% {
-            transform: translateX(calc(100% - 120px));
+            transform: translateX(calc(100% - 100px));
           }
           100% {
             transform: translateX(-20px);
@@ -669,7 +672,44 @@ const WalkingAnimation = () => {
           .walking-animation-container {
             position: relative;
             top: 0;
-            margin-top: 32px;
+            width: 100%;
+            max-width: 100%;
+            min-height: auto;
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 18px;
+          }
+          
+          .animation-stage {
+            height: 100px;
+          }
+          
+          .animation-cta {
+            padding: 10px;
+            font-size: 13px;
+          }
+          
+          .animation-header {
+            margin-bottom: 12px;
+          }
+          
+          .walking-man {
+            transform: scale(0.6);
+          }
+          
+          .house-roof {
+            font-size: 24px;
+          }
+          
+          .house-body {
+            width: 45px;
+            height: 38px;
+          }
+          
+          .door {
+            left: 13px;
+            width: 18px;
+            height: 24px;
           }
         }
       `}</style>
@@ -1398,7 +1438,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
 
-  // ADD THIS FUNCTION HERE:
   const getBHKDisplay = () => {
     if (pg.bhk_type) return pg.bhk_type;
     if (pg.price_2bhk > 0) return "2BHK";
@@ -1605,7 +1644,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
               gap: 8,
               marginBottom: 16
             }}>
-              {getBHKDisplay()}
+              🛏️ {pg.available_rooms || 0} Beds Left
             </div>
           )}
           
@@ -1745,7 +1784,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
 };
 
 /* ================= COMPARE MODAL COMPONENT ================= */
-/* ================= COMPARE MODAL COMPONENT ================= */
+
 const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
   const [compareData, setCompareData] = useState([]);
 
@@ -3451,9 +3490,9 @@ function UserPGSearch() {
 
         {/* RIGHT SIDE - STICKY WALKING ANIMATION */}
         <div style={{
-          width: "340px",
+          width: "320px",
           position: "sticky",
-          top: "100px",
+          top: "90px",
           height: "fit-content",
           display: isMobile ? "none" : "block"
         }}>
