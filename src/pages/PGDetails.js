@@ -225,16 +225,16 @@ const ModernAmenities = ({ facilities }) => {
   
   // Category icons
   const categoryIcons = {
-    "Room & Comfort": "🛋️",
-    "Appliances": "🔌",
-    "Connectivity": "📡",
-    "Safety & Security": "🛡️",
-    "Parking": "🚗",
-    "Utilities": "💡",
-    "Health & Wellness": "💪",
-    "Services": "🧹",
-    "Food": "🍽️",
-    "Other Amenities": "✨"
+    "Room & Comfort": "",
+    "Appliances": "",
+    "Connectivity": "",
+    "Safety & Security": "",
+    "Parking": "",
+    "Utilities": "",
+    "Health & Wellness": "",
+    "Services": "",
+    "Food": "",
+    "Other Amenities": ""
   };
   
   if (facilities.length === 0) return null;
