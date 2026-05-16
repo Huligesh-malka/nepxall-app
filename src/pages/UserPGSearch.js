@@ -258,465 +258,6 @@ const getEffectiveRent = (pg) => {
   );
 };
 
-/* ================= WALKING ANIMATION COMPONENT ================= */
-const WalkingAnimation = () => {
-  const [doorOpen, setDoorOpen] = useState(false);
-  const [showText, setShowText] = useState(false);
-
-  useEffect(() => {
-    // Cycle animation: walk -> door opens -> person enters -> reset
-    const cycleInterval = setInterval(() => {
-      // Start walking animation triggers door open after 2 seconds
-      setTimeout(() => setDoorOpen(true), 2000);
-      // After person enters, close door and reset
-      setTimeout(() => {
-        setDoorOpen(false);
-        setShowText(true);
-        setTimeout(() => setShowText(false), 1500);
-      }, 3500);
-    }, 6000);
-
-    return () => clearInterval(cycleInterval);
-  }, []);
-
-  return (
-    <div className="walking-animation-container">
-      <div className="animation-header">
-        <span className="live-badge">⚡ LIVE</span>
-        <span className="animation-title">See how it works</span>
-      </div>
-      
-      <div className="animation-stage">
-        <div className="walking-man-wrapper">
-          <div className="walking-man">
-            <div className="person">
-              <div className="head"></div>
-              <div className="body"></div>
-              <div className="legs">
-                <div className="leg leg-left"></div>
-                <div className="leg leg-right"></div>
-              </div>
-              <div className="arms">
-                <div className="arm arm-left"></div>
-                <div className="arm arm-right"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className={`house ${doorOpen ? "door-open" : ""}`}>
-          <div className="house-roof">🏠</div>
-          <div className="house-body">
-            <div className="door">
-              <div className="door-handle"></div>
-            </div>
-            <div className="window"></div>
-          </div>
-        </div>
-        
-        <div className="path"></div>
-      </div>
-      
-      {showText && (
-        <div className="success-message">
-          ✨ Just like that! Owner will contact you ✨
-        </div>
-      )}
-      
-      <div className="cta-button-wrapper">
-        <button className="animation-cta">
-          <MessageCircle size={18} />
-          Join PG Now
-        </button>
-        <p className="animation-note">Zero brokerage • Verified owners</p>
-      </div>
-      
-      <style>{`
-        .walking-animation-container {
-          background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-          border-radius: 22px;
-          padding: 14px;
-          width: 100%;
-          max-width: 320px;
-          min-height: 420px;
-          box-shadow: 0 20px 35px -12px rgba(0,0,0,0.25);
-          position: sticky;
-          top: 100px;
-          transition: all 0.3s ease;
-          border: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        .animation-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 20px;
-          padding: 0 4px;
-        }
-        
-        .live-badge {
-          background: #ef4444;
-          color: white;
-          font-size: 11px;
-          font-weight: 700;
-          padding: 4px 10px;
-          border-radius: 30px;
-          letter-spacing: 0.5px;
-          animation: pulse 1.5s infinite;
-        }
-        
-        .animation-title {
-          color: #94a3b8;
-          font-size: 12px;
-          font-weight: 500;
-        }
-        
-        .animation-stage {
-          position: relative;
-          height: 120px;
-          background: rgba(255,255,255,0.05);
-          border-radius: 20px;
-          margin-bottom: 20px;
-          overflow: hidden;
-        }
-        
-        .walking-man-wrapper {
-          position: absolute;
-          bottom: 15px;
-          left: 0;
-          animation: walkAcross 4s ease-in-out infinite;
-          z-index: 10;
-        }
-        
-        .walking-man {
-          transform: scale(0.7);
-        }
-        
-        .person {
-          position: relative;
-          width: 40px;
-          height: 70px;
-        }
-        
-        .head {
-          width: 28px;
-          height: 28px;
-          background: #fcd34d;
-          border-radius: 50%;
-          position: absolute;
-          top: 0;
-          left: 6px;
-          animation: bob 0.4s ease-in-out infinite;
-        }
-        
-        .head::before {
-          content: "👤";
-          position: absolute;
-          font-size: 18px;
-          top: 2px;
-          left: 5px;
-          opacity: 0.8;
-        }
-        
-        .body {
-          width: 24px;
-          height: 30px;
-          background: #3b82f6;
-          border-radius: 12px;
-          position: absolute;
-          top: 30px;
-          left: 8px;
-        }
-        
-        .legs {
-          position: absolute;
-          top: 60px;
-          left: 10px;
-          width: 20px;
-          display: flex;
-          gap: 2px;
-        }
-        
-        .leg {
-          width: 8px;
-          height: 16px;
-          background: #1e293b;
-          border-radius: 4px;
-          animation: walk 0.4s ease-in-out infinite;
-          transform-origin: top center;
-        }
-        
-        .leg-left {
-          animation-delay: 0s;
-        }
-        
-        .leg-right {
-          animation-delay: 0.2s;
-        }
-        
-        .arms {
-          position: absolute;
-          top: 38px;
-          left: 6px;
-          width: 28px;
-          display: flex;
-          justify-content: space-between;
-        }
-        
-        .arm {
-          width: 6px;
-          height: 18px;
-          background: #fcd34d;
-          border-radius: 3px;
-          animation: swing 0.4s ease-in-out infinite;
-          transform-origin: top center;
-        }
-        
-        .arm-left {
-          transform: rotate(-20deg);
-          animation-delay: 0s;
-        }
-        
-        .arm-right {
-          transform: rotate(20deg);
-          animation-delay: 0.2s;
-        }
-        
-        .house {
-          position: absolute;
-          bottom: 15px;
-          right: 15px;
-          transition: all 0.3s ease;
-        }
-        
-        .house-roof {
-          font-size: 28px;
-          filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
-        }
-        
-        .house-body {
-          background: #f59e0b;
-          width: 50px;
-          height: 42px;
-          border-radius: 8px;
-          position: relative;
-          margin-top: -8px;
-          overflow: hidden;
-        }
-        
-        .door {
-          position: absolute;
-          bottom: 0;
-          left: 15px;
-          width: 20px;
-          height: 28px;
-          background: #78350f;
-          border-radius: 10px 10px 0 0;
-          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-          transform-origin: left center;
-        }
-        
-        .house.door-open .door {
-          transform: rotateY(-80deg);
-          background: #451a03;
-        }
-        
-        .door-handle {
-          position: absolute;
-          right: 3px;
-          top: 12px;
-          width: 3px;
-          height: 3px;
-          background: #fcd34d;
-          border-radius: 50%;
-        }
-        
-        .window {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          width: 14px;
-          height: 14px;
-          background: #93c5fd;
-          border-radius: 4px;
-          animation: glow 2s infinite;
-        }
-        
-        .path {
-          position: absolute;
-          bottom: 12px;
-          left: 0;
-          right: 0;
-          height: 3px;
-          background: repeating-linear-gradient(90deg, #475569, #475569 10px, #334155 10px, #334155 20px);
-          border-radius: 2px;
-        }
-        
-        .success-message {
-          background: #10b981;
-          color: white;
-          text-align: center;
-          padding: 8px 12px;
-          border-radius: 40px;
-          font-size: 12px;
-          font-weight: 600;
-          margin-top: 12px;
-          animation: slideUp 0.4s ease;
-        }
-        
-        .cta-button-wrapper {
-          margin-top: 20px;
-          text-align: center;
-        }
-        
-        .animation-cta {
-          width: 100%;
-          background: linear-gradient(135deg, #3b82f6, #2563eb);
-          border: none;
-          padding: 12px;
-          border-radius: 40px;
-          color: white;
-          font-weight: 600;
-          font-size: 14px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          cursor: pointer;
-          transition: all 0.2s;
-          box-shadow: 0 4px 12px rgba(59,130,246,0.3);
-        }
-        
-        .animation-cta:hover {
-          transform: scale(1.02);
-          background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        }
-        
-        .animation-note {
-          font-size: 10px;
-          color: #64748b;
-          margin-top: 10px;
-          margin-bottom: 0;
-        }
-        
-        @keyframes walkAcross {
-          0% {
-            transform: translateX(-20px);
-          }
-          50% {
-            transform: translateX(calc(100% - 100px));
-          }
-          100% {
-            transform: translateX(-20px);
-          }
-        }
-        
-        @keyframes walk {
-          0%, 100% {
-            transform: rotate(0deg);
-          }
-          50% {
-            transform: rotate(25deg);
-          }
-        }
-        
-        @keyframes swing {
-          0%, 100% {
-            transform: rotate(-25deg);
-          }
-          50% {
-            transform: rotate(25deg);
-          }
-        }
-        
-        @keyframes bob {
-          0%, 100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-3px);
-          }
-        }
-        
-        @keyframes glow {
-          0%, 100% {
-            opacity: 0.6;
-          }
-          50% {
-            opacity: 1;
-            box-shadow: 0 0 8px #93c5fd;
-          }
-        }
-        
-        @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        @keyframes pulse {
-          0%, 100% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.6;
-          }
-        }
-        
-        @media (max-width: 768px) {
-          .walking-animation-container {
-            position: relative;
-            top: 0;
-            width: 100%;
-            max-width: 100%;
-            min-height: auto;
-            margin-top: 20px;
-            padding: 12px;
-            border-radius: 18px;
-          }
-          
-          .animation-stage {
-            height: 100px;
-          }
-          
-          .animation-cta {
-            padding: 10px;
-            font-size: 13px;
-          }
-          
-          .animation-header {
-            margin-bottom: 12px;
-          }
-          
-          .walking-man {
-            transform: scale(0.6);
-          }
-          
-          .house-roof {
-            font-size: 24px;
-          }
-          
-          .house-body {
-            width: 45px;
-            height: 38px;
-          }
-          
-          .door {
-            left: 13px;
-            width: 18px;
-            height: 24px;
-          }
-        }
-      `}</style>
-    </div>
-  );
-};
-
 /* ================= BUDGET FILTER COMPONENT ================= */
 const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
   const [localMin, setLocalMin] = useState(minBudget);
@@ -1437,16 +978,6 @@ const BookingModal = ({ pg, onClose, onBook }) => {
 const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
-
-  const getBHKDisplay = () => {
-    if (pg.bhk_type) return pg.bhk_type;
-    if (pg.price_2bhk > 0) return "2BHK";
-    if (pg.price_3bhk > 0) return "3BHK";
-    if (pg.price_1bhk > 0) return "1BHK";
-    if (pg.price_4bhk > 0) return "4BHK";
-    return "Apartment";
-  };
-
   
   const photosArray = React.useMemo(() => {
     if (pg.photos && Array.isArray(pg.photos) && pg.photos.length > 0) {
@@ -1681,7 +1212,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
               flexWrap: "wrap",
               marginBottom: 16
             }}>
-              <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>🏠 {getBHKDisplay()}</span>
+              {pg.bhk_type && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🏠 {pg.bhk_type}</span>}
               {pg.furnishing_type && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🛋️ {pg.furnishing_type}</span>}
               {pg.family_allowed && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>👨‍👩‍👧 Family</span>}
               {pg.parking_available && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🚗 Parking</span>}
@@ -1784,7 +1315,6 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
 };
 
 /* ================= COMPARE MODAL COMPONENT ================= */
-
 const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
   const [compareData, setCompareData] = useState([]);
 
@@ -1923,8 +1453,7 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
                     padding: "16px", 
                     background: "#f3f4f6",
                     textAlign: "left",
-                    borderRadius: "10px 0 0 0",
-                    width: "200px"
+                    borderRadius: "10px 0 0 0"
                   }}>
                     Features
                   </th>
@@ -1933,7 +1462,7 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
                       padding: "16px", 
                       background: "#f3f4f6",
                       textAlign: "center",
-                      minWidth: "220px",
+                      minWidth: "200px",
                       borderRadius: idx === compareData.length - 1 ? "0 10px 0 0" : "0"
                     }}>
                       <div style={{ fontWeight: 600, marginBottom: 8 }}>{pg.pg_name}</div>
@@ -1989,8 +1518,7 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
                           color: feature.key === 'price' ? "#10b981" : "#374151",
                           padding: feature.key === 'price' ? "6px 12px" : "0",
                           borderRadius: feature.key === 'price' ? "20px" : "0",
-                          fontWeight: feature.key === 'price' ? 600 : 400,
-                          display: "inline-block"
+                          fontWeight: feature.key === 'price' ? 600 : 400
                         }}>
                           {getFeatureValue(pg, feature.key)}
                         </span>
@@ -2550,7 +2078,7 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
               flexWrap: "wrap",
               marginBottom: 12
             }}>
-              <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>🏠 {getBHKDisplay()}</span>
+              {pg.bhk_type && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🏠 {pg.bhk_type}</span>}
               {pg.furnishing_type && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🛋️ {pg.furnishing_type}</span>}
               {pg.family_allowed && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>👨‍👩‍👧 Family</span>}
               {pg.parking_available && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🚗 Parking</span>}
@@ -3349,156 +2877,139 @@ function UserPGSearch() {
         )}
       </div>
 
-      {/* MAIN LAYOUT: LEFT SIDE (Property Cards) + RIGHT SIDE (Walking Animation) */}
-      <div style={{ display: "flex", gap: "32px" }}>
-        {/* LEFT SIDE - PROPERTY CARDS */}
-        <div style={{ flex: 1 }}>
-          {/* Property Tabs */}
+      {/* Property Tabs */}
+      <div style={{ 
+        display: "flex", 
+        gap: 8, 
+        marginBottom: 28,
+        borderBottom: "1px solid #e5e7eb",
+        paddingBottom: 12,
+        overflowX: "auto",
+        scrollbarWidth: "thin"
+      }}>
+        {propertyTabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: "12px 24px",
+              borderRadius: 40,
+              background: activeTab === tab.id ? "#1e3a5f" : "transparent",
+              color: activeTab === tab.id ? "white" : "#4b5563",
+              border: activeTab === tab.id ? "none" : "1px solid #e5e7eb",
+              cursor: "pointer",
+              fontSize: 15,
+              fontWeight: activeTab === tab.id ? 600 : 500,
+              transition: "all 0.2s ease",
+              whiteSpace: "nowrap"
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Results Header */}
+      <div style={{ 
+        display: "flex", 
+        justifyContent: "space-between", 
+        alignItems: "center",
+        marginBottom: 24,
+        flexWrap: "wrap",
+        gap: 12
+      }}>
+        <div>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>
+            {getTabTitle()}
+          </h2>
+          <p style={{ fontSize: 14, color: "#6b7280", margin: "4px 0 0" }}>
+            {resultCount} {resultCount === 1 ? "property" : "properties"} found
+          </p>
+        </div>
+        
+        {compareMode && selectedForCompare.size > 0 && (
+          <button
+            onClick={handleCompare}
+            style={{
+              padding: "10px 20px",
+              background: "#8b5cf6",
+              color: "white",
+              border: "none",
+              borderRadius: 40,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 8
+            }}
+          >
+            <BarChart size={16} />
+            Compare ({selectedForCompare.size})
+          </button>
+        )}
+      </div>
+
+      {/* Properties Grid */}
+      {loading ? (
+        <div style={{ textAlign: "center", padding: "80px 20px" }}>
+          <div style={{ width: 50, height: 50, border: "4px solid #e5e7eb", borderTop: "4px solid #3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 20px" }} />
+          <p style={{ color: "#6b7280" }}>Loading properties...</p>
+        </div>
+      ) : displayedPGs.length > 0 ? (
+        <>
           <div style={{ 
-            display: "flex", 
-            gap: 8, 
-            marginBottom: 28,
-            borderBottom: "1px solid #e5e7eb",
-            paddingBottom: 12,
-            overflowX: "auto",
-            scrollbarWidth: "thin"
+            display: "grid", 
+            gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", 
+            gap: 28 
           }}>
-            {propertyTabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  padding: "12px 24px",
-                  borderRadius: 40,
-                  background: activeTab === tab.id ? "#1e3a5f" : "transparent",
-                  color: activeTab === tab.id ? "white" : "#4b5563",
-                  border: activeTab === tab.id ? "none" : "1px solid #e5e7eb",
-                  cursor: "pointer",
-                  fontSize: 15,
-                  fontWeight: activeTab === tab.id ? 600 : 500,
-                  transition: "all 0.2s ease",
-                  whiteSpace: "nowrap"
-                }}
-              >
-                {tab.label}
-              </button>
+            {displayedPGs.map((pg) => (
+              <PGPropertyCard
+                key={pg.id}
+                pg={pg}
+                onQuickView={handleQuickView}
+                onFavorite={toggleFavorite}
+                onContact={handleBookNow}
+                onCardClick={handleCardClick}
+                isFavorite={favorites.has(pg.id)}
+                isSelectedForCompare={selectedForCompare.has(pg.id)}
+                onSelectForCompare={toggleSelectForCompare}
+                compareMode={compareMode}
+              />
             ))}
           </div>
-
-          {/* Results Header */}
-          <div style={{ 
-            display: "flex", 
-            justifyContent: "space-between", 
-            alignItems: "center",
-            marginBottom: 24,
-            flexWrap: "wrap",
-            gap: 12
-          }}>
-            <div>
-              <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>
-                {getTabTitle()}
-              </h2>
-              <p style={{ fontSize: 14, color: "#6b7280", margin: "4px 0 0" }}>
-                {resultCount} {resultCount === 1 ? "property" : "properties"} found
-              </p>
-            </div>
-            
-            {compareMode && selectedForCompare.size > 0 && (
+          
+          {/* View All PGs Button - Exactly as requested */}
+          {!showAllPGs && filteredPGs.length > INITIAL_PG_LIMIT && (
+            <div style={{ textAlign: "center", marginTop: 40, marginBottom: 60 }}>
               <button
-                onClick={handleCompare}
+                onClick={() => setShowAllPGs(true)}
                 style={{
-                  padding: "10px 20px",
-                  background: "#8b5cf6",
+                  padding: "14px 28px",
+                  background: "#2563eb",
                   color: "white",
                   border: "none",
-                  borderRadius: 40,
-                  fontSize: 14,
+                  borderRadius: 12,
+                  fontSize: 16,
                   fontWeight: 600,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8
+                  cursor: "pointer"
                 }}
               >
-                <BarChart size={16} />
-                Compare ({selectedForCompare.size})
-              </button>
-            )}
-          </div>
-
-          {/* Properties Grid */}
-          {loading ? (
-            <div style={{ textAlign: "center", padding: "80px 20px" }}>
-              <div style={{ width: 50, height: 50, border: "4px solid #e5e7eb", borderTop: "4px solid #3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 20px" }} />
-              <p style={{ color: "#6b7280" }}>Loading properties...</p>
-            </div>
-          ) : displayedPGs.length > 0 ? (
-            <>
-              <div style={{ 
-                display: "grid", 
-                gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", 
-                gap: 28 
-              }}>
-                {displayedPGs.map((pg) => (
-                  <PGPropertyCard
-                    key={pg.id}
-                    pg={pg}
-                    onQuickView={handleQuickView}
-                    onFavorite={toggleFavorite}
-                    onContact={handleBookNow}
-                    onCardClick={handleCardClick}
-                    isFavorite={favorites.has(pg.id)}
-                    isSelectedForCompare={selectedForCompare.has(pg.id)}
-                    onSelectForCompare={toggleSelectForCompare}
-                    compareMode={compareMode}
-                  />
-                ))}
-              </div>
-              
-              {/* View All PGs Button - Exactly as requested */}
-              {!showAllPGs && filteredPGs.length > INITIAL_PG_LIMIT && (
-                <div style={{ textAlign: "center", marginTop: 40, marginBottom: 60 }}>
-                  <button
-                    onClick={() => setShowAllPGs(true)}
-                    style={{
-                      padding: "14px 28px",
-                      background: "#2563eb",
-                      color: "white",
-                      border: "none",
-                      borderRadius: 12,
-                      fontSize: 16,
-                      fontWeight: 600,
-                      cursor: "pointer"
-                    }}
-                  >
-                    View All PGs
-                  </button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div style={{ textAlign: "center", padding: "80px 20px", background: "#f9fafb", borderRadius: 24, marginBottom: 40 }}>
-              <Search size={56} style={{ margin: "0 auto 20px", color: "#9ca3af" }} />
-              <h3 style={{ fontSize: 22, fontWeight: 600, color: "#374151", marginBottom: 8 }}>No properties found</h3>
-              <p style={{ color: "#6b7280", marginBottom: 28 }}>Try adjusting your filters or search for a different location</p>
-              <button onClick={resetFilters} style={{ padding: "12px 28px", background: "#3b82f6", color: "white", border: "none", borderRadius: 40, cursor: "pointer", fontWeight: 600 }}>
-                Reset All Filters
+                View All PGs
               </button>
             </div>
           )}
+        </>
+      ) : (
+        <div style={{ textAlign: "center", padding: "80px 20px", background: "#f9fafb", borderRadius: 24, marginBottom: 40 }}>
+          <Search size={56} style={{ margin: "0 auto 20px", color: "#9ca3af" }} />
+          <h3 style={{ fontSize: 22, fontWeight: 600, color: "#374151", marginBottom: 8 }}>No properties found</h3>
+          <p style={{ color: "#6b7280", marginBottom: 28 }}>Try adjusting your filters or search for a different location</p>
+          <button onClick={resetFilters} style={{ padding: "12px 28px", background: "#3b82f6", color: "white", border: "none", borderRadius: 40, cursor: "pointer", fontWeight: 600 }}>
+            Reset All Filters
+          </button>
         </div>
-
-        {/* RIGHT SIDE - STICKY WALKING ANIMATION */}
-        <div style={{
-          width: "320px",
-          position: "sticky",
-          top: "90px",
-          height: "fit-content",
-          display: isMobile ? "none" : "block"
-        }}>
-          <WalkingAnimation />
-        </div>
-      </div>
+      )}
 
       {/* Modals */}
       {showBudgetFilter && <BudgetFilter minBudget={filters.minBudget} maxBudget={filters.maxBudget} onBudgetChange={handleBudgetChange} onClose={() => setShowBudgetFilter(false)} />}
