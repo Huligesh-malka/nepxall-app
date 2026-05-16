@@ -210,19 +210,13 @@ const GooglePropertySearch = () => {
 
   /*
   --------------------------------------------------
-  HANDLE EDIT & ADD PROPERTY - FIXED!
+  ACCEPT FACEBOOK PROPERTY - SIMPLE SAVE
   --------------------------------------------------
   */
 
-  const handleEditAddProperty = async () => {
+  const handleAcceptFacebookProperty = async () => {
 
     try {
-
-      /*
-      =========================================
-      SAVE TEMP PROPERTY OR GET EXISTING
-      =========================================
-      */
 
       const response =
         await axios.post(
@@ -260,37 +254,29 @@ const GooglePropertySearch = () => {
 
         );
 
-      /*
-      =========================================
-      CHECK RESPONSE HAS property_id
-      =========================================
-      */
+      if (response.data.success) {
 
-      if (response.data.success && response.data.property_id) {
-
-        const propertyId = response.data.property_id;
-
-        console.log("Property ID:", propertyId);
+        alert(
+          "Facebook Property Accepted ✅"
+        );
 
         /*
-        =========================================
-        FIXED: Use /admin/pg/ route NOT /admin/add-property
-        =========================================
+        CLEAR PREVIEW
         */
 
-        window.location.href = `/admin/pg/${propertyId}`;
+        setFacebookProperty(null);
 
-      } else {
-
-        console.error("No property_id in response:", response.data);
-        alert("Failed to get property ID. Please try again.");
+        setFacebookUrl("");
 
       }
 
     } catch (error) {
 
-      console.log("Error in handleEditAddProperty:", error);
-      alert("Failed To Open Edit Page: " + (error.response?.data?.message || error.message));
+      console.log(error);
+
+      alert(
+        "Failed To Accept Property"
+      );
 
     }
 
@@ -415,14 +401,14 @@ const GooglePropertySearch = () => {
 
             </a>
 
-            {/* EDIT BUTTON - FIXED ROUTE */}
+            {/* ACCEPT PROPERTY BUTTON */}
 
             <button
               style={styles.acceptBtn}
-              onClick={handleEditAddProperty}
+              onClick={handleAcceptFacebookProperty}
             >
 
-              Edit & Add Property
+              Accept Property
 
             </button>
 
