@@ -2205,7 +2205,7 @@ function UserPGSearch() {
     foodType: ""
   });
 
-  const limit = 1000;
+  const limit = 12;
 
   // Auto ask for location on first load
   useEffect(() => {
