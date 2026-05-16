@@ -1,4 +1,4 @@
-// AdminPGDetails.js - Complete with ALL fields editable
+// AdminPGDetails.js - Complete with ALL fields editable (matching AdminAddPG structure)
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { adminPGAPI } from "../../api/api";
@@ -51,7 +51,12 @@ import {
   Hospital,
   School,
   Store,
-  Church
+  Church,
+  Coffee,
+  Wind,
+  Sun,
+  Moon,
+  ArrowLeft
 } from "lucide-react";
 
 const FILES_BASE =
@@ -63,11 +68,9 @@ const getCorrectImageUrl = (path) => {
   if (!path) {
     return "https://via.placeholder.com/400x300?text=No+Image";
   }
-
   if (path.startsWith("http")) {
     return path;
   }
-
   if (path.includes("/uploads/")) {
     const uploadsIndex = path.indexOf("/uploads/");
     if (uploadsIndex !== -1) {
@@ -75,19 +78,17 @@ const getCorrectImageUrl = (path) => {
       return `${FILES_BASE}${relativePath}`;
     }
   }
-
   if (path.includes("/opt/render/")) {
     const uploadsMatch = path.match(/\/uploads\/.*/);
     if (uploadsMatch) {
       return `${FILES_BASE}${uploadsMatch[0]}`;
     }
   }
-
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return `${FILES_BASE}${normalizedPath}`;
 };
 
-// Chair icon component
+// Custom Icons
 const Chair = ({ size = 16, className = "" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="M7 18v4m10-4v4M5 14h14v-4a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v4Z" />
@@ -95,14 +96,12 @@ const Chair = ({ size = 16, className = "" }) => (
   </svg>
 );
 
-// Tree icon component for park
 const Tree = ({ size = 16, className = "" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="M12 22V12M7 12L12 7L17 12M7 12H4L9 7L7 4L12 9L17 4L15 7L20 12H17" />
   </svg>
 );
 
-// Bank/Landmark icon component
 const LandmarkIcon = ({ size = 16, className = "" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="M3 9.5L12 3L21 9.5M5 10v7M7 10v7M9 10v7M11 10v7M13 10v7M15 10v7M17 10v7M19 10v7M4 21h16" />
@@ -110,7 +109,6 @@ const LandmarkIcon = ({ size = 16, className = "" }) => (
   </svg>
 );
 
-// Mosque icon component
 const MosqueIcon = ({ size = 16, className = "" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="M12 2L9 7h6L12 2z" />
@@ -121,7 +119,6 @@ const MosqueIcon = ({ size = 16, className = "" }) => (
   </svg>
 );
 
-// Temple icon component
 const TempleIcon = ({ size = 16, className = "" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="M12 2L3 9h18L12 2z" />
@@ -161,7 +158,8 @@ const AdminPGDetails = () => {
     minStay: true,
     food: true,
     nearby: true,
-    system: true
+    system: true,
+    additional: true
   });
 
   const loadPG = useCallback(async () => {
@@ -327,15 +325,13 @@ const AdminPGDetails = () => {
 
       const numericFields = [
         "single_sharing", "double_sharing", "triple_sharing", "four_sharing",
-        "single_room", "double_room", "triple_room", "price_1bhk", "price_2bhk", 
-        "price_3bhk", "price_4bhk", "co_living_single_room", "co_living_double_room",
-        "coliving_three_sharing", "coliving_four_sharing", "deposit_amount", 
-        "maintenance_amount", "rent_amount", "brokerage_amount",
+        "single_room", "double_room", "price_1bhk", "price_2bhk", "price_3bhk", "price_4bhk",
+        "co_living_single_room", "co_living_double_room", "coliving_three_sharing", "coliving_four_sharing",
+        "security_deposit", "maintenance_amount", "rent_amount", "brokerage_amount",
         "bedrooms_1bhk", "bathrooms_1bhk", "bedrooms_2bhk", "bathrooms_2bhk",
         "bedrooms_3bhk", "bathrooms_3bhk", "bedrooms_4bhk", "bathrooms_4bhk",
         "min_stay_days", "min_stay_months", "lock_in_period", "notice_period",
-        "total_rooms", "available_rooms", "meals_per_day", "pincode", 
-        "latitude", "longitude"
+        "total_rooms", "available_rooms", "meals_per_day", "pincode", "latitude", "longitude"
       ];
 
       if (numericFields.includes(editingField) && editValue && editValue !== "") {
@@ -577,6 +573,10 @@ const AdminPGDetails = () => {
       !photo.includes("fakepath")
   );
 
+  const isToLet = pg.pg_category === "to_let";
+  const isPG = pg.pg_category === "pg";
+  const isCoLiving = pg.pg_category === "coliving";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {showSuccessToast && (
@@ -605,7 +605,7 @@ const AdminPGDetails = () => {
             onClick={() => window.history.back()}
             className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
           >
-            <ChevronLeft size={20} />
+            <ArrowLeft size={20} />
             <span>Back to Properties</span>
           </button>
 
@@ -634,8 +634,8 @@ const AdminPGDetails = () => {
         <div className="space-y-6">
           {/* Basic Information Section */}
           <Section title="Basic Information" icon={Info} sectionKey="basic">
-            <EditableField label="PG Name" field="pg_name" value={pg.pg_name} icon={Building} />
-            <EditableField label="PG Code" field="pg_code" value={pg.pg_code} icon={Layers} />
+            <EditableField label="Property Name" field="pg_name" value={pg.pg_name} icon={Building} />
+            <EditableField label="Property Code" field="pg_code" value={pg.pg_code} icon={Layers} />
             <EditableField 
               label="Category" 
               field="pg_category" 
@@ -686,58 +686,91 @@ const AdminPGDetails = () => {
 
           {/* Pricing Details Section */}
           <Section title="Pricing Details" icon={DollarSign} sectionKey="pricing">
-            <EditableField label="Single Sharing" field="single_sharing" value={pg.single_sharing} type="currency" icon={DollarSign} />
-            <EditableField label="Double Sharing" field="double_sharing" value={pg.double_sharing} type="currency" icon={DollarSign} />
-            <EditableField label="Triple Sharing" field="triple_sharing" value={pg.triple_sharing} type="currency" icon={DollarSign} />
-            <EditableField label="Four Sharing" field="four_sharing" value={pg.four_sharing} type="currency" icon={DollarSign} />
-            <EditableField label="Single Room" field="single_room" value={pg.single_room} type="currency" icon={Home} />
-            <EditableField label="Double Room" field="double_room" value={pg.double_room} type="currency" icon={Home} />
-            <EditableField label="Triple Room" field="triple_room" value={pg.triple_room} type="currency" icon={Home} />
-            <EditableField label="1 BHK" field="price_1bhk" value={pg.price_1bhk} type="currency" icon={Building} />
-            <EditableField label="2 BHK" field="price_2bhk" value={pg.price_2bhk} type="currency" icon={Building} />
-            <EditableField label="3 BHK" field="price_3bhk" value={pg.price_3bhk} type="currency" icon={Building} />
-            <EditableField label="4 BHK" field="price_4bhk" value={pg.price_4bhk} type="currency" icon={Building} />
-            <EditableField label="Deposit Amount" field="deposit_amount" value={pg.deposit_amount} type="currency" icon={DollarSign} />
+            {isPG && (
+              <>
+                <EditableField label="Single Sharing" field="single_sharing" value={pg.single_sharing} type="currency" icon={DollarSign} />
+                <EditableField label="Double Sharing" field="double_sharing" value={pg.double_sharing} type="currency" icon={DollarSign} />
+                <EditableField label="Triple Sharing" field="triple_sharing" value={pg.triple_sharing} type="currency" icon={DollarSign} />
+                <EditableField label="Four Sharing" field="four_sharing" value={pg.four_sharing} type="currency" icon={DollarSign} />
+                <EditableField label="Single Room" field="single_room" value={pg.single_room} type="currency" icon={Home} />
+                <EditableField label="Double Room" field="double_room" value={pg.double_room} type="currency" icon={Home} />
+              </>
+            )}
+            {isToLet && (
+              <>
+                <EditableField label="1 BHK Rent" field="price_1bhk" value={pg.price_1bhk} type="currency" icon={Building} />
+                <EditableField label="2 BHK Rent" field="price_2bhk" value={pg.price_2bhk} type="currency" icon={Building} />
+                <EditableField label="3 BHK Rent" field="price_3bhk" value={pg.price_3bhk} type="currency" icon={Building} />
+                <EditableField label="4 BHK Rent" field="price_4bhk" value={pg.price_4bhk} type="currency" icon={Building} />
+              </>
+            )}
+            {isCoLiving && (
+              <>
+                <EditableField label="Co-Living Single Room" field="co_living_single_room" value={pg.co_living_single_room} type="currency" icon={DollarSign} />
+                <EditableField label="Co-Living Double Room" field="co_living_double_room" value={pg.co_living_double_room} type="currency" icon={DollarSign} />
+                <EditableField label="Co-Living 3 Sharing" field="coliving_three_sharing" value={pg.coliving_three_sharing} type="currency" icon={Users} />
+                <EditableField label="Co-Living 4 Sharing" field="coliving_four_sharing" value={pg.coliving_four_sharing} type="currency" icon={Users} />
+              </>
+            )}
+            <EditableField label="Security Deposit" field="security_deposit" value={pg.security_deposit} type="currency" icon={DollarSign} />
             <EditableField label="Maintenance Amount" field="maintenance_amount" value={pg.maintenance_amount} type="currency" icon={DollarSign} />
             <EditableField label="Rent Amount" field="rent_amount" value={pg.rent_amount} type="currency" icon={DollarSign} />
             <EditableField label="Brokerage Amount" field="brokerage_amount" value={pg.brokerage_amount} type="currency" icon={DollarSign} />
           </Section>
 
-          {/* BHK Details Section */}
-          <Section title="BHK Details" icon={Building} sectionKey="bhkDetails">
-            <EditableField 
-              label="BHK Type" 
-              field="bhk_type" 
-              value={pg.bhk_type} 
-              icon={Building} 
-              options={[
-                { value: "1", label: "1 BHK" },
-                { value: "2", label: "2 BHK" },
-                { value: "3", label: "3 BHK" },
-                { value: "4", label: "4 BHK" },
-                { value: "4+", label: "4+ BHK" }
-              ]}
-            />
-            <EditableField 
-              label="Furnishing Type" 
-              field="furnishing_type" 
-              value={pg.furnishing_type} 
-              icon={Home}
-              options={[
-                { value: "fully_furnished", label: "Fully Furnished" },
-                { value: "semi_furnished", label: "Semi Furnished" },
-                { value: "unfurnished", label: "Unfurnished" }
-              ]}
-            />
-            <EditableField label="1 BHK Bedrooms" field="bedrooms_1bhk" value={pg.bedrooms_1bhk} type="number" icon={Bed} />
-            <EditableField label="1 BHK Bathrooms" field="bathrooms_1bhk" value={pg.bathrooms_1bhk} type="number" icon={Bath} />
-            <EditableField label="2 BHK Bedrooms" field="bedrooms_2bhk" value={pg.bedrooms_2bhk} type="number" icon={Bed} />
-            <EditableField label="2 BHK Bathrooms" field="bathrooms_2bhk" value={pg.bathrooms_2bhk} type="number" icon={Bath} />
-            <EditableField label="3 BHK Bedrooms" field="bedrooms_3bhk" value={pg.bedrooms_3bhk} type="number" icon={Bed} />
-            <EditableField label="3 BHK Bathrooms" field="bathrooms_3bhk" value={pg.bathrooms_3bhk} type="number" icon={Bath} />
-            <EditableField label="4 BHK Bedrooms" field="bedrooms_4bhk" value={pg.bedrooms_4bhk} type="number" icon={Bed} />
-            <EditableField label="4 BHK Bathrooms" field="bathrooms_4bhk" value={pg.bathrooms_4bhk} type="number" icon={Bath} />
-          </Section>
+          {/* BHK Details Section - Only for To Let */}
+          {isToLet && (
+            <Section title="BHK Details" icon={Building} sectionKey="bhkDetails">
+              <EditableField 
+                label="BHK Type" 
+                field="bhk_type" 
+                value={pg.bhk_type} 
+                icon={Building} 
+                options={[
+                  { value: "1", label: "1 BHK" },
+                  { value: "2", label: "2 BHK" },
+                  { value: "3", label: "3 BHK" },
+                  { value: "4", label: "4 BHK" },
+                  { value: "4+", label: "4+ BHK" }
+                ]}
+              />
+              <EditableField 
+                label="Furnishing Type" 
+                field="furnishing_type" 
+                value={pg.furnishing_type} 
+                icon={Home}
+                options={[
+                  { value: "fully_furnished", label: "Fully Furnished" },
+                  { value: "semi_furnished", label: "Semi Furnished" },
+                  { value: "unfurnished", label: "Unfurnished" }
+                ]}
+              />
+              {parseInt(pg.bhk_type) >= 1 && (
+                <>
+                  <EditableField label="1 BHK Bedrooms" field="bedrooms_1bhk" value={pg.bedrooms_1bhk} type="number" icon={Bed} />
+                  <EditableField label="1 BHK Bathrooms" field="bathrooms_1bhk" value={pg.bathrooms_1bhk} type="number" icon={Bath} />
+                </>
+              )}
+              {parseInt(pg.bhk_type) >= 2 && (
+                <>
+                  <EditableField label="2 BHK Bedrooms" field="bedrooms_2bhk" value={pg.bedrooms_2bhk} type="number" icon={Bed} />
+                  <EditableField label="2 BHK Bathrooms" field="bathrooms_2bhk" value={pg.bathrooms_2bhk} type="number" icon={Bath} />
+                </>
+              )}
+              {parseInt(pg.bhk_type) >= 3 && (
+                <>
+                  <EditableField label="3 BHK Bedrooms" field="bedrooms_3bhk" value={pg.bedrooms_3bhk} type="number" icon={Bed} />
+                  <EditableField label="3 BHK Bathrooms" field="bathrooms_3bhk" value={pg.bathrooms_3bhk} type="number" icon={Bath} />
+                </>
+              )}
+              {parseInt(pg.bhk_type) >= 4 && (
+                <>
+                  <EditableField label="4 BHK Bedrooms" field="bedrooms_4bhk" value={pg.bedrooms_4bhk} type="number" icon={Bed} />
+                  <EditableField label="4 BHK Bathrooms" field="bathrooms_4bhk" value={pg.bathrooms_4bhk} type="number" icon={Bath} />
+                </>
+              )}
+            </Section>
+          )}
 
           {/* Room Details Section */}
           <Section title="Room Details" icon={Bed} sectionKey="roomDetails">
@@ -755,43 +788,43 @@ const AdminPGDetails = () => {
           </Section>
 
           {/* Co-Living Details Section */}
-          <Section title="Co-Living Details" icon={Users} sectionKey="coLiving">
-            <EditableField label="Co-Living Single Room" field="co_living_single_room" value={pg.co_living_single_room} type="currency" icon={DollarSign} />
-            <EditableField label="Co-Living Double Room" field="co_living_double_room" value={pg.co_living_double_room} type="currency" icon={DollarSign} />
-            <EditableField label="Co-Living 3 Sharing" field="coliving_three_sharing" value={pg.coliving_three_sharing} type="currency" icon={Users} />
-            <EditableField label="Co-Living 4 Sharing" field="coliving_four_sharing" value={pg.coliving_four_sharing} type="currency" icon={Users} />
-            <EditableField label="Fully Furnished" field="co_living_fully_furnished" value={pg.co_living_fully_furnished} type="boolean" icon={Home} />
-            <EditableField label="Food Included" field="co_living_food_included" value={pg.co_living_food_included} type="boolean" icon={Utensils} />
-            <EditableField label="WiFi Included" field="co_living_wifi_included" value={pg.co_living_wifi_included} type="boolean" icon={Wifi} />
-            <EditableField label="Housekeeping Included" field="co_living_housekeeping" value={pg.co_living_housekeeping} type="boolean" icon={ShieldCheck} />
-            <EditableField label="Power Backup Included" field="co_living_power_backup" value={pg.co_living_power_backup} type="boolean" icon={Zap} />
-            <EditableField label="Maintenance Included" field="co_living_maintenance" value={pg.co_living_maintenance} type="boolean" icon={DollarSign} />
-          </Section>
+          {isCoLiving && (
+            <Section title="Co-Living Inclusions" icon={Users} sectionKey="coLiving">
+              <EditableField label="Fully Furnished" field="co_living_fully_furnished" value={pg.co_living_fully_furnished} type="boolean" icon={Home} />
+              <EditableField label="Food Included" field="co_living_food_included" value={pg.co_living_food_included} type="boolean" icon={Utensils} />
+              <EditableField label="WiFi Included" field="co_living_wifi_included" value={pg.co_living_wifi_included} type="boolean" icon={Wifi} />
+              <EditableField label="Housekeeping Included" field="co_living_housekeeping" value={pg.co_living_housekeeping} type="boolean" icon={ShieldCheck} />
+              <EditableField label="Power Backup Included" field="co_living_power_backup" value={pg.co_living_power_backup} type="boolean" icon={Zap} />
+              <EditableField label="Maintenance Included" field="co_living_maintenance" value={pg.co_living_maintenance} type="boolean" icon={DollarSign} />
+            </Section>
+          )}
 
           {/* Minimum Stay Section */}
-          <Section title="Minimum Stay" icon={ClockIcon} sectionKey="minStay">
-            <EditableField label="Min Stay Available" field="min_stay_available" value={pg.min_stay_available} type="boolean" icon={ClockIcon} />
-            <EditableField label="Min Stay Days" field="min_stay_days" value={pg.min_stay_days} type="number" icon={Calendar} />
+          <Section title="Minimum Stay & Terms" icon={ClockIcon} sectionKey="minStay">
+            <EditableField label="Lock-in Period Available" field="lock_in_period" value={pg.lock_in_period} type="boolean" icon={Lock} />
             <EditableField label="Min Stay Months" field="min_stay_months" value={pg.min_stay_months} type="number" icon={Calendar} />
-            <EditableField label="Lock-in Period" field="lock_in_period" value={pg.lock_in_period} type="number" icon={Lock} />
-            <EditableField label="Notice Period" field="notice_period" value={pg.notice_period} type="number" icon={Calendar} />
+            <EditableField label="Notice Period (Months)" field="notice_period" value={pg.notice_period} type="number" icon={Calendar} />
           </Section>
 
           {/* Food Details Section */}
           <Section title="Food Details" icon={Utensils} sectionKey="food">
             <EditableField label="Food Available" field="food_available" value={pg.food_available} type="boolean" icon={Utensils} />
-            <EditableField 
-              label="Food Type" 
-              field="food_type" 
-              value={pg.food_type} 
-              icon={Utensils}
-              options={[
-                { value: "veg", label: "Vegetarian" },
-                { value: "non-veg", label: "Non-Vegetarian" },
-                { value: "both", label: "Both" }
-              ]}
-            />
-            <EditableField label="Meals Per Day" field="meals_per_day" value={pg.meals_per_day} type="number" icon={Utensils} />
+            {pg.food_available && (
+              <>
+                <EditableField 
+                  label="Food Type" 
+                  field="food_type" 
+                  value={pg.food_type} 
+                  icon={Utensils}
+                  options={[
+                    { value: "veg", label: "Vegetarian" },
+                    { value: "non_veg", label: "Non-Vegetarian" },
+                    { value: "both", label: "Both" }
+                  ]}
+                />
+                <EditableField label="Meals Per Day" field="meals_per_day" value={pg.meals_per_day} type="number" icon={Utensils} />
+              </>
+            )}
           </Section>
 
           {/* Location Coordinates Section */}
@@ -820,7 +853,7 @@ const AdminPGDetails = () => {
                 <AmenityBadge label="WiFi" value={pg.wifi_available} />
                 <AmenityBadge label="AC" value={pg.ac_available} />
                 <AmenityBadge label="TV" value={pg.tv} />
-                <AmenityBadge label="Parking" value={pg.parking_available} />
+                <AmenityBadge label="Car Parking" value={pg.parking_available} />
                 <AmenityBadge label="Bike Parking" value={pg.bike_parking} />
                 <AmenityBadge label="Laundry" value={pg.laundry_available} />
                 <AmenityBadge label="Washing Machine" value={pg.washing_machine} />
@@ -848,8 +881,9 @@ const AdminPGDetails = () => {
               icon={Droplets}
               options={[
                 { value: "borewell", label: "Borewell" },
-                { value: "corporation", label: "Corporation" },
-                { value: "both", label: "Both" }
+                { value: "kaveri", label: "Kaveri" },
+                { value: "both", label: "Both" },
+                { value: "municipal", label: "Municipal" }
               ]}
             />
           </Section>
