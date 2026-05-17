@@ -2316,74 +2316,83 @@
     };
 
     // ✅ FIXED: loadPGs with proper pagination
-    const loadPGs = async (pageToLoad = 1, isLoadMore = false) => {
-      try {
-        if (!isLoadMore) {
-          setLoading(true);
-        } else {
-          setLoadingMore(true);
-        }
-        
-        // Build URL with proper parameters
-        let url = `/pg/search/advanced?page=${pageToLoad}&limit=${PAGE_SIZE}`;
-        
-        // Add sorting parameter
-        let sortParam = "relevance";
-        if (filters.sort === "low") sortParam = "price_low";
-        else if (filters.sort === "high") sortParam = "price_high";
-        else if (filters.sort === "new") sortParam = "newest";
-        else if (filters.sort === "distance" && userLocation) sortParam = "nearest";
-        url += `&sort_by=${sortParam}`;
-        
-        // Add search parameter
-        if (filters.location) {
-          url += `&search=${encodeURIComponent(filters.location)}`;
-        }
-        
-        // Add user location for distance calculation
-        if (userLocation && filters.nearMe) {
-          url += `&lat=${userLocation.lat}&lng=${userLocation.lng}`;
-        }
-        
-        console.log("Fetching:", url);
-        const response = await api.get(url);
-        
-        if (response.data?.data) {
-          let rawData = response.data.data;
-          
-          // Process distance data
-          if (userLocation) {
-            rawData = rawData.map(pg => {
-              if (pg.latitude && pg.longitude) {
-                const distance = getDistanceKm(userLocation.lat, userLocation.lng, pg.latitude, pg.longitude);
-                return { ...pg, distance };
-              }
-              return pg;
-            });
+   // Find this function in your UserPGSearch.js (around line 1050-1100)
+// Replace the entire loadPGs function with this:
+
+// ✅ FIXED: loadPGs with proper pagination
+const loadPGs = async (pageToLoad = 1, isLoadMore = false) => {
+  try {
+    if (!isLoadMore) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+    
+    // Build URL with proper parameters
+    let url = `/pg/search/advanced?page=${pageToLoad}&limit=${PAGE_SIZE}`;
+    
+    // Add sorting parameter
+    let sortParam = "relevance";
+    if (filters.sort === "low") sortParam = "price_low";
+    else if (filters.sort === "high") sortParam = "price_high";
+    else if (filters.sort === "new") sortParam = "newest";
+    else if (filters.sort === "distance" && userLocation) sortParam = "nearest";
+    url += `&sort_by=${sortParam}`;
+    
+    // Add search parameter
+    if (filters.location) {
+      url += `&search=${encodeURIComponent(filters.location)}`;
+    }
+    
+    // Add user location for distance calculation
+    if (userLocation && filters.nearMe) {
+      url += `&lat=${userLocation.lat}&lng=${userLocation.lng}`;
+    }
+    
+    console.log("Fetching:", url);
+    const response = await api.get(url);
+    
+    if (response.data?.data) {
+      let rawData = response.data.data;
+      
+      // Process distance data
+      if (userLocation) {
+        rawData = rawData.map(pg => {
+          if (pg.latitude && pg.longitude) {
+            const distance = getDistanceKm(userLocation.lat, userLocation.lng, pg.latitude, pg.longitude);
+            return { ...pg, distance };
           }
-          
-          const processedData = processPGData(rawData);
-          
-          if (!isLoadMore || pageToLoad === 1) {
-            setAllPGs(processedData);
-          } else {
-            setAllPGs(prev => [...prev, ...processedData]);
-          }
-          
-          // ✅ CRITICAL: Use hasMore from backend response
-          setHasMorePages(response.data.hasMore === true);
-          setTotalCount(response.data.total || 0);
-          setCurrentPage(pageToLoad);
-        }
-        
-        setLoading(false);
-        setLoadingMore(false);
-      } catch (error) {
-        console.error("Error loading PGs:", error);
-        setLoading(false);
-        setLoadingMore(false);
+          return pg;
+        });
       }
-    };
+      
+      const processedData = processPGData(rawData);
+      
+      if (!isLoadMore || pageToLoad === 1) {
+        setAllPGs(processedData);
+      } else {
+        setAllPGs(prev => [...prev, ...processedData]);
+      }
+      
+      setTotalCount(response.data.total || 0);
+      setCurrentPage(pageToLoad);
+      
+      // ✅ CRITICAL FIX: Better hasMore logic for frontend
+      // Shows "Load More" button if we received a full page of results OR backend says there's more
+      const hasMoreFromBackend = response.data.hasMore === true;
+      const hasFullPage = response.data.data && response.data.data.length >= PAGE_SIZE;
+      
+      setHasMorePages(hasMoreFromBackend || hasFullPage);
+    }
+    
+    setLoading(false);
+    setLoadingMore(false);
+  } catch (error) {
+    console.error("Error loading PGs:", error);
+    setLoading(false);
+    setLoadingMore(false);
+  }
+};
 
     // Reset and fetch first page
     const resetAndFetch = () => {
