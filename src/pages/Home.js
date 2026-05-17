@@ -440,28 +440,52 @@ export default function Home() {
         ))}
       </div>
       
-      {/* ✅ FIXED: Load More Button with correct hasMore logic */}
-      {hasMore && filteredPGs.length > 0 && (
-        <div style={{ textAlign: "center", marginTop: "40px" }}>
+      {/* ✅ LOAD MORE BUTTON - CORRECTLY PLACED OUTSIDE THE GRID */}
+      {hasMore && filteredPGs.length > 0 && !loading && (
+        <div style={{ 
+          display: "flex", 
+          justifyContent: "center", 
+          marginTop: "40px", 
+          marginBottom: "40px" 
+        }}>
           <button
             onClick={loadMore}
             disabled={loadingMore}
             style={{
-              padding: "12px 32px",
-              border: "none",
-              borderRadius: "40px",
-              background: "#2563eb",
+              padding: "14px 32px",
+              background: loadingMore ? "#9ca3af" : "#2563eb",
               color: "white",
-              cursor: loadingMore ? "not-allowed" : "pointer",
+              border: "none",
+              borderRadius: "12px",
               fontSize: "16px",
-              fontWeight: "500",
+              fontWeight: "600",
+              cursor: loadingMore ? "not-allowed" : "pointer",
               transition: "all 0.3s ease",
-              opacity: loadingMore ? 0.7 : 1
+              boxShadow: loadingMore ? "none" : "0 4px 12px rgba(37, 99, 235, 0.3)"
             }}
-            onMouseEnter={(e) => !loadingMore && (e.currentTarget.style.background = "#1d4ed8")}
-            onMouseLeave={(e) => !loadingMore && (e.currentTarget.style.background = "#2563eb")}
+            onMouseEnter={(e) => {
+              if (!loadingMore) {
+                e.currentTarget.style.background = "#1d4ed8";
+                e.currentTarget.style.transform = "translateY(-2px)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!loadingMore) {
+                e.currentTarget.style.background = "#2563eb";
+                e.currentTarget.style.transform = "translateY(0)";
+              }
+            }}
           >
-            {loadingMore ? "Loading..." : "Load More Properties"}
+            {loadingMore ? (
+              <>
+                <span style={{ display: "inline-block", marginRight: "8px" }}>⏳</span>
+                Loading...
+              </>
+            ) : (
+              <>
+                📦 Load More Properties
+              </>
+            )}
           </button>
         </div>
       )}
