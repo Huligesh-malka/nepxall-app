@@ -438,7 +438,11 @@ export default function Home() {
       
       {/* ✅ DSA: Load More Button with Pagination */}
       {hasMore && filteredPGs.length > 0 && (
-        <div style={{ textAlign: "center", marginTop: "40px" }}>
+        <div style={{ 
+          display: "flex", 
+          justifyContent: "center", 
+          marginTop: "40px" 
+        }}>
           <button
             onClick={loadMore}
             disabled={loadingMore}
