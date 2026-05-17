@@ -2158,9 +2158,13 @@ function UserPGSearch() {
 
   const [allPGs, setAllPGs] = useState([]);
   
-  // View All PGs state
-  const INITIAL_PG_LIMIT = 12;
-  const [showAllPGs, setShowAllPGs] = useState(false);
+  // ✅ PAGINATION STATE (FIXED)
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMorePages, setHasMorePages] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 12;
   
   // Tab state - Default is "all"
   const [activeTab, setActiveTab] = useState("all");
@@ -2173,10 +2177,6 @@ function UserPGSearch() {
     { id: "to_let", label: "To-Let" }
   ];
   
-  const [loading, setLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
   const [userAddress, setUserAddress] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -2204,8 +2204,6 @@ function UserPGSearch() {
     nearMe: false,
     foodType: ""
   });
-
-  const limit = 12;
 
   // Auto ask for location on first load
   useEffect(() => {
@@ -2236,8 +2234,7 @@ function UserPGSearch() {
         setFilters(prev => ({ ...prev, nearMe: true, sort: "distance" }));
         localStorage.setItem(LOCATION_AUTO_ASKED_KEY, "true");
         setLocationLoading(false);
-        setPage(1);
-        loadPGs(false);
+        resetAndFetch();
       },
       () => {
         localStorage.setItem(LOCATION_AUTO_ASKED_KEY, "true");
@@ -2253,7 +2250,6 @@ function UserPGSearch() {
     
     if (newActiveFilters.has(filter.id)) {
       newActiveFilters.delete(filter.id);
-      // Reset the specific filter
       if (filter.type === "location") {
         setFilters(prev => ({ ...prev, nearMe: false }));
       } else if (filter.type === "food") {
@@ -2263,7 +2259,6 @@ function UserPGSearch() {
       }
     } else {
       newActiveFilters.add(filter.id);
-      // Apply the filter
       if (filter.type === "location") {
         setFilters(prev => ({ ...prev, nearMe: true, sort: "distance" }));
         detectLocation();
@@ -2276,6 +2271,7 @@ function UserPGSearch() {
     
     setActiveQuickFilters(newActiveFilters);
     showNotification(`${newActiveFilters.has(filter.id) ? "Applied" : "Removed"} ${filter.name}`);
+    resetAndFetch();
   };
 
   const handlePromoBannerClick = (banner) => {
@@ -2319,21 +2315,43 @@ function UserPGSearch() {
     }));
   };
 
-  const loadPGs = async (isLoadMore = false) => {
+  // ✅ FIXED: loadPGs with proper pagination
+  const loadPGs = async (pageToLoad = 1, isLoadMore = false) => {
     try {
-      if (!isLoadMore) setLoading(true);
-      else setLoadingMore(true);
-      
-      let url = `/pg/search/advanced?page=${page}&limit=${limit}`;
-      if (userLocation && filters.nearMe) {
-        url += `&lat=${userLocation.lat}&lng=${userLocation.lng}&radius=5`;
+      if (!isLoadMore) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
       }
       
-      const res = await api.get(url);
+      // Build URL with proper parameters
+      let url = `/pg/search/advanced?page=${pageToLoad}&limit=${PAGE_SIZE}`;
       
-      if (res.data?.success || res.data?.data) {
-        let rawData = res.data?.data || [];
+      // Add sorting parameter
+      let sortParam = "relevance";
+      if (filters.sort === "low") sortParam = "price_low";
+      else if (filters.sort === "high") sortParam = "price_high";
+      else if (filters.sort === "new") sortParam = "newest";
+      else if (filters.sort === "distance" && userLocation) sortParam = "nearest";
+      url += `&sort_by=${sortParam}`;
+      
+      // Add search parameter
+      if (filters.location) {
+        url += `&search=${encodeURIComponent(filters.location)}`;
+      }
+      
+      // Add user location for distance calculation
+      if (userLocation && filters.nearMe) {
+        url += `&lat=${userLocation.lat}&lng=${userLocation.lng}`;
+      }
+      
+      console.log("Fetching:", url);
+      const response = await api.get(url);
+      
+      if (response.data?.data) {
+        let rawData = response.data.data;
         
+        // Process distance data
         if (userLocation) {
           rawData = rawData.map(pg => {
             if (pg.latitude && pg.longitude) {
@@ -2342,21 +2360,20 @@ function UserPGSearch() {
             }
             return pg;
           });
-          
-          if (filters.nearMe) {
-            rawData.sort((a, b) => (a.distance || 999) - (b.distance || 999));
-          }
         }
         
         const processedData = processPGData(rawData);
         
-        if (!isLoadMore || page === 1) {
+        if (!isLoadMore || pageToLoad === 1) {
           setAllPGs(processedData);
         } else {
           setAllPGs(prev => [...prev, ...processedData]);
         }
         
-        setHasMore(false);
+        // ✅ CRITICAL: Use hasMore from backend response
+        setHasMorePages(response.data.hasMore === true);
+        setTotalCount(response.data.total || 0);
+        setCurrentPage(pageToLoad);
       }
       
       setLoading(false);
@@ -2368,27 +2385,30 @@ function UserPGSearch() {
     }
   };
 
-  useEffect(() => {
-    loadPGs(false);
-    loadFavorites();
-  }, []);
+  // Reset and fetch first page
+  const resetAndFetch = () => {
+    setCurrentPage(1);
+    loadPGs(1, false);
+  };
 
-  useEffect(() => {
-    if (userLocation && filters.nearMe) {
-      setPage(1);
-      loadPGs(false);
-    }
-  }, [userLocation]);
-
-  const loadMore = () => {
-    if (!loadingMore && hasMore && !loading) {
-      setPage(prev => prev + 1);
+  // ✅ Load more function
+  const loadMoreProperties = () => {
+    if (!loadingMore && hasMorePages && !loading) {
+      const nextPage = currentPage + 1;
+      loadPGs(nextPage, true);
     }
   };
 
+  // Initial load
   useEffect(() => {
-    if (page > 1) loadPGs(true);
-  }, [page]);
+    resetAndFetch();
+    loadFavorites();
+  }, []);
+
+  // Refetch when filters change
+  useEffect(() => {
+    resetAndFetch();
+  }, [filters.location, filters.sort, filters.nearMe, userLocation, filters.minBudget, filters.maxBudget, filters.food, filters.ac, filters.wifi, filters.parking, filters.foodType]);
 
   const loadFavorites = () => {
     try {
@@ -2440,8 +2460,7 @@ function UserPGSearch() {
         localStorage.setItem(LOCATION_PERMISSION_ASKED_KEY, "true");
         showNotification("📍 Location detected! Showing nearby properties within 5km");
         setLocationLoading(false);
-        setPage(1);
-        loadPGs(false);
+        resetAndFetch();
       },
       () => {
         showNotification("❌ Unable to get your location.", true);
@@ -2467,8 +2486,7 @@ function UserPGSearch() {
         setFilters(prev => ({ ...prev, nearMe: true, sort: "distance" }));
         showNotification("📍 Location detected! Showing nearby properties");
         setLocationLoading(false);
-        setPage(1);
-        loadPGs(false);
+        resetAndFetch();
       },
       () => {
         showNotification("❌ Unable to get your location. Please check permissions.", true);
@@ -2477,7 +2495,7 @@ function UserPGSearch() {
     );
   };
 
-  // Apply filters - FIRST filter all PGs
+  // Apply filters - filter the loaded PGs
   const applyFilters = useCallback(() => {
     let filtered = [...allPGs];
 
@@ -2524,22 +2542,12 @@ function UserPGSearch() {
   }, [applyFilters, activeTab]);
 
   const filteredPGs = getFilteredByTab();
-  
-  // THEN display based on showAllPGs state
-  const displayedPGs = showAllPGs
-    ? filteredPGs
-    : filteredPGs.slice(0, INITIAL_PG_LIMIT);
-
   const resultCount = filteredPGs.length;
-  
-  // Reset showAllPGs when filters or tab changes
-  useEffect(() => {
-    setShowAllPGs(false);
-  }, [activeTab, filters, allPGs]);
 
   const handleBudgetChange = (min, max) => {
     setFilters(prev => ({ ...prev, minBudget: min, maxBudget: max }));
     showNotification(`Budget set: ₹${formatPrice(min)} - ₹${formatPrice(max)}`);
+    resetAndFetch();
   };
 
   const resetFilters = () => {
@@ -2547,8 +2555,8 @@ function UserPGSearch() {
       location: "", minBudget: 0, maxBudget: 50000, food: false, ac: false, wifi: false, parking: false, sort: "", nearMe: false, foodType: ""
     });
     setActiveQuickFilters(new Set());
-    setShowAllPGs(false);
     showNotification("All filters reset");
+    resetAndFetch();
   };
 
   const handleQuickView = (pg, e) => {
@@ -2956,14 +2964,14 @@ function UserPGSearch() {
           <div style={{ width: 50, height: 50, border: "4px solid #e5e7eb", borderTop: "4px solid #3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 20px" }} />
           <p style={{ color: "#6b7280" }}>Loading properties...</p>
         </div>
-      ) : displayedPGs.length > 0 ? (
+      ) : filteredPGs.length > 0 ? (
         <>
           <div style={{ 
             display: "grid", 
             gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", 
             gap: 28 
           }}>
-            {displayedPGs.map((pg) => (
+            {filteredPGs.map((pg) => (
               <PGPropertyCard
                 key={pg.id}
                 pg={pg}
@@ -2979,24 +2987,62 @@ function UserPGSearch() {
             ))}
           </div>
           
-          {/* View All PGs Button - Exactly as requested */}
-          {!showAllPGs && filteredPGs.length > INITIAL_PG_LIMIT && (
+          {/* ✅ LOAD MORE BUTTON - FIXED */}
+          {!loading && hasMorePages && !loadingMore && filteredPGs.length > 0 && filteredPGs.length < totalCount && (
             <div style={{ textAlign: "center", marginTop: 40, marginBottom: 60 }}>
               <button
-                onClick={() => setShowAllPGs(true)}
+                onClick={loadMoreProperties}
+                disabled={loadingMore}
                 style={{
-                  padding: "14px 28px",
+                  padding: "14px 32px",
                   background: "#2563eb",
                   color: "white",
                   border: "none",
                   borderRadius: 12,
                   fontSize: 16,
                   fontWeight: 600,
-                  cursor: "pointer"
+                  cursor: loadingMore ? "not-allowed" : "pointer",
+                  opacity: loadingMore ? 0.7 : 1,
+                  transition: "all 0.3s ease",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8
                 }}
               >
-                View All PGs
+                {loadingMore ? (
+                  <>
+                    <div style={{
+                      width: 18,
+                      height: 18,
+                      border: "2px solid white",
+                      borderTop: "2px solid transparent",
+                      borderRadius: "50%",
+                      animation: "spin 0.8s linear infinite"
+                    }} />
+                    Loading...
+                  </>
+                ) : (
+                  "Load More Properties"
+                )}
               </button>
+            </div>
+          )}
+          
+          {/* Loading more indicator */}
+          {loadingMore && (
+            <div style={{ textAlign: "center", marginTop: 20, marginBottom: 40 }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                border: "3px solid #e5e7eb",
+                borderTop: "3px solid #2563eb",
+                borderRadius: "50%",
+                animation: "spin 0.8s linear infinite",
+                margin: "0 auto"
+              }} />
+              <p style={{ marginTop: 12, color: "#6b7280", fontSize: 14 }}>
+                Loading more properties...
+              </p>
             </div>
           )}
         </>
@@ -3018,9 +3064,9 @@ function UserPGSearch() {
       {showCompareModal && <CompareModal selectedPGs={selectedForCompare} allPGs={allPGs} onClose={() => { setShowCompareModal(false); setSelectedForCompare(new Set()); setCompareMode(false); }} />}
 
       {/* Sticky Contact Button for Mobile */}
-      {isMobile && !compareMode && displayedPGs.length > 0 && (
+      {isMobile && !compareMode && filteredPGs.length > 0 && (
         <div style={{ position: "fixed", bottom: 16, left: 16, right: 16, zIndex: 999 }}>
-          <button onClick={() => handleBookNow(displayedPGs[0])} style={{ width: "100%", padding: "14px", background: "#3b82f6", color: "white", border: "none", borderRadius: 60, fontSize: 16, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}>
+          <button onClick={() => handleBookNow(filteredPGs[0])} style={{ width: "100%", padding: "14px", background: "#3b82f6", color: "white", border: "none", borderRadius: 60, fontSize: 16, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}>
             <MessageCircle size={20} /> Contact Owner
           </button>
         </div>
