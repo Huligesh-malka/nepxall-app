@@ -99,12 +99,8 @@ export default function Home() {
         
         setTotalCount(response.data.total || 0);
         
-        // ✅ FIXED: Better hasMore logic for frontend
-        // Shows "Load More" button if we received a full page of results
-        setHasMore(
-          response.data.data && 
-          response.data.data.length >= limit
-        );
+        // ✅ DSA: Check if more data exists (FIXED)
+        setHasMore(response.data.hasMore === true);
       }
     } catch (error) {
       console.error("Error fetching PGs:", error);
@@ -112,7 +108,7 @@ export default function Home() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [page, sortBy, searchDebounce, userLocation, limit]);
+  }, [page, sortBy, searchDebounce, userLocation]);
   
   // ✅ DSA: Initial load and when dependencies change
   useEffect(() => {
@@ -440,7 +436,7 @@ export default function Home() {
         ))}
       </div>
       
-      {/* ✅ FIXED: Load More Button with correct hasMore logic */}
+      {/* ✅ DSA: Load More Button with Pagination */}
       {hasMore && filteredPGs.length > 0 && (
         <div style={{ textAlign: "center", marginTop: "40px" }}>
           <button
