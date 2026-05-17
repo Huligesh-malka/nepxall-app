@@ -99,12 +99,8 @@ export default function Home() {
         
         setTotalCount(response.data.total || 0);
         
-        // ✅ FIXED: Better hasMore logic for frontend
-        // Shows "Load More" button if we received a full page of results
-        setHasMore(
-          response.data.data && 
-          response.data.data.length >= limit
-        );
+        // ✅ DSA: Check if more data exists (FIXED)
+        setHasMore(response.data.hasMore === true);
       }
     } catch (error) {
       console.error("Error fetching PGs:", error);
@@ -112,7 +108,7 @@ export default function Home() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [page, sortBy, searchDebounce, userLocation, limit]);
+  }, [page, sortBy, searchDebounce, userLocation]);
   
   // ✅ DSA: Initial load and when dependencies change
   useEffect(() => {
@@ -440,52 +436,28 @@ export default function Home() {
         ))}
       </div>
       
-      {/* ✅ LOAD MORE BUTTON - CORRECTLY PLACED OUTSIDE THE GRID */}
-      {hasMore && filteredPGs.length > 0 && !loading && (
-        <div style={{ 
-          display: "flex", 
-          justifyContent: "center", 
-          marginTop: "40px", 
-          marginBottom: "40px" 
-        }}>
+      {/* ✅ DSA: Load More Button with Pagination */}
+      {hasMore && filteredPGs.length > 0 && (
+        <div style={{ textAlign: "center", marginTop: "40px" }}>
           <button
             onClick={loadMore}
             disabled={loadingMore}
             style={{
-              padding: "14px 32px",
-              background: loadingMore ? "#9ca3af" : "#2563eb",
-              color: "white",
+              padding: "12px 32px",
               border: "none",
-              borderRadius: "12px",
-              fontSize: "16px",
-              fontWeight: "600",
+              borderRadius: "40px",
+              background: "#2563eb",
+              color: "white",
               cursor: loadingMore ? "not-allowed" : "pointer",
+              fontSize: "16px",
+              fontWeight: "500",
               transition: "all 0.3s ease",
-              boxShadow: loadingMore ? "none" : "0 4px 12px rgba(37, 99, 235, 0.3)"
+              opacity: loadingMore ? 0.7 : 1
             }}
-            onMouseEnter={(e) => {
-              if (!loadingMore) {
-                e.currentTarget.style.background = "#1d4ed8";
-                e.currentTarget.style.transform = "translateY(-2px)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!loadingMore) {
-                e.currentTarget.style.background = "#2563eb";
-                e.currentTarget.style.transform = "translateY(0)";
-              }
-            }}
+            onMouseEnter={(e) => !loadingMore && (e.currentTarget.style.background = "#1d4ed8")}
+            onMouseLeave={(e) => !loadingMore && (e.currentTarget.style.background = "#2563eb")}
           >
-            {loadingMore ? (
-              <>
-                <span style={{ display: "inline-block", marginRight: "8px" }}>⏳</span>
-                Loading...
-              </>
-            ) : (
-              <>
-                📦 Load More Properties
-              </>
-            )}
+            {loadingMore ? "Loading..." : "Load More Properties"}
           </button>
         </div>
       )}
