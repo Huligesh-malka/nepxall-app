@@ -56,34 +56,8 @@ const OwnerBookings = () => {
       );
 
       setSuccess(`Booking ${status.toUpperCase()} successfully`);
-      
-      // Check if owner has completed bank details
-      if (status === "approved") {
-        // Fetch fresh user data to check bank_verified status
-        const userRes = await api.get("/auth/me", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        const isBankVerified = userRes.data.data?.bank_verified === true;
-        
-        if (!isBankVerified) {
-          // Redirect to bank details page if not verified
-          setTimeout(() => {
-            navigate("/owner/bank", { 
-              state: { 
-                fromBooking: true,
-                message: "Please complete your bank details to continue" 
-              }
-            });
-          }, 1500);
-        } else {
-          loadOwnerBookings();
-          setTimeout(() => setSuccess(""), 2500);
-        }
-      } else {
-        loadOwnerBookings();
-        setTimeout(() => setSuccess(""), 2500);
-      }
+      loadOwnerBookings();
+      setTimeout(() => setSuccess(""), 2500);
     } catch (err) {
       alert(err.response?.data?.message || "Action failed");
     } finally {
