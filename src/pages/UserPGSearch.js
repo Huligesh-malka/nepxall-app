@@ -172,7 +172,6 @@ import {
   CircleComp,
   CircleLido,
   CircleStEth,
-  CircleRpl,
   CircleFx,
   CircleBtc,
   CircleEth,
