@@ -162,7 +162,7 @@ import {
   CircleTether,
   CircleSolana,
   CircleBnb,
-  CircleMatic,
+  
   CircleUsdc,
   CircleUsdt,
   CircleDai,
