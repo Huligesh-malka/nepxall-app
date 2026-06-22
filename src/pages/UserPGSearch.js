@@ -141,7 +141,6 @@ import {
   Hexagon,
   Octagon,
   Diamond,
-  CircleDot,
   CircleDashed,
   CircleCheck,
   CircleAlert,
