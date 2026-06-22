@@ -189,7 +189,6 @@ import {
   CircleMkr,
   CircleLdo,
   CircleRpl,
-  CircleRpl,
 } from "lucide-react";
 import api from "../api/api";
 
