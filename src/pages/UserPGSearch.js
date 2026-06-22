@@ -167,7 +167,6 @@ import {
   CircleUsdt,
   CircleDai,
   CircleMkr,
-  CircleAave,
   CircleLink,
   CircleUni,
   CircleComp,
