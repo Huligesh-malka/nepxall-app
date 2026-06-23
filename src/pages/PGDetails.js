@@ -8,7 +8,7 @@ import "leaflet/dist/leaflet.css";
 import api from "../api/api";
 import {
   X, MapPin, Navigation, ChevronLeft, ChevronRight, Check, Info,
-  Share2, Heart, ArrowUpRight, Phone, Sparkles
+  Share2, Heart, ArrowUpRight, Phone, Sparkles, ArrowUp
 } from "lucide-react";
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -90,6 +90,7 @@ export default function PGDetails() {
   const [mapCenter, setMapCenter] = useState([0, 0]);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   const highlightCategories = [
     { id: "all", label: "All", icon: "✦" },
@@ -121,6 +122,12 @@ export default function PGDetails() {
     apply(mq);
     mq.addEventListener("change", apply);
     return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 400);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
@@ -375,11 +382,16 @@ export default function PGDetails() {
             <span>{pg.area || pg.city}</span>
           </div>
           <h1 style={S.title}>{pg.pg_name}</h1>
-          <p style={S.addr}>
-            <MapPin size={15} strokeWidth={1.5} />
-            {pg.address || `${pg.area}, ${pg.city}, ${pg.state || ""}`}
-          </p>
-          {pg.landmark && <p style={S.landmark}>Near {pg.landmark}</p>}
+          <div style={S.addrBox}>
+            <MapPin size={16} strokeWidth={1.5} color={T.tan} />
+            <span style={S.addrText}>{pg.address || `${pg.area}, ${pg.city}, ${pg.state || ""}`}</span>
+          </div>
+          {pg.landmark && (
+            <div style={S.landmarkBox}>
+              <span style={S.landmarkLabel}>Nearby</span>
+              <span style={S.landmarkText}>{pg.landmark}</span>
+            </div>
+          )}
 
           <div style={S.badges}>
             {!isToLet && !isCoLiving && pg.pg_type && (
@@ -590,6 +602,17 @@ export default function PGDetails() {
           </button>
         </div>
       )}
+
+      {/* Scroll to top button */}
+      {showScrollTop && (
+        <button
+          style={S.scrollTopBtn}
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          aria-label="Scroll to top"
+        >
+          <ArrowUp size={20} />
+        </button>
+      )}
     </div>
   );
 }
@@ -764,12 +787,15 @@ const S = {
   galleryCounter: { position: "absolute", bottom: 14, left: 14, background: "rgba(20,24,26,0.8)", color: "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500 },
   galleryEmpty: { height: 280, borderRadius: 14, background: T.paperDeep, display: "grid", placeItems: "center", color: T.inkMute, fontSize: 14 },
 
-  titleBlock: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 48, flexWrap: "wrap", paddingBottom: 32, borderBottom: `1px solid ${T.line}` },
+  titleBlock: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 40, flexWrap: "wrap", paddingBottom: 28, borderBottom: `1px solid ${T.line}` },
   eyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: T.tan, fontWeight: 600, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 },
   eyebrowDot: { color: T.line },
-  title: { fontFamily: "'Fraunces', serif", fontSize: "clamp(32px, 4.5vw, 52px)", fontWeight: 500, lineHeight: 1.05, letterSpacing: "-0.02em", color: T.ink, margin: "0 0 16px" },
-  addr: { display: "flex", alignItems: "center", gap: 8, color: T.inkSoft, fontSize: 15, margin: "0 0 4px" },
-  landmark: { color: T.inkMute, fontSize: 13, margin: "0 0 20px" },
+  title: { fontFamily: "'Fraunces', serif", fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 500, lineHeight: 1.1, letterSpacing: "-0.02em", color: T.ink, margin: "0 0 14px" },
+  addrBox: { display: "inline-flex", alignItems: "flex-start", gap: 10, maxWidth: 520, background: T.paperDeep, borderRadius: 10, padding: "10px 14px", marginBottom: 10 },
+  addrText: { color: T.inkSoft, fontSize: 14, lineHeight: 1.5, wordBreak: "break-word" },
+  landmarkBox: { display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 18 },
+  landmarkLabel: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: T.tan, fontWeight: 600, background: T.emeraldSoft, padding: "3px 8px", borderRadius: 6 },
+  landmarkText: { color: T.inkMute, fontSize: 13 },
   badges: { display: "flex", flexWrap: "wrap", gap: 8 },
   badge: { padding: "5px 12px", borderRadius: 999, background: T.surface, border: `1px solid ${T.line}`, color: T.inkSoft, fontSize: 12, fontWeight: 500 },
   badgeOk: { background: T.emeraldSoft, border: `1px solid ${T.emerald}30`, color: T.emerald, fontWeight: 600 },
@@ -847,4 +873,6 @@ const S = {
   trustRow: { marginTop: 20, display: "flex", alignItems: "center", gap: 8, justifyContent: "center", fontSize: 12, color: T.inkMute },
 
   mobileBottomBar: { position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50, background: T.surface, borderTop: `1px solid ${T.line}`, padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 -4px 20px rgba(0,0,0,0.06)" },
+
+  scrollTopBtn: { position: "fixed", bottom: 24, right: 24, zIndex: 90, width: 48, height: 48, borderRadius: "50%", border: `1px solid ${T.line}`, background: T.surface, color: T.ink, cursor: "pointer", display: "grid", placeItems: "center", boxShadow: "0 8px 24px rgba(20,24,26,0.12)", transition: "all .25s ease", opacity: 0.95 },
 };
