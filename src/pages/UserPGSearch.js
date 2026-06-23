@@ -1554,142 +1554,6 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
   );
 };
 
-/* ================= PROMOTIONAL BANNERS SLIDER COMPONENT ================= */
-const PromoBannerSlider = ({ onBannerClick }) => {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
-
-  const promoBanners = [
-    {
-      id: 1,
-      title: "₹200 OFF",
-      subtitle: "On First Booking",
-      description: "Use code FIRST200",
-      icon: "🎉",
-      gradient: "linear-gradient(135deg, #3b82f6, #1e40af)"
-    },
-    {
-      id: 2,
-      title: "Direct Owner Contact",
-      subtitle: "No Middlemen",
-      description: "Save on commission",
-      icon: "🏠",
-      gradient: "linear-gradient(135deg, #10b981, #047857)"
-    },
-    {
-      id: 3,
-      title: "Instant Booking",
-      subtitle: "Fast Confirmation",
-      description: "Get confirmed in minutes",
-      icon: "⚡",
-      gradient: "linear-gradient(135deg, #f59e0b, #b45309)"
-    },
-    {
-      id: 4,
-      title: "Verified PGs",
-      subtitle: "100% Trusted Properties",
-      description: "No hidden charges",
-      icon: "🤝",
-      gradient: "linear-gradient(135deg, #8b5cf6, #6d28d9)"
-    },
-    {
-      id: 5,
-      title: "Student Offer",
-      subtitle: "Limited Time Deal",
-      description: "Special discount for students",
-      icon: "🎓",
-      gradient: "linear-gradient(135deg, #ec4899, #be185d)"
-    }
-  ];
-
-  useEffect(() => {
-    if (isHovered) return;
-    const interval = setInterval(() => {
-      setActiveIndex((prevIndex) => (prevIndex + 1) % promoBanners.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [isHovered, promoBanners.length]);
-
-  const handleManualScroll = (direction) => {
-    if (direction === 'next') {
-      setActiveIndex((prev) => (prev + 1) % promoBanners.length);
-    } else {
-      setActiveIndex((prev) => (prev - 1 + promoBanners.length) % promoBanners.length);
-    }
-  };
-
-  const handleBannerClick = (banner) => {
-    if (onBannerClick) {
-      onBannerClick(banner);
-    }
-  };
-
-  const isMobile = window.innerWidth < 768;
-
-  if (isMobile) {
-    return (
-      <div style={{ marginBottom: 24, position: "relative" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, color: "#111827" }}>🔥 Exclusive Offers</h3>
-            <p style={{ fontSize: 13, color: "#6b7280" }}>Limited time deals for you</p>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => handleManualScroll('prev')} style={{ width: 32, height: 32, borderRadius: "50%", background: "#f3f4f6", border: "none", cursor: "pointer" }}>
-              <ChevronLeft size={18} />
-            </button>
-            <button onClick={() => handleManualScroll('next')} style={{ width: 32, height: 32, borderRadius: "50%", background: "#f3f4f6", border: "none", cursor: "pointer" }}>
-              <ChevronRight size={18} />
-            </button>
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: 16, overflowX: "auto", padding: "8px 4px 16px", scrollbarWidth: "thin" }}>
-          {promoBanners.map((banner) => (
-            <div key={banner.id} onClick={() => handleBannerClick(banner)} style={{ minWidth: 280, background: banner.gradient, borderRadius: 20, padding: 20, color: "white", cursor: "pointer" }}>
-              <div style={{ fontSize: 42, marginBottom: 12 }}>{banner.icon}</div>
-              <h3 style={{ fontSize: 24, fontWeight: 700 }}>{banner.title}</h3>
-              <p style={{ fontSize: 14, opacity: 0.9 }}>{banner.subtitle}</p>
-              <p style={{ fontSize: 12, opacity: 0.75 }}>{banner.description}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ marginBottom: 32 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div>
-          <h2 style={{ fontSize: 24, fontWeight: 700, color: "#111827" }}>🔥 Exclusive Offers</h2>
-          <p style={{ fontSize: 14, color: "#6b7280" }}>Grab these limited-time deals before they're gone!</p>
-        </div>
-        <div style={{ display: "flex", gap: 12 }}>
-          <button onClick={() => handleManualScroll('prev')} style={{ width: 40, height: 40, borderRadius: "50%", background: "#f3f4f6", border: "none", cursor: "pointer" }}>
-            <ChevronLeft size={20} />
-          </button>
-          <button onClick={() => handleManualScroll('next')} style={{ width: 40, height: 40, borderRadius: "50%", background: "#f3f4f6", border: "none", cursor: "pointer" }}>
-            <ChevronRight size={20} />
-          </button>
-        </div>
-      </div>
-      <div style={{ display: "flex", justifyContent: "center", gap: 24, flexWrap: "wrap" }}>
-        {promoBanners.slice(0, 3).map((banner) => (
-          <div key={banner.id} onClick={() => handleBannerClick(banner)} style={{ flex: "1 1 280px", maxWidth: 320, background: banner.gradient, borderRadius: 24, padding: 24, color: "white", cursor: "pointer", transition: "transform 0.3s" }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>{banner.icon}</div>
-            <h3 style={{ fontSize: 26, fontWeight: 700 }}>{banner.title}</h3>
-            <p style={{ fontSize: 15, opacity: 0.9 }}>{banner.subtitle}</p>
-            <p style={{ fontSize: 13, opacity: 0.75, marginBottom: 16 }}>{banner.description}</p>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", background: "rgba(255,255,255,0.2)", borderRadius: 30, fontSize: 13 }}>
-              Claim Offer →
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 /* ================= HERO BANNER COMPONENT ================= */
 const HeroBanner = ({ onSearch }) => {
   const isMobile = isMobileDevice();
@@ -1896,85 +1760,6 @@ const StatisticsSection = () => {
           <div key={index} style={{ color: "white" }}>
             <div style={{ fontSize: 36, fontWeight: 800, marginBottom: 4 }}>{stat.value}</div>
             <div style={{ fontSize: 14, opacity: 0.9 }}>{stat.label}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-/* ================= HOW NEPXALL WORKS ================= */
-const HowItWorks = () => {
-  const isMobile = isMobileDevice();
-  
-  const steps = [
-    { 
-      icon: <Search size={32} />, 
-      title: "Search PG", 
-      description: "Find nearby PGs and rentals",
-      color: "#3b82f6"
-    },
-    { 
-      icon: <MessageCircle size={32} />, 
-      title: "Compare & Contact", 
-      description: "View details and contact owners directly",
-      color: "#10b981"
-    },
-    { 
-      icon: <Home size={32} />, 
-      title: "Move In", 
-      description: "Book your preferred accommodation",
-      color: "#8b5cf6"
-    },
-  ];
-  
-  return (
-    <div style={{ marginBottom: 48 }}>
-      <div style={{ textAlign: "center", marginBottom: 32 }}>
-        <h2 style={{ fontSize: isMobile ? 28 : 36, fontWeight: 700, color: "#111827" }}>How Nepxall Works</h2>
-        <p style={{ fontSize: isMobile ? 16 : 18, color: "#6b7280" }}>Find your perfect home in 3 simple steps</p>
-      </div>
-      
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
-        gap: 24
-      }}>
-        {steps.map((step, index) => (
-          <div key={index} style={{
-            background: "white",
-            borderRadius: 20,
-            padding: 32,
-            textAlign: "center",
-            border: "1px solid #e5e7eb",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
-            position: "relative"
-          }}>
-            {index < steps.length - 1 && !isMobile && (
-              <div style={{
-                position: "absolute",
-                right: -20,
-                top: "50%",
-                transform: "translateY(-50%)",
-                fontSize: 24,
-                color: "#d1d5db"
-              }}>→</div>
-            )}
-            <div style={{
-              width: 72,
-              height: 72,
-              borderRadius: "50%",
-              background: `${step.color}15`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 16px",
-              color: step.color
-            }}>
-              {step.icon}
-            </div>
-            <h3 style={{ fontSize: 20, fontWeight: 700, color: "#111827", marginBottom: 8 }}>{step.title}</h3>
-            <p style={{ fontSize: 14, color: "#6b7280" }}>{step.description}</p>
           </div>
         ))}
       </div>
@@ -2992,9 +2777,6 @@ function UserPGSearch() {
       {/* Statistics Section */}
       <StatisticsSection />
 
-      {/* How It Works */}
-      <HowItWorks />
-
       {/* Trust Section */}
       <TrustSection />
 
@@ -3045,9 +2827,6 @@ function UserPGSearch() {
           </button>
         </div>
       )}
-
-      {/* Promotional Banners */}
-      <PromoBannerSlider onBannerClick={handlePromoBannerClick} />
 
       {/* Quick Filters Section */}
       <div style={{ marginBottom: 28 }}>
