@@ -1736,37 +1736,6 @@ const WhyChooseNepxall = () => {
   );
 };
 
-/* ================= STATISTICS SECTION ================= */
-const StatisticsSection = () => {
-  const isMobile = isMobileDevice();
-  
-  const stats = [
-    { value: "70+", label: "PG Owners", icon: <Building size={24} />, color: "#3b82f6" },
-    { value: "500+", label: "Beds Available", icon: <Bed size={24} />, color: "#10b981" },
-    { value: "1000+", label: "Monthly Visitors", icon: <Users size={24} />, color: "#8b5cf6" },
-    { value: "📍", label: "Bangalore Coverage", icon: <MapPin size={24} />, color: "#f59e0b" },
-  ];
-  
-  return (
-    <div style={{
-      background: "linear-gradient(135deg, #1e3a5f, #2c5282)",
-      borderRadius: 20,
-      padding: isMobile ? "32px 20px" : "48px 40px",
-      marginBottom: 48,
-      textAlign: "center"
-    }}>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: 24 }}>
-        {stats.map((stat, index) => (
-          <div key={index} style={{ color: "white" }}>
-            <div style={{ fontSize: 36, fontWeight: 800, marginBottom: 4 }}>{stat.value}</div>
-            <div style={{ fontSize: 14, opacity: 0.9 }}>{stat.label}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 /* ================= TRUST SECTION ================= */
 const TrustSection = () => {
   const isMobile = isMobileDevice();
@@ -2773,9 +2742,6 @@ function UserPGSearch() {
 
       {/* Why Choose Nepxall */}
       <WhyChooseNepxall />
-
-      {/* Statistics Section */}
-      <StatisticsSection />
 
       {/* Trust Section */}
       <TrustSection />
