@@ -1644,79 +1644,170 @@ const HeroBanner = ({ onSearch }) => {
   );
 };
 
-/* ================= WHY CHOOSE NEPXALL SECTION (UPDATED) ================= */
+/* ================= WHY CHOOSE NEPXALL SECTION ================= */
 const WhyChooseNepxall = () => {
   const isMobile = isMobileDevice();
   
-  const benefits = [
-    { icon: <Building size={24} />, title: "70+ PG Owners", description: "Trusted property owners", color: "#3b82f6", bg: "#eff6ff" },
-    { icon: <Bed size={24} />, title: "500+ Beds Available", description: "Wide variety of options", color: "#10b981", bg: "#f0fdf4" },
-    { icon: <Users size={24} />, title: "1000+ Monthly Visitors", description: "Growing community", color: "#8b5cf6", bg: "#f5f3ff" },
-    { icon: <MapPin size={24} />, title: "Bangalore Coverage", description: "Across all major areas", color: "#f59e0b", bg: "#fffbeb" },
-    { icon: <Shield size={24} />, title: "Verified Properties", description: "All listings verified", color: "#10b981", bg: "#f0fdf4" },
-    { icon: <Phone size={24} />, title: "Direct Owner Contact", description: "No middlemen", color: "#3b82f6", bg: "#eff6ff" },
-    { icon: <X size={24} />, title: "No Brokerage", description: "Zero commission", color: "#ef4444", bg: "#fef2f2" },
-    { icon: <Star size={24} />, title: "Trusted by Professionals", description: "Students & working pros", color: "#f59e0b", bg: "#fffbeb" },
+  const tenantBenefits = [
+    { icon: <MapPin size={24} />, title: "Find PGs Near Your Workplace", color: "#3b82f6" },
+    { icon: <Shield size={24} />, title: "Verified PG Listings", color: "#10b981" },
+    { icon: <BarChart size={24} />, title: "Compare Rent, Food & Amenities", color: "#8b5cf6" },
+    { icon: <Phone size={24} />, title: "Direct Owner Contact", color: "#f59e0b" },
+    { icon: <Coins size={24} />, title: "No Broker Charges", color: "#ef4444" },
   ];
-
+  
+  const ownerBenefits = [
+    { icon: <Users size={24} />, title: "Get More Tenant Leads", color: "#3b82f6" },
+    { icon: <Plus size={24} />, title: "List PGs Free", color: "#10b981" },
+    { icon: <Calendar size={24} />, title: "Manage Rooms & Bookings", color: "#8b5cf6" },
+    { icon: <Award size={24} />, title: "Build Trust with Verification", color: "#f59e0b" },
+    { icon: <Rocket size={24} />, title: "Increase Occupancy Faster", color: "#ef4444" },
+  ];
+  
   return (
     <div style={{ marginBottom: 48 }}>
       <div style={{ textAlign: "center", marginBottom: 32 }}>
-        <h2 style={{ fontSize: isMobile ? 28 : 36, fontWeight: 700, color: "#111827" }}>
-          Why Choose Nepxall?
-        </h2>
-        <p style={{ fontSize: isMobile ? 16 : 18, color: "#6b7280", marginTop: 8 }}>
-          India's trusted platform for finding PGs, Coliving & Rental Homes
-        </p>
+        <h2 style={{ fontSize: isMobile ? 28 : 36, fontWeight: 700, color: "#111827" }}>Why Choose Nepxall?</h2>
+        <p style={{ fontSize: isMobile ? 16 : 18, color: "#6b7280" }}>Connecting tenants with trusted property owners</p>
       </div>
       
       <div style={{
         display: "grid",
-        gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
-        gap: 20
+        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+        gap: 32
       }}>
-        {benefits.map((benefit, index) => (
-          <div
-            key={index}
-            style={{
-              background: benefit.bg,
-              borderRadius: 16,
-              padding: "24px 20px",
-              textAlign: "center",
-              border: `1px solid ${benefit.color}20`,
-              transition: "all 0.3s ease",
-              cursor: "default"
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-4px)";
-              e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.08)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "none";
-            }}
-          >
-            <div
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: "50%",
-                background: `${benefit.color}15`,
+        {/* Tenants Section */}
+        <div style={{
+          background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
+          borderRadius: 20,
+          padding: 24,
+          border: "1px solid #bfdbfe"
+        }}>
+          <h3 style={{ fontSize: 20, fontWeight: 700, color: "#1e3a5f", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <Users size={24} color="#3b82f6" /> For Tenants
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
+            {tenantBenefits.map((benefit, index) => (
+              <div key={index} style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 12px",
-                color: benefit.color
-              }}
-            >
-              {benefit.icon}
+                gap: 12,
+                background: "white",
+                padding: "12px 16px",
+                borderRadius: 12,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
+              }}>
+                <div style={{ color: benefit.color }}>{benefit.icon}</div>
+                <span style={{ fontSize: 14, fontWeight: 500, color: "#374151" }}>{benefit.title}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Owners Section */}
+        <div style={{
+          background: "linear-gradient(135deg, #f0fdf4, #dcfce7)",
+          borderRadius: 20,
+          padding: 24,
+          border: "1px solid #bbf7d0"
+        }}>
+          <h3 style={{ fontSize: 20, fontWeight: 700, color: "#065f46", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <Building size={24} color="#10b981" /> For PG Owners
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
+            {ownerBenefits.map((benefit, index) => (
+              <div key={index} style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                background: "white",
+                padding: "12px 16px",
+                borderRadius: 12,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
+              }}>
+                <div style={{ color: benefit.color }}>{benefit.icon}</div>
+                <span style={{ fontSize: 14, fontWeight: 500, color: "#374151" }}>{benefit.title}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ================= STATISTICS SECTION ================= */
+const StatisticsSection = () => {
+  const isMobile = isMobileDevice();
+  
+  const stats = [
+    { value: "70+", label: "PG Owners", icon: <Building size={24} />, color: "#3b82f6" },
+    { value: "500+", label: "Beds Available", icon: <Bed size={24} />, color: "#10b981" },
+    { value: "1000+", label: "Monthly Visitors", icon: <Users size={24} />, color: "#8b5cf6" },
+    { value: "📍", label: "Bangalore Coverage", icon: <MapPin size={24} />, color: "#f59e0b" },
+  ];
+  
+  return (
+    <div style={{
+      background: "linear-gradient(135deg, #1e3a5f, #2c5282)",
+      borderRadius: 20,
+      padding: isMobile ? "32px 20px" : "48px 40px",
+      marginBottom: 48,
+      textAlign: "center"
+    }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: 24 }}>
+        {stats.map((stat, index) => (
+          <div key={index} style={{ color: "white" }}>
+            <div style={{ fontSize: 36, fontWeight: 800, marginBottom: 4 }}>{stat.value}</div>
+            <div style={{ fontSize: 14, opacity: 0.9 }}>{stat.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/* ================= TRUST SECTION ================= */
+const TrustSection = () => {
+  const isMobile = isMobileDevice();
+  
+  const trustPoints = [
+    { icon: <Shield size={28} />, title: "Verified Properties", description: "All listings are verified for authenticity", color: "#10b981" },
+    { icon: <Phone size={28} />, title: "Direct Owner Contact", description: "Talk directly with property owners", color: "#3b82f6" },
+    { icon: <X size={28} />, title: "No Brokerage", description: "Zero commission, save money", color: "#ef4444" },
+    { icon: <Star size={28} />, title: "Trusted by Professionals", description: "Used by students and working professionals", color: "#f59e0b" },
+  ];
+  
+  return (
+    <div style={{
+      background: "#f8fafc",
+      borderRadius: 20,
+      padding: isMobile ? "32px 20px" : "48px 40px",
+      marginBottom: 48,
+      border: "1px solid #e2e8f0"
+    }}>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)",
+        gap: 24
+      }}>
+        {trustPoints.map((point, index) => (
+          <div key={index} style={{ textAlign: "center" }}>
+            <div style={{
+              width: 64,
+              height: 64,
+              borderRadius: "50%",
+              background: `${point.color}15`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 12px",
+              color: point.color
+            }}>
+              {point.icon}
             </div>
-            <h4 style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 4 }}>
-              {benefit.title}
-            </h4>
-            <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>
-              {benefit.description}
-            </p>
+            <h4 style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 4 }}>{point.title}</h4>
+            <p style={{ fontSize: 13, color: "#6b7280" }}>{point.description}</p>
           </div>
         ))}
       </div>
@@ -2680,8 +2771,14 @@ function UserPGSearch() {
       {/* Hero Banner with Search */}
       <HeroBanner onSearch={handleHeroSearch} />
 
-      {/* Why Choose Nepxall - Combined Section (Removed Statistics & Trust) */}
+      {/* Why Choose Nepxall */}
       <WhyChooseNepxall />
+
+      {/* Statistics Section */}
+      <StatisticsSection />
+
+      {/* Trust Section */}
+      <TrustSection />
 
       {/* Location Info Bar */}
       {userLocation && (
