@@ -321,11 +321,11 @@ export default function PGDetails() {
         <span style={S.crumbCurrent}>{pg.pg_name}</span>
       </nav>
 
-      {/* ===== Gallery ===== */}
+      {/* ===== Gallery (same compact layout on all screens) ===== */}
       <section style={S.hero}>
         {media.length > 0 ? (
-          <div style={isMobile ? S.galleryGridMobile : S.galleryGrid}>
-            <div style={isMobile ? S.galleryMainMobile : S.galleryMain} onClick={() => setGalleryOpen(true)}>
+          <div style={S.galleryGrid}>
+            <div style={S.galleryMain} onClick={() => setGalleryOpen(true)}>
               {current.type === "photo" ? (
                 <img src={current.src} alt={pg.pg_name} style={S.galleryMainImg}
                   onError={(e) => { e.target.src = "https://via.placeholder.com/1200x800?text=No+Image"; }} />
@@ -344,27 +344,11 @@ export default function PGDetails() {
                 </>
               )}
             </div>
-            {!isMobile && media.length > 1 && (
+            {media.length > 1 && (
               <div style={S.galleryThumbs}>
                 {media.slice(0, 4).map((m, i) => (
                   <div key={i} onClick={() => setIndex(i)} style={{
                     ...S.galleryThumb,
-                    outline: i === index ? `2px solid ${T.emerald}` : "none",
-                    outlineOffset: i === index ? 2 : 0,
-                  }}>
-                    {m.type === "photo"
-                      ? <img src={m.src} alt="" style={S.galleryThumbImg} />
-                      : <div style={{ ...S.galleryThumbImg, background: T.ink, color: "#fff", display: "grid", placeItems: "center" }}>▶</div>}
-                    {i === 3 && media.length > 4 && <div style={S.galleryMore}>+{media.length - 4}</div>}
-                  </div>
-                ))}
-              </div>
-            )}
-            {isMobile && media.length > 1 && (
-              <div style={S.galleryThumbsMobile}>
-                {media.slice(0, 4).map((m, i) => (
-                  <div key={i} onClick={() => setIndex(i)} style={{
-                    ...S.galleryThumbMobile,
                     outline: i === index ? `2px solid ${T.emerald}` : "none",
                     outlineOffset: i === index ? 2 : 0,
                   }}>
@@ -767,24 +751,18 @@ const S = {
   crumbSep: { color: T.inkMute, opacity: 0.5 },
   crumbCurrent: { color: T.ink, fontWeight: 500 },
 
-  /* ===== DESKTOP Gallery ===== */
+  /* ===== Gallery (compact on all screens) ===== */
   hero: { marginBottom: 28 },
-  galleryGrid: { display: "grid", gridTemplateColumns: "2.2fr 1fr", gap: 8, height: 420 },
-  galleryMain: { position: "relative", borderRadius: 14, overflow: "hidden", cursor: "pointer", background: T.paperDeep, height: "100%" },
+  galleryGrid: { display: "grid", gridTemplateColumns: "1fr", gap: 6, height: "auto" },
+  galleryMain: { position: "relative", borderRadius: 14, overflow: "hidden", cursor: "pointer", background: T.paperDeep, height: 320 },
   galleryMainImg: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
-  galleryThumbs: { display: "grid", gridTemplateRows: "repeat(4, 1fr)", gap: 8, height: "100%" },
+  galleryThumbs: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, height: 80 },
   galleryThumb: { position: "relative", borderRadius: 10, overflow: "hidden", cursor: "pointer", background: T.paperDeep, height: "100%" },
   galleryThumbImg: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
   galleryMore: { position: "absolute", inset: 0, background: "rgba(20,24,26,0.7)", color: "#fff", display: "grid", placeItems: "center", fontSize: 16, fontWeight: 600, fontFamily: "'Fraunces', serif" },
   galleryNav: { position: "absolute", top: "50%", transform: "translateY(-50%)", width: 36, height: 36, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.95)", cursor: "pointer", display: "grid", placeItems: "center", boxShadow: "0 4px 14px rgba(0,0,0,0.15)" },
   galleryCounter: { position: "absolute", bottom: 14, left: 14, background: "rgba(20,24,26,0.8)", color: "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500 },
   galleryEmpty: { height: 280, borderRadius: 14, background: T.paperDeep, display: "grid", placeItems: "center", color: T.inkMute, fontSize: 14 },
-
-  /* ===== MOBILE Gallery ===== */
-  galleryGridMobile: { display: "grid", gridTemplateColumns: "1fr", gap: 6, height: "auto" },
-  galleryMainMobile: { position: "relative", borderRadius: 14, overflow: "hidden", cursor: "pointer", background: T.paperDeep, height: 260 },
-  galleryThumbsMobile: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, height: 72 },
-  galleryThumbMobile: { position: "relative", borderRadius: 8, overflow: "hidden", cursor: "pointer", background: T.paperDeep, height: "100%" },
 
   titleBlock: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 48, flexWrap: "wrap", paddingBottom: 32, borderBottom: `1px solid ${T.line}` },
   eyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: T.tan, fontWeight: 600, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 },
