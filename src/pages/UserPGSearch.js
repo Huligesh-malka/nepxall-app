@@ -111,13 +111,13 @@ const LOCATION_AUTO_ASKED_KEY = "nepxall_location_auto_asked";
 
 // Popular Areas in Bangalore
 const popularAreas = [
-  { name: "Koramangala", icon: "🌆", color: "#3b82f6" },
-  { name: "BTM Layout", icon: "🏙️", color: "#10b981" },
-  { name: "Jayanagar", icon: "🌳", color: "#f59e0b" },
-  { name: "Electronic City", icon: "💻", color: "#8b5cf6" },
-  { name: "HSR Layout", icon: "🏘️", color: "#ec4899" },
-  { name: "Whitefield", icon: "🏢", color: "#06b6d4" },
-  { name: "Marathahalli", icon: "🚗", color: "#ef4444" },
+  { name: "Koramangala", icon: "", color: "#3b82f6" },
+  { name: "BTM Layout", icon: "", color: "#10b981" },
+  { name: "Jayanagar", icon: "", color: "#f59e0b" },
+  { name: "Electronic City", icon: "", color: "#8b5cf6" },
+  { name: "HSR Layout", icon: "", color: "#ec4899" },
+  { name: "Whitefield", icon: "", color: "#06b6d4" },
+  { name: "Marathahalli", icon: "", color: "#ef4444" },
 ];
 
 // Quick Filters - Easy access filters
@@ -1554,6 +1554,142 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
   );
 };
 
+/* ================= PROMOTIONAL BANNERS SLIDER COMPONENT ================= */
+const PromoBannerSlider = ({ onBannerClick }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const promoBanners = [
+    {
+      id: 1,
+      title: "₹200 OFF",
+      subtitle: "On First Booking",
+      description: "Use code FIRST200",
+      icon: "🎉",
+      gradient: "linear-gradient(135deg, #3b82f6, #1e40af)"
+    },
+    {
+      id: 2,
+      title: "Direct Owner Contact",
+      subtitle: "No Middlemen",
+      description: "Save on commission",
+      icon: "🏠",
+      gradient: "linear-gradient(135deg, #10b981, #047857)"
+    },
+    {
+      id: 3,
+      title: "Instant Booking",
+      subtitle: "Fast Confirmation",
+      description: "Get confirmed in minutes",
+      icon: "⚡",
+      gradient: "linear-gradient(135deg, #f59e0b, #b45309)"
+    },
+    {
+      id: 4,
+      title: "Verified PGs",
+      subtitle: "100% Trusted Properties",
+      description: "No hidden charges",
+      icon: "🤝",
+      gradient: "linear-gradient(135deg, #8b5cf6, #6d28d9)"
+    },
+    {
+      id: 5,
+      title: "Student Offer",
+      subtitle: "Limited Time Deal",
+      description: "Special discount for students",
+      icon: "🎓",
+      gradient: "linear-gradient(135deg, #ec4899, #be185d)"
+    }
+  ];
+
+  useEffect(() => {
+    if (isHovered) return;
+    const interval = setInterval(() => {
+      setActiveIndex((prevIndex) => (prevIndex + 1) % promoBanners.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [isHovered, promoBanners.length]);
+
+  const handleManualScroll = (direction) => {
+    if (direction === 'next') {
+      setActiveIndex((prev) => (prev + 1) % promoBanners.length);
+    } else {
+      setActiveIndex((prev) => (prev - 1 + promoBanners.length) % promoBanners.length);
+    }
+  };
+
+  const handleBannerClick = (banner) => {
+    if (onBannerClick) {
+      onBannerClick(banner);
+    }
+  };
+
+  const isMobile = window.innerWidth < 768;
+
+  if (isMobile) {
+    return (
+      <div style={{ marginBottom: 24, position: "relative" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: "#111827" }}>🔥 Exclusive Offers</h3>
+            <p style={{ fontSize: 13, color: "#6b7280" }}>Limited time deals for you</p>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => handleManualScroll('prev')} style={{ width: 32, height: 32, borderRadius: "50%", background: "#f3f4f6", border: "none", cursor: "pointer" }}>
+              <ChevronLeft size={18} />
+            </button>
+            <button onClick={() => handleManualScroll('next')} style={{ width: 32, height: 32, borderRadius: "50%", background: "#f3f4f6", border: "none", cursor: "pointer" }}>
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 16, overflowX: "auto", padding: "8px 4px 16px", scrollbarWidth: "thin" }}>
+          {promoBanners.map((banner) => (
+            <div key={banner.id} onClick={() => handleBannerClick(banner)} style={{ minWidth: 280, background: banner.gradient, borderRadius: 20, padding: 20, color: "white", cursor: "pointer" }}>
+              <div style={{ fontSize: 42, marginBottom: 12 }}>{banner.icon}</div>
+              <h3 style={{ fontSize: 24, fontWeight: 700 }}>{banner.title}</h3>
+              <p style={{ fontSize: 14, opacity: 0.9 }}>{banner.subtitle}</p>
+              <p style={{ fontSize: 12, opacity: 0.75 }}>{banner.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginBottom: 32 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div>
+          <h2 style={{ fontSize: 24, fontWeight: 700, color: "#111827" }}>🔥 Exclusive Offers</h2>
+          <p style={{ fontSize: 14, color: "#6b7280" }}>Grab these limited-time deals before they're gone!</p>
+        </div>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button onClick={() => handleManualScroll('prev')} style={{ width: 40, height: 40, borderRadius: "50%", background: "#f3f4f6", border: "none", cursor: "pointer" }}>
+            <ChevronLeft size={20} />
+          </button>
+          <button onClick={() => handleManualScroll('next')} style={{ width: 40, height: 40, borderRadius: "50%", background: "#f3f4f6", border: "none", cursor: "pointer" }}>
+            <ChevronRight size={20} />
+          </button>
+        </div>
+      </div>
+      <div style={{ display: "flex", justifyContent: "center", gap: 24, flexWrap: "wrap" }}>
+        {promoBanners.slice(0, 3).map((banner) => (
+          <div key={banner.id} onClick={() => handleBannerClick(banner)} style={{ flex: "1 1 280px", maxWidth: 320, background: banner.gradient, borderRadius: 24, padding: 24, color: "white", cursor: "pointer", transition: "transform 0.3s" }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>{banner.icon}</div>
+            <h3 style={{ fontSize: 26, fontWeight: 700 }}>{banner.title}</h3>
+            <p style={{ fontSize: 15, opacity: 0.9 }}>{banner.subtitle}</p>
+            <p style={{ fontSize: 13, opacity: 0.75, marginBottom: 16 }}>{banner.description}</p>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", background: "rgba(255,255,255,0.2)", borderRadius: 30, fontSize: 13 }}>
+              Claim Offer →
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 /* ================= HERO BANNER COMPONENT ================= */
 const HeroBanner = ({ onSearch }) => {
   const isMobile = isMobileDevice();
@@ -1570,165 +1706,75 @@ const HeroBanner = ({ onSearch }) => {
     <div style={{
       background: "linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%)",
       borderRadius: 24,
-      marginBottom: 48,
+      marginBottom: 40,
       overflow: "hidden",
-      padding: isMobile ? "40px 20px" : "64px 48px",
-      position: "relative"
+      padding: isMobile ? "40px 20px" : "60px 40px",
     }}>
-      {/* Background decoration */}
-      <div style={{
-        position: "absolute",
-        top: -100,
-        right: -100,
-        width: 400,
-        height: 400,
-        borderRadius: "50%",
-        background: "rgba(59, 130, 246, 0.1)",
-        pointerEvents: "none"
-      }} />
-      <div style={{
-        position: "absolute",
-        bottom: -150,
-        left: -50,
-        width: 300,
-        height: 300,
-        borderRadius: "50%",
-        background: "rgba(16, 185, 129, 0.08)",
-        pointerEvents: "none"
-      }} />
+      <h1 style={{
+        fontSize: isMobile ? "36px" : "52px",
+        fontWeight: 800,
+        color: "#ffffff",
+        marginBottom: 16,
+        lineHeight: 1.2
+      }}>
+        Find Verified PGs,<br />
+        Coliving & Rental Homes
+      </h1>
+      <p style={{
+        fontSize: isMobile ? "16px" : "22px",
+        color: "rgba(255,255,255,0.9)",
+        marginBottom: 32,
+        maxWidth: "90%"
+      }}>
+        Book trusted stays with secure payments and verified owners.
+      </p>
       
-      <div style={{ position: "relative", zIndex: 1 }}>
-        <div style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          background: "rgba(255,255,255,0.12)",
-          padding: "6px 16px",
-          borderRadius: 30,
-          marginBottom: 16,
-          color: "rgba(255,255,255,0.9)",
-          fontSize: 13,
-          fontWeight: 500
-        }}>
-          <Shield size={14} />
-          Trusted by 1000+ tenants
-        </div>
-        
-        <h1 style={{
-          fontSize: isMobile ? "32px" : "52px",
-          fontWeight: 800,
-          color: "#ffffff",
-          marginBottom: 16,
-          lineHeight: 1.15,
-          letterSpacing: "-0.02em"
-        }}>
-          Find Verified PGs,<br />
-          Coliving & Rental Homes
-        </h1>
-        
-        <p style={{
-          fontSize: isMobile ? "16px" : "20px",
-          color: "rgba(255,255,255,0.9)",
-          marginBottom: 32,
-          maxWidth: "600px",
-          lineHeight: 1.6
-        }}>
-          Book trusted stays with secure payments and verified owners. 
-          No brokerage, direct owner contact.
-        </p>
-        
-        {/* Search Bar */}
-        <form onSubmit={handleSearch} style={{
-          display: "flex",
-          maxWidth: 600,
-          background: "white",
-          borderRadius: 60,
-          overflow: "hidden",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.2)"
-        }}>
-          <input
-            type="text"
-            placeholder="Search by area, city, or PG name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              flex: 1,
-              padding: "18px 24px",
-              border: "none",
-              outline: "none",
-              fontSize: 16,
-              background: "transparent"
-            }}
-          />
-          <button
-            type="submit"
-            style={{
-              padding: "18px 32px",
-              background: "#3b82f6",
-              color: "white",
-              border: "none",
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 16,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              transition: "background 0.2s"
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "#2563eb"}
-            onMouseLeave={(e) => e.currentTarget.style.background = "#3b82f6"}
-          >
-            <Search size={20} /> Search
-          </button>
-        </form>
-        
-        <div style={{ 
-          display: "flex", 
-          flexWrap: "wrap", 
-          gap: 12, 
-          marginTop: 24,
-          alignItems: "center"
-        }}>
-          <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, fontWeight: 500 }}>
-            Trusted by:
-          </span>
-          <div style={{ 
-            background: "rgba(255,255,255,0.12)", 
-            color: "white", 
-            padding: "6px 16px", 
-            borderRadius: 30, 
-            fontSize: 13,
+      {/* Search Bar */}
+      <form onSubmit={handleSearch} style={{
+        display: "flex",
+        maxWidth: 600,
+        background: "white",
+        borderRadius: 60,
+        overflow: "hidden",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.2)"
+      }}>
+        <input
+          type="text"
+          placeholder="Search by area, city, or PG name..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            flex: 1,
+            padding: "18px 24px",
+            border: "none",
+            outline: "none",
+            fontSize: 16,
+            background: "transparent"
+          }}
+        />
+        <button
+          type="submit"
+          style={{
+            padding: "18px 32px",
+            background: "#3b82f6",
+            color: "white",
+            border: "none",
+            cursor: "pointer",
+            fontWeight: 600,
+            fontSize: 16,
             display: "flex",
             alignItems: "center",
-            gap: 6
-          }}>
-            <Check size={14} /> Verified Properties
-          </div>
-          <div style={{ 
-            background: "rgba(255,255,255,0.12)", 
-            color: "white", 
-            padding: "6px 16px", 
-            borderRadius: 30, 
-            fontSize: 13,
-            display: "flex",
-            alignItems: "center",
-            gap: 6
-          }}>
-            <Phone size={14} /> Direct Owner Contact
-          </div>
-          <div style={{ 
-            background: "rgba(255,255,255,0.12)", 
-            color: "white", 
-            padding: "6px 16px", 
-            borderRadius: 30, 
-            fontSize: 13,
-            display: "flex",
-            alignItems: "center",
-            gap: 6
-          }}>
-            <Coins size={14} /> No Brokerage
-          </div>
-        </div>
+            gap: 8
+          }}
+        >
+          <Search size={20} /> Search
+        </button>
+      </form>
+      
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 24 }}>
+        <div style={{ background: "rgba(255,255,255,0.15)", color: "white", padding: "8px 16px", borderRadius: 30, fontSize: 13 }}>✓ Verified Properties</div>
+        <div style={{ background: "rgba(255,255,255,0.15)", color: "white", padding: "8px 16px", borderRadius: 30, fontSize: 13 }}>✓ Direct Owner Contact</div>
+        <div style={{ background: "rgba(255,255,255,0.15)", color: "white", padding: "8px 16px", borderRadius: 30, fontSize: 13 }}>✓ No Brokerage</div>
       </div>
     </div>
   );
@@ -1739,45 +1785,26 @@ const WhyChooseNepxall = () => {
   const isMobile = isMobileDevice();
   
   const tenantBenefits = [
-    { icon: <MapPin size={24} />, title: "Find PGs Near Your Workplace", description: "Locate properties close to your office or college", color: "#3b82f6", bg: "#eff6ff" },
-    { icon: <Shield size={24} />, title: "Verified PG Listings", description: "Every property is verified for authenticity", color: "#10b981", bg: "#f0fdf4" },
-    { icon: <BarChart size={24} />, title: "Compare & Choose", description: "Compare rent, food & amenities side by side", color: "#8b5cf6", bg: "#f5f3ff" },
-    { icon: <Phone size={24} />, title: "Direct Owner Contact", description: "Talk directly with owners, no middlemen", color: "#f59e0b", bg: "#fffbeb" },
-    { icon: <Coins size={24} />, title: "No Broker Charges", description: "Zero commission, save up to 1 month rent", color: "#ef4444", bg: "#fef2f2" },
+    { icon: <MapPin size={24} />, title: "Find PGs Near Your Workplace", color: "#3b82f6" },
+    { icon: <Shield size={24} />, title: "Verified PG Listings", color: "#10b981" },
+    { icon: <BarChart size={24} />, title: "Compare Rent, Food & Amenities", color: "#8b5cf6" },
+    { icon: <Phone size={24} />, title: "Direct Owner Contact", color: "#f59e0b" },
+    { icon: <Coins size={24} />, title: "No Broker Charges", color: "#ef4444" },
   ];
   
   const ownerBenefits = [
-    { icon: <Users size={24} />, title: "Get More Tenant Leads", description: "Reach thousands of active tenants", color: "#3b82f6", bg: "#eff6ff" },
-    { icon: <Plus size={24} />, title: "List Your PG Free", description: "No listing fees, start getting inquiries", color: "#10b981", bg: "#f0fdf4" },
-    { icon: <Calendar size={24} />, title: "Manage Rooms & Bookings", description: "Track availability and bookings easily", color: "#8b5cf6", bg: "#f5f3ff" },
-    { icon: <Award size={24} />, title: "Build Trust with Verification", description: "Get verified badge to attract more tenants", color: "#f59e0b", bg: "#fffbeb" },
-    { icon: <Rocket size={24} />, title: "Increase Occupancy Faster", description: "Fill your rooms quickly with our platform", color: "#ef4444", bg: "#fef2f2" },
+    { icon: <Users size={24} />, title: "Get More Tenant Leads", color: "#3b82f6" },
+    { icon: <Plus size={24} />, title: "List PGs Free", color: "#10b981" },
+    { icon: <Calendar size={24} />, title: "Manage Rooms & Bookings", color: "#8b5cf6" },
+    { icon: <Award size={24} />, title: "Build Trust with Verification", color: "#f59e0b" },
+    { icon: <Rocket size={24} />, title: "Increase Occupancy Faster", color: "#ef4444" },
   ];
   
   return (
     <div style={{ marginBottom: 48 }}>
-      <div style={{ textAlign: "center", marginBottom: 36 }}>
-        <div style={{ 
-          display: "inline-flex", 
-          alignItems: "center", 
-          gap: 8, 
-          background: "#eff6ff", 
-          padding: "6px 16px", 
-          borderRadius: 30,
-          marginBottom: 12,
-          fontSize: 13,
-          fontWeight: 600,
-          color: "#3b82f6"
-        }}>
-          <Star size={14} fill="#3b82f6" />
-          Why Nepxall
-        </div>
-        <h2 style={{ fontSize: isMobile ? 28 : 36, fontWeight: 700, color: "#111827" }}>
-          Built for Tenants &amp; PG Owners
-        </h2>
-        <p style={{ fontSize: isMobile ? 16 : 18, color: "#6b7280" }}>
-          Everything you need to find or list the perfect property
-        </p>
+      <div style={{ textAlign: "center", marginBottom: 32 }}>
+        <h2 style={{ fontSize: isMobile ? 28 : 36, fontWeight: 700, color: "#111827" }}>Why Choose Nepxall?</h2>
+        <p style={{ fontSize: isMobile ? 16 : 18, color: "#6b7280" }}>Connecting tenants with trusted property owners</p>
       </div>
       
       <div style={{
@@ -1787,54 +1814,27 @@ const WhyChooseNepxall = () => {
       }}>
         {/* Tenants Section */}
         <div style={{
-          background: "#ffffff",
+          background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
           borderRadius: 20,
-          padding: 28,
-          border: "1px solid #e5e7eb",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.04)"
+          padding: 24,
+          border: "1px solid #bfdbfe"
         }}>
-          <h3 style={{ 
-            fontSize: 20, 
-            fontWeight: 700, 
-            color: "#1e3a5f", 
-            marginBottom: 20, 
-            display: "flex", 
-            alignItems: "center", 
-            gap: 10 
-          }}>
-            <span style={{
-              background: "#3b82f6",
-              color: "white",
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 18
-            }}>🏠</span>
-            For Tenants
+          <h3 style={{ fontSize: 20, fontWeight: 700, color: "#1e3a5f", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <Users size={24} color="#3b82f6" /> For Tenants
           </h3>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
             {tenantBenefits.map((benefit, index) => (
               <div key={index} style={{
                 display: "flex",
-                alignItems: "flex-start",
-                gap: 14,
-                background: benefit.bg,
-                padding: "14px 18px",
+                alignItems: "center",
+                gap: 12,
+                background: "white",
+                padding: "12px 16px",
                 borderRadius: 12,
-                border: `1px solid ${benefit.color}20`
+                boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
               }}>
-                <div style={{ 
-                  color: benefit.color,
-                  marginTop: 2,
-                  flexShrink: 0
-                }}>{benefit.icon}</div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{benefit.title}</div>
-                  <div style={{ fontSize: 13, color: "#6b7280" }}>{benefit.description}</div>
-                </div>
+                <div style={{ color: benefit.color }}>{benefit.icon}</div>
+                <span style={{ fontSize: 14, fontWeight: 500, color: "#374151" }}>{benefit.title}</span>
               </div>
             ))}
           </div>
@@ -1842,54 +1842,27 @@ const WhyChooseNepxall = () => {
         
         {/* Owners Section */}
         <div style={{
-          background: "#ffffff",
+          background: "linear-gradient(135deg, #f0fdf4, #dcfce7)",
           borderRadius: 20,
-          padding: 28,
-          border: "1px solid #e5e7eb",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.04)"
+          padding: 24,
+          border: "1px solid #bbf7d0"
         }}>
-          <h3 style={{ 
-            fontSize: 20, 
-            fontWeight: 700, 
-            color: "#065f46", 
-            marginBottom: 20, 
-            display: "flex", 
-            alignItems: "center", 
-            gap: 10 
-          }}>
-            <span style={{
-              background: "#10b981",
-              color: "white",
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 18
-            }}>🏢</span>
-            For PG Owners
+          <h3 style={{ fontSize: 20, fontWeight: 700, color: "#065f46", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <Building size={24} color="#10b981" /> For PG Owners
           </h3>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
             {ownerBenefits.map((benefit, index) => (
               <div key={index} style={{
                 display: "flex",
-                alignItems: "flex-start",
-                gap: 14,
-                background: benefit.bg,
-                padding: "14px 18px",
+                alignItems: "center",
+                gap: 12,
+                background: "white",
+                padding: "12px 16px",
                 borderRadius: 12,
-                border: `1px solid ${benefit.color}20`
+                boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
               }}>
-                <div style={{ 
-                  color: benefit.color,
-                  marginTop: 2,
-                  flexShrink: 0
-                }}>{benefit.icon}</div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{benefit.title}</div>
-                  <div style={{ fontSize: 13, color: "#6b7280" }}>{benefit.description}</div>
-                </div>
+                <div style={{ color: benefit.color }}>{benefit.icon}</div>
+                <span style={{ fontSize: 14, fontWeight: 500, color: "#374151" }}>{benefit.title}</span>
               </div>
             ))}
           </div>
@@ -1904,74 +1877,27 @@ const StatisticsSection = () => {
   const isMobile = isMobileDevice();
   
   const stats = [
-    { value: "70+", label: "PG Owners", icon: <Building size={28} />, color: "#3b82f6" },
-    { value: "500+", label: "Beds Available", icon: <Bed size={28} />, color: "#10b981" },
-    { value: "1,000+", label: "Monthly Visitors", icon: <Users size={28} />, color: "#8b5cf6" },
-    { value: "📍", label: "Bangalore Coverage", icon: <MapPin size={28} />, color: "#f59e0b" },
+    { value: "70+", label: "PG Owners", icon: <Building size={24} />, color: "#3b82f6" },
+    { value: "500+", label: "Beds Available", icon: <Bed size={24} />, color: "#10b981" },
+    { value: "1000+", label: "Monthly Visitors", icon: <Users size={24} />, color: "#8b5cf6" },
+    { value: "📍", label: "Bangalore Coverage", icon: <MapPin size={24} />, color: "#f59e0b" },
   ];
   
   return (
     <div style={{
-      background: "linear-gradient(135deg, #0f172a, #1e3a5f)",
+      background: "linear-gradient(135deg, #1e3a5f, #2c5282)",
       borderRadius: 20,
       padding: isMobile ? "32px 20px" : "48px 40px",
       marginBottom: 48,
-      textAlign: "center",
-      position: "relative",
-      overflow: "hidden"
+      textAlign: "center"
     }}>
-      {/* Decorative elements */}
-      <div style={{
-        position: "absolute",
-        top: -80,
-        right: -80,
-        width: 200,
-        height: 200,
-        borderRadius: "50%",
-        background: "rgba(59, 130, 246, 0.08)"
-      }} />
-      <div style={{
-        position: "absolute",
-        bottom: -60,
-        left: -60,
-        width: 150,
-        height: 150,
-        borderRadius: "50%",
-        background: "rgba(16, 185, 129, 0.06)"
-      }} />
-      
-      <div style={{ position: "relative", zIndex: 1 }}>
-        <div style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          background: "rgba(255,255,255,0.08)",
-          padding: "6px 16px",
-          borderRadius: 30,
-          marginBottom: 24,
-          color: "rgba(255,255,255,0.8)",
-          fontSize: 13
-        }}>
-          <TrendingUp size={14} />
-          Growing Platform
-        </div>
-        <div style={{ 
-          display: "grid", 
-          gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", 
-          gap: 24 
-        }}>
-          {stats.map((stat, index) => (
-            <div key={index} style={{ color: "white" }}>
-              <div style={{ 
-                fontSize: isMobile ? 28 : 38, 
-                fontWeight: 800, 
-                marginBottom: 4,
-                letterSpacing: "-0.02em"
-              }}>{stat.value}</div>
-              <div style={{ fontSize: 14, opacity: 0.8 }}>{stat.label}</div>
-            </div>
-          ))}
-        </div>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: 24 }}>
+        {stats.map((stat, index) => (
+          <div key={index} style={{ color: "white" }}>
+            <div style={{ fontSize: 36, fontWeight: 800, marginBottom: 4 }}>{stat.value}</div>
+            <div style={{ fontSize: 14, opacity: 0.9 }}>{stat.label}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -1985,50 +1911,28 @@ const HowItWorks = () => {
     { 
       icon: <Search size={32} />, 
       title: "Search PG", 
-      description: "Find nearby PGs and rentals matching your needs",
-      color: "#3b82f6",
-      bg: "#eff6ff"
+      description: "Find nearby PGs and rentals",
+      color: "#3b82f6"
     },
     { 
       icon: <MessageCircle size={32} />, 
       title: "Compare & Contact", 
-      description: "View details, compare options & contact owners directly",
-      color: "#10b981",
-      bg: "#f0fdf4"
+      description: "View details and contact owners directly",
+      color: "#10b981"
     },
     { 
       icon: <Home size={32} />, 
       title: "Move In", 
-      description: "Book your preferred accommodation and move in",
-      color: "#8b5cf6",
-      bg: "#f5f3ff"
+      description: "Book your preferred accommodation",
+      color: "#8b5cf6"
     },
   ];
   
   return (
     <div style={{ marginBottom: 48 }}>
-      <div style={{ textAlign: "center", marginBottom: 36 }}>
-        <div style={{ 
-          display: "inline-flex", 
-          alignItems: "center", 
-          gap: 8, 
-          background: "#f0fdf4", 
-          padding: "6px 16px", 
-          borderRadius: 30,
-          marginBottom: 12,
-          fontSize: 13,
-          fontWeight: 600,
-          color: "#10b981"
-        }}>
-          <Zap size={14} />
-          Simple Process
-        </div>
-        <h2 style={{ fontSize: isMobile ? 28 : 36, fontWeight: 700, color: "#111827" }}>
-          How Nepxall Works
-        </h2>
-        <p style={{ fontSize: isMobile ? 16 : 18, color: "#6b7280" }}>
-          Find your perfect home in 3 simple steps
-        </p>
+      <div style={{ textAlign: "center", marginBottom: 32 }}>
+        <h2 style={{ fontSize: isMobile ? 28 : 36, fontWeight: 700, color: "#111827" }}>How Nepxall Works</h2>
+        <p style={{ fontSize: isMobile ? 16 : 18, color: "#6b7280" }}>Find your perfect home in 3 simple steps</p>
       </div>
       
       <div style={{
@@ -2043,27 +1947,9 @@ const HowItWorks = () => {
             padding: 32,
             textAlign: "center",
             border: "1px solid #e5e7eb",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
-            position: "relative",
-            transition: "transform 0.2s"
+            boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
+            position: "relative"
           }}>
-            <div style={{
-              position: "absolute",
-              top: -12,
-              right: -12,
-              background: step.color,
-              color: "white",
-              width: 28,
-              height: 28,
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 14,
-              fontWeight: 700
-            }}>
-              {index + 1}
-            </div>
             {index < steps.length - 1 && !isMobile && (
               <div style={{
                 position: "absolute",
@@ -2075,10 +1961,10 @@ const HowItWorks = () => {
               }}>→</div>
             )}
             <div style={{
-              width: 80,
-              height: 80,
+              width: 72,
+              height: 72,
               borderRadius: "50%",
-              background: step.bg,
+              background: `${step.color}15`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -2088,7 +1974,7 @@ const HowItWorks = () => {
               {step.icon}
             </div>
             <h3 style={{ fontSize: 20, fontWeight: 700, color: "#111827", marginBottom: 8 }}>{step.title}</h3>
-            <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6 }}>{step.description}</p>
+            <p style={{ fontSize: 14, color: "#6b7280" }}>{step.description}</p>
           </div>
         ))}
       </div>
@@ -2101,10 +1987,10 @@ const TrustSection = () => {
   const isMobile = isMobileDevice();
   
   const trustPoints = [
-    { icon: <Shield size={28} />, title: "Verified Properties", description: "All listings are verified for authenticity", color: "#10b981", bg: "#f0fdf4" },
-    { icon: <Phone size={28} />, title: "Direct Owner Contact", description: "Talk directly with property owners", color: "#3b82f6", bg: "#eff6ff" },
-    { icon: <X size={28} />, title: "No Brokerage", description: "Zero commission, save up to 1 month rent", color: "#ef4444", bg: "#fef2f2" },
-    { icon: <Star size={28} />, title: "Trusted by Professionals", description: "Used by 1000+ students and professionals", color: "#f59e0b", bg: "#fffbeb" },
+    { icon: <Shield size={28} />, title: "Verified Properties", description: "All listings are verified for authenticity", color: "#10b981" },
+    { icon: <Phone size={28} />, title: "Direct Owner Contact", description: "Talk directly with property owners", color: "#3b82f6" },
+    { icon: <X size={28} />, title: "No Brokerage", description: "Zero commission, save money", color: "#ef4444" },
+    { icon: <Star size={28} />, title: "Trusted by Professionals", description: "Used by students and working professionals", color: "#f59e0b" },
   ];
   
   return (
@@ -2115,43 +2001,28 @@ const TrustSection = () => {
       marginBottom: 48,
       border: "1px solid #e2e8f0"
     }}>
-      <div style={{ textAlign: "center", marginBottom: 28 }}>
-        <h2 style={{ fontSize: isMobile ? 24 : 32, fontWeight: 700, color: "#111827" }}>
-          Built on Trust
-        </h2>
-        <p style={{ fontSize: 16, color: "#6b7280" }}>
-          We make finding a home safe and transparent
-        </p>
-      </div>
       <div style={{
         display: "grid",
         gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)",
-        gap: 20
+        gap: 24
       }}>
         {trustPoints.map((point, index) => (
-          <div key={index} style={{
-            background: point.bg,
-            borderRadius: 16,
-            padding: 24,
-            textAlign: "center",
-            border: `1px solid ${point.color}20`
-          }}>
+          <div key={index} style={{ textAlign: "center" }}>
             <div style={{
               width: 64,
               height: 64,
               borderRadius: "50%",
-              background: "white",
+              background: `${point.color}15`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               margin: "0 auto 12px",
-              color: point.color,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.04)"
+              color: point.color
             }}>
               {point.icon}
             </div>
             <h4 style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 4 }}>{point.title}</h4>
-            <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>{point.description}</p>
+            <p style={{ fontSize: 13, color: "#6b7280" }}>{point.description}</p>
           </div>
         ))}
       </div>
@@ -2558,11 +2429,8 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: 8,
-            transition: "background 0.2s"
+            gap: 8
           }}
-          onMouseEnter={(e) => e.currentTarget.style.background = "#2563eb"}
-          onMouseLeave={(e) => e.currentTarget.style.background = "#3b82f6"}
         >
           <MessageCircle size={16} /> Contact Owner
         </button>
@@ -2592,7 +2460,7 @@ function UserPGSearch() {
   
   // Property tabs definition
   const propertyTabs = [
-    { id: "all", label: "All Properties" },
+    { id: "all", label: "All" },
     { id: "pg", label: "PG" },
     { id: "coliving", label: "Co-Living" },
     { id: "to_let", label: "To-Let" }
@@ -2693,6 +2561,10 @@ function UserPGSearch() {
     setActiveQuickFilters(newActiveFilters);
     showNotification(`${newActiveFilters.has(filter.id) ? "Applied" : "Removed"} ${filter.name}`);
     resetAndFetch();
+  };
+
+  const handlePromoBannerClick = (banner) => {
+    showNotification(`🎉 ${banner.title} - ${banner.description}`);
   };
 
   const processPGData = (data) => {
@@ -3174,12 +3046,12 @@ function UserPGSearch() {
         </div>
       )}
 
+      {/* Promotional Banners */}
+      <PromoBannerSlider onBannerClick={handlePromoBannerClick} />
+
       {/* Quick Filters Section */}
       <div style={{ marginBottom: 28 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, color: "#374151" }}>Quick Filters</h3>
-          <span style={{ fontSize: 13, color: "#6b7280" }}>Find your perfect match</span>
-        </div>
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: "#374151" }}>Quick Filters</h3>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           {quickFilters.map((filter) => (
             <button
@@ -3231,7 +3103,7 @@ function UserPGSearch() {
                 transition: "all 0.2s"
               }}
             >
-              <span style={{ fontSize: 16 }}>{area.icon}</span> {area.name}
+              <span>{area.icon}</span> {area.name}
             </button>
           ))}
         </div>
