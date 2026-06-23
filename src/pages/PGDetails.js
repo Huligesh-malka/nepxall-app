@@ -12,7 +12,6 @@ import {
   Share2, Heart, ArrowUpRight, Phone, Sparkles
 } from "lucide-react";
 
-/* ============== Leaflet fix ============== */
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
@@ -20,24 +19,13 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
-/* ============== Design tokens ============== */
 const T = {
-  paper: "#F7F5F0",
-  paperDeep: "#EFEBE2",
-  surface: "#FFFFFF",
-  ink: "#14181A",
-  inkSoft: "#3E4544",
-  inkMute: "#7A8280",
-  line: "#E5E0D5",
-  emerald: "#0F4C3A",
-  emeraldSoft: "#E4EFE9",
-  tan: "#B8956A",
-  coral: "#C7522A",
-  danger: "#B23A48",
-  success: "#0F4C3A",
+  paper: "#F7F5F0", paperDeep: "#EFEBE2", surface: "#FFFFFF",
+  ink: "#14181A", inkSoft: "#3E4544", inkMute: "#7A8280",
+  line: "#E5E0D5", emerald: "#0F4C3A", emeraldSoft: "#E4EFE9",
+  tan: "#B8956A", coral: "#C7522A", danger: "#B23A48", success: "#0F4C3A",
 };
 
-/* ============== Helpers (unchanged) ============== */
 const BASE_URL = process.env.REACT_APP_API_URL?.replace("/api", "") || "https://nepxall-backend.onrender.com";
 
 const getCorrectImageUrl = (photo) => {
@@ -82,7 +70,6 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-/* ============== Main Component ============== */
 export default function PGDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -99,7 +86,6 @@ export default function PGDetails() {
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState(null);
   const [favorited, setFavorited] = useState(false);
-
   const [selectedHighlightCategory, setSelectedHighlightCategory] = useState("all");
   const [mapZoom, setMapZoom] = useState(15);
   const [mapCenter, setMapCenter] = useState([0, 0]);
@@ -129,7 +115,6 @@ export default function PGDetails() {
     nearby_police_station: "safety", nearby_restaurant: "food",
   };
 
-  /* ===== Fetch PG details (unchanged) ===== */
   useEffect(() => {
     const fetchPGDetails = async () => {
       try {
@@ -153,14 +138,11 @@ export default function PGDetails() {
         if (data.latitude && data.longitude) setMapCenter([data.latitude, data.longitude]);
       } catch (err) {
         setError(err.message || "Failed to load");
-      } finally {
-        setLoading(false);
-      }
+      } finally { setLoading(false); }
     };
     if (id) fetchPGDetails(); else { setError("Invalid ID"); setLoading(false); }
   }, [id]);
 
-  /* ===== Fetch nearby (unchanged logic) ===== */
   useEffect(() => {
     if (!pg?.latitude || !pg?.longitude) return;
 
@@ -218,7 +200,6 @@ export default function PGDetails() {
     fetchNearbyPGs();
   }, [pg, id]);
 
-  /* ===== Computed (unchanged) ===== */
   const isToLet = pg?.pg_category === "to_let";
   const isCoLiving = pg?.pg_category === "coliving";
   const isPG = !isToLet && !isCoLiving;
@@ -251,11 +232,9 @@ export default function PGDetails() {
     if (!pg) return [];
     const f = [];
     const push = (cond, label, group) => cond && f.push({ label, group });
-    // Connectivity
     push(pg.wifi_available, "Wi-Fi", "Connectivity");
     push(pg.common_tv_lounge, "TV Lounge", "Connectivity");
     push(pg.study_room, "Study Room", "Connectivity");
-    // Climate & appliances
     push(pg.ac_available, "Air Conditioning", "Appliances");
     push(pg.geyser, "Geyser", "Appliances");
     push(pg.tv, "Television", "Appliances");
@@ -263,7 +242,6 @@ export default function PGDetails() {
     push(pg.washing_machine, "Washing Machine", "Appliances");
     push(pg.microwave, "Microwave", "Appliances");
     push(pg.water_purifier, "Water Purifier", "Appliances");
-    // Room
     push(pg.bed_with_mattress, "Bed with Mattress", "Room & Comfort");
     push(pg.cupboard_available, "Wardrobe", "Room & Comfort");
     push(pg.table_chair_available, "Study Desk", "Room & Comfort");
@@ -272,25 +250,19 @@ export default function PGDetails() {
     push(pg.attached_bathroom, "Attached Bathroom", "Room & Comfort");
     push(pg.balcony_available, "Balcony", "Room & Comfort");
     push(pg.fan_light, "Fan & Light", "Room & Comfort");
-    // Kitchen
     push(pg.kitchen_room, "Kitchen", "Kitchen");
     push(pg.modular_kitchen, "Modular Kitchen", "Kitchen");
-    // Safety
     push(pg.cctv, "CCTV", "Safety");
     push(pg.security_guard, "Security Guard", "Safety");
     push(pg.fire_safety, "Fire Safety", "Safety");
     push(pg.lock_system, "Secure Locks", "Safety");
-    // Parking
     push(pg.parking_available, "Car Parking", "Parking");
     push(pg.bike_parking, "Bike Parking", "Parking");
-    // Utilities
     push(pg.power_backup, "Power Backup", "Utilities");
     push(pg.water_24x7, "24×7 Water", "Utilities");
     push(pg.lift_elevator, "Elevator", "Utilities");
-    // Wellness
     push(pg.gym, "Gym", "Wellness");
     push(pg.balcony_open_space, "Open Terrace", "Wellness");
-    // Services
     push(pg.housekeeping, "Housekeeping", "Services");
     push(pg.laundry_available, "Laundry", "Services");
     return f;
@@ -302,15 +274,12 @@ export default function PGDetails() {
     return acc;
   }, {});
 
-  /* ============== Loading / Error states ============== */
   if (authLoading || loading) {
     return (
       <div style={S.center}>
         <Fonts />
         <div className="pulse-dot" />
-        <p style={{ marginTop: 16, color: T.inkMute, fontFamily: "'Inter Tight', sans-serif", fontSize: 14 }}>
-          Loading property…
-        </p>
+        <p style={{ marginTop: 16, color: T.inkMute, fontFamily: "'Inter Tight', sans-serif", fontSize: 14 }}>Loading property…</p>
         <style>{`.pulse-dot{width:12px;height:12px;background:${T.emerald};border-radius:50%;animation:pulse 1.4s infinite ease}@keyframes pulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.6);opacity:1}}`}</style>
       </div>
     );
@@ -334,13 +303,8 @@ export default function PGDetails() {
     <div style={S.page}>
       <Fonts />
 
-      {notification && (
-        <div style={S.toast}>
-          <Check size={16} /> {notification}
-        </div>
-      )}
+      {notification && <div style={S.toast}><Check size={16} /> {notification}</div>}
 
-      {/* Breadcrumb */}
       <nav style={S.breadcrumb}>
         <span onClick={() => navigate("/")} style={S.crumb}>Home</span>
         <span style={S.crumbSep}>—</span>
@@ -349,7 +313,7 @@ export default function PGDetails() {
         <span style={S.crumbCurrent}>{pg.pg_name}</span>
       </nav>
 
-      {/* ===== Hero gallery ===== */}
+      {/* ===== Compact Hero gallery ===== */}
       <section style={S.hero}>
         {media.length > 0 ? (
           <div style={S.galleryGrid}>
@@ -363,11 +327,11 @@ export default function PGDetails() {
               <div style={S.galleryCounter}>{index + 1} / {media.length}</div>
               {media.length > 1 && (
                 <>
-                  <button style={{ ...S.galleryNav, left: 24 }} onClick={(e) => { e.stopPropagation(); setIndex(i => i === 0 ? media.length - 1 : i - 1); }}>
-                    <ChevronLeft size={22} />
+                  <button style={{ ...S.galleryNav, left: 16 }} onClick={(e) => { e.stopPropagation(); setIndex(i => i === 0 ? media.length - 1 : i - 1); }}>
+                    <ChevronLeft size={18} />
                   </button>
-                  <button style={{ ...S.galleryNav, right: 24 }} onClick={(e) => { e.stopPropagation(); setIndex(i => (i + 1) % media.length); }}>
-                    <ChevronRight size={22} />
+                  <button style={{ ...S.galleryNav, right: 16 }} onClick={(e) => { e.stopPropagation(); setIndex(i => (i + 1) % media.length); }}>
+                    <ChevronRight size={18} />
                   </button>
                 </>
               )}
@@ -378,14 +342,12 @@ export default function PGDetails() {
                   <div key={i} onClick={() => setIndex(i)} style={{
                     ...S.galleryThumb,
                     outline: i === index ? `2px solid ${T.emerald}` : "none",
-                    outlineOffset: i === index ? 3 : 0,
+                    outlineOffset: i === index ? 2 : 0,
                   }}>
                     {m.type === "photo"
                       ? <img src={m.src} alt="" style={S.galleryThumbImg} />
                       : <div style={{ ...S.galleryThumbImg, background: T.ink, color: "#fff", display: "grid", placeItems: "center" }}>▶</div>}
-                    {i === 3 && media.length > 4 && (
-                      <div style={S.galleryMore}>+{media.length - 4}</div>
-                    )}
+                    {i === 3 && media.length > 4 && <div style={S.galleryMore}>+{media.length - 4}</div>}
                   </div>
                 ))}
               </div>
@@ -432,9 +394,7 @@ export default function PGDetails() {
           <IconBtn onClick={() => setFavorited(f => !f)} active={favorited}>
             <Heart size={18} fill={favorited ? T.coral : "none"} color={favorited ? T.coral : T.ink} />
           </IconBtn>
-          <IconBtn>
-            <Share2 size={18} color={T.ink} />
-          </IconBtn>
+          <IconBtn><Share2 size={18} color={T.ink} /></IconBtn>
           {hasLocation && (
             <button style={S.btnPrimary}
               onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${pg.latitude},${pg.longitude}`, "_blank")}>
@@ -444,9 +404,7 @@ export default function PGDetails() {
         </div>
       </section>
 
-      {/* ===== Two column main ===== */}
       <section style={S.grid}>
-        {/* LEFT */}
         <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
           {pg.description && (
             <Panel title="About this place" eyebrow="Overview">
@@ -480,27 +438,17 @@ export default function PGDetails() {
             </Panel>
           )}
 
-          {/* Pricing */}
           <PricePanel pg={pg} isToLet={isToLet} isCoLiving={isCoLiving} isPG={isPG} />
 
-          {/* Map */}
           {hasLocation && (
             <Panel title="Where you'll be" eyebrow="Location" id="location-map">
               <div style={S.mapWrap}>
-                <MapContainer
-                  center={mapCenter} zoom={mapZoom}
+                <MapContainer center={mapCenter} zoom={mapZoom}
                   style={{ height: 380, width: "100%", borderRadius: 16 }}
-                  key={`${mapCenter[0]}-${mapCenter[1]}-${mapZoom}`}
-                >
-                  <TileLayer
-                    url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
-                    attribution='© OpenStreetMap, © CARTO'
-                  />
+                  key={`${mapCenter[0]}-${mapCenter[1]}-${mapZoom}`}>
+                  <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png" attribution='© OpenStreetMap, © CARTO' />
                   <Marker position={[pg.latitude, pg.longitude]}>
-                    <Popup>
-                      <strong>{pg.pg_name}</strong><br />
-                      <small>{pg.address || pg.area}</small>
-                    </Popup>
+                    <Popup><strong>{pg.pg_name}</strong><br /><small>{pg.address || pg.area}</small></Popup>
                   </Marker>
                 </MapContainer>
               </div>
@@ -513,7 +461,6 @@ export default function PGDetails() {
             </Panel>
           )}
 
-          {/* Nearby highlights */}
           {hasLocation && (nearbyHighlights.length > 0 || loadingHighlights) && (
             <Panel title="What's around you" eyebrow={loadingHighlights ? "Loading…" : `${nearbyHighlights.length} places`}>
               {loadingHighlights ? (
@@ -526,12 +473,9 @@ export default function PGDetails() {
                       if (count === 0) return null;
                       const active = selectedHighlightCategory === c.id;
                       return (
-                        <button key={c.id}
-                          onClick={() => setSelectedHighlightCategory(c.id)}
+                        <button key={c.id} onClick={() => setSelectedHighlightCategory(c.id)}
                           style={{ ...S.chip, ...(active ? S.chipActive : {}) }}>
-                          <span>{c.icon}</span>
-                          <span>{c.label}</span>
-                          <span style={S.chipCount}>{count}</span>
+                          <span>{c.icon}</span><span>{c.label}</span><span style={S.chipCount}>{count}</span>
                         </button>
                       );
                     })}
@@ -554,7 +498,6 @@ export default function PGDetails() {
             </Panel>
           )}
 
-          {/* Nearby PGs */}
           {(nearbyPGs.length > 0 || loadingNearbyPGs) && (
             <Panel title="More in this area" eyebrow={loadingNearbyPGs ? "Loading…" : `${nearbyPGs.length} properties`}>
               {loadingNearbyPGs ? (
@@ -573,16 +516,12 @@ export default function PGDetails() {
           )}
         </div>
 
-        {/* RIGHT — Sticky CTA */}
         <aside style={S.aside}>
           <div style={S.stickyCard}>
             {startingPrice ? (
               <>
                 <div style={S.priceEyebrow}>Starting from</div>
-                <div style={S.priceLarge}>
-                  {fmtINR(startingPrice)}
-                  <span style={S.pricePer}>/month</span>
-                </div>
+                <div style={S.priceLarge}>{fmtINR(startingPrice)}<span style={S.pricePer}>/month</span></div>
               </>
             ) : (
               <div style={S.priceLarge}>Price on request</div>
@@ -600,9 +539,7 @@ export default function PGDetails() {
               {pg.available_rooms !== undefined && (
                 <div style={S.stickyStat}>
                   <span style={S.stickyStatLabel}>Available</span>
-                  <span style={{ ...S.stickyStatValue, color: pg.available_rooms > 0 ? T.emerald : T.danger }}>
-                    {pg.available_rooms}
-                  </span>
+                  <span style={{ ...S.stickyStatValue, color: pg.available_rooms > 0 ? T.emerald : T.danger }}>{pg.available_rooms}</span>
                 </div>
               )}
               {pg.sqft_area && (
@@ -616,9 +553,7 @@ export default function PGDetails() {
             <button style={{ ...S.btnPrimary, width: "100%", marginTop: 20, justifyContent: "center" }}>
               <Phone size={16} /> Contact owner
             </button>
-            <button style={{ ...S.btnGhost, width: "100%", marginTop: 10 }}>
-              Schedule a visit
-            </button>
+            <button style={{ ...S.btnGhost, width: "100%", marginTop: 10 }}>Schedule a visit</button>
 
             <div style={S.trustRow}>
               <Sparkles size={14} color={T.tan} />
@@ -631,7 +566,6 @@ export default function PGDetails() {
   );
 }
 
-/* ============== Subcomponents ============== */
 const Panel = ({ title, eyebrow, children, id }) => (
   <section id={id} style={S.panel}>
     <header style={S.panelHeader}>
@@ -649,8 +583,7 @@ const IconBtn = ({ children, onClick, active }) => (
     width: 44, height: 44, borderRadius: "50%",
     border: `1px solid ${active ? T.coral : T.line}`,
     background: T.surface, cursor: "pointer",
-    display: "grid", placeItems: "center",
-    transition: "all .2s",
+    display: "grid", placeItems: "center", transition: "all .2s",
   }}>{children}</button>
 );
 
@@ -780,263 +713,111 @@ const Fonts = () => (
   `}</style>
 );
 
-/* ============== Styles ============== */
 const S = {
-  page: {
-    maxWidth: 1280, margin: "0 auto", padding: "24px 24px 80px",
-    background: T.paper, minHeight: "100vh",
-    fontFamily: "'Inter Tight', -apple-system, sans-serif",
-    color: T.ink,
-  },
-  center: {
-    minHeight: "100vh", display: "grid", placeItems: "center",
-    background: T.paper, padding: 24, textAlign: "center",
-  },
-  toast: {
-    position: "fixed", top: 24, right: 24, zIndex: 100,
-    background: T.ink, color: T.surface, padding: "12px 20px",
-    borderRadius: 999, display: "flex", alignItems: "center", gap: 8,
-    fontSize: 14, fontWeight: 500,
-    boxShadow: "0 20px 40px -10px rgba(0,0,0,0.3)",
-  },
+  page: { maxWidth: 1280, margin: "0 auto", padding: "24px 24px 80px", background: T.paper, minHeight: "100vh", fontFamily: "'Inter Tight', -apple-system, sans-serif", color: T.ink },
+  center: { minHeight: "100vh", display: "grid", placeItems: "center", background: T.paper, padding: 24, textAlign: "center" },
+  toast: { position: "fixed", top: 24, right: 24, zIndex: 100, background: T.ink, color: T.surface, padding: "12px 20px", borderRadius: 999, display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 500, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.3)" },
 
-  breadcrumb: { display: "flex", gap: 12, alignItems: "center", fontSize: 13, color: T.inkMute, marginBottom: 24, flexWrap: "wrap" },
+  breadcrumb: { display: "flex", gap: 12, alignItems: "center", fontSize: 13, color: T.inkMute, marginBottom: 20, flexWrap: "wrap" },
   crumb: { cursor: "pointer", color: T.inkSoft },
   crumbSep: { color: T.inkMute, opacity: 0.5 },
   crumbCurrent: { color: T.ink, fontWeight: 500 },
 
-  /* Hero gallery */
-  hero: { marginBottom: 40 },
-  galleryGrid: { display: "grid", gridTemplateColumns: "2.5fr 1fr", gap: 12, height: 520 },
-  galleryMain: { position: "relative", borderRadius: 20, overflow: "hidden", cursor: "pointer", background: T.paperDeep },
+  /* ===== COMPACT Gallery ===== */
+  hero: { marginBottom: 28 },
+  galleryGrid: { display: "grid", gridTemplateColumns: "2.2fr 1fr", gap: 8, height: 360 },
+  galleryMain: { position: "relative", borderRadius: 14, overflow: "hidden", cursor: "pointer", background: T.paperDeep },
   galleryMainImg: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
-  galleryThumbs: { display: "grid", gridTemplateRows: "repeat(4, 1fr)", gap: 12 },
-  galleryThumb: { position: "relative", borderRadius: 14, overflow: "hidden", cursor: "pointer", background: T.paperDeep },
+  galleryThumbs: { display: "grid", gridTemplateRows: "repeat(4, 1fr)", gap: 8 },
+  galleryThumb: { position: "relative", borderRadius: 10, overflow: "hidden", cursor: "pointer", background: T.paperDeep },
   galleryThumbImg: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
-  galleryMore: {
-    position: "absolute", inset: 0, background: "rgba(20,24,26,0.7)",
-    color: "#fff", display: "grid", placeItems: "center",
-    fontSize: 20, fontWeight: 600, fontFamily: "'Fraunces', serif",
-  },
-  galleryNav: {
-    position: "absolute", top: "50%", transform: "translateY(-50%)",
-    width: 44, height: 44, borderRadius: "50%",
-    border: "none", background: "rgba(255,255,255,0.95)", cursor: "pointer",
-    display: "grid", placeItems: "center",
-    boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
-  },
-  galleryCounter: {
-    position: "absolute", bottom: 20, left: 20,
-    background: "rgba(20,24,26,0.8)", color: "#fff",
-    padding: "6px 14px", borderRadius: 999, fontSize: 12,
-    fontFamily: "'JetBrains Mono', monospace", fontWeight: 500,
-  },
-  galleryEmpty: {
-    height: 400, borderRadius: 20, background: T.paperDeep,
-    display: "grid", placeItems: "center", color: T.inkMute, fontSize: 16,
-  },
+  galleryMore: { position: "absolute", inset: 0, background: "rgba(20,24,26,0.7)", color: "#fff", display: "grid", placeItems: "center", fontSize: 16, fontWeight: 600, fontFamily: "'Fraunces', serif" },
+  galleryNav: { position: "absolute", top: "50%", transform: "translateY(-50%)", width: 36, height: 36, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.95)", cursor: "pointer", display: "grid", placeItems: "center", boxShadow: "0 4px 14px rgba(0,0,0,0.15)" },
+  galleryCounter: { position: "absolute", bottom: 14, left: 14, background: "rgba(20,24,26,0.8)", color: "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500 },
+  galleryEmpty: { height: 280, borderRadius: 14, background: T.paperDeep, display: "grid", placeItems: "center", color: T.inkMute, fontSize: 14 },
 
-  /* Title block */
-  titleBlock: {
-    display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-    gap: 24, marginBottom: 48, flexWrap: "wrap",
-    paddingBottom: 32, borderBottom: `1px solid ${T.line}`,
-  },
-  eyebrow: {
-    fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
-    letterSpacing: "0.12em", textTransform: "uppercase",
-    color: T.tan, fontWeight: 600, marginBottom: 12,
-    display: "flex", alignItems: "center", gap: 8,
-  },
+  titleBlock: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 48, flexWrap: "wrap", paddingBottom: 32, borderBottom: `1px solid ${T.line}` },
+  eyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: T.tan, fontWeight: 600, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 },
   eyebrowDot: { color: T.line },
-  title: {
-    fontFamily: "'Fraunces', serif", fontSize: "clamp(36px, 5vw, 56px)",
-    fontWeight: 500, lineHeight: 1.05, letterSpacing: "-0.02em",
-    color: T.ink, margin: "0 0 16px",
-  },
+  title: { fontFamily: "'Fraunces', serif", fontSize: "clamp(32px, 4.5vw, 52px)", fontWeight: 500, lineHeight: 1.05, letterSpacing: "-0.02em", color: T.ink, margin: "0 0 16px" },
   addr: { display: "flex", alignItems: "center", gap: 8, color: T.inkSoft, fontSize: 15, margin: "0 0 4px" },
   landmark: { color: T.inkMute, fontSize: 13, margin: "0 0 20px" },
   badges: { display: "flex", flexWrap: "wrap", gap: 8 },
-  badge: {
-    padding: "5px 12px", borderRadius: 999, background: T.surface,
-    border: `1px solid ${T.line}`, color: T.inkSoft, fontSize: 12, fontWeight: 500,
-  },
+  badge: { padding: "5px 12px", borderRadius: 999, background: T.surface, border: `1px solid ${T.line}`, color: T.inkSoft, fontSize: 12, fontWeight: 500 },
   badgeOk: { background: T.emeraldSoft, border: `1px solid ${T.emerald}30`, color: T.emerald, fontWeight: 600 },
   badgeWarn: { background: "#FBE9E9", border: `1px solid ${T.danger}30`, color: T.danger, fontWeight: 600 },
   badgeAccent: { background: T.ink, border: `1px solid ${T.ink}`, color: T.surface, fontWeight: 600 },
   titleActions: { display: "flex", alignItems: "center", gap: 10 },
 
-  btnPrimary: {
-    display: "inline-flex", alignItems: "center", gap: 8,
-    padding: "12px 22px", background: T.ink, color: T.surface,
-    border: "none", borderRadius: 999, fontSize: 14, fontWeight: 500,
-    cursor: "pointer", fontFamily: "inherit",
-    transition: "all .2s",
-  },
-  btnGhost: {
-    display: "inline-flex", alignItems: "center", gap: 8,
-    padding: "12px 22px", background: "transparent", color: T.ink,
-    border: `1px solid ${T.line}`, borderRadius: 999, fontSize: 14, fontWeight: 500,
-    cursor: "pointer", fontFamily: "inherit",
-    transition: "all .2s",
-  },
+  btnPrimary: { display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 22px", background: T.ink, color: T.surface, border: "none", borderRadius: 999, fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", transition: "all .2s" },
+  btnGhost: { display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 22px", background: "transparent", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 999, fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", transition: "all .2s" },
 
-  /* Grid */
   grid: { display: "grid", gridTemplateColumns: "1fr 380px", gap: 48, alignItems: "start" },
 
-  /* Panels */
   panel: { paddingBottom: 32, borderBottom: `1px solid ${T.line}` },
   panelHeader: { marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "baseline" },
-  panelEyebrow: {
-    fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
-    letterSpacing: "0.12em", textTransform: "uppercase", color: T.tan,
-    fontWeight: 600, marginBottom: 8,
-  },
-  panelTitle: {
-    fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 500,
-    margin: 0, letterSpacing: "-0.01em", color: T.ink,
-  },
+  panelEyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: T.tan, fontWeight: 600, marginBottom: 8 },
+  panelTitle: { fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 500, margin: 0, letterSpacing: "-0.01em", color: T.ink },
 
   body: { fontSize: 16, lineHeight: 1.7, color: T.inkSoft, margin: 0 },
 
-  /* Amenities */
   amenityGroups: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 32 },
   amenityGroup: {},
-  amenityGroupTitle: {
-    fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
-    letterSpacing: "0.1em", textTransform: "uppercase",
-    color: T.inkMute, fontWeight: 600, marginBottom: 14,
-  },
+  amenityGroupTitle: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: T.inkMute, fontWeight: 600, marginBottom: 14 },
   amenityList: { display: "flex", flexDirection: "column", gap: 12 },
   amenityRow: { display: "flex", alignItems: "center", gap: 12, fontSize: 14.5, color: T.inkSoft },
-  amenityDot: {
-    width: 22, height: 22, borderRadius: "50%",
-    background: T.emeraldSoft, color: T.emerald,
-    display: "grid", placeItems: "center", flexShrink: 0,
-  },
-  note: {
-    marginTop: 24, padding: "14px 18px", borderRadius: 12,
-    background: T.paperDeep, fontSize: 13.5, color: T.inkSoft,
-  },
+  amenityDot: { width: 22, height: 22, borderRadius: "50%", background: T.emeraldSoft, color: T.emerald, display: "grid", placeItems: "center", flexShrink: 0 },
+  note: { marginTop: 24, padding: "14px 18px", borderRadius: 12, background: T.paperDeep, fontSize: 13.5, color: T.inkSoft },
 
-  /* Pricing */
   priceGroup: { display: "flex", flexDirection: "column", gap: 0 },
   priceSubBlock: { marginBottom: 28 },
-  priceSubTitle: {
-    fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
-    letterSpacing: "0.1em", textTransform: "uppercase",
-    color: T.inkMute, fontWeight: 600, marginBottom: 12,
-  },
-  priceRow: {
-    display: "flex", justifyContent: "space-between", alignItems: "center",
-    padding: "16px 0", borderBottom: `1px solid ${T.line}`,
-  },
+  priceSubTitle: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: T.inkMute, fontWeight: 600, marginBottom: 12 },
+  priceRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 0", borderBottom: `1px solid ${T.line}` },
   priceRowLabel: { fontSize: 15, color: T.inkSoft },
-  priceRowValue: {
-    fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: T.ink,
-  },
-  priceRowPer: {
-    fontFamily: "'Inter Tight', sans-serif", fontSize: 12, fontWeight: 400,
-    color: T.inkMute, marginLeft: 4,
-  },
+  priceRowValue: { fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: T.ink },
+  priceRowPer: { fontFamily: "'Inter Tight', sans-serif", fontSize: 12, fontWeight: 400, color: T.inkMute, marginLeft: 4 },
   priceRowDeposit: { fontSize: 12, color: T.coral, marginTop: 2 },
-  foodBox: {
-    marginTop: 24, padding: 20, borderRadius: 16,
-    background: T.emeraldSoft, border: `1px solid ${T.emerald}20`,
-  },
+  foodBox: { marginTop: 24, padding: 20, borderRadius: 16, background: T.emeraldSoft, border: `1px solid ${T.emerald}20` },
   foodTitle: { fontWeight: 600, color: T.emerald, fontSize: 14, marginBottom: 4 },
   foodMeta: { fontSize: 13.5, color: T.inkSoft },
 
-  /* Map */
   mapWrap: { borderRadius: 16, overflow: "hidden", border: `1px solid ${T.line}` },
-  locGrid: {
-    marginTop: 20, display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 20,
-  },
+  locGrid: { marginTop: 20, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 20 },
   locItem: { display: "flex", flexDirection: "column", gap: 4 },
-  locLabel: {
-    fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
-    letterSpacing: "0.1em", textTransform: "uppercase", color: T.inkMute, fontWeight: 600,
-  },
+  locLabel: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: T.inkMute, fontWeight: 600 },
   locValue: { fontSize: 14.5, color: T.ink, fontWeight: 500 },
 
-  /* Chips & nearby */
   chipRow: { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 24 },
-  chip: {
-    display: "inline-flex", alignItems: "center", gap: 6,
-    padding: "8px 14px", borderRadius: 999,
-    border: `1px solid ${T.line}`, background: T.surface,
-    color: T.inkSoft, fontSize: 13, fontWeight: 500, cursor: "pointer",
-    fontFamily: "inherit", transition: "all .2s",
-  },
+  chip: { display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 999, border: `1px solid ${T.line}`, background: T.surface, color: T.inkSoft, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", transition: "all .2s" },
   chipActive: { background: T.ink, color: T.surface, borderColor: T.ink },
   chipCount: { fontSize: 11, opacity: 0.7, fontFamily: "'JetBrains Mono', monospace" },
   nearbyList: { display: "flex", flexDirection: "column", maxHeight: 480, overflowY: "auto" },
-  nearbyRow: {
-    display: "flex", alignItems: "center", gap: 14,
-    padding: "14px 4px", borderBottom: `1px solid ${T.line}`,
-    cursor: "pointer", transition: "all .15s",
-  },
-  nearbyIcon: {
-    width: 40, height: 40, borderRadius: 12,
-    background: T.paperDeep, display: "grid", placeItems: "center",
-    fontSize: 18, flexShrink: 0,
-  },
+  nearbyRow: { display: "flex", alignItems: "center", gap: 14, padding: "14px 4px", borderBottom: `1px solid ${T.line}`, cursor: "pointer", transition: "all .15s" },
+  nearbyIcon: { width: 40, height: 40, borderRadius: 12, background: T.paperDeep, display: "grid", placeItems: "center", fontSize: 18, flexShrink: 0 },
   nearbyName: { fontSize: 14.5, fontWeight: 500, color: T.ink, marginBottom: 2 },
   nearbyType: { fontSize: 12, color: T.inkMute, textTransform: "capitalize" },
 
-  /* Nearby PG cards */
-  nearbyPGGrid: {
-    display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-    gap: 16, marginBottom: 16,
-  },
-  npCard: {
-    border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden",
-    background: T.surface, cursor: "pointer", transition: "all .2s",
-  },
+  nearbyPGGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16, marginBottom: 16 },
+  npCard: { border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden", background: T.surface, cursor: "pointer", transition: "all .2s" },
   npImage: { position: "relative", height: 140, overflow: "hidden" },
-  npDist: {
-    position: "absolute", top: 10, right: 10,
-    background: "rgba(20,24,26,0.85)", color: "#fff",
-    padding: "4px 10px", borderRadius: 999,
-    fontSize: 11, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500,
-  },
+  npDist: { position: "absolute", top: 10, right: 10, background: "rgba(20,24,26,0.85)", color: "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500 },
   npTitle: { fontSize: 15, fontWeight: 600, color: T.ink, marginBottom: 4, fontFamily: "'Fraunces', serif" },
   npAddr: { fontSize: 12, color: T.inkMute, marginBottom: 10 },
   npPrice: { fontSize: 16, fontWeight: 600, color: T.emerald, fontFamily: "'Fraunces', serif" },
 
-  /* Sticky aside */
   aside: { position: "sticky", top: 24, alignSelf: "start" },
-  stickyCard: {
-    background: T.surface, border: `1px solid ${T.line}`,
-    borderRadius: 24, padding: 28,
-    boxShadow: "0 4px 24px rgba(20,24,26,0.04)",
-  },
-  priceEyebrow: {
-    fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
-    letterSpacing: "0.12em", textTransform: "uppercase",
-    color: T.tan, fontWeight: 600, marginBottom: 8,
-  },
-  priceLarge: {
-    fontFamily: "'Fraunces', serif", fontSize: 38, fontWeight: 500,
-    color: T.ink, lineHeight: 1, letterSpacing: "-0.02em",
-  },
-  pricePer: {
-    fontFamily: "'Inter Tight', sans-serif", fontSize: 14, fontWeight: 400,
-    color: T.inkMute, marginLeft: 4,
-  },
+  stickyCard: { background: T.surface, border: `1px solid ${T.line}`, borderRadius: 24, padding: 28, boxShadow: "0 4px 24px rgba(20,24,26,0.04)" },
+  priceEyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: T.tan, fontWeight: 600, marginBottom: 8 },
+  priceLarge: { fontFamily: "'Fraunces', serif", fontSize: 38, fontWeight: 500, color: T.ink, lineHeight: 1, letterSpacing: "-0.02em" },
+  pricePer: { fontFamily: "'Inter Tight', sans-serif", fontSize: 14, fontWeight: 400, color: T.inkMute, marginLeft: 4 },
   stickyDivider: { height: 1, background: T.line, margin: "24px 0" },
   stickyStats: { display: "flex", flexDirection: "column", gap: 14 },
   stickyStat: { display: "flex", justifyContent: "space-between", alignItems: "center" },
   stickyStatLabel: { fontSize: 13.5, color: T.inkMute },
   stickyStatValue: { fontSize: 15, fontWeight: 600, color: T.ink, fontFamily: "'JetBrains Mono', monospace" },
-  trustRow: {
-    marginTop: 20, display: "flex", alignItems: "center", gap: 8,
-    justifyContent: "center", fontSize: 12, color: T.inkMute,
-  },
+  trustRow: { marginTop: 20, display: "flex", alignItems: "center", gap: 8, justifyContent: "center", fontSize: 12, color: T.inkMute },
 };
 
-/* Mobile responsive */
 if (typeof window !== "undefined") {
   const mq = window.matchMedia("(max-width: 900px)");
   const apply = (e) => {
@@ -1044,14 +825,18 @@ if (typeof window !== "undefined") {
       S.grid.gridTemplateColumns = "1fr";
       S.galleryGrid.gridTemplateColumns = "1fr";
       S.galleryGrid.height = "auto";
+      S.galleryGrid.gap = 6;
+      S.galleryMain.height = 240;
       S.galleryThumbs.gridTemplateRows = "auto";
       S.galleryThumbs.gridTemplateColumns = "repeat(4, 1fr)";
-      S.galleryThumb.height = 80;
+      S.galleryThumb.height = 60;
       S.aside.position = "static";
     } else {
       S.grid.gridTemplateColumns = "1fr 380px";
-      S.galleryGrid.gridTemplateColumns = "2.5fr 1fr";
-      S.galleryGrid.height = 520;
+      S.galleryGrid.gridTemplateColumns = "2.2fr 1fr";
+      S.galleryGrid.height = 360;
+      S.galleryGrid.gap = 8;
+      delete S.galleryMain.height;
       S.galleryThumbs.gridTemplateRows = "repeat(4, 1fr)";
       delete S.galleryThumbs.gridTemplateColumns;
       delete S.galleryThumb.height;
