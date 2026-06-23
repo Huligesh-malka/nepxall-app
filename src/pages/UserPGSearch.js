@@ -1691,8 +1691,16 @@ const PromoBannerSlider = ({ onBannerClick }) => {
 };
 
 /* ================= HERO BANNER COMPONENT ================= */
-const HeroBanner = () => {
+const HeroBanner = ({ onSearch }) => {
   const isMobile = isMobileDevice();
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (onSearch && searchQuery.trim()) {
+      onSearch(searchQuery.trim());
+    }
+  };
   
   return (
     <div style={{
@@ -1707,6 +1715,7 @@ const HeroBanner = () => {
         fontWeight: 800,
         color: "#ffffff",
         marginBottom: 16,
+        lineHeight: 1.2
       }}>
         Find Verified PGs,<br />
         Coliving & Rental Homes
@@ -1719,10 +1728,303 @@ const HeroBanner = () => {
       }}>
         Book trusted stays with secure payments and verified owners.
       </p>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-        <div style={{ background: "#10b981", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Verified</div>
-        <div style={{ background: "#3b82f6", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Secure</div>
-        <div style={{ background: "#8b5cf6", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Trusted</div>
+      
+      {/* Search Bar */}
+      <form onSubmit={handleSearch} style={{
+        display: "flex",
+        maxWidth: 600,
+        background: "white",
+        borderRadius: 60,
+        overflow: "hidden",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.2)"
+      }}>
+        <input
+          type="text"
+          placeholder="Search by area, city, or PG name..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            flex: 1,
+            padding: "18px 24px",
+            border: "none",
+            outline: "none",
+            fontSize: 16,
+            background: "transparent"
+          }}
+        />
+        <button
+          type="submit"
+          style={{
+            padding: "18px 32px",
+            background: "#3b82f6",
+            color: "white",
+            border: "none",
+            cursor: "pointer",
+            fontWeight: 600,
+            fontSize: 16,
+            display: "flex",
+            alignItems: "center",
+            gap: 8
+          }}
+        >
+          <Search size={20} /> Search
+        </button>
+      </form>
+      
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 24 }}>
+        <div style={{ background: "rgba(255,255,255,0.15)", color: "white", padding: "8px 16px", borderRadius: 30, fontSize: 13 }}>✓ Verified Properties</div>
+        <div style={{ background: "rgba(255,255,255,0.15)", color: "white", padding: "8px 16px", borderRadius: 30, fontSize: 13 }}>✓ Direct Owner Contact</div>
+        <div style={{ background: "rgba(255,255,255,0.15)", color: "white", padding: "8px 16px", borderRadius: 30, fontSize: 13 }}>✓ No Brokerage</div>
+      </div>
+    </div>
+  );
+};
+
+/* ================= WHY CHOOSE NEPXALL SECTION ================= */
+const WhyChooseNepxall = () => {
+  const isMobile = isMobileDevice();
+  
+  const tenantBenefits = [
+    { icon: <MapPin size={24} />, title: "Find PGs Near Your Workplace", color: "#3b82f6" },
+    { icon: <Shield size={24} />, title: "Verified PG Listings", color: "#10b981" },
+    { icon: <BarChart size={24} />, title: "Compare Rent, Food & Amenities", color: "#8b5cf6" },
+    { icon: <Phone size={24} />, title: "Direct Owner Contact", color: "#f59e0b" },
+    { icon: <Coins size={24} />, title: "No Broker Charges", color: "#ef4444" },
+  ];
+  
+  const ownerBenefits = [
+    { icon: <Users size={24} />, title: "Get More Tenant Leads", color: "#3b82f6" },
+    { icon: <Plus size={24} />, title: "List PGs Free", color: "#10b981" },
+    { icon: <Calendar size={24} />, title: "Manage Rooms & Bookings", color: "#8b5cf6" },
+    { icon: <Award size={24} />, title: "Build Trust with Verification", color: "#f59e0b" },
+    { icon: <Rocket size={24} />, title: "Increase Occupancy Faster", color: "#ef4444" },
+  ];
+  
+  return (
+    <div style={{ marginBottom: 48 }}>
+      <div style={{ textAlign: "center", marginBottom: 32 }}>
+        <h2 style={{ fontSize: isMobile ? 28 : 36, fontWeight: 700, color: "#111827" }}>Why Choose Nepxall?</h2>
+        <p style={{ fontSize: isMobile ? 16 : 18, color: "#6b7280" }}>Connecting tenants with trusted property owners</p>
+      </div>
+      
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+        gap: 32
+      }}>
+        {/* Tenants Section */}
+        <div style={{
+          background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
+          borderRadius: 20,
+          padding: 24,
+          border: "1px solid #bfdbfe"
+        }}>
+          <h3 style={{ fontSize: 20, fontWeight: 700, color: "#1e3a5f", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <Users size={24} color="#3b82f6" /> For Tenants
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
+            {tenantBenefits.map((benefit, index) => (
+              <div key={index} style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                background: "white",
+                padding: "12px 16px",
+                borderRadius: 12,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
+              }}>
+                <div style={{ color: benefit.color }}>{benefit.icon}</div>
+                <span style={{ fontSize: 14, fontWeight: 500, color: "#374151" }}>{benefit.title}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Owners Section */}
+        <div style={{
+          background: "linear-gradient(135deg, #f0fdf4, #dcfce7)",
+          borderRadius: 20,
+          padding: 24,
+          border: "1px solid #bbf7d0"
+        }}>
+          <h3 style={{ fontSize: 20, fontWeight: 700, color: "#065f46", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <Building size={24} color="#10b981" /> For PG Owners
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
+            {ownerBenefits.map((benefit, index) => (
+              <div key={index} style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                background: "white",
+                padding: "12px 16px",
+                borderRadius: 12,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
+              }}>
+                <div style={{ color: benefit.color }}>{benefit.icon}</div>
+                <span style={{ fontSize: 14, fontWeight: 500, color: "#374151" }}>{benefit.title}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ================= STATISTICS SECTION ================= */
+const StatisticsSection = () => {
+  const isMobile = isMobileDevice();
+  
+  const stats = [
+    { value: "70+", label: "PG Owners", icon: <Building size={24} />, color: "#3b82f6" },
+    { value: "500+", label: "Beds Available", icon: <Bed size={24} />, color: "#10b981" },
+    { value: "1000+", label: "Monthly Visitors", icon: <Users size={24} />, color: "#8b5cf6" },
+    { value: "📍", label: "Bangalore Coverage", icon: <MapPin size={24} />, color: "#f59e0b" },
+  ];
+  
+  return (
+    <div style={{
+      background: "linear-gradient(135deg, #1e3a5f, #2c5282)",
+      borderRadius: 20,
+      padding: isMobile ? "32px 20px" : "48px 40px",
+      marginBottom: 48,
+      textAlign: "center"
+    }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: 24 }}>
+        {stats.map((stat, index) => (
+          <div key={index} style={{ color: "white" }}>
+            <div style={{ fontSize: 36, fontWeight: 800, marginBottom: 4 }}>{stat.value}</div>
+            <div style={{ fontSize: 14, opacity: 0.9 }}>{stat.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/* ================= HOW NEPXALL WORKS ================= */
+const HowItWorks = () => {
+  const isMobile = isMobileDevice();
+  
+  const steps = [
+    { 
+      icon: <Search size={32} />, 
+      title: "Search PG", 
+      description: "Find nearby PGs and rentals",
+      color: "#3b82f6"
+    },
+    { 
+      icon: <MessageCircle size={32} />, 
+      title: "Compare & Contact", 
+      description: "View details and contact owners directly",
+      color: "#10b981"
+    },
+    { 
+      icon: <Home size={32} />, 
+      title: "Move In", 
+      description: "Book your preferred accommodation",
+      color: "#8b5cf6"
+    },
+  ];
+  
+  return (
+    <div style={{ marginBottom: 48 }}>
+      <div style={{ textAlign: "center", marginBottom: 32 }}>
+        <h2 style={{ fontSize: isMobile ? 28 : 36, fontWeight: 700, color: "#111827" }}>How Nepxall Works</h2>
+        <p style={{ fontSize: isMobile ? 16 : 18, color: "#6b7280" }}>Find your perfect home in 3 simple steps</p>
+      </div>
+      
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
+        gap: 24
+      }}>
+        {steps.map((step, index) => (
+          <div key={index} style={{
+            background: "white",
+            borderRadius: 20,
+            padding: 32,
+            textAlign: "center",
+            border: "1px solid #e5e7eb",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
+            position: "relative"
+          }}>
+            {index < steps.length - 1 && !isMobile && (
+              <div style={{
+                position: "absolute",
+                right: -20,
+                top: "50%",
+                transform: "translateY(-50%)",
+                fontSize: 24,
+                color: "#d1d5db"
+              }}>→</div>
+            )}
+            <div style={{
+              width: 72,
+              height: 72,
+              borderRadius: "50%",
+              background: `${step.color}15`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 16px",
+              color: step.color
+            }}>
+              {step.icon}
+            </div>
+            <h3 style={{ fontSize: 20, fontWeight: 700, color: "#111827", marginBottom: 8 }}>{step.title}</h3>
+            <p style={{ fontSize: 14, color: "#6b7280" }}>{step.description}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/* ================= TRUST SECTION ================= */
+const TrustSection = () => {
+  const isMobile = isMobileDevice();
+  
+  const trustPoints = [
+    { icon: <Shield size={28} />, title: "Verified Properties", description: "All listings are verified for authenticity", color: "#10b981" },
+    { icon: <Phone size={28} />, title: "Direct Owner Contact", description: "Talk directly with property owners", color: "#3b82f6" },
+    { icon: <X size={28} />, title: "No Brokerage", description: "Zero commission, save money", color: "#ef4444" },
+    { icon: <Star size={28} />, title: "Trusted by Professionals", description: "Used by students and working professionals", color: "#f59e0b" },
+  ];
+  
+  return (
+    <div style={{
+      background: "#f8fafc",
+      borderRadius: 20,
+      padding: isMobile ? "32px 20px" : "48px 40px",
+      marginBottom: 48,
+      border: "1px solid #e2e8f0"
+    }}>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)",
+        gap: 24
+      }}>
+        {trustPoints.map((point, index) => (
+          <div key={index} style={{ textAlign: "center" }}>
+            <div style={{
+              width: 64,
+              height: 64,
+              borderRadius: "50%",
+              background: `${point.color}15`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 12px",
+              color: point.color
+            }}>
+              {point.icon}
+            </div>
+            <h4 style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 4 }}>{point.title}</h4>
+            <p style={{ fontSize: 13, color: "#6b7280" }}>{point.description}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -2386,6 +2688,12 @@ function UserPGSearch() {
     }
   };
 
+  // Handle search from hero
+  const handleHeroSearch = (searchQuery) => {
+    setFilters(prev => ({ ...prev, location: searchQuery }));
+    resetAndFetch();
+  };
+
   // Initial load
   useEffect(() => {
     resetAndFetch();
@@ -2675,8 +2983,20 @@ function UserPGSearch() {
         <LocationPermissionBanner onAllow={handleAllowLocation} onDeny={handleDenyLocation} isLoading={locationLoading} />
       )}
 
-      {/* Hero Banner */}
-      <HeroBanner />
+      {/* Hero Banner with Search */}
+      <HeroBanner onSearch={handleHeroSearch} />
+
+      {/* Why Choose Nepxall */}
+      <WhyChooseNepxall />
+
+      {/* Statistics Section */}
+      <StatisticsSection />
+
+      {/* How It Works */}
+      <HowItWorks />
+
+      {/* Trust Section */}
+      <TrustSection />
 
       {/* Location Info Bar */}
       {userLocation && (
