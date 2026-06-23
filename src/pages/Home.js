@@ -206,9 +206,22 @@ export default function Home() {
   
   return (
     <div style={{ padding: "20px", maxWidth: "1400px", margin: "0 auto" }}>
-      <h1 style={{ marginBottom: "20px", fontSize: "28px" }}>
-        Properties
+      {/* ✅ SEO IMPROVED: Main H1 with target keywords */}
+      <h1 style={{ marginBottom: "8px", fontSize: "28px" }}>
+        Nepxall - Find Verified PGs, Coliving & Rental Homes in Bangalore
       </h1>
+      
+      {/* ✅ SEO IMPROVED: H2 with supporting description */}
+      <h2
+        style={{
+          fontSize: "18px",
+          color: "#666",
+          marginBottom: "20px",
+          fontWeight: "400"
+        }}
+      >
+        Search verified PGs, Coliving spaces and rental homes directly from owners.
+      </h2>
       
       {/* ✅ DSA: Search Bar */}
       <div style={{ marginBottom: "20px" }}>
