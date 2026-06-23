@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
@@ -90,6 +89,7 @@ export default function PGDetails() {
   const [mapZoom, setMapZoom] = useState(15);
   const [mapCenter, setMapCenter] = useState([0, 0]);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const highlightCategories = [
     { id: "all", label: "All", icon: "✦" },
@@ -114,6 +114,14 @@ export default function PGDetails() {
     nearby_temple: "worship", nearby_mosque: "worship", nearby_church: "worship",
     nearby_police_station: "safety", nearby_restaurant: "food",
   };
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 900px)");
+    const apply = (e) => setIsMobile(e.matches);
+    apply(mq);
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
 
   useEffect(() => {
     const fetchPGDetails = async () => {
@@ -313,11 +321,11 @@ export default function PGDetails() {
         <span style={S.crumbCurrent}>{pg.pg_name}</span>
       </nav>
 
-      {/* ===== Compact Hero gallery ===== */}
+      {/* ===== Gallery ===== */}
       <section style={S.hero}>
         {media.length > 0 ? (
-          <div style={S.galleryGrid}>
-            <div style={S.galleryMain} onClick={() => setGalleryOpen(true)}>
+          <div style={isMobile ? S.galleryGridMobile : S.galleryGrid}>
+            <div style={isMobile ? S.galleryMainMobile : S.galleryMain} onClick={() => setGalleryOpen(true)}>
               {current.type === "photo" ? (
                 <img src={current.src} alt={pg.pg_name} style={S.galleryMainImg}
                   onError={(e) => { e.target.src = "https://via.placeholder.com/1200x800?text=No+Image"; }} />
@@ -336,11 +344,27 @@ export default function PGDetails() {
                 </>
               )}
             </div>
-            {media.length > 1 && (
+            {!isMobile && media.length > 1 && (
               <div style={S.galleryThumbs}>
                 {media.slice(0, 4).map((m, i) => (
                   <div key={i} onClick={() => setIndex(i)} style={{
                     ...S.galleryThumb,
+                    outline: i === index ? `2px solid ${T.emerald}` : "none",
+                    outlineOffset: i === index ? 2 : 0,
+                  }}>
+                    {m.type === "photo"
+                      ? <img src={m.src} alt="" style={S.galleryThumbImg} />
+                      : <div style={{ ...S.galleryThumbImg, background: T.ink, color: "#fff", display: "grid", placeItems: "center" }}>▶</div>}
+                    {i === 3 && media.length > 4 && <div style={S.galleryMore}>+{media.length - 4}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {isMobile && media.length > 1 && (
+              <div style={S.galleryThumbsMobile}>
+                {media.slice(0, 4).map((m, i) => (
+                  <div key={i} onClick={() => setIndex(i)} style={{
+                    ...S.galleryThumbMobile,
                     outline: i === index ? `2px solid ${T.emerald}` : "none",
                     outlineOffset: i === index ? 2 : 0,
                   }}>
@@ -404,7 +428,7 @@ export default function PGDetails() {
         </div>
       </section>
 
-      <section style={S.grid}>
+      <section style={isMobile ? S.gridMobile : S.grid}>
         <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
           {pg.description && (
             <Panel title="About this place" eyebrow="Overview">
@@ -516,52 +540,72 @@ export default function PGDetails() {
           )}
         </div>
 
-        <aside style={S.aside}>
-          <div style={S.stickyCard}>
-            {startingPrice ? (
-              <>
-                <div style={S.priceEyebrow}>Starting from</div>
-                <div style={S.priceLarge}>{fmtINR(startingPrice)}<span style={S.pricePer}>/month</span></div>
-              </>
-            ) : (
-              <div style={S.priceLarge}>Price on request</div>
-            )}
+        {!isMobile && (
+          <aside style={S.aside}>
+            <div style={S.stickyCard}>
+              {startingPrice ? (
+                <>
+                  <div style={S.priceEyebrow}>Starting from</div>
+                  <div style={S.priceLarge}>{fmtINR(startingPrice)}<span style={S.pricePer}>/month</span></div>
+                </>
+              ) : (
+                <div style={S.priceLarge}>Price on request</div>
+              )}
 
-            <div style={S.stickyDivider} />
+              <div style={S.stickyDivider} />
 
-            <div style={S.stickyStats}>
-              {pg.total_rooms > 0 && (
-                <div style={S.stickyStat}>
-                  <span style={S.stickyStatLabel}>Total rooms</span>
-                  <span style={S.stickyStatValue}>{pg.total_rooms}</span>
-                </div>
-              )}
-              {pg.available_rooms !== undefined && (
-                <div style={S.stickyStat}>
-                  <span style={S.stickyStatLabel}>Available</span>
-                  <span style={{ ...S.stickyStatValue, color: pg.available_rooms > 0 ? T.emerald : T.danger }}>{pg.available_rooms}</span>
-                </div>
-              )}
-              {pg.sqft_area && (
-                <div style={S.stickyStat}>
-                  <span style={S.stickyStatLabel}>Size</span>
-                  <span style={S.stickyStatValue}>{pg.sqft_area} sqft</span>
-                </div>
-              )}
+              <div style={S.stickyStats}>
+                {pg.total_rooms > 0 && (
+                  <div style={S.stickyStat}>
+                    <span style={S.stickyStatLabel}>Total rooms</span>
+                    <span style={S.stickyStatValue}>{pg.total_rooms}</span>
+                  </div>
+                )}
+                {pg.available_rooms !== undefined && (
+                  <div style={S.stickyStat}>
+                    <span style={S.stickyStatLabel}>Available</span>
+                    <span style={{ ...S.stickyStatValue, color: pg.available_rooms > 0 ? T.emerald : T.danger }}>{pg.available_rooms}</span>
+                  </div>
+                )}
+                {pg.sqft_area && (
+                  <div style={S.stickyStat}>
+                    <span style={S.stickyStatLabel}>Size</span>
+                    <span style={S.stickyStatValue}>{pg.sqft_area} sqft</span>
+                  </div>
+                )}
+              </div>
+
+              <button style={{ ...S.btnPrimary, width: "100%", marginTop: 20, justifyContent: "center" }}>
+                <Phone size={16} /> Contact owner
+              </button>
+              <button style={{ ...S.btnGhost, width: "100%", marginTop: 10 }}>Schedule a visit</button>
+
+              <div style={S.trustRow}>
+                <Sparkles size={14} color={T.tan} />
+                <span>Verified listing · Zero brokerage</span>
+              </div>
             </div>
-
-            <button style={{ ...S.btnPrimary, width: "100%", marginTop: 20, justifyContent: "center" }}>
-              <Phone size={16} /> Contact owner
-            </button>
-            <button style={{ ...S.btnGhost, width: "100%", marginTop: 10 }}>Schedule a visit</button>
-
-            <div style={S.trustRow}>
-              <Sparkles size={14} color={T.tan} />
-              <span>Verified listing · Zero brokerage</span>
-            </div>
-          </div>
-        </aside>
+          </aside>
+        )}
       </section>
+
+      {/* Mobile sticky bottom bar */}
+      {isMobile && (
+        <div style={S.mobileBottomBar}>
+          <div>
+            {startingPrice ? (
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 500, color: T.ink }}>
+                {fmtINR(startingPrice)}<span style={{ fontSize: 12, color: T.inkMute, marginLeft: 4 }}>/mo</span>
+              </div>
+            ) : (
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: T.ink }}>Price on request</div>
+            )}
+          </div>
+          <button style={{ ...S.btnPrimary, padding: "10px 20px" }}>
+            <Phone size={16} /> Contact
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -723,18 +767,24 @@ const S = {
   crumbSep: { color: T.inkMute, opacity: 0.5 },
   crumbCurrent: { color: T.ink, fontWeight: 500 },
 
-  /* ===== COMPACT Gallery ===== */
+  /* ===== DESKTOP Gallery ===== */
   hero: { marginBottom: 28 },
-  galleryGrid: { display: "grid", gridTemplateColumns: "2.2fr 1fr", gap: 8, height: 360 },
-  galleryMain: { position: "relative", borderRadius: 14, overflow: "hidden", cursor: "pointer", background: T.paperDeep },
+  galleryGrid: { display: "grid", gridTemplateColumns: "2.2fr 1fr", gap: 8, height: 420 },
+  galleryMain: { position: "relative", borderRadius: 14, overflow: "hidden", cursor: "pointer", background: T.paperDeep, height: "100%" },
   galleryMainImg: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
-  galleryThumbs: { display: "grid", gridTemplateRows: "repeat(4, 1fr)", gap: 8 },
-  galleryThumb: { position: "relative", borderRadius: 10, overflow: "hidden", cursor: "pointer", background: T.paperDeep },
+  galleryThumbs: { display: "grid", gridTemplateRows: "repeat(4, 1fr)", gap: 8, height: "100%" },
+  galleryThumb: { position: "relative", borderRadius: 10, overflow: "hidden", cursor: "pointer", background: T.paperDeep, height: "100%" },
   galleryThumbImg: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
   galleryMore: { position: "absolute", inset: 0, background: "rgba(20,24,26,0.7)", color: "#fff", display: "grid", placeItems: "center", fontSize: 16, fontWeight: 600, fontFamily: "'Fraunces', serif" },
   galleryNav: { position: "absolute", top: "50%", transform: "translateY(-50%)", width: 36, height: 36, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.95)", cursor: "pointer", display: "grid", placeItems: "center", boxShadow: "0 4px 14px rgba(0,0,0,0.15)" },
   galleryCounter: { position: "absolute", bottom: 14, left: 14, background: "rgba(20,24,26,0.8)", color: "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500 },
   galleryEmpty: { height: 280, borderRadius: 14, background: T.paperDeep, display: "grid", placeItems: "center", color: T.inkMute, fontSize: 14 },
+
+  /* ===== MOBILE Gallery ===== */
+  galleryGridMobile: { display: "grid", gridTemplateColumns: "1fr", gap: 6, height: "auto" },
+  galleryMainMobile: { position: "relative", borderRadius: 14, overflow: "hidden", cursor: "pointer", background: T.paperDeep, height: 260 },
+  galleryThumbsMobile: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, height: 72 },
+  galleryThumbMobile: { position: "relative", borderRadius: 8, overflow: "hidden", cursor: "pointer", background: T.paperDeep, height: "100%" },
 
   titleBlock: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 48, flexWrap: "wrap", paddingBottom: 32, borderBottom: `1px solid ${T.line}` },
   eyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: T.tan, fontWeight: 600, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 },
@@ -753,6 +803,7 @@ const S = {
   btnGhost: { display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 22px", background: "transparent", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 999, fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", transition: "all .2s" },
 
   grid: { display: "grid", gridTemplateColumns: "1fr 380px", gap: 48, alignItems: "start" },
+  gridMobile: { display: "grid", gridTemplateColumns: "1fr", gap: 32, alignItems: "start" },
 
   panel: { paddingBottom: 32, borderBottom: `1px solid ${T.line}` },
   panelHeader: { marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "baseline" },
@@ -816,33 +867,6 @@ const S = {
   stickyStatLabel: { fontSize: 13.5, color: T.inkMute },
   stickyStatValue: { fontSize: 15, fontWeight: 600, color: T.ink, fontFamily: "'JetBrains Mono', monospace" },
   trustRow: { marginTop: 20, display: "flex", alignItems: "center", gap: 8, justifyContent: "center", fontSize: 12, color: T.inkMute },
-};
 
-if (typeof window !== "undefined") {
-  const mq = window.matchMedia("(max-width: 900px)");
-  const apply = (e) => {
-    if (e.matches) {
-      S.grid.gridTemplateColumns = "1fr";
-      S.galleryGrid.gridTemplateColumns = "1fr";
-      S.galleryGrid.height = "auto";
-      S.galleryGrid.gap = 6;
-      S.galleryMain.height = 240;
-      S.galleryThumbs.gridTemplateRows = "auto";
-      S.galleryThumbs.gridTemplateColumns = "repeat(4, 1fr)";
-      S.galleryThumb.height = 60;
-      S.aside.position = "static";
-    } else {
-      S.grid.gridTemplateColumns = "1fr 380px";
-      S.galleryGrid.gridTemplateColumns = "2.2fr 1fr";
-      S.galleryGrid.height = 360;
-      S.galleryGrid.gap = 8;
-      delete S.galleryMain.height;
-      S.galleryThumbs.gridTemplateRows = "repeat(4, 1fr)";
-      delete S.galleryThumbs.gridTemplateColumns;
-      delete S.galleryThumb.height;
-      S.aside.position = "sticky";
-    }
-  };
-  apply(mq);
-  mq.addEventListener("change", apply);
-}
+  mobileBottomBar: { position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50, background: T.surface, borderTop: `1px solid ${T.line}`, padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 -4px 20px rgba(0,0,0,0.06)" },
+};

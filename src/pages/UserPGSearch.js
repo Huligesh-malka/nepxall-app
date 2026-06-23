@@ -1684,7 +1684,7 @@ const WhyChooseNepxall = () => {
           border: "1px solid #bfdbfe"
         }}>
           <h3 style={{ fontSize: 20, fontWeight: 700, color: "#1e3a5f", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-            <Users size={24} color="#3b82f6" /> For Tenants
+            <Users size={24} color="#3b82f6" /> looking for pg/coliving/tolet
           </h3>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
             {tenantBenefits.map((benefit, index) => (
