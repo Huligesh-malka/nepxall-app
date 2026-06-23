@@ -111,13 +111,13 @@ const LOCATION_AUTO_ASKED_KEY = "nepxall_location_auto_asked";
 
 // Popular Areas in Bangalore
 const popularAreas = [
-  { name: "Koramangala", icon: "🏙️", color: "#3b82f6" },
-  { name: "BTM Layout", icon: "🏘️", color: "#10b981" },
-  { name: "Jayanagar", icon: "🌳", color: "#f59e0b" },
-  { name: "Electronic City", icon: "💻", color: "#8b5cf6" },
-  { name: "HSR Layout", icon: "🏢", color: "#ec4899" },
-  { name: "Whitefield", icon: "🏠", color: "#06b6d4" },
-  { name: "Marathahalli", icon: "🌆", color: "#ef4444" },
+  { name: "Koramangala", icon: "", color: "#3b82f6" },
+  { name: "BTM Layout", icon: "", color: "#10b981" },
+  { name: "Jayanagar", icon: "", color: "#f59e0b" },
+  { name: "Electronic City", icon: "", color: "#8b5cf6" },
+  { name: "HSR Layout", icon: "", color: "#ec4899" },
+  { name: "Whitefield", icon: "", color: "#06b6d4" },
+  { name: "Marathahalli", icon: "", color: "#ef4444" },
 ];
 
 // Quick Filters - Easy access filters
@@ -258,17 +258,17 @@ const getEffectiveRent = (pg) => {
   );
 };
 
-// ================= BUDGET FILTER COMPONENT =================
+/* ================= BUDGET FILTER COMPONENT ================= */
 const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
   const [localMin, setLocalMin] = useState(minBudget);
   const [localMax, setLocalMax] = useState(maxBudget);
 
   const budgetRanges = [
-    { label: "Budget", min: 0, max: 5000, emoji: "💰" },
-    { label: "Economy", min: 5000, max: 10000, emoji: "🟢" },
-    { label: "Standard", min: 10000, max: 20000, emoji: "🔵" },
-    { label: "Premium", min: 20000, max: 30000, emoji: "💎" },
-    { label: "Luxury", min: 30000, max: 100000, emoji: "👑" }
+    { label: "Budget (₹0-5k)", min: 0, max: 5000 },
+    { label: "Economy (₹5k-10k)", min: 5000, max: 10000 },
+    { label: "Standard (₹10k-20k)", min: 10000, max: 20000 },
+    { label: "Premium (₹20k-30k)", min: 20000, max: 30000 },
+    { label: "Luxury (₹30k+)", min: 30000, max: 100000 }
   ];
 
   const handleApply = () => {
@@ -294,8 +294,7 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.6)",
-      backdropFilter: "blur(8px)",
+      backgroundColor: "rgba(0, 0, 0, 0.8)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -305,13 +304,13 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
     }}>
       <div style={{
         background: "#ffffff",
-        borderRadius: 24,
+        borderRadius: 20,
         width: "100%",
-        maxWidth: 520,
+        maxWidth: 500,
         maxHeight: "90vh",
         overflowY: "auto",
         position: "relative",
-        boxShadow: "0 25px 80px rgba(0,0,0,0.25)"
+        boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
       }}>
         <button
           onClick={onClose}
@@ -319,7 +318,7 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
             position: "absolute",
             top: 16,
             right: 16,
-            background: "#f1f5f9",
+            background: "rgba(255,255,255,0.9)",
             border: "none",
             width: 40,
             height: 40,
@@ -329,197 +328,170 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
             justifyContent: "center",
             cursor: "pointer",
             zIndex: 100,
-            transition: "all 0.2s"
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
           }}
-          onMouseEnter={(e) => e.currentTarget.style.background = "#e2e8f0"}
-          onMouseLeave={(e) => e.currentTarget.style.background = "#f1f5f9"}
         >
-          <X size={22} color="#475569" />
+          <X size={24} />
         </button>
 
-        <div style={{ padding: "32px 32px 28px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-            <div style={{
-              background: "linear-gradient(135deg, #3b82f6, #2563eb)",
-              borderRadius: "12px",
-              padding: "10px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}>
-              <Coins size={22} color="white" />
-            </div>
-            <h2 style={{ 
-              fontSize: 24, 
-              fontWeight: 700, 
-              color: "#0f172a",
-              margin: 0
-            }}>
-              Budget Filter
-            </h2>
-          </div>
+        <div style={{ padding: 30 }}>
+          <h2 style={{ 
+            fontSize: 24, 
+            fontWeight: 700, 
+            color: "#111827",
+            marginBottom: 8,
+            display: "flex",
+            alignItems: "center",
+            gap: 12
+          }}>
+            <Sliders size={24} />
+            Budget Filter
+          </h2>
           <p style={{ 
             fontSize: 14, 
-            color: "#64748b",
-            marginLeft: 52,
-            marginBottom: 24,
-            marginTop: 0
+            color: "#6b7280",
+            marginBottom: 24 
           }}>
             Set your monthly budget range
           </p>
 
-          <div style={{ marginBottom: 28 }}>
+          <div style={{ marginBottom: 30 }}>
             <h4 style={{ 
-              fontSize: 13, 
+              fontSize: 16, 
               fontWeight: 600, 
-              marginBottom: 12,
-              color: "#64748b",
-              textTransform: "uppercase",
-              letterSpacing: "0.5px"
+              marginBottom: 16,
+              color: "#374151"
             }}>
               Quick Select
             </h4>
             <div style={{
               display: "grid",
               gridTemplateColumns: "repeat(2, 1fr)",
-              gap: 10
+              gap: 12
             }}>
               {budgetRanges.map((range, index) => (
                 <button
                   key={index}
                   onClick={() => selectBudgetRange(range.min, range.max)}
                   style={{
-                    padding: "12px 14px",
-                    background: localMin === range.min && localMax === range.max ? "#3b82f6" : "#f8fafc",
-                    color: localMin === range.min && localMax === range.max ? "white" : "#1e293b",
-                    border: localMin === range.min && localMax === range.max ? "2px solid #3b82f6" : "1px solid #e2e8f0",
-                    borderRadius: 12,
-                    fontSize: 13,
+                    padding: "14px 12px",
+                    background: localMin === range.min && localMax === range.max ? "#3b82f6" : "#f3f4f6",
+                    color: localMin === range.min && localMax === range.max ? "white" : "#374151",
+                    border: "none",
+                    borderRadius: 10,
+                    fontSize: 14,
                     fontWeight: 500,
                     cursor: "pointer",
                     transition: "all 0.2s",
                     display: "flex",
-                    alignItems: "center",
-                    gap: 8
+                    flexDirection: "column",
+                    alignItems: "center"
                   }}
                 >
-                  <span style={{ fontSize: 18 }}>{range.emoji}</span>
-                  <div style={{ textAlign: "left" }}>
-                    <div style={{ fontWeight: 600 }}>{range.label}</div>
-                    <div style={{ fontSize: 11, opacity: 0.7 }}>
-                      ₹{formatPrice(range.min)} - ₹{formatPrice(range.max)}
-                    </div>
-                  </div>
+                  <span style={{ fontWeight: 600 }}>{range.label.split('(')[0]}</span>
+                  <span style={{ fontSize: 12, opacity: 0.8 }}>{range.label.split('(')[1]?.replace(')', '')}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          <div style={{ marginBottom: 28 }}>
+          <div style={{ marginBottom: 30 }}>
             <h4 style={{ 
-              fontSize: 13, 
+              fontSize: 16, 
               fontWeight: 600, 
               marginBottom: 16,
-              color: "#64748b",
-              textTransform: "uppercase",
-              letterSpacing: "0.5px"
+              color: "#374151"
             }}>
               Custom Range
             </h4>
             
-            <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: 20 }}>
               <div style={{
                 display: "flex",
                 justifyContent: "space-between",
-                marginBottom: 10
+                marginBottom: 8
               }}>
-                <span style={{ fontSize: 14, color: "#1e293b", fontWeight: 600 }}>
-                  ₹{formatPrice(localMin)}
+                <span style={{ fontSize: 14, color: "#374151", fontWeight: 500 }}>
+                  Min: ₹{formatPrice(localMin)}
                 </span>
-                <span style={{ fontSize: 14, color: "#1e293b", fontWeight: 600 }}>
-                  ₹{formatPrice(localMax)}
+                <span style={{ fontSize: 14, color: "#374151", fontWeight: 500 }}>
+                  Max: ₹{formatPrice(localMax)}
                 </span>
               </div>
               <div style={{
                 position: "relative",
-                height: 36,
-                display: "flex",
-                alignItems: "center"
+                height: 40
               }}>
+                <input
+                  type="range"
+                  min="0"
+                  max="50000"
+                  step="1000"
+                  value={localMin}
+                  onChange={(e) => setLocalMin(Number(e.target.value))}
+                  style={{
+                    position: "absolute",
+                    width: "100%",
+                    height: 6,
+                    background: "transparent",
+                    appearance: "none",
+                    pointerEvents: "none"
+                  }}
+                />
+                <input
+                  type="range"
+                  min="0"
+                  max="50000"
+                  step="1000"
+                  value={localMax}
+                  onChange={(e) => setLocalMax(Number(e.target.value))}
+                  style={{
+                    position: "absolute",
+                    width: "100%",
+                    height: 6,
+                    background: "transparent",
+                    appearance: "none",
+                    pointerEvents: "none"
+                  }}
+                />
                 <div style={{
                   position: "absolute",
                   width: "100%",
-                  height: 4,
-                  background: "#e2e8f0",
-                  borderRadius: 2
+                  height: 6,
+                  background: "#e5e7eb",
+                  borderRadius: 3
                 }} />
                 <div style={{
                   position: "absolute",
                   left: `${(localMin / 50000) * 100}%`,
                   right: `${100 - (localMax / 50000) * 100}%`,
-                  height: 4,
-                  background: "linear-gradient(90deg, #3b82f6, #2563eb)",
-                  borderRadius: 2
+                  height: 6,
+                  background: "#3b82f6",
+                  borderRadius: 3
                 }} />
-                <input
-                  type="range"
-                  min="0"
-                  max="50000"
-                  step="500"
-                  value={localMin}
-                  onChange={(e) => setLocalMin(Math.min(Number(e.target.value), localMax - 1000))}
-                  style={{
-                    position: "absolute",
-                    width: "100%",
-                    height: 4,
-                    background: "transparent",
-                    appearance: "none",
-                    pointerEvents: "none",
-                    outline: "none"
-                  }}
-                />
-                <input
-                  type="range"
-                  min="0"
-                  max="50000"
-                  step="500"
-                  value={localMax}
-                  onChange={(e) => setLocalMax(Math.max(Number(e.target.value), localMin + 1000))}
-                  style={{
-                    position: "absolute",
-                    width: "100%",
-                    height: 4,
-                    background: "transparent",
-                    appearance: "none",
-                    pointerEvents: "none",
-                    outline: "none"
-                  }}
-                />
                 <div style={{
                   position: "absolute",
                   left: `${(localMin / 50000) * 100}%`,
                   top: "50%",
                   transform: "translate(-50%, -50%)",
-                  width: 18,
-                  height: 18,
-                  background: "white",
+                  width: 20,
+                  height: 20,
+                  background: "#3b82f6",
                   borderRadius: "50%",
-                  border: "3px solid #3b82f6",
-                  boxShadow: "0 2px 8px rgba(59,130,246,0.3)",
-                  pointerEvents: "none"
+                  border: "3px solid white",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
                 }} />
                 <div style={{
                   position: "absolute",
                   left: `${(localMax / 50000) * 100}%`,
                   top: "50%",
                   transform: "translate(-50%, -50%)",
-                  width: 18,
-                  height: 18,
-                  background: "white",
+                  width: 20,
+                  height: 20,
+                  background: "#3b82f6",
                   borderRadius: "50%",
-                  border: "3px solid #3b82f6",
-                  boxShadow: "0 2px 8px rgba(59,130,246,0.3)",
-                  pointerEvents: "none"
+                  border: "3px solid white",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
                 }} />
               </div>
             </div>
@@ -527,63 +499,73 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
             <div style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
-              gap: 12
+              gap: 16
             }}>
               <div>
                 <label style={{
                   display: "block",
-                  marginBottom: 6,
-                  fontSize: 13,
+                  marginBottom: 8,
+                  fontSize: 14,
                   fontWeight: 500,
-                  color: "#64748b"
+                  color: "#374151"
                 }}>
-                  Min Budget (₹)
+                  Min Budget
                 </label>
-                <input
-                  type="number"
-                  value={localMin}
-                  onChange={(e) => setLocalMin(Math.min(Number(e.target.value), localMax - 1000))}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 10,
-                    fontSize: 14,
-                    background: "#f8fafc",
-                    outline: "none",
-                    transition: "border-color 0.2s"
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = "#3b82f6"}
-                  onBlur={(e) => e.target.style.borderColor = "#e2e8f0"}
-                />
+                <div style={{ position: "relative" }}>
+                  <span style={{
+                    position: "absolute",
+                    left: 12,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "#6b7280"
+                  }}>₹</span>
+                  <input
+                    type="number"
+                    value={localMin}
+                    onChange={(e) => setLocalMin(Number(e.target.value))}
+                    style={{
+                      width: "100%",
+                      padding: "12px 12px 12px 32px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: 10,
+                      fontSize: 14,
+                      background: "#f9fafb"
+                    }}
+                  />
+                </div>
               </div>
               <div>
                 <label style={{
                   display: "block",
-                  marginBottom: 6,
-                  fontSize: 13,
+                  marginBottom: 8,
+                  fontSize: 14,
                   fontWeight: 500,
-                  color: "#64748b"
+                  color: "#374151"
                 }}>
-                  Max Budget (₹)
+                  Max Budget
                 </label>
-                <input
-                  type="number"
-                  value={localMax}
-                  onChange={(e) => setLocalMax(Math.max(Number(e.target.value), localMin + 1000))}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 10,
-                    fontSize: 14,
-                    background: "#f8fafc",
-                    outline: "none",
-                    transition: "border-color 0.2s"
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = "#3b82f6"}
-                  onBlur={(e) => e.target.style.borderColor = "#e2e8f0"}
-                />
+                <div style={{ position: "relative" }}>
+                  <span style={{
+                    position: "absolute",
+                    left: 12,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "#6b7280"
+                  }}>₹</span>
+                  <input
+                    type="number"
+                    value={localMax}
+                    onChange={(e) => setLocalMax(Number(e.target.value))}
+                    style={{
+                      width: "100%",
+                      padding: "12px 12px 12px 32px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: 10,
+                      fontSize: 14,
+                      background: "#f9fafb"
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -594,17 +576,14 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
               style={{
                 flex: 1,
                 padding: "14px",
-                background: "#f1f5f9",
-                color: "#475569",
+                background: "#f3f4f6",
+                color: "#374151",
                 border: "none",
-                borderRadius: 12,
+                borderRadius: 10,
                 fontSize: 14,
                 fontWeight: 600,
-                cursor: "pointer",
-                transition: "all 0.2s"
+                cursor: "pointer"
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "#e2e8f0"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "#f1f5f9"}
             >
               Reset
             </button>
@@ -613,22 +592,18 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
               style={{
                 flex: 2,
                 padding: "14px",
-                background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+                background: "#3b82f6",
                 color: "white",
                 border: "none",
-                borderRadius: 12,
+                borderRadius: 10,
                 fontSize: 14,
                 fontWeight: 600,
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 8,
-                transition: "all 0.2s",
-                boxShadow: "0 4px 12px rgba(59,130,246,0.3)"
+                gap: 8
               }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
-              onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
             >
               <Check size={18} />
               Apply Budget
@@ -640,7 +615,7 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
   );
 };
 
-// ================= BOOKING MODAL =================
+/* ================= SIMPLE BOOKING MODAL (CONTACT OWNER) ================= */
 const BookingModal = ({ pg, onClose, onBook }) => {
 
   const [bookingData, setBookingData] = useState({
@@ -789,8 +764,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.6)",
-      backdropFilter: "blur(8px)",
+      backgroundColor: "rgba(0, 0, 0, 0.8)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -800,13 +774,13 @@ const BookingModal = ({ pg, onClose, onBook }) => {
     }}>
       <div style={{
         background: "#ffffff",
-        borderRadius: 24,
+        borderRadius: 20,
         width: "100%",
         maxWidth: 500,
         maxHeight: "90vh",
         overflowY: "auto",
         position: "relative",
-        boxShadow: "0 25px 80px rgba(0,0,0,0.25)"
+        boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
       }}>
         <button
           onClick={onClose}
@@ -815,7 +789,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
             position: "absolute",
             top: 16,
             right: 16,
-            background: "#f1f5f9",
+            background: "rgba(255,255,255,0.9)",
             border: "none",
             width: 40,
             height: 40,
@@ -825,60 +799,44 @@ const BookingModal = ({ pg, onClose, onBook }) => {
             justifyContent: "center",
             cursor: loading ? "not-allowed" : "pointer",
             zIndex: 100,
-            transition: "all 0.2s"
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
           }}
-          onMouseEnter={(e) => !loading && (e.currentTarget.style.background = "#e2e8f0")}
-          onMouseLeave={(e) => e.currentTarget.style.background = "#f1f5f9"}
         >
-          <X size={22} color="#475569" />
+          <X size={24} />
         </button>
 
-        <div style={{ padding: "32px 32px 28px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-            <div style={{
-              background: "linear-gradient(135deg, #3b82f6, #2563eb)",
-              borderRadius: "12px",
-              padding: "10px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}>
-              <MessageCircle size={22} color="white" />
-            </div>
-            <h2 style={{ 
-              fontSize: 22, 
-              fontWeight: 700, 
-              color: "#0f172a",
-              margin: 0
-            }}>
-              Contact Owner
-            </h2>
-          </div>
+        <div style={{ padding: 30 }}>
+          <h2 style={{ 
+            fontSize: 24, 
+            fontWeight: 700, 
+            color: "#111827",
+            marginBottom: 8 
+          }}>
+            📞 Contact Owner - {pg.pg_name}
+          </h2>
           <p style={{ 
             fontSize: 14, 
-            color: "#64748b",
-            marginLeft: 52,
-            marginBottom: 20,
-            marginTop: 0
+            color: "#6b7280",
+            marginBottom: 24 
           }}>
-            {pg.pg_name}
+            Your details will be shared with the property owner. They will contact you shortly.
           </p>
 
           {Number(pg.min_stay_months) > 0 && (
             <div style={{
               background: "#f0fdf4",
-              padding: "12px 16px",
-              borderRadius: 12,
-              marginBottom: 16,
+              padding: 12,
+              borderRadius: 8,
+              marginBottom: 15,
               fontSize: 13,
               color: "#065f46",
               border: "1px solid #bbf7d0",
               display: "flex",
               alignItems: "center",
-              gap: 10
+              gap: 8
             }}>
               <Lock size={16} />
-              <span>Minimum stay: <strong>{pg.min_stay_months} months</strong></span>
+              Minimum stay requirement: {pg.min_stay_months} months
             </div>
           )}
 
@@ -899,7 +857,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                 marginBottom: 8,
                 fontSize: 14,
                 fontWeight: 500,
-                color: "#1e293b"
+                color: "#374151"
               }}>
                 {pg.pg_category === "to_let" ? "BHK Type *" : "Room Type *"}
               </label>
@@ -911,16 +869,11 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                 style={{
                   width: "100%",
                   padding: "12px 16px",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: 12,
+                  border: "1px solid #d1d5db",
+                  borderRadius: 10,
                   fontSize: 14,
-                  background: "#f8fafc",
-                  outline: "none",
-                  transition: "border-color 0.2s",
-                  color: "#1e293b"
+                  background: "#f9fafb"
                 }}
-                onFocus={(e) => e.target.style.borderColor = "#3b82f6"}
-                onBlur={(e) => e.target.style.borderColor = "#e2e8f0"}
               >
                 <option value="">Select {pg.pg_category === "to_let" ? "BHK Type" : "Room Type"}</option>
                 {getRoomTypes().map((type, index) => (
@@ -929,44 +882,26 @@ const BookingModal = ({ pg, onClose, onBook }) => {
               </select>
               
               {selectedPrice !== null && selectedPrice > 0 && (
-                <div style={{ 
-                  marginTop: 10,
-                  padding: "10px 16px",
-                  background: "#f0fdf4",
-                  borderRadius: 10,
-                  border: "1px solid #bbf7d0",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center"
-                }}>
-                  <span style={{ fontWeight: 500, color: "#065f46" }}>Selected:</span>
-                  <span style={{ fontWeight: 700, color: "#065f46" }}>
-                    ₹{formatPrice(selectedPrice)}/month
-                  </span>
-                </div>
+                <p style={{ marginTop: 8, fontWeight: 600, color: "#10b981", fontSize: 14 }}>
+                  Selected: {bookingData.roomType} - ₹{formatPrice(selectedPrice)}/month
+                </p>
               )}
             </div>
 
             <div style={{
-              background: "#f8fafc",
-              borderRadius: 14,
-              padding: "16px 20px",
+              background: "#f0fdf4",
+              borderRadius: 12,
+              padding: 16,
               marginBottom: 24,
-              border: "1px solid #e2e8f0"
+              border: "1px solid #bbf7d0"
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                <Info size={18} color="#3b82f6" />
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <Info size={16} color="#10b981" />
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#065f46" }}>
                   What happens next?
                 </span>
               </div>
-              <ul style={{ 
-                margin: 0, 
-                paddingLeft: 20, 
-                color: "#475569", 
-                fontSize: 13,
-                lineHeight: 1.8
-              }}>
+              <ul style={{ margin: 0, paddingLeft: 20, color: "#065f46", fontSize: 13 }}>
                 <li>Owner receives your inquiry instantly</li>
                 <li>Owner gets WhatsApp notification</li>
                 <li>Owner will contact you within 24 hours</li>
@@ -982,17 +917,14 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                 style={{
                   flex: 1,
                   padding: "14px",
-                  background: "#f1f5f9",
-                  color: "#475569",
+                  background: "#f3f4f6",
+                  color: "#374151",
                   border: "none",
-                  borderRadius: 12,
+                  borderRadius: 10,
                   fontSize: 14,
                   fontWeight: 600,
-                  cursor: loading ? "not-allowed" : "pointer",
-                  transition: "all 0.2s"
+                  cursor: loading ? "not-allowed" : "pointer"
                 }}
-                onMouseEnter={(e) => !loading && (e.currentTarget.style.background = "#e2e8f0")}
-                onMouseLeave={(e) => e.currentTarget.style.background = "#f1f5f9"}
               >
                 Cancel
               </button>
@@ -1002,19 +934,17 @@ const BookingModal = ({ pg, onClose, onBook }) => {
                 style={{
                   flex: 2,
                   padding: "14px",
-                  background: loading ? "#94a3b8" : "linear-gradient(135deg, #3b82f6, #2563eb)",
+                  background: loading ? "#9ca3af" : "#3b82f6",
                   color: "white",
                   border: "none",
-                  borderRadius: 12,
+                  borderRadius: 10,
                   fontSize: 14,
                   fontWeight: 600,
                   cursor: loading ? "not-allowed" : "pointer",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: 8,
-                  transition: "all 0.2s",
-                  boxShadow: loading ? "none" : "0 4px 12px rgba(59,130,246,0.3)"
+                  gap: 8
                 }}
               >
                 {loading ? (
@@ -1044,7 +974,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
   );
 };
 
-// ================= QUICK VIEW MODAL =================
+/* ================= QUICK VIEW MODAL COMPONENT ================= */
 const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
@@ -1062,7 +992,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
     if (hasMultipleImages) {
       const interval = setInterval(() => {
         setCurrentImage((prev) => (prev + 1) % photosArray.length);
-      }, 3000);
+      }, 2500);
       return () => clearInterval(interval);
     }
   }, [hasMultipleImages, photosArray.length]);
@@ -1113,8 +1043,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.6)",
-      backdropFilter: "blur(8px)",
+      backgroundColor: "rgba(0, 0, 0, 0.8)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -1124,13 +1053,13 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
     }}>
       <div style={{
         background: "#ffffff",
-        borderRadius: 24,
+        borderRadius: 20,
         width: "100%",
         maxWidth: 500,
         maxHeight: "90vh",
         overflowY: "auto",
         position: "relative",
-        boxShadow: "0 25px 80px rgba(0,0,0,0.25)"
+        boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
       }}>
         <button
           onClick={onClose}
@@ -1148,13 +1077,10 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
             justifyContent: "center",
             cursor: "pointer",
             zIndex: 100,
-            boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
-            transition: "all 0.2s"
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
           }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.05)"}
-          onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
         >
-          <X size={22} color="#1e293b" />
+          <X size={24} />
         </button>
         
         <button
@@ -1173,16 +1099,13 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
             justifyContent: "center",
             cursor: "pointer",
             zIndex: 100,
-            boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
-            transition: "all 0.2s"
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
           }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.05)"}
-          onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
         >
           <Heart size={20} color="#ef4444" fill={isFavorite ? "#ef4444" : "none"} />
         </button>
         
-        <div style={{ position: "relative", height: 260, background: "#f1f5f9" }}>
+        <div style={{ position: "relative", height: 250, background: "#f3f4f6" }}>
           <img
             src={currentPhotoUrl}
             alt={pg.pg_name}
@@ -1196,25 +1119,24 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
           {hasMultipleImages && (
             <div style={{
               position: "absolute",
-              bottom: 16,
+              bottom: 12,
               left: "50%",
               transform: "translateX(-50%)",
               display: "flex",
-              gap: 8,
+              gap: 6,
               background: "rgba(0,0,0,0.5)",
-              padding: "6px 12px",
-              borderRadius: 20,
-              backdropFilter: "blur(4px)"
+              padding: "4px 8px",
+              borderRadius: 20
             }}>
               {photosArray.map((_, idx) => (
                 <div
                   key={idx}
                   style={{
-                    width: currentImage === idx ? 10 : 6,
-                    height: currentImage === idx ? 10 : 6,
+                    width: currentImage === idx ? 8 : 6,
+                    height: currentImage === idx ? 8 : 6,
                     borderRadius: "50%",
-                    background: currentImage === idx ? "#fff" : "rgba(255,255,255,0.4)",
-                    transition: "all 0.3s"
+                    background: currentImage === idx ? "#fff" : "rgba(255,255,255,0.5)",
+                    transition: "all 0.2s"
                   }}
                 />
               ))}
@@ -1222,94 +1144,67 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
           )}
         </div>
         
-        <div style={{ padding: "24px 28px" }}>
-          <h2 style={{ 
-            fontSize: 24, 
-            fontWeight: 700, 
-            marginBottom: 4, 
-            color: "#0f172a",
-            lineHeight: 1.2
-          }}>
+        <div style={{ padding: 20 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4, color: "#111827" }}>
             {pg.pg_name}
           </h2>
           
-          <div style={{ 
-            display: "flex", 
-            alignItems: "center", 
-            gap: 6, 
-            marginBottom: 16, 
-            color: "#64748b", 
-            fontSize: 14 
-          }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 16, color: "#6b7280", fontSize: 14 }}>
             <MapPin size={14} />
             <span>{pg.area}{pg.city ? `, ${pg.city}` : ""}</span>
           </div>
           
           <div style={{ marginBottom: 16 }}>
-            <div style={{ 
-              fontSize: 32, 
-              fontWeight: 700, 
-              color: "#0f172a",
-              display: "flex",
-              alignItems: "baseline",
-              gap: 6
-            }}>
-              ₹{formatPrice(startingPrice)}
-              <span style={{ fontSize: 16, fontWeight: 400, color: "#64748b" }}>onwards</span>
+            <div style={{ fontSize: 28, fontWeight: 700, color: "#1e3a5f" }}>
+              ₹{formatPrice(startingPrice)} <span style={{ fontSize: 14, fontWeight: 400, color: "#6b7280" }}>onwards</span>
             </div>
-            <div style={{ fontSize: 13, color: "#10b981", fontWeight: 500 }}>per month</div>
+            <div style={{ fontSize: 12, color: "#10b981", fontWeight: 500 }}>per month</div>
           </div>
           
+          {/* PG ONLY: Beds Left */}
           {pg.pg_category !== "to_let" && (
             <div style={{
               background: "#ecfdf5",
               color: "#059669",
-              padding: "8px 16px",
+              padding: "8px 12px",
               borderRadius: 12,
               fontSize: 14,
               fontWeight: "600",
               display: "inline-flex",
               alignItems: "center",
               gap: 8,
-              marginBottom: 16,
-              border: "1px solid #bbf7d0"
+              marginBottom: 16
             }}>
               🛏️ {pg.available_rooms || 0} Beds Left
             </div>
           )}
           
+          {/* PG ONLY: Food Available */}
           {pg.pg_category === "pg" && pg.food_available && (
-            <div style={{ 
-              marginBottom: 16, 
-              fontSize: 14, 
-              color: "#1e293b",
-              display: "flex",
-              alignItems: "center",
-              gap: 8
-            }}>
-              <Utensils size={16} />
-              {pg.food_type === 'veg' ? 'Vegetarian' : pg.food_type === 'non-veg' ? 'Non-Vegetarian' : 'Veg & Non-Veg'}
+            <div style={{ marginBottom: 16, fontSize: 14, color: "#374151" }}>
+              🍽️ {pg.food_type === 'veg' ? 'Vegetarian' : pg.food_type === 'non-veg' ? 'Non-Vegetarian' : 'Veg & Non-Veg'}
             </div>
           )}
           
+          {/* PG ONLY: Filling Fast */}
           {pg.pg_category !== "to_let" && pg.available_rooms < 5 && pg.available_rooms > 0 && (
             <div style={{
               background: "#fef3c7",
               color: "#d97706",
-              padding: "6px 14px",
+              padding: "6px 12px",
               borderRadius: 10,
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: 600,
               display: "inline-flex",
               alignItems: "center",
               gap: 6,
-              marginBottom: 16,
-              border: "1px solid #fde68a"
+              marginBottom: 16
             }}>
               🔥 Filling Fast
             </div>
           )}
           
+          {/* TO-LET BADGES */}
           {pg.pg_category === "to_let" && (
             <div style={{
               display: "flex",
@@ -1317,10 +1212,10 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
               flexWrap: "wrap",
               marginBottom: 16
             }}>
-              {pg.bhk_type && <span style={{ background: "#f1f5f9", padding: "4px 14px", borderRadius: 20, fontSize: 12, color: "#1e293b" }}>🏠 {pg.bhk_type}</span>}
-              {pg.furnishing_type && <span style={{ background: "#f1f5f9", padding: "4px 14px", borderRadius: 20, fontSize: 12, color: "#1e293b" }}>🛋️ {pg.furnishing_type}</span>}
-              {pg.family_allowed && <span style={{ background: "#f1f5f9", padding: "4px 14px", borderRadius: 20, fontSize: 12, color: "#1e293b" }}>👨‍👩‍👧 Family</span>}
-              {pg.parking_available && <span style={{ background: "#f1f5f9", padding: "4px 14px", borderRadius: 20, fontSize: 12, color: "#1e293b" }}>🚗 Parking</span>}
+              {pg.bhk_type && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🏠 {pg.bhk_type}</span>}
+              {pg.furnishing_type && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🛋️ {pg.furnishing_type}</span>}
+              {pg.family_allowed && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>👨‍👩‍👧 Family</span>}
+              {pg.parking_available && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🚗 Parking</span>}
             </div>
           )}
           
@@ -1328,20 +1223,20 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
             display: "flex",
             alignItems: "center",
             gap: 16,
-            marginBottom: 20,
-            fontSize: 13,
-            color: "#64748b",
+            marginBottom: 24,
+            fontSize: 12,
+            color: "#6b7280",
             flexWrap: "wrap"
           }}>
             {pg.is_verified && (
-              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <Shield size={14} color="#10b981" />
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <Shield size={12} color="#10b981" />
                 Verified
               </span>
             )}
           </div>
           
-          <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ display: "flex", gap: 12 }}>
             <button
               onClick={handleCall}
               style={{
@@ -1357,12 +1252,8 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 8,
-                transition: "all 0.2s",
-                boxShadow: "0 4px 12px rgba(16,185,129,0.3)"
+                gap: 8
               }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
-              onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
             >
               <Phone size={16} />
               Call
@@ -1383,12 +1274,8 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 8,
-                transition: "all 0.2s",
-                boxShadow: "0 4px 12px rgba(37,211,102,0.3)"
+                gap: 8
               }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
-              onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
             >
               <MessageCircle size={16} />
               WhatsApp
@@ -1399,7 +1286,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
               style={{
                 flex: 1,
                 padding: "14px",
-                background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+                background: "#3b82f6",
                 color: "white",
                 border: "none",
                 borderRadius: 12,
@@ -1409,12 +1296,8 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 8,
-                transition: "all 0.2s",
-                boxShadow: "0 4px 12px rgba(59,130,246,0.3)"
+                gap: 8
               }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
-              onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
             >
               <Check size={16} />
               Book Now
@@ -1426,7 +1309,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   );
 };
 
-// ================= COMPARE MODAL =================
+/* ================= COMPARE MODAL COMPONENT ================= */
 const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
   const [compareData, setCompareData] = useState([]);
 
@@ -1455,13 +1338,13 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
               (pg.food_type === 'veg' ? 'Vegetarian' : 
                 pg.food_type === 'non-veg' ? 'Non-Veg' : 'Both') : 'No';
       case 'wifi':
-        return pg.wifi_available ? '✅ Yes' : '❌ No';
+        return pg.wifi_available ? 'Yes' : 'No';
       case 'ac':
-        return pg.ac_available ? '✅ Yes' : '❌ No';
+        return pg.ac_available ? 'Yes' : 'No';
       case 'parking':
-        return pg.parking_available ? '✅ Yes' : '❌ No';
+        return pg.parking_available ? 'Yes' : 'No';
       case 'attached_bathroom':
-        return pg.attached_bathroom ? '✅ Yes' : '❌ No';
+        return pg.attached_bathroom ? 'Yes' : 'No';
       case 'available_rooms':
         return pg.available_rooms || 0;
       case 'min_stay':
@@ -1496,8 +1379,7 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.6)",
-      backdropFilter: "blur(8px)",
+      backgroundColor: "rgba(0, 0, 0, 0.8)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -1507,13 +1389,13 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
     }}>
       <div style={{
         background: "#ffffff",
-        borderRadius: 24,
+        borderRadius: 20,
         width: "100%",
         maxWidth: 1200,
         maxHeight: "90vh",
         overflowY: "auto",
         position: "relative",
-        boxShadow: "0 25px 80px rgba(0,0,0,0.25)"
+        boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
       }}>
         <button
           onClick={onClose}
@@ -1521,7 +1403,7 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
             position: "absolute",
             top: 16,
             right: 16,
-            background: "#f1f5f9",
+            background: "rgba(255,255,255,0.9)",
             border: "none",
             width: 40,
             height: 40,
@@ -1531,41 +1413,29 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
             justifyContent: "center",
             cursor: "pointer",
             zIndex: 100,
-            transition: "all 0.2s"
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
           }}
-          onMouseEnter={(e) => e.currentTarget.style.background = "#e2e8f0"}
-          onMouseLeave={(e) => e.currentTarget.style.background = "#f1f5f9"}
         >
-          <X size={22} color="#475569" />
+          <X size={24} />
         </button>
 
-        <div style={{ padding: "32px 36px 28px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-            <div style={{
-              background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
-              borderRadius: "12px",
-              padding: "10px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}>
-              <BarChart size={22} color="white" />
-            </div>
-            <h2 style={{ 
-              fontSize: 24, 
-              fontWeight: 700, 
-              color: "#0f172a",
-              margin: 0
-            }}>
-              Compare Properties
-            </h2>
-          </div>
+        <div style={{ padding: 30 }}>
+          <h2 style={{ 
+            fontSize: 28, 
+            fontWeight: 700, 
+            color: "#111827",
+            marginBottom: 8,
+            display: "flex",
+            alignItems: "center",
+            gap: 12
+          }}>
+            <BarChart size={28} />
+            Compare Properties
+          </h2>
           <p style={{ 
             fontSize: 14, 
-            color: "#64748b",
-            marginLeft: 52,
-            marginBottom: 28,
-            marginTop: 0
+            color: "#6b7280",
+            marginBottom: 30 
           }}>
             Comparing {compareData.length} properties
           </p>
@@ -1575,32 +1445,27 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
               <thead>
                 <tr>
                   <th style={{ 
-                    padding: "16px 20px", 
-                    background: "#f8fafc",
+                    padding: "16px", 
+                    background: "#f3f4f6",
                     textAlign: "left",
-                    borderRadius: "12px 0 0 0",
-                    fontWeight: 600,
-                    color: "#475569",
-                    fontSize: 14,
-                    borderBottom: "2px solid #e2e8f0"
+                    borderRadius: "10px 0 0 0"
                   }}>
                     Features
                   </th>
                   {compareData.map((pg, idx) => (
                     <th key={pg.id} style={{ 
-                      padding: "16px 20px", 
-                      background: "#f8fafc",
+                      padding: "16px", 
+                      background: "#f3f4f6",
                       textAlign: "center",
                       minWidth: "200px",
-                      borderRadius: idx === compareData.length - 1 ? "0 12px 0 0" : "0",
-                      borderBottom: "2px solid #e2e8f0"
+                      borderRadius: idx === compareData.length - 1 ? "0 10px 0 0" : "0"
                     }}>
-                      <div style={{ fontWeight: 600, marginBottom: 8, color: "#0f172a", fontSize: 16 }}>{pg.pg_name}</div>
+                      <div style={{ fontWeight: 600, marginBottom: 8 }}>{pg.pg_name}</div>
                       {pg.photos && pg.photos.length > 0 && (
                         <img 
                           src={getCorrectImageUrl(pg.photos[0])}
                           alt={pg.pg_name}
-                          style={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 12 }}
+                          style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 8 }}
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src = "/no-image.png";
@@ -1609,16 +1474,15 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
                       )}
                       {pg.distance && (
                         <div style={{
-                          marginTop: 10,
-                          fontSize: 13,
+                          marginTop: 8,
+                          fontSize: 12,
                           color: "#10b981",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          gap: 6,
-                          fontWeight: 500
+                          gap: 4
                         }}>
-                          <Navigation size={14} />
+                          <Navigation size={12} />
                           {pg.distance.toFixed(1)} km away
                         </div>
                       )}
@@ -1629,32 +1493,27 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
               <tbody>
                 {features.map((feature, featureIdx) => (
                   <tr key={feature.key} style={{
-                    background: featureIdx % 2 === 0 ? "#ffffff" : "#fafafa"
+                    background: featureIdx % 2 === 0 ? "#ffffff" : "#f9fafb"
                   }}>
                     <td style={{ 
-                      padding: "14px 20px", 
+                      padding: "14px 16px", 
                       fontWeight: 600,
-                      borderBottom: "1px solid #f1f5f9",
-                      color: "#475569",
-                      fontSize: 14
+                      borderBottom: "1px solid #e5e7eb"
                     }}>
                       {feature.label}
                     </td>
                     {compareData.map((pg) => (
                       <td key={`${pg.id}-${feature.key}`} style={{ 
-                        padding: "14px 20px", 
+                        padding: "14px 16px", 
                         textAlign: "center",
-                        borderBottom: "1px solid #f1f5f9",
-                        color: "#1e293b",
-                        fontSize: 14
+                        borderBottom: "1px solid #e5e7eb"
                       }}>
                         <span style={{
-                          background: feature.key === 'price' ? "#f0fdf4" : "transparent",
-                          color: feature.key === 'price' ? "#059669" : "#1e293b",
-                          padding: feature.key === 'price' ? "6px 14px" : "0",
-                          borderRadius: "20px",
-                          fontWeight: feature.key === 'price' ? 600 : 400,
-                          display: feature.key === 'price' ? "inline-block" : "inline"
+                          background: feature.key === 'price' ? "#10b98120" : "transparent",
+                          color: feature.key === 'price' ? "#10b981" : "#374151",
+                          padding: feature.key === 'price' ? "6px 12px" : "0",
+                          borderRadius: feature.key === 'price' ? "20px" : "0",
+                          fontWeight: feature.key === 'price' ? 600 : 400
                         }}>
                           {getFeatureValue(pg, feature.key)}
                         </span>
@@ -1670,25 +1529,21 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
             display: "flex",
             justifyContent: "flex-end",
             marginTop: 24,
-            paddingTop: 20,
-            borderTop: "1px solid #e2e8f0"
+            paddingTop: 16,
+            borderTop: "1px solid #e5e7eb"
           }}>
             <button
               onClick={onClose}
               style={{
-                padding: "12px 28px",
-                background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+                padding: "12px 24px",
+                background: "#3b82f6",
                 color: "white",
                 border: "none",
-                borderRadius: 12,
+                borderRadius: 10,
                 fontSize: 15,
                 fontWeight: 600,
-                cursor: "pointer",
-                transition: "all 0.2s",
-                boxShadow: "0 4px 12px rgba(59,130,246,0.3)"
+                cursor: "pointer"
               }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
-              onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
             >
               Close Comparison
             </button>
@@ -1699,7 +1554,7 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
   );
 };
 
-// ================= PROMO BANNER SLIDER =================
+/* ================= PROMOTIONAL BANNERS SLIDER COMPONENT ================= */
 const PromoBannerSlider = ({ onBannerClick }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
@@ -1773,82 +1628,28 @@ const PromoBannerSlider = ({ onBannerClick }) => {
 
   if (isMobile) {
     return (
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+      <div style={{ marginBottom: 24, position: "relative" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a" }}>🔥 Exclusive Offers</h3>
-            <p style={{ fontSize: 13, color: "#64748b" }}>Limited time deals for you</p>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: "#111827" }}>🔥 Exclusive Offers</h3>
+            <p style={{ fontSize: 13, color: "#6b7280" }}>Limited time deals for you</p>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button 
-              onClick={() => handleManualScroll('prev')} 
-              style={{ 
-                width: 36, 
-                height: 36, 
-                borderRadius: "50%", 
-                background: "#f1f5f9", 
-                border: "none", 
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                transition: "all 0.2s"
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "#e2e8f0"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "#f1f5f9"}
-            >
-              <ChevronLeft size={18} color="#475569" />
+            <button onClick={() => handleManualScroll('prev')} style={{ width: 32, height: 32, borderRadius: "50%", background: "#f3f4f6", border: "none", cursor: "pointer" }}>
+              <ChevronLeft size={18} />
             </button>
-            <button 
-              onClick={() => handleManualScroll('next')} 
-              style={{ 
-                width: 36, 
-                height: 36, 
-                borderRadius: "50%", 
-                background: "#f1f5f9", 
-                border: "none", 
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                transition: "all 0.2s"
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "#e2e8f0"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "#f1f5f9"}
-            >
-              <ChevronRight size={18} color="#475569" />
+            <button onClick={() => handleManualScroll('next')} style={{ width: 32, height: 32, borderRadius: "50%", background: "#f3f4f6", border: "none", cursor: "pointer" }}>
+              <ChevronRight size={18} />
             </button>
           </div>
         </div>
-        <div style={{ 
-          display: "flex", 
-          gap: 16, 
-          overflowX: "auto", 
-          padding: "4px 2px 12px",
-          scrollbarWidth: "thin",
-          scrollSnapType: "x mandatory"
-        }}>
+        <div style={{ display: "flex", gap: 16, overflowX: "auto", padding: "8px 4px 16px", scrollbarWidth: "thin" }}>
           {promoBanners.map((banner) => (
-            <div 
-              key={banner.id} 
-              onClick={() => handleBannerClick(banner)} 
-              style={{ 
-                minWidth: 280, 
-                background: banner.gradient, 
-                borderRadius: 20, 
-                padding: "24px 20px", 
-                color: "white", 
-                cursor: "pointer",
-                scrollSnapAlign: "start",
-                transition: "transform 0.2s"
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.02)"}
-              onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
-            >
-              <div style={{ fontSize: 44, marginBottom: 12 }}>{banner.icon}</div>
-              <h3 style={{ fontSize: 24, fontWeight: 700, marginBottom: 4 }}>{banner.title}</h3>
+            <div key={banner.id} onClick={() => handleBannerClick(banner)} style={{ minWidth: 280, background: banner.gradient, borderRadius: 20, padding: 20, color: "white", cursor: "pointer" }}>
+              <div style={{ fontSize: 42, marginBottom: 12 }}>{banner.icon}</div>
+              <h3 style={{ fontSize: 24, fontWeight: 700 }}>{banner.title}</h3>
               <p style={{ fontSize: 14, opacity: 0.9 }}>{banner.subtitle}</p>
-              <p style={{ fontSize: 13, opacity: 0.75 }}>{banner.description}</p>
+              <p style={{ fontSize: 12, opacity: 0.75 }}>{banner.description}</p>
             </div>
           ))}
         </div>
@@ -1857,114 +1658,29 @@ const PromoBannerSlider = ({ onBannerClick }) => {
   }
 
   return (
-    <div style={{ marginBottom: 36 }}>
+    <div style={{ marginBottom: 32 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
-          <h2 style={{ fontSize: 24, fontWeight: 700, color: "#0f172a" }}>🔥 Exclusive Offers</h2>
-          <p style={{ fontSize: 14, color: "#64748b" }}>Grab these limited-time deals before they're gone!</p>
+          <h2 style={{ fontSize: 24, fontWeight: 700, color: "#111827" }}>🔥 Exclusive Offers</h2>
+          <p style={{ fontSize: 14, color: "#6b7280" }}>Grab these limited-time deals before they're gone!</p>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button 
-            onClick={() => handleManualScroll('prev')} 
-            style={{ 
-              width: 40, 
-              height: 40, 
-              borderRadius: "50%", 
-              background: "#f1f5f9", 
-              border: "none", 
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.2s"
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "#e2e8f0"}
-            onMouseLeave={(e) => e.currentTarget.style.background = "#f1f5f9"}
-          >
-            <ChevronLeft size={20} color="#475569" />
+        <div style={{ display: "flex", gap: 12 }}>
+          <button onClick={() => handleManualScroll('prev')} style={{ width: 40, height: 40, borderRadius: "50%", background: "#f3f4f6", border: "none", cursor: "pointer" }}>
+            <ChevronLeft size={20} />
           </button>
-          <button 
-            onClick={() => handleManualScroll('next')} 
-            style={{ 
-              width: 40, 
-              height: 40, 
-              borderRadius: "50%", 
-              background: "#f1f5f9", 
-              border: "none", 
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.2s"
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "#e2e8f0"}
-            onMouseLeave={(e) => e.currentTarget.style.background = "#f1f5f9"}
-          >
-            <ChevronRight size={20} color="#475569" />
+          <button onClick={() => handleManualScroll('next')} style={{ width: 40, height: 40, borderRadius: "50%", background: "#f3f4f6", border: "none", cursor: "pointer" }}>
+            <ChevronRight size={20} />
           </button>
         </div>
       </div>
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "center", 
-        gap: 24, 
-        flexWrap: "wrap" 
-      }}>
+      <div style={{ display: "flex", justifyContent: "center", gap: 24, flexWrap: "wrap" }}>
         {promoBanners.slice(0, 3).map((banner) => (
-          <div 
-            key={banner.id} 
-            onClick={() => handleBannerClick(banner)} 
-            style={{ 
-              flex: "1 1 280px", 
-              maxWidth: 340, 
-              background: banner.gradient, 
-              borderRadius: 24, 
-              padding: "28px 24px", 
-              color: "white", 
-              cursor: "pointer", 
-              transition: "all 0.3s ease",
-              position: "relative",
-              overflow: "hidden"
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-6px)";
-              e.currentTarget.style.boxShadow = "0 12px 40px rgba(0,0,0,0.15)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "none";
-            }}
-          >
-            <div style={{ 
-              position: "absolute", 
-              top: -20, 
-              right: -20, 
-              fontSize: 80, 
-              opacity: 0.1 
-            }}>
-              {banner.icon}
-            </div>
-            <div style={{ fontSize: 48, marginBottom: 16, position: "relative", zIndex: 1 }}>{banner.icon}</div>
-            <h3 style={{ fontSize: 28, fontWeight: 700, position: "relative", zIndex: 1 }}>{banner.title}</h3>
-            <p style={{ fontSize: 16, opacity: 0.9, position: "relative", zIndex: 1 }}>{banner.subtitle}</p>
-            <p style={{ fontSize: 14, opacity: 0.75, marginBottom: 18, position: "relative", zIndex: 1 }}>{banner.description}</p>
-            <div style={{ 
-              display: "inline-flex", 
-              alignItems: "center", 
-              gap: 8, 
-              padding: "8px 20px", 
-              background: "rgba(255,255,255,0.2)", 
-              borderRadius: 30, 
-              fontSize: 14,
-              fontWeight: 500,
-              position: "relative", 
-              zIndex: 1,
-              backdropFilter: "blur(4px)",
-              transition: "all 0.2s"
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.3)"}
-            onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.2)"}
-            >
+          <div key={banner.id} onClick={() => handleBannerClick(banner)} style={{ flex: "1 1 280px", maxWidth: 320, background: banner.gradient, borderRadius: 24, padding: 24, color: "white", cursor: "pointer", transition: "transform 0.3s" }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>{banner.icon}</div>
+            <h3 style={{ fontSize: 26, fontWeight: 700 }}>{banner.title}</h3>
+            <p style={{ fontSize: 15, opacity: 0.9 }}>{banner.subtitle}</p>
+            <p style={{ fontSize: 13, opacity: 0.75, marginBottom: 16 }}>{banner.description}</p>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", background: "rgba(255,255,255,0.2)", borderRadius: 30, fontSize: 13 }}>
               Claim Offer →
             </div>
           </div>
@@ -1974,169 +1690,70 @@ const PromoBannerSlider = ({ onBannerClick }) => {
   );
 };
 
-// ================= HERO BANNER =================
+/* ================= HERO BANNER COMPONENT ================= */
 const HeroBanner = () => {
   const isMobile = isMobileDevice();
   
   return (
     <div style={{
-      background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #2c5282 100%)",
+      background: "linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%)",
       borderRadius: 24,
       marginBottom: 40,
       overflow: "hidden",
-      padding: isMobile ? "48px 24px" : "64px 48px",
-      position: "relative"
+      padding: isMobile ? "40px 20px" : "60px 40px",
     }}>
-      <div style={{
-        position: "absolute",
-        top: -100,
-        right: -100,
-        width: 400,
-        height: 400,
-        background: "rgba(59,130,246,0.1)",
-        borderRadius: "50%"
-      }} />
-      <div style={{
-        position: "absolute",
-        bottom: -80,
-        left: -80,
-        width: 300,
-        height: 300,
-        background: "rgba(16,185,129,0.08)",
-        borderRadius: "50%"
-      }} />
       <h1 style={{
-        fontSize: isMobile ? "32px" : "48px",
+        fontSize: isMobile ? "36px" : "52px",
         fontWeight: 800,
         color: "#ffffff",
-        marginBottom: 12,
-        position: "relative",
-        zIndex: 1,
-        lineHeight: 1.1
+        marginBottom: 16,
       }}>
         Find Verified PGs,<br />
         Coliving & Rental Homes
       </h1>
       <p style={{
-        fontSize: isMobile ? "16px" : "20px",
-        color: "rgba(255,255,255,0.85)",
-        marginBottom: 28,
-        maxWidth: "600px",
-        position: "relative",
-        zIndex: 1,
-        lineHeight: 1.5
+        fontSize: isMobile ? "16px" : "22px",
+        color: "rgba(255,255,255,0.9)",
+        marginBottom: 32,
+        maxWidth: "90%"
       }}>
         Book trusted stays with secure payments and verified owners.
       </p>
-      <div style={{ 
-        display: "flex", 
-        flexWrap: "wrap", 
-        gap: 12,
-        position: "relative",
-        zIndex: 1
-      }}>
-        <div style={{ 
-          background: "rgba(16,185,129,0.2)", 
-          backdropFilter: "blur(4px)",
-          color: "#34d399", 
-          padding: "10px 20px", 
-          borderRadius: 30, 
-          fontWeight: 600,
-          border: "1px solid rgba(16,185,129,0.2)"
-        }}>✓ Verified</div>
-        <div style={{ 
-          background: "rgba(59,130,246,0.2)", 
-          backdropFilter: "blur(4px)",
-          color: "#60a5fa", 
-          padding: "10px 20px", 
-          borderRadius: 30, 
-          fontWeight: 600,
-          border: "1px solid rgba(59,130,246,0.2)"
-        }}>✓ Secure</div>
-        <div style={{ 
-          background: "rgba(139,92,246,0.2)", 
-          backdropFilter: "blur(4px)",
-          color: "#a78bfa", 
-          padding: "10px 20px", 
-          borderRadius: 30, 
-          fontWeight: 600,
-          border: "1px solid rgba(139,92,246,0.2)"
-        }}>✓ Trusted</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+        <div style={{ background: "#10b981", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Verified</div>
+        <div style={{ background: "#3b82f6", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Secure</div>
+        <div style={{ background: "#8b5cf6", color: "white", padding: "10px 18px", borderRadius: 30, fontWeight: 600 }}>✓ Trusted</div>
       </div>
     </div>
   );
 };
 
-// ================= LOCATION PERMISSION BANNER =================
+/* ================= LOCATION PERMISSION BANNER COMPONENT ================= */
 const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
   return (
     <div style={{
       background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
       borderRadius: 20,
-      marginBottom: 24,
+      marginBottom: 20,
       padding: "20px 24px",
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
       flexWrap: "wrap",
       gap: 16,
-      boxShadow: "0 4px 20px rgba(59,130,246,0.3)"
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <div style={{ 
-          background: "rgba(255,255,255,0.2)", 
-          borderRadius: "50%", 
-          width: 48, 
-          height: 48, 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: "center",
-          backdropFilter: "blur(4px)"
-        }}>
+        <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Navigation size={24} color="white" />
         </div>
         <div>
-          <h3 style={{ fontSize: 16, fontWeight: 600, color: "white", marginBottom: 2 }}>📍 Find Properties Near You</h3>
+          <h3 style={{ fontSize: 16, fontWeight: 600, color: "white" }}>📍 Find Properties Near You</h3>
           <p style={{ fontSize: 13, color: "rgba(255,255,255,0.9)" }}>Allow location access to see properties within 5km of your area</p>
         </div>
       </div>
       <div style={{ display: "flex", gap: 12 }}>
-        <button 
-          onClick={onDeny} 
-          style={{ 
-            padding: "10px 20px", 
-            background: "rgba(255,255,255,0.15)", 
-            color: "white", 
-            border: "1px solid rgba(255,255,255,0.2)", 
-            borderRadius: 10, 
-            cursor: "pointer",
-            fontWeight: 500,
-            transition: "all 0.2s",
-            backdropFilter: "blur(4px)"
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.25)"}
-          onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
-        >
-          Not Now
-        </button>
-        <button 
-          onClick={onAllow} 
-          disabled={isLoading} 
-          style={{ 
-            padding: "10px 24px", 
-            background: "white", 
-            color: "#3b82f6", 
-            border: "none", 
-            borderRadius: 10, 
-            fontWeight: 600, 
-            cursor: isLoading ? "not-allowed" : "pointer",
-            opacity: isLoading ? 0.7 : 1,
-            transition: "all 0.2s",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
-          }}
-          onMouseEnter={(e) => !isLoading && (e.currentTarget.style.transform = "translateY(-2px)")}
-          onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
-        >
+        <button onClick={onDeny} style={{ padding: "10px 20px", background: "rgba(255,255,255,0.2)", color: "white", border: "none", borderRadius: 10, cursor: "pointer" }}>Not Now</button>
+        <button onClick={onAllow} disabled={isLoading} style={{ padding: "10px 24px", background: "white", color: "#3b82f6", border: "none", borderRadius: 10, fontWeight: 600, cursor: "pointer" }}>
           {isLoading ? "Getting location..." : "Allow Location"}
         </button>
       </div>
@@ -2144,7 +1761,7 @@ const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
   );
 };
 
-// ================= PG PROPERTY CARD =================
+/* ================= UPDATED PG CARD COMPONENT WITH SEPARATE UI FOR PG AND TO-LET ================= */
 const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, isFavorite, isSelectedForCompare, onSelectForCompare, compareMode }) => {
   const isMobile = window.innerWidth < 768;
   const [currentImage, setCurrentImage] = useState(0);
@@ -2162,7 +1779,7 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
     if (hasMultipleImages && !compareMode) {
       const interval = setInterval(() => {
         setCurrentImage((prev) => (prev + 1) % photosArray.length);
-      }, 3000);
+      }, 2500);
       return () => clearInterval(interval);
     }
   }, [hasMultipleImages, photosArray.length, compareMode]);
@@ -2208,61 +1825,40 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
     if (pg.sqft_area) return `${pg.sqft_area} sqft`;
     return "Spacious";
   };
-
-  const getTypeColor = () => {
-    if (pg.pg_category === "to_let") return "#f97316";
-    if (pg.pg_category === "coliving") return "#8b5cf6";
-    if (pg.pg_type === "boys") return "#16a34a";
-    if (pg.pg_type === "girls") return "#db2777";
-    return "#3b82f6";
-  };
-
-  const getTypeLabel = () => {
-    if (pg.pg_category === "to_let") return "To-Let";
-    if (pg.pg_category === "coliving") return "Co-Living";
-    if (pg.pg_type) return `${pg.pg_type.charAt(0).toUpperCase() + pg.pg_type.slice(1)} PG`;
-    return "PG";
-  };
   
   return (
     <div
       onClick={() => onCardClick(pg)}
       style={{
-        borderRadius: 20,
+        borderRadius: 16,
         overflow: "hidden",
         background: "#fff",
         cursor: "pointer",
         transition: "all 0.3s ease",
-        border: isSelectedForCompare ? "2px solid #8b5cf6" : "1px solid #f1f5f9",
+        border: isSelectedForCompare ? "2px solid #8b5cf6" : "1px solid #e5e7eb",
         position: "relative",
         width: "100%",
         maxWidth: isMobile ? "100%" : "380px",
         minWidth: 0,
-        boxSizing: "border-box",
-        boxShadow: "0 2px 12px rgba(0,0,0,0.04)"
+        boxSizing: "border-box"
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.transform = "translateY(-6px)";
-        e.currentTarget.style.boxShadow = "0 12px 40px rgba(0,0,0,0.08)";
-        e.currentTarget.style.borderColor = "#e2e8f0";
+        e.currentTarget.style.transform = "translateY(-4px)";
+        e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,.12)";
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.04)";
-        e.currentTarget.style.borderColor = isSelectedForCompare ? "#8b5cf6" : "#f1f5f9";
+        e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,.08)";
       }}
     >
       {compareMode && (
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelectForCompare(pg.id, e);
-          }}
+          onClick={(e) => onSelectForCompare(pg.id, e)}
           style={{
             position: "absolute",
             top: 12,
             left: 12,
-            background: "rgba(255,255,255,0.95)",
+            background: "rgba(255,255,255,0.9)",
             border: "none",
             width: 36,
             height: 36,
@@ -2272,56 +1868,44 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
             justifyContent: "center",
             cursor: "pointer",
             zIndex: 20,
-            boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-            transition: "all 0.2s"
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
           }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.05)"}
-          onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
         >
-          {isSelectedForCompare ? <Check size={18} color="#8b5cf6" /> : <Plus size={18} color="#475569" />}
+          {isSelectedForCompare ? <Check size={18} color="#8b5cf6" /> : <Plus size={18} color="#374151" />}
         </button>
       )}
       
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onQuickView(pg, e);
-        }}
+        onClick={(e) => onQuickView(pg, e)}
         style={{
           position: "absolute",
           top: 12,
           right: 12,
-          background: "rgba(255,255,255,0.95)",
+          background: "rgba(255,255,255,0.9)",
           border: "none",
-          padding: "6px 16px",
+          padding: "8px 16px",
           borderRadius: 20,
           fontSize: 13,
           fontWeight: 500,
-          color: "#1e293b",
+          color: "#374151",
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
           gap: 6,
           zIndex: 10,
-          boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-          transition: "all 0.2s"
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
         }}
-        onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.05)"}
-        onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
       >
         <Eye size={14} /> Quick View
       </button>
       
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onFavorite(pg.id, e);
-        }}
+        onClick={(e) => onFavorite(pg.id, e)}
         style={{
           position: "absolute",
           top: 12,
           left: compareMode ? 56 : 12,
-          background: "rgba(255,255,255,0.95)",
+          background: "rgba(255,255,255,0.9)",
           border: "none",
           width: 36,
           height: 36,
@@ -2331,11 +1915,8 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
           justifyContent: "center",
           cursor: "pointer",
           zIndex: 10,
-          boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-          transition: "all 0.2s"
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
         }}
-        onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.05)"}
-        onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
       >
         <Heart size={18} color="#ef4444" fill={isFavorite ? "#ef4444" : "none"} />
       </button>
@@ -2355,15 +1936,14 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
           position: "absolute",
           bottom: 12,
           left: 12,
-          background: getTypeColor(),
+          background: pg.pg_category === "to_let" ? "#f97316" : pg.pg_category === "coliving" ? "#8b5cf6" : pg.pg_type === "boys" ? "#16a34a" : "#db2777",
           color: "#fff",
-          padding: "4px 14px",
+          padding: "6px 12px",
           borderRadius: 20,
           fontSize: 12,
           fontWeight: 600,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.15)"
         }}>
-          {getTypeLabel()}
+          {pg.pg_category === "to_let" ? "To-Let" : pg.pg_category === "coliving" ? "Co-Living" : pg.pg_type ? pg.pg_type.charAt(0).toUpperCase() + pg.pg_type.slice(1) + " PG" : "PG"}
         </div>
         
         {pg.distance && (
@@ -2372,17 +1952,15 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
             bottom: 12,
             right: 12,
             background: "rgba(0,0,0,0.7)",
-            backdropFilter: "blur(4px)",
             color: "white",
-            padding: "4px 12px",
+            padding: "4px 10px",
             borderRadius: 20,
-            fontSize: 12,
+            fontSize: 11,
             display: "flex",
             alignItems: "center",
-            gap: 4,
-            fontWeight: 500
+            gap: 4
           }}>
-            <Navigation size={12} /> {pg.distance.toFixed(1)} km
+            <Navigation size={10} /> {pg.distance.toFixed(1)} km
           </div>
         )}
         
@@ -2395,111 +1973,74 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
             display: "flex",
             gap: 6,
             background: "rgba(0,0,0,0.5)",
-            padding: "4px 10px",
-            borderRadius: 20,
-            backdropFilter: "blur(4px)"
+            padding: "4px 8px",
+            borderRadius: 20
           }}>
             {photosArray.map((_, idx) => (
               <div key={idx} style={{
-                width: currentImage === idx ? 8 : 5,
-                height: currentImage === idx ? 8 : 5,
+                width: currentImage === idx ? 8 : 6,
+                height: currentImage === idx ? 8 : 6,
                 borderRadius: "50%",
-                background: currentImage === idx ? "#fff" : "rgba(255,255,255,0.4)",
-                transition: "all 0.3s"
+                background: currentImage === idx ? "#fff" : "rgba(255,255,255,0.5)",
               }} />
             ))}
           </div>
         )}
       </div>
       
-      <div style={{ padding: "18px 20px 20px" }}>
-        <h3 style={{ 
-          fontSize: 18, 
-          fontWeight: 700, 
-          marginBottom: 4, 
-          color: "#0f172a",
-          lineHeight: 1.2,
-          display: "-webkit-box",
-          WebkitLineClamp: 1,
-          WebkitBoxOrient: "vertical",
-          overflow: "hidden"
-        }}>
-          {pg.pg_name}
-        </h3>
+      <div style={{ padding: 16 }}>
+        <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: "#111827" }}>{pg.pg_name}</h3>
         
-        <div style={{ 
-          display: "flex", 
-          alignItems: "center", 
-          gap: 4, 
-          marginBottom: 12, 
-          color: "#64748b", 
-          fontSize: 14 
-        }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 12, color: "#6b7280", fontSize: 14 }}>
           <MapPin size={14} />
-          <span style={{ display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-            {pg.area}{pg.city ? `, ${pg.city}` : ""}
-          </span>
+          <span>{pg.area}{pg.city ? `, ${pg.city}` : ""}</span>
         </div>
         
+        {/* ========== PG UI ========== */}
         {pg.pg_category !== "to_let" && (
           <>
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ 
-                fontSize: 22, 
-                fontWeight: 700, 
-                color: "#0f172a", 
-                display: "flex", 
-                alignItems: "baseline", 
-                gap: 4 
-              }}>
-                ₹{formatPrice(startingPrice)} 
-                <span style={{ fontSize: 13, fontWeight: 400, color: "#64748b" }}>onwards</span>
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: "#1e3a5f", display: "flex", alignItems: "baseline", gap: 4 }}>
+                ₹{formatPrice(startingPrice)} <span style={{ fontSize: 13, fontWeight: 400, color: "#6b7280" }}>onwards</span>
               </div>
-              <div style={{ fontSize: 12, color: "#10b981", fontWeight: 500 }}>per month</div>
+              <div style={{ fontSize: 11, color: "#10b981", fontWeight: 500 }}>per month</div>
             </div>
             
-            <div style={{
-              background: "#ecfdf5",
-              color: "#059669",
-              padding: "4px 12px",
-              borderRadius: 16,
-              fontSize: 12,
-              fontWeight: "600",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              marginBottom: 10,
-              border: "1px solid #bbf7d0"
-            }}>
-              🛏️ {pg.available_rooms || 0} Beds Left
-            </div>
+            {pg.pg_category !== "to_let" && (
+              <div style={{
+                background: "#ecfdf5",
+                color: "#059669",
+                padding: "6px 12px",
+                borderRadius: 20,
+                fontSize: 12,
+                fontWeight: "600",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: 10
+              }}>
+                🛏️ {pg.available_rooms || 0} Beds Left
+              </div>
+            )}
             
             {pg.pg_category === "pg" && foodTypeDisplay && (
-              <div style={{ 
-                display: "flex", 
-                alignItems: "center", 
-                gap: 6, 
-                marginBottom: 10, 
-                fontSize: 13, 
-                color: "#1e293b" 
-              }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12, fontSize: 13, color: "#374151" }}>
                 {foodTypeDisplay}
               </div>
             )}
             
-            {isFillingFast && (
+            {pg.pg_category !== "to_let" && isFillingFast && (
               <div style={{
                 background: "#fef3c7",
                 color: "#d97706",
-                padding: "4px 12px",
+                padding: "4px 10px",
                 borderRadius: 16,
                 fontSize: 11,
                 fontWeight: 600,
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 4,
-                marginBottom: 12,
-                border: "1px solid #fde68a"
+                marginBottom: 12
               }}>
                 🔥 Filling Fast
               </div>
@@ -2507,82 +2048,47 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
           </>
         )}
         
+        {/* ========== TO-LET UI ========== */}
         {pg.pg_category === "to_let" && (
           <>
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ 
-                fontSize: 22, 
-                fontWeight: 700, 
-                color: "#0f172a", 
-                display: "flex", 
-                alignItems: "baseline", 
-                gap: 4 
-              }}>
-                ₹{formatPrice(startingPrice)} 
-                <span style={{ fontSize: 13, fontWeight: 400, color: "#64748b" }}>/month</span>
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: "#1e3a5f", display: "flex", alignItems: "baseline", gap: 4 }}>
+                ₹{formatPrice(startingPrice)} <span style={{ fontSize: 13, fontWeight: 400, color: "#6b7280" }}>/month</span>
               </div>
             </div>
             
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 14, color: "#1e293b", marginBottom: 2 }}>
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 14, color: "#374151", marginBottom: 4 }}>
                 {getBHKDisplay()} • {getAreaDisplay()}
               </div>
             </div>
             
+            {/* To-Let Badges */}
             <div style={{
               display: "flex",
-              gap: "6px",
+              gap: "8px",
               flexWrap: "wrap",
               marginBottom: 12
             }}>
-              {pg.furnishing_type && (
-                <span style={{ 
-                  background: "#f1f5f9", 
-                  padding: "2px 12px", 
-                  borderRadius: 16, 
-                  fontSize: 12,
-                  color: "#475569"
-                }}>
-                  🛋️ {pg.furnishing_type}
-                </span>
-              )}
-              {pg.family_allowed && (
-                <span style={{ 
-                  background: "#f1f5f9", 
-                  padding: "2px 12px", 
-                  borderRadius: 16, 
-                  fontSize: 12,
-                  color: "#475569"
-                }}>
-                  👨‍👩‍👧 Family
-                </span>
-              )}
-              {pg.parking_available && (
-                <span style={{ 
-                  background: "#f1f5f9", 
-                  padding: "2px 12px", 
-                  borderRadius: 16, 
-                  fontSize: 12,
-                  color: "#475569"
-                }}>
-                  🚗 Parking
-                </span>
-              )}
+              {pg.bhk_type && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🏠 {pg.bhk_type}</span>}
+              {pg.furnishing_type && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🛋️ {pg.furnishing_type}</span>}
+              {pg.family_allowed && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>👨‍👩‍👧 Family</span>}
+              {pg.parking_available && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🚗 Parking</span>}
             </div>
             
+            {/* Ready to Move Badge */}
             {pg.ready_to_move && (
               <div style={{
                 background: "#dbeafe",
                 color: "#1e40af",
-                padding: "4px 12px",
+                padding: "4px 10px",
                 borderRadius: 16,
                 fontSize: 11,
                 fontWeight: 600,
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 4,
-                marginBottom: 12,
-                border: "1px solid #bfdbfe"
+                marginBottom: 12
               }}>
                 ✓ Ready to Move
               </div>
@@ -2595,46 +2101,33 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
           alignItems: "center",
           gap: 12,
           marginBottom: 14,
-          fontSize: 12,
-          color: "#64748b",
+          fontSize: 11,
+          color: "#6b7280",
           flexWrap: "wrap"
         }}>
           {pg.is_verified && (
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <Shield size={13} color="#10b981" /> Verified
+              <Shield size={12} color="#10b981" /> Verified
             </span>
           )}
         </div>
         
         <button
-          onClick={(e) => { 
-            e.stopPropagation(); 
-            onContact(pg); 
-          }}
+          onClick={(e) => { e.stopPropagation(); onContact(pg); }}
           style={{
             width: "100%",
             fontSize: 14,
             padding: "12px 16px",
-            background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+            background: "#3b82f6",
             color: "white",
             border: "none",
-            borderRadius: 12,
+            borderRadius: 10,
             fontWeight: 600,
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: 8,
-            transition: "all 0.2s",
-            boxShadow: "0 4px 12px rgba(59,130,246,0.25)"
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-2px)";
-            e.currentTarget.style.boxShadow = "0 6px 20px rgba(59,130,246,0.35)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
-            e.currentTarget.style.boxShadow = "0 4px 12px rgba(59,130,246,0.25)";
+            gap: 8
           }}
         >
           <MessageCircle size={16} /> Contact Owner
@@ -2644,7 +2137,7 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
   );
 };
 
-// ================= MAIN COMPONENT =================
+/* ================= MAIN COMPONENT ================= */
 function UserPGSearch() {
   const isMobile = window.innerWidth < 768;
   const navigate = useNavigate();
@@ -2652,7 +2145,7 @@ function UserPGSearch() {
 
   const [allPGs, setAllPGs] = useState([]);
   
-  // Pagination state
+  // ✅ PAGINATION STATE (FIXED)
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -2660,9 +2153,10 @@ function UserPGSearch() {
   const [totalCount, setTotalCount] = useState(0);
   const PAGE_SIZE = 12;
   
-  // Tab state
+  // Tab state - Default is "all"
   const [activeTab, setActiveTab] = useState("all");
   
+  // Property tabs definition
   const propertyTabs = [
     { id: "all", label: "All" },
     { id: "pg", label: "PG" },
@@ -2808,7 +2302,7 @@ function UserPGSearch() {
     }));
   };
 
-  // Load PGs with pagination
+  // ✅ FIXED: loadPGs with proper pagination
   const loadPGs = async (pageToLoad = 1, isLoadMore = false) => {
     try {
       if (!isLoadMore) {
@@ -2817,8 +2311,10 @@ function UserPGSearch() {
         setLoadingMore(true);
       }
       
+      // Build URL with proper parameters
       let url = `/pg/search/advanced?page=${pageToLoad}&limit=${PAGE_SIZE}`;
       
+      // Add sorting parameter
       let sortParam = "relevance";
       if (filters.sort === "low") sortParam = "price_low";
       else if (filters.sort === "high") sortParam = "price_high";
@@ -2826,10 +2322,12 @@ function UserPGSearch() {
       else if (filters.sort === "distance" && userLocation) sortParam = "nearest";
       url += `&sort_by=${sortParam}`;
       
+      // Add search parameter
       if (filters.location) {
         url += `&search=${encodeURIComponent(filters.location)}`;
       }
       
+      // Add user location for distance calculation
       if (userLocation && filters.nearMe) {
         url += `&lat=${userLocation.lat}&lng=${userLocation.lng}`;
       }
@@ -2840,6 +2338,7 @@ function UserPGSearch() {
       if (response.data?.data) {
         let rawData = response.data.data;
         
+        // Process distance data
         if (userLocation) {
           rawData = rawData.map(pg => {
             if (pg.latitude && pg.longitude) {
@@ -2858,6 +2357,7 @@ function UserPGSearch() {
           setAllPGs(prev => [...prev, ...processedData]);
         }
         
+        // ✅ CRITICAL: Use hasMore from backend response
         setHasMorePages(response.data.hasMore === true);
         setTotalCount(response.data.total || 0);
         setCurrentPage(pageToLoad);
@@ -2878,7 +2378,7 @@ function UserPGSearch() {
     loadPGs(1, false);
   };
 
-  // Load more function
+  // ✅ Load more function
   const loadMoreProperties = () => {
     if (!loadingMore && hasMorePages && !loading) {
       const nextPage = currentPage + 1;
@@ -2982,7 +2482,7 @@ function UserPGSearch() {
     );
   };
 
-  // Apply filters
+  // Apply filters - filter the loaded PGs
   const applyFilters = useCallback(() => {
     let filtered = [...allPGs];
 
@@ -3016,7 +2516,7 @@ function UserPGSearch() {
     return filtered;
   }, [allPGs, filters, userLocation]);
 
-  // Get filtered by tab
+  // Get filtered PGs based on tab
   const getFilteredByTab = useCallback(() => {
     const allFiltered = applyFilters();
     
@@ -3134,6 +2634,7 @@ function UserPGSearch() {
     setShowCompareModal(true);
   };
 
+  // Get title based on active tab
   const getTabTitle = () => {
     switch(activeTab) {
       case "pg": return "PG Accommodations";
@@ -3143,35 +2644,27 @@ function UserPGSearch() {
     }
   };
 
+  // Check if filters are active
   const hasActiveFilters = filters.location || filters.minBudget > 0 || filters.maxBudget < 50000 || filters.food || filters.ac || filters.wifi || filters.parking || filters.foodType || activeQuickFilters.size > 0;
 
   if (authLoading) {
     return (
       <div style={{ textAlign: "center", paddingTop: 100 }}>
-        <div style={{ width: 50, height: 50, border: "4px solid #f1f5f9", borderTop: "4px solid #3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
-        <p style={{ color: "#64748b" }}>Loading authentication...</p>
+        <div style={{ width: 50, height: 50, border: "4px solid #e5e7eb", borderTop: "4px solid #3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+        <p>Loading authentication...</p>
       </div>
     );
   }
   
   return (
-    <div style={{ maxWidth: 1400, margin: "0 auto", minHeight: "100vh", padding: "0 20px" }}>
+    <div style={{ maxWidth: 1400, margin: "auto", minHeight: "100vh", padding: "0 16px" }}>
       {/* Notification Toast */}
       {notification && (
         <div style={{
-          position: "fixed",
-          top: 20,
-          right: 20,
+          position: "fixed", top: 20, right: 20,
           background: notification.isError ? "#ef4444" : "#10b981",
-          color: "white",
-          padding: "14px 24px",
-          borderRadius: 16,
-          zIndex: 4000,
-          animation: "slideIn 0.3s ease",
-          boxShadow: "0 8px 30px rgba(0,0,0,0.15)",
-          fontWeight: 500,
-          fontSize: 14,
-          maxWidth: 400
+          color: "white", padding: "12px 24px", borderRadius: 10, zIndex: 4000,
+          animation: "slideIn 0.3s ease"
         }}>
           {notification.message}
         </div>
@@ -3188,24 +2681,24 @@ function UserPGSearch() {
       {/* Location Info Bar */}
       {userLocation && (
         <div style={{
-          background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
+          background: "linear-gradient(135deg, #f0f9ff, #e0f2fe)",
           borderRadius: 16,
-          padding: "14px 24px",
+          padding: "12px 20px",
           marginBottom: 24,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           flexWrap: "wrap",
           gap: 12,
-          border: "1px solid #bfdbfe"
+          border: "1px solid #bae6fd"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <Navigation size={20} color="#2563eb" />
+            <Navigation size={20} color="#0284c7" />
             <div>
-              <span style={{ fontWeight: 600, color: "#1e40af" }}>
+              <span style={{ fontWeight: 600, color: "#0369a1" }}>
                 📍 {userAddress ? `Near ${userAddress}` : "Your Location"}
               </span>
-              <span style={{ fontSize: 12, color: "#2563eb", marginLeft: 8, fontWeight: 500 }}>
+              <span style={{ fontSize: 12, color: "#0284c7", marginLeft: 8 }}>
                 Properties within 5km
               </span>
             </div>
@@ -3214,22 +2707,18 @@ function UserPGSearch() {
             onClick={detectLocation}
             disabled={locationLoading}
             style={{
-              padding: "8px 20px",
-              background: "#2563eb",
+              padding: "8px 16px",
+              background: "#0284c7",
               color: "white",
               border: "none",
               borderRadius: 10,
               fontSize: 13,
               fontWeight: 500,
-              cursor: locationLoading ? "not-allowed" : "pointer",
+              cursor: "pointer",
               display: "flex",
               alignItems: "center",
-              gap: 6,
-              opacity: locationLoading ? 0.7 : 1,
-              transition: "all 0.2s"
+              gap: 6
             }}
-            onMouseEnter={(e) => !locationLoading && (e.currentTarget.style.transform = "translateY(-2px)")}
-            onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
           >
             <Navigation size={14} />
             Refresh Location
@@ -3242,36 +2731,25 @@ function UserPGSearch() {
 
       {/* Quick Filters Section */}
       <div style={{ marginBottom: 28 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: "#1e293b" }}>Quick Filters</h3>
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: "#374151" }}>Quick Filters</h3>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           {quickFilters.map((filter) => (
             <button
               key={filter.id}
               onClick={() => applyQuickFilter(filter)}
               style={{
-                padding: "10px 20px",
+                padding: "10px 18px",
                 borderRadius: 40,
-                background: activeQuickFilters.has(filter.id) ? filter.id === "near_me" ? "#f97316" : "#3b82f6" : "#f8fafc",
-                color: activeQuickFilters.has(filter.id) ? "white" : "#1e293b",
-                border: activeQuickFilters.has(filter.id) ? "none" : "1px solid #e2e8f0",
+                background: activeQuickFilters.has(filter.id) ? filter.id === "near_me" ? "#f97316" : "#3b82f6" : "#f3f4f6",
+                color: activeQuickFilters.has(filter.id) ? "white" : "#374151",
+                border: "none",
                 cursor: "pointer",
                 fontSize: 14,
                 fontWeight: 500,
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
-                transition: "all 0.2s",
-                boxShadow: activeQuickFilters.has(filter.id) ? "0 4px 12px rgba(59,130,246,0.25)" : "none"
-              }}
-              onMouseEnter={(e) => {
-                if (!activeQuickFilters.has(filter.id)) {
-                  e.currentTarget.style.background = "#f1f5f9";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!activeQuickFilters.has(filter.id)) {
-                  e.currentTarget.style.background = "#f8fafc";
-                }
+                transition: "all 0.2s"
               }}
             >
               {filter.icon}
@@ -3283,7 +2761,7 @@ function UserPGSearch() {
 
       {/* Popular Areas Chips */}
       <div style={{ marginBottom: 28 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: "#1e293b" }}>📍 Popular Areas in Bangalore</h3>
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: "#374151" }}>📍 Popular Areas in Bangalore</h3>
         <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 10, scrollbarWidth: "thin" }}>
           {popularAreas.map((area) => (
             <button
@@ -3292,9 +2770,9 @@ function UserPGSearch() {
               style={{
                 padding: "10px 20px",
                 borderRadius: 40,
-                border: filters.location === area.name ? `2px solid ${area.color}` : "1px solid #e2e8f0",
+                border: filters.location === area.name ? `2px solid ${area.color}` : "1px solid #e5e7eb",
                 background: filters.location === area.name ? `${area.color}10` : "#fff",
-                color: filters.location === area.name ? area.color : "#475569",
+                color: filters.location === area.name ? area.color : "#374151",
                 whiteSpace: "nowrap",
                 cursor: "pointer",
                 fontWeight: 500,
@@ -3304,18 +2782,6 @@ function UserPGSearch() {
                 gap: 8,
                 transition: "all 0.2s"
               }}
-              onMouseEnter={(e) => {
-                if (filters.location !== area.name) {
-                  e.currentTarget.style.borderColor = area.color;
-                  e.currentTarget.style.background = `${area.color}08`;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (filters.location !== area.name) {
-                  e.currentTarget.style.borderColor = "#e2e8f0";
-                  e.currentTarget.style.background = "#fff";
-                }
-              }}
             >
               <span>{area.icon}</span> {area.name}
             </button>
@@ -3323,340 +2789,84 @@ function UserPGSearch() {
         </div>
       </div>
 
-      {/* Modern Filter Bar */}
+      {/* Filter Bar */}
       <div style={{ 
         background: "#fff", 
         borderRadius: 20, 
         padding: "20px 24px", 
-        boxShadow: "0 4px 20px rgba(0,0,0,0.05)", 
+        boxShadow: "0 4px 20px rgba(0,0,0,0.06)", 
         marginBottom: 32, 
         position: "sticky", 
         top: 20, 
         zIndex: 100,
-        border: "1px solid #f1f5f9"
+        border: "1px solid #eef2ff"
       }}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
           <div style={{ flex: 1, minWidth: 260, position: "relative" }}>
-            <Search size={18} style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+            <Search size={18} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
             <input 
               placeholder="Search by area, city or property name..." 
               value={filters.location} 
               onChange={(e) => setFilters({ ...filters, location: e.target.value })} 
-              style={{ 
-                width: "100%", 
-                padding: "12px 16px 12px 44px", 
-                border: "1px solid #e2e8f0", 
-                borderRadius: 40, 
-                fontSize: 14, 
-                background: "#f8fafc",
-                outline: "none",
-                transition: "border-color 0.2s"
-              }}
-              onFocus={(e) => e.target.style.borderColor = "#3b82f6"}
-              onBlur={(e) => e.target.style.borderColor = "#e2e8f0"}
+              style={{ width: "100%", padding: "12px 14px 12px 42px", border: "1px solid #e5e7eb", borderRadius: 40, fontSize: 14, background: "#fafafa" }} 
             />
           </div>
-          <button 
-            onClick={() => setShowBudgetFilter(true)} 
-            style={{ 
-              padding: "12px 20px", 
-              background: "#f8fafc", 
-              border: "1px solid #e2e8f0", 
-              borderRadius: 40, 
-              display: "flex", 
-              alignItems: "center", 
-              gap: 8, 
-              cursor: "pointer", 
-              fontWeight: 500,
-              fontSize: 14,
-              color: "#1e293b",
-              transition: "all 0.2s"
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.borderColor = "#cbd5e1"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#e2e8f0"; }}
-          >
+          <button onClick={() => setShowBudgetFilter(true)} style={{ padding: "12px 20px", background: "#f3f4f6", border: "none", borderRadius: 40, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 500 }}>
             <Coins size={16} /> Budget
           </button>
-          <button 
-            onClick={() => setShowFilters(!showFilters)} 
-            style={{ 
-              padding: "12px 20px", 
-              background: showFilters ? "#3b82f6" : "#f8fafc", 
-              color: showFilters ? "white" : "#1e293b",
-              border: showFilters ? "none" : "1px solid #e2e8f0", 
-              borderRadius: 40, 
-              display: "flex", 
-              alignItems: "center", 
-              gap: 8, 
-              cursor: "pointer", 
-              fontWeight: 500,
-              fontSize: 14,
-              transition: "all 0.2s"
-            }}
-            onMouseEnter={(e) => {
-              if (!showFilters) {
-                e.currentTarget.style.background = "#f1f5f9";
-                e.currentTarget.style.borderColor = "#cbd5e1";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!showFilters) {
-                e.currentTarget.style.background = "#f8fafc";
-                e.currentTarget.style.borderColor = "#e2e8f0";
-              }
-            }}
-          >
+          <button onClick={() => setShowFilters(!showFilters)} style={{ padding: "12px 20px", background: showFilters ? "#3b82f6" : "#f3f4f6", color: showFilters ? "white" : "#374151", border: "none", borderRadius: 40, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 500 }}>
             <Filter size={16} /> Filters
           </button>
-          <button 
-            onClick={detectLocation} 
-            style={{ 
-              padding: "12px 20px", 
-              background: filters.nearMe ? "#f97316" : "#f8fafc", 
-              color: filters.nearMe ? "white" : "#1e293b",
-              border: filters.nearMe ? "none" : "1px solid #e2e8f0", 
-              borderRadius: 40, 
-              display: "flex", 
-              alignItems: "center", 
-              gap: 8, 
-              cursor: "pointer", 
-              fontWeight: 500,
-              fontSize: 14,
-              transition: "all 0.2s"
-            }}
-            onMouseEnter={(e) => {
-              if (!filters.nearMe) {
-                e.currentTarget.style.background = "#f1f5f9";
-                e.currentTarget.style.borderColor = "#cbd5e1";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!filters.nearMe) {
-                e.currentTarget.style.background = "#f8fafc";
-                e.currentTarget.style.borderColor = "#e2e8f0";
-              }
-            }}
-          >
+          <button onClick={detectLocation} style={{ padding: "12px 20px", background: filters.nearMe ? "#f97316" : "#f3f4f6", color: filters.nearMe ? "white" : "#374151", border: "none", borderRadius: 40, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 500 }}>
             <Navigation size={16} /> Near Me
           </button>
-          <button 
-            onClick={toggleCompareMode} 
-            style={{ 
-              padding: "12px 20px", 
-              background: compareMode ? "#8b5cf6" : "#f8fafc", 
-              color: compareMode ? "white" : "#1e293b",
-              border: compareMode ? "none" : "1px solid #e2e8f0", 
-              borderRadius: 40, 
-              display: "flex", 
-              alignItems: "center", 
-              gap: 8, 
-              cursor: "pointer", 
-              fontWeight: 500,
-              fontSize: 14,
-              transition: "all 0.2s"
-            }}
-            onMouseEnter={(e) => {
-              if (!compareMode) {
-                e.currentTarget.style.background = "#f1f5f9";
-                e.currentTarget.style.borderColor = "#cbd5e1";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!compareMode) {
-                e.currentTarget.style.background = "#f8fafc";
-                e.currentTarget.style.borderColor = "#e2e8f0";
-              }
-            }}
-          >
+          <button onClick={toggleCompareMode} style={{ padding: "12px 20px", background: compareMode ? "#8b5cf6" : "#f3f4f6", color: compareMode ? "white" : "#374151", border: "none", borderRadius: 40, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 500 }}>
             <BarChart size={16} /> Compare
           </button>
           {hasActiveFilters && (
-            <button 
-              onClick={resetFilters} 
-              style={{ 
-                padding: "12px 20px", 
-                background: "#ef4444", 
-                color: "white", 
-                border: "none", 
-                borderRadius: 40, 
-                display: "flex", 
-                alignItems: "center", 
-                gap: 8, 
-                cursor: "pointer", 
-                fontWeight: 500,
-                fontSize: 14,
-                transition: "all 0.2s"
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "#dc2626"; e.currentTarget.style.transform = "scale(1.02)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "#ef4444"; e.currentTarget.style.transform = "scale(1)"; }}
-            >
+            <button onClick={resetFilters} style={{ padding: "12px 20px", background: "#ef4444", color: "white", border: "none", borderRadius: 40, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 500 }}>
               <X size={16} /> Clear All
             </button>
           )}
         </div>
 
         {showFilters && (
-          <div style={{ paddingTop: 20, marginTop: 20, borderTop: "1px solid #f1f5f9" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>Advanced Filters</h3>
+          <div style={{ paddingTop: 20, marginTop: 20, borderTop: "1px solid #eef2ff" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600 }}>Advanced Filters</h3>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }}>
-              <select 
-                value={filters.foodType} 
-                onChange={(e) => setFilters({ ...filters, foodType: e.target.value })} 
-                style={{ 
-                  padding: "10px 16px", 
-                  border: "1px solid #e2e8f0", 
-                  borderRadius: 30, 
-                  background: "#f8fafc",
-                  fontSize: 14,
-                  color: "#1e293b",
-                  outline: "none",
-                  transition: "border-color 0.2s"
-                }}
-                onFocus={(e) => e.target.style.borderColor = "#3b82f6"}
-                onBlur={(e) => e.target.style.borderColor = "#e2e8f0"}
-              >
+              <select value={filters.foodType} onChange={(e) => setFilters({ ...filters, foodType: e.target.value })} style={{ padding: "10px 14px", border: "1px solid #e5e7eb", borderRadius: 30, background: "#fafafa" }}>
                 <option value="">Any Food Type</option>
                 <option value="veg">Vegetarian Only</option>
                 <option value="non-veg">Non-Vegetarian Only</option>
                 <option value="both">Both Available</option>
               </select>
-              <select 
-                value={filters.sort} 
-                onChange={(e) => setFilters({ ...filters, sort: e.target.value })} 
-                style={{ 
-                  padding: "10px 16px", 
-                  border: "1px solid #e2e8f0", 
-                  borderRadius: 30, 
-                  background: "#f8fafc",
-                  fontSize: 14,
-                  color: "#1e293b",
-                  outline: "none",
-                  transition: "border-color 0.2s"
-                }}
-                onFocus={(e) => e.target.style.borderColor = "#3b82f6"}
-                onBlur={(e) => e.target.style.borderColor = "#e2e8f0"}
-              >
+              <select value={filters.sort} onChange={(e) => setFilters({ ...filters, sort: e.target.value })} style={{ padding: "10px 14px", border: "1px solid #e5e7eb", borderRadius: 30, background: "#fafafa" }}>
                 <option value="">Sort by: Relevance</option>
                 <option value="low">Rent: Low to High</option>
                 <option value="high">Rent: High to Low</option>
                 <option value="new">Newest First</option>
                 {userLocation && <option value="distance">Distance (Nearest First)</option>}
               </select>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <label style={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  gap: 6, 
-                  padding: "6px 16px", 
-                  background: filters.food ? "#10b981" : "#f8fafc", 
-                  borderRadius: 30, 
-                  cursor: "pointer", 
-                  fontSize: 13,
-                  fontWeight: 500,
-                  color: filters.food ? "white" : "#1e293b",
-                  border: filters.food ? "none" : "1px solid #e2e8f0",
-                  transition: "all 0.2s"
-                }}
-                onMouseEnter={(e) => {
-                  if (!filters.food) {
-                    e.currentTarget.style.background = "#f1f5f9";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!filters.food) {
-                    e.currentTarget.style.background = "#f8fafc";
-                  }
-                }}
-              >
-                <input type="checkbox" checked={filters.food} onChange={(e) => setFilters({ ...filters, food: e.target.checked })} style={{ display: "none" }} />
-                <Utensils size={14} /> Food
-              </label>
-              <label style={{ 
-                display: "flex", 
-                alignItems: "center", 
-                gap: 6, 
-                padding: "6px 16px", 
-                background: filters.ac ? "#3b82f6" : "#f8fafc", 
-                borderRadius: 30, 
-                cursor: "pointer", 
-                fontSize: 13,
-                fontWeight: 500,
-                color: filters.ac ? "white" : "#1e293b",
-                border: filters.ac ? "none" : "1px solid #e2e8f0",
-                transition: "all 0.2s"
-              }}
-              onMouseEnter={(e) => {
-                if (!filters.ac) {
-                  e.currentTarget.style.background = "#f1f5f9";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!filters.ac) {
-                  e.currentTarget.style.background = "#f8fafc";
-                }
-              }}
-              >
-                <input type="checkbox" checked={filters.ac} onChange={(e) => setFilters({ ...filters, ac: e.target.checked })} style={{ display: "none" }} />
-                <Snowflake size={14} /> AC
-              </label>
-              <label style={{ 
-                display: "flex", 
-                alignItems: "center", 
-                gap: 6, 
-                padding: "6px 16px", 
-                background: filters.wifi ? "#8b5cf6" : "#f8fafc", 
-                borderRadius: 30, 
-                cursor: "pointer", 
-                fontSize: 13,
-                fontWeight: 500,
-                color: filters.wifi ? "white" : "#1e293b",
-                border: filters.wifi ? "none" : "1px solid #e2e8f0",
-                transition: "all 0.2s"
-              }}
-              onMouseEnter={(e) => {
-                if (!filters.wifi) {
-                  e.currentTarget.style.background = "#f1f5f9";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!filters.wifi) {
-                  e.currentTarget.style.background = "#f8fafc";
-                }
-              }}
-              >
-                <input type="checkbox" checked={filters.wifi} onChange={(e) => setFilters({ ...filters, wifi: e.target.checked })} style={{ display: "none" }} />
-                <Wifi size={14} /> WiFi
-              </label>
-              <label style={{ 
-                display: "flex", 
-                alignItems: "center", 
-                gap: 6, 
-                padding: "6px 16px", 
-                background: filters.parking ? "#f59e0b" : "#f8fafc", 
-                borderRadius: 30, 
-                cursor: "pointer", 
-                fontSize: 13,
-                fontWeight: 500,
-                color: filters.parking ? "white" : "#1e293b",
-                border: filters.parking ? "none" : "1px solid #e2e8f0",
-                transition: "all 0.2s"
-              }}
-              onMouseEnter={(e) => {
-                if (!filters.parking) {
-                  e.currentTarget.style.background = "#f1f5f9";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!filters.parking) {
-                  e.currentTarget.style.background = "#f8fafc";
-                }
-              }}
-              >
-                <input type="checkbox" checked={filters.parking} onChange={(e) => setFilters({ ...filters, parking: e.target.checked })} style={{ display: "none" }} />
-                <Car size={14} /> Parking
-              </label>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", background: filters.food ? "#10b981" : "#f3f4f6", borderRadius: 30, cursor: "pointer", fontSize: 13 }}>
+                  <input type="checkbox" checked={filters.food} onChange={(e) => setFilters({ ...filters, food: e.target.checked })} style={{ display: "none" }} />
+                  <Utensils size={14} /> Food
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", background: filters.ac ? "#3b82f6" : "#f3f4f6", borderRadius: 30, cursor: "pointer", fontSize: 13 }}>
+                  <input type="checkbox" checked={filters.ac} onChange={(e) => setFilters({ ...filters, ac: e.target.checked })} style={{ display: "none" }} />
+                  <Snowflake size={14} /> AC
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", background: filters.wifi ? "#8b5cf6" : "#f3f4f6", borderRadius: 30, cursor: "pointer", fontSize: 13 }}>
+                  <input type="checkbox" checked={filters.wifi} onChange={(e) => setFilters({ ...filters, wifi: e.target.checked })} style={{ display: "none" }} />
+                  <Wifi size={14} /> WiFi
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", background: filters.parking ? "#f59e0b" : "#f3f4f6", borderRadius: 30, cursor: "pointer", fontSize: 13 }}>
+                  <input type="checkbox" checked={filters.parking} onChange={(e) => setFilters({ ...filters, parking: e.target.checked })} style={{ display: "none" }} />
+                  <Car size={14} /> Parking
+                </label>
+              </div>
             </div>
           </div>
         )}
@@ -3667,7 +2877,7 @@ function UserPGSearch() {
         display: "flex", 
         gap: 8, 
         marginBottom: 28,
-        borderBottom: "2px solid #f1f5f9",
+        borderBottom: "1px solid #e5e7eb",
         paddingBottom: 12,
         overflowX: "auto",
         scrollbarWidth: "thin"
@@ -3677,28 +2887,16 @@ function UserPGSearch() {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             style={{
-              padding: "10px 24px",
+              padding: "12px 24px",
               borderRadius: 40,
-              background: activeTab === tab.id ? "#0f172a" : "transparent",
-              color: activeTab === tab.id ? "white" : "#64748b",
-              border: "none",
+              background: activeTab === tab.id ? "#1e3a5f" : "transparent",
+              color: activeTab === tab.id ? "white" : "#4b5563",
+              border: activeTab === tab.id ? "none" : "1px solid #e5e7eb",
               cursor: "pointer",
               fontSize: 15,
               fontWeight: activeTab === tab.id ? 600 : 500,
               transition: "all 0.2s ease",
               whiteSpace: "nowrap"
-            }}
-            onMouseEnter={(e) => {
-              if (activeTab !== tab.id) {
-                e.currentTarget.style.color = "#0f172a";
-                e.currentTarget.style.background = "#f1f5f9";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (activeTab !== tab.id) {
-                e.currentTarget.style.color = "#64748b";
-                e.currentTarget.style.background = "transparent";
-              }
             }}
           >
             {tab.label}
@@ -3716,10 +2914,10 @@ function UserPGSearch() {
         gap: 12
       }}>
         <div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: "#0f172a", margin: 0 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>
             {getTabTitle()}
           </h2>
-          <p style={{ fontSize: 14, color: "#64748b", margin: "4px 0 0" }}>
+          <p style={{ fontSize: 14, color: "#6b7280", margin: "4px 0 0" }}>
             {resultCount} {resultCount === 1 ? "property" : "properties"} found
           </p>
         </div>
@@ -3728,8 +2926,8 @@ function UserPGSearch() {
           <button
             onClick={handleCompare}
             style={{
-              padding: "10px 24px",
-              background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+              padding: "10px 20px",
+              background: "#8b5cf6",
               color: "white",
               border: "none",
               borderRadius: 40,
@@ -3738,12 +2936,8 @@ function UserPGSearch() {
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              transition: "all 0.2s",
-              boxShadow: "0 4px 12px rgba(139,92,246,0.3)"
+              gap: 8
             }}
-            onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
-            onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
           >
             <BarChart size={16} />
             Compare ({selectedForCompare.size})
@@ -3754,8 +2948,8 @@ function UserPGSearch() {
       {/* Properties Grid */}
       {loading ? (
         <div style={{ textAlign: "center", padding: "80px 20px" }}>
-          <div style={{ width: 50, height: 50, border: "4px solid #f1f5f9", borderTop: "4px solid #3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 20px" }} />
-          <p style={{ color: "#64748b" }}>Loading properties...</p>
+          <div style={{ width: 50, height: 50, border: "4px solid #e5e7eb", borderTop: "4px solid #3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 20px" }} />
+          <p style={{ color: "#6b7280" }}>Loading properties...</p>
         </div>
       ) : filteredPGs.length > 0 ? (
         <>
@@ -3780,15 +2974,15 @@ function UserPGSearch() {
             ))}
           </div>
           
-          {/* Load More Button */}
+          {/* ✅ LOAD MORE BUTTON - FIXED */}
           {!loading && hasMorePages && !loadingMore && filteredPGs.length > 0 && filteredPGs.length < totalCount && (
             <div style={{ textAlign: "center", marginTop: 40, marginBottom: 60 }}>
               <button
                 onClick={loadMoreProperties}
                 disabled={loadingMore}
                 style={{
-                  padding: "14px 36px",
-                  background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                  padding: "14px 32px",
+                  background: "#2563eb",
                   color: "white",
                   border: "none",
                   borderRadius: 12,
@@ -3799,11 +2993,8 @@ function UserPGSearch() {
                   transition: "all 0.3s ease",
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: 8,
-                  boxShadow: "0 4px 16px rgba(37,99,235,0.3)"
+                  gap: 8
                 }}
-                onMouseEnter={(e) => !loadingMore && (e.currentTarget.style.transform = "translateY(-2px)")}
-                onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
               >
                 {loadingMore ? (
                   <>
@@ -3830,47 +3021,24 @@ function UserPGSearch() {
               <div style={{
                 width: 40,
                 height: 40,
-                border: "3px solid #f1f5f9",
+                border: "3px solid #e5e7eb",
                 borderTop: "3px solid #2563eb",
                 borderRadius: "50%",
                 animation: "spin 0.8s linear infinite",
                 margin: "0 auto"
               }} />
-              <p style={{ marginTop: 12, color: "#64748b", fontSize: 14 }}>
+              <p style={{ marginTop: 12, color: "#6b7280", fontSize: 14 }}>
                 Loading more properties...
               </p>
             </div>
           )}
         </>
       ) : (
-        <div style={{ 
-          textAlign: "center", 
-          padding: "80px 20px", 
-          background: "#fafafa", 
-          borderRadius: 24, 
-          marginBottom: 40,
-          border: "1px dashed #e2e8f0"
-        }}>
-          <Search size={56} style={{ margin: "0 auto 20px", color: "#cbd5e1" }} />
-          <h3 style={{ fontSize: 22, fontWeight: 600, color: "#1e293b", marginBottom: 8 }}>No properties found</h3>
-          <p style={{ color: "#64748b", marginBottom: 28 }}>Try adjusting your filters or search for a different location</p>
-          <button 
-            onClick={resetFilters} 
-            style={{ 
-              padding: "12px 32px", 
-              background: "linear-gradient(135deg, #3b82f6, #2563eb)", 
-              color: "white", 
-              border: "none", 
-              borderRadius: 40, 
-              cursor: "pointer", 
-              fontWeight: 600,
-              fontSize: 14,
-              transition: "all 0.2s",
-              boxShadow: "0 4px 12px rgba(59,130,246,0.3)"
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
-            onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
-          >
+        <div style={{ textAlign: "center", padding: "80px 20px", background: "#f9fafb", borderRadius: 24, marginBottom: 40 }}>
+          <Search size={56} style={{ margin: "0 auto 20px", color: "#9ca3af" }} />
+          <h3 style={{ fontSize: 22, fontWeight: 600, color: "#374151", marginBottom: 8 }}>No properties found</h3>
+          <p style={{ color: "#6b7280", marginBottom: 28 }}>Try adjusting your filters or search for a different location</p>
+          <button onClick={resetFilters} style={{ padding: "12px 28px", background: "#3b82f6", color: "white", border: "none", borderRadius: 40, cursor: "pointer", fontWeight: 600 }}>
             Reset All Filters
           </button>
         </div>
@@ -3885,24 +3053,7 @@ function UserPGSearch() {
       {/* Sticky Contact Button for Mobile */}
       {isMobile && !compareMode && filteredPGs.length > 0 && (
         <div style={{ position: "fixed", bottom: 16, left: 16, right: 16, zIndex: 999 }}>
-          <button 
-            onClick={() => handleBookNow(filteredPGs[0])} 
-            style={{ 
-              width: "100%", 
-              padding: "14px", 
-              background: "linear-gradient(135deg, #3b82f6, #2563eb)", 
-              color: "white", 
-              border: "none", 
-              borderRadius: 60, 
-              fontSize: 16, 
-              fontWeight: 600, 
-              display: "flex", 
-              alignItems: "center", 
-              justifyContent: "center", 
-              gap: 8, 
-              boxShadow: "0 4px 20px rgba(59,130,246,0.35)"
-            }}
-          >
+          <button onClick={() => handleBookNow(filteredPGs[0])} style={{ width: "100%", padding: "14px", background: "#3b82f6", color: "white", border: "none", borderRadius: 60, fontSize: 16, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}>
             <MessageCircle size={20} /> Contact Owner
           </button>
         </div>
@@ -3910,7 +3061,7 @@ function UserPGSearch() {
 
       <style>{`
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         
         *::-webkit-scrollbar {
@@ -3918,15 +3069,12 @@ function UserPGSearch() {
           width: 6px;
         }
         *::-webkit-scrollbar-track {
-          background: #f8fafc;
+          background: #f1f1f1;
           border-radius: 10px;
         }
         *::-webkit-scrollbar-thumb {
-          background: #e2e8f0;
-          border-radius: 10px;
-        }
-        *::-webkit-scrollbar-thumb:hover {
           background: #cbd5e1;
+          border-radius: 10px;
         }
       `}</style>
     </div>
