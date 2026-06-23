@@ -258,7 +258,7 @@ const getEffectiveRent = (pg) => {
   );
 };
 
-/* ================= MODERN BUDGET FILTER COMPONENT ================= */
+// ================= BUDGET FILTER COMPONENT =================
 const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
   const [localMin, setLocalMin] = useState(minBudget);
   const [localMax, setLocalMax] = useState(maxBudget);
@@ -640,7 +640,7 @@ const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
   );
 };
 
-/* ================= MODERN BOOKING MODAL ================= */
+// ================= BOOKING MODAL =================
 const BookingModal = ({ pg, onClose, onBook }) => {
 
   const [bookingData, setBookingData] = useState({
@@ -1044,7 +1044,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
   );
 };
 
-/* ================= MODERN QUICK VIEW MODAL ================= */
+// ================= QUICK VIEW MODAL =================
 const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
@@ -1426,7 +1426,7 @@ const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
   );
 };
 
-/* ================= MODERN COMPARE MODAL ================= */
+// ================= COMPARE MODAL =================
 const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
   const [compareData, setCompareData] = useState([]);
 
@@ -1699,7 +1699,7 @@ const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
   );
 };
 
-/* ================= MODERN PROMO BANNER SLIDER ================= */
+// ================= PROMO BANNER SLIDER =================
 const PromoBannerSlider = ({ onBannerClick }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
@@ -1974,7 +1974,7 @@ const PromoBannerSlider = ({ onBannerClick }) => {
   );
 };
 
-/* ================= MODERN HERO BANNER ================= */
+// ================= HERO BANNER =================
 const HeroBanner = () => {
   const isMobile = isMobileDevice();
   
@@ -2067,7 +2067,7 @@ const HeroBanner = () => {
   );
 };
 
-/* ================= LOCATION PERMISSION BANNER ================= */
+// ================= LOCATION PERMISSION BANNER =================
 const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
   return (
     <div style={{
@@ -2144,7 +2144,7 @@ const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
   );
 };
 
-/* ================= MODERN PG CARD ================= */
+// ================= PG PROPERTY CARD =================
 const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, isFavorite, isSelectedForCompare, onSelectForCompare, compareMode }) => {
   const isMobile = window.innerWidth < 768;
   const [currentImage, setCurrentImage] = useState(0);
@@ -2644,7 +2644,7 @@ const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, i
   );
 };
 
-/* ================= MAIN COMPONENT ================= */
+// ================= MAIN COMPONENT =================
 function UserPGSearch() {
   const isMobile = window.innerWidth < 768;
   const navigate = useNavigate();
