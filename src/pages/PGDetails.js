@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef } from "react";
+
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -7,8 +8,8 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import api from "../api/api";
 import {
-  X, MapPin, Navigation, ChevronLeft, ChevronRight, Check, Info,
-  Share2, Heart, ArrowUpRight, Phone, Sparkles, ArrowUp
+  MapPin, Navigation, ChevronLeft, ChevronRight, Check,
+  Share2, Heart, ArrowUpRight, Phone, Sparkles, ArrowUp, Calendar, Eye
 } from "lucide-react";
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -18,11 +19,23 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
+/* ============ NEW THEME — Midnight Editorial ============ */
 const T = {
-  paper: "#F7F5F0", paperDeep: "#EFEBE2", surface: "#FFFFFF",
-  ink: "#14181A", inkSoft: "#3E4544", inkMute: "#7A8280",
-  line: "#E5E0D5", emerald: "#0F4C3A", emeraldSoft: "#E4EFE9",
-  tan: "#B8956A", coral: "#C7522A", danger: "#B23A48", success: "#0F4C3A",
+  bg: "#0B0C0E",            // canvas
+  bgSoft: "#121316",        // raised
+  bgElev: "#191B1F",        // card
+  bgGlass: "rgba(25,27,31,0.65)",
+  ink: "#F2EFE8",           // primary text (cream)
+  inkSoft: "#B7B2A6",       // secondary
+  inkMute: "#7A7568",       // tertiary
+  line: "#2A2C30",
+  lineSoft: "#1F2125",
+  gold: "#D9B26A",          // primary accent
+  goldSoft: "#3A2F1B",
+  emerald: "#7BB69A",        // success / available
+  emeraldSoft: "#1A2A23",
+  coral: "#E07856",          // heart / warn
+  danger: "#D85A6C",
 };
 
 const BASE_URL = process.env.REACT_APP_API_URL?.replace("/api", "") || "https://nepxall-backend.onrender.com";
@@ -91,6 +104,7 @@ export default function PGDetails() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   const highlightCategories = [
     { id: "all", label: "All", icon: "✦" },
@@ -125,7 +139,12 @@ export default function PGDetails() {
   }, []);
 
   useEffect(() => {
-    const onScroll = () => setShowScrollTop(window.scrollY > 400);
+    const onScroll = () => {
+      const y = window.scrollY;
+      setShowScrollTop(y > 400);
+      const h = document.documentElement.scrollHeight - window.innerHeight;
+      setScrollProgress(h > 0 ? Math.min((y / h) * 100, 100) : 0);
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -291,22 +310,29 @@ export default function PGDetails() {
 
   if (authLoading || loading) {
     return (
-      <div style={S.center}>
+      <div style={S.bgWrap}>
+        <BackgroundFX />
         <Fonts />
-        <div className="pulse-dot" />
-        <p style={{ marginTop: 16, color: T.inkMute, fontFamily: "'Inter Tight', sans-serif", fontSize: 14 }}>Loading property…</p>
-        <style>{`.pulse-dot{width:12px;height:12px;background:${T.emerald};border-radius:50%;animation:pulse 1.4s infinite ease}@keyframes pulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.6);opacity:1}}`}</style>
+        <div style={S.center}>
+          <div className="loader-orb" />
+          <p style={{ marginTop: 24, color: T.inkMute, fontFamily: "'Inter Tight', sans-serif", fontSize: 13, letterSpacing: "0.15em", textTransform: "uppercase" }}>Loading property</p>
+          <style>{`.loader-orb{width:48px;height:48px;border-radius:50%;background:radial-gradient(circle at 30% 30%,${T.gold},transparent 60%);animation:orb 1.6s infinite ease-in-out;box-shadow:0 0 40px ${T.gold}40}@keyframes orb{0%,100%{transform:scale(.85);opacity:.5}50%{transform:scale(1.15);opacity:1}}`}</style>
+        </div>
       </div>
     );
   }
 
   if (error || !pg) {
     return (
-      <div style={S.center}>
+      <div style={S.bgWrap}>
+        <BackgroundFX />
         <Fonts />
-        <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 32, color: T.ink, margin: 0 }}>Property not found</h2>
-        <p style={{ color: T.inkMute, marginTop: 8, fontFamily: "'Inter Tight', sans-serif" }}>{error || "This listing may have been removed."}</p>
-        <button style={S.btnGhost} onClick={() => navigate("/")}>← Back home</button>
+        <div style={S.center}>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", color: T.gold, letterSpacing: "0.2em", fontSize: 11, marginBottom: 16 }}>ERROR · 404</div>
+          <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 48, color: T.ink, margin: 0, fontWeight: 400, letterSpacing: "-0.02em" }}>Property not found</h2>
+          <p style={{ color: T.inkMute, marginTop: 12, fontFamily: "'Inter Tight', sans-serif" }}>{error || "This listing may have been removed."}</p>
+          <button style={{ ...S.btnGhost, marginTop: 24 }} onClick={() => navigate("/")}>← Back home</button>
+        </div>
       </div>
     );
   }
@@ -315,307 +341,358 @@ export default function PGDetails() {
   const startingPrice = getStartingPrice();
 
   return (
-    <div style={S.page}>
+    <div style={S.bgWrap}>
       <Fonts />
+      <BackgroundFX />
 
-      {notification && <div style={S.toast}><Check size={16} /> {notification}</div>}
+      {/* Scroll progress bar */}
+      <div style={{ ...S.scrollBar, width: `${scrollProgress}%` }} />
 
-      <nav style={S.breadcrumb}>
-        <span onClick={() => navigate("/")} style={S.crumb}>Home</span>
-        <span style={S.crumbSep}>—</span>
-        <span onClick={() => navigate("/properties")} style={S.crumb}>Properties</span>
-        <span style={S.crumbSep}>—</span>
-        <span style={S.crumbCurrent}>{pg.pg_name}</span>
-      </nav>
+      <div style={S.page}>
+        {notification && <div style={S.toast}><Check size={16} /> {notification}</div>}
 
-      {/* ===== Gallery (same compact layout on all screens) ===== */}
-      <section style={S.hero}>
-        {media.length > 0 ? (
-          <div style={S.galleryGrid}>
-            <div style={S.galleryMain} onClick={() => setGalleryOpen(true)}>
-              {current.type === "photo" ? (
-                <img src={current.src} alt={pg.pg_name} style={S.galleryMainImg}
-                  onError={(e) => { e.target.src = "https://via.placeholder.com/1200x800?text=No+Image"; }} />
-              ) : (
-                <video src={current.src} controls style={S.galleryMainImg} />
-              )}
-              <div style={S.galleryCounter}>{index + 1} / {media.length}</div>
-              {media.length > 1 && (
-                <>
-                  <button style={{ ...S.galleryNav, left: 16 }} onClick={(e) => { e.stopPropagation(); setIndex(i => i === 0 ? media.length - 1 : i - 1); }}>
-                    <ChevronLeft size={18} />
-                  </button>
-                  <button style={{ ...S.galleryNav, right: 16 }} onClick={(e) => { e.stopPropagation(); setIndex(i => (i + 1) % media.length); }}>
-                    <ChevronRight size={18} />
-                  </button>
-                </>
-              )}
+        {/* Top utility nav */}
+        <nav style={S.topNav}>
+          <div style={S.breadcrumb}>
+            <span onClick={() => navigate("/")} style={S.crumb}>Home</span>
+            <span style={S.crumbSep}>/</span>
+            <span onClick={() => navigate("/properties")} style={S.crumb}>Properties</span>
+            <span style={S.crumbSep}>/</span>
+            <span style={S.crumbCurrent}>{pg.pg_name}</span>
+          </div>
+          <div style={S.topActions}>
+            <IconBtn onClick={() => setFavorited(f => !f)} active={favorited}>
+              <Heart size={16} fill={favorited ? T.coral : "none"} color={favorited ? T.coral : T.ink} />
+            </IconBtn>
+            <IconBtn><Share2 size={16} color={T.ink} /></IconBtn>
+          </div>
+        </nav>
+
+        {/* ===== HERO: editorial split ===== */}
+        <section style={S.heroEditorial}>
+          {/* Left: meta + title */}
+          <div style={S.heroLeft}>
+            <div style={S.heroEyebrow}>
+              <span style={S.heroEyebrowDot} />
+              {isToLet ? "House · Flat" : isCoLiving ? "Co-Living" : "PG · Hostel"}
+              <span style={{ color: T.line, margin: "0 8px" }}>·</span>
+              <span>{pg.area || pg.city}</span>
             </div>
-            {media.length > 1 && (
-              <div style={S.galleryThumbs}>
-                {media.slice(0, 4).map((m, i) => (
-                  <div key={i} onClick={() => setIndex(i)} style={{
-                    ...S.galleryThumb,
-                    outline: i === index ? `2px solid ${T.emerald}` : "none",
-                    outlineOffset: i === index ? 2 : 0,
-                  }}>
-                    {m.type === "photo"
-                      ? <img src={m.src} alt="" style={S.galleryThumbImg} />
-                      : <div style={{ ...S.galleryThumbImg, background: T.ink, color: "#fff", display: "grid", placeItems: "center" }}>▶</div>}
-                    {i === 3 && media.length > 4 && <div style={S.galleryMore}>+{media.length - 4}</div>}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div style={S.galleryEmpty}>📷 No photos available</div>
-        )}
-      </section>
 
-      {/* ===== Title block ===== */}
-      <section style={S.titleBlock}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={S.eyebrow}>
-            {isToLet ? "House · Flat" : isCoLiving ? "Co-Living" : "PG · Hostel"}
-            <span style={S.eyebrowDot}>·</span>
-            <span>{pg.area || pg.city}</span>
-          </div>
-          <h1 style={S.title}>{pg.pg_name}</h1>
-          <div style={S.addrBox}>
-            <MapPin size={16} strokeWidth={1.5} color={T.tan} />
-            <span style={S.addrText}>{pg.address || `${pg.area}, ${pg.city}, ${pg.state || ""}`}</span>
-          </div>
-          {pg.landmark && (
-            <div style={S.landmarkBox}>
-              <span style={S.landmarkLabel}>Nearby</span>
-              <span style={S.landmarkText}>{pg.landmark}</span>
+            <h1 style={S.heroTitle}>{pg.pg_name}</h1>
+
+            <div style={S.heroAddr}>
+              <MapPin size={15} strokeWidth={1.5} color={T.gold} />
+              <span>{pg.address || `${pg.area}, ${pg.city}, ${pg.state || ""}`}</span>
             </div>
-          )}
 
-          <div style={S.badges}>
-            {!isToLet && !isCoLiving && pg.pg_type && (
-              <span style={S.badge}>
-                {pg.pg_type === "boys" ? "Boys" : pg.pg_type === "girls" ? "Girls" : pg.pg_type === "coliving" ? "Co-Living" : "Mixed"}
-              </span>
-            )}
-            {isToLet && pg.bhk_type && <span style={S.badge}>{pg.bhk_type === "4+" ? "4+ BHK" : `${pg.bhk_type} BHK`}</span>}
-            {!isToLet && pg.available_rooms !== undefined && (
-              <span style={{ ...S.badge, ...(pg.available_rooms > 0 ? S.badgeOk : S.badgeWarn) }}>
-                {pg.available_rooms > 0 ? `${pg.available_rooms} available` : "Fully occupied"}
-              </span>
-            )}
-            {isToLet && pg.ready_to_move && <span style={{ ...S.badge, ...S.badgeOk }}>Ready to move</span>}
-            <span style={{ ...S.badge, ...S.badgeAccent }}>Zero brokerage</span>
-          </div>
-        </div>
+            <div style={S.heroBadges}>
+              {!isToLet && !isCoLiving && pg.pg_type && (
+                <span style={S.badge}>
+                  {pg.pg_type === "boys" ? "Boys" : pg.pg_type === "girls" ? "Girls" : pg.pg_type === "coliving" ? "Co-Living" : "Mixed"}
+                </span>
+              )}
+              {isToLet && pg.bhk_type && <span style={S.badge}>{pg.bhk_type === "4+" ? "4+ BHK" : `${pg.bhk_type} BHK`}</span>}
+              {!isToLet && pg.available_rooms !== undefined && (
+                <span style={{ ...S.badge, ...(pg.available_rooms > 0 ? S.badgeOk : S.badgeWarn) }}>
+                  {pg.available_rooms > 0 ? `${pg.available_rooms} available` : "Fully occupied"}
+                </span>
+              )}
+              {isToLet && pg.ready_to_move && <span style={{ ...S.badge, ...S.badgeOk }}>Ready to move</span>}
+              <span style={{ ...S.badge, ...S.badgeAccent }}>Zero brokerage</span>
+            </div>
 
-        <div style={S.titleActions}>
-          <IconBtn onClick={() => setFavorited(f => !f)} active={favorited}>
-            <Heart size={18} fill={favorited ? T.coral : "none"} color={favorited ? T.coral : T.ink} />
-          </IconBtn>
-          <IconBtn><Share2 size={18} color={T.ink} /></IconBtn>
-          {hasLocation && (
-            <button style={S.btnPrimary}
-              onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${pg.latitude},${pg.longitude}`, "_blank")}>
-              <Navigation size={16} /> Directions
-            </button>
-          )}
-        </div>
-      </section>
-
-      <section style={isMobile ? S.gridMobile : S.grid}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-          {pg.description && (
-            <Panel title="About this place" eyebrow="Overview">
-              <p style={S.body}>{pg.description}</p>
-            </Panel>
-          )}
-
-          {facilities.length > 0 && (
-            <Panel title="What this place offers" eyebrow={`${facilities.length} amenities`}>
-              <div style={S.amenityGroups}>
-                {Object.entries(facGrouped).map(([group, items]) => (
-                  <div key={group} style={S.amenityGroup}>
-                    <div style={S.amenityGroupTitle}>{group}</div>
-                    <div style={S.amenityList}>
-                      {items.map((f, i) => (
-                        <div key={i} style={S.amenityRow}>
-                          <span style={S.amenityDot}><Check size={12} strokeWidth={2.5} /></span>
-                          <span>{f.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {pg.water_type && (
-                <div style={S.note}>
-                  <span style={{ fontWeight: 600 }}>Water source · </span>
-                  {{ borewell: "Borewell", kaveri: "Kaveri", both: "Borewell + Kaveri", municipal: "Municipal" }[pg.water_type] || pg.water_type}
+            {/* Price quick stat */}
+            <div style={S.heroPriceRow}>
+              <div>
+                <div style={S.heroPriceLabel}>Starting from</div>
+                <div style={S.heroPriceVal}>
+                  {startingPrice ? <>{fmtINR(startingPrice)}<span style={S.heroPricePer}>/month</span></> : "On request"}
                 </div>
-              )}
-            </Panel>
-          )}
-
-          <PricePanel pg={pg} isToLet={isToLet} isCoLiving={isCoLiving} isPG={isPG} />
-
-          {hasLocation && (
-            <Panel title="Where you'll be" eyebrow="Location" id="location-map">
-              <div style={S.mapWrap}>
-                <MapContainer center={mapCenter} zoom={mapZoom}
-                  style={{ height: 380, width: "100%", borderRadius: 16 }}
-                  key={`${mapCenter[0]}-${mapCenter[1]}-${mapZoom}`}>
-                  <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png" attribution='© OpenStreetMap, © CARTO' />
-                  <Marker position={[pg.latitude, pg.longitude]}>
-                    <Popup><strong>{pg.pg_name}</strong><br /><small>{pg.address || pg.area}</small></Popup>
-                  </Marker>
-                </MapContainer>
               </div>
-              <div style={S.locGrid}>
-                {pg.area && <LocItem label="Area" value={pg.area} />}
-                {pg.road && <LocItem label="Road" value={pg.road} />}
-                {pg.landmark && <LocItem label="Landmark" value={pg.landmark} />}
-                {pg.city && <LocItem label="City" value={pg.city} />}
-              </div>
-            </Panel>
-          )}
-
-          {hasLocation && (nearbyHighlights.length > 0 || loadingHighlights) && (
-            <Panel title="What's around you" eyebrow={loadingHighlights ? "Loading…" : `${nearbyHighlights.length} places`}>
-              {loadingHighlights ? (
-                <div style={{ padding: 40, textAlign: "center", color: T.inkMute }}>Finding nearby places…</div>
-              ) : (
-                <>
-                  <div style={S.chipRow}>
-                    {highlightCategories.map(c => {
-                      const count = c.id === "all" ? nearbyHighlights.length : nearbyHighlights.filter(h => h.category === c.id).length;
-                      if (count === 0) return null;
-                      const active = selectedHighlightCategory === c.id;
-                      return (
-                        <button key={c.id} onClick={() => setSelectedHighlightCategory(c.id)}
-                          style={{ ...S.chip, ...(active ? S.chipActive : {}) }}>
-                          <span>{c.icon}</span><span>{c.label}</span><span style={S.chipCount}>{count}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div style={S.nearbyList}>
-                    {(selectedHighlightCategory === "all" ? nearbyHighlights : nearbyHighlights.filter(h => h.category === selectedHighlightCategory))
-                      .map((h, i) => (
-                        <div key={i} style={S.nearbyRow} onClick={() => handleViewOnMap(h)}>
-                          <span style={S.nearbyIcon}>{h.icon}</span>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={S.nearbyName}>{h.name}</div>
-                            <div style={S.nearbyType}>{h.type.replace(/_/g, " ").replace("nearby ", "")}</div>
-                          </div>
-                          {h.coordinates && <ArrowUpRight size={16} color={T.inkMute} />}
-                        </div>
-                      ))}
-                  </div>
-                </>
+              {hasLocation && (
+                <button style={S.btnGold}
+                  onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${pg.latitude},${pg.longitude}`, "_blank")}>
+                  <Navigation size={15} /> Directions
+                </button>
               )}
-            </Panel>
-          )}
-
-          {(nearbyPGs.length > 0 || loadingNearbyPGs) && (
-            <Panel title="More in this area" eyebrow={loadingNearbyPGs ? "Loading…" : `${nearbyPGs.length} properties`}>
-              {loadingNearbyPGs ? (
-                <div style={{ padding: 40, textAlign: "center", color: T.inkMute }}>Finding nearby properties…</div>
-              ) : (
-                <>
-                  <div style={S.nearbyPGGrid}>
-                    {nearbyPGs.map(np => <NearbyCard key={np.id} pg={np} onClick={() => handleViewNearbyPG(np.id)} />)}
-                  </div>
-                  <button style={S.btnGhost} onClick={() => handleViewNearbyPG("all")}>
-                    View all in {nearbyPGs[0]?.area || nearbyPGs[0]?.city || "area"} →
-                  </button>
-                </>
-              )}
-            </Panel>
-          )}
-        </div>
-
-        {!isMobile && (
-          <aside style={S.aside}>
-            <div style={S.stickyCard}>
-              {startingPrice ? (
-                <>
-                  <div style={S.priceEyebrow}>Starting from</div>
-                  <div style={S.priceLarge}>{fmtINR(startingPrice)}<span style={S.pricePer}>/month</span></div>
-                </>
-              ) : (
-                <div style={S.priceLarge}>Price on request</div>
-              )}
-
-              <div style={S.stickyDivider} />
-
-              <div style={S.stickyStats}>
-                {pg.total_rooms > 0 && (
-                  <div style={S.stickyStat}>
-                    <span style={S.stickyStatLabel}>Total rooms</span>
-                    <span style={S.stickyStatValue}>{pg.total_rooms}</span>
-                  </div>
-                )}
-                {pg.available_rooms !== undefined && (
-                  <div style={S.stickyStat}>
-                    <span style={S.stickyStatLabel}>Available</span>
-                    <span style={{ ...S.stickyStatValue, color: pg.available_rooms > 0 ? T.emerald : T.danger }}>{pg.available_rooms}</span>
-                  </div>
-                )}
-                {pg.sqft_area && (
-                  <div style={S.stickyStat}>
-                    <span style={S.stickyStatLabel}>Size</span>
-                    <span style={S.stickyStatValue}>{pg.sqft_area} sqft</span>
-                  </div>
-                )}
-              </div>
-
-              <button style={{ ...S.btnPrimary, width: "100%", marginTop: 20, justifyContent: "center" }}>
-                <Phone size={16} /> Contact owner
-              </button>
-              <button style={{ ...S.btnGhost, width: "100%", marginTop: 10 }}>Schedule a visit</button>
-
-              <div style={S.trustRow}>
-                <Sparkles size={14} color={T.tan} />
-                <span>Verified listing · Zero brokerage</span>
-              </div>
             </div>
-          </aside>
-        )}
-      </section>
+          </div>
 
-      {/* Mobile sticky bottom bar */}
-      {isMobile && (
-        <div style={S.mobileBottomBar}>
-          <div>
-            {startingPrice ? (
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 500, color: T.ink }}>
-                {fmtINR(startingPrice)}<span style={{ fontSize: 12, color: T.inkMute, marginLeft: 4 }}>/mo</span>
+          {/* Right: gallery */}
+          <div style={S.heroRight}>
+            {media.length > 0 ? (
+              <div style={S.galleryStack}>
+                <div style={S.galleryMain} onClick={() => setGalleryOpen(true)}>
+                  {current.type === "photo" ? (
+                    <img src={current.src} alt={pg.pg_name} style={S.galleryMainImg}
+                      onError={(e) => { e.target.src = "https://via.placeholder.com/1200x800?text=No+Image"; }} />
+                  ) : (
+                    <video src={current.src} controls style={S.galleryMainImg} />
+                  )}
+                  <div style={S.galleryFrame} />
+                  <div style={S.galleryCounter}>
+                    <span style={{ color: T.gold }}>{String(index + 1).padStart(2, "0")}</span>
+                    <span style={{ color: T.inkMute, margin: "0 6px" }}>/</span>
+                    <span>{String(media.length).padStart(2, "0")}</span>
+                  </div>
+                  {media.length > 1 && (
+                    <>
+                      <button style={{ ...S.galleryNav, left: 14 }} onClick={(e) => { e.stopPropagation(); setIndex(i => i === 0 ? media.length - 1 : i - 1); }}>
+                        <ChevronLeft size={16} />
+                      </button>
+                      <button style={{ ...S.galleryNav, right: 14 }} onClick={(e) => { e.stopPropagation(); setIndex(i => (i + 1) % media.length); }}>
+                        <ChevronRight size={16} />
+                      </button>
+                    </>
+                  )}
+                </div>
+                {media.length > 1 && (
+                  <div style={S.galleryThumbs}>
+                    {media.slice(0, 4).map((m, i) => (
+                      <div key={i} onClick={() => setIndex(i)} style={{
+                        ...S.galleryThumb,
+                        outline: i === index ? `1.5px solid ${T.gold}` : `1px solid ${T.line}`,
+                        outlineOffset: i === index ? 2 : 0,
+                      }}>
+                        {m.type === "photo"
+                          ? <img src={m.src} alt="" style={S.galleryThumbImg} />
+                          : <div style={{ ...S.galleryThumbImg, background: T.bgElev, color: T.gold, display: "grid", placeItems: "center" }}>▶</div>}
+                        {i === 3 && media.length > 4 && <div style={S.galleryMore}>+{media.length - 4}</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: T.ink }}>Price on request</div>
+              <div style={S.galleryEmpty}>📷 No photos available</div>
             )}
           </div>
-          <button style={{ ...S.btnPrimary, padding: "10px 20px" }}>
-            <Phone size={16} /> Contact
-          </button>
-        </div>
-      )}
+        </section>
 
-      {/* Scroll to top button */}
-      {showScrollTop && (
-        <button
-          style={S.scrollTopBtn}
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          aria-label="Scroll to top"
-        >
-          <ArrowUp size={20} />
-        </button>
-      )}
+        {/* ===== Content grid ===== */}
+        <section style={isMobile ? S.gridMobile : S.grid}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+
+            {pg.description && (
+              <Panel title="About this place" eyebrow="01 · Overview">
+                <p style={S.body}>{pg.description}</p>
+              </Panel>
+            )}
+
+            {/* Quick stats bento */}
+            <div style={S.bentoRow}>
+              {pg.total_rooms > 0 && <BentoStat label="Total rooms" value={pg.total_rooms} />}
+              {pg.available_rooms !== undefined && <BentoStat label="Available" value={pg.available_rooms} accent={pg.available_rooms > 0 ? T.emerald : T.danger} />}
+              {pg.sqft_area && <BentoStat label="Built-up" value={`${pg.sqft_area} sqft`} />}
+              {pg.floor && <BentoStat label="Floor" value={pg.floor} />}
+            </div>
+
+            {facilities.length > 0 && (
+              <Panel title="What this place offers" eyebrow={`02 · ${facilities.length} amenities`}>
+                <div style={S.amenityGroups}>
+                  {Object.entries(facGrouped).map(([group, items]) => (
+                    <div key={group} style={S.amenityGroup}>
+                      <div style={S.amenityGroupTitle}>{group}</div>
+                      <div style={S.amenityList}>
+                        {items.map((f, i) => (
+                          <div key={i} style={S.amenityRow}>
+                            <span style={S.amenityDot}><Check size={11} strokeWidth={3} /></span>
+                            <span>{f.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {pg.water_type && (
+                  <div style={S.note}>
+                    <span style={{ color: T.gold, fontWeight: 600, marginRight: 6 }}>◆</span>
+                    <span style={{ fontWeight: 600, color: T.ink }}>Water source · </span>
+                    {{ borewell: "Borewell", kaveri: "Kaveri", both: "Borewell + Kaveri", municipal: "Municipal" }[pg.water_type] || pg.water_type}
+                  </div>
+                )}
+              </Panel>
+            )}
+
+            <PricePanel pg={pg} isToLet={isToLet} isCoLiving={isCoLiving} isPG={isPG} />
+
+            {hasLocation && (
+              <Panel title="Where you'll be" eyebrow="04 · Location" id="location-map">
+                <div style={S.mapWrap}>
+                  <MapContainer center={mapCenter} zoom={mapZoom}
+                    style={{ height: 420, width: "100%" }}
+                    key={`${mapCenter[0]}-${mapCenter[1]}-${mapZoom}`}>
+                    <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png" attribution='© OpenStreetMap, © CARTO' />
+                    <Marker position={[pg.latitude, pg.longitude]}>
+                      <Popup><strong>{pg.pg_name}</strong><br /><small>{pg.address || pg.area}</small></Popup>
+                    </Marker>
+                  </MapContainer>
+                  <div style={S.mapOverlay} />
+                </div>
+                <div style={S.locGrid}>
+                  {pg.area && <LocItem label="Area" value={pg.area} />}
+                  {pg.road && <LocItem label="Road" value={pg.road} />}
+                  {pg.landmark && <LocItem label="Landmark" value={pg.landmark} />}
+                  {pg.city && <LocItem label="City" value={pg.city} />}
+                </div>
+              </Panel>
+            )}
+
+            {hasLocation && (nearbyHighlights.length > 0 || loadingHighlights) && (
+              <Panel title="What's around you" eyebrow={`05 · ${loadingHighlights ? "Loading…" : `${nearbyHighlights.length} places`}`}>
+                {loadingHighlights ? (
+                  <div style={{ padding: 40, textAlign: "center", color: T.inkMute }}>Finding nearby places…</div>
+                ) : (
+                  <>
+                    <div style={S.chipRow}>
+                      {highlightCategories.map(c => {
+                        const count = c.id === "all" ? nearbyHighlights.length : nearbyHighlights.filter(h => h.category === c.id).length;
+                        if (count === 0) return null;
+                        const active = selectedHighlightCategory === c.id;
+                        return (
+                          <button key={c.id} onClick={() => setSelectedHighlightCategory(c.id)}
+                            style={{ ...S.chip, ...(active ? S.chipActive : {}) }}>
+                            <span>{c.icon}</span><span>{c.label}</span><span style={S.chipCount}>{count}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div style={S.nearbyList}>
+                      {(selectedHighlightCategory === "all" ? nearbyHighlights : nearbyHighlights.filter(h => h.category === selectedHighlightCategory))
+                        .map((h, i) => (
+                          <div key={i} style={S.nearbyRow} onClick={() => handleViewOnMap(h)}>
+                            <span style={S.nearbyIcon}>{h.icon}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={S.nearbyName}>{h.name}</div>
+                              <div style={S.nearbyType}>{h.type.replace(/_/g, " ").replace("nearby ", "")}</div>
+                            </div>
+                            {h.coordinates && <ArrowUpRight size={15} color={T.gold} />}
+                          </div>
+                        ))}
+                    </div>
+                  </>
+                )}
+              </Panel>
+            )}
+
+            {(nearbyPGs.length > 0 || loadingNearbyPGs) && (
+              <Panel title="More in this area" eyebrow={`06 · ${loadingNearbyPGs ? "Loading…" : `${nearbyPGs.length} properties`}`}>
+                {loadingNearbyPGs ? (
+                  <div style={{ padding: 40, textAlign: "center", color: T.inkMute }}>Finding nearby properties…</div>
+                ) : (
+                  <>
+                    <div style={S.nearbyPGGrid}>
+                      {nearbyPGs.map(np => <NearbyCard key={np.id} pg={np} onClick={() => handleViewNearbyPG(np.id)} />)}
+                    </div>
+                    <button style={S.btnGhost} onClick={() => handleViewNearbyPG("all")}>
+                      View all in {nearbyPGs[0]?.area || nearbyPGs[0]?.city || "area"} <ArrowUpRight size={14} />
+                    </button>
+                  </>
+                )}
+              </Panel>
+            )}
+          </div>
+
+          {!isMobile && (
+            <aside style={S.aside}>
+              <div style={S.stickyCard}>
+                <div style={S.stickyTopBar}>
+                  <span style={S.stickyTag}>◆ Verified</span>
+                  <span style={{ color: T.inkMute, fontSize: 11, fontFamily: "'JetBrains Mono', monospace" }}>#{pg.id || "—"}</span>
+                </div>
+
+                {startingPrice ? (
+                  <>
+                    <div style={S.priceEyebrow}>Starting from</div>
+                    <div style={S.priceLarge}>
+                      {fmtINR(startingPrice)}
+                      <span style={S.pricePer}>/month</span>
+                    </div>
+                  </>
+                ) : (
+                  <div style={S.priceLarge}>Price on request</div>
+                )}
+
+                <div style={S.stickyDivider} />
+
+                <div style={S.stickyStats}>
+                  {pg.total_rooms > 0 && (
+                    <div style={S.stickyStat}>
+                      <span style={S.stickyStatLabel}>Total rooms</span>
+                      <span style={S.stickyStatValue}>{pg.total_rooms}</span>
+                    </div>
+                  )}
+                  {pg.available_rooms !== undefined && (
+                    <div style={S.stickyStat}>
+                      <span style={S.stickyStatLabel}>Available</span>
+                      <span style={{ ...S.stickyStatValue, color: pg.available_rooms > 0 ? T.emerald : T.danger }}>{pg.available_rooms}</span>
+                    </div>
+                  )}
+                  {pg.sqft_area && (
+                    <div style={S.stickyStat}>
+                      <span style={S.stickyStatLabel}>Size</span>
+                      <span style={S.stickyStatValue}>{pg.sqft_area} sqft</span>
+                    </div>
+                  )}
+                </div>
+
+                <button style={{ ...S.btnGold, width: "100%", marginTop: 22, justifyContent: "center", padding: "14px 22px" }}>
+                  <Phone size={15} /> Contact owner
+                </button>
+                <button style={{ ...S.btnGhost, width: "100%", marginTop: 10, justifyContent: "center" }}>
+                  <Calendar size={15} /> Schedule visit
+                </button>
+
+                <div style={S.trustRow}>
+                  <Sparkles size={13} color={T.gold} />
+                  <span>Zero brokerage · Direct owner</span>
+                </div>
+              </div>
+            </aside>
+          )}
+        </section>
+
+        {/* Footer mark */}
+        <footer style={S.footerMark}>
+          <span style={{ color: T.gold }}>◆</span>
+          <span>End of listing</span>
+          <span style={{ color: T.gold }}>◆</span>
+        </footer>
+
+        {/* Mobile sticky bottom bar */}
+        {isMobile && (
+          <div style={S.mobileBottomBar}>
+            <div>
+              {startingPrice ? (
+                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: T.ink, letterSpacing: "-0.01em" }}>
+                  {fmtINR(startingPrice)}<span style={{ fontSize: 12, color: T.inkMute, marginLeft: 4, fontFamily: "'Inter Tight', sans-serif" }}>/mo</span>
+                </div>
+              ) : (
+                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: T.ink }}>Price on request</div>
+              )}
+            </div>
+            <button style={{ ...S.btnGold, padding: "12px 22px" }}>
+              <Phone size={15} /> Contact
+            </button>
+          </div>
+        )}
+
+        {showScrollTop && (
+          <button
+            style={S.scrollTopBtn}
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            aria-label="Scroll to top"
+          >
+            <ArrowUp size={18} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
+
+/* ============ Subcomponents ============ */
 
 const Panel = ({ title, eyebrow, children, id }) => (
   <section id={id} style={S.panel}>
@@ -624,6 +701,7 @@ const Panel = ({ title, eyebrow, children, id }) => (
         {eyebrow && <div style={S.panelEyebrow}>{eyebrow}</div>}
         <h2 style={S.panelTitle}>{title}</h2>
       </div>
+      <div style={S.panelRule} />
     </header>
     <div>{children}</div>
   </section>
@@ -631,9 +709,9 @@ const Panel = ({ title, eyebrow, children, id }) => (
 
 const IconBtn = ({ children, onClick, active }) => (
   <button onClick={onClick} style={{
-    width: 44, height: 44, borderRadius: "50%",
+    width: 40, height: 40, borderRadius: "50%",
     border: `1px solid ${active ? T.coral : T.line}`,
-    background: T.surface, cursor: "pointer",
+    background: T.bgSoft, cursor: "pointer",
     display: "grid", placeItems: "center", transition: "all .2s",
   }}>{children}</button>
 );
@@ -642,6 +720,13 @@ const LocItem = ({ label, value }) => (
   <div style={S.locItem}>
     <span style={S.locLabel}>{label}</span>
     <span style={S.locValue}>{value}</span>
+  </div>
+);
+
+const BentoStat = ({ label, value, accent }) => (
+  <div style={S.bentoStat}>
+    <div style={S.bentoStatLabel}>{label}</div>
+    <div style={{ ...S.bentoStatValue, color: accent || T.ink }}>{value}</div>
   </div>
 );
 
@@ -665,7 +750,7 @@ const PricePanel = ({ pg, isToLet, isCoLiving, isPG }) => {
   if (!hasAny()) return null;
 
   return (
-    <Panel title="Pricing" eyebrow="From the owner">
+    <Panel title="Pricing" eyebrow="03 · From the owner">
       {isToLet && (
         <div style={S.priceGroup}>
           <PriceRow label="1 BHK" value={pg.price_1bhk} deposit={pg.security_deposit} />
@@ -707,7 +792,7 @@ const PricePanel = ({ pg, isToLet, isCoLiving, isPG }) => {
           )}
           {pg.food_available && (
             <div style={S.foodBox}>
-              <div style={S.foodTitle}>Meals included</div>
+              <div style={S.foodTitle}>◆ Meals included</div>
               <div style={S.foodMeta}>
                 {pg.food_type === "veg" ? "Vegetarian" : pg.food_type === "non-veg" ? "Non-vegetarian" : "Veg & Non-veg"}
                 {pg.meals_per_day && ` · ${pg.meals_per_day} meals/day`}
@@ -743,136 +828,181 @@ const NearbyCard = ({ pg, onClick }) => {
     <div style={S.npCard} onClick={onClick}>
       <div style={S.npImage}>
         {img ? <img src={img} alt={pg.pg_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          : <div style={{ width: "100%", height: "100%", background: T.paperDeep, display: "grid", placeItems: "center", fontSize: 36 }}>🏠</div>}
+          : <div style={{ width: "100%", height: "100%", background: T.bgElev, display: "grid", placeItems: "center", fontSize: 36, color: T.gold }}>◇</div>}
         {pg.distance > 0 && <div style={S.npDist}>{pg.distance.toFixed(1)} km</div>}
+        <div style={S.npImageFade} />
       </div>
-      <div style={{ padding: 16 }}>
+      <div style={{ padding: 18 }}>
         <div style={S.npTitle}>{pg.pg_name}</div>
-        <div style={S.npAddr}>{pg.area || pg.city}</div>
+        <div style={S.npAddr}>
+          <MapPin size={11} color={T.gold} /> {pg.area || pg.city}
+        </div>
         {fmtINR(price) && (
-          <div style={S.npPrice}>{fmtINR(price)}<span style={{ fontSize: 12, color: T.inkMute, fontWeight: 400 }}>/mo</span></div>
+          <div style={S.npPrice}>{fmtINR(price)}<span style={{ fontSize: 12, color: T.inkMute, fontWeight: 400, marginLeft: 3 }}>/mo</span></div>
         )}
       </div>
     </div>
   );
 };
 
+const BackgroundFX = () => (
+  <div style={S.bgFx} aria-hidden>
+    <div style={S.bgGlow1} />
+    <div style={S.bgGlow2} />
+    <div style={S.bgGrain} />
+  </div>
+);
+
 const Fonts = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
-    body { background: ${T.paper}; }
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=Inter+Tight:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    body { background: ${T.bg}; margin: 0; }
+    .leaflet-container { background: ${T.bgElev} !important; }
+    .leaflet-popup-content-wrapper { background: ${T.bgElev} !important; color: ${T.ink} !important; border-radius: 8px !important; }
+    .leaflet-popup-tip { background: ${T.bgElev} !important; }
+    ::selection { background: ${T.gold}; color: ${T.bg}; }
+    @keyframes float-glow {
+      0%, 100% { transform: translate(0,0) scale(1); }
+      50% { transform: translate(30px,-20px) scale(1.05); }
+    }
   `}</style>
 );
 
+/* ============ Styles ============ */
 const S = {
-  page: { maxWidth: 1280, margin: "0 auto", padding: "24px 24px 80px", background: T.paper, minHeight: "100vh", fontFamily: "'Inter Tight', -apple-system, sans-serif", color: T.ink },
-  center: { minHeight: "100vh", display: "grid", placeItems: "center", background: T.paper, padding: 24, textAlign: "center" },
-  toast: { position: "fixed", top: 24, right: 24, zIndex: 100, background: T.ink, color: T.surface, padding: "12px 20px", borderRadius: 999, display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 500, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.3)" },
+  bgWrap: { position: "relative", minHeight: "100vh", background: T.bg, color: T.ink, overflow: "hidden" },
+  bgFx: { position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 },
+  bgGlow1: { position: "absolute", top: "-10%", left: "-10%", width: 600, height: 600, borderRadius: "50%", background: `radial-gradient(circle, ${T.gold}18, transparent 60%)`, filter: "blur(80px)", animation: "float-glow 18s ease-in-out infinite" },
+  bgGlow2: { position: "absolute", bottom: "-15%", right: "-10%", width: 700, height: 700, borderRadius: "50%", background: `radial-gradient(circle, ${T.emerald}14, transparent 60%)`, filter: "blur(100px)", animation: "float-glow 22s ease-in-out infinite reverse" },
+  bgGrain: { position: "absolute", inset: 0, opacity: 0.04, mixBlendMode: "overlay", backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` },
 
-  breadcrumb: { display: "flex", gap: 12, alignItems: "center", fontSize: 13, color: T.inkMute, marginBottom: 20, flexWrap: "wrap" },
-  crumb: { cursor: "pointer", color: T.inkSoft },
-  crumbSep: { color: T.inkMute, opacity: 0.5 },
-  crumbCurrent: { color: T.ink, fontWeight: 500 },
+  scrollBar: { position: "fixed", top: 0, left: 0, height: 2, background: `linear-gradient(90deg, ${T.gold}, ${T.emerald})`, zIndex: 1000, transition: "width .1s linear" },
 
-  /* ===== Gallery (compact on all screens) ===== */
-  hero: { marginBottom: 28 },
-  galleryGrid: { display: "grid", gridTemplateColumns: "1fr", gap: 6, height: "auto" },
-  galleryMain: { position: "relative", borderRadius: 14, overflow: "hidden", cursor: "pointer", background: T.paperDeep, height: 320 },
+  page: { position: "relative", zIndex: 1, maxWidth: 1320, margin: "0 auto", padding: "20px 28px 100px", fontFamily: "'Inter Tight', -apple-system, sans-serif", color: T.ink },
+  center: { position: "relative", zIndex: 1, minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, textAlign: "center" },
+  toast: { position: "fixed", top: 24, right: 24, zIndex: 100, background: T.bgElev, border: `1px solid ${T.gold}`, color: T.gold, padding: "12px 20px", borderRadius: 999, display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 500, boxShadow: `0 20px 40px -10px ${T.gold}30` },
+
+  topNav: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32, paddingBottom: 20, borderBottom: `1px solid ${T.lineSoft}`, flexWrap: "wrap", gap: 16 },
+  breadcrumb: { display: "flex", gap: 10, alignItems: "center", fontSize: 12, color: T.inkMute, fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.05em" },
+  crumb: { cursor: "pointer", color: T.inkSoft, transition: "color .2s" },
+  crumbSep: { color: T.line },
+  crumbCurrent: { color: T.gold },
+  topActions: { display: "flex", gap: 10 },
+
+  /* HERO editorial split */
+  heroEditorial: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.15fr)", gap: 48, marginBottom: 64, alignItems: "stretch" },
+  heroLeft: { display: "flex", flexDirection: "column", justifyContent: "space-between", paddingTop: 8 },
+  heroEyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: T.gold, fontWeight: 500, marginBottom: 28, display: "flex", alignItems: "center", gap: 10 },
+  heroEyebrowDot: { width: 6, height: 6, borderRadius: "50%", background: T.gold, boxShadow: `0 0 12px ${T.gold}` },
+  heroTitle: { fontFamily: "'Fraunces', serif", fontSize: "clamp(40px, 6vw, 84px)", fontWeight: 300, lineHeight: 0.95, letterSpacing: "-0.035em", color: T.ink, margin: "0 0 28px", fontVariationSettings: '"opsz" 144' },
+  heroAddr: { display: "inline-flex", alignItems: "flex-start", gap: 10, color: T.inkSoft, fontSize: 15, lineHeight: 1.5, marginBottom: 24, maxWidth: 460 },
+  heroBadges: { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 36 },
+  heroPriceRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 24, paddingTop: 28, borderTop: `1px solid ${T.lineSoft}`, flexWrap: "wrap" },
+  heroPriceLabel: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: T.inkMute, marginBottom: 8 },
+  heroPriceVal: { fontFamily: "'Fraunces', serif", fontSize: 36, fontWeight: 400, color: T.ink, letterSpacing: "-0.02em" },
+  heroPricePer: { fontFamily: "'Inter Tight', sans-serif", fontSize: 13, fontWeight: 400, color: T.inkMute, marginLeft: 6 },
+
+  heroRight: { minWidth: 0 },
+  galleryStack: { display: "flex", flexDirection: "column", gap: 8 },
+  galleryMain: { position: "relative", borderRadius: 18, overflow: "hidden", cursor: "pointer", background: T.bgElev, height: 480, border: `1px solid ${T.line}` },
   galleryMainImg: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
-  galleryThumbs: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, height: 80 },
-  galleryThumb: { position: "relative", borderRadius: 10, overflow: "hidden", cursor: "pointer", background: T.paperDeep, height: "100%" },
+  galleryFrame: { position: "absolute", inset: 8, border: `1px solid rgba(217,178,106,0.3)`, borderRadius: 12, pointerEvents: "none" },
+  galleryThumbs: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, height: 90 },
+  galleryThumb: { position: "relative", borderRadius: 12, overflow: "hidden", cursor: "pointer", background: T.bgElev, height: "100%" },
   galleryThumbImg: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
-  galleryMore: { position: "absolute", inset: 0, background: "rgba(20,24,26,0.7)", color: "#fff", display: "grid", placeItems: "center", fontSize: 16, fontWeight: 600, fontFamily: "'Fraunces', serif" },
-  galleryNav: { position: "absolute", top: "50%", transform: "translateY(-50%)", width: 36, height: 36, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.95)", cursor: "pointer", display: "grid", placeItems: "center", boxShadow: "0 4px 14px rgba(0,0,0,0.15)" },
-  galleryCounter: { position: "absolute", bottom: 14, left: 14, background: "rgba(20,24,26,0.8)", color: "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500 },
-  galleryEmpty: { height: 280, borderRadius: 14, background: T.paperDeep, display: "grid", placeItems: "center", color: T.inkMute, fontSize: 14 },
+  galleryMore: { position: "absolute", inset: 0, background: "rgba(11,12,14,0.78)", color: T.gold, display: "grid", placeItems: "center", fontSize: 17, fontWeight: 500, fontFamily: "'Fraunces', serif" },
+  galleryNav: { position: "absolute", top: "50%", transform: "translateY(-50%)", width: 38, height: 38, borderRadius: "50%", border: `1px solid ${T.line}`, background: T.bgGlass, color: T.ink, cursor: "pointer", display: "grid", placeItems: "center", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", transition: "all .2s" },
+  galleryCounter: { position: "absolute", bottom: 18, left: 18, background: T.bgGlass, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: `1px solid ${T.line}`, color: T.ink, padding: "6px 14px", borderRadius: 999, fontSize: 12, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500, letterSpacing: "0.08em" },
+  galleryEmpty: { height: 480, borderRadius: 18, background: T.bgElev, border: `1px solid ${T.line}`, display: "grid", placeItems: "center", color: T.inkMute, fontSize: 14 },
 
-  titleBlock: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 40, flexWrap: "wrap", paddingBottom: 28, borderBottom: `1px solid ${T.line}` },
-  eyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: T.tan, fontWeight: 600, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 },
-  eyebrowDot: { color: T.line },
-  title: { fontFamily: "'Fraunces', serif", fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 500, lineHeight: 1.1, letterSpacing: "-0.02em", color: T.ink, margin: "0 0 14px" },
-  addrBox: { display: "inline-flex", alignItems: "flex-start", gap: 10, maxWidth: 520, background: T.paperDeep, borderRadius: 10, padding: "10px 14px", marginBottom: 10 },
-  addrText: { color: T.inkSoft, fontSize: 14, lineHeight: 1.5, wordBreak: "break-word" },
-  landmarkBox: { display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 18 },
-  landmarkLabel: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: T.tan, fontWeight: 600, background: T.emeraldSoft, padding: "3px 8px", borderRadius: 6 },
-  landmarkText: { color: T.inkMute, fontSize: 13 },
-  badges: { display: "flex", flexWrap: "wrap", gap: 8 },
-  badge: { padding: "5px 12px", borderRadius: 999, background: T.surface, border: `1px solid ${T.line}`, color: T.inkSoft, fontSize: 12, fontWeight: 500 },
-  badgeOk: { background: T.emeraldSoft, border: `1px solid ${T.emerald}30`, color: T.emerald, fontWeight: 600 },
-  badgeWarn: { background: "#FBE9E9", border: `1px solid ${T.danger}30`, color: T.danger, fontWeight: 600 },
-  badgeAccent: { background: T.ink, border: `1px solid ${T.ink}`, color: T.surface, fontWeight: 600 },
-  titleActions: { display: "flex", alignItems: "center", gap: 10 },
+  badge: { padding: "6px 13px", borderRadius: 999, background: T.bgSoft, border: `1px solid ${T.line}`, color: T.inkSoft, fontSize: 12, fontWeight: 500, letterSpacing: "0.01em" },
+  badgeOk: { background: T.emeraldSoft, border: `1px solid ${T.emerald}50`, color: T.emerald, fontWeight: 600 },
+  badgeWarn: { background: `${T.danger}15`, border: `1px solid ${T.danger}50`, color: T.danger, fontWeight: 600 },
+  badgeAccent: { background: T.goldSoft, border: `1px solid ${T.gold}`, color: T.gold, fontWeight: 600 },
 
-  btnPrimary: { display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 22px", background: T.ink, color: T.surface, border: "none", borderRadius: 999, fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", transition: "all .2s" },
-  btnGhost: { display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 22px", background: "transparent", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 999, fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", transition: "all .2s" },
+  btnGold: { display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 22px", background: T.gold, color: T.bg, border: "none", borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", transition: "all .2s", letterSpacing: "0.01em" },
+  btnGhost: { display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 22px", background: "transparent", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 999, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", transition: "all .2s" },
 
-  grid: { display: "grid", gridTemplateColumns: "1fr 380px", gap: 48, alignItems: "start" },
+  grid: { display: "grid", gridTemplateColumns: "1fr 400px", gap: 56, alignItems: "start" },
   gridMobile: { display: "grid", gridTemplateColumns: "1fr", gap: 32, alignItems: "start" },
 
-  panel: { paddingBottom: 32, borderBottom: `1px solid ${T.line}` },
-  panelHeader: { marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "baseline" },
-  panelEyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: T.tan, fontWeight: 600, marginBottom: 8 },
-  panelTitle: { fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 500, margin: 0, letterSpacing: "-0.01em", color: T.ink },
+  panel: { paddingBottom: 8, position: "relative" },
+  panelHeader: { marginBottom: 28, display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 24, paddingBottom: 20, borderBottom: `1px solid ${T.lineSoft}` },
+  panelEyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: T.gold, fontWeight: 500, marginBottom: 12 },
+  panelTitle: { fontFamily: "'Fraunces', serif", fontSize: "clamp(28px, 3.5vw, 40px)", fontWeight: 300, margin: 0, letterSpacing: "-0.02em", color: T.ink, lineHeight: 1 },
+  panelRule: { flex: "0 0 60px", height: 1, background: `linear-gradient(90deg, ${T.gold}, transparent)`, marginBottom: 8 },
 
-  body: { fontSize: 16, lineHeight: 1.7, color: T.inkSoft, margin: 0 },
+  body: { fontSize: 16, lineHeight: 1.8, color: T.inkSoft, margin: 0, fontWeight: 300 },
 
-  amenityGroups: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 32 },
+  /* Bento stats */
+  bentoRow: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 },
+  bentoStat: { background: T.bgSoft, border: `1px solid ${T.line}`, borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", gap: 8 },
+  bentoStatLabel: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: T.inkMute },
+  bentoStatValue: { fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 400, color: T.ink, letterSpacing: "-0.01em" },
+
+  amenityGroups: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 36 },
   amenityGroup: {},
-  amenityGroupTitle: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: T.inkMute, fontWeight: 600, marginBottom: 14 },
+  amenityGroupTitle: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: T.gold, fontWeight: 500, marginBottom: 16, paddingBottom: 12, borderBottom: `1px solid ${T.lineSoft}` },
   amenityList: { display: "flex", flexDirection: "column", gap: 12 },
-  amenityRow: { display: "flex", alignItems: "center", gap: 12, fontSize: 14.5, color: T.inkSoft },
-  amenityDot: { width: 22, height: 22, borderRadius: "50%", background: T.emeraldSoft, color: T.emerald, display: "grid", placeItems: "center", flexShrink: 0 },
-  note: { marginTop: 24, padding: "14px 18px", borderRadius: 12, background: T.paperDeep, fontSize: 13.5, color: T.inkSoft },
+  amenityRow: { display: "flex", alignItems: "center", gap: 12, fontSize: 14.5, color: T.inkSoft, fontWeight: 400 },
+  amenityDot: { width: 20, height: 20, borderRadius: "50%", background: T.emeraldSoft, color: T.emerald, display: "grid", placeItems: "center", flexShrink: 0, border: `1px solid ${T.emerald}40` },
+  note: { marginTop: 28, padding: "14px 18px", borderRadius: 12, background: T.goldSoft, border: `1px solid ${T.gold}30`, fontSize: 13.5, color: T.inkSoft, display: "flex", alignItems: "center", flexWrap: "wrap" },
 
   priceGroup: { display: "flex", flexDirection: "column", gap: 0 },
-  priceSubBlock: { marginBottom: 28 },
-  priceSubTitle: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: T.inkMute, fontWeight: 600, marginBottom: 12 },
-  priceRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 0", borderBottom: `1px solid ${T.line}` },
+  priceSubBlock: { marginBottom: 32 },
+  priceSubTitle: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: T.gold, fontWeight: 500, marginBottom: 14 },
+  priceRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 0", borderBottom: `1px solid ${T.lineSoft}` },
   priceRowLabel: { fontSize: 15, color: T.inkSoft },
-  priceRowValue: { fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: T.ink },
+  priceRowValue: { fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 400, color: T.ink, letterSpacing: "-0.01em" },
   priceRowPer: { fontFamily: "'Inter Tight', sans-serif", fontSize: 12, fontWeight: 400, color: T.inkMute, marginLeft: 4 },
-  priceRowDeposit: { fontSize: 12, color: T.coral, marginTop: 2 },
-  foodBox: { marginTop: 24, padding: 20, borderRadius: 16, background: T.emeraldSoft, border: `1px solid ${T.emerald}20` },
-  foodTitle: { fontWeight: 600, color: T.emerald, fontSize: 14, marginBottom: 4 },
+  priceRowDeposit: { fontSize: 12, color: T.coral, marginTop: 3 },
+  foodBox: { marginTop: 28, padding: 22, borderRadius: 16, background: T.emeraldSoft, border: `1px solid ${T.emerald}40` },
+  foodTitle: { fontWeight: 600, color: T.emerald, fontSize: 13, marginBottom: 6, letterSpacing: "0.02em" },
   foodMeta: { fontSize: 13.5, color: T.inkSoft },
 
-  mapWrap: { borderRadius: 16, overflow: "hidden", border: `1px solid ${T.line}` },
-  locGrid: { marginTop: 20, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 20 },
-  locItem: { display: "flex", flexDirection: "column", gap: 4 },
-  locLabel: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: T.inkMute, fontWeight: 600 },
-  locValue: { fontSize: 14.5, color: T.ink, fontWeight: 500 },
+  mapWrap: { position: "relative", borderRadius: 18, overflow: "hidden", border: `1px solid ${T.line}` },
+  mapOverlay: { position: "absolute", inset: 0, boxShadow: `inset 0 0 60px ${T.bg}80`, pointerEvents: "none", borderRadius: 18 },
+  locGrid: { marginTop: 24, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 24 },
+  locItem: { display: "flex", flexDirection: "column", gap: 6 },
+  locLabel: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: T.inkMute, fontWeight: 500 },
+  locValue: { fontSize: 14.5, color: T.ink, fontWeight: 400 },
 
-  chipRow: { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 24 },
-  chip: { display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 999, border: `1px solid ${T.line}`, background: T.surface, color: T.inkSoft, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", transition: "all .2s" },
-  chipActive: { background: T.ink, color: T.surface, borderColor: T.ink },
-  chipCount: { fontSize: 11, opacity: 0.7, fontFamily: "'JetBrains Mono', monospace" },
-  nearbyList: { display: "flex", flexDirection: "column", maxHeight: 480, overflowY: "auto" },
-  nearbyRow: { display: "flex", alignItems: "center", gap: 14, padding: "14px 4px", borderBottom: `1px solid ${T.line}`, cursor: "pointer", transition: "all .15s" },
-  nearbyIcon: { width: 40, height: 40, borderRadius: 12, background: T.paperDeep, display: "grid", placeItems: "center", fontSize: 18, flexShrink: 0 },
-  nearbyName: { fontSize: 14.5, fontWeight: 500, color: T.ink, marginBottom: 2 },
-  nearbyType: { fontSize: 12, color: T.inkMute, textTransform: "capitalize" },
+  chipRow: { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 28 },
+  chip: { display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 999, border: `1px solid ${T.line}`, background: T.bgSoft, color: T.inkSoft, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", transition: "all .2s" },
+  chipActive: { background: T.gold, color: T.bg, borderColor: T.gold },
+  chipCount: { fontSize: 11, opacity: 0.65, fontFamily: "'JetBrains Mono', monospace" },
+  nearbyList: { display: "flex", flexDirection: "column", maxHeight: 480, overflowY: "auto", paddingRight: 4 },
+  nearbyRow: { display: "flex", alignItems: "center", gap: 14, padding: "16px 8px", borderBottom: `1px solid ${T.lineSoft}`, cursor: "pointer", transition: "all .15s", borderRadius: 4 },
+  nearbyIcon: { width: 42, height: 42, borderRadius: 12, background: T.bgSoft, border: `1px solid ${T.line}`, display: "grid", placeItems: "center", fontSize: 18, flexShrink: 0 },
+  nearbyName: { fontSize: 14.5, fontWeight: 500, color: T.ink, marginBottom: 3 },
+  nearbyType: { fontSize: 12, color: T.inkMute, textTransform: "capitalize", fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.03em" },
 
-  nearbyPGGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16, marginBottom: 16 },
-  npCard: { border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden", background: T.surface, cursor: "pointer", transition: "all .2s" },
-  npImage: { position: "relative", height: 140, overflow: "hidden" },
-  npDist: { position: "absolute", top: 10, right: 10, background: "rgba(20,24,26,0.85)", color: "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500 },
-  npTitle: { fontSize: 15, fontWeight: 600, color: T.ink, marginBottom: 4, fontFamily: "'Fraunces', serif" },
-  npAddr: { fontSize: 12, color: T.inkMute, marginBottom: 10 },
-  npPrice: { fontSize: 16, fontWeight: 600, color: T.emerald, fontFamily: "'Fraunces', serif" },
+  nearbyPGGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16, marginBottom: 20 },
+  npCard: { border: `1px solid ${T.line}`, borderRadius: 18, overflow: "hidden", background: T.bgSoft, cursor: "pointer", transition: "all .25s" },
+  npImage: { position: "relative", height: 160, overflow: "hidden" },
+  npImageFade: { position: "absolute", inset: 0, background: `linear-gradient(180deg, transparent 50%, ${T.bgSoft})`, pointerEvents: "none" },
+  npDist: { position: "absolute", top: 12, right: 12, background: T.bgGlass, backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: `1px solid ${T.line}`, color: T.gold, padding: "5px 11px", borderRadius: 999, fontSize: 11, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500, zIndex: 1 },
+  npTitle: { fontSize: 17, fontWeight: 500, color: T.ink, marginBottom: 6, fontFamily: "'Fraunces', serif", letterSpacing: "-0.01em" },
+  npAddr: { fontSize: 12, color: T.inkMute, marginBottom: 12, display: "flex", alignItems: "center", gap: 5 },
+  npPrice: { fontSize: 18, fontWeight: 500, color: T.gold, fontFamily: "'Fraunces', serif", letterSpacing: "-0.01em" },
 
   aside: { position: "sticky", top: 24, alignSelf: "start" },
-  stickyCard: { background: T.surface, border: `1px solid ${T.line}`, borderRadius: 24, padding: 28, boxShadow: "0 4px 24px rgba(20,24,26,0.04)" },
-  priceEyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: T.tan, fontWeight: 600, marginBottom: 8 },
-  priceLarge: { fontFamily: "'Fraunces', serif", fontSize: 38, fontWeight: 500, color: T.ink, lineHeight: 1, letterSpacing: "-0.02em" },
-  pricePer: { fontFamily: "'Inter Tight', sans-serif", fontSize: 14, fontWeight: 400, color: T.inkMute, marginLeft: 4 },
-  stickyDivider: { height: 1, background: T.line, margin: "24px 0" },
+  stickyCard: { background: T.bgGlass, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: `1px solid ${T.line}`, borderRadius: 24, padding: 28, boxShadow: `0 24px 60px -20px ${T.bg}, 0 0 0 1px ${T.gold}10` },
+  stickyTopBar: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, paddingBottom: 16, borderBottom: `1px solid ${T.lineSoft}` },
+  stickyTag: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: T.gold, fontWeight: 500 },
+  priceEyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: T.inkMute, fontWeight: 500, marginBottom: 10 },
+  priceLarge: { fontFamily: "'Fraunces', serif", fontSize: 42, fontWeight: 400, color: T.ink, lineHeight: 1, letterSpacing: "-0.025em" },
+  pricePer: { fontFamily: "'Inter Tight', sans-serif", fontSize: 14, fontWeight: 400, color: T.inkMute, marginLeft: 6 },
+  stickyDivider: { height: 1, background: T.lineSoft, margin: "24px 0" },
   stickyStats: { display: "flex", flexDirection: "column", gap: 14 },
   stickyStat: { display: "flex", justifyContent: "space-between", alignItems: "center" },
   stickyStatLabel: { fontSize: 13.5, color: T.inkMute },
   stickyStatValue: { fontSize: 15, fontWeight: 600, color: T.ink, fontFamily: "'JetBrains Mono', monospace" },
-  trustRow: { marginTop: 20, display: "flex", alignItems: "center", gap: 8, justifyContent: "center", fontSize: 12, color: T.inkMute },
+  trustRow: { marginTop: 20, paddingTop: 18, borderTop: `1px solid ${T.lineSoft}`, display: "flex", alignItems: "center", gap: 8, justifyContent: "center", fontSize: 12, color: T.inkMute },
 
-  mobileBottomBar: { position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50, background: T.surface, borderTop: `1px solid ${T.line}`, padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 -4px 20px rgba(0,0,0,0.06)" },
+  footerMark: { marginTop: 64, paddingTop: 32, borderTop: `1px solid ${T.lineSoft}`, display: "flex", justifyContent: "center", alignItems: "center", gap: 16, fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", color: T.inkMute },
 
-  scrollTopBtn: { position: "fixed", bottom: 24, right: 24, zIndex: 90, width: 48, height: 48, borderRadius: "50%", border: `1px solid ${T.line}`, background: T.surface, color: T.ink, cursor: "pointer", display: "grid", placeItems: "center", boxShadow: "0 8px 24px rgba(20,24,26,0.12)", transition: "all .25s ease", opacity: 0.95 },
+  mobileBottomBar: { position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50, background: T.bgGlass, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderTop: `1px solid ${T.line}`, padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" },
+
+  scrollTopBtn: { position: "fixed", bottom: 90, right: 24, zIndex: 90, width: 46, height: 46, borderRadius: "50%", border: `1px solid ${T.gold}50`, background: T.bgGlass, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", color: T.gold, cursor: "pointer", display: "grid", placeItems: "center", boxShadow: `0 12px 30px ${T.bg}, 0 0 30px ${T.gold}30`, transition: "all .25s" },
 };
