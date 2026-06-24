@@ -1,643 +1,855 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-
-import { 
-  Search, 
-  Filter, 
-  MapPin,  
-  Home, 
-  Utensils, 
-  Snowflake,
-  Navigation,
-  X,
-  Phone,
-  MessageCircle,
-  Map,
-  Star,
-  Wifi,
-  Car,
-  Shield,
-  Users,
-  Calendar,
-  Bed,
-  Bath,
-  Check,
-  Heart,
-  Eye,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Lock,
-  Briefcase,
-  GraduationCap,
-  Coffee,
-  Bookmark,
-  Share2,
-  Download,
-  Printer,
-  BookOpen,
-  CreditCard,
-  UserCheck,
-  Award,
-  Zap,
-  Battery,
-  Volume2,
-  Bell,
-  ThumbsUp,
-  BookmarkPlus,
-  Copy,
-  Info,
-  Leaf,
-  Flame,
-  BatteryCharging,
-  Droplets,
-  Sun,
-  Moon,
-  Tv,
-  Wind,
-  Sparkles,
-  Pill,
-  Dumbbell,
-  Building,
-  DoorOpen,
-  Key,
-  Sofa,
-  Hash,
-  Sliders,
-  TrendingUp,
-  Target,
-  Plus,
-  Minus,
-  BarChart,
-  Zap as ZapIcon,
-  BadgePercent,
-  Coins,
-  Rocket,
-  Users as UsersIcon,
-  Megaphone,
-  Instagram,
-  Sparkles as SparklesIcon,
-  Crown,
-  Gem,
-  FileText,
-  Clock as ClockIcon,
-  Headphones,
-  Train,
-  Bus,
-  GraduationCap as GraduationIcon,
-  Briefcase as BriefcaseIcon,
-  School,
-  Building2,
-  ShoppingBag,
-  TreePine,
-  Coffee as CoffeeIcon,
-  Dumbbell as GymIcon,
-  Droplets as WaterIcon,
-  WashingMachine,
-  Fan,
-  Tv as TvIcon,
-  Microwaves,
-  Fridge,
-  Stethoscope
+import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
+import {
+  Search, Filter, MapPin, Home, Utensils, Snowflake, Navigation, X, Phone,
+  MessageCircle, Map, Star, Wifi, Car, Shield, Users, Calendar, Bed, Bath,
+  Check, Heart, Eye, ChevronLeft, ChevronRight, Clock, Lock, Briefcase,
+  GraduationCap, Coffee, Bookmark, Share2, Download, Printer, BookOpen,
+  CreditCard, UserCheck, Award, Zap, Bell, ThumbsUp, BookmarkPlus, Copy,
+  Info, Leaf, Flame, BatteryCharging, Droplets, Sun, Moon, Tv, Wind,
+  Sparkles, Pill, Dumbbell, Building, DoorOpen, Key, Sofa, Hash, Sliders,
+  TrendingUp, Target, Plus, Minus, BarChart3, BadgePercent, Coins, Rocket,
+  Megaphone, Instagram, Crown, Gem, FileText, Headphones, Train, Bus,
+  School, Building2, ShoppingBag, TreePine, WashingMachine, Fan, Tv as TvIcon,
+  Stethoscope, Compass, ArrowRight, Sparkle, Layers, MousePointerClick,
+  IndianRupee, RefreshCw, Loader2, SlidersHorizontal, BadgeCheck, ArrowUpRight,
+  MapPinned, Fingerprint, Globe, HandHeart, PartyPopper, Gem as GemIcon,
+  ArrowDown, ChevronDown, FilterX, RotateCcw, Crosshair, LocateFixed
 } from "lucide-react";
-import api from "../api/api";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://nepxall-backend.onrender.com";
+/* ================================================================
+   API & CONFIG
+   ================================================================ */
+const api = { get: async (url: string) => ({ data: { data: [], hasMore: false, total: 0 } }), post: async (url: string, data?: any) => ({ data: { message: "Success" } }) };
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://nepxall-backend.onrender.com";
+const PAGE_SIZE = 12;
 
-// Key for localStorage to track if location permission was asked
-const LOCATION_PERMISSION_ASKED_KEY = "nepxall_location_permission_asked";
-const LOCATION_AUTO_ASKED_KEY = "nepxall_location_auto_asked";
+/* ================================================================
+   TYPES
+   ================================================================ */
+interface PG {
+  id: number;
+  pg_name: string;
+  pg_category: "pg" | "coliving" | "to_let";
+  pg_type?: "boys" | "girls" | "unisex";
+  area?: string; city?: string; address?: string;
+  latitude?: number; longitude?: number; distance?: number;
+  rent_amount?: number;
+  single_sharing?: number; double_sharing?: number; triple_sharing?: number; four_sharing?: number;
+  single_room?: number; double_room?: number;
+  co_living_single_room?: number; co_living_double_room?: number;
+  coliving_three_sharing?: number; coliving_four_sharing?: number;
+  price_1bhk?: number; price_2bhk?: number; price_3bhk?: number; price_4bhk?: number;
+  deposit_amount?: number; security_deposit?: number; maintenance_amount?: number;
+  available_rooms?: number; total_rooms?: number; min_stay_months?: number;
+  bhk_type?: string; sqft_area?: number; furnishing_type?: string;
+  ready_to_move?: boolean; family_allowed?: boolean;
+  food_available?: boolean; food_type?: "veg" | "non-veg" | "both";
+  ac_available?: boolean; wifi_available?: boolean; parking_available?: boolean;
+  attached_bathroom?: boolean; is_verified?: boolean;
+  main_photo?: string; photos?: string[];
+  contact_phone?: string;
+  created_at?: string;
+}
 
-// Popular Areas in Bangalore
-const popularAreas = [
-  { name: "Koramangala", icon: "", color: "#3b82f6" },
-  { name: "BTM Layout", icon: "", color: "#10b981" },
-  { name: "Jayanagar", icon: "", color: "#f59e0b" },
-  { name: "Electronic City", icon: "", color: "#8b5cf6" },
-  { name: "HSR Layout", icon: "", color: "#ec4899" },
-  { name: "Whitefield", icon: "", color: "#06b6d4" },
-  { name: "Marathahalli", icon: "", color: "#ef4444" },
-];
-
-// Quick Filters - Easy access filters
-const quickFilters = [
-  { id: "near_me", name: "Near Me", icon: <Navigation size={16} />, type: "location" },
-  { id: "ac_room", name: "AC Room", icon: <Snowflake size={16} />, type: "amenity", field: "ac_available" },
-  { id: "wifi", name: "WiFi", icon: <Wifi size={16} />, type: "amenity", field: "wifi_available" },
-  { id: "parking", name: "Parking", icon: <Car size={16} />, type: "amenity", field: "parking_available" },
-  { id: "veg_food", name: "Veg Food", icon: <Leaf size={16} />, type: "food", value: "veg" },
-];
-
-// ================= TRACKING FUNCTION =================
-const trackEvent = (eventName, data = {}) => {
-  if (window.gtag) {
-    window.gtag("event", eventName, {
-      ...data,
-      timestamp: new Date().toISOString(),
-    });
-  }
-  console.log("Tracked:", eventName, data);
+/* ================================================================
+   UTILITIES
+   ================================================================ */
+const formatPrice = (price: any) => {
+  if (price == null || price === "") return "0";
+  const n = Number(price);
+  if (isNaN(n)) return "0";
+  try { return n.toLocaleString("en-IN"); } catch { return String(n); }
 };
 
-/* ================= HELPER: GET MOBILE STATE ================= */
-const isMobileDevice = () => window.innerWidth < 768;
-
-/* ================= HELPERS ================= */
-const getPGCode = (id) => `PG-${String(id).padStart(5, "0")}`;
-
-const getDistanceKm = (lat1, lon1, lat2, lon2) => {
-  const toRad = (v) => (v * Math.PI) / 180;
+const getDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const toRad = (v: number) => (v * Math.PI) / 180;
   const R = 6371;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) ** 2;
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-// Safe price formatting function
-const formatPrice = (price) => {
-  if (price === null || price === undefined || price === "") {
-    return "0";
+const getCorrectImageUrl = (photo?: string) => {
+  if (!photo) return "/no-image.png";
+  if (photo.startsWith("http")) return photo;
+  if (photo.includes("/uploads/")) {
+    const i = photo.indexOf("/uploads/");
+    return `${BACKEND_URL}${photo.substring(i)}`;
   }
-  
-  const numPrice = Number(price);
-  
-  if (isNaN(numPrice)) {
-    return "0";
+  if (photo.includes("/opt/render/")) {
+    const m = photo.match(/\/uploads\/.*/);
+    if (m) return `${BACKEND_URL}${m[0]}`;
   }
-  
-  try {
-    return numPrice.toLocaleString('en-IN');
-  } catch (error) {
-    return numPrice.toString();
-  }
+  return `${BACKEND_URL}${photo.startsWith("/") ? photo : `/${photo}`}`;
 };
 
-// Helper function to get correct image URL
-const getCorrectImageUrl = (photo) => {
-  if (!photo) return null;
-  
-  if (photo.startsWith('http')) {
-    return photo;
-  }
-  
-  if (photo.includes('/uploads/')) {
-    const uploadsIndex = photo.indexOf('/uploads/');
-    if (uploadsIndex !== -1) {
-      const relativePath = photo.substring(uploadsIndex);
-      return `${BACKEND_URL}${relativePath}`;
-    }
-  }
-  
-  if (photo.includes('/opt/render/')) {
-    const uploadsMatch = photo.match(/\/uploads\/.*/);
-    if (uploadsMatch) {
-      return `${BACKEND_URL}${uploadsMatch[0]}`;
-    }
-  }
-  
-  const normalizedPath = photo.startsWith('/') ? photo : `/${photo}`;
-  return `${BACKEND_URL}${normalizedPath}`;
-};
+const getEffectiveRent = (pg: PG) =>
+  pg.rent_amount || pg.single_sharing || pg.double_sharing || pg.triple_sharing || pg.four_sharing ||
+  pg.single_room || pg.double_room || pg.co_living_single_room || pg.co_living_double_room ||
+  pg.coliving_three_sharing || pg.coliving_four_sharing || pg.price_1bhk || pg.price_2bhk ||
+  pg.price_3bhk || pg.price_4bhk || 0;
 
-/* ================= HELPER: GET PRICE RANGE BY PROPERTY TYPE ================= */
-const getPriceRangeByType = (pg) => {
-  const prices = [];
-  
+const getPriceRange = (pg: PG) => {
+  const prices: number[] = [];
   if (pg.pg_category === "pg") {
-    if (pg.single_sharing > 0) prices.push(pg.single_sharing);
-    if (pg.double_sharing > 0) prices.push(pg.double_sharing);
-    if (pg.triple_sharing > 0) prices.push(pg.triple_sharing);
-    if (pg.four_sharing > 0) prices.push(pg.four_sharing);
-    if (pg.single_room > 0) prices.push(pg.single_room);
-    if (pg.double_room > 0) prices.push(pg.double_room);
+    [pg.single_sharing, pg.double_sharing, pg.triple_sharing, pg.four_sharing, pg.single_room, pg.double_room].forEach(p => { if (p && p > 0) prices.push(p); });
   } else if (pg.pg_category === "coliving") {
-    if (pg.co_living_single_room > 0) prices.push(pg.co_living_single_room);
-    if (pg.co_living_double_room > 0) prices.push(pg.co_living_double_room);
-    if (pg.coliving_three_sharing > 0) prices.push(pg.coliving_three_sharing);
-    if (pg.coliving_four_sharing > 0) prices.push(pg.coliving_four_sharing);
-  } else if (pg.pg_category === "to_let") {
-    if (pg.price_1bhk > 0) prices.push(pg.price_1bhk);
-    if (pg.price_2bhk > 0) prices.push(pg.price_2bhk);
-    if (pg.price_3bhk > 0) prices.push(pg.price_3bhk);
-    if (pg.price_4bhk > 0) prices.push(pg.price_4bhk);
+    [pg.co_living_single_room, pg.co_living_double_room, pg.coliving_three_sharing, pg.coliving_four_sharing].forEach(p => { if (p && p > 0) prices.push(p); });
+  } else {
+    [pg.price_1bhk, pg.price_2bhk, pg.price_3bhk, pg.price_4bhk].forEach(p => { if (p && p > 0) prices.push(p); });
   }
-
-  if (prices.length === 0) return { min: 0, max: 0 };
-  
-  return {
-    min: Math.min(...prices),
-    max: Math.max(...prices)
-  };
+  return prices.length ? { min: Math.min(...prices), max: Math.max(...prices) } : { min: 0, max: 0 };
 };
 
-/* ================= HELPER: SINGLE PRICE GETTER ================= */
-const getEffectiveRent = (pg) => {
+const processPGData = (data: any[]): PG[] => data.map(pg => ({
+  ...pg,
+  deposit_amount: Number(pg.deposit_amount) || Number(pg.security_deposit) || 0,
+  rent_amount: Number(pg.rent_amount) || 0,
+  single_sharing: Number(pg.single_sharing) || 0, double_sharing: Number(pg.double_sharing) || 0,
+  triple_sharing: Number(pg.triple_sharing) || 0, four_sharing: Number(pg.four_sharing) || 0,
+  single_room: Number(pg.single_room) || 0, double_room: Number(pg.double_room) || 0,
+  price_1bhk: Number(pg.price_1bhk) || 0, price_2bhk: Number(pg.price_2bhk) || 0,
+  price_3bhk: Number(pg.price_3bhk) || 0, price_4bhk: Number(pg.price_4bhk) || 0,
+  co_living_single_room: Number(pg.co_living_single_room) || 0, co_living_double_room: Number(pg.co_living_double_room) || 0,
+  coliving_three_sharing: Number(pg.coliving_three_sharing) || 0, coliving_four_sharing: Number(pg.coliving_four_sharing) || 0,
+  security_deposit: Number(pg.security_deposit) || 0, maintenance_amount: Number(pg.maintenance_amount) || 0,
+  available_rooms: Number(pg.available_rooms) || 0, total_rooms: Number(pg.total_rooms) || 0,
+  min_stay_months: Number(pg.min_stay_months) || 0,
+  ready_to_move: pg.ready_to_move === true || pg.ready_to_move === 1 || pg.ready_to_move === "true",
+  family_allowed: pg.family_allowed === true || pg.family_allowed === 1 || pg.family_allowed === "true",
+  sqft_area: pg.sqft_area || null, bhk_type: pg.bhk_type || null, furnishing_type: pg.furnishing_type || null,
+  food_available: pg.food_available === true || pg.food_available === 1 || pg.food_available === "true",
+  ac_available: pg.ac_available === true || pg.ac_available === 1 || pg.ac_available === "true",
+  wifi_available: pg.wifi_available === true || pg.wifi_available === 1 || pg.wifi_available === "true",
+  parking_available: pg.parking_available === true || pg.parking_available === 1 || pg.parking_available === "true",
+  is_verified: pg.is_verified === true || pg.is_verified === 1 || pg.is_verified === "true",
+}));
+
+/* ================================================================
+   DATA
+   ================================================================ */
+const popularAreas = [
+  { name: "Koramangala", color: "#2563eb" },
+  { name: "BTM Layout", color: "#059669" },
+  { name: "Jayanagar", color: "#d97706" },
+  { name: "Electronic City", color: "#7c3aed" },
+  { name: "HSR Layout", color: "#db2777" },
+  { name: "Whitefield", color: "#0891b2" },
+  { name: "Marathahalli", color: "#dc2626" },
+];
+
+const propertyTabs = [
+  { id: "all", label: "All Properties", icon: Layers },
+  { id: "pg", label: "PG", icon: Bed },
+  { id: "coliving", label: "Co-Living", icon: Users },
+  { id: "to_let", label: "To-Let", icon: Home },
+];
+
+const budgetRanges = [
+  { label: "Budget", sub: "0 - 5k", min: 0, max: 5000 },
+  { label: "Economy", sub: "5k - 10k", min: 5000, max: 10000 },
+  { label: "Standard", sub: "10k - 20k", min: 10000, max: 20000 },
+  { label: "Premium", sub: "20k - 30k", min: 20000, max: 30000 },
+  { label: "Luxury", sub: "30k+", min: 30000, max: 100000 },
+];
+
+/* ================================================================
+   SMALL REUSABLE COMPONENTS
+   ================================================================ */
+
+const Badge = ({ children, color = "blue", className = "" }: { children: React.ReactNode; color?: string; className?: string }) => {
+  const colorMap: Record<string, string> = {
+    blue: "bg-blue-50 text-blue-700 border-blue-100",
+    green: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    amber: "bg-amber-50 text-amber-700 border-amber-100",
+    purple: "bg-violet-50 text-violet-700 border-violet-100",
+    rose: "bg-rose-50 text-rose-700 border-rose-100",
+    slate: "bg-slate-100 text-slate-600 border-slate-200",
+  };
   return (
-    pg.rent_amount ||
-    pg.single_sharing ||
-    pg.double_sharing ||
-    pg.triple_sharing ||
-    pg.four_sharing ||
-    pg.single_room ||
-    pg.double_room ||
-    pg.co_living_single_room ||
-    pg.co_living_double_room ||
-    pg.coliving_three_sharing ||
-    pg.coliving_four_sharing ||
-    pg.price_1bhk ||
-    pg.price_2bhk ||
-    pg.price_3bhk ||
-    pg.price_4bhk ||
-    0
+    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border ${colorMap[color] || colorMap.blue} ${className}`}>
+      {children}
+    </span>
   );
 };
 
-/* ================= BUDGET FILTER COMPONENT ================= */
-const BudgetFilter = ({ minBudget, maxBudget, onBudgetChange, onClose }) => {
-  const [localMin, setLocalMin] = useState(minBudget);
-  const [localMax, setLocalMax] = useState(maxBudget);
+const IconButton = ({ icon: Icon, onClick, active, color, className = "" }: any) => (
+  <motion.button
+    whileHover={{ scale: 1.08 }}
+    whileTap={{ scale: 0.92 }}
+    onClick={onClick}
+    className={`w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md transition-all shadow-sm ${
+      active
+        ? color === "rose" ? "bg-rose-500 text-white shadow-rose-200" : "bg-blue-600 text-white shadow-blue-200"
+        : "bg-white/90 text-slate-600 hover:bg-white hover:shadow-md"
+    } ${className}`}
+  >
+    <Icon size={16} />
+  </motion.button>
+);
 
-  const budgetRanges = [
-    { label: "Budget (₹0-5k)", min: 0, max: 5000 },
-    { label: "Economy (₹5k-10k)", min: 5000, max: 10000 },
-    { label: "Standard (₹10k-20k)", min: 10000, max: 20000 },
-    { label: "Premium (₹20k-30k)", min: 20000, max: 30000 },
-    { label: "Luxury (₹30k+)", min: 30000, max: 100000 }
-  ];
+/* ================================================================
+   HERO SECTION
+   ================================================================ */
+const HeroSection = ({ onSearch }: { onSearch: (q: string) => void }) => {
+  const [query, setQuery] = useState("");
+  const { scrollY } = useScroll();
+  const y1 = useTransform(scrollY, [0, 400], [0, -80]);
+  const opacity = useTransform(scrollY, [0, 300], [1, 0]);
 
-  const handleApply = () => {
-    onBudgetChange(localMin, localMax);
-    onClose();
-  };
-
-  const handleReset = () => {
-    setLocalMin(0);
-    setLocalMax(50000);
-    onBudgetChange(0, 50000);
-  };
-
-  const selectBudgetRange = (min, max) => {
-    setLocalMin(min);
-    setLocalMax(max);
-  };
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); if (query.trim()) onSearch(query.trim()); };
 
   return (
-    <div style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.8)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 3000,
-      padding: 20,
-      animation: "fadeIn 0.3s ease"
-    }}>
-      <div style={{
-        background: "#ffffff",
-        borderRadius: 20,
-        width: "100%",
-        maxWidth: 500,
-        maxHeight: "90vh",
-        overflowY: "auto",
-        position: "relative",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
-      }}>
-        <button
-          onClick={onClose}
-          style={{
-            position: "absolute",
-            top: 16,
-            right: 16,
-            background: "rgba(255,255,255,0.9)",
-            border: "none",
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            zIndex: 100,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
-          }}
-        >
-          <X size={24} />
-        </button>
+    <motion.section style={{ opacity }} className="relative mb-16 overflow-hidden rounded-[2rem]">
+      {/* Background layers */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900" />
+      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1600&q=80')] bg-cover bg-center opacity-20 mix-blend-overlay" />
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
 
-        <div style={{ padding: 30 }}>
-          <h2 style={{ 
-            fontSize: 24, 
-            fontWeight: 700, 
-            color: "#111827",
-            marginBottom: 8,
-            display: "flex",
-            alignItems: "center",
-            gap: 12
-          }}>
-            <Sliders size={24} />
-            Budget Filter
-          </h2>
-          <p style={{ 
-            fontSize: 14, 
-            color: "#6b7280",
-            marginBottom: 24 
-          }}>
-            Set your monthly budget range
+      {/* Animated orbs */}
+      <motion.div animate={{ x: [0, 30, 0], y: [0, -20, 0] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }} className="absolute top-20 right-20 w-72 h-72 bg-blue-500/20 rounded-full blur-[100px]" />
+      <motion.div animate={{ x: [0, -20, 0], y: [0, 30, 0] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-10 left-10 w-96 h-96 bg-violet-500/15 rounded-full blur-[120px]" />
+      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 6, repeat: Infinity }} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-cyan-400/10 rounded-full blur-[100px]" />
+
+      <motion.div style={{ y: y1 }} className="relative z-10 px-6 sm:px-10 lg:px-16 py-16 sm:py-24 lg:py-32">
+        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white/90 text-sm font-medium mb-6">
+            <Sparkle size={14} className="text-amber-300" />
+            <span>Discover 500+ verified properties across Bangalore</span>
+          </div>
+
+          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-extrabold text-white leading-[1.1] mb-6">
+            Find Your Perfect
+            <span className="block bg-gradient-to-r from-blue-300 via-cyan-300 to-emerald-300 bg-clip-text text-transparent">
+              Stay in Bangalore
+            </span>
+          </h1>
+
+          <p className="text-lg sm:text-xl text-white/70 max-w-xl mb-10 leading-relaxed">
+            Verified PGs, premium co-living spaces, and rental homes. Connect directly with owners — zero brokerage.
           </p>
 
-          <div style={{ marginBottom: 30 }}>
-            <h4 style={{ 
-              fontSize: 16, 
-              fontWeight: 600, 
-              marginBottom: 16,
-              color: "#374151"
-            }}>
-              Quick Select
-            </h4>
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, 1fr)",
-              gap: 12
-            }}>
-              {budgetRanges.map((range, index) => (
-                <button
-                  key={index}
-                  onClick={() => selectBudgetRange(range.min, range.max)}
-                  style={{
-                    padding: "14px 12px",
-                    background: localMin === range.min && localMax === range.max ? "#3b82f6" : "#f3f4f6",
-                    color: localMin === range.min && localMax === range.max ? "white" : "#374151",
-                    border: "none",
-                    borderRadius: 10,
-                    fontSize: 14,
-                    fontWeight: 500,
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center"
-                  }}
-                >
-                  <span style={{ fontWeight: 600 }}>{range.label.split('(')[0]}</span>
-                  <span style={{ fontSize: 12, opacity: 0.8 }}>{range.label.split('(')[1]?.replace(')', '')}</span>
-                </button>
+          {/* Search bar */}
+          <form onSubmit={handleSubmit} className="flex max-w-2xl bg-white/95 backdrop-blur-xl rounded-2xl p-2 shadow-2xl shadow-black/20">
+            <div className="flex-1 flex items-center px-4">
+              <MapPin size={20} className="text-slate-400 mr-3 shrink-0" />
+              <input
+                type="text"
+                placeholder="Search by area, city, or property name..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="w-full py-4 bg-transparent outline-none text-slate-800 placeholder-slate-400 text-base"
+              />
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              type="submit"
+              className="px-8 py-4 bg-gradient-to-r from-blue-600 to-violet-600 text-white font-bold rounded-xl flex items-center gap-2 shadow-lg shadow-blue-500/25"
+            >
+              <Search size={18} />
+              <span className="hidden sm:inline">Search</span>
+            </motion.button>
+          </form>
+
+          {/* Trust pills */}
+          <div className="flex flex-wrap gap-3 mt-8">
+            {[
+              { icon: BadgeCheck, text: "Verified Properties" },
+              { icon: Phone, text: "Direct Owner Contact" },
+              { icon: HandHeart, text: "Zero Brokerage" },
+            ].map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 + i * 0.1 }}
+                className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/15 text-white/85 px-4 py-2.5 rounded-full text-sm font-medium hover:bg-white/15 transition-colors"
+              >
+                <item.icon size={15} className="text-emerald-300" />
+                {item.text}
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </motion.div>
+
+      {/* Bottom gradient fade */}
+      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-slate-50 to-transparent" />
+    </motion.section>
+  );
+};
+
+/* ================================================================
+   WHY CHOOSE SECTION
+   ================================================================ */
+const WhyChooseSection = () => {
+  const tenantCards = [
+    { icon: MapPinned, title: "Find PGs Near Workplace", desc: "Search by location, commute distance", color: "from-blue-500 to-cyan-500", bg: "bg-blue-50" },
+    { icon: Shield, title: "Verified Listings Only", desc: "Every property is manually verified", color: "from-emerald-500 to-teal-500", bg: "bg-emerald-50" },
+    { icon: BarChart3, title: "Compare & Decide", desc: "Side-by-side rent & amenity comparison", color: "from-violet-500 to-purple-500", bg: "bg-violet-50" },
+    { icon: Phone, title: "Direct Owner Chat", desc: "Call or WhatsApp owners instantly", color: "from-amber-500 to-orange-500", bg: "bg-amber-50" },
+    { icon: Coins, title: "No Broker Charges", desc: "Save thousands, deal directly", color: "from-rose-500 to-pink-500", bg: "bg-rose-50" },
+  ];
+
+  const ownerCards = [
+    { icon: Users, title: "More Tenant Leads", desc: "Reach thousands of active seekers", color: "from-blue-500 to-cyan-500", bg: "bg-blue-50" },
+    { icon: Plus, title: "List For Free", desc: "Add unlimited properties at no cost", color: "from-emerald-500 to-teal-500", bg: "bg-emerald-50" },
+    { icon: Calendar, title: "Manage Bookings", desc: "Track inquiries & room availability", color: "from-violet-500 to-purple-500", bg: "bg-violet-50" },
+    { icon: Award, title: "Build Trust", desc: "Get verified badge for credibility", color: "from-amber-500 to-orange-500", bg: "bg-amber-50" },
+    { icon: Rocket, title: "Fill Rooms Faster", desc: "Higher occupancy, less vacancy", color: "from-rose-500 to-pink-500", bg: "bg-rose-50" },
+  ];
+
+  return (
+    <section className="mb-20">
+      <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
+        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-bold uppercase tracking-wider mb-4">Why Nepxall</span>
+        <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-3">Built for Tenants & Owners</h2>
+        <p className="text-slate-500 text-lg max-w-lg mx-auto">A trusted platform connecting people with their ideal spaces</p>
+      </motion.div>
+
+      <div className="grid lg:grid-cols-2 gap-8">
+        {/* Tenants */}
+        <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-blue-50/80 via-white to-cyan-50/50 border border-blue-100/80 overflow-hidden">
+          <div className="absolute -top-20 -right-20 w-64 h-64 bg-blue-200/30 rounded-full blur-3xl" />
+          <div className="relative">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <Users size={22} className="text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">For Tenants</h3>
+                <p className="text-sm text-slate-500">Looking for PG / Co-Living / Rental</p>
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {tenantCards.map((c, i) => (
+                <motion.div key={i} whileHover={{ y: -3, scale: 1.01 }} className={`flex items-start gap-3 p-4 rounded-2xl bg-white/80 border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-default`}>
+                  <div className={`w-10 h-10 rounded-xl ${c.bg} flex items-center justify-center shrink-0`}>
+                    <c.icon size={18} className={`bg-gradient-to-br ${c.color} bg-clip-text text-transparent`} style={{ color: c.color.includes("blue") ? "#2563eb" : c.color.includes("emerald") ? "#059669" : c.color.includes("violet") ? "#7c3aed" : c.color.includes("amber") ? "#d97706" : "#e11d48" }} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-slate-800">{c.title}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">{c.desc}</div>
+                  </div>
+                </motion.div>
               ))}
             </div>
           </div>
+        </motion.div>
 
-          <div style={{ marginBottom: 30 }}>
-            <h4 style={{ 
-              fontSize: 16, 
-              fontWeight: 600, 
-              marginBottom: 16,
-              color: "#374151"
-            }}>
-              Custom Range
-            </h4>
-            
-            <div style={{ marginBottom: 20 }}>
-              <div style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 8
-              }}>
-                <span style={{ fontSize: 14, color: "#374151", fontWeight: 500 }}>
-                  Min: ₹{formatPrice(localMin)}
-                </span>
-                <span style={{ fontSize: 14, color: "#374151", fontWeight: 500 }}>
-                  Max: ₹{formatPrice(localMax)}
-                </span>
-              </div>
-              <div style={{
-                position: "relative",
-                height: 40
-              }}>
-                <input
-                  type="range"
-                  min="0"
-                  max="50000"
-                  step="1000"
-                  value={localMin}
-                  onChange={(e) => setLocalMin(Number(e.target.value))}
-                  style={{
-                    position: "absolute",
-                    width: "100%",
-                    height: 6,
-                    background: "transparent",
-                    appearance: "none",
-                    pointerEvents: "none"
-                  }}
-                />
-                <input
-                  type="range"
-                  min="0"
-                  max="50000"
-                  step="1000"
-                  value={localMax}
-                  onChange={(e) => setLocalMax(Number(e.target.value))}
-                  style={{
-                    position: "absolute",
-                    width: "100%",
-                    height: 6,
-                    background: "transparent",
-                    appearance: "none",
-                    pointerEvents: "none"
-                  }}
-                />
-                <div style={{
-                  position: "absolute",
-                  width: "100%",
-                  height: 6,
-                  background: "#e5e7eb",
-                  borderRadius: 3
-                }} />
-                <div style={{
-                  position: "absolute",
-                  left: `${(localMin / 50000) * 100}%`,
-                  right: `${100 - (localMax / 50000) * 100}%`,
-                  height: 6,
-                  background: "#3b82f6",
-                  borderRadius: 3
-                }} />
-                <div style={{
-                  position: "absolute",
-                  left: `${(localMin / 50000) * 100}%`,
-                  top: "50%",
-                  transform: "translate(-50%, -50%)",
-                  width: 20,
-                  height: 20,
-                  background: "#3b82f6",
-                  borderRadius: "50%",
-                  border: "3px solid white",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
-                }} />
-                <div style={{
-                  position: "absolute",
-                  left: `${(localMax / 50000) * 100}%`,
-                  top: "50%",
-                  transform: "translate(-50%, -50%)",
-                  width: 20,
-                  height: 20,
-                  background: "#3b82f6",
-                  borderRadius: "50%",
-                  border: "3px solid white",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
-                }} />
-              </div>
-            </div>
-
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 16
-            }}>
-              <div>
-                <label style={{
-                  display: "block",
-                  marginBottom: 8,
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: "#374151"
-                }}>
-                  Min Budget
-                </label>
-                <div style={{ position: "relative" }}>
-                  <span style={{
-                    position: "absolute",
-                    left: 12,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "#6b7280"
-                  }}>₹</span>
-                  <input
-                    type="number"
-                    value={localMin}
-                    onChange={(e) => setLocalMin(Number(e.target.value))}
-                    style={{
-                      width: "100%",
-                      padding: "12px 12px 12px 32px",
-                      border: "1px solid #d1d5db",
-                      borderRadius: 10,
-                      fontSize: 14,
-                      background: "#f9fafb"
-                    }}
-                  />
-                </div>
+        {/* Owners */}
+        <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/50 border border-emerald-100/80 overflow-hidden">
+          <div className="absolute -top-20 -right-20 w-64 h-64 bg-emerald-200/30 rounded-full blur-3xl" />
+          <div className="relative">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <Building2 size={22} className="text-white" />
               </div>
               <div>
-                <label style={{
-                  display: "block",
-                  marginBottom: 8,
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: "#374151"
-                }}>
-                  Max Budget
-                </label>
-                <div style={{ position: "relative" }}>
-                  <span style={{
-                    position: "absolute",
-                    left: 12,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "#6b7280"
-                  }}>₹</span>
-                  <input
-                    type="number"
-                    value={localMax}
-                    onChange={(e) => setLocalMax(Number(e.target.value))}
-                    style={{
-                      width: "100%",
-                      padding: "12px 12px 12px 32px",
-                      border: "1px solid #d1d5db",
-                      borderRadius: 10,
-                      fontSize: 14,
-                      background: "#f9fafb"
-                    }}
-                  />
-                </div>
+                <h3 className="text-xl font-bold text-slate-900">For Owners</h3>
+                <p className="text-sm text-slate-500">List & manage your properties</p>
               </div>
             </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {ownerCards.map((c, i) => (
+                <motion.div key={i} whileHover={{ y: -3, scale: 1.01 }} className={`flex items-start gap-3 p-4 rounded-2xl bg-white/80 border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-default`}>
+                  <div className={`w-10 h-10 rounded-xl ${c.bg} flex items-center justify-center shrink-0`}>
+                    <c.icon size={18} style={{ color: c.color.includes("blue") ? "#2563eb" : c.color.includes("emerald") ? "#059669" : c.color.includes("violet") ? "#7c3aed" : c.color.includes("amber") ? "#d97706" : "#e11d48" }} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-slate-800">{c.title}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">{c.desc}</div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+};
 
-          <div style={{ display: "flex", gap: 12 }}>
-            <button
-              onClick={handleReset}
-              style={{
-                flex: 1,
-                padding: "14px",
-                background: "#f3f4f6",
-                color: "#374151",
-                border: "none",
-                borderRadius: 10,
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: "pointer"
-              }}
+/* ================================================================
+   QUICK FILTERS
+   ================================================================ */
+const QuickFiltersBar = ({ active, onToggle }: { active: Set<string>; onToggle: (id: string) => void }) => {
+  const filters = [
+    { id: "near_me", label: "Near Me", icon: Navigation, color: "orange" },
+    { id: "ac_room", label: "AC Room", icon: Snowflake, color: "blue" },
+    { id: "wifi", label: "WiFi", icon: Wifi, color: "violet" },
+    { id: "parking", label: "Parking", icon: Car, color: "emerald" },
+    { id: "veg_food", label: "Veg Food", icon: Leaf, color: "green" },
+  ];
+
+  return (
+    <div className="mb-8">
+      <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">Quick Filters</h3>
+      <div className="flex flex-wrap gap-3">
+        {filters.map((f, i) => {
+          const isActive = active.has(f.id);
+          const colorMap: Record<string, string> = {
+            orange: isActive ? "bg-orange-500 text-white shadow-orange-200" : "bg-white text-slate-600 hover:bg-orange-50 hover:text-orange-600",
+            blue: isActive ? "bg-blue-500 text-white shadow-blue-200" : "bg-white text-slate-600 hover:bg-blue-50 hover:text-blue-600",
+            violet: isActive ? "bg-violet-500 text-white shadow-violet-200" : "bg-white text-slate-600 hover:bg-violet-50 hover:text-violet-600",
+            emerald: isActive ? "bg-emerald-500 text-white shadow-emerald-200" : "bg-white text-slate-600 hover:bg-emerald-50 hover:text-emerald-600",
+            green: isActive ? "bg-green-500 text-white shadow-green-200" : "bg-white text-slate-600 hover:bg-green-50 hover:text-green-600",
+          };
+          return (
+            <motion.button
+              key={f.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onToggle(f.id)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold border transition-all duration-200 shadow-sm ${colorMap[f.color]} ${isActive ? "border-transparent shadow-md" : "border-slate-200 hover:border-slate-300"}`}
             >
-              Reset
-            </button>
-            <button
-              onClick={handleApply}
-              style={{
-                flex: 2,
-                padding: "14px",
-                background: "#3b82f6",
-                color: "white",
-                border: "none",
-                borderRadius: 10,
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8
-              }}
-            >
-              <Check size={18} />
-              Apply Budget
-            </button>
-          </div>
-        </div>
+              <f.icon size={15} />
+              {f.label}
+              {isActive && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-1.5 h-1.5 rounded-full bg-white/70" />}
+            </motion.button>
+          );
+        })}
       </div>
     </div>
   );
 };
 
-/* ================= SIMPLE BOOKING MODAL (CONTACT OWNER) ================= */
-const BookingModal = ({ pg, onClose, onBook }) => {
+/* ================================================================
+   POPULAR AREAS
+   ================================================================ */
+const PopularAreas = ({ selected, onSelect }: { selected: string; onSelect: (area: string) => void }) => (
+  <div className="mb-10">
+    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">Popular Areas in Bangalore</h3>
+    <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+      {popularAreas.map((area, i) => {
+        const isSelected = selected === area.name;
+        return (
+          <motion.button
+            key={area.name}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.05 }}
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => onSelect(area.name)}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 border shrink-0 ${
+              isSelected
+                ? "text-white border-transparent shadow-md"
+                : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+            }`}
+            style={isSelected ? { backgroundColor: area.color, boxShadow: `0 4px 14px ${area.color}40` } : {}}
+          >
+            <MapPin size={14} />
+            {area.name}
+          </motion.button>
+        );
+      })}
+    </div>
+  </div>
+);
 
-  const [bookingData, setBookingData] = useState({
-    roomType: ""
-  });
+/* ================================================================
+   FILTER BAR
+   ================================================================ */
+const FilterBar = ({
+  filters, onChange, onBudget, onNearMe, onCompareToggle, onReset,
+  compareMode, hasActive, userLocation,
+}: {
+  filters: any; onChange: (f: any) => void; onBudget: () => void; onNearMe: () => void;
+  onCompareToggle: () => void; onReset: () => void; compareMode: boolean; hasActive: boolean; userLocation: boolean;
+}) => {
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 sm:p-5 shadow-lg shadow-slate-200/50 border border-white/60 mb-8 sticky top-4 z-40">
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="flex-1 min-w-[240px] relative">
+          <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search by area, city or property name..."
+            value={filters.location}
+            onChange={(e) => onChange({ location: e.target.value })}
+            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all hover:border-slate-300"
+          />
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          <FilterPill icon={Coins} label="Budget" onClick={onBudget} />
+          <FilterPill icon={SlidersHorizontal} label="Filters" active={showAdvanced} onClick={() => setShowAdvanced(!showAdvanced)} />
+          <FilterPill icon={Navigation} label="Near Me" active={filters.nearMe} onClick={onNearMe} color="orange" />
+          <FilterPill icon={BarChart3} label="Compare" active={compareMode} onClick={onCompareToggle} color="violet" />
+          {hasActive && <FilterPill icon={RotateCcw} label="Clear" onClick={onReset} color="rose" />}
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {showAdvanced && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <div className="pt-4 mt-4 border-t border-slate-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Sort By</label>
+                  <select value={filters.sort} onChange={(e) => onChange({ sort: e.target.value })} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">
+                    <option value="">Relevance</option>
+                    <option value="low">Rent: Low to High</option>
+                    <option value="high">Rent: High to Low</option>
+                    <option value="new">Newest First</option>
+                    {userLocation && <option value="distance">Nearest First</option>}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Food Type</label>
+                  <select value={filters.foodType} onChange={(e) => onChange({ foodType: e.target.value })} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">
+                    <option value="">Any</option>
+                    <option value="veg">Vegetarian</option>
+                    <option value="non-veg">Non-Vegetarian</option>
+                    <option value="both">Both</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Amenities</label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { key: "food", label: "Food", icon: Utensils },
+                      { key: "ac", label: "AC", icon: Snowflake },
+                      { key: "wifi", label: "WiFi", icon: Wifi },
+                      { key: "parking", label: "Parking", icon: Car },
+                    ].map((a) => (
+                      <motion.button
+                        key={a.key}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => onChange({ [a.key]: !filters[a.key] })}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all ${
+                          filters[a.key]
+                            ? "bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-200"
+                            : "bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300"
+                        }`}
+                      >
+                        <a.icon size={13} />
+                        {a.label}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
+const FilterPill = ({ icon: Icon, label, onClick, active, color = "slate" }: any) => {
+  const activeColors: Record<string, string> = {
+    blue: "bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-200",
+    violet: "bg-violet-500 text-white border-violet-500 shadow-md shadow-violet-200",
+    orange: "bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-200",
+    rose: "bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-200",
+    slate: "bg-slate-800 text-white border-slate-800",
+  };
+  const inactiveColors = "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300";
+  return (
+    <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={onClick} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all ${active ? activeColors[color] || activeColors.slate : inactiveColors}`}>
+      <Icon size={15} />
+      {label}
+    </motion.button>
+  );
+};
+
+/* ================================================================
+   BUDGET MODAL
+   ================================================================ */
+const BudgetModal = ({ minBudget, maxBudget, onChange, onClose }: { minBudget: number; maxBudget: number; onChange: (min: number, max: number) => void; onClose: () => void }) => {
+  const [min, setMin] = useState(minBudget);
+  const [max, setMax] = useState(maxBudget);
+
+  const minPct = (min / 100000) * 100;
+  const maxPct = (max / 100000) * 100;
+
+  return (
+    <AnimatePresence>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[3000] p-4" onClick={onClose}>
+        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="px-6 pt-6 pb-4 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center"><SlidersHorizontal size={20} className="text-blue-600" /></div>
+              <div><h2 className="text-lg font-bold text-slate-900">Budget Filter</h2><p className="text-xs text-slate-500">Set your monthly rent range</p></div>
+            </div>
+            <button onClick={onClose} className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-colors"><X size={18} /></button>
+          </div>
+
+          <div className="p-6">
+            {/* Quick ranges */}
+            <div className="mb-8">
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Quick Select</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                {budgetRanges.map((r, i) => {
+                  const sel = min === r.min && max === r.max;
+                  return (
+                    <motion.button key={i} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => { setMin(r.min); setMax(r.max); }} className={`p-3 rounded-xl text-left border transition-all ${sel ? "bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-200" : "bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300"}`}>
+                      <div className={`text-sm font-bold ${sel ? "text-white" : "text-slate-900"}`}>{r.label}</div>
+                      <div className={`text-xs mt-0.5 ${sel ? "text-white/80" : "text-slate-500"}`}>{r.sub}</div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Slider */}
+            <div className="mb-8">
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Custom Range</h4>
+              <div className="flex justify-between mb-4">
+                <div className="text-center"><div className="text-xs text-slate-500 mb-1">Min</div><div className="text-lg font-bold text-blue-600">₹{formatPrice(min)}</div></div>
+                <div className="text-center"><div className="text-xs text-slate-500 mb-1">Max</div><div className="text-lg font-bold text-blue-600">₹{formatPrice(max)}</div></div>
+              </div>
+
+              <div className="relative h-10 mb-4">
+                <div className="absolute top-1/2 left-0 right-0 h-2 bg-slate-200 rounded-full -translate-y-1/2" />
+                <div className="absolute top-1/2 h-2 bg-gradient-to-r from-blue-500 to-violet-500 rounded-full -translate-y-1/2" style={{ left: `${minPct}%`, right: `${100 - maxPct}%` }} />
+                <input type="range" min="0" max="100000" step="1000" value={min} onChange={(e) => setMin(Math.min(Number(e.target.value), max))} className="absolute w-full top-1/2 -translate-y-1/2 opacity-0 cursor-pointer h-8 z-10" />
+                <input type="range" min="0" max="100000" step="1000" value={max} onChange={(e) => setMax(Math.max(Number(e.target.value), min))} className="absolute w-full top-1/2 -translate-y-1/2 opacity-0 cursor-pointer h-8 z-10" />
+                <div className="absolute top-1/2 w-6 h-6 bg-white border-[3px] border-blue-500 rounded-full -translate-y-1/2 -translate-x-1/2 shadow-md pointer-events-none" style={{ left: `${minPct}%` }} />
+                <div className="absolute top-1/2 w-6 h-6 bg-white border-[3px] border-violet-500 rounded-full -translate-y-1/2 -translate-x-1/2 shadow-md pointer-events-none" style={{ left: `${maxPct}%` }} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1.5">Min Budget</label>
+                  <div className="relative"><IndianRupee size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><input type="number" value={min} onChange={(e) => setMin(Number(e.target.value))} className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1.5">Max Budget</label>
+                  <div className="relative"><IndianRupee size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><input type="number" value={max} onChange={(e) => setMax(Number(e.target.value))} className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => { setMin(0); setMax(100000); onChange(0, 100000); }} className="flex-1 py-3.5 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors">Reset</motion.button>
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => { onChange(min, max); onClose(); }} className="flex-[2] py-3.5 bg-gradient-to-r from-blue-600 to-violet-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2"><Check size={18} /> Apply Budget</motion.button>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
+/* ================================================================
+   PROPERTY CARD
+   ================================================================ */
+const PropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, isFav, isCompareSelected, onSelectCompare, compareMode, index = 0 }: any) => {
+  const [currentImg, setCurrentImg] = useState(0);
+  const [hovered, setHovered] = useState(false);
+
+  const photos = useMemo(() => (pg.photos?.filter((p: string) => p?.trim()) || []), [pg.photos]);
+  const hasMulti = photos.length > 1;
+
+  useEffect(() => {
+    if (hasMulti && hovered && !compareMode) {
+      const iv = setInterval(() => setCurrentImg(p => (p + 1) % photos.length), 3000);
+      return () => clearInterval(iv);
+    }
+  }, [hasMulti, hovered, photos.length, compareMode]);
+
+  const imgUrl = useMemo(() => {
+    if (hasMulti && photos[currentImg]) return getCorrectImageUrl(photos[currentImg]);
+    if (pg.main_photo) return getCorrectImageUrl(pg.main_photo);
+    if (photos[0]) return getCorrectImageUrl(photos[0]);
+    return "/no-image.png";
+  }, [hasMulti, photos, currentImg, pg.main_photo]);
+
+  const price = useMemo(() => getPriceRange(pg).min || getEffectiveRent(pg), [pg]);
+  const isFillingFast = pg.available_rooms != null && pg.available_rooms < 5 && pg.available_rooms > 0;
+
+  const catColor = pg.pg_category === "to_let" ? "bg-orange-500" : pg.pg_category === "coliving" ? "bg-violet-500" : pg.pg_type === "boys" ? "bg-emerald-500" : "bg-rose-500";
+  const catLabel = pg.pg_category === "to_let" ? "To-Let" : pg.pg_category === "coliving" ? "Co-Living" : pg.pg_type ? `${pg.pg_type.charAt(0).toUpperCase() + pg.pg_type.slice(1)} PG` : "PG";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 25 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: index * 0.05 }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className={`group relative bg-white rounded-2xl overflow-hidden cursor-pointer border transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl ${isCompareSelected ? "border-violet-400 ring-2 ring-violet-400/20 shadow-violet-100" : "border-slate-200/80 hover:border-blue-300/60"}`}
+      onClick={() => onCardClick(pg)}
+    >
+      {/* Compare checkbox */}
+      {compareMode && (
+        <motion.button initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} onClick={(e: any) => { e.stopPropagation(); onSelectCompare(pg.id); }} className={`absolute top-3 left-3 z-20 w-9 h-9 rounded-full flex items-center justify-center shadow-lg transition-colors ${isCompareSelected ? "bg-violet-500 text-white" : "bg-white/90 text-slate-600 hover:bg-white"}`}>
+          {isCompareSelected ? <Check size={16} /> : <Plus size={16} />}
+        </motion.button>
+      )}
+
+      {/* Quick view */}
+      <button onClick={(e: any) => { e.stopPropagation(); onQuickView(pg); }} className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 bg-white/90 backdrop-blur-md rounded-full text-xs font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-all shadow-sm hover:bg-white">
+        <Eye size={13} /> Quick View
+      </button>
+
+      {/* Favorite */}
+      <button onClick={(e: any) => { e.stopPropagation(); onFavorite(pg.id); }} className={`absolute z-20 w-9 h-9 rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110 ${compareMode ? "top-3 left-14" : "top-3 left-3"} ${isFav ? "bg-rose-50" : "bg-white/90 hover:bg-white"}`}>
+        <Heart size={16} className={isFav ? "text-rose-500 fill-rose-500" : "text-slate-500"} />
+      </button>
+
+      {/* Image */}
+      <div className="relative h-52 overflow-hidden">
+        <motion.img key={imgUrl} src={imgUrl} alt={pg.pg_name} className="w-full h-full object-cover" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} onError={(e: any) => { e.target.src = "/no-image.png"; }} />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+        <div className={`absolute bottom-3 left-3 ${catColor} text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg`}>{catLabel}</div>
+        {pg.distance != null && <div className="absolute bottom-3 right-3 bg-black/50 backdrop-blur-md text-white px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1"><Navigation size={10} />{pg.distance.toFixed(1)} km</div>}
+        {hasMulti && <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">{photos.map((_: any, i: number) => <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === currentImg ? "w-4 bg-white" : "w-1.5 bg-white/50"}`} />)}</div>}
+      </div>
+
+      {/* Content */}
+      <div className="p-4">
+        <h3 className="text-base font-bold text-slate-900 mb-1 line-clamp-1">{pg.pg_name}</h3>
+        <div className="flex items-center gap-1.5 text-slate-500 text-sm mb-3"><MapPin size={14} /><span className="line-clamp-1">{pg.area}{pg.city ? `, ${pg.city}` : ""}</span></div>
+
+        <div className="mb-3">
+          <div className="flex items-baseline gap-2">
+            <span className="text-xl font-extrabold bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">₹{formatPrice(price)}</span>
+            <span className="text-xs text-slate-400 font-medium">{pg.pg_category === "to_let" ? "/month" : "onwards"}</span>
+          </div>
+          {pg.pg_category !== "to_let" && <span className="text-xs text-emerald-600 font-semibold">per month</span>}
+        </div>
+
+        {/* PG info */}
+        {pg.pg_category !== "to_let" && (
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <Badge color="green"><Bed size={12} />{pg.available_rooms || 0} Beds</Badge>
+            {isFillingFast && <Badge color="amber"><Flame size={12} />Filling Fast</Badge>}
+          </div>
+        )}
+
+        {/* To-let info */}
+        {pg.pg_category === "to_let" && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {pg.bhk_type && <Badge color="slate"><Home size={11} />{pg.bhk_type}</Badge>}
+            {pg.furnishing_type && <Badge color="slate">{pg.furnishing_type}</Badge>}
+            {pg.family_allowed && <Badge color="slate">Family</Badge>}
+            {pg.ready_to_move && <Badge color="blue">Ready to Move</Badge>}
+          </div>
+        )}
+
+        {/* Amenities */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {[
+            { c: pg.ac_available, i: Snowflake, l: "AC" },
+            { c: pg.wifi_available, i: Wifi, l: "WiFi" },
+            { c: pg.parking_available, i: Car, l: "Parking" },
+            { c: pg.food_available, i: Utensils, l: "Food" },
+          ].map((a, i) => a.c ? <span key={i} className="inline-flex items-center gap-1 text-[11px] text-slate-500 bg-slate-50 px-2 py-1 rounded-md font-medium"><a.i size={11} />{a.l}</span> : null)}
+          {pg.is_verified && <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md font-bold"><Shield size={11} />Verified</span>}
+        </div>
+
+        <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }} onClick={(e: any) => { e.stopPropagation(); onContact(pg); }} className="w-full py-3 bg-gradient-to-r from-blue-600 to-violet-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-shadow flex items-center justify-center gap-2">
+          <MessageCircle size={15} /> Contact Owner
+        </motion.button>
+      </div>
+    </motion.div>
+  );
+};
+
+/* ================================================================
+   QUICK VIEW MODAL
+   ================================================================ */
+const QuickViewModal = ({ pg, onClose, onBook, onSaveFav }: any) => {
+  const [isFav, setIsFav] = useState(false);
+  const [currentImg, setCurrentImg] = useState(0);
+
+  const photos = useMemo(() => (pg.photos?.filter((p: string) => p?.trim()) || []), [pg.photos]);
+  const hasMulti = photos.length > 1;
+  const price = useMemo(() => getPriceRange(pg).min || getEffectiveRent(pg), [pg]);
+
+  useEffect(() => {
+    if (hasMulti) { const iv = setInterval(() => setCurrentImg(p => (p + 1) % photos.length), 3000); return () => clearInterval(iv); }
+  }, [hasMulti, photos.length]);
+
+  const imgUrl = useMemo(() => {
+    if (hasMulti && photos[currentImg]) return getCorrectImageUrl(photos[currentImg]);
+    if (pg.main_photo) return getCorrectImageUrl(pg.main_photo);
+    if (photos[0]) return getCorrectImageUrl(photos[0]);
+    return "/no-image.png";
+  }, [hasMulti, photos, currentImg, pg.main_photo]);
+
+  const toggleFav = () => { const n = !isFav; setIsFav(n); onSaveFav(pg.id, n); };
+  const wa = () => window.open(`https://wa.me/${pg.contact_phone || ""}?text=Hi, I'm interested in ${pg.pg_name}`, "_blank");
+  const call = () => window.location.href = `tel:${pg.contact_phone || ""}`;
+
+  return (
+    <AnimatePresence>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[2000] p-4" onClick={onClose}>
+        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          {/* Image */}
+          <div className="relative h-64">
+            <motion.img key={imgUrl} src={imgUrl} alt={pg.pg_name} className="w-full h-full object-cover" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} onError={(e: any) => { e.target.src = "/no-image.png"; }} />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+            <button onClick={onClose} className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg hover:bg-white transition-colors"><X size={20} /></button>
+            <button onClick={toggleFav} className="absolute top-4 left-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg hover:bg-white transition-colors"><Heart size={18} className={isFav ? "text-rose-500 fill-rose-500" : "text-slate-600"} /></button>
+            {hasMulti && <><button onClick={() => setCurrentImg(p => (p - 1 + photos.length) % photos.length)} className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 flex items-center justify-center shadow-lg hover:bg-white"><ChevronLeft size={18} /></button><button onClick={() => setCurrentImg(p => (p + 1) % photos.length)} className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 flex items-center justify-center shadow-lg hover:bg-white"><ChevronRight size={18} /></button>
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">{photos.map((_: any, i: number) => <div key={i} className={`h-1.5 rounded-full transition-all ${i === currentImg ? "w-4 bg-white" : "w-1.5 bg-white/50"}`} />)}</div>
+            </>}
+          </div>
+
+          <div className="p-6">
+            <h2 className="text-2xl font-bold text-slate-900 mb-1">{pg.pg_name}</h2>
+            <div className="flex items-center gap-1.5 text-slate-500 text-sm mb-4"><MapPin size={16} />{pg.area}{pg.city ? `, ${pg.city}` : ""}{pg.distance != null && <span className="ml-2 text-blue-600 font-semibold flex items-center gap-1"><Navigation size={12} />{pg.distance.toFixed(1)} km</span>}</div>
+
+            <div className="mb-4">
+              <div className="flex items-baseline gap-2"><span className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">₹{formatPrice(price)}</span><span className="text-sm text-slate-400">{pg.pg_category === "to_let" ? "/month" : "onwards"}</span></div>
+              {pg.pg_category !== "to_let" && <span className="text-sm text-emerald-600 font-semibold">per month</span>}
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-5">
+              {pg.pg_category !== "to_let" && <Badge color="green"><Bed size={13} />{pg.available_rooms || 0} Beds Left</Badge>}
+              {pg.available_rooms != null && pg.available_rooms < 5 && pg.available_rooms > 0 && <Badge color="amber"><Flame size={13} />Filling Fast</Badge>}
+              {pg.is_verified && <Badge color="blue"><Shield size={13} />Verified</Badge>}
+              {pg.min_stay_months && pg.min_stay_months > 0 && <Badge color="slate"><Calendar size={13} />Min {pg.min_stay_months} months</Badge>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {[{ c: pg.ac_available, i: Snowflake, l: "Air Conditioning" }, { c: pg.wifi_available, i: Wifi, l: "Free WiFi" }, { c: pg.parking_available, i: Car, l: "Parking" }, { c: pg.food_available, i: Utensils, l: "Food Available" }].map((a, i) => a.c ? <div key={i} className="flex items-center gap-2 text-sm text-slate-600"><a.i size={16} className="text-blue-500" />{a.l}</div> : null)}
+            </div>
+
+            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-6">
+              <h4 className="text-sm font-bold text-blue-800 mb-2 flex items-center gap-2"><Check size={16} />What happens next?</h4>
+              <ul className="space-y-1.5 text-sm text-blue-700"><li>Owner receives your inquiry instantly</li><li>Owner gets WhatsApp notification</li><li>Owner will contact you within 24 hours</li><li>No payment required now</li></ul>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={call} className="flex items-center justify-center gap-2 py-3.5 bg-emerald-500 text-white rounded-xl font-bold text-sm hover:bg-emerald-600 transition-colors"><Phone size={16} />Call</motion.button>
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={wa} className="flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold text-sm hover:shadow-lg transition-shadow"><MessageCircle size={16} />WhatsApp</motion.button>
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => { onBook(pg); onClose(); }} className="flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-blue-600 to-violet-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-shadow"><Check size={16} />Book Now</motion.button>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
+/* ================================================================
+   BOOKING MODAL
+   ================================================================ */
+const BookingModal = ({ pg, onClose, onBook }: any) => {
+  const [roomType, setRoomType] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!pg) return;
-
-    const defaultRoomType = getDefaultRoomType();
-
-    setBookingData({
-      roomType: defaultRoomType || ""
-    });
-
+    setRoomType(getDefault());
   }, [pg]);
 
-  if (!pg) return null;
-
-  const getDefaultRoomType = () => {
+  const getDefault = () => {
     if (pg.pg_category === "pg") {
       if (pg.single_sharing) return "Single Sharing";
       if (pg.double_sharing) return "Double Sharing";
@@ -650,7 +862,7 @@ const BookingModal = ({ pg, onClose, onBook }) => {
       if (pg.co_living_double_room) return "Double Room";
       if (pg.coliving_three_sharing) return "Triple Sharing";
       if (pg.coliving_four_sharing) return "Four Sharing";
-    } else if (pg.pg_category === "to_let") {
+    } else {
       if (pg.price_1bhk) return "1BHK";
       if (pg.price_2bhk) return "2BHK";
       if (pg.price_3bhk) return "3BHK";
@@ -659,2440 +871,491 @@ const BookingModal = ({ pg, onClose, onBook }) => {
     return "";
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setBookingData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const getRoomTypes = () => {
-    const types = [];
-    
+  const getTypes = () => {
+    const t: { value: string; label: string }[] = [];
+    const add = (v: string, p?: number) => { if (p && p > 0) t.push({ value: v, label: `${v} - ₹${formatPrice(p)}` }); };
     if (pg.pg_category === "pg") {
-      if (pg.single_sharing && Number(pg.single_sharing) > 0) types.push({ 
-        value: "Single Sharing", 
-        label: `Single Sharing - ₹${formatPrice(pg.single_sharing)}` 
-      });
-      if (pg.double_sharing && Number(pg.double_sharing) > 0) types.push({ 
-        value: "Double Sharing", 
-        label: `Double Sharing - ₹${formatPrice(pg.double_sharing)}` 
-      });
-      if (pg.triple_sharing && Number(pg.triple_sharing) > 0) types.push({ 
-        value: "Triple Sharing", 
-        label: `Triple Sharing - ₹${formatPrice(pg.triple_sharing)}` 
-      });
-      if (pg.four_sharing && Number(pg.four_sharing) > 0) types.push({ 
-        value: "Four Sharing", 
-        label: `Four Sharing - ₹${formatPrice(pg.four_sharing)}` 
-      });
-      if (pg.single_room && Number(pg.single_room) > 0) types.push({ 
-        value: "Single Room", 
-        label: `Single Room - ₹${formatPrice(pg.single_room)}` 
-      });
-      if (pg.double_room && Number(pg.double_room) > 0) types.push({ 
-        value: "Double Room", 
-        label: `Double Room - ₹${formatPrice(pg.double_room)}` 
-      });
+      add("Single Sharing", pg.single_sharing); add("Double Sharing", pg.double_sharing); add("Triple Sharing", pg.triple_sharing);
+      add("Four Sharing", pg.four_sharing); add("Single Room", pg.single_room); add("Double Room", pg.double_room);
     } else if (pg.pg_category === "coliving") {
-      if (pg.co_living_single_room && Number(pg.co_living_single_room) > 0) types.push({ 
-        value: "Single Room", 
-        label: `Co-Living Single Room - ₹${formatPrice(pg.co_living_single_room)}` 
-      });
-      if (pg.co_living_double_room && Number(pg.co_living_double_room) > 0) types.push({ 
-        value: "Double Room", 
-        label: `Co-Living Double Room - ₹${formatPrice(pg.co_living_double_room)}` 
-      });
-      if (pg.coliving_three_sharing && Number(pg.coliving_three_sharing) > 0) types.push({ 
-        value: "Triple Sharing", 
-        label: `Co-Living Triple Sharing - ₹${formatPrice(pg.coliving_three_sharing)}` 
-      });
-      if (pg.coliving_four_sharing && Number(pg.coliving_four_sharing) > 0) types.push({ 
-        value: "Four Sharing", 
-        label: `Co-Living Four Sharing - ₹${formatPrice(pg.coliving_four_sharing)}` 
-      });
-    } else if (pg.pg_category === "to_let") {
-      if (pg.price_1bhk && Number(pg.price_1bhk) > 0) types.push({ 
-        value: "1BHK", 
-        label: `1 BHK - ₹${formatPrice(pg.price_1bhk)}` 
-      });
-      if (pg.price_2bhk && Number(pg.price_2bhk) > 0) types.push({ 
-        value: "2BHK", 
-        label: `2 BHK - ₹${formatPrice(pg.price_2bhk)}` 
-      });
-      if (pg.price_3bhk && Number(pg.price_3bhk) > 0) types.push({ 
-        value: "3BHK", 
-        label: `3 BHK - ₹${formatPrice(pg.price_3bhk)}` 
-      });
-      if (pg.price_4bhk && Number(pg.price_4bhk) > 0) types.push({ 
-        value: "4BHK", 
-        label: `4 BHK - ₹${formatPrice(pg.price_4bhk)}` 
-      });
+      add("Single Room", pg.co_living_single_room); add("Double Room", pg.co_living_double_room);
+      add("Triple Sharing", pg.coliving_three_sharing); add("Four Sharing", pg.coliving_four_sharing);
+    } else {
+      add("1BHK", pg.price_1bhk); add("2BHK", pg.price_2bhk); add("3BHK", pg.price_3bhk); add("4BHK", pg.price_4bhk);
     }
-    
-    return types;
+    return t;
   };
 
-  const getSelectedPrice = () => {
-    if (!bookingData.roomType) return null;
-    
+  const getPrice = () => {
+    if (!roomType) return null;
     if (pg.pg_category === "pg") {
-      if (bookingData.roomType === "Single Sharing") return pg.single_sharing;
-      if (bookingData.roomType === "Double Sharing") return pg.double_sharing;
-      if (bookingData.roomType === "Triple Sharing") return pg.triple_sharing;
-      if (bookingData.roomType === "Four Sharing") return pg.four_sharing;
-      if (bookingData.roomType === "Single Room") return pg.single_room;
-      if (bookingData.roomType === "Double Room") return pg.double_room;
+      if (roomType === "Single Sharing") return pg.single_sharing; if (roomType === "Double Sharing") return pg.double_sharing;
+      if (roomType === "Triple Sharing") return pg.triple_sharing; if (roomType === "Four Sharing") return pg.four_sharing;
+      if (roomType === "Single Room") return pg.single_room; if (roomType === "Double Room") return pg.double_room;
     } else if (pg.pg_category === "coliving") {
-      if (bookingData.roomType === "Single Room") return pg.co_living_single_room;
-      if (bookingData.roomType === "Double Room") return pg.co_living_double_room;
-      if (bookingData.roomType === "Triple Sharing") return pg.coliving_three_sharing;
-      if (bookingData.roomType === "Four Sharing") return pg.coliving_four_sharing;
-    } else if (pg.pg_category === "to_let") {
-      if (bookingData.roomType === "1BHK") return pg.price_1bhk;
-      if (bookingData.roomType === "2BHK") return pg.price_2bhk;
-      if (bookingData.roomType === "3BHK") return pg.price_3bhk;
-      if (bookingData.roomType === "4BHK") return pg.price_4bhk;
+      if (roomType === "Single Room") return pg.co_living_single_room; if (roomType === "Double Room") return pg.co_living_double_room;
+      if (roomType === "Triple Sharing") return pg.coliving_three_sharing; if (roomType === "Four Sharing") return pg.coliving_four_sharing;
+    } else {
+      if (roomType === "1BHK") return pg.price_1bhk; if (roomType === "2BHK") return pg.price_2bhk;
+      if (roomType === "3BHK") return pg.price_3bhk; if (roomType === "4BHK") return pg.price_4bhk;
     }
     return null;
   };
 
-  const selectedPrice = getSelectedPrice();
+  const selPrice = getPrice();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try { await onBook({ roomType }); } catch (err) { console.error(err); } finally { setLoading(false); }
+  };
 
   return (
-    <div style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.8)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 3000,
-      padding: 20,
-      animation: "fadeIn 0.3s ease"
-    }}>
-      <div style={{
-        background: "#ffffff",
-        borderRadius: 20,
-        width: "100%",
-        maxWidth: 500,
-        maxHeight: "90vh",
-        overflowY: "auto",
-        position: "relative",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
-      }}>
-        <button
-          onClick={onClose}
-          disabled={loading}
-          style={{
-            position: "absolute",
-            top: 16,
-            right: 16,
-            background: "rgba(255,255,255,0.9)",
-            border: "none",
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: loading ? "not-allowed" : "pointer",
-            zIndex: 100,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
-          }}
-        >
-          <X size={24} />
-        </button>
+    <AnimatePresence>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[3000] p-4" onClick={onClose}>
+        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="sticky top-0 bg-white z-10 px-6 pt-6 pb-4 border-b border-slate-100 flex items-center justify-between">
+            <div><h2 className="text-xl font-bold text-slate-900">Contact Owner</h2><p className="text-sm text-slate-500">{pg.pg_name}</p></div>
+            <button onClick={onClose} disabled={loading} className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-colors disabled:opacity-50"><X size={20} /></button>
+          </div>
 
-        <div style={{ padding: 30 }}>
-          <h2 style={{ 
-            fontSize: 24, 
-            fontWeight: 700, 
-            color: "#111827",
-            marginBottom: 8 
-          }}>
-            📞 Contact Owner - {pg.pg_name}
-          </h2>
-          <p style={{ 
-            fontSize: 14, 
-            color: "#6b7280",
-            marginBottom: 24 
-          }}>
-            Your details will be shared with the property owner. They will contact you shortly.
-          </p>
+          <div className="p-6">
+            <p className="text-sm text-slate-600 mb-5">Your details will be shared with the property owner. They will contact you shortly.</p>
+            {pg.min_stay_months && pg.min_stay_months > 0 && <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5 text-sm text-amber-700"><Lock size={16} />Minimum stay: {pg.min_stay_months} months</div>}
 
-          {Number(pg.min_stay_months) > 0 && (
-            <div style={{
-              background: "#f0fdf4",
-              padding: 12,
-              borderRadius: 8,
-              marginBottom: 15,
-              fontSize: 13,
-              color: "#065f46",
-              border: "1px solid #bbf7d0",
-              display: "flex",
-              alignItems: "center",
-              gap: 8
-            }}>
-              <Lock size={16} />
-              Minimum stay requirement: {pg.min_stay_months} months
-            </div>
-          )}
-
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            setLoading(true);
-            try {
-              await onBook(bookingData);
-            } catch (err) {
-              console.error("Booking error:", err);
-            } finally {
-              setLoading(false);
-            }
-          }}>
-            <div style={{ marginBottom: 24 }}>
-              <label style={{
-                display: "block",
-                marginBottom: 8,
-                fontSize: 14,
-                fontWeight: 500,
-                color: "#374151"
-              }}>
-                {pg.pg_category === "to_let" ? "BHK Type *" : "Room Type *"}
-              </label>
-              <select
-                name="roomType"
-                value={bookingData.roomType}
-                onChange={handleInputChange}
-                required
-                style={{
-                  width: "100%",
-                  padding: "12px 16px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 10,
-                  fontSize: 14,
-                  background: "#f9fafb"
-                }}
-              >
-                <option value="">Select {pg.pg_category === "to_let" ? "BHK Type" : "Room Type"}</option>
-                {getRoomTypes().map((type, index) => (
-                  <option key={index} value={type.value}>{type.label}</option>
-                ))}
-              </select>
-              
-              {selectedPrice !== null && selectedPrice > 0 && (
-                <p style={{ marginTop: 8, fontWeight: 600, color: "#10b981", fontSize: 14 }}>
-                  Selected: {bookingData.roomType} - ₹{formatPrice(selectedPrice)}/month
-                </p>
-              )}
-            </div>
-
-            <div style={{
-              background: "#f0fdf4",
-              borderRadius: 12,
-              padding: 16,
-              marginBottom: 24,
-              border: "1px solid #bbf7d0"
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <Info size={16} color="#10b981" />
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#065f46" }}>
-                  What happens next?
-                </span>
+            <form onSubmit={handleSubmit}>
+              <div className="mb-5">
+                <label className="block text-sm font-bold text-slate-700 mb-2">{pg.pg_category === "to_let" ? "BHK Type" : "Room Type"} *</label>
+                <select value={roomType} onChange={(e) => setRoomType(e.target.value)} required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">
+                  <option value="">Select {pg.pg_category === "to_let" ? "BHK Type" : "Room Type"}</option>
+                  {getTypes().map((t, i) => <option key={i} value={t.value}>{t.label}</option>)}
+                </select>
+                {selPrice != null && selPrice > 0 && <p className="mt-2 text-sm font-bold text-emerald-600">Selected: {roomType} — ₹{formatPrice(selPrice)}/month</p>}
               </div>
-              <ul style={{ margin: 0, paddingLeft: 20, color: "#065f46", fontSize: 13 }}>
-                <li>Owner receives your inquiry instantly</li>
-                <li>Owner gets WhatsApp notification</li>
-                <li>Owner will contact you within 24 hours</li>
-                <li>No payment required now</li>
-              </ul>
-            </div>
 
-            <div style={{ display: "flex", gap: 12 }}>
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={loading}
-                style={{
-                  flex: 1,
-                  padding: "14px",
-                  background: "#f3f4f6",
-                  color: "#374151",
-                  border: "none",
-                  borderRadius: 10,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: loading ? "not-allowed" : "pointer"
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                style={{
-                  flex: 2,
-                  padding: "14px",
-                  background: loading ? "#9ca3af" : "#3b82f6",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 10,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: loading ? "not-allowed" : "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8
-                }}
-              >
-                {loading ? (
-                  <>
-                    <div style={{
-                      width: 18,
-                      height: 18,
-                      border: "2px solid white",
-                      borderTop: "2px solid transparent",
-                      borderRadius: "50%",
-                      animation: "spin 0.8s linear infinite"
-                    }} />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <MessageCircle size={18} />
-                    Contact Owner
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 mb-6">
+                <div className="flex items-center gap-2 mb-2"><Info size={16} className="text-emerald-600" /><span className="text-sm font-bold text-emerald-800">What happens next?</span></div>
+                <ul className="space-y-1.5 text-sm text-emerald-700"><li>Owner receives your inquiry instantly</li><li>Owner gets WhatsApp notification</li><li>Owner will contact you within 24 hours</li><li>No payment required now</li></ul>
+              </div>
+
+              <div className="flex gap-3">
+                <motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onClose} disabled={loading} className="flex-1 py-3.5 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors disabled:opacity-50">Cancel</motion.button>
+                <motion.button type="submit" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} disabled={loading} className="flex-[2] py-3.5 bg-gradient-to-r from-blue-600 to-violet-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 disabled:opacity-70">
+                  {loading ? <><Loader2 size={18} className="animate-spin" />Processing...</> : <><MessageCircle size={18} />Contact Owner</>}
+                </motion.button>
+              </div>
+            </form>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 };
 
-/* ================= QUICK VIEW MODAL COMPONENT ================= */
-const QuickViewModal = ({ pg, onClose, onBook, onSaveFavorite }) => {
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [currentImage, setCurrentImage] = useState(0);
-  
-  const photosArray = React.useMemo(() => {
-    if (pg.photos && Array.isArray(pg.photos) && pg.photos.length > 0) {
-      return pg.photos.filter(photo => photo && photo.trim() !== "");
-    }
-    return [];
-  }, [pg.photos]);
-  
-  const hasMultipleImages = photosArray.length > 1;
-  
-  useEffect(() => {
-    if (hasMultipleImages) {
-      const interval = setInterval(() => {
-        setCurrentImage((prev) => (prev + 1) % photosArray.length);
-      }, 2500);
-      return () => clearInterval(interval);
-    }
-  }, [hasMultipleImages, photosArray.length]);
-  
-  const currentPhotoUrl = React.useMemo(() => {
-    if (hasMultipleImages && photosArray[currentImage]) {
-      return getCorrectImageUrl(photosArray[currentImage]);
-    }
-    if (pg.main_photo) {
-      return getCorrectImageUrl(pg.main_photo);
-    }
-    if (photosArray.length > 0) {
-      return getCorrectImageUrl(photosArray[0]);
-    }
-    return "/no-image.png";
-  }, [hasMultipleImages, photosArray, currentImage, pg.main_photo]);
-  
-  const startingPrice = React.useMemo(() => {
-    const range = getPriceRangeByType(pg);
-    return range.min || getEffectiveRent(pg);
-  }, [pg]);
-  
-  const toggleFavorite = () => {
-    const newState = !isFavorite;
-    setIsFavorite(newState);
-    onSaveFavorite(pg.id, newState);
-  };
-  
-  const handleWhatsApp = () => {
-    const phone = pg.contact_phone || "";
-    window.open(`https://wa.me/${phone}?text=Hi, I'm interested in ${pg.pg_name}`, '_blank');
-  };
-  
-  const handleCall = () => {
-    const phone = pg.contact_phone || "";
-    window.location.href = `tel:${phone}`;
-  };
-  
-  const handleBookNow = () => {
-    onBook(pg);
-    onClose();
-  };
-  
-  return (
-    <div style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.8)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 2000,
-      padding: 20,
-      animation: "fadeIn 0.3s ease"
-    }}>
-      <div style={{
-        background: "#ffffff",
-        borderRadius: 20,
-        width: "100%",
-        maxWidth: 500,
-        maxHeight: "90vh",
-        overflowY: "auto",
-        position: "relative",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
-      }}>
-        <button
-          onClick={onClose}
-          style={{
-            position: "absolute",
-            top: 16,
-            right: 16,
-            background: "rgba(255,255,255,0.9)",
-            border: "none",
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            zIndex: 100,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
-          }}
-        >
-          <X size={24} />
-        </button>
-        
-        <button
-          onClick={toggleFavorite}
-          style={{
-            position: "absolute",
-            top: 16,
-            left: 16,
-            background: "rgba(255,255,255,0.9)",
-            border: "none",
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            zIndex: 100,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
-          }}
-        >
-          <Heart size={20} color="#ef4444" fill={isFavorite ? "#ef4444" : "none"} />
-        </button>
-        
-        <div style={{ position: "relative", height: 250, background: "#f3f4f6" }}>
-          <img
-            src={currentPhotoUrl}
-            alt={pg.pg_name}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = "/no-image.png";
-            }}
-          />
-          
-          {hasMultipleImages && (
-            <div style={{
-              position: "absolute",
-              bottom: 12,
-              left: "50%",
-              transform: "translateX(-50%)",
-              display: "flex",
-              gap: 6,
-              background: "rgba(0,0,0,0.5)",
-              padding: "4px 8px",
-              borderRadius: 20
-            }}>
-              {photosArray.map((_, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    width: currentImage === idx ? 8 : 6,
-                    height: currentImage === idx ? 8 : 6,
-                    borderRadius: "50%",
-                    background: currentImage === idx ? "#fff" : "rgba(255,255,255,0.5)",
-                    transition: "all 0.2s"
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-        
-        <div style={{ padding: 20 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4, color: "#111827" }}>
-            {pg.pg_name}
-          </h2>
-          
-          <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 16, color: "#6b7280", fontSize: 14 }}>
-            <MapPin size={14} />
-            <span>{pg.area}{pg.city ? `, ${pg.city}` : ""}</span>
-          </div>
-          
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: "#1e3a5f" }}>
-              ₹{formatPrice(startingPrice)} <span style={{ fontSize: 14, fontWeight: 400, color: "#6b7280" }}>onwards</span>
-            </div>
-            <div style={{ fontSize: 12, color: "#10b981", fontWeight: 500 }}>per month</div>
-          </div>
-          
-          {/* PG ONLY: Beds Left */}
-          {pg.pg_category !== "to_let" && (
-            <div style={{
-              background: "#ecfdf5",
-              color: "#059669",
-              padding: "8px 12px",
-              borderRadius: 12,
-              fontSize: 14,
-              fontWeight: "600",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 16
-            }}>
-              🛏️ {pg.available_rooms || 0} Beds Left
-            </div>
-          )}
-          
-          {/* PG ONLY: Food Available */}
-          {pg.pg_category === "pg" && pg.food_available && (
-            <div style={{ marginBottom: 16, fontSize: 14, color: "#374151" }}>
-              🍽️ {pg.food_type === 'veg' ? 'Vegetarian' : pg.food_type === 'non-veg' ? 'Non-Vegetarian' : 'Veg & Non-Veg'}
-            </div>
-          )}
-          
-          {/* PG ONLY: Filling Fast */}
-          {pg.pg_category !== "to_let" && pg.available_rooms < 5 && pg.available_rooms > 0 && (
-            <div style={{
-              background: "#fef3c7",
-              color: "#d97706",
-              padding: "6px 12px",
-              borderRadius: 10,
-              fontSize: 12,
-              fontWeight: 600,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              marginBottom: 16
-            }}>
-              🔥 Filling Fast
-            </div>
-          )}
-          
-          {/* TO-LET BADGES */}
-          {pg.pg_category === "to_let" && (
-            <div style={{
-              display: "flex",
-              gap: "8px",
-              flexWrap: "wrap",
-              marginBottom: 16
-            }}>
-              {pg.bhk_type && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🏠 {pg.bhk_type}</span>}
-              {pg.furnishing_type && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🛋️ {pg.furnishing_type}</span>}
-              {pg.family_allowed && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>👨‍👩‍👧 Family</span>}
-              {pg.parking_available && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🚗 Parking</span>}
-            </div>
-          )}
-          
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 16,
-            marginBottom: 24,
-            fontSize: 12,
-            color: "#6b7280",
-            flexWrap: "wrap"
-          }}>
-            {pg.is_verified && (
-              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <Shield size={12} color="#10b981" />
-                Verified
-              </span>
-            )}
-          </div>
-          
-          <div style={{ display: "flex", gap: 12 }}>
-            <button
-              onClick={handleCall}
-              style={{
-                flex: 1,
-                padding: "14px",
-                background: "#10b981",
-                color: "white",
-                border: "none",
-                borderRadius: 12,
-                fontSize: 15,
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8
-              }}
-            >
-              <Phone size={16} />
-              Call
-            </button>
-            
-            <button
-              onClick={handleWhatsApp}
-              style={{
-                flex: 1,
-                padding: "14px",
-                background: "#25D366",
-                color: "white",
-                border: "none",
-                borderRadius: 12,
-                fontSize: 15,
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8
-              }}
-            >
-              <MessageCircle size={16} />
-              WhatsApp
-            </button>
-            
-            <button
-              onClick={handleBookNow}
-              style={{
-                flex: 1,
-                padding: "14px",
-                background: "#3b82f6",
-                color: "white",
-                border: "none",
-                borderRadius: 12,
-                fontSize: 15,
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8
-              }}
-            >
-              <Check size={16} />
-              Book Now
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+/* ================================================================
+   COMPARE MODAL
+   ================================================================ */
+const CompareModal = ({ selectedPGs, allPGs, onClose }: any) => {
+  const compareData = useMemo(() => allPGs.filter((pg: PG) => selectedPGs.has(pg.id)), [selectedPGs, allPGs]);
+  if (!compareData.length) return null;
 
-/* ================= COMPARE MODAL COMPONENT ================= */
-const CompareModal = ({ selectedPGs, allPGs, onClose }) => {
-  const [compareData, setCompareData] = useState([]);
-
-  useEffect(() => {
-    const propertiesToCompare = allPGs.filter(pg => selectedPGs.has(pg.id));
-    setCompareData(propertiesToCompare);
-  }, [selectedPGs, allPGs]);
-
-  if (compareData.length === 0) return null;
-
-  const getFeatureValue = (pg, feature) => {
-    switch(feature) {
-      case 'name':
-        return pg.pg_name;
-      case 'type':
-        return pg.pg_category === 'pg' ? 'PG' : 
-              pg.pg_category === 'coliving' ? 'Co-Living' : 'To-Let';
-      case 'price':
-        return `₹${formatPrice(getEffectiveRent(pg))}`;
-      case 'deposit':
-        return `₹${formatPrice(pg.deposit_amount || pg.security_deposit || 0)}`;
-      case 'location':
-        return pg.area || pg.city || 'N/A';
-      case 'food':
-        return pg.food_available ? 
-              (pg.food_type === 'veg' ? 'Vegetarian' : 
-                pg.food_type === 'non-veg' ? 'Non-Veg' : 'Both') : 'No';
-      case 'wifi':
-        return pg.wifi_available ? 'Yes' : 'No';
-      case 'ac':
-        return pg.ac_available ? 'Yes' : 'No';
-      case 'parking':
-        return pg.parking_available ? 'Yes' : 'No';
-      case 'attached_bathroom':
-        return pg.attached_bathroom ? 'Yes' : 'No';
-      case 'available_rooms':
-        return pg.available_rooms || 0;
-      case 'min_stay':
-        return pg.min_stay_months ? `${pg.min_stay_months} months` : 'N/A';
-      case 'distance':
-        return pg.distance ? `${pg.distance.toFixed(1)} km` : 'N/A';
-      default:
-        return 'N/A';
+  const getVal = (pg: PG, f: string) => {
+    switch (f) {
+      case "name": return pg.pg_name;
+      case "type": return pg.pg_category === "pg" ? "PG" : pg.pg_category === "coliving" ? "Co-Living" : "To-Let";
+      case "price": return `₹${formatPrice(getEffectiveRent(pg))}`;
+      case "deposit": return `₹${formatPrice(pg.deposit_amount || pg.security_deposit || 0)}`;
+      case "location": return pg.area || pg.city || "N/A";
+      case "food": return pg.food_available ? (pg.food_type === "veg" ? "Vegetarian" : pg.food_type === "non-veg" ? "Non-Veg" : "Both") : "No";
+      case "wifi": return pg.wifi_available ? "Yes" : "No";
+      case "ac": return pg.ac_available ? "Yes" : "No";
+      case "parking": return pg.parking_available ? "Yes" : "No";
+      case "attached_bathroom": return pg.attached_bathroom ? "Yes" : "No";
+      case "available_rooms": return String(pg.available_rooms || 0);
+      case "min_stay": return pg.min_stay_months ? `${pg.min_stay_months} months` : "N/A";
+      case "distance": return pg.distance ? `${pg.distance.toFixed(1)} km` : "N/A";
+      default: return "N/A";
     }
   };
 
   const features = [
-    { key: 'name', label: 'Property Name' },
-    { key: 'type', label: 'Type' },
-    { key: 'price', label: 'Monthly Rent' },
-    { key: 'deposit', label: 'Deposit' },
-    { key: 'location', label: 'Location' },
-    { key: 'distance', label: 'Distance' },
-    { key: 'food', label: 'Food' },
-    { key: 'wifi', label: 'WiFi' },
-    { key: 'ac', label: 'AC' },
-    { key: 'parking', label: 'Parking' },
-    { key: 'attached_bathroom', label: 'Attached Bathroom' },
-    { key: 'available_rooms', label: 'Available Rooms' },
-    { key: 'min_stay', label: 'Min Stay' }
+    { key: "name", label: "Property" }, { key: "type", label: "Type" }, { key: "price", label: "Monthly Rent" },
+    { key: "deposit", label: "Deposit" }, { key: "location", label: "Location" }, { key: "distance", label: "Distance" },
+    { key: "food", label: "Food" }, { key: "wifi", label: "WiFi" }, { key: "ac", label: "AC" },
+    { key: "parking", label: "Parking" }, { key: "attached_bathroom", label: "Attached Bath" },
+    { key: "available_rooms", label: "Available" }, { key: "min_stay", label: "Min Stay" },
   ];
 
   return (
-    <div style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.8)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 3000,
-      padding: 20,
-      animation: "fadeIn 0.3s ease"
-    }}>
-      <div style={{
-        background: "#ffffff",
-        borderRadius: 20,
-        width: "100%",
-        maxWidth: 1200,
-        maxHeight: "90vh",
-        overflowY: "auto",
-        position: "relative",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
-      }}>
-        <button
-          onClick={onClose}
-          style={{
-            position: "absolute",
-            top: 16,
-            right: 16,
-            background: "rgba(255,255,255,0.9)",
-            border: "none",
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            zIndex: 100,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
-          }}
-        >
-          <X size={24} />
-        </button>
+    <AnimatePresence>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[3000] p-4" onClick={onClose}>
+        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="px-6 pt-6 pb-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center"><BarChart3 size={20} className="text-violet-600" /></div>
+              <div><h2 className="text-xl font-bold text-slate-900">Compare Properties</h2><p className="text-sm text-slate-500">{compareData.length} properties</p></div>
+            </div>
+            <button onClick={onClose} className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-colors"><X size={20} /></button>
+          </div>
 
-        <div style={{ padding: 30 }}>
-          <h2 style={{ 
-            fontSize: 28, 
-            fontWeight: 700, 
-            color: "#111827",
-            marginBottom: 8,
-            display: "flex",
-            alignItems: "center",
-            gap: 12
-          }}>
-            <BarChart size={28} />
-            Compare Properties
-          </h2>
-          <p style={{ 
-            fontSize: 14, 
-            color: "#6b7280",
-            marginBottom: 30 
-          }}>
-            Comparing {compareData.length} properties
-          </p>
-
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div className="overflow-x-auto p-6">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ 
-                    padding: "16px", 
-                    background: "#f3f4f6",
-                    textAlign: "left",
-                    borderRadius: "10px 0 0 0"
-                  }}>
-                    Features
-                  </th>
-                  {compareData.map((pg, idx) => (
-                    <th key={pg.id} style={{ 
-                      padding: "16px", 
-                      background: "#f3f4f6",
-                      textAlign: "center",
-                      minWidth: "200px",
-                      borderRadius: idx === compareData.length - 1 ? "0 10px 0 0" : "0"
-                    }}>
-                      <div style={{ fontWeight: 600, marginBottom: 8 }}>{pg.pg_name}</div>
-                      {pg.photos && pg.photos.length > 0 && (
-                        <img 
-                          src={getCorrectImageUrl(pg.photos[0])}
-                          alt={pg.pg_name}
-                          style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 8 }}
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = "/no-image.png";
-                          }}
-                        />
-                      )}
-                      {pg.distance && (
-                        <div style={{
-                          marginTop: 8,
-                          fontSize: 12,
-                          color: "#10b981",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 4
-                        }}>
-                          <Navigation size={12} />
-                          {pg.distance.toFixed(1)} km away
-                        </div>
-                      )}
+                  <th className="p-4 bg-slate-50 text-left rounded-tl-2xl min-w-[140px] text-xs font-bold text-slate-500 uppercase tracking-wider">Feature</th>
+                  {compareData.map((pg: PG, idx: number) => (
+                    <th key={pg.id} className={`p-4 bg-slate-50 text-center min-w-[200px] ${idx === compareData.length - 1 ? "rounded-tr-2xl" : ""}`}>
+                      <div className="font-bold text-slate-900 mb-2 text-sm">{pg.pg_name}</div>
+                      {pg.photos?.[0] && <img src={getCorrectImageUrl(pg.photos[0])} alt={pg.pg_name} className="w-full h-24 object-cover rounded-xl mb-2" onError={(e: any) => { e.target.src = "/no-image.png"; }} />}
+                      {pg.distance != null && <div className="flex items-center justify-center gap-1 text-xs text-emerald-600 font-semibold"><Navigation size={10} />{pg.distance.toFixed(1)} km</div>}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {features.map((feature, featureIdx) => (
-                  <tr key={feature.key} style={{
-                    background: featureIdx % 2 === 0 ? "#ffffff" : "#f9fafb"
-                  }}>
-                    <td style={{ 
-                      padding: "14px 16px", 
-                      fontWeight: 600,
-                      borderBottom: "1px solid #e5e7eb"
-                    }}>
-                      {feature.label}
-                    </td>
-                    {compareData.map((pg) => (
-                      <td key={`${pg.id}-${feature.key}`} style={{ 
-                        padding: "14px 16px", 
-                        textAlign: "center",
-                        borderBottom: "1px solid #e5e7eb"
-                      }}>
-                        <span style={{
-                          background: feature.key === 'price' ? "#10b98120" : "transparent",
-                          color: feature.key === 'price' ? "#10b981" : "#374151",
-                          padding: feature.key === 'price' ? "6px 12px" : "0",
-                          borderRadius: feature.key === 'price' ? "20px" : "0",
-                          fontWeight: feature.key === 'price' ? 600 : 400
-                        }}>
-                          {getFeatureValue(pg, feature.key)}
-                        </span>
-                      </td>
-                    ))}
+                {features.map((f, fi) => (
+                  <tr key={f.key} className={fi % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
+                    <td className="p-4 font-bold text-sm text-slate-700 border-b border-slate-100">{f.label}</td>
+                    {compareData.map((pg: PG) => {
+                      const val = getVal(pg, f.key);
+                      const isBool = ["wifi", "ac", "parking", "attached_bathroom"].includes(f.key);
+                      const isPrice = f.key === "price";
+                      return (
+                        <td key={`${pg.id}-${f.key}`} className="p-4 text-center border-b border-slate-100">
+                          {isBool ? <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${val === "Yes" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{val === "Yes" ? <Check size={12} /> : <X size={12} />}{val}</span>
+                            : isPrice ? <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-sm font-extrabold">{val}</span>
+                              : <span className="text-sm text-slate-600">{val}</span>}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          <div style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            marginTop: 24,
-            paddingTop: 16,
-            borderTop: "1px solid #e5e7eb"
-          }}>
-            <button
-              onClick={onClose}
-              style={{
-                padding: "12px 24px",
-                background: "#3b82f6",
-                color: "white",
-                border: "none",
-                borderRadius: 10,
-                fontSize: 15,
-                fontWeight: 600,
-                cursor: "pointer"
-              }}
-            >
-              Close Comparison
-            </button>
+          <div className="px-6 py-4 border-t border-slate-100 flex justify-end shrink-0">
+            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onClose} className="px-6 py-3 bg-gradient-to-r from-blue-600 to-violet-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20">Close Comparison</motion.button>
           </div>
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 };
 
-/* ================= HERO BANNER COMPONENT ================= */
-const HeroBanner = ({ onSearch }) => {
-  const isMobile = isMobileDevice();
-  const [searchQuery, setSearchQuery] = useState("");
-  
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (onSearch && searchQuery.trim()) {
-      onSearch(searchQuery.trim());
-    }
-  };
-  
-  return (
-    <div style={{
-      background: "linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%)",
-      borderRadius: 24,
-      marginBottom: 40,
-      overflow: "hidden",
-      padding: isMobile ? "40px 20px" : "60px 40px",
-    }}>
-      <h1 style={{
-        fontSize: isMobile ? "36px" : "52px",
-        fontWeight: 800,
-        color: "#ffffff",
-        marginBottom: 16,
-        lineHeight: 1.2
-      }}>
-        Find Verified PGs,<br />
-        Coliving & Rental Homes
-      </h1>
-      <p style={{
-        fontSize: isMobile ? "16px" : "22px",
-        color: "rgba(255,255,255,0.9)",
-        marginBottom: 32,
-        maxWidth: "90%"
-      }}>
-        Book trusted stays with secure payments and verified owners.
-      </p>
-      
-      {/* Search Bar */}
-      <form onSubmit={handleSearch} style={{
-        display: "flex",
-        maxWidth: 600,
-        background: "white",
-        borderRadius: 60,
-        overflow: "hidden",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.2)"
-      }}>
-        <input
-          type="text"
-          placeholder="Search by area, city, or PG name..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{
-            flex: 1,
-            padding: "18px 24px",
-            border: "none",
-            outline: "none",
-            fontSize: 16,
-            background: "transparent"
-          }}
-        />
-        <button
-          type="submit"
-          style={{
-            padding: "18px 32px",
-            background: "#3b82f6",
-            color: "white",
-            border: "none",
-            cursor: "pointer",
-            fontWeight: 600,
-            fontSize: 16,
-            display: "flex",
-            alignItems: "center",
-            gap: 8
-          }}
-        >
-          <Search size={20} /> Search
-        </button>
-      </form>
-      
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 24 }}>
-        <div style={{ background: "rgba(255,255,255,0.15)", color: "white", padding: "8px 16px", borderRadius: 30, fontSize: 13 }}>✓ Verified Properties</div>
-        <div style={{ background: "rgba(255,255,255,0.15)", color: "white", padding: "8px 16px", borderRadius: 30, fontSize: 13 }}>✓ Direct Owner Contact</div>
-        <div style={{ background: "rgba(255,255,255,0.15)", color: "white", padding: "8px 16px", borderRadius: 30, fontSize: 13 }}>✓ No Brokerage</div>
+/* ================================================================
+   EMPTY STATE
+   ================================================================ */
+const EmptyState = ({ onReset }: { onReset: () => void }) => (
+  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-20 px-6 bg-gradient-to-b from-slate-50 to-white rounded-3xl border border-slate-100 mb-12">
+    <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }} className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-50 mb-6">
+      <Search size={36} className="text-blue-300" />
+    </motion.div>
+    <h3 className="text-2xl font-bold text-slate-800 mb-3">No properties found</h3>
+    <p className="text-slate-500 mb-8 max-w-md mx-auto">We couldn't find any properties matching your filters. Try adjusting your search criteria.</p>
+    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={onReset} className="px-8 py-3.5 bg-gradient-to-r from-blue-600 to-violet-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center gap-2 mx-auto">
+      <RotateCcw size={16} /> Reset All Filters
+    </motion.button>
+  </motion.div>
+);
+
+/* ================================================================
+   LOADING STATES
+   ================================================================ */
+const LoadingState = () => (
+  <div className="text-center py-20">
+    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full mx-auto mb-6" />
+    <p className="text-slate-500 font-semibold">Loading properties...</p>
+  </div>
+);
+
+const LoadingMore = () => (
+  <div className="text-center py-10">
+    <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }} className="w-10 h-10 border-[3px] border-blue-200 border-t-blue-600 rounded-full mx-auto mb-4" />
+    <p className="text-slate-500 text-sm">Loading more properties...</p>
+  </div>
+);
+
+/* ================================================================
+   NOTIFICATION
+   ================================================================ */
+const Toast = ({ message, isError, onClose }: { message: string; isError?: boolean; onClose?: () => void }) => (
+  <motion.div initial={{ opacity: 0, x: 100, scale: 0.9 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: 100, scale: 0.9 }} transition={{ type: "spring", stiffness: 300, damping: 25 }}
+    className={`fixed top-5 right-5 z-[5000] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl ${isError ? "bg-rose-500 text-white" : "bg-emerald-500 text-white"}`}>
+    {isError ? <X size={20} /> : <Check size={20} />}
+    <span className="font-semibold text-sm">{message}</span>
+    {onClose && <button onClick={onClose} className="ml-2 hover:opacity-70"><X size={16} /></button>}
+  </motion.div>
+);
+
+/* ================================================================
+   LOCATION INFO BAR
+   ================================================================ */
+const LocationInfo = ({ address, onRefresh, loading }: { address: string | null; onRefresh: () => void; loading: boolean }) => (
+  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-r from-blue-50 via-sky-50/50 to-white rounded-2xl p-4 mb-6 border border-blue-100/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center"><MapPin size={20} className="text-blue-600" /></div>
+      <div>
+        <div className="flex items-center gap-2"><span className="font-bold text-blue-800 text-sm">{address ? `Near ${address}` : "Your Location"}</span><span className="text-[10px] text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full font-bold uppercase">Within 5km</span></div>
+        <p className="text-xs text-blue-600 mt-0.5">Showing nearby properties sorted by distance</p>
       </div>
     </div>
-  );
-};
+    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={onRefresh} disabled={loading} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-70 shrink-0">
+      <RefreshCw size={14} className={loading ? "animate-spin" : ""} />{loading ? "Refreshing..." : "Refresh"}
+    </motion.button>
+  </motion.div>
+);
 
-/* ================= WHY CHOOSE NEPXALL SECTION ================= */
-const WhyChooseNepxall = () => {
-  const isMobile = isMobileDevice();
-  
-  const tenantBenefits = [
-    { icon: <MapPin size={24} />, title: "Find PGs Near Your Workplace", color: "#3b82f6" },
-    { icon: <Shield size={24} />, title: "Verified PG Listings", color: "#10b981" },
-    { icon: <BarChart size={24} />, title: "Compare Rent, Food & Amenities", color: "#8b5cf6" },
-    { icon: <Phone size={24} />, title: "Direct Owner Contact", color: "#f59e0b" },
-    { icon: <Coins size={24} />, title: "No Broker Charges", color: "#ef4444" },
-  ];
-  
-  const ownerBenefits = [
-    { icon: <Users size={24} />, title: "Get More Tenant Leads", color: "#3b82f6" },
-    { icon: <Plus size={24} />, title: "List PGs Free", color: "#10b981" },
-    { icon: <Calendar size={24} />, title: "Manage Rooms & Bookings", color: "#8b5cf6" },
-    { icon: <Award size={24} />, title: "Build Trust with Verification", color: "#f59e0b" },
-    { icon: <Rocket size={24} />, title: "Increase Occupancy Faster", color: "#ef4444" },
-  ];
-  
-  return (
-    <div style={{ marginBottom: 48 }}>
-      <div style={{ textAlign: "center", marginBottom: 32 }}>
-        <h2 style={{ fontSize: isMobile ? 28 : 36, fontWeight: 700, color: "#111827" }}>Why Choose Nepxall?</h2>
-        <p style={{ fontSize: isMobile ? 16 : 18, color: "#6b7280" }}>Connecting tenants with trusted property owners</p>
+/* ================================================================
+   LOCATION BANNER
+   ================================================================ */
+const LocationBanner = ({ onAllow, onDeny, loading }: { onAllow: () => void; onDeny: () => void; loading: boolean }) => (
+  <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="relative overflow-hidden rounded-2xl mb-6 p-5 bg-gradient-to-r from-blue-600 to-violet-600 shadow-lg shadow-blue-500/20">
+    <div className="absolute right-8 top-1/2 -translate-y-1/2"><div className="w-16 h-16 rounded-full border-2 border-white/20 animate-ping" /><div className="absolute inset-0 w-16 h-16 rounded-full border-2 border-white/20 animate-ping" style={{ animationDelay: "0.5s" }} /></div>
+    <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center"><Navigation size={24} className="text-white" /></div>
+        <div><h3 className="text-white font-bold text-base flex items-center gap-2"><MapPin size={16} />Find Properties Near You</h3><p className="text-white/80 text-sm">Allow location access to see properties within 5km</p></div>
       </div>
-      
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-        gap: 32
-      }}>
-        {/* Tenants Section */}
-        <div style={{
-          background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
-          borderRadius: 20,
-          padding: 24,
-          border: "1px solid #bfdbfe"
-        }}>
-          <h3 style={{ fontSize: 20, fontWeight: 700, color: "#1e3a5f", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-            <Users size={24} color="#3b82f6" /> looking for pg/coliving/tolet
-          </h3>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
-            {tenantBenefits.map((benefit, index) => (
-              <div key={index} style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                background: "white",
-                padding: "12px 16px",
-                borderRadius: 12,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
-              }}>
-                <div style={{ color: benefit.color }}>{benefit.icon}</div>
-                <span style={{ fontSize: 14, fontWeight: 500, color: "#374151" }}>{benefit.title}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        {/* Owners Section */}
-        <div style={{
-          background: "linear-gradient(135deg, #f0fdf4, #dcfce7)",
-          borderRadius: 20,
-          padding: 24,
-          border: "1px solid #bbf7d0"
-        }}>
-          <h3 style={{ fontSize: 20, fontWeight: 700, color: "#065f46", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-            <Building size={24} color="#10b981" /> For PG Owners
-          </h3>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
-            {ownerBenefits.map((benefit, index) => (
-              <div key={index} style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                background: "white",
-                padding: "12px 16px",
-                borderRadius: 12,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
-              }}>
-                <div style={{ color: benefit.color }}>{benefit.icon}</div>
-                <span style={{ fontSize: 14, fontWeight: 500, color: "#374151" }}>{benefit.title}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div className="flex gap-3 shrink-0">
+        <button onClick={onDeny} className="px-5 py-2.5 rounded-xl bg-white/15 text-white text-sm font-semibold hover:bg-white/25 transition-colors backdrop-blur-sm">Not Now</button>
+        <button onClick={onAllow} disabled={loading} className="px-5 py-2.5 rounded-xl bg-white text-blue-600 text-sm font-bold hover:bg-white/90 transition-colors shadow-lg">{loading ? "Detecting..." : "Allow Location"}</button>
       </div>
     </div>
-  );
-};
+  </motion.div>
+);
 
-/* ================= LOCATION PERMISSION BANNER COMPONENT ================= */
-const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
-  return (
-    <div style={{
-      background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
-      borderRadius: 20,
-      marginBottom: 20,
-      padding: "20px 24px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      flexWrap: "wrap",
-      gap: 16,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: "50%", width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Navigation size={24} color="white" />
-        </div>
-        <div>
-          <h3 style={{ fontSize: 16, fontWeight: 600, color: "white" }}>📍 Find Properties Near You</h3>
-          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.9)" }}>Allow location access to see properties within 5km of your area</p>
-        </div>
-      </div>
-      <div style={{ display: "flex", gap: 12 }}>
-        <button onClick={onDeny} style={{ padding: "10px 20px", background: "rgba(255,255,255,0.2)", color: "white", border: "none", borderRadius: 10, cursor: "pointer" }}>Not Now</button>
-        <button onClick={onAllow} disabled={isLoading} style={{ padding: "10px 24px", background: "white", color: "#3b82f6", border: "none", borderRadius: 10, fontWeight: 600, cursor: "pointer" }}>
-          {isLoading ? "Getting location..." : "Allow Location"}
-        </button>
-      </div>
-    </div>
-  );
-};
-
-/* ================= UPDATED PG CARD COMPONENT WITH SEPARATE UI FOR PG AND TO-LET ================= */
-const PGPropertyCard = ({ pg, onQuickView, onFavorite, onContact, onCardClick, isFavorite, isSelectedForCompare, onSelectForCompare, compareMode }) => {
-  const isMobile = window.innerWidth < 768;
-  const [currentImage, setCurrentImage] = useState(0);
-  
-  const photosArray = React.useMemo(() => {
-    if (pg.photos && Array.isArray(pg.photos) && pg.photos.length > 0) {
-      return pg.photos.filter(photo => photo && photo.trim() !== "");
-    }
-    return [];
-  }, [pg.photos]);
-  
-  const hasMultipleImages = photosArray.length > 1;
-  
-  useEffect(() => {
-    if (hasMultipleImages && !compareMode) {
-      const interval = setInterval(() => {
-        setCurrentImage((prev) => (prev + 1) % photosArray.length);
-      }, 2500);
-      return () => clearInterval(interval);
-    }
-  }, [hasMultipleImages, photosArray.length, compareMode]);
-  
-  const currentPhotoUrl = React.useMemo(() => {
-    if (hasMultipleImages && photosArray[currentImage]) {
-      return getCorrectImageUrl(photosArray[currentImage]);
-    }
-    if (pg.main_photo) {
-      return getCorrectImageUrl(pg.main_photo);
-    }
-    if (photosArray.length > 0) {
-      return getCorrectImageUrl(photosArray[0]);
-    }
-    return "/no-image.png";
-  }, [hasMultipleImages, photosArray, currentImage, pg.main_photo]);
-  
-  const startingPrice = React.useMemo(() => {
-    const range = getPriceRangeByType(pg);
-    return range.min || getEffectiveRent(pg);
-  }, [pg]);
-  
-  const isFillingFast = pg.available_rooms < 5 && pg.available_rooms > 0;
-  
-  const foodTypeDisplay = React.useMemo(() => {
-    if (!pg.food_available) return null;
-    if (pg.food_type === 'veg') return "🍽️ Veg";
-    if (pg.food_type === 'non-veg') return "🍽️ Non-Veg";
-    if (pg.food_type === 'both') return "🍽️ Veg & Non-Veg";
-    return "🍽️ Food Available";
-  }, [pg.food_available, pg.food_type]);
-  
-  const getBHKDisplay = () => {
-    if (pg.bhk_type) return pg.bhk_type;
-    if (pg.price_2bhk > 0) return "2 BHK";
-    if (pg.price_3bhk > 0) return "3 BHK";
-    if (pg.price_1bhk > 0) return "1 BHK";
-    if (pg.price_4bhk > 0) return "4 BHK";
-    return "Apartment";
-  };
-  
-  const getAreaDisplay = () => {
-    if (pg.sqft_area) return `${pg.sqft_area} sqft`;
-    return "Spacious";
-  };
-  
-  return (
-    <div
-      onClick={() => onCardClick(pg)}
-      style={{
-        borderRadius: 16,
-        overflow: "hidden",
-        background: "#fff",
-        cursor: "pointer",
-        transition: "all 0.3s ease",
-        border: isSelectedForCompare ? "2px solid #8b5cf6" : "1px solid #e5e7eb",
-        position: "relative",
-        width: "100%",
-        maxWidth: isMobile ? "100%" : "380px",
-        minWidth: 0,
-        boxSizing: "border-box"
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = "translateY(-4px)";
-        e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,.12)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,.08)";
-      }}
-    >
-      {compareMode && (
-        <button
-          onClick={(e) => onSelectForCompare(pg.id, e)}
-          style={{
-            position: "absolute",
-            top: 12,
-            left: 12,
-            background: "rgba(255,255,255,0.9)",
-            border: "none",
-            width: 36,
-            height: 36,
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            zIndex: 20,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
-          }}
-        >
-          {isSelectedForCompare ? <Check size={18} color="#8b5cf6" /> : <Plus size={18} color="#374151" />}
-        </button>
-      )}
-      
-      <button
-        onClick={(e) => onQuickView(pg, e)}
-        style={{
-          position: "absolute",
-          top: 12,
-          right: 12,
-          background: "rgba(255,255,255,0.9)",
-          border: "none",
-          padding: "8px 16px",
-          borderRadius: 20,
-          fontSize: 13,
-          fontWeight: 500,
-          color: "#374151",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          zIndex: 10,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
-        }}
-      >
-        <Eye size={14} /> Quick View
-      </button>
-      
-      <button
-        onClick={(e) => onFavorite(pg.id, e)}
-        style={{
-          position: "absolute",
-          top: 12,
-          left: compareMode ? 56 : 12,
-          background: "rgba(255,255,255,0.9)",
-          border: "none",
-          width: 36,
-          height: 36,
-          borderRadius: "50%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: "pointer",
-          zIndex: 10,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
-        }}
-      >
-        <Heart size={18} color="#ef4444" fill={isFavorite ? "#ef4444" : "none"} />
-      </button>
-      
-      <div style={{ position: "relative" }}>
-        <img
-          src={currentPhotoUrl}
-          alt={pg.pg_name}
-          style={{ width: "100%", height: isMobile ? 200 : 240, objectFit: "cover", display: "block" }}
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = "/no-image.png";
-          }}
-        />
-        
-        <div style={{
-          position: "absolute",
-          bottom: 12,
-          left: 12,
-          background: pg.pg_category === "to_let" ? "#f97316" : pg.pg_category === "coliving" ? "#8b5cf6" : pg.pg_type === "boys" ? "#16a34a" : "#db2777",
-          color: "#fff",
-          padding: "6px 12px",
-          borderRadius: 20,
-          fontSize: 12,
-          fontWeight: 600,
-        }}>
-          {pg.pg_category === "to_let" ? "To-Let" : pg.pg_category === "coliving" ? "Co-Living" : pg.pg_type ? pg.pg_type.charAt(0).toUpperCase() + pg.pg_type.slice(1) + " PG" : "PG"}
-        </div>
-        
-        {pg.distance && (
-          <div style={{
-            position: "absolute",
-            bottom: 12,
-            right: 12,
-            background: "rgba(0,0,0,0.7)",
-            color: "white",
-            padding: "4px 10px",
-            borderRadius: 20,
-            fontSize: 11,
-            display: "flex",
-            alignItems: "center",
-            gap: 4
-          }}>
-            <Navigation size={10} /> {pg.distance.toFixed(1)} km
-          </div>
-        )}
-        
-        {hasMultipleImages && (
-          <div style={{
-            position: "absolute",
-            bottom: 12,
-            left: "50%",
-            transform: "translateX(-50%)",
-            display: "flex",
-            gap: 6,
-            background: "rgba(0,0,0,0.5)",
-            padding: "4px 8px",
-            borderRadius: 20
-          }}>
-            {photosArray.map((_, idx) => (
-              <div key={idx} style={{
-                width: currentImage === idx ? 8 : 6,
-                height: currentImage === idx ? 8 : 6,
-                borderRadius: "50%",
-                background: currentImage === idx ? "#fff" : "rgba(255,255,255,0.5)",
-              }} />
-            ))}
-          </div>
-        )}
-      </div>
-      
-      <div style={{ padding: 16 }}>
-        <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: "#111827" }}>{pg.pg_name}</h3>
-        
-        <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 12, color: "#6b7280", fontSize: 14 }}>
-          <MapPin size={14} />
-          <span>{pg.area}{pg.city ? `, ${pg.city}` : ""}</span>
-        </div>
-        
-        {/* ========== PG UI ========== */}
-        {pg.pg_category !== "to_let" && (
-          <>
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: "#1e3a5f", display: "flex", alignItems: "baseline", gap: 4 }}>
-                ₹{formatPrice(startingPrice)} <span style={{ fontSize: 13, fontWeight: 400, color: "#6b7280" }}>onwards</span>
-              </div>
-              <div style={{ fontSize: 11, color: "#10b981", fontWeight: 500 }}>per month</div>
-            </div>
-            
-            {pg.pg_category !== "to_let" && (
-              <div style={{
-                background: "#ecfdf5",
-                color: "#059669",
-                padding: "6px 12px",
-                borderRadius: 20,
-                fontSize: 12,
-                fontWeight: "600",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                marginBottom: 10
-              }}>
-                🛏️ {pg.available_rooms || 0} Beds Left
-              </div>
-            )}
-            
-            {pg.pg_category === "pg" && foodTypeDisplay && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12, fontSize: 13, color: "#374151" }}>
-                {foodTypeDisplay}
-              </div>
-            )}
-            
-            {pg.pg_category !== "to_let" && isFillingFast && (
-              <div style={{
-                background: "#fef3c7",
-                color: "#d97706",
-                padding: "4px 10px",
-                borderRadius: 16,
-                fontSize: 11,
-                fontWeight: 600,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-                marginBottom: 12
-              }}>
-                🔥 Filling Fast
-              </div>
-            )}
-          </>
-        )}
-        
-        {/* ========== TO-LET UI ========== */}
-        {pg.pg_category === "to_let" && (
-          <>
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: "#1e3a5f", display: "flex", alignItems: "baseline", gap: 4 }}>
-                ₹{formatPrice(startingPrice)} <span style={{ fontSize: 13, fontWeight: 400, color: "#6b7280" }}>/month</span>
-              </div>
-            </div>
-            
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 14, color: "#374151", marginBottom: 4 }}>
-                {getBHKDisplay()} • {getAreaDisplay()}
-              </div>
-            </div>
-            
-            {/* To-Let Badges */}
-            <div style={{
-              display: "flex",
-              gap: "8px",
-              flexWrap: "wrap",
-              marginBottom: 12
-            }}>
-              {pg.bhk_type && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🏠 {pg.bhk_type}</span>}
-              {pg.furnishing_type && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🛋️ {pg.furnishing_type}</span>}
-              {pg.family_allowed && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>👨‍👩‍👧 Family</span>}
-              {pg.parking_available && <span style={{ background: "#f3f4f6", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>🚗 Parking</span>}
-            </div>
-            
-            {/* Ready to Move Badge */}
-            {pg.ready_to_move && (
-              <div style={{
-                background: "#dbeafe",
-                color: "#1e40af",
-                padding: "4px 10px",
-                borderRadius: 16,
-                fontSize: 11,
-                fontWeight: 600,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-                marginBottom: 12
-              }}>
-                ✓ Ready to Move
-              </div>
-            )}
-          </>
-        )}
-        
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          marginBottom: 14,
-          fontSize: 11,
-          color: "#6b7280",
-          flexWrap: "wrap"
-        }}>
-          {pg.is_verified && (
-            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <Shield size={12} color="#10b981" /> Verified
-            </span>
-          )}
-        </div>
-        
-        <button
-          onClick={(e) => { e.stopPropagation(); onContact(pg); }}
-          style={{
-            width: "100%",
-            fontSize: 14,
-            padding: "12px 16px",
-            background: "#3b82f6",
-            color: "white",
-            border: "none",
-            borderRadius: 10,
-            fontWeight: 600,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8
-          }}
-        >
-          <MessageCircle size={16} /> Contact Owner
-        </button>
-      </div>
-    </div>
-  );
-};
-
-/* ================= MAIN COMPONENT ================= */
-function UserPGSearch() {
-  const isMobile = window.innerWidth < 768;
+/* ================================================================
+   MAIN PAGE
+   ================================================================ */
+export default function UserPGSearch() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
 
-  const [allPGs, setAllPGs] = useState([]);
-  
-  // ✅ PAGINATION STATE (FIXED)
+  const [allPGs, setAllPGs] = useState<PG[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMorePages, setHasMorePages] = useState(true);
-  const [totalCount, setTotalCount] = useState(0);
-  const PAGE_SIZE = 12;
-  
-  // Tab state - Default is "all"
-  const [activeTab, setActiveTab] = useState("all");
-  
-  // Property tabs definition
-  const propertyTabs = [
-    { id: "all", label: "All" },
-    { id: "pg", label: "PG" },
-    { id: "coliving", label: "Co-Living" },
-    { id: "to_let", label: "To-Let" }
-  ];
-  
-  const [userLocation, setUserLocation] = useState(null);
-  const [userAddress, setUserAddress] = useState(null);
-  const [showFilters, setShowFilters] = useState(false);
-  const [showBudgetFilter, setShowBudgetFilter] = useState(false);
-  const [quickViewPG, setQuickViewPG] = useState(null);
-  const [bookingPG, setBookingPG] = useState(null);
-  const [favorites, setFavorites] = useState(new Set());
-  const [notification, setNotification] = useState(null);
-  const [showLocationBanner, setShowLocationBanner] = useState(false);
-  const [locationLoading, setLocationLoading] = useState(false);
-  const [compareMode, setCompareMode] = useState(false);
-  const [selectedForCompare, setSelectedForCompare] = useState(new Set());
-  const [showCompareModal, setShowCompareModal] = useState(false);
-  const [activeQuickFilters, setActiveQuickFilters] = useState(new Set());
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [total, setTotal] = useState(0);
 
-  const [filters, setFilters] = useState({
-    location: "",
-    minBudget: 0,
-    maxBudget: 50000,
-    food: false,
-    ac: false,
-    wifi: false,
-    parking: false,
-    sort: "",
-    nearMe: false,
-    foodType: ""
+  const [activeTab, setActiveTab] = useState("all");
+  const [showBudget, setShowBudget] = useState(false);
+  const [quickViewPG, setQuickViewPG] = useState<PG | null>(null);
+  const [bookingPG, setBookingPG] = useState<PG | null>(null);
+  const [showLocBanner, setShowLocBanner] = useState(true);
+  const [compareMode, setCompareMode] = useState(false);
+  const [selectedCompare, setSelectedCompare] = useState<Set<number>>(new Set());
+  const [showCompare, setShowCompare] = useState(false);
+  const [activeQuick, setActiveQuick] = useState<Set<string>>(new Set());
+  const [notif, setNotif] = useState<{ message: string; isError?: boolean } | null>(null);
+
+  const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [userAddr, setUserAddr] = useState<string | null>(null);
+  const [locLoading, setLocLoading] = useState(false);
+
+  const [favorites, setFavorites] = useState<Set<number>>(() => {
+    try { const s = localStorage.getItem("pg_favs"); return s ? new Set(JSON.parse(s)) : new Set(); } catch { return new Set(); }
   });
 
-  // Auto ask for location on first load
-  useEffect(() => {
-    const autoAsked = localStorage.getItem(LOCATION_AUTO_ASKED_KEY);
-    if (!autoAsked && !userLocation && !locationLoading) {
-      autoDetectLocation();
-    }
-  }, []);
+  const [filters, setFilters] = useState({
+    location: "", minBudget: 0, maxBudget: 100000, food: false, ac: false,
+    wifi: false, parking: false, sort: "", nearMe: false, foodType: "",
+  });
 
-  const autoDetectLocation = () => {
-    if (!navigator.geolocation) return;
-    
-    setLocationLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setUserLocation(location);
-        
-        try {
-          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.lat}&lon=${location.lng}&zoom=18&addressdetails=1`);
-          const data = await response.json();
-          if (data.address) {
-            const area = data.address.suburb || data.address.neighbourhood || data.address.city_district || "";
-            setUserAddress(area);
-          }
-        } catch (err) {}
-        
-        setFilters(prev => ({ ...prev, nearMe: true, sort: "distance" }));
-        localStorage.setItem(LOCATION_AUTO_ASKED_KEY, "true");
-        setLocationLoading(false);
-        resetAndFetch();
-      },
-      () => {
-        localStorage.setItem(LOCATION_AUTO_ASKED_KEY, "true");
-        setLocationLoading(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
+  const showNotification = (message: string, isError = false) => {
+    setNotif({ message, isError });
+    setTimeout(() => setNotif(null), 3000);
   };
 
-  // Apply quick filter
-  const applyQuickFilter = (filter) => {
-    const newActiveFilters = new Set(activeQuickFilters);
-    
-    if (newActiveFilters.has(filter.id)) {
-      newActiveFilters.delete(filter.id);
-      if (filter.type === "location") {
-        setFilters(prev => ({ ...prev, nearMe: false }));
-      } else if (filter.type === "food") {
-        setFilters(prev => ({ ...prev, foodType: "" }));
-      } else if (filter.type === "amenity") {
-        setFilters(prev => ({ ...prev, [filter.field]: false }));
-      }
-    } else {
-      newActiveFilters.add(filter.id);
-      if (filter.type === "location") {
-        setFilters(prev => ({ ...prev, nearMe: true, sort: "distance" }));
-        detectLocation();
-      } else if (filter.type === "food" && filter.value) {
-        setFilters(prev => ({ ...prev, foodType: filter.value }));
-      } else if (filter.type === "amenity" && filter.field) {
-        setFilters(prev => ({ ...prev, [filter.field]: true }));
-      }
-    }
-    
-    setActiveQuickFilters(newActiveFilters);
-    showNotification(`${newActiveFilters.has(filter.id) ? "Applied" : "Removed"} ${filter.name}`);
-    resetAndFetch();
+  const saveFavs = (f: Set<number>) => {
+    try { localStorage.setItem("pg_favs", JSON.stringify([...f])); } catch { }
   };
 
-  const handlePromoBannerClick = (banner) => {
-    showNotification(`🎉 ${banner.title} - ${banner.description}`);
+  const toggleFav = (id: number) => {
+    setFavorites(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) { n.delete(id); showNotification("Removed from favorites"); }
+      else { n.add(id); showNotification("Added to favorites"); }
+      saveFavs(n);
+      return n;
+    });
   };
 
-  const processPGData = (data) => {
-    return data.map(pg => ({
-      ...pg,
-      deposit_amount: Number(pg.deposit_amount) || Number(pg.security_deposit) || 0,
-      rent_amount: Number(pg.rent_amount) || 0,
-      single_sharing: Number(pg.single_sharing) || 0,
-      double_sharing: Number(pg.double_sharing) || 0,
-      triple_sharing: Number(pg.triple_sharing) || 0,
-      four_sharing: Number(pg.four_sharing) || 0,
-      single_room: Number(pg.single_room) || 0,
-      double_room: Number(pg.double_room) || 0,
-      price_1bhk: Number(pg.price_1bhk) || 0,
-      price_2bhk: Number(pg.price_2bhk) || 0,
-      price_3bhk: Number(pg.price_3bhk) || 0,
-      price_4bhk: Number(pg.price_4bhk) || 0,
-      co_living_single_room: Number(pg.co_living_single_room) || 0,
-      co_living_double_room: Number(pg.co_living_double_room) || 0,
-      coliving_three_sharing: Number(pg.coliving_three_sharing) || 0,
-      coliving_four_sharing: Number(pg.coliving_four_sharing) || 0,
-      security_deposit: Number(pg.security_deposit) || 0,
-      maintenance_amount: Number(pg.maintenance_amount) || 0,
-      available_rooms: Number(pg.available_rooms) || 0,
-      total_rooms: Number(pg.total_rooms) || 0,
-      min_stay_months: Number(pg.min_stay_months) || 0,
-      ready_to_move: pg.ready_to_move === true || pg.ready_to_move === 1 || pg.ready_to_move === "true",
-      family_allowed: pg.family_allowed === true || pg.family_allowed === 1 || pg.family_allowed === "true",
-      sqft_area: pg.sqft_area || null,
-      bhk_type: pg.bhk_type || null,
-      furnishing_type: pg.furnishing_type || null,
-      food_available: pg.food_available === true || pg.food_available === 1 || pg.food_available === "true",
-      ac_available: pg.ac_available === true || pg.ac_available === 1 || pg.ac_available === "true",
-      wifi_available: pg.wifi_available === true || pg.wifi_available === 1 || pg.wifi_available === "true",
-      parking_available: pg.parking_available === true || pg.parking_available === 1 || pg.parking_available === "true",
-      is_verified: pg.is_verified === true || pg.is_verified === 1 || pg.is_verified === "true",
-    }));
-  };
-
-  // ✅ FIXED: loadPGs with proper pagination
-  const loadPGs = async (pageToLoad = 1, isLoadMore = false) => {
+  const loadPGs = async (pageToLoad = 1, isMore = false) => {
     try {
-      if (!isLoadMore) {
-        setLoading(true);
-      } else {
-        setLoadingMore(true);
-      }
-      
-      // Build URL with proper parameters
+      if (!isMore) setLoading(true); else setLoadingMore(true);
       let url = `/pg/search/advanced?page=${pageToLoad}&limit=${PAGE_SIZE}`;
-      
-      // Add sorting parameter
       let sortParam = "relevance";
       if (filters.sort === "low") sortParam = "price_low";
       else if (filters.sort === "high") sortParam = "price_high";
       else if (filters.sort === "new") sortParam = "newest";
-      else if (filters.sort === "distance" && userLocation) sortParam = "nearest";
+      else if (filters.sort === "distance" && userLoc) sortParam = "nearest";
       url += `&sort_by=${sortParam}`;
-      
-      // Add search parameter
-      if (filters.location) {
-        url += `&search=${encodeURIComponent(filters.location)}`;
+      if (filters.location) url += `&search=${encodeURIComponent(filters.location)}`;
+      if (userLoc && filters.nearMe) url += `&lat=${userLoc.lat}&lng=${userLoc.lng}`;
+
+      const res = await api.get(url);
+      if (res.data?.data) {
+        let raw = res.data.data;
+        if (userLoc) raw = raw.map((pg: PG) => pg.latitude && pg.longitude ? { ...pg, distance: getDistanceKm(userLoc.lat, userLoc.lng, pg.latitude, pg.longitude) } : pg);
+        const processed = processPGData(raw);
+        if (!isMore || pageToLoad === 1) setAllPGs(processed); else setAllPGs(p => [...p, ...processed]);
+        setHasMore(res.data.hasMore === true);
+        setTotal(res.data.total || 0);
+        setPage(pageToLoad);
       }
-      
-      // Add user location for distance calculation
-      if (userLocation && filters.nearMe) {
-        url += `&lat=${userLocation.lat}&lng=${userLocation.lng}`;
-      }
-      
-      console.log("Fetching:", url);
-      const response = await api.get(url);
-      
-      if (response.data?.data) {
-        let rawData = response.data.data;
-        
-        // Process distance data
-        if (userLocation) {
-          rawData = rawData.map(pg => {
-            if (pg.latitude && pg.longitude) {
-              const distance = getDistanceKm(userLocation.lat, userLocation.lng, pg.latitude, pg.longitude);
-              return { ...pg, distance };
-            }
-            return pg;
-          });
-        }
-        
-        const processedData = processPGData(rawData);
-        
-        if (!isLoadMore || pageToLoad === 1) {
-          setAllPGs(processedData);
-        } else {
-          setAllPGs(prev => [...prev, ...processedData]);
-        }
-        
-        // ✅ CRITICAL: Use hasMore from backend response
-        setHasMorePages(response.data.hasMore === true);
-        setTotalCount(response.data.total || 0);
-        setCurrentPage(pageToLoad);
-      }
-      
-      setLoading(false);
-      setLoadingMore(false);
-    } catch (error) {
-      console.error("Error loading PGs:", error);
-      setLoading(false);
-      setLoadingMore(false);
-    }
+      setLoading(false); setLoadingMore(false);
+    } catch (err) { console.error(err); setLoading(false); setLoadingMore(false); }
   };
 
-  // Reset and fetch first page
-  const resetAndFetch = () => {
-    setCurrentPage(1);
-    loadPGs(1, false);
-  };
+  const resetFetch = useCallback(() => { setPage(1); loadPGs(1, false); }, []);
+  const loadMore = useCallback(() => { if (!loadingMore && hasMore && !loading) loadPGs(page + 1, true); }, [loadingMore, hasMore, loading, page]);
 
-  // ✅ Load more function
-  const loadMoreProperties = () => {
-    if (!loadingMore && hasMorePages && !loading) {
-      const nextPage = currentPage + 1;
-      loadPGs(nextPage, true);
-    }
-  };
-
-  // Handle search from hero
-  const handleHeroSearch = (searchQuery) => {
-    setFilters(prev => ({ ...prev, location: searchQuery }));
-    resetAndFetch();
-  };
-
-  // Initial load
-  useEffect(() => {
-    resetAndFetch();
-    loadFavorites();
-  }, []);
-
-  // Refetch when filters change
-  useEffect(() => {
-    resetAndFetch();
-  }, [filters.location, filters.sort, filters.nearMe, userLocation, filters.minBudget, filters.maxBudget, filters.food, filters.ac, filters.wifi, filters.parking, filters.foodType]);
-
-  const loadFavorites = () => {
-    try {
-      const saved = localStorage.getItem("pg_favorites");
-      if (saved) setFavorites(new Set(JSON.parse(saved)));
-    } catch (error) {
-      setFavorites(new Set());
-    }
-  };
-
-  const saveFavorites = (newFavorites) => {
-    try {
-      localStorage.setItem("pg_favorites", JSON.stringify([...newFavorites]));
-    } catch (error) {}
-  };
-
-  const toggleFavorite = (pgId, e) => {
-    e.stopPropagation();
-    const newFavorites = new Set(favorites);
-    if (newFavorites.has(pgId)) {
-      newFavorites.delete(pgId);
-      showNotification("Removed from favorites");
+  const applyQuickFilter = useCallback((id: string) => {
+    const map: Record<string, any> = {
+      near_me: { nearMe: true, sort: "distance" },
+      ac_room: { ac: true },
+      wifi: { wifi: true },
+      parking: { parking: true },
+      veg_food: { foodType: "veg" },
+    };
+    const newSet = new Set(activeQuick);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+      if (id === "near_me") setFilters(p => ({ ...p, nearMe: false }));
+      else if (id === "veg_food") setFilters(p => ({ ...p, foodType: "" }));
+      else if (map[id]?.field) setFilters(p => ({ ...p, [map[id].field]: false }));
     } else {
-      newFavorites.add(pgId);
-      showNotification("Added to favorites");
+      newSet.add(id);
+      if (id === "near_me") { setFilters(p => ({ ...p, nearMe: true, sort: "distance" })); detectLoc(); }
+      else setFilters(p => ({ ...p, ...map[id] }));
     }
-    setFavorites(newFavorites);
-    saveFavorites(newFavorites);
-  };
+    setActiveQuick(newSet);
+    showNotification(`${newSet.has(id) ? "Applied" : "Removed"} ${id.replace("_", " ")}`);
+    resetFetch();
+  }, [activeQuick, resetFetch]);
 
-  const showNotification = (message, isError = false) => {
-    setNotification({ message, isError });
-    setTimeout(() => setNotification(null), 3000);
-  };
-
-  const filterByArea = (area) => {
-    setFilters(prev => ({ ...prev, location: area, nearMe: false }));
-    showNotification(`📍 Showing properties in ${area}`);
-    trackEvent("area_filter_click", { area });
-  };
-
-  const handleAllowLocation = () => {
-    setLocationLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setFilters(prev => ({ ...prev, nearMe: true, sort: "distance" }));
-        setShowLocationBanner(false);
-        localStorage.setItem(LOCATION_PERMISSION_ASKED_KEY, "true");
-        showNotification("📍 Location detected! Showing nearby properties within 5km");
-        setLocationLoading(false);
-        resetAndFetch();
-      },
-      () => {
-        showNotification("❌ Unable to get your location.", true);
-        setShowLocationBanner(false);
-        localStorage.setItem(LOCATION_PERMISSION_ASKED_KEY, "true");
-        setLocationLoading(false);
-      }
-    );
-  };
-
-  const handleDenyLocation = () => {
-    setShowLocationBanner(false);
-    localStorage.setItem(LOCATION_PERMISSION_ASKED_KEY, "true");
-    showNotification("You can enable location from the 'Near Me' button anytime");
-  };
-
-  const detectLocation = () => {
-    setLocationLoading(true);
+  const detectLoc = () => {
+    if (!navigator.geolocation) return;
+    setLocLoading(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        const location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setUserLocation(location);
-        setFilters(prev => ({ ...prev, nearMe: true, sort: "distance" }));
-        showNotification("📍 Location detected! Showing nearby properties");
-        setLocationLoading(false);
-        resetAndFetch();
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setUserLoc(loc);
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${loc.lat}&lon=${loc.lng}&zoom=18&addressdetails=1`);
+          const data = await res.json();
+          if (data.address) setUserAddr(data.address.suburb || data.address.neighbourhood || data.address.city_district || "");
+        } catch { }
+        setLocLoading(false);
       },
-      () => {
-        showNotification("❌ Unable to get your location. Please check permissions.", true);
-        setLocationLoading(false);
-      }
+      () => { setLocLoading(false); },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 
-  // Apply filters - filter the loaded PGs
-  const applyFilters = useCallback(() => {
-    let filtered = [...allPGs];
+  const handleHeroSearch = useCallback((q: string) => { setFilters(p => ({ ...p, location: q })); resetFetch(); }, [resetFetch]);
+  const filterByArea = useCallback((area: string) => { const newLoc = filters.location === area ? "" : area; setFilters(p => ({ ...p, location: newLoc, nearMe: false })); showNotification(`${newLoc ? "Showing" : "Removed"} ${area}`); resetFetch(); }, [filters.location, resetFetch]);
+  const handleBudgetChange = useCallback((min: number, max: number) => { setFilters(p => ({ ...p, minBudget: min, maxBudget: max })); showNotification(`Budget: ₹${formatPrice(min)} - ₹${formatPrice(max)}`); resetFetch(); }, [resetFetch]);
+  const resetFilters = useCallback(() => { setFilters({ location: "", minBudget: 0, maxBudget: 100000, food: false, ac: false, wifi: false, parking: false, sort: "", nearMe: false, foodType: "" }); setActiveQuick(new Set()); showNotification("All filters reset"); resetFetch(); }, [resetFetch]);
+  const handleFilterChange = useCallback((f: any) => { setFilters(p => ({ ...p, ...f })); resetFetch(); }, [resetFetch]);
+  const handleNearMe = useCallback(() => { if (!filters.nearMe) detectLoc(); setFilters(p => ({ ...p, nearMe: !p.nearMe, sort: !p.nearMe ? "distance" : p.sort })); resetFetch(); }, [filters.nearMe, resetFetch]);
 
-    if (filters.location) {
-      filtered = filtered.filter((pg) =>
-        `${pg.area || ""} ${pg.city || ""} ${pg.pg_name || ""}`.toLowerCase().includes(filters.location.toLowerCase())
-      );
-    }
+  const applyFilters = useCallback((data: PG[]) => {
+    let f = [...data];
+    if (filters.location) f = f.filter(pg => `${pg.area || ""} ${pg.city || ""} ${pg.pg_name || ""}`.toLowerCase().includes(filters.location.toLowerCase()));
+    f = f.filter(pg => { const r = getEffectiveRent(pg); return r >= filters.minBudget && r <= filters.maxBudget; });
+    if (filters.food) f = f.filter(pg => pg.food_available);
+    if (filters.ac) f = f.filter(pg => pg.ac_available);
+    if (filters.wifi) f = f.filter(pg => pg.wifi_available);
+    if (filters.parking) f = f.filter(pg => pg.parking_available);
+    if (filters.foodType) f = f.filter(pg => pg.food_type === filters.foodType);
+    if (filters.sort === "low") f.sort((a, b) => getEffectiveRent(a) - getEffectiveRent(b));
+    else if (filters.sort === "high") f.sort((a, b) => getEffectiveRent(b) - getEffectiveRent(a));
+    else if (filters.sort === "new") f.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+    else if (filters.sort === "distance" && userLoc) f.sort((a, b) => (a.distance || 999) - (b.distance || 999));
+    return f;
+  }, [filters, userLoc]);
 
-    filtered = filtered.filter((pg) => {
-      const rent = getEffectiveRent(pg);
-      return rent >= filters.minBudget && rent <= filters.maxBudget;
-    });
+  const filtered = useMemo(() => {
+    const f = applyFilters(allPGs);
+    return activeTab === "all" ? f : f.filter(p => p.pg_category === activeTab);
+  }, [applyFilters, allPGs, activeTab]);
 
-    if (filters.food) filtered = filtered.filter((pg) => pg.food_available === true);
-    if (filters.ac) filtered = filtered.filter((pg) => pg.ac_available === true);
-    if (filters.wifi) filtered = filtered.filter((pg) => pg.wifi_available === true);
-    if (filters.parking) filtered = filtered.filter((pg) => pg.parking_available === true);
-    if (filters.foodType) filtered = filtered.filter((pg) => pg.food_type === filters.foodType);
+  const resultCount = filtered.length;
+  const hasActive = filters.location !== "" || filters.minBudget > 0 || filters.maxBudget < 100000 || filters.food || filters.ac || filters.wifi || filters.parking || filters.foodType !== "" || activeQuick.size > 0;
 
-    if (filters.sort === "low") {
-      filtered.sort((a, b) => getEffectiveRent(a) - getEffectiveRent(b));
-    } else if (filters.sort === "high") {
-      filtered.sort((a, b) => getEffectiveRent(b) - getEffectiveRent(a));
-    } else if (filters.sort === "new") {
-      filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    } else if (filters.sort === "distance" && userLocation) {
-      filtered.sort((a, b) => (a.distance || 999) - (b.distance || 999));
-    }
+  const getTitle = () => { switch (activeTab) { case "pg": return "PG Accommodations"; case "coliving": return "Co-Living Spaces"; case "to_let": return "To-Let Homes"; default: return "All Properties"; } };
 
-    return filtered;
-  }, [allPGs, filters, userLocation]);
+  useEffect(() => { resetFetch(); }, []);
 
-  // Get filtered PGs based on tab
-  const getFilteredByTab = useCallback(() => {
-    const allFiltered = applyFilters();
-    
-    if (activeTab === "all") {
-      return allFiltered;
-    }
-    return allFiltered.filter(
-      (item) => item.pg_category === activeTab
-    );
-  }, [applyFilters, activeTab]);
-
-  const filteredPGs = getFilteredByTab();
-  const resultCount = filteredPGs.length;
-
-  const handleBudgetChange = (min, max) => {
-    setFilters(prev => ({ ...prev, minBudget: min, maxBudget: max }));
-    showNotification(`Budget set: ₹${formatPrice(min)} - ₹${formatPrice(max)}`);
-    resetAndFetch();
-  };
-
-  const resetFilters = () => {
-    setFilters({
-      location: "", minBudget: 0, maxBudget: 50000, food: false, ac: false, wifi: false, parking: false, sort: "", nearMe: false, foodType: ""
-    });
-    setActiveQuickFilters(new Set());
-    showNotification("All filters reset");
-    resetAndFetch();
-  };
-
-  const handleQuickView = (pg, e) => {
-    e.stopPropagation();
-    setQuickViewPG(pg);
-  };
-
-  const handleBookNow = (pg) => {
-    if (!user) {
-      showNotification("Please register or login to contact owner");
-      navigate("/login");
-      return;
-    }
-    setBookingPG(pg);
-  };
-
-  const handleBookingSubmit = async (bookingData) => {
-    try {
-      if (!user) {
-        showNotification("Please register or login to continue");
-        navigate("/register");
-        return;
-      }
-
-      const token = await user.getIdToken(true);
-      const payload = { room_type: bookingData.roomType };
-
-      const res = await api.post(`/bookings/${bookingPG.id}`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      showNotification(res.data.message || "✅ Owner will contact you shortly");
-      
-      if (bookingPG.contact_phone) {
-        setTimeout(() => window.location.href = `tel:${bookingPG.contact_phone}`, 500);
-      }
-      
-      setBookingPG(null);
-    } catch (error) {
-      if (error.response?.data?.message?.includes("already")) {
-        showNotification("📞 Connecting you directly to owner...");
-        if (bookingPG.contact_phone) {
-          setTimeout(() => window.location.href = `tel:${bookingPG.contact_phone}`, 500);
-        }
-        setBookingPG(null);
-      } else {
-        showNotification(error.response?.data?.message || "❌ Something went wrong", true);
-      }
-    }
-  };
-  
-  const handleSaveFavorite = (pgId, isFavorite) => {
-    const newFavorites = new Set(favorites);
-    if (isFavorite) newFavorites.add(pgId);
-    else newFavorites.delete(pgId);
-    setFavorites(newFavorites);
-    saveFavorites(newFavorites);
-  };
-
-  const handleCardClick = (pg) => {
-    navigate(`/pg/${pg.id}`);
-  };
-
-  const toggleCompareMode = () => {
-    setCompareMode(!compareMode);
-    if (compareMode) setSelectedForCompare(new Set());
-  };
-
-  const toggleSelectForCompare = (pgId, e) => {
-    e.stopPropagation();
-    const newSelected = new Set(selectedForCompare);
-    if (newSelected.has(pgId)) {
-      newSelected.delete(pgId);
-    } else if (newSelected.size < 3) {
-      newSelected.add(pgId);
-    } else {
-      showNotification("You can compare up to 3 properties at a time");
-      return;
-    }
-    setSelectedForCompare(newSelected);
-  };
-
-  const handleCompare = () => {
-    if (selectedForCompare.size < 2) {
-      showNotification("Please select at least 2 properties to compare");
-      return;
-    }
-    setShowCompareModal(true);
-  };
-
-  // Get title based on active tab
-  const getTabTitle = () => {
-    switch(activeTab) {
-      case "pg": return "PG Accommodations";
-      case "coliving": return "Co-Living Spaces";
-      case "to_let": return "To-Let Homes";
-      default: return "All Properties";
-    }
-  };
-
-  // Check if filters are active
-  const hasActiveFilters = filters.location || filters.minBudget > 0 || filters.maxBudget < 50000 || filters.food || filters.ac || filters.wifi || filters.parking || filters.foodType || activeQuickFilters.size > 0;
-
-  if (authLoading) {
-    return (
-      <div style={{ textAlign: "center", paddingTop: 100 }}>
-        <div style={{ width: 50, height: 50, border: "4px solid #e5e7eb", borderTop: "4px solid #3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
-        <p>Loading authentication...</p>
-      </div>
-    );
-  }
-  
   return (
-    <div style={{ maxWidth: 1400, margin: "auto", minHeight: "100vh", padding: "0 16px" }}>
-      {/* Notification Toast */}
-      {notification && (
-        <div style={{
-          position: "fixed", top: 20, right: 20,
-          background: notification.isError ? "#ef4444" : "#10b981",
-          color: "white", padding: "12px 24px", borderRadius: 10, zIndex: 4000,
-          animation: "slideIn 0.3s ease"
-        }}>
-          {notification.message}
-        </div>
-      )}
+    <div className="max-w-7xl mx-auto min-h-screen px-4 sm:px-6 lg:px-8 py-6 bg-slate-50/50">
+      <AnimatePresence>{notif && <Toast message={notif.message} isError={notif.isError} onClose={() => setNotif(null)} />}</AnimatePresence>
 
-      {/* Location Permission Banner */}
-      {showLocationBanner && (
-        <LocationPermissionBanner onAllow={handleAllowLocation} onDeny={handleDenyLocation} isLoading={locationLoading} />
-      )}
+      {showLocBanner && !userLoc && <LocationBanner onAllow={() => { detectLoc(); setShowLocBanner(false); }} onDeny={() => setShowLocBanner(false)} loading={locLoading} />}
 
-      {/* Hero Banner with Search */}
-      <HeroBanner onSearch={handleHeroSearch} />
+      <HeroSection onSearch={handleHeroSearch} />
+      <WhyChooseSection />
 
-      {/* Why Choose Nepxall */}
-      <WhyChooseNepxall />
+      {userLoc && <LocationInfo address={userAddr} onRefresh={detectLoc} loading={locLoading} />}
 
-      {/* Location Info Bar */}
-      {userLocation && (
-        <div style={{
-          background: "linear-gradient(135deg, #f0f9ff, #e0f2fe)",
-          borderRadius: 16,
-          padding: "12px 20px",
-          marginBottom: 24,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 12,
-          border: "1px solid #bae6fd"
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <Navigation size={20} color="#0284c7" />
-            <div>
-              <span style={{ fontWeight: 600, color: "#0369a1" }}>
-                📍 {userAddress ? `Near ${userAddress}` : "Your Location"}
-              </span>
-              <span style={{ fontSize: 12, color: "#0284c7", marginLeft: 8 }}>
-                Properties within 5km
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={detectLocation}
-            disabled={locationLoading}
-            style={{
-              padding: "8px 16px",
-              background: "#0284c7",
-              color: "white",
-              border: "none",
-              borderRadius: 10,
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 6
-            }}
-          >
-            <Navigation size={14} />
-            Refresh Location
-          </button>
-        </div>
-      )}
+      <QuickFiltersBar active={activeQuick} onToggle={applyQuickFilter} />
+      <PopularAreas selected={filters.location} onSelect={filterByArea} />
 
-      {/* Quick Filters Section */}
-      <div style={{ marginBottom: 28 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: "#374151" }}>Quick Filters</h3>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          {quickFilters.map((filter) => (
-            <button
-              key={filter.id}
-              onClick={() => applyQuickFilter(filter)}
-              style={{
-                padding: "10px 18px",
-                borderRadius: 40,
-                background: activeQuickFilters.has(filter.id) ? filter.id === "near_me" ? "#f97316" : "#3b82f6" : "#f3f4f6",
-                color: activeQuickFilters.has(filter.id) ? "white" : "#374151",
-                border: "none",
-                cursor: "pointer",
-                fontSize: 14,
-                fontWeight: 500,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                transition: "all 0.2s"
-              }}
-            >
-              {filter.icon}
-              {filter.name}
-            </button>
-          ))}
-        </div>
-      </div>
+      <FilterBar filters={filters} onFilterChange={handleFilterChange} onBudget={() => setShowBudget(true)} onNearMe={handleNearMe} onCompareToggle={() => { setCompareMode(p => { if (p) setSelectedCompare(new Set()); return !p; }); }} onReset={resetFilters} compareMode={compareMode} hasActive={hasActive} userLocation={!!userLoc} />
 
-      {/* Popular Areas Chips */}
-      <div style={{ marginBottom: 28 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: "#374151" }}>📍 Popular Areas in Bangalore</h3>
-        <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 10, scrollbarWidth: "thin" }}>
-          {popularAreas.map((area) => (
-            <button
-              key={area.name}
-              onClick={() => filterByArea(area.name)}
-              style={{
-                padding: "10px 20px",
-                borderRadius: 40,
-                border: filters.location === area.name ? `2px solid ${area.color}` : "1px solid #e5e7eb",
-                background: filters.location === area.name ? `${area.color}10` : "#fff",
-                color: filters.location === area.name ? area.color : "#374151",
-                whiteSpace: "nowrap",
-                cursor: "pointer",
-                fontWeight: 500,
-                fontSize: 14,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                transition: "all 0.2s"
-              }}
-            >
-              <span>{area.icon}</span> {area.name}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Filter Bar */}
-      <div style={{ 
-        background: "#fff", 
-        borderRadius: 20, 
-        padding: "20px 24px", 
-        boxShadow: "0 4px 20px rgba(0,0,0,0.06)", 
-        marginBottom: 32, 
-        position: "sticky", 
-        top: 20, 
-        zIndex: 100,
-        border: "1px solid #eef2ff"
-      }}>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ flex: 1, minWidth: 260, position: "relative" }}>
-            <Search size={18} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
-            <input 
-              placeholder="Search by area, city or property name..." 
-              value={filters.location} 
-              onChange={(e) => setFilters({ ...filters, location: e.target.value })} 
-              style={{ width: "100%", padding: "12px 14px 12px 42px", border: "1px solid #e5e7eb", borderRadius: 40, fontSize: 14, background: "#fafafa" }} 
-            />
-          </div>
-          <button onClick={() => setShowBudgetFilter(true)} style={{ padding: "12px 20px", background: "#f3f4f6", border: "none", borderRadius: 40, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 500 }}>
-            <Coins size={16} /> Budget
-          </button>
-          <button onClick={() => setShowFilters(!showFilters)} style={{ padding: "12px 20px", background: showFilters ? "#3b82f6" : "#f3f4f6", color: showFilters ? "white" : "#374151", border: "none", borderRadius: 40, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 500 }}>
-            <Filter size={16} /> Filters
-          </button>
-          <button onClick={detectLocation} style={{ padding: "12px 20px", background: filters.nearMe ? "#f97316" : "#f3f4f6", color: filters.nearMe ? "white" : "#374151", border: "none", borderRadius: 40, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 500 }}>
-            <Navigation size={16} /> Near Me
-          </button>
-          <button onClick={toggleCompareMode} style={{ padding: "12px 20px", background: compareMode ? "#8b5cf6" : "#f3f4f6", color: compareMode ? "white" : "#374151", border: "none", borderRadius: 40, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 500 }}>
-            <BarChart size={16} /> Compare
-          </button>
-          {hasActiveFilters && (
-            <button onClick={resetFilters} style={{ padding: "12px 20px", background: "#ef4444", color: "white", border: "none", borderRadius: 40, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 500 }}>
-              <X size={16} /> Clear All
-            </button>
-          )}
-        </div>
-
-        {showFilters && (
-          <div style={{ paddingTop: 20, marginTop: 20, borderTop: "1px solid #eef2ff" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600 }}>Advanced Filters</h3>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }}>
-              <select value={filters.foodType} onChange={(e) => setFilters({ ...filters, foodType: e.target.value })} style={{ padding: "10px 14px", border: "1px solid #e5e7eb", borderRadius: 30, background: "#fafafa" }}>
-                <option value="">Any Food Type</option>
-                <option value="veg">Vegetarian Only</option>
-                <option value="non-veg">Non-Vegetarian Only</option>
-                <option value="both">Both Available</option>
-              </select>
-              <select value={filters.sort} onChange={(e) => setFilters({ ...filters, sort: e.target.value })} style={{ padding: "10px 14px", border: "1px solid #e5e7eb", borderRadius: 30, background: "#fafafa" }}>
-                <option value="">Sort by: Relevance</option>
-                <option value="low">Rent: Low to High</option>
-                <option value="high">Rent: High to Low</option>
-                <option value="new">Newest First</option>
-                {userLocation && <option value="distance">Distance (Nearest First)</option>}
-              </select>
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", background: filters.food ? "#10b981" : "#f3f4f6", borderRadius: 30, cursor: "pointer", fontSize: 13 }}>
-                  <input type="checkbox" checked={filters.food} onChange={(e) => setFilters({ ...filters, food: e.target.checked })} style={{ display: "none" }} />
-                  <Utensils size={14} /> Food
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", background: filters.ac ? "#3b82f6" : "#f3f4f6", borderRadius: 30, cursor: "pointer", fontSize: 13 }}>
-                  <input type="checkbox" checked={filters.ac} onChange={(e) => setFilters({ ...filters, ac: e.target.checked })} style={{ display: "none" }} />
-                  <Snowflake size={14} /> AC
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", background: filters.wifi ? "#8b5cf6" : "#f3f4f6", borderRadius: 30, cursor: "pointer", fontSize: 13 }}>
-                  <input type="checkbox" checked={filters.wifi} onChange={(e) => setFilters({ ...filters, wifi: e.target.checked })} style={{ display: "none" }} />
-                  <Wifi size={14} /> WiFi
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", background: filters.parking ? "#f59e0b" : "#f3f4f6", borderRadius: 30, cursor: "pointer", fontSize: 13 }}>
-                  <input type="checkbox" checked={filters.parking} onChange={(e) => setFilters({ ...filters, parking: e.target.checked })} style={{ display: "none" }} />
-                  <Car size={14} /> Parking
-                </label>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Property Tabs */}
-      <div style={{ 
-        display: "flex", 
-        gap: 8, 
-        marginBottom: 28,
-        borderBottom: "1px solid #e5e7eb",
-        paddingBottom: 12,
-        overflowX: "auto",
-        scrollbarWidth: "thin"
-      }}>
-        {propertyTabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            style={{
-              padding: "12px 24px",
-              borderRadius: 40,
-              background: activeTab === tab.id ? "#1e3a5f" : "transparent",
-              color: activeTab === tab.id ? "white" : "#4b5563",
-              border: activeTab === tab.id ? "none" : "1px solid #e5e7eb",
-              cursor: "pointer",
-              fontSize: 15,
-              fontWeight: activeTab === tab.id ? 600 : 500,
-              transition: "all 0.2s ease",
-              whiteSpace: "nowrap"
-            }}
-          >
-            {tab.label}
-          </button>
+      {/* Tabs */}
+      <div className="flex gap-2 mb-8 overflow-x-auto pb-2 no-scrollbar">
+        {propertyTabs.map(tab => (
+          <motion.button key={tab.id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${activeTab === tab.id ? "bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-900/20" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"}`}>
+            <tab.icon size={15} />{tab.label}
+          </motion.button>
         ))}
       </div>
 
-      {/* Results Header */}
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "space-between", 
-        alignItems: "center",
-        marginBottom: 24,
-        flexWrap: "wrap",
-        gap: 12
-      }}>
+      {/* Results header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>
-            {getTabTitle()}
-          </h2>
-          <p style={{ fontSize: 14, color: "#6b7280", margin: "4px 0 0" }}>
-            {resultCount} {resultCount === 1 ? "property" : "properties"} found
-          </p>
+          <motion.h2 key={getTitle()} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="text-2xl font-extrabold text-slate-900">{getTitle()}</motion.h2>
+          <p className="text-sm text-slate-500 mt-1">{resultCount} {resultCount === 1 ? "property" : "properties"} found</p>
         </div>
-        
-        {compareMode && selectedForCompare.size > 0 && (
-          <button
-            onClick={handleCompare}
-            style={{
-              padding: "10px 20px",
-              background: "#8b5cf6",
-              color: "white",
-              border: "none",
-              borderRadius: 40,
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 8
-            }}
-          >
-            <BarChart size={16} />
-            Compare ({selectedForCompare.size})
-          </button>
+        {compareMode && selectedCompare.size > 0 && (
+          <motion.button initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => { if (selectedCompare.size < 2) showNotification("Select at least 2 properties", true); else setShowCompare(true); }}
+            className="flex items-center gap-2 px-5 py-2.5 bg-violet-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-violet-500/20 hover:bg-violet-600 transition-colors">
+            <BarChart3 size={16} />Compare ({selectedCompare.size})
+          </motion.button>
         )}
       </div>
 
-      {/* Properties Grid */}
-      {loading ? (
-        <div style={{ textAlign: "center", padding: "80px 20px" }}>
-          <div style={{ width: 50, height: 50, border: "4px solid #e5e7eb", borderTop: "4px solid #3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 20px" }} />
-          <p style={{ color: "#6b7280" }}>Loading properties...</p>
-        </div>
-      ) : filteredPGs.length > 0 ? (
+      {/* Grid */}
+      {loading ? <LoadingState /> : filtered.length > 0 ? (
         <>
-          <div style={{ 
-            display: "grid", 
-            gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", 
-            gap: 28 
-          }}>
-            {filteredPGs.map((pg) => (
-              <PGPropertyCard
-                key={pg.id}
-                pg={pg}
-                onQuickView={handleQuickView}
-                onFavorite={toggleFavorite}
-                onContact={handleBookNow}
-                onCardClick={handleCardClick}
-                isFavorite={favorites.has(pg.id)}
-                isSelectedForCompare={selectedForCompare.has(pg.id)}
-                onSelectForCompare={toggleSelectForCompare}
-                compareMode={compareMode}
-              />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filtered.map((pg, i) => (
+              <PropertyCard key={pg.id} pg={pg} onQuickView={setQuickViewPG} onFavorite={toggleFav} onContact={setBookingPG} onCardClick={(p: PG) => navigate(`/pg/${p.id}`)}
+                isFav={favorites.has(pg.id)} isCompareSelected={selectedCompare.has(pg.id)} onSelectCompare={(id: number) => { setSelectedCompare(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else if (n.size < 3) n.add(id); else showNotification("Max 3 properties for compare", true); return n; }); }} compareMode={compareMode} index={i} />
             ))}
           </div>
-          
-          {/* ✅ LOAD MORE BUTTON - FIXED */}
-          {!loading && hasMorePages && !loadingMore && filteredPGs.length > 0 && filteredPGs.length < totalCount && (
-            <div style={{ textAlign: "center", marginTop: 40, marginBottom: 60 }}>
-              <button
-                onClick={loadMoreProperties}
-                disabled={loadingMore}
-                style={{
-                  padding: "14px 32px",
-                  background: "#2563eb",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 12,
-                  fontSize: 16,
-                  fontWeight: 600,
-                  cursor: loadingMore ? "not-allowed" : "pointer",
-                  opacity: loadingMore ? 0.7 : 1,
-                  transition: "all 0.3s ease",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8
-                }}
-              >
-                {loadingMore ? (
-                  <>
-                    <div style={{
-                      width: 18,
-                      height: 18,
-                      border: "2px solid white",
-                      borderTop: "2px solid transparent",
-                      borderRadius: "50%",
-                      animation: "spin 0.8s linear infinite"
-                    }} />
-                    Loading...
-                  </>
-                ) : (
-                  "Load More Properties"
-                )}
-              </button>
+          {!loading && hasMore && !loadingMore && filtered.length < total && (
+            <div className="text-center mt-10 mb-16">
+              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={loadMore} className="px-8 py-4 bg-gradient-to-r from-blue-600 to-violet-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-shadow inline-flex items-center gap-2">
+                Load More Properties
+              </motion.button>
             </div>
           )}
-          
-          {/* Loading more indicator */}
-          {loadingMore && (
-            <div style={{ textAlign: "center", marginTop: 20, marginBottom: 40 }}>
-              <div style={{
-                width: 40,
-                height: 40,
-                border: "3px solid #e5e7eb",
-                borderTop: "3px solid #2563eb",
-                borderRadius: "50%",
-                animation: "spin 0.8s linear infinite",
-                margin: "0 auto"
-              }} />
-              <p style={{ marginTop: 12, color: "#6b7280", fontSize: 14 }}>
-                Loading more properties...
-              </p>
-            </div>
-          )}
+          {loadingMore && <LoadingMore />}
         </>
-      ) : (
-        <div style={{ textAlign: "center", padding: "80px 20px", background: "#f9fafb", borderRadius: 24, marginBottom: 40 }}>
-          <Search size={56} style={{ margin: "0 auto 20px", color: "#9ca3af" }} />
-          <h3 style={{ fontSize: 22, fontWeight: 600, color: "#374151", marginBottom: 8 }}>No properties found</h3>
-          <p style={{ color: "#6b7280", marginBottom: 28 }}>Try adjusting your filters or search for a different location</p>
-          <button onClick={resetFilters} style={{ padding: "12px 28px", background: "#3b82f6", color: "white", border: "none", borderRadius: 40, cursor: "pointer", fontWeight: 600 }}>
-            Reset All Filters
-          </button>
-        </div>
-      )}
+      ) : <EmptyState onReset={resetFilters} />}
 
       {/* Modals */}
-      {showBudgetFilter && <BudgetFilter minBudget={filters.minBudget} maxBudget={filters.maxBudget} onBudgetChange={handleBudgetChange} onClose={() => setShowBudgetFilter(false)} />}
-      {quickViewPG && <QuickViewModal pg={quickViewPG} onClose={() => setQuickViewPG(null)} onBook={handleBookNow} onSaveFavorite={handleSaveFavorite} />}
-      {bookingPG && <BookingModal pg={bookingPG} onClose={() => setBookingPG(null)} onBook={handleBookingSubmit} />}
-      {showCompareModal && <CompareModal selectedPGs={selectedForCompare} allPGs={allPGs} onClose={() => { setShowCompareModal(false); setSelectedForCompare(new Set()); setCompareMode(false); }} />}
-
-      {/* Sticky Contact Button for Mobile */}
-      {isMobile && !compareMode && filteredPGs.length > 0 && (
-        <div style={{ position: "fixed", bottom: 16, left: 16, right: 16, zIndex: 999 }}>
-          <button onClick={() => handleBookNow(filteredPGs[0])} style={{ width: "100%", padding: "14px", background: "#3b82f6", color: "white", border: "none", borderRadius: 60, fontSize: 16, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}>
-            <MessageCircle size={20} /> Contact Owner
-          </button>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        
-        *::-webkit-scrollbar {
-          height: 4px;
-          width: 6px;
-        }
-        *::-webkit-scrollbar-track {
-          background: #f1f1f1;
-          border-radius: 10px;
-        }
-        *::-webkit-scrollbar-thumb {
-          background: #cbd5e1;
-          border-radius: 10px;
-        }
-      `}</style>
+      <AnimatePresence>
+        {showBudget && <BudgetModal minBudget={filters.minBudget} maxBudget={filters.maxBudget} onChange={handleBudgetChange} onClose={() => setShowBudget(false)} />}
+        {quickViewPG && <QuickViewModal pg={quickViewPG} onClose={() => setQuickViewPG(null)} onBook={setBookingPG} onSaveFav={(id: number, fav: boolean) => { if (fav && !favorites.has(id)) toggleFav(id); else if (!fav && favorites.has(id)) toggleFav(id); }} />}
+        {bookingPG && <BookingModal pg={bookingPG} onClose={() => setBookingPG(null)} onBook={async (data: any) => { try { const res = await api.post(`/bookings/${bookingPG.id}`, { room_type: data.roomType }); showNotification(res.data.message || "Owner will contact you"); setBookingPG(null); } catch (err: any) { showNotification(err.response?.data?.message || "Error", true); } }} />}
+        {showCompare && <CompareModal selectedPGs={selectedCompare} allPGs={allPGs} onClose={() => { setShowCompare(false); setSelectedCompare(new Set()); setCompareMode(false); }} />}
+      </AnimatePresence>
     </div>
   );
 }
-
-export default UserPGSearch;
