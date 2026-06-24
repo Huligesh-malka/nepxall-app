@@ -1644,6 +1644,98 @@ const HeroBanner = ({ onSearch }) => {
   );
 };
 
+/* ================= WHY CHOOSE NEPXALL SECTION ================= */
+const WhyChooseNepxall = () => {
+  const isMobile = isMobileDevice();
+  
+  const tenantBenefits = [
+    { icon: <MapPin size={24} />, title: "Find PGs Near Your Workplace", color: "#3b82f6" },
+    { icon: <Shield size={24} />, title: "Verified PG Listings", color: "#10b981" },
+    { icon: <BarChart size={24} />, title: "Compare Rent, Food & Amenities", color: "#8b5cf6" },
+    { icon: <Phone size={24} />, title: "Direct Owner Contact", color: "#f59e0b" },
+    { icon: <Coins size={24} />, title: "No Broker Charges", color: "#ef4444" },
+  ];
+  
+  const ownerBenefits = [
+    { icon: <Users size={24} />, title: "Get More Tenant Leads", color: "#3b82f6" },
+    { icon: <Plus size={24} />, title: "List PGs Free", color: "#10b981" },
+    { icon: <Calendar size={24} />, title: "Manage Rooms & Bookings", color: "#8b5cf6" },
+    { icon: <Award size={24} />, title: "Build Trust with Verification", color: "#f59e0b" },
+    { icon: <Rocket size={24} />, title: "Increase Occupancy Faster", color: "#ef4444" },
+  ];
+  
+  return (
+    <div style={{ marginBottom: 48 }}>
+      <div style={{ textAlign: "center", marginBottom: 32 }}>
+        <h2 style={{ fontSize: isMobile ? 28 : 36, fontWeight: 700, color: "#111827" }}>Why Choose Nepxall?</h2>
+        <p style={{ fontSize: isMobile ? 16 : 18, color: "#6b7280" }}>Connecting tenants with trusted property owners</p>
+      </div>
+      
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+        gap: 32
+      }}>
+        {/* Tenants Section */}
+        <div style={{
+          background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
+          borderRadius: 20,
+          padding: 24,
+          border: "1px solid #bfdbfe"
+        }}>
+          <h3 style={{ fontSize: 20, fontWeight: 700, color: "#1e3a5f", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <Users size={24} color="#3b82f6" /> looking for pg/coliving/tolet
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
+            {tenantBenefits.map((benefit, index) => (
+              <div key={index} style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                background: "white",
+                padding: "12px 16px",
+                borderRadius: 12,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
+              }}>
+                <div style={{ color: benefit.color }}>{benefit.icon}</div>
+                <span style={{ fontSize: 14, fontWeight: 500, color: "#374151" }}>{benefit.title}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Owners Section */}
+        <div style={{
+          background: "linear-gradient(135deg, #f0fdf4, #dcfce7)",
+          borderRadius: 20,
+          padding: 24,
+          border: "1px solid #bbf7d0"
+        }}>
+          <h3 style={{ fontSize: 20, fontWeight: 700, color: "#065f46", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <Building size={24} color="#10b981" /> For PG Owners
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
+            {ownerBenefits.map((benefit, index) => (
+              <div key={index} style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                background: "white",
+                padding: "12px 16px",
+                borderRadius: 12,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
+              }}>
+                <div style={{ color: benefit.color }}>{benefit.icon}</div>
+                <span style={{ fontSize: 14, fontWeight: 500, color: "#374151" }}>{benefit.title}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /* ================= LOCATION PERMISSION BANNER COMPONENT ================= */
 const LocationPermissionBanner = ({ onAllow, onDeny, isLoading }) => {
   return (
@@ -2599,6 +2691,9 @@ function UserPGSearch() {
 
       {/* Hero Banner with Search */}
       <HeroBanner onSearch={handleHeroSearch} />
+
+      {/* Why Choose Nepxall */}
+      <WhyChooseNepxall />
 
       {/* Location Info Bar */}
       {userLocation && (
