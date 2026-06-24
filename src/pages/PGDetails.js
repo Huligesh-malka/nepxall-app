@@ -387,10 +387,7 @@ export default function PGDetails() {
             <span>{pg.area || pg.city}</span>
           </div>
           <h1 style={S.title}>{pg.pg_name}</h1>
-          <div style={S.addrBox}>
-            <MapPin size={16} strokeWidth={1.5} color={T.tan} />
-            <span style={S.addrText}>{pg.address || `${pg.area}, ${pg.city}, ${pg.state || ""}`}</span>
-          </div>
+          
           {pg.landmark && (
             <div style={S.landmarkBox}>
               <span style={S.landmarkLabel}>Nearby</span>
@@ -473,7 +470,7 @@ export default function PGDetails() {
                   key={`${mapCenter[0]}-${mapCenter[1]}-${mapZoom}`}>
                   <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png" attribution='© OpenStreetMap, © CARTO' />
                   <Marker position={[pg.latitude, pg.longitude]}>
-                    <Popup><strong>{pg.pg_name}</strong><br /><small>{pg.address || pg.area}</small></Popup>
+                    <Popup><strong>{pg.pg_name}</strong><br /><small>{pg.area || pg.city}</small></Popup>
                   </Marker>
                 </MapContainer>
               </div>
@@ -875,22 +872,11 @@ const S = {
   eyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: T.tan, fontWeight: 600, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 },
   eyebrowDot: { color: T.line },
   title: { fontFamily: "'Fraunces', serif", fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 500, lineHeight: 1.1, letterSpacing: "-0.02em", color: T.ink, margin: "0 0 14px" },
-  addrBox: { 
-    display: "inline-flex", 
-    alignItems: "flex-start", 
-    gap: 10, 
-    maxWidth: 520, 
-    background: T.paperDeep,
-    border: `1px solid ${T.line}`,
-    borderRadius: 10, 
-    padding: "10px 14px", 
-    marginBottom: 10,
-    boxShadow: "0 1px 4px rgba(184, 149, 106, 0.04)",
-  },
-  addrText: { color: T.inkSoft, fontSize: 14, lineHeight: 1.5, wordBreak: "break-word" },
+  
   landmarkBox: { display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 18 },
   landmarkLabel: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: T.tan, fontWeight: 600, background: T.emeraldSoft, padding: "3px 8px", borderRadius: 6 },
   landmarkText: { color: T.inkMute, fontSize: 13 },
+  
   badges: { display: "flex", flexWrap: "wrap", gap: 8 },
   badge: { 
     padding: "5px 12px", 
