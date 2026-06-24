@@ -387,10 +387,17 @@ export default function PGDetails() {
             <span>{pg.area || pg.city}</span>
           </div>
           <h1 style={S.title}>{pg.pg_name}</h1>
+          
+          {/* Updated Address Box - More compact and better width control */}
           <div style={S.addrBox}>
-            <MapPin size={16} strokeWidth={1.5} color={T.tan} />
-            <span style={S.addrText}>{pg.address || `${pg.area}, ${pg.city}, ${pg.state || ""}`}</span>
+            <div style={S.addrIconWrapper}>
+              <MapPin size={16} strokeWidth={1.5} color={T.tan} />
+            </div>
+            <span style={S.addrText}>
+              {pg.address || `${pg.area}, ${pg.city}, ${pg.state || ""}`}
+            </span>
           </div>
+          
           {pg.landmark && (
             <div style={S.landmarkBox}>
               <span style={S.landmarkLabel}>Nearby</span>
@@ -875,19 +882,37 @@ const S = {
   eyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: T.tan, fontWeight: 600, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 },
   eyebrowDot: { color: T.line },
   title: { fontFamily: "'Fraunces', serif", fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 500, lineHeight: 1.1, letterSpacing: "-0.02em", color: T.ink, margin: "0 0 14px" },
+  
+  // Improved Address Box - Better width control and compact design
   addrBox: { 
-    display: "inline-flex", 
+    display: "flex", 
     alignItems: "flex-start", 
     gap: 10, 
-    maxWidth: 520, 
+    maxWidth: "100%", 
+    width: "auto",
     background: T.paperDeep,
     border: `1px solid ${T.line}`,
     borderRadius: 10, 
-    padding: "10px 14px", 
+    padding: "8px 14px", 
     marginBottom: 10,
     boxShadow: "0 1px 4px rgba(184, 149, 106, 0.04)",
   },
-  addrText: { color: T.inkSoft, fontSize: 14, lineHeight: 1.5, wordBreak: "break-word" },
+  addrIconWrapper: {
+    flexShrink: 0,
+    marginTop: 2,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addrText: { 
+    color: T.inkSoft, 
+    fontSize: 14, 
+    lineHeight: 1.5, 
+    wordBreak: "break-word",
+    flex: 1,
+    minWidth: 0,
+  },
+  
   landmarkBox: { display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 18 },
   landmarkLabel: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: T.tan, fontWeight: 600, background: T.emeraldSoft, padding: "3px 8px", borderRadius: 6 },
   landmarkText: { color: T.inkMute, fontSize: 13 },
