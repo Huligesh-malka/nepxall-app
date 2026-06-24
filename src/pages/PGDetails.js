@@ -19,7 +19,7 @@ L.Icon.Default.mergeOptions({
 });
 
 const T = {
-  paper: "#F8F9FA", paperDeep: "#EFEBE2", surface: "#FFFFFF",
+  paper: "#FDF6F0", paperDeep: "#EFEBE2", surface: "#FFFFFF",
   ink: "#14181A", inkSoft: "#3E4544", inkMute: "#7A8280",
   line: "#E5E0D5", emerald: "#0F4C3A", emeraldSoft: "#E4EFE9",
   tan: "#B8956A", coral: "#C7522A", danger: "#B23A48", success: "#0F4C3A",
