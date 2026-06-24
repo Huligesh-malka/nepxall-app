@@ -19,9 +19,9 @@ L.Icon.Default.mergeOptions({
 });
 
 const T = {
-  paper: "#FDF6F0", paperDeep: "#EFEBE2", surface: "#FFFFFF",
+  paper: "#FDF6F0", paperDeep: "#F5EDE5", surface: "#FFFFFF",
   ink: "#14181A", inkSoft: "#3E4544", inkMute: "#7A8280",
-  line: "#E5E0D5", emerald: "#0F4C3A", emeraldSoft: "#E4EFE9",
+  line: "#E5DCD1", emerald: "#0F4C3A", emeraldSoft: "#E8F0E8",
   tan: "#B8956A", coral: "#C7522A", danger: "#B23A48", success: "#0F4C3A",
 };
 
@@ -115,6 +115,11 @@ export default function PGDetails() {
     nearby_temple: "worship", nearby_mosque: "worship", nearby_church: "worship",
     nearby_police_station: "safety", nearby_restaurant: "food",
   };
+
+  // Scroll to top on page load
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 900px)");
@@ -760,12 +765,79 @@ const NearbyCard = ({ pg, onClick }) => {
 const Fonts = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
-    body { background: ${T.paper}; }
+    
+    body { 
+      background: ${T.paper};
+      background-image: radial-gradient(ellipse at 50% 0%, rgba(253, 246, 240, 0.5) 0%, transparent 70%);
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+    }
+    
+    /* Smooth scrolling for better UX */
+    html {
+      scroll-behavior: smooth;
+    }
+    
+    /* Subtle warm selection color */
+    ::selection {
+      background: rgba(184, 149, 106, 0.25);
+      color: ${T.ink};
+    }
+    
+    /* Warm scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: ${T.paperDeep};
+      border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: ${T.tan};
+      border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #A88558;
+    }
+    
+    .pulse-dot {
+      width: 12px;
+      height: 12px;
+      background: ${T.emerald};
+      border-radius: 50%;
+      animation: pulse 1.4s infinite ease;
+      box-shadow: 0 0 20px rgba(15, 76, 58, 0.2);
+    }
+    
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 0.6;
+      }
+      50% {
+        transform: scale(1.6);
+        opacity: 1;
+      }
+    }
   `}</style>
 );
 
 const S = {
-  page: { maxWidth: 1280, margin: "0 auto", padding: "24px 24px 80px", background: T.paper, minHeight: "100vh", fontFamily: "'Inter Tight', -apple-system, sans-serif", color: T.ink },
+  page: { 
+    maxWidth: 1280, 
+    margin: "0 auto", 
+    padding: "24px 24px 80px", 
+    background: T.paper,
+    backgroundImage: "radial-gradient(ellipse at 50% 0%, rgba(253, 246, 240, 0.8) 0%, transparent 70%)",
+    minHeight: "100vh", 
+    fontFamily: "'Inter Tight', -apple-system, sans-serif", 
+    color: T.ink 
+  },
   center: { minHeight: "100vh", display: "grid", placeItems: "center", background: T.paper, padding: 24, textAlign: "center" },
   toast: { position: "fixed", top: 24, right: 24, zIndex: 100, background: T.ink, color: T.surface, padding: "12px 20px", borderRadius: 999, display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 500, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.3)" },
 
@@ -787,29 +859,98 @@ const S = {
   galleryCounter: { position: "absolute", bottom: 14, left: 14, background: "rgba(20,24,26,0.8)", color: "#fff", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500 },
   galleryEmpty: { height: 280, borderRadius: 14, background: T.paperDeep, display: "grid", placeItems: "center", color: T.inkMute, fontSize: 14 },
 
-  titleBlock: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 40, flexWrap: "wrap", paddingBottom: 28, borderBottom: `1px solid ${T.line}` },
+  titleBlock: { 
+    display: "flex", 
+    justifyContent: "space-between", 
+    alignItems: "flex-start", 
+    gap: 24, 
+    marginBottom: 40, 
+    flexWrap: "wrap", 
+    paddingBottom: 28, 
+    borderBottom: `1px solid ${T.line}`,
+    background: `linear-gradient(180deg, ${T.surface} 0%, transparent 100%)`,
+    padding: "20px 24px",
+    borderRadius: 16,
+  },
   eyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: T.tan, fontWeight: 600, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 },
   eyebrowDot: { color: T.line },
   title: { fontFamily: "'Fraunces', serif", fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 500, lineHeight: 1.1, letterSpacing: "-0.02em", color: T.ink, margin: "0 0 14px" },
-  addrBox: { display: "inline-flex", alignItems: "flex-start", gap: 10, maxWidth: 520, background: T.paperDeep, borderRadius: 10, padding: "10px 14px", marginBottom: 10 },
+  addrBox: { 
+    display: "inline-flex", 
+    alignItems: "flex-start", 
+    gap: 10, 
+    maxWidth: 520, 
+    background: T.paperDeep,
+    border: `1px solid ${T.line}`,
+    borderRadius: 10, 
+    padding: "10px 14px", 
+    marginBottom: 10,
+    boxShadow: "0 1px 4px rgba(184, 149, 106, 0.04)",
+  },
   addrText: { color: T.inkSoft, fontSize: 14, lineHeight: 1.5, wordBreak: "break-word" },
   landmarkBox: { display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 18 },
   landmarkLabel: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: T.tan, fontWeight: 600, background: T.emeraldSoft, padding: "3px 8px", borderRadius: 6 },
   landmarkText: { color: T.inkMute, fontSize: 13 },
   badges: { display: "flex", flexWrap: "wrap", gap: 8 },
-  badge: { padding: "5px 12px", borderRadius: 999, background: T.surface, border: `1px solid ${T.line}`, color: T.inkSoft, fontSize: 12, fontWeight: 500 },
+  badge: { 
+    padding: "5px 12px", 
+    borderRadius: 999, 
+    background: T.surface, 
+    border: `1px solid ${T.line}`, 
+    color: T.inkSoft, 
+    fontSize: 12, 
+    fontWeight: 500,
+    boxShadow: "0 1px 4px rgba(184, 149, 106, 0.05)",
+  },
   badgeOk: { background: T.emeraldSoft, border: `1px solid ${T.emerald}30`, color: T.emerald, fontWeight: 600 },
   badgeWarn: { background: "#FBE9E9", border: `1px solid ${T.danger}30`, color: T.danger, fontWeight: 600 },
   badgeAccent: { background: T.ink, border: `1px solid ${T.ink}`, color: T.surface, fontWeight: 600 },
   titleActions: { display: "flex", alignItems: "center", gap: 10 },
 
-  btnPrimary: { display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 22px", background: T.ink, color: T.surface, border: "none", borderRadius: 999, fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", transition: "all .2s" },
-  btnGhost: { display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 22px", background: "transparent", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 999, fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", transition: "all .2s" },
+  btnPrimary: { 
+    display: "inline-flex", 
+    alignItems: "center", 
+    gap: 8, 
+    padding: "12px 22px", 
+    background: T.ink, 
+    color: T.surface, 
+    border: "none", 
+    borderRadius: 999, 
+    fontSize: 14, 
+    fontWeight: 500, 
+    cursor: "pointer", 
+    fontFamily: "inherit", 
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    boxShadow: "0 2px 12px rgba(20, 24, 26, 0.15)",
+  },
+  btnGhost: { 
+    display: "inline-flex", 
+    alignItems: "center", 
+    gap: 8, 
+    padding: "12px 22px", 
+    background: "transparent", 
+    color: T.ink, 
+    border: `1px solid ${T.line}`, 
+    borderRadius: 999, 
+    fontSize: 14, 
+    fontWeight: 500, 
+    cursor: "pointer", 
+    fontFamily: "inherit", 
+    transition: "all .2s" 
+  },
 
   grid: { display: "grid", gridTemplateColumns: "1fr 380px", gap: 48, alignItems: "start" },
   gridMobile: { display: "grid", gridTemplateColumns: "1fr", gap: 32, alignItems: "start" },
 
-  panel: { paddingBottom: 32, borderBottom: `1px solid ${T.line}` },
+  panel: { 
+    paddingBottom: 32, 
+    borderBottom: `1px solid ${T.line}`,
+    background: `linear-gradient(135deg, ${T.surface} 0%, ${T.paperDeep} 100%)`,
+    padding: "24px 28px",
+    borderRadius: 16,
+    boxShadow: "0 2px 12px rgba(184, 149, 106, 0.06)",
+    marginBottom: 8,
+  },
   panelHeader: { marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "baseline" },
   panelEyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: T.tan, fontWeight: 600, marginBottom: 8 },
   panelTitle: { fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 500, margin: 0, letterSpacing: "-0.01em", color: T.ink },
@@ -821,8 +962,26 @@ const S = {
   amenityGroupTitle: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: T.inkMute, fontWeight: 600, marginBottom: 14 },
   amenityList: { display: "flex", flexDirection: "column", gap: 12 },
   amenityRow: { display: "flex", alignItems: "center", gap: 12, fontSize: 14.5, color: T.inkSoft },
-  amenityDot: { width: 22, height: 22, borderRadius: "50%", background: T.emeraldSoft, color: T.emerald, display: "grid", placeItems: "center", flexShrink: 0 },
-  note: { marginTop: 24, padding: "14px 18px", borderRadius: 12, background: T.paperDeep, fontSize: 13.5, color: T.inkSoft },
+  amenityDot: { 
+    width: 22, 
+    height: 22, 
+    borderRadius: "50%", 
+    background: "#E8F0E8", 
+    color: "#0F4C3A", 
+    display: "grid", 
+    placeItems: "center", 
+    flexShrink: 0,
+    boxShadow: "0 2px 6px rgba(15, 76, 58, 0.1)",
+  },
+  note: { 
+    marginTop: 24, 
+    padding: "14px 18px", 
+    borderRadius: 12, 
+    background: T.paperDeep,
+    border: `1px solid ${T.line}`,
+    fontSize: 13.5, 
+    color: T.inkSoft,
+  },
 
   priceGroup: { display: "flex", flexDirection: "column", gap: 0 },
   priceSubBlock: { marginBottom: 28 },
@@ -832,7 +991,14 @@ const S = {
   priceRowValue: { fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: T.ink },
   priceRowPer: { fontFamily: "'Inter Tight', sans-serif", fontSize: 12, fontWeight: 400, color: T.inkMute, marginLeft: 4 },
   priceRowDeposit: { fontSize: 12, color: T.coral, marginTop: 2 },
-  foodBox: { marginTop: 24, padding: 20, borderRadius: 16, background: T.emeraldSoft, border: `1px solid ${T.emerald}20` },
+  foodBox: { 
+    marginTop: 24, 
+    padding: 20, 
+    borderRadius: 16, 
+    background: "linear-gradient(135deg, #E8F0E8 0%, #F5EDE5 100%)",
+    border: `1px solid rgba(15, 76, 58, 0.15)`,
+    boxShadow: "0 2px 8px rgba(15, 76, 58, 0.05)",
+  },
   foodTitle: { fontWeight: 600, color: T.emerald, fontSize: 14, marginBottom: 4 },
   foodMeta: { fontSize: 13.5, color: T.inkSoft },
 
@@ -848,7 +1014,17 @@ const S = {
   chipCount: { fontSize: 11, opacity: 0.7, fontFamily: "'JetBrains Mono', monospace" },
   nearbyList: { display: "flex", flexDirection: "column", maxHeight: 480, overflowY: "auto" },
   nearbyRow: { display: "flex", alignItems: "center", gap: 14, padding: "14px 4px", borderBottom: `1px solid ${T.line}`, cursor: "pointer", transition: "all .15s" },
-  nearbyIcon: { width: 40, height: 40, borderRadius: 12, background: T.paperDeep, display: "grid", placeItems: "center", fontSize: 18, flexShrink: 0 },
+  nearbyIcon: { 
+    width: 40, 
+    height: 40, 
+    borderRadius: 12, 
+    background: T.paperDeep,
+    border: `1px solid ${T.line}`,
+    display: "grid", 
+    placeItems: "center", 
+    fontSize: 18, 
+    flexShrink: 0,
+  },
   nearbyName: { fontSize: 14.5, fontWeight: 500, color: T.ink, marginBottom: 2 },
   nearbyType: { fontSize: 12, color: T.inkMute, textTransform: "capitalize" },
 
@@ -861,7 +1037,13 @@ const S = {
   npPrice: { fontSize: 16, fontWeight: 600, color: T.emerald, fontFamily: "'Fraunces', serif" },
 
   aside: { position: "sticky", top: 24, alignSelf: "start" },
-  stickyCard: { background: T.surface, border: `1px solid ${T.line}`, borderRadius: 24, padding: 28, boxShadow: "0 4px 24px rgba(20,24,26,0.04)" },
+  stickyCard: { 
+    background: T.surface, 
+    border: `1px solid ${T.line}`, 
+    borderRadius: 24, 
+    padding: 28, 
+    boxShadow: "0 8px 32px rgba(184, 149, 106, 0.08)",
+  },
   priceEyebrow: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: T.tan, fontWeight: 600, marginBottom: 8 },
   priceLarge: { fontFamily: "'Fraunces', serif", fontSize: 38, fontWeight: 500, color: T.ink, lineHeight: 1, letterSpacing: "-0.02em" },
   pricePer: { fontFamily: "'Inter Tight', sans-serif", fontSize: 14, fontWeight: 400, color: T.inkMute, marginLeft: 4 },
@@ -874,5 +1056,22 @@ const S = {
 
   mobileBottomBar: { position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50, background: T.surface, borderTop: `1px solid ${T.line}`, padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 -4px 20px rgba(0,0,0,0.06)" },
 
-  scrollTopBtn: { position: "fixed", bottom: 24, right: 24, zIndex: 90, width: 48, height: 48, borderRadius: "50%", border: `1px solid ${T.line}`, background: T.surface, color: T.ink, cursor: "pointer", display: "grid", placeItems: "center", boxShadow: "0 8px 24px rgba(20,24,26,0.12)", transition: "all .25s ease", opacity: 0.95 },
+  scrollTopBtn: { 
+    position: "fixed", 
+    bottom: 24, 
+    right: 24, 
+    zIndex: 90, 
+    width: 48, 
+    height: 48, 
+    borderRadius: "50%", 
+    border: `1px solid ${T.line}`, 
+    background: T.surface, 
+    color: T.ink, 
+    cursor: "pointer", 
+    display: "grid", 
+    placeItems: "center", 
+    boxShadow: "0 8px 24px rgba(20,24,26,0.12)", 
+    transition: "all .25s ease", 
+    opacity: 0.95 
+  },
 };
