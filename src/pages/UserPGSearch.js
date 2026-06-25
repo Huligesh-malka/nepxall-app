@@ -723,10 +723,7 @@ function UserPGSearch() {
   const hasFilters = search || minB>0 || maxB<50000 || nearMe || sort || Object.values(amenity).some(Boolean) || foodType;
 
   const tabs = [
-    { id:"all",      label:"All" },
-    { id:"pg",       label:"PG" },
-    { id:"coliving", label:"Co-Living" },
-    { id:"to_let",   label:"To-Let" },
+    { id:"all", label:"All" },
   ];
 
   if (authLoading) return (
