@@ -240,6 +240,46 @@ function OwnerAddPG() {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
+      @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-4px); }
+        100% { transform: translateY(0px); }
+      }
+      @keyframes shimmer {
+        0% { background-position: -200% center; }
+        100% { background-position: 200% center; }
+      }
+      .trendy-card {
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      }
+      .trendy-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 20px 60px rgba(108, 92, 231, 0.25);
+      }
+      .input-glow:focus {
+        box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.2), 0 0 20px rgba(108, 92, 231, 0.1);
+      }
+      .checkbox-modern {
+        accent-color: #6c5ce7;
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .checkbox-modern:hover {
+        transform: scale(1.1);
+      }
+      .btn-gradient {
+        background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+        transition: all 0.3s ease;
+      }
+      .btn-gradient:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(108, 92, 231, 0.4);
+      }
+      .badge-pulse {
+        animation: float 3s ease-in-out infinite;
+      }
     `;
     document.head.appendChild(style);
     return () => document.head.removeChild(style);
@@ -619,7 +659,7 @@ function OwnerAddPG() {
     }
   };
 
-  const getErrorStyle = (fieldName) => validationErrors[fieldName] ? { border: "2px solid #f44336", backgroundColor: "#ffebee" } : {};
+  const getErrorStyle = (fieldName) => validationErrors[fieldName] ? { border: "2px solid #ff6b6b", backgroundColor: "#fff5f5" } : {};
 
   // Manual Address Modal Component
   const ManualAddressModal = () => {
@@ -647,25 +687,25 @@ function OwnerAddPG() {
       <div style={styles.manualModalOverlay}>
         <div style={styles.manualModal}>
           <div style={styles.manualHeader}>
-            <h3>Enter Address Manually</h3>
+            <h3 style={{ margin: 0, color: "#2d3436" }}>📝 Enter Address Manually</h3>
             <button onClick={() => setManualEditMode(false)} style={styles.closeBtn}>✕</button>
           </div>
           <div style={styles.manualForm}>
             <div style={styles.grid}>
-              <div style={styles.inputGroup}><label>Full Address *</label><textarea name="address" value={localLocation.address} onChange={handleLocalChange} placeholder="Complete address including floor, building, street" style={styles.textarea} rows="3" required /></div>
-              <div style={styles.inputGroup}><label>Area/Locality *</label><input type="text" name="area" value={localLocation.area} onChange={handleLocalChange} placeholder="e.g., Koramangala, Whitefield" style={styles.input} required /></div>
-              <div style={styles.inputGroup}><label>Road/Street</label><input type="text" name="road" value={localLocation.road} onChange={handleLocalChange} placeholder="e.g., MG Road, 100 Feet Road" style={styles.input} /></div>
-              <div style={styles.inputGroup}><label>Landmark</label><input type="text" name="landmark" value={localLocation.landmark} onChange={handleLocalChange} placeholder="e.g., Near Forum Mall, Opposite Metro Station" style={styles.input} /></div>
-              <div style={styles.inputGroup}><label>City *</label><input type="text" name="city" value={localLocation.city} onChange={handleLocalChange} placeholder="e.g., Bangalore" style={styles.input} required /></div>
-              <div style={styles.inputGroup}><label>State *</label><input type="text" name="state" value={localLocation.state} onChange={handleLocalChange} placeholder="e.g., Karnataka" style={styles.input} required /></div>
-              <div style={styles.inputGroup}><label>Pincode *</label><input type="text" name="pincode" value={localLocation.pincode} onChange={handleLocalChange} placeholder="e.g., 560034" style={styles.input} required pattern="[0-9]{6}" /></div>
-              <div style={styles.inputGroup}><label>Country *</label><input type="text" name="country" value={localLocation.country} onChange={handleLocalChange} placeholder="e.g., India" style={styles.input} required /></div>
-              <div style={styles.inputGroup}><label>Latitude (optional)</label><input type="text" name="lat" value={localLocation.lat === 0 ? "" : localLocation.lat} onChange={handleLocalChange} placeholder="e.g., 12.9716" style={styles.input} step="any" /></div>
-              <div style={styles.inputGroup}><label>Longitude (optional)</label><input type="text" name="lng" value={localLocation.lng === 0 ? "" : localLocation.lng} onChange={handleLocalChange} placeholder="e.g., 77.5946" style={styles.input} step="any" /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>Full Address *</label><textarea name="address" value={localLocation.address} onChange={handleLocalChange} placeholder="Complete address including floor, building, street" style={{...styles.textarea, ...styles.inputGlow}} rows="3" required /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>Area/Locality *</label><input type="text" name="area" value={localLocation.area} onChange={handleLocalChange} placeholder="e.g., Koramangala, Whitefield" style={{...styles.input, ...styles.inputGlow}} required /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>Road/Street</label><input type="text" name="road" value={localLocation.road} onChange={handleLocalChange} placeholder="e.g., MG Road, 100 Feet Road" style={{...styles.input, ...styles.inputGlow}} /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>Landmark</label><input type="text" name="landmark" value={localLocation.landmark} onChange={handleLocalChange} placeholder="e.g., Near Forum Mall, Opposite Metro Station" style={{...styles.input, ...styles.inputGlow}} /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>City *</label><input type="text" name="city" value={localLocation.city} onChange={handleLocalChange} placeholder="e.g., Bangalore" style={{...styles.input, ...styles.inputGlow}} required /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>State *</label><input type="text" name="state" value={localLocation.state} onChange={handleLocalChange} placeholder="e.g., Karnataka" style={{...styles.input, ...styles.inputGlow}} required /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>Pincode *</label><input type="text" name="pincode" value={localLocation.pincode} onChange={handleLocalChange} placeholder="e.g., 560034" style={{...styles.input, ...styles.inputGlow}} required pattern="[0-9]{6}" /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>Country *</label><input type="text" name="country" value={localLocation.country} onChange={handleLocalChange} placeholder="e.g., India" style={{...styles.input, ...styles.inputGlow}} required /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>Latitude (optional)</label><input type="text" name="lat" value={localLocation.lat === 0 ? "" : localLocation.lat} onChange={handleLocalChange} placeholder="e.g., 12.9716" style={{...styles.input, ...styles.inputGlow}} step="any" /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>Longitude (optional)</label><input type="text" name="lng" value={localLocation.lng === 0 ? "" : localLocation.lng} onChange={handleLocalChange} placeholder="e.g., 77.5946" style={{...styles.input, ...styles.inputGlow}} step="any" /></div>
             </div>
             <div style={styles.manualFooter}>
-              <button onClick={handleSave} style={styles.saveButton}>💾 Save Address</button>
-              <button onClick={() => { setManualEditMode(false); setShowMap(true); }} style={styles.backToMapButton}>🗺️ Back to Map</button>
+              <button onClick={handleSave} style={{...styles.saveButton, ...styles.btnGradient}}>💾 Save Address</button>
+              <button onClick={() => { setManualEditMode(false); setShowMap(true); }} style={{...styles.backToMapButton, ...styles.btnGradient}}>🗺️ Back to Map</button>
             </div>
           </div>
         </div>
@@ -674,7 +714,7 @@ function OwnerAddPG() {
   };
 
   if (authLoading) {
-    return <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh"><CircularProgress /></Box>;
+    return <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh"><CircularProgress sx={{ color: "#6c5ce7" }} /></Box>;
   }
   if (!user) return <Navigate to="/login" replace />;
   if (role !== "owner") return <Navigate to="/" replace />;
@@ -684,69 +724,76 @@ function OwnerAddPG() {
 
   return (
     <div style={styles.container}>
-      <div style={styles.card}>
-        <h2 style={styles.title}>🏠 Add New Property</h2>
+      <div style={{...styles.card, ...styles.cardTrendy}} className="trendy-card">
+        <div style={styles.headerBadge}>
+          <span style={styles.badgeIcon}>🏠</span>
+          <span style={styles.badgeText}>New Listing</span>
+        </div>
+        <h2 style={styles.title}>✨ Add Your Property</h2>
         <div style={styles.premiumBanner}>
-          ⭐ List your property and reach thousands of potential tenants!
-          <br />
-          <span style={{ fontSize: "13px", opacity: 0.9 }}>Fill in all required fields (*) to create your listing</span>
+          <span style={{ fontSize: "20px", marginRight: "10px" }}>⭐</span>
+          <div>
+            <strong>List your property</strong> and reach thousands of potential tenants!
+            <br />
+            <span style={{ fontSize: "13px", opacity: 0.9 }}>Fill in all required fields (*) to create your listing</span>
+          </div>
         </div>
         
         {/* Basic Information */}
         <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>📋 Basic Information</h3>
+          <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>📋</span> Basic Information</h3>
           <div style={styles.grid}>
             <div style={styles.inputGroup}>
-              <label>Property Name *</label>
+              <label style={styles.label}>Property Name <span style={{ color: "#ff6b6b" }}>*</span></label>
               <input 
                 name="pg_name" 
                 placeholder={isToLet ? "e.g., 2BHK Flat, Independent House" : "e.g., Royal PG, Cozy Coliving"} 
                 value={form.pg_name} 
                 onChange={handleChange} 
-                style={{...styles.input, ...getErrorStyle("pg_name")}} 
+                style={{...styles.input, ...styles.inputGlow, ...getErrorStyle("pg_name")}} 
                 required 
               />
             </div>
             <div style={styles.inputGroup}>
-              <label>Property Category *</label>
-              <select name="pg_category" value={form.pg_category} onChange={handleChange} style={styles.input}>
-                <option value="pg">PG / Hostel</option>
-                <option value="coliving">Co-Living Space</option>
-                <option value="to_let">House/Flat To Let</option>
+              <label style={styles.label}>Property Category <span style={{ color: "#ff6b6b" }}>*</span></label>
+              <select name="pg_category" value={form.pg_category} onChange={handleChange} style={{...styles.input, ...styles.inputGlow, ...styles.select}}>
+                <option value="pg">🏢 PG / Hostel</option>
+                <option value="coliving">🤝 Co-Living Space</option>
+                <option value="to_let">🏠 House/Flat To Let</option>
               </select>
             </div>
             {!isToLet && (
               <>
                 <div style={styles.inputGroup}>
-                  <label>Property Type *</label>
-                  <select name="pg_type" value={form.pg_type} onChange={handleChange} style={styles.input}>
-                    <option value="boys">Boys Only</option>
-                    <option value="girls">Girls Only</option>
-                    <option value="coliving">Co-Living (Mixed)</option>
+                  <label style={styles.label}>Property Type <span style={{ color: "#ff6b6b" }}>*</span></label>
+                  <select name="pg_type" value={form.pg_type} onChange={handleChange} style={{...styles.input, ...styles.inputGlow, ...styles.select}}>
+                    <option value="boys">👦 Boys Only</option>
+                    <option value="girls">👧 Girls Only</option>
+                    <option value="coliving">👫 Co-Living (Mixed)</option>
                   </select>
                 </div>
                 <div style={styles.inputGroup}>
-                  <label>Total Beds *</label>
+                  <label style={styles.label}>Total Beds <span style={{ color: "#ff6b6b" }}>*</span></label>
                   <input 
                     type="number" 
                     name="total_beds" 
                     placeholder="e.g., 50" 
                     value={form.total_beds} 
                     onChange={handleChange} 
-                    style={{...styles.input, ...getErrorStyle("total_beds")}} 
+                    style={{...styles.input, ...styles.inputGlow, ...getErrorStyle("total_beds")}} 
                     min="1"
                     required 
                   />
                 </div>
                 <div style={styles.inputGroup}>
-                  <label>Available Beds *</label>
+                  <label style={styles.label}>Available Beds <span style={{ color: "#ff6b6b" }}>*</span></label>
                   <input 
                     type="number" 
                     name="available_beds" 
                     placeholder="e.g., 20" 
                     value={form.available_beds} 
                     onChange={handleChange} 
-                    style={{...styles.input, ...getErrorStyle("available_beds")}} 
+                    style={{...styles.input, ...styles.inputGlow, ...getErrorStyle("available_beds")}} 
                     min="0"
                     required 
                   />
@@ -756,8 +803,8 @@ function OwnerAddPG() {
             {isToLet && (
               <>
                 <div style={styles.inputGroup}>
-                  <label>BHK Type *</label>
-                  <select name="bhk_type" value={form.bhk_type} onChange={handleChange} style={styles.input}>
+                  <label style={styles.label}>BHK Type <span style={{ color: "#ff6b6b" }}>*</span></label>
+                  <select name="bhk_type" value={form.bhk_type} onChange={handleChange} style={{...styles.input, ...styles.inputGlow, ...styles.select}}>
                     <option value="1">1 BHK</option>
                     <option value="2">2 BHK</option>
                     <option value="3">3 BHK</option>
@@ -766,11 +813,11 @@ function OwnerAddPG() {
                   </select>
                 </div>
                 <div style={styles.inputGroup}>
-                  <label>Furnishing Type *</label>
-                  <select name="furnishing_type" value={form.furnishing_type} onChange={handleChange} style={styles.input}>
-                    <option value="unfurnished">Unfurnished</option>
-                    <option value="semi_furnished">Semi-Furnished</option>
-                    <option value="fully_furnished">Fully Furnished</option>
+                  <label style={styles.label}>Furnishing Type <span style={{ color: "#ff6b6b" }}>*</span></label>
+                  <select name="furnishing_type" value={form.furnishing_type} onChange={handleChange} style={{...styles.input, ...styles.inputGlow, ...styles.select}}>
+                    <option value="unfurnished">🪑 Unfurnished</option>
+                    <option value="semi_furnished">🛋️ Semi-Furnished</option>
+                    <option value="fully_furnished">🛏️ Fully Furnished</option>
                   </select>
                 </div>
               </>
@@ -780,15 +827,15 @@ function OwnerAddPG() {
 
         {/* Location */}
         <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>📍 Location *</h3>
+          <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>📍</span> Property Location <span style={{ color: "#ff6b6b" }}>*</span></h3>
           <div style={styles.locationButtons}>
-            <button type="button" onClick={() => setShowMap(true)} style={styles.mapButton}>🗺️ Select on OpenStreetMap</button>
-            <button type="button" onClick={() => setManualEditMode(true)} style={styles.manualAddressButton}>📝 Enter Address Manually</button>
+            <button type="button" onClick={() => setShowMap(true)} style={{...styles.mapButton, ...styles.btnGradient}}>🗺️ Select on OpenStreetMap</button>
+            <button type="button" onClick={() => setManualEditMode(true)} style={{...styles.manualAddressButton, ...styles.btnGradient}}>📝 Enter Address Manually</button>
           </div>
           {selectedLocation.address ? (
-            <div style={{...styles.locationPreview, ...(validationErrors.address ? { borderLeftColor: "#f44336", backgroundColor: "#ffebee" } : {})}}>
+            <div style={{...styles.locationPreview, ...(validationErrors.address ? { borderLeftColor: "#ff6b6b", backgroundColor: "#fff5f5" } : {})}}>
               <div style={styles.locationHeader}>
-                <h4>📍 Selected Location</h4>
+                <h4 style={{ margin: 0, color: "#2d3436" }}>📍 Selected Location</h4>
                 <div style={styles.locationActionButtons}>
                   <button type="button" onClick={() => setManualEditMode(true)} style={styles.editLocationBtn}>✏️ Edit</button>
                   <button type="button" onClick={removeHostelLocation} style={styles.removeLocationBtn}>🗑️ Remove</button>
@@ -809,10 +856,10 @@ function OwnerAddPG() {
 
         {/* Photos */}
         <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>📷 Photos & Cover Image *</h3>
+          <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>📷</span> Photos & Cover Image <span style={{ color: "#ff6b6b" }}>*</span></h3>
           <p style={styles.note}>Upload at least 1 photo. Maximum 10 photos allowed. Select which photo should be the cover image.</p>
           <div style={styles.fileUpload}>
-            <label htmlFor="photo-upload" style={styles.fileUploadLabel}>📁 Choose Photos</label>
+            <label htmlFor="photo-upload" style={{...styles.fileUploadLabel, ...styles.btnGradient}}>📁 Choose Photos</label>
             <input id="photo-upload" type="file" accept="image/*" multiple onChange={handlePhotoUpload} style={styles.fileInput} />
           </div>
           {photos.length > 0 && (
@@ -836,16 +883,16 @@ function OwnerAddPG() {
               <p style={styles.photoCount}>📸 {photos.length} photo{photos.length > 1 ? 's' : ''} uploaded • ⭐ {coverPhotoIndex + 1} is cover photo</p>
             </>
           )}
-          {validationErrors.photos && <p style={{ color: "#f44336", fontSize: 12, marginTop: 5 }}>⚠️ At least one photo is required</p>}
+          {validationErrors.photos && <p style={{ color: "#ff6b6b", fontSize: 12, marginTop: 5 }}>⚠️ At least one photo is required</p>}
         </div>
 
         {/* Top Facilities Preview */}
         {topFacilities.length > 0 && (
           <div style={styles.topFacilitiesSection}>
-            <h3 style={styles.sectionTitle}>⭐ Top Facilities</h3>
+            <h3 style={{...styles.sectionTitle, color: "#fff", margin: 0, fontSize: "16px"}}>⭐ Top Facilities</h3>
             <div style={styles.topFacilitiesContainer}>
               {topFacilities.map((facility, index) => (
-                <span key={index} style={styles.topFacilityBadge}>
+                <span key={index} style={styles.topFacilityBadge} className="badge-pulse">
                   {facility}
                 </span>
               ))}
@@ -860,69 +907,69 @@ function OwnerAddPG() {
 
         {/* Room Types & Prices */}
         <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>🛏️ Room Types & Prices</h3>
+          <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>🛏️</span> Room Types & Prices</h3>
           {isToLet ? (
             <div style={styles.grid}>
-              <div style={styles.inputGroup}><label>1 BHK Rent (₹/Month) *</label><input type="number" name="price_1bhk" placeholder="e.g., 15000" value={roomRates.price_1bhk} onChange={handleRateChange} style={styles.input} min="0" required /></div>
-              {parseInt(form.bhk_type) >= 2 && <div style={styles.inputGroup}><label>2 BHK Rent (₹/Month)</label><input type="number" name="price_2bhk" placeholder="e.g., 25000" value={roomRates.price_2bhk} onChange={handleRateChange} style={styles.input} min="0" /></div>}
-              {parseInt(form.bhk_type) >= 3 && <div style={styles.inputGroup}><label>3 BHK Rent (₹/Month)</label><input type="number" name="price_3bhk" placeholder="e.g., 35000" value={roomRates.price_3bhk} onChange={handleRateChange} style={styles.input} min="0" /></div>}
-              {parseInt(form.bhk_type) >= 4 && <div style={styles.inputGroup}><label>4 BHK Rent (₹/Month)</label><input type="number" name="price_4bhk" placeholder="e.g., 45000" value={roomRates.price_4bhk} onChange={handleRateChange} style={styles.input} min="0" /></div>}
+              <div style={styles.inputGroup}><label style={styles.label}>1 BHK Rent (₹/Month) <span style={{ color: "#ff6b6b" }}>*</span></label><input type="number" name="price_1bhk" placeholder="e.g., 15000" value={roomRates.price_1bhk} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" required /></div>
+              {parseInt(form.bhk_type) >= 2 && <div style={styles.inputGroup}><label style={styles.label}>2 BHK Rent (₹/Month)</label><input type="number" name="price_2bhk" placeholder="e.g., 25000" value={roomRates.price_2bhk} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>}
+              {parseInt(form.bhk_type) >= 3 && <div style={styles.inputGroup}><label style={styles.label}>3 BHK Rent (₹/Month)</label><input type="number" name="price_3bhk" placeholder="e.g., 35000" value={roomRates.price_3bhk} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>}
+              {parseInt(form.bhk_type) >= 4 && <div style={styles.inputGroup}><label style={styles.label}>4 BHK Rent (₹/Month)</label><input type="number" name="price_4bhk" placeholder="e.g., 45000" value={roomRates.price_4bhk} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>}
             </div>
           ) : isCoLiving ? (
             <div style={styles.ratesGrid}>
-              <div style={styles.inputGroup}><label>Co-Living Single Room *</label><input type="number" name="co_living_single_room" placeholder="₹" value={roomRates.co_living_single_room} onChange={handleRateChange} style={styles.input} min="0" required /></div>
-              <div style={styles.inputGroup}><label>Co-Living Double Room</label><input type="number" name="co_living_double_room" placeholder="₹" value={roomRates.co_living_double_room} onChange={handleRateChange} style={styles.input} min="0" /></div>
-              <div style={styles.inputGroup}><label>Co-Living 3 Sharing</label><input type="number" name="coliving_three_sharing" placeholder="₹" value={roomRates.coliving_three_sharing} onChange={handleRateChange} style={styles.input} min="0" /></div>
-              <div style={styles.inputGroup}><label>Co-Living 4 Sharing</label><input type="number" name="coliving_four_sharing" placeholder="₹" value={roomRates.coliving_four_sharing} onChange={handleRateChange} style={styles.input} min="0" /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>Co-Living Single Room <span style={{ color: "#ff6b6b" }}>*</span></label><input type="number" name="co_living_single_room" placeholder="₹" value={roomRates.co_living_single_room} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" required /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>Co-Living Double Room</label><input type="number" name="co_living_double_room" placeholder="₹" value={roomRates.co_living_double_room} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>Co-Living 3 Sharing</label><input type="number" name="coliving_three_sharing" placeholder="₹" value={roomRates.coliving_three_sharing} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>Co-Living 4 Sharing</label><input type="number" name="coliving_four_sharing" placeholder="₹" value={roomRates.coliving_four_sharing} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
             </div>
           ) : (
             <div style={styles.ratesGrid}>
-              <div style={styles.inputGroup}><label>Single Sharing</label><input type="number" name="single_sharing" placeholder="₹" value={roomRates.single_sharing} onChange={handleRateChange} style={styles.input} min="0" /></div>
-              <div style={styles.inputGroup}><label>Double Sharing</label><input type="number" name="double_sharing" placeholder="₹" value={roomRates.double_sharing} onChange={handleRateChange} style={styles.input} min="0" /></div>
-              <div style={styles.inputGroup}><label>Triple Sharing</label><input type="number" name="triple_sharing" placeholder="₹" value={roomRates.triple_sharing} onChange={handleRateChange} style={styles.input} min="0" /></div>
-              <div style={styles.inputGroup}><label>Four Sharing</label><input type="number" name="four_sharing" placeholder="₹" value={roomRates.four_sharing} onChange={handleRateChange} style={styles.input} min="0" /></div>
-              <div style={styles.inputGroup}><label>Single Room</label><input type="number" name="single_room" placeholder="₹" value={roomRates.single_room} onChange={handleRateChange} style={styles.input} min="0" /></div>
-              <div style={styles.inputGroup}><label>Double Room</label><input type="number" name="double_room" placeholder="₹" value={roomRates.double_room} onChange={handleRateChange} style={styles.input} min="0" /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>Single Sharing</label><input type="number" name="single_sharing" placeholder="₹" value={roomRates.single_sharing} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>Double Sharing</label><input type="number" name="double_sharing" placeholder="₹" value={roomRates.double_sharing} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>Triple Sharing</label><input type="number" name="triple_sharing" placeholder="₹" value={roomRates.triple_sharing} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>Four Sharing</label><input type="number" name="four_sharing" placeholder="₹" value={roomRates.four_sharing} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>Single Room</label><input type="number" name="single_room" placeholder="₹" value={roomRates.single_room} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
+              <div style={styles.inputGroup}><label style={styles.label}>Double Room</label><input type="number" name="double_room" placeholder="₹" value={roomRates.double_room} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
             </div>
           )}
         </div>
 
         {/* Deposit & Maintenance */}
         <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>💰 Deposit & Maintenance</h3>
+          <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>💰</span> Deposit & Maintenance</h3>
           <div style={styles.grid}>
             <div style={styles.inputGroup}>
-              <label>Security Deposit (₹)</label>
+              <label style={styles.label}>Security Deposit (₹)</label>
               <input 
                 type="number" 
                 name="security_deposit" 
                 placeholder="e.g., 10000" 
                 value={form.security_deposit} 
                 onChange={handleChange} 
-                style={styles.input} 
+                style={{...styles.input, ...styles.inputGlow}} 
                 min="0" 
               />
-              <small style={{ fontSize: "11px", color: "#666" }}>Refundable security deposit amount</small>
+              <small style={styles.helperText}>Refundable security deposit amount</small>
             </div>
             <div style={styles.inputGroup}>
-              <label>Maintenance Charges (₹/Month)</label>
+              <label style={styles.label}>Maintenance Charges (₹/Month)</label>
               <input 
                 type="number" 
                 name="maintenance_amount" 
                 placeholder="e.g., 1000" 
                 value={form.maintenance_amount} 
                 onChange={handleChange} 
-                style={styles.input} 
+                style={{...styles.input, ...styles.inputGlow}} 
                 min="0" 
               />
-              <small style={{ fontSize: "11px", color: "#666" }}>Monthly maintenance fee</small>
+              <small style={styles.helperText}>Monthly maintenance fee</small>
             </div>
           </div>
         </div>
 
         {/* Facilities & Amenities */}
         <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>🏠 Facilities & Amenities</h3>
+          <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>🏠</span> Facilities & Amenities</h3>
           <p style={styles.note}>Select facilities available at your property. Top 5 will be shown prominently.</p>
           
           {!isToLet && (
@@ -930,22 +977,22 @@ function OwnerAddPG() {
               <h4 style={styles.facilityGroupTitle}>🍽️ Food Options</h4>
               <div style={styles.checkboxGrid}>
                 <label style={styles.checkboxLabel}>
-                  <input type="checkbox" name="food_available" checked={form.food_available} onChange={handleChange} style={styles.checkbox} /> 
+                  <input type="checkbox" name="food_available" checked={form.food_available} onChange={handleChange} className="checkbox-modern" /> 
                   Food Available
                 </label>
                 {form.food_available && (
-                  <div style={{ gridColumn: "1 / -1", display: "flex", gap: "15px", flexWrap: "wrap", padding: "10px", background: "#f8f9fa", borderRadius: "8px" }}>
+                  <div style={{ gridColumn: "1 / -1", display: "flex", gap: "15px", flexWrap: "wrap", padding: "12px 16px", background: "rgba(108, 92, 231, 0.06)", borderRadius: "10px", border: "1px solid rgba(108, 92, 231, 0.1)" }}>
                     <div>
-                      <label style={{ marginRight: 10 }}>Food Type:</label>
-                      <select name="food_type" value={form.food_type} onChange={handleChange} style={{...styles.input, width: 150, display: "inline-block"}}>
+                      <label style={{ marginRight: 10, fontSize: "13px", color: "#555" }}>Food Type:</label>
+                      <select name="food_type" value={form.food_type} onChange={handleChange} style={{...styles.input, width: 150, display: "inline-block", ...styles.inputGlow}}>
                         <option value="veg">Vegetarian</option>
                         <option value="non_veg">Non-Vegetarian</option>
                         <option value="both">Both</option>
                       </select>
                     </div>
                     <div>
-                      <label style={{ marginRight: 10 }}>Meals/Day:</label>
-                      <input type="number" name="meals_per_day" placeholder="e.g., 3" value={form.meals_per_day} onChange={handleChange} style={{...styles.input, width: 100, display: "inline-block"}} min="1" max="4" />
+                      <label style={{ marginRight: 10, fontSize: "13px", color: "#555" }}>Meals/Day:</label>
+                      <input type="number" name="meals_per_day" placeholder="e.g., 3" value={form.meals_per_day} onChange={handleChange} style={{...styles.input, width: 100, display: "inline-block", ...styles.inputGlow}} min="1" max="4" />
                     </div>
                   </div>
                 )}
@@ -958,7 +1005,7 @@ function OwnerAddPG() {
             <div style={styles.checkboxGrid}>
               {roomFurnishings.map(item => (
                 <label key={item.key} style={styles.checkboxLabel}>
-                  <input type="checkbox" name={item.key} checked={form[item.key]} onChange={handleChange} style={styles.checkbox} />
+                  <input type="checkbox" name={item.key} checked={form[item.key]} onChange={handleChange} className="checkbox-modern" />
                   {item.label}
                 </label>
               ))}
@@ -970,7 +1017,7 @@ function OwnerAddPG() {
             <div style={styles.checkboxGrid}>
               {buildingFacilities.map(item => (
                 <label key={item.key} style={{...styles.checkboxLabel, fontWeight: form[item.key] ? "500" : "normal"}}>
-                  <input type="checkbox" name={item.key} checked={form[item.key]} onChange={handleChange} style={styles.checkbox} />
+                  <input type="checkbox" name={item.key} checked={form[item.key]} onChange={handleChange} className="checkbox-modern" />
                   {item.label}
                 </label>
               ))}
@@ -990,7 +1037,7 @@ function OwnerAddPG() {
                   { key: "co_living_maintenance", label: "🔧 Maintenance" }
                 ].map(item => (
                   <label key={item.key} style={{...styles.checkboxLabel, color: "#2E7D32"}}>
-                    <input type="checkbox" name={item.key} checked={form[item.key]} onChange={handleChange} style={styles.checkbox} />
+                    <input type="checkbox" name={item.key} checked={form[item.key]} onChange={handleChange} className="checkbox-modern" />
                     {item.label}
                   </label>
                 ))}
@@ -1000,7 +1047,7 @@ function OwnerAddPG() {
 
           <div style={styles.facilityGroup}>
             <h4 style={styles.facilityGroupTitle}>💧 Water Source</h4>
-            <select name="water_type" value={form.water_type} onChange={handleChange} style={{...styles.input, maxWidth: "300px"}}>
+            <select name="water_type" value={form.water_type} onChange={handleChange} style={{...styles.input, maxWidth: "300px", ...styles.inputGlow, ...styles.select}}>
               <option value="borewell">Borewell</option>
               <option value="kaveri">Kaveri</option>
               <option value="both">Both</option>
@@ -1009,42 +1056,41 @@ function OwnerAddPG() {
           </div>
         </div>
 
-
         {/* Contact Information */}
         <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>📞 Contact Details</h3>
+          <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>📞</span> Contact Details</h3>
           <div style={styles.grid}>
             <div style={styles.inputGroup}>
-              <label>Contact Person *</label>
+              <label style={styles.label}>Contact Person <span style={{ color: "#ff6b6b" }}>*</span></label>
               <input 
                 name="contact_person" 
                 placeholder="e.g., Owner/Manager Name" 
                 value={form.contact_person} 
                 onChange={handleChange} 
-                style={{...styles.input, ...getErrorStyle("contact_person")}} 
+                style={{...styles.input, ...styles.inputGlow, ...getErrorStyle("contact_person")}} 
                 required 
               />
             </div>
             <div style={styles.inputGroup}>
-              <label>Contact Email</label>
+              <label style={styles.label}>Contact Email</label>
               <input 
                 type="email" 
                 name="contact_email" 
                 placeholder="contact@example.com" 
                 value={form.contact_email} 
                 onChange={handleChange} 
-                style={{...styles.input, ...getErrorStyle("contact_email")}} 
+                style={{...styles.input, ...styles.inputGlow, ...getErrorStyle("contact_email")}} 
               />
             </div>
             <div style={styles.inputGroup}>
-              <label>Contact Phone *</label>
+              <label style={styles.label}>Contact Phone <span style={{ color: "#ff6b6b" }}>*</span></label>
               <input 
                 type="tel" 
                 name="contact_phone" 
                 placeholder="Enter 10-digit phone number" 
                 value={form.contact_phone} 
                 onChange={handleChange} 
-                style={{...styles.input, ...getErrorStyle("contact_phone")}} 
+                style={{...styles.input, ...styles.inputGlow, ...getErrorStyle("contact_phone")}} 
                 required 
                 pattern="[0-9]{10,15}" 
               />
@@ -1053,7 +1099,7 @@ function OwnerAddPG() {
         </div>
 
         {/* Create Listing Button */}
-        <button onClick={handleSubmit} disabled={isSubmitDisabled} style={{...styles.submitBtn, ...(isSubmitDisabled ? styles.submitBtnDisabled : {})}}>
+        <button onClick={handleSubmit} disabled={isSubmitDisabled} style={{...styles.submitBtn, ...styles.btnGradient, ...(isSubmitDisabled ? styles.submitBtnDisabled : {})}}>
           {loading ? "⏳ Creating Property..." : `🏠 Create ${isToLet ? 'House/Flat' : 'Property'} Listing`}
         </button>
         
@@ -1065,14 +1111,14 @@ function OwnerAddPG() {
       {/* Map Modal */}
       {showMap && (
         <div style={styles.mapModalOverlay}>
-          <div style={styles.mapModal}>
+          <div style={{...styles.mapModal, ...styles.cardTrendy}}>
             <div style={styles.mapHeader}>
-              <h3>Select Property Location</h3>
+              <h3 style={{ margin: 0, color: "#2d3436" }}>🗺️ Select Property Location</h3>
               <div style={styles.mapControls}>
-                <button onClick={getUserCurrentLocation} style={styles.currentLocationButton} disabled={gettingLocation || mapLoading}>{gettingLocation ? "📍 Getting Location..." : "📍 Use My Location"}</button>
+                <button onClick={getUserCurrentLocation} style={{...styles.currentLocationButton, ...styles.btnGradient}} disabled={gettingLocation || mapLoading}>{gettingLocation ? "📍 Getting Location..." : "📍 Use My Location"}</button>
                 <div style={styles.mapSearch}>
-                  <input type="text" id="location-search" placeholder="Search for area, landmark, or address..." style={styles.searchInput} onKeyPress={(e) => e.key === 'Enter' && searchLocation(e.target.value)} />
-                  <button onClick={() => searchLocation(document.getElementById('location-search').value)} style={styles.searchButton} disabled={mapLoading}>{mapLoading ? "Searching..." : "🔍 Search"}</button>
+                  <input type="text" id="location-search" placeholder="Search for area, landmark, or address..." style={{...styles.searchInput, ...styles.inputGlow}} onKeyPress={(e) => e.key === 'Enter' && searchLocation(e.target.value)} />
+                  <button onClick={() => searchLocation(document.getElementById('location-search').value)} style={{...styles.searchButton, ...styles.btnGradient}} disabled={mapLoading}>{mapLoading ? "Searching..." : "🔍 Search"}</button>
                 </div>
               </div>
               <button onClick={() => setShowMap(false)} style={styles.closeBtn}>✕</button>
@@ -1081,7 +1127,7 @@ function OwnerAddPG() {
               {(mapLoading || gettingLocation) && (
                 <div style={styles.loadingOverlay}>
                   <div style={styles.spinner}></div>
-                  <p>{gettingLocation ? "Getting your location..." : "Loading map..."}</p>
+                  <p style={{ marginTop: "12px", color: "#555" }}>{gettingLocation ? "Getting your location..." : "Loading map..."}</p>
                 </div>
               )}
               <MapContainer center={[parseFloat(selectedLocation.lat) || 12.9716, parseFloat(selectedLocation.lng) || 77.5946]} zoom={13} style={styles.leafletMap} ref={mapRef}>
@@ -1090,7 +1136,7 @@ function OwnerAddPG() {
                 <LocationMarker onLocationSelect={handleLocationSelect} selectedLocation={selectedLocation} />
               </MapContainer>
               <div style={styles.locationPreview}>
-                <h4>Selected Location Details:</h4>
+                <h4 style={{ margin: "0 0 8px 0", color: "#2d3436" }}>Selected Location Details:</h4>
                 {mapLoading ? <p>Fetching address details...</p> : (
                   <>
                     <p><strong>Coordinates:</strong> {selectedLocation.lat}, {selectedLocation.lng}</p>
@@ -1099,8 +1145,8 @@ function OwnerAddPG() {
                 )}
               </div>
               <div style={styles.mapFooter}>
-                <button onClick={() => { if (selectedLocation.lat && selectedLocation.lng) setShowMap(false); else alert("Please select a location by clicking on the map"); }} style={styles.confirmButton} disabled={mapLoading || gettingLocation}>✅ Confirm This Location</button>
-                <button onClick={() => { setShowMap(false); setManualEditMode(true); }} style={styles.manualButton}>✏️ Enter Address Manually</button>
+                <button onClick={() => { if (selectedLocation.lat && selectedLocation.lng) setShowMap(false); else alert("Please select a location by clicking on the map"); }} style={{...styles.confirmButton, ...styles.btnGradient}} disabled={mapLoading || gettingLocation}>✅ Confirm This Location</button>
+                <button onClick={() => { setShowMap(false); setManualEditMode(true); }} style={{...styles.manualButton, ...styles.btnGradient}}>✏️ Enter Address Manually</button>
               </div>
             </div>
           </div>
@@ -1113,81 +1159,649 @@ function OwnerAddPG() {
   );
 }
 
-// Styles
+// Enhanced Trendy Styles
 const styles = {
-  container: { minHeight: "100vh", background: "linear-gradient(135deg, #667eea, #764ba2)", padding: "20px", display: "flex", justifyContent: "center", alignItems: "flex-start" },
-  card: { background: "#ffffff", width: "100%", maxWidth: "1200px", padding: "30px", borderRadius: "20px", boxShadow: "0 25px 50px rgba(0, 0, 0, 0.2)", margin: "20px 0" },
-  title: { textAlign: "center", marginBottom: "30px", color: "#333", fontSize: "28px", fontWeight: "600" },
-  premiumBanner: { background: "linear-gradient(135deg, #FFD700, #FFA500)", color: "#333", padding: "15px", borderRadius: "10px", textAlign: "center", marginBottom: "25px", fontWeight: "bold", fontSize: "16px" },
-  section: { marginBottom: "30px", paddingBottom: "20px", borderBottom: "1px solid #eee" },
-  sectionTitle: { fontSize: "18px", fontWeight: "600", color: "#444", marginBottom: "15px", display: "flex", alignItems: "center", gap: "8px" },
-  note: { fontSize: "14px", color: "#666", marginBottom: "15px", fontStyle: "italic" },
-  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "15px", marginBottom: "15px" },
-  ratesGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px" },
-  inputGroup: { display: "flex", flexDirection: "column" },
-  input: { padding: "12px 14px", border: "1px solid #ddd", borderRadius: "8px", fontSize: "14px", outline: "none", transition: "border 0.2s, box-shadow 0.2s", width: "100%", boxSizing: "border-box" },
-  textarea: { padding: "12px 14px", border: "1px solid #ddd", borderRadius: "8px", fontSize: "14px", outline: "none", width: "100%", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" },
-  locationButtons: { display: "flex", gap: "15px", marginBottom: "15px", flexWrap: "wrap" },
-  mapButton: { padding: "12px 20px", background: "#4CAF50", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "500", display: "inline-flex", alignItems: "center", gap: "8px", flex: "1", minWidth: "200px" },
-  manualAddressButton: { padding: "12px 20px", background: "#2196F3", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "500", display: "inline-flex", alignItems: "center", gap: "8px", flex: "1", minWidth: "200px" },
-  locationPreview: { background: "#f8f9fa", padding: "15px", borderRadius: "8px", marginTop: "10px", borderLeft: "4px solid #4CAF50" },
-  locationHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "10px" },
-  locationActionButtons: { display: "flex", gap: "10px" },
-  editLocationBtn: { background: "#2196F3", color: "white", border: "none", padding: "6px 12px", borderRadius: "4px", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" },
-  removeLocationBtn: { background: "#ff4444", color: "white", border: "none", padding: "6px 12px", borderRadius: "4px", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" },
-  locationDetails: { fontSize: "14px", color: "#555" },
-  locationWarning: { background: "#FFF3CD", border: "1px solid #FFEEBA", color: "#856404", padding: "10px", borderRadius: "6px", marginTop: "10px", fontSize: "14px" },
-  
-  topFacilitiesSection: { marginBottom: "30px", padding: "20px", background: "linear-gradient(135deg, #f5f7fa, #c3cfe2)", borderRadius: "12px" },
-  topFacilitiesContainer: { display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center" },
-  topFacilityBadge: { background: "linear-gradient(135deg, #667eea, #764ba2)", color: "white", padding: "8px 16px", borderRadius: "20px", fontSize: "14px", fontWeight: "500", boxShadow: "0 2px 8px rgba(102, 126, 234, 0.3)" },
-  topFacilityEmpty: { color: "#666", fontSize: "14px", fontStyle: "italic" },
-  
-  facilityGroup: { marginBottom: "20px" },
-  facilityGroupTitle: { fontSize: "15px", fontWeight: "600", color: "#555", marginBottom: "10px", paddingBottom: "5px", borderBottom: "2px solid #f0f0f0" },
-  
-  checkboxGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" },
-  checkboxLabel: { display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "14px", color: "#555", padding: "8px", borderRadius: "6px", transition: "background 0.2s" },
-  checkbox: { width: "18px", height: "18px", cursor: "pointer" },
-  
-  fileUpload: { marginBottom: "15px" },
-  fileUploadLabel: { display: "inline-block", padding: "12px 20px", background: "#667eea", color: "white", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "500" },
-  fileInput: { display: "none" },
-  photoPreview: { display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "10px" },
-  photoItem: { display: "flex", alignItems: "center", gap: "10px", background: "#f8f9fa", padding: "8px 12px", borderRadius: "6px", fontSize: "14px", border: "1px solid #e9ecef" },
-  coverPhotoItem: { background: "#fff3e0", border: "2px solid #FFD700" },
-  photoName: { maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  coverPhotoBtn: { background: "none", border: "none", cursor: "pointer", fontSize: "18px", padding: "2px 6px", color: "#999" },
-  coverPhotoBtnActive: { background: "none", border: "none", cursor: "pointer", fontSize: "18px", padding: "2px 6px", color: "#FFD700" },
-  removePhotoBtn: { background: "#ff4444", color: "white", border: "none", borderRadius: "50%", width: "24px", height: "24px", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", justifyContent: "center" },
-  photoCount: { fontSize: "14px", color: "#666", marginTop: "10px" },
-  
-  submitBtn: { width: "100%", padding: "16px", background: "linear-gradient(135deg, #667eea, #764ba2)", color: "white", border: "none", borderRadius: "10px", fontSize: "18px", fontWeight: "600", cursor: "pointer", transition: "all 0.3s", marginTop: "10px" },
-  submitBtnDisabled: { opacity: "0.6", cursor: "not-allowed" },
-  
-  mapModalOverlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.8)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 },
-  mapModal: { background: "white", borderRadius: "12px", width: "95%", maxWidth: "1000px", maxHeight: "95vh", overflow: "hidden", boxShadow: "0 20px 40px rgba(0,0,0,0.3)" },
-  mapHeader: { padding: "15px 20px", borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8f9fa", flexWrap: "wrap", gap: "10px" },
-  mapControls: { display: "flex", flex: "1", flexDirection: "column", gap: "10px", minWidth: "300px" },
-  currentLocationButton: { padding: "10px 15px", background: "#FF9800", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "14px", fontWeight: "500", display: "flex", alignItems: "center", gap: "5px", width: "100%", justifyContent: "center" },
-  mapSearch: { display: "flex", gap: "10px", width: "100%" },
-  searchInput: { flex: "1", padding: "10px 15px", border: "1px solid #ddd", borderRadius: "6px", fontSize: "14px", outline: "none", minWidth: "200px" },
-  searchButton: { padding: "10px 15px", background: "#2196F3", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "14px", fontWeight: "500", display: "flex", alignItems: "center", gap: "5px", minWidth: "100px" },
-  closeBtn: { background: "none", border: "none", fontSize: "24px", cursor: "pointer", color: "#666", width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", flexShrink: 0 },
-  mapContainer: { position: "relative" },
-  leafletMap: { height: "400px", width: "100%" },
-  loadingOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(255,255,255,0.8)", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", zIndex: 1000 },
-  spinner: { border: "4px solid #f3f3f3", borderTop: "4px solid #3498db", borderRadius: "50%", width: "40px", height: "40px", animation: "spin 1s linear infinite" },
-  mapFooter: { padding: "15px 20px", display: "flex", gap: "15px", justifyContent: "center", background: "#f8f9fa", borderTop: "1px solid #eee" },
-  confirmButton: { padding: "12px 24px", background: "#4CAF50", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "14px", fontWeight: "500", display: "flex", alignItems: "center", gap: "8px" },
-  manualButton: { padding: "12px 24px", background: "#2196F3", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "14px", fontWeight: "500", display: "flex", alignItems: "center", gap: "8px" },
-  manualModalOverlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.8)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1001 },
-  manualModal: { background: "white", borderRadius: "12px", width: "90%", maxWidth: "800px", maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 40px rgba(0,0,0,0.3)" },
-  manualHeader: { padding: "20px", borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8f9fa" },
-  manualForm: { padding: "20px" },
-  manualFooter: { padding: "20px", display: "flex", gap: "15px", justifyContent: "center", background: "#f8f9fa", borderTop: "1px solid #eee" },
-  saveButton: { padding: "12px 24px", background: "#4CAF50", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "14px", fontWeight: "500", display: "flex", alignItems: "center", gap: "8px" },
-  backToMapButton: { padding: "12px 24px", background: "#2196F3", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "14px", fontWeight: "500", display: "flex", alignItems: "center", gap: "8px" },
+  container: { 
+    minHeight: "100vh", 
+    background: "linear-gradient(135deg, #0c0d1e 0%, #1a1a2e 50%, #16213e 100%)", 
+    padding: "20px", 
+    display: "flex", 
+    justifyContent: "center", 
+    alignItems: "flex-start",
+    fontFamily: "'Inter', -apple-system, sans-serif"
+  },
+  card: { 
+    background: "rgba(255, 255, 255, 0.08)",
+    backdropFilter: "blur(20px)",
+    WebkitBackdropFilter: "blur(20px)",
+    border: "1px solid rgba(255, 255, 255, 0.12)",
+    width: "100%", 
+    maxWidth: "1200px", 
+    padding: "35px", 
+    borderRadius: "24px", 
+    boxShadow: "0 25px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08)", 
+    margin: "20px 0",
+    position: "relative",
+    overflow: "hidden"
+  },
+  cardTrendy: {
+    transition: "all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)"
+  },
+  headerBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    background: "rgba(108, 92, 231, 0.2)",
+    padding: "6px 16px",
+    borderRadius: "20px",
+    marginBottom: "16px",
+    border: "1px solid rgba(108, 92, 231, 0.2)"
+  },
+  badgeIcon: { fontSize: "16px" },
+  badgeText: { fontSize: "12px", fontWeight: "600", color: "#a29bfe", textTransform: "uppercase", letterSpacing: "0.5px" },
+  title: { 
+    textAlign: "center", 
+    marginBottom: "20px", 
+    color: "#fff", 
+    fontSize: "32px", 
+    fontWeight: "700",
+    background: "linear-gradient(135deg, #a29bfe, #fd79a8)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    backgroundClip: "text",
+    letterSpacing: "-0.5px"
+  },
+  premiumBanner: { 
+    background: "linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 165, 0, 0.1))",
+    border: "1px solid rgba(255, 215, 0, 0.2)",
+    color: "#ffd700", 
+    padding: "16px 20px", 
+    borderRadius: "12px", 
+    textAlign: "center", 
+    marginBottom: "30px", 
+    fontWeight: "500", 
+    fontSize: "15px",
+    backdropFilter: "blur(10px)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "10px",
+    flexWrap: "wrap"
+  },
+  section: { 
+    marginBottom: "32px", 
+    paddingBottom: "24px", 
+    borderBottom: "1px solid rgba(255, 255, 255, 0.06)" 
+  },
+  sectionTitle: { 
+    fontSize: "18px", 
+    fontWeight: "600", 
+    color: "#e0e0e0", 
+    marginBottom: "18px", 
+    display: "flex", 
+    alignItems: "center", 
+    gap: "10px" 
+  },
+  sectionIcon: { fontSize: "20px" },
+  note: { 
+    fontSize: "14px", 
+    color: "rgba(255,255,255,0.6)", 
+    marginBottom: "15px", 
+    fontStyle: "italic" 
+  },
+  grid: { 
+    display: "grid", 
+    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", 
+    gap: "16px", 
+    marginBottom: "15px" 
+  },
+  ratesGrid: { 
+    display: "grid", 
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
+    gap: "16px" 
+  },
+  inputGroup: { 
+    display: "flex", 
+    flexDirection: "column" 
+  },
+  label: {
+    fontSize: "13px",
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.8)",
+    marginBottom: "6px",
+    letterSpacing: "0.3px"
+  },
+  input: { 
+    padding: "12px 16px", 
+    background: "rgba(255, 255, 255, 0.06)",
+    border: "1px solid rgba(255, 255, 255, 0.1)", 
+    borderRadius: "10px", 
+    fontSize: "14px", 
+    outline: "none", 
+    transition: "all 0.3s ease", 
+    width: "100%", 
+    boxSizing: "border-box",
+    color: "#fff",
+    backdropFilter: "blur(4px)"
+  },
+  inputGlow: {
+    transition: "all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)"
+  },
+  select: {
+    appearance: "none",
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='rgba(255,255,255,0.5)' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "right 12px center",
+    paddingRight: "36px",
+    cursor: "pointer"
+  },
+  textarea: { 
+    padding: "12px 16px", 
+    background: "rgba(255, 255, 255, 0.06)",
+    border: "1px solid rgba(255, 255, 255, 0.1)", 
+    borderRadius: "10px", 
+    fontSize: "14px", 
+    outline: "none", 
+    width: "100%", 
+    resize: "vertical", 
+    fontFamily: "inherit", 
+    boxSizing: "border-box",
+    color: "#fff",
+    transition: "all 0.3s ease"
+  },
+  helperText: { 
+    fontSize: "11px", 
+    color: "rgba(255,255,255,0.4)", 
+    marginTop: "4px" 
+  },
+  locationButtons: { 
+    display: "flex", 
+    gap: "12px", 
+    marginBottom: "15px", 
+    flexWrap: "wrap" 
+  },
+  mapButton: { 
+    padding: "12px 24px", 
+    color: "white", 
+    border: "none", 
+    borderRadius: "10px", 
+    cursor: "pointer", 
+    fontSize: "14px", 
+    fontWeight: "500", 
+    display: "inline-flex", 
+    alignItems: "center", 
+    gap: "8px", 
+    flex: "1", 
+    minWidth: "200px",
+    justifyContent: "center",
+    transition: "all 0.3s ease"
+  },
+  manualAddressButton: { 
+    padding: "12px 24px", 
+    color: "white", 
+    border: "none", 
+    borderRadius: "10px", 
+    cursor: "pointer", 
+    fontSize: "14px", 
+    fontWeight: "500", 
+    display: "inline-flex", 
+    alignItems: "center", 
+    gap: "8px", 
+    flex: "1", 
+    minWidth: "200px",
+    justifyContent: "center",
+    transition: "all 0.3s ease"
+  },
+  btnGradient: {
+    background: "linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%)",
+    transition: "all 0.3s ease",
+    boxShadow: "0 4px 15px rgba(108, 92, 231, 0.3)"
+  },
+  locationPreview: { 
+    background: "rgba(255, 255, 255, 0.06)",
+    padding: "16px 20px", 
+    borderRadius: "12px", 
+    marginTop: "10px", 
+    borderLeft: "4px solid #6c5ce7",
+    backdropFilter: "blur(4px)"
+  },
+  locationHeader: { 
+    display: "flex", 
+    justifyContent: "space-between", 
+    alignItems: "center", 
+    marginBottom: "10px", 
+    flexWrap: "wrap", 
+    gap: "10px" 
+  },
+  locationActionButtons: { 
+    display: "flex", 
+    gap: "8px" 
+  },
+  editLocationBtn: { 
+    background: "rgba(108, 92, 231, 0.2)", 
+    color: "#a29bfe", 
+    border: "1px solid rgba(108, 92, 231, 0.2)", 
+    padding: "6px 14px", 
+    borderRadius: "6px", 
+    cursor: "pointer", 
+    fontSize: "12px", 
+    display: "flex", 
+    alignItems: "center", 
+    gap: "4px",
+    transition: "all 0.2s"
+  },
+  removeLocationBtn: { 
+    background: "rgba(255, 107, 107, 0.15)", 
+    color: "#ff6b6b", 
+    border: "1px solid rgba(255, 107, 107, 0.2)", 
+    padding: "6px 14px", 
+    borderRadius: "6px", 
+    cursor: "pointer", 
+    fontSize: "12px", 
+    display: "flex", 
+    alignItems: "center", 
+    gap: "4px",
+    transition: "all 0.2s"
+  },
+  locationDetails: { 
+    fontSize: "14px", 
+    color: "rgba(255,255,255,0.75)" 
+  },
+  locationWarning: { 
+    background: "rgba(255, 215, 0, 0.1)", 
+    border: "1px solid rgba(255, 215, 0, 0.2)", 
+    color: "#ffd700", 
+    padding: "12px 16px", 
+    borderRadius: "8px", 
+    marginTop: "10px", 
+    fontSize: "14px" 
+  },
+  topFacilitiesSection: { 
+    marginBottom: "30px", 
+    padding: "20px 24px", 
+    background: "linear-gradient(135deg, rgba(108, 92, 231, 0.15), rgba(162, 155, 254, 0.08))",
+    borderRadius: "14px",
+    border: "1px solid rgba(108, 92, 231, 0.12)"
+  },
+  topFacilitiesContainer: { 
+    display: "flex", 
+    flexWrap: "wrap", 
+    gap: "10px", 
+    alignItems: "center",
+    marginTop: "10px"
+  },
+  topFacilityBadge: { 
+    background: "linear-gradient(135deg, #6c5ce7, #a29bfe)", 
+    color: "white", 
+    padding: "6px 16px", 
+    borderRadius: "20px", 
+    fontSize: "13px", 
+    fontWeight: "500", 
+    boxShadow: "0 4px 15px rgba(108, 92, 231, 0.3)",
+    letterSpacing: "0.3px"
+  },
+  topFacilityEmpty: { 
+    color: "rgba(255,255,255,0.4)", 
+    fontSize: "13px", 
+    fontStyle: "italic" 
+  },
+  facilityGroup: { 
+    marginBottom: "20px" 
+  },
+  facilityGroupTitle: { 
+    fontSize: "14px", 
+    fontWeight: "600", 
+    color: "rgba(255,255,255,0.7)", 
+    marginBottom: "12px", 
+    paddingBottom: "6px", 
+    borderBottom: "1px solid rgba(255, 255, 255, 0.06)" 
+  },
+  checkboxGrid: { 
+    display: "grid", 
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", 
+    gap: "8px" 
+  },
+  checkboxLabel: { 
+    display: "flex", 
+    alignItems: "center", 
+    gap: "10px", 
+    cursor: "pointer", 
+    fontSize: "14px", 
+    color: "rgba(255,255,255,0.7)", 
+    padding: "8px 12px", 
+    borderRadius: "8px", 
+    transition: "all 0.2s",
+    background: "rgba(255, 255, 255, 0.03)"
+  },
+  fileUpload: { 
+    marginBottom: "15px" 
+  },
+  fileUploadLabel: { 
+    display: "inline-block", 
+    padding: "12px 24px", 
+    color: "white", 
+    borderRadius: "10px", 
+    cursor: "pointer", 
+    fontSize: "14px", 
+    fontWeight: "500",
+    transition: "all 0.3s ease"
+  },
+  fileInput: { 
+    display: "none" 
+  },
+  photoPreview: { 
+    display: "flex", 
+    flexWrap: "wrap", 
+    gap: "10px", 
+    marginTop: "12px" 
+  },
+  photoItem: { 
+    display: "flex", 
+    alignItems: "center", 
+    gap: "10px", 
+    background: "rgba(255, 255, 255, 0.06)", 
+    padding: "8px 14px", 
+    borderRadius: "8px", 
+    fontSize: "13px", 
+    border: "1px solid rgba(255, 255, 255, 0.06)" 
+  },
+  coverPhotoItem: { 
+    background: "rgba(255, 215, 0, 0.08)", 
+    border: "2px solid #ffd700" 
+  },
+  photoName: { 
+    maxWidth: "150px", 
+    overflow: "hidden", 
+    textOverflow: "ellipsis", 
+    whiteSpace: "nowrap",
+    color: "rgba(255,255,255,0.7)"
+  },
+  coverPhotoBtn: { 
+    background: "none", 
+    border: "none", 
+    cursor: "pointer", 
+    fontSize: "18px", 
+    padding: "2px 6px", 
+    color: "rgba(255,255,255,0.3)" 
+  },
+  coverPhotoBtnActive: { 
+    background: "none", 
+    border: "none", 
+    cursor: "pointer", 
+    fontSize: "18px", 
+    padding: "2px 6px", 
+    color: "#ffd700" 
+  },
+  removePhotoBtn: { 
+    background: "rgba(255, 107, 107, 0.15)", 
+    color: "#ff6b6b", 
+    border: "none", 
+    borderRadius: "50%", 
+    width: "24px", 
+    height: "24px", 
+    cursor: "pointer", 
+    fontSize: "12px", 
+    display: "flex", 
+    alignItems: "center", 
+    justifyContent: "center",
+    transition: "all 0.2s"
+  },
+  photoCount: { 
+    fontSize: "13px", 
+    color: "rgba(255,255,255,0.5)", 
+    marginTop: "10px" 
+  },
+  submitBtn: { 
+    width: "100%", 
+    padding: "16px", 
+    color: "white", 
+    border: "none", 
+    borderRadius: "12px", 
+    fontSize: "18px", 
+    fontWeight: "600", 
+    cursor: "pointer", 
+    transition: "all 0.3s ease", 
+    marginTop: "10px",
+    letterSpacing: "0.5px"
+  },
+  submitBtnDisabled: { 
+    opacity: "0.5", 
+    cursor: "not-allowed",
+    transform: "none !important"
+  },
+  mapModalOverlay: { 
+    position: "fixed", 
+    top: 0, 
+    left: 0, 
+    right: 0, 
+    bottom: 0, 
+    background: "rgba(0,0,0,0.85)", 
+    display: "flex", 
+    justifyContent: "center", 
+    alignItems: "center", 
+    zIndex: 1000,
+    backdropFilter: "blur(8px)"
+  },
+  mapModal: { 
+    background: "rgba(255, 255, 255, 0.06)",
+    backdropFilter: "blur(20px)",
+    border: "1px solid rgba(255, 255, 255, 0.1)",
+    borderRadius: "16px", 
+    width: "95%", 
+    maxWidth: "1000px", 
+    maxHeight: "95vh", 
+    overflow: "hidden", 
+    boxShadow: "0 30px 80px rgba(0,0,0,0.6)" 
+  },
+  mapHeader: { 
+    padding: "16px 24px", 
+    borderBottom: "1px solid rgba(255, 255, 255, 0.06)", 
+    display: "flex", 
+    justifyContent: "space-between", 
+    alignItems: "center", 
+    flexWrap: "wrap", 
+    gap: "12px" 
+  },
+  mapControls: { 
+    display: "flex", 
+    flex: "1", 
+    flexDirection: "column", 
+    gap: "10px", 
+    minWidth: "280px" 
+  },
+  currentLocationButton: { 
+    padding: "10px 18px", 
+    color: "white", 
+    border: "none", 
+    borderRadius: "8px", 
+    cursor: "pointer", 
+    fontSize: "14px", 
+    fontWeight: "500", 
+    display: "flex", 
+    alignItems: "center", 
+    gap: "6px", 
+    width: "100%", 
+    justifyContent: "center",
+    transition: "all 0.3s ease"
+  },
+  mapSearch: { 
+    display: "flex", 
+    gap: "10px", 
+    width: "100%" 
+  },
+  searchInput: { 
+    flex: "1", 
+    padding: "10px 16px", 
+    background: "rgba(255, 255, 255, 0.06)",
+    border: "1px solid rgba(255, 255, 255, 0.1)", 
+    borderRadius: "8px", 
+    fontSize: "14px", 
+    outline: "none", 
+    minWidth: "200px",
+    color: "#fff",
+    transition: "all 0.3s ease"
+  },
+  searchButton: { 
+    padding: "10px 18px", 
+    color: "white", 
+    border: "none", 
+    borderRadius: "8px", 
+    cursor: "pointer", 
+    fontSize: "14px", 
+    fontWeight: "500", 
+    display: "flex", 
+    alignItems: "center", 
+    gap: "6px", 
+    minWidth: "100px",
+    justifyContent: "center",
+    transition: "all 0.3s ease"
+  },
+  closeBtn: { 
+    background: "rgba(255, 255, 255, 0.06)", 
+    border: "1px solid rgba(255, 255, 255, 0.06)", 
+    fontSize: "20px", 
+    cursor: "pointer", 
+    color: "rgba(255,255,255,0.5)", 
+    width: "36px", 
+    height: "36px", 
+    display: "flex", 
+    alignItems: "center", 
+    justifyContent: "center", 
+    borderRadius: "50%", 
+    flexShrink: 0,
+    transition: "all 0.2s"
+  },
+  mapContainer: { 
+    position: "relative" 
+  },
+  leafletMap: { 
+    height: "400px", 
+    width: "100%" 
+  },
+  loadingOverlay: { 
+    position: "absolute", 
+    top: 0, 
+    left: 0, 
+    right: 0, 
+    bottom: 0, 
+    background: "rgba(0,0,0,0.6)", 
+    display: "flex", 
+    flexDirection: "column", 
+    justifyContent: "center", 
+    alignItems: "center", 
+    zIndex: 1000,
+    backdropFilter: "blur(4px)"
+  },
+  spinner: { 
+    border: "4px solid rgba(255,255,255,0.1)", 
+    borderTop: "4px solid #a29bfe", 
+    borderRadius: "50%", 
+    width: "40px", 
+    height: "40px", 
+    animation: "spin 1s linear infinite" 
+  },
+  mapFooter: { 
+    padding: "16px 24px", 
+    display: "flex", 
+    gap: "12px", 
+    justifyContent: "center", 
+    borderTop: "1px solid rgba(255, 255, 255, 0.06)",
+    flexWrap: "wrap"
+  },
+  confirmButton: { 
+    padding: "12px 28px", 
+    color: "white", 
+    border: "none", 
+    borderRadius: "8px", 
+    cursor: "pointer", 
+    fontSize: "14px", 
+    fontWeight: "500", 
+    display: "flex", 
+    alignItems: "center", 
+    gap: "8px",
+    transition: "all 0.3s ease"
+  },
+  manualButton: { 
+    padding: "12px 28px", 
+    color: "white", 
+    border: "none", 
+    borderRadius: "8px", 
+    cursor: "pointer", 
+    fontSize: "14px", 
+    fontWeight: "500", 
+    display: "flex", 
+    alignItems: "center", 
+    gap: "8px",
+    transition: "all 0.3s ease"
+  },
+  manualModalOverlay: { 
+    position: "fixed", 
+    top: 0, 
+    left: 0, 
+    right: 0, 
+    bottom: 0, 
+    background: "rgba(0,0,0,0.85)", 
+    display: "flex", 
+    justifyContent: "center", 
+    alignItems: "center", 
+    zIndex: 1001,
+    backdropFilter: "blur(8px)"
+  },
+  manualModal: { 
+    background: "rgba(255, 255, 255, 0.06)",
+    backdropFilter: "blur(20px)",
+    border: "1px solid rgba(255, 255, 255, 0.1)",
+    borderRadius: "16px", 
+    width: "90%", 
+    maxWidth: "800px", 
+    maxHeight: "90vh", 
+    overflow: "auto", 
+    boxShadow: "0 30px 80px rgba(0,0,0,0.6)" 
+  },
+  manualHeader: { 
+    padding: "20px 24px", 
+    borderBottom: "1px solid rgba(255, 255, 255, 0.06)", 
+    display: "flex", 
+    justifyContent: "space-between", 
+    alignItems: "center" 
+  },
+  manualForm: { 
+    padding: "24px" 
+  },
+  manualFooter: { 
+    padding: "16px 24px", 
+    display: "flex", 
+    gap: "12px", 
+    justifyContent: "center", 
+    borderTop: "1px solid rgba(255, 255, 255, 0.06)",
+    flexWrap: "wrap"
+  },
+  saveButton: { 
+    padding: "12px 28px", 
+    color: "white", 
+    border: "none", 
+    borderRadius: "8px", 
+    cursor: "pointer", 
+    fontSize: "14px", 
+    fontWeight: "500", 
+    display: "flex", 
+    alignItems: "center", 
+    gap: "8px",
+    transition: "all 0.3s ease"
+  },
+  backToMapButton: { 
+    padding: "12px 28px", 
+    color: "white", 
+    border: "none", 
+    borderRadius: "8px", 
+    cursor: "pointer", 
+    fontSize: "14px", 
+    fontWeight: "500", 
+    display: "flex", 
+    alignItems: "center", 
+    gap: "8px",
+    transition: "all 0.3s ease"
+  }
 };
 
 export default OwnerAddPG;
