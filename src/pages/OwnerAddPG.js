@@ -74,6 +74,10 @@ const initialForm = {
   bhk_type: "1",
   furnishing_type: "unfurnished",
   
+  // NEW: Beds availability
+  total_beds: "",
+  available_beds: "",
+  
   food_available: false,
   food_type: "veg",
   meals_per_day: "",
@@ -220,6 +224,45 @@ function OwnerAddPG() {
   const isToLet = form.pg_category === "to_let";
   const isPG = form.pg_category === "pg";
   const isCoLiving = form.pg_category === "coliving";
+
+  // Get top 5 facilities for display
+  const getTopFacilities = () => {
+    const facilityMap = {
+      ac_available: "❄️ AC",
+      wifi_available: "📶 Wi-Fi",
+      tv: "📺 TV",
+      parking_available: "🚗 Parking",
+      bike_parking: "🏍️ Bike Parking",
+      laundry_available: "🧺 Laundry",
+      washing_machine: "🧼 Washing Machine",
+      refrigerator: "🧊 Fridge",
+      microwave: "🍳 Microwave",
+      geyser: "🚿 Geyser",
+      power_backup: "🔋 Power Backup",
+      lift_elevator: "⬆️ Lift",
+      cctv: "📹 CCTV",
+      security_guard: "🛡️ Security",
+      gym: "🏋️ Gym",
+      housekeeping: "🧹 Housekeeping",
+      water_purifier: "💧 RO Water",
+      fire_safety: "🔥 Fire Safety",
+      study_room: "📚 Study Room",
+      common_tv_lounge: "📺 Lounge",
+      balcony_open_space: "🌿 Balcony",
+      water_24x7: "💦 24×7 Water",
+      food_available: "🍽️ Food",
+    };
+    
+    const selected = [];
+    Object.keys(facilityMap).forEach(key => {
+      if (form[key]) {
+        selected.push(facilityMap[key]);
+      }
+    });
+    
+    // Return top 5 (or all if less than 5)
+    return selected.slice(0, 5);
+  };
 
   useEffect(() => {
     const style = document.createElement("style");
@@ -380,7 +423,6 @@ function OwnerAddPG() {
       return;
     }
     setPhotos(prev => [...prev, ...files]);
-    // Set cover photo to first uploaded if no cover set
     if (photos.length === 0 && files.length > 0) {
       setCoverPhotoIndex(0);
     }
@@ -411,6 +453,13 @@ function OwnerAddPG() {
     if (!form.contact_person?.trim()) missing.push("Contact Person");
     if (!form.contact_phone?.trim()) missing.push("Contact Phone");
     if (photos.length === 0) missing.push("Property Photos (at least 1)");
+    
+    // For PG and Co-living, beds are required
+    if (!isToLet) {
+      if (!form.total_beds?.trim()) missing.push("Total Beds");
+      if (!form.available_beds?.trim()) missing.push("Available Beds");
+    }
+    
     if (form.contact_email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
       missing.push("Valid Contact Email");
     }
@@ -427,6 +476,13 @@ function OwnerAddPG() {
     if (!form.contact_person?.trim()) errors.contact_person = true;
     if (!form.contact_phone?.trim()) errors.contact_phone = true;
     if (photos.length === 0) errors.photos = true;
+    
+    // For PG and Co-living, beds are required
+    if (!isToLet) {
+      if (!form.total_beds?.trim()) errors.total_beds = true;
+      if (!form.available_beds?.trim()) errors.available_beds = true;
+    }
+    
     if (form.contact_email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
       errors.contact_email = true;
     }
@@ -459,6 +515,12 @@ function OwnerAddPG() {
       if (!form.contact_person?.trim()) errors.contact_person = true;
       if (!form.contact_phone?.trim()) errors.contact_phone = true;
       if (photos.length === 0) errors.photos = true;
+      
+      if (!isToLet) {
+        if (!form.total_beds?.trim()) errors.total_beds = true;
+        if (!form.available_beds?.trim()) errors.available_beds = true;
+      }
+      
       if (form.contact_email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
         errors.contact_email = true;
       }
@@ -483,6 +545,12 @@ function OwnerAddPG() {
       formData.append("pg_category", form.pg_category);
       formData.append("pg_type", form.pg_type);
       formData.append("owner_id", user.uid);
+      
+      // Beds information (for PG and Co-living)
+      if (!isToLet) {
+        appendIfValue(formData, "total_beds", form.total_beds);
+        appendIfValue(formData, "available_beds", form.available_beds);
+      }
       
       // Location details
       formData.append("address", selectedLocation.address);
@@ -683,6 +751,7 @@ function OwnerAddPG() {
   if (role !== "owner") return <Navigate to="/" replace />;
 
   const isSubmitDisabled = loading;
+  const topFacilities = getTopFacilities();
 
   return (
     <div style={styles.container}>
@@ -718,14 +787,42 @@ function OwnerAddPG() {
               </select>
             </div>
             {!isToLet && (
-              <div style={styles.inputGroup}>
-                <label>Property Type *</label>
-                <select name="pg_type" value={form.pg_type} onChange={handleChange} style={styles.input}>
-                  <option value="boys">Boys Only</option>
-                  <option value="girls">Girls Only</option>
-                  <option value="coliving">Co-Living (Mixed)</option>
-                </select>
-              </div>
+              <>
+                <div style={styles.inputGroup}>
+                  <label>Property Type *</label>
+                  <select name="pg_type" value={form.pg_type} onChange={handleChange} style={styles.input}>
+                    <option value="boys">Boys Only</option>
+                    <option value="girls">Girls Only</option>
+                    <option value="coliving">Co-Living (Mixed)</option>
+                  </select>
+                </div>
+                <div style={styles.inputGroup}>
+                  <label>Total Beds *</label>
+                  <input 
+                    type="number" 
+                    name="total_beds" 
+                    placeholder="e.g., 50" 
+                    value={form.total_beds} 
+                    onChange={handleChange} 
+                    style={{...styles.input, ...getErrorStyle("total_beds")}} 
+                    min="1"
+                    required 
+                  />
+                </div>
+                <div style={styles.inputGroup}>
+                  <label>Available Beds *</label>
+                  <input 
+                    type="number" 
+                    name="available_beds" 
+                    placeholder="e.g., 20" 
+                    value={form.available_beds} 
+                    onChange={handleChange} 
+                    style={{...styles.input, ...getErrorStyle("available_beds")}} 
+                    min="0"
+                    required 
+                  />
+                </div>
+              </>
             )}
             {isToLet && (
               <>
@@ -813,6 +910,25 @@ function OwnerAddPG() {
           {validationErrors.photos && <p style={{ color: "#f44336", fontSize: 12, marginTop: 5 }}>⚠️ At least one photo is required</p>}
         </div>
 
+        {/* Top Facilities Preview */}
+        {topFacilities.length > 0 && (
+          <div style={styles.topFacilitiesSection}>
+            <h3 style={styles.sectionTitle}>⭐ Top Facilities ({topFacilities.length})</h3>
+            <div style={styles.topFacilitiesContainer}>
+              {topFacilities.map((facility, index) => (
+                <span key={index} style={styles.topFacilityBadge}>
+                  {facility}
+                </span>
+              ))}
+              {topFacilities.length < 5 && (
+                <span style={styles.topFacilityEmpty}>
+                  + {5 - topFacilities.length} more facilities available (select below)
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Room Types & Prices */}
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>🛏️ Room Types & Prices</h3>
@@ -872,6 +988,189 @@ function OwnerAddPG() {
               />
               <small style={{ fontSize: "11px", color: "#666" }}>Monthly maintenance fee</small>
             </div>
+          </div>
+        </div>
+
+        {/* All Facilities & Amenities */}
+        <div style={styles.section}>
+          <h3 style={styles.sectionTitle}>🏠 All Facilities & Amenities</h3>
+          <p style={styles.note}>Select all facilities available at your property. Top 5 will be shown prominently.</p>
+          <div style={styles.checkboxGrid}>
+            {!isToLet && (
+              <>
+                <label style={styles.checkboxLabel}><input type="checkbox" name="food_available" checked={form.food_available} onChange={handleChange} style={styles.checkbox} /> 🍽️ Food Available</label>
+                {form.food_available && (
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={{ marginRight: 10 }}>Food Type:</label>
+                    <select name="food_type" value={form.food_type} onChange={handleChange} style={{...styles.input, width: 150, display: "inline-block"}}>
+                      <option value="veg">Vegetarian</option><option value="non_veg">Non-Vegetarian</option><option value="both">Both</option>
+                    </select>
+                    <label style={{ marginLeft: 20, marginRight: 10 }}>Meals per Day:</label>
+                    <input type="number" name="meals_per_day" placeholder="e.g., 3" value={form.meals_per_day} onChange={handleChange} style={{...styles.input, width: 100, display: "inline-block"}} min="1" max="4" />
+                  </div>
+                )}
+              </>
+            )}
+            <div style={{ gridColumn: "1 / -1", marginTop: 10 }}><h4>🛏️ Room Furnishings:</h4></div>
+            {["cupboard_available","table_chair_available","dining_table_available","attached_bathroom","balcony_available","wall_mounted_clothes_hook","bed_with_mattress","fan_light","kitchen_room"].map(key => (
+              <label key={key} style={styles.checkboxLabel}>
+                <input type="checkbox" name={key} checked={form[key]} onChange={handleChange} style={styles.checkbox} />
+                {key === "cupboard_available" && "👔 Cupboard/Wardrobe"}
+                {key === "table_chair_available" && "💺 Study Table & Chair"}
+                {key === "dining_table_available" && "🍽️ Dining Table"}
+                {key === "attached_bathroom" && "🚽 Attached Bathroom"}
+                {key === "balcony_available" && "🌿 Balcony"}
+                {key === "wall_mounted_clothes_hook" && "🪝 Wall-mounted Clothes Hook"}
+                {key === "bed_with_mattress" && "🛌 Bed with Mattress"}
+                {key === "fan_light" && "💡 Fan & Light"}
+                {key === "kitchen_room" && "🍳 Kitchen Room"}
+              </label>
+            ))}
+            <div style={{ gridColumn: "1 / -1", marginTop: 10 }}><h4>🏢 Building Facilities:</h4></div>
+            {["ac_available","wifi_available","tv","parking_available","bike_parking","laundry_available","washing_machine","refrigerator","microwave","geyser","power_backup","lift_elevator","cctv","security_guard","gym","housekeeping","water_purifier","fire_safety","study_room","common_tv_lounge","balcony_open_space","water_24x7"].map(key => (
+              <label key={key} style={styles.checkboxLabel}>
+                <input type="checkbox" name={key} checked={form[key]} onChange={handleChange} style={styles.checkbox} />
+                {key === "ac_available" && "❄️ Air Conditioner"}
+                {key === "wifi_available" && "📶 Wi-Fi / Internet"}
+                {key === "tv" && "📺 Television"}
+                {key === "parking_available" && "🚗 Car Parking"}
+                {key === "bike_parking" && "🏍️ Bike Parking"}
+                {key === "laundry_available" && "🧺 Laundry Service"}
+                {key === "washing_machine" && "🧼 Washing Machine"}
+                {key === "refrigerator" && "🧊 Refrigerator"}
+                {key === "microwave" && "🍳 Microwave"}
+                {key === "geyser" && "🚿 Geyser"}
+                {key === "power_backup" && "🔋 Power Backup"}
+                {key === "lift_elevator" && "⬆️ Lift / Elevator"}
+                {key === "cctv" && "📹 CCTV Surveillance"}
+                {key === "security_guard" && "🛡️ Security Guard"}
+                {key === "gym" && "🏋️ Gym / Fitness"}
+                {key === "housekeeping" && "🧹 Housekeeping"}
+                {key === "water_purifier" && "💧 Water Purifier (RO)"}
+                {key === "fire_safety" && "🔥 Fire Safety System"}
+                {key === "study_room" && "📚 Study Room"}
+                {key === "common_tv_lounge" && "📺 Common TV / Lounge"}
+                {key === "balcony_open_space" && "🌿 Balcony / Open Space"}
+                {key === "water_24x7" && "💦 24×7 Water Supply"}
+              </label>
+            ))}
+            {isCoLiving && (
+              <>
+                <div style={{ gridColumn: "1 / -1", marginTop: 10 }}><h4>🤝 Co-Living Inclusions:</h4></div>
+                {[
+                  { key: "co_living_fully_furnished", label: "🛋️ Fully Furnished" },
+                  { key: "co_living_food_included", label: "🍽️ Food Included" },
+                  { key: "co_living_wifi_included", label: "📶 Wi-Fi Included" },
+                  { key: "co_living_housekeeping", label: "🧹 Housekeeping" },
+                  { key: "co_living_power_backup", label: "🔋 Power Backup" },
+                  { key: "co_living_maintenance", label: "🔧 Maintenance" }
+                ].map(item => (
+                  <label key={item.key} style={{...styles.checkboxLabel, color: "#2E7D32"}}>
+                    <input type="checkbox" name={item.key} checked={form[item.key]} onChange={handleChange} style={styles.checkbox} />
+                    {item.label}
+                  </label>
+                ))}
+              </>
+            )}
+            <div style={{ gridColumn: "1 / -1", marginTop: 10 }}>
+              <label style={{ marginRight: 10 }}>💧 Water Source:</label>
+              <select name="water_type" value={form.water_type} onChange={handleChange} style={{...styles.input, width: 150, display: "inline-block"}}>
+                <option value="borewell">Borewell</option><option value="kaveri">Kaveri</option><option value="both">Both</option><option value="municipal">Municipal</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Rules & Restrictions */}
+        <div style={styles.section}>
+          <h3 style={styles.sectionTitle}>📜 Rules & Restrictions</h3>
+          <div style={styles.checkboxGrid}>
+            <div style={{ gridColumn: "1 / -1", marginBottom: 10 }}><h4>👥 Allowed For:</h4>
+              <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+                <label style={styles.checkboxLabel}><input type="checkbox" name="boys_only" checked={form.boys_only} onChange={handleChange} style={styles.checkbox} /> 👨 Boys Only</label>
+                <label style={styles.checkboxLabel}><input type="checkbox" name="girls_only" checked={form.girls_only} onChange={handleChange} style={styles.checkbox} /> 👩 Girls Only</label>
+                <label style={styles.checkboxLabel}><input type="checkbox" name="co_living_allowed" checked={form.co_living_allowed} onChange={handleChange} style={styles.checkbox} /> 🤝 Co-Living (Mixed)</label>
+              </div>
+            </div>
+            {["visitor_allowed","visitor_time_restricted","couple_allowed","family_allowed","smoking_allowed","drinking_allowed","pets_allowed","late_night_entry_allowed","outside_food_allowed","parties_allowed","loud_music_restricted","lock_in_period","agreement_mandatory","id_proof_mandatory","office_going_only","students_only","subletting_allowed"].map(rule => (
+              <label key={rule} style={styles.checkboxLabel}>
+                <input type="checkbox" name={rule} checked={form[rule]} onChange={handleChange} style={styles.checkbox} />
+                {rule === "visitor_allowed" && "👥 Visitors Allowed"}
+                {rule === "visitor_time_restricted" && "⏰ Visitor Time Restricted"}
+                {rule === "couple_allowed" && "❤️ Couples Allowed"}
+                {rule === "family_allowed" && "👨‍👩‍👧‍👦 Family Allowed"}
+                {rule === "smoking_allowed" && "🚬 Smoking Allowed"}
+                {rule === "drinking_allowed" && "🍺 Drinking Allowed"}
+                {rule === "pets_allowed" && "🐕 Pets Allowed"}
+                {rule === "late_night_entry_allowed" && "🌙 Late Night Entry"}
+                {rule === "outside_food_allowed" && "🍕 Outside Food Allowed"}
+                {rule === "parties_allowed" && "🎉 Parties Allowed"}
+                {rule === "loud_music_restricted" && "🔇 Loud Music Restricted"}
+                {rule === "lock_in_period" && "🔒 Lock-in Period"}
+                {rule === "agreement_mandatory" && "📝 Agreement Mandatory"}
+                {rule === "id_proof_mandatory" && "🆔 ID Proof Mandatory"}
+                {rule === "office_going_only" && "💼 Office-Going Only"}
+                {rule === "students_only" && "🎓 Students Only"}
+                {rule === "subletting_allowed" && "🔄 Sub-letting Allowed"}
+              </label>
+            ))}
+            
+            <div style={{ gridColumn: "1 / -1", marginTop: 15, padding: "15px", background: "#f0f8ff", borderRadius: "8px", border: "1px solid #b0d4ff" }}>
+              <h4 style={{ margin: "0 0 10px 0", color: "#1976d2" }}>⏱️ Minimum Stay Options</h4>
+              <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", alignItems: "center" }}>
+                <label style={styles.checkboxLabel}>
+                  <input type="checkbox" name="min_stay_available" checked={form.min_stay_available} onChange={handleChange} style={styles.checkbox} />
+                  Enable Minimum Stay Requirement
+                </label>
+                {form.min_stay_available && (
+                  <div style={{ ...styles.inputGroup, width: "200px" }}>
+                    <label>Minimum Stay Days</label>
+                    <input 
+                      type="number" 
+                      name="min_stay_days" 
+                      placeholder="e.g., 30, 60, 90" 
+                      value={form.min_stay_days} 
+                      onChange={handleChange} 
+                      style={styles.input} 
+                      min="1"
+                    />
+                    <small style={{ fontSize: "11px", color: "#666" }}>Minimum number of days tenant must stay</small>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div style={{...styles.grid, marginTop: 15}}>
+            {form.visitor_time_restricted && <div style={styles.inputGroup}><label>Visitors Allowed Till</label><input type="time" name="visitors_allowed_till" value={form.visitors_allowed_till} onChange={handleChange} style={styles.input} /></div>}
+            {!form.late_night_entry_allowed && <div style={styles.inputGroup}><label>Entry Curfew Time</label><input type="time" name="entry_curfew_time" value={form.entry_curfew_time} onChange={handleChange} style={styles.input} /></div>}
+            {form.lock_in_period && <div style={styles.inputGroup}><label>Minimum Stay (Months)</label><input type="number" name="min_stay_months" value={form.min_stay_months} onChange={handleChange} style={styles.input} min="1" placeholder="e.g., 6" /></div>}
+          </div>
+        </div>
+
+        {/* Additional Details */}
+        <div style={styles.section}>
+          <h3 style={styles.sectionTitle}>📝 Additional Details</h3>
+          <div style={styles.grid}>
+            <div style={styles.inputGroup}>
+              <label>Total {isToLet ? "Properties" : "Rooms"}</label>
+              <input type="number" name="total_rooms" placeholder={isToLet ? "e.g., 1" : "e.g., 10"} value={form.total_rooms} onChange={handleChange} style={styles.input} min="1" />
+            </div>
+            <div style={styles.inputGroup}>
+              <label>Available {isToLet ? "Properties" : "Rooms"}</label>
+              <input type="number" name="available_rooms" placeholder={isToLet ? "e.g., 1" : "e.g., 5"} value={form.available_rooms} onChange={handleChange} style={styles.input} min="0" />
+            </div>
+            <div style={styles.inputGroup}>
+              <label>Notice Period</label>
+              <select name="notice_period" value={form.notice_period} onChange={handleChange} style={styles.input}>
+                <option value="1">1 Month</option>
+                <option value="2">2 Months</option>
+                <option value="3">3 Months</option>
+              </select>
+            </div>
+          </div>
+          <div style={styles.inputGroup}>
+            <label>Description</label>
+            <textarea name="description" placeholder={isToLet ? "Describe your house/flat, bedrooms, bathrooms, nearby facilities..." : "Describe your property, amenities, nearby facilities..."} value={form.description} onChange={handleChange} style={styles.textarea} rows="4" />
           </div>
         </div>
 
@@ -1002,6 +1301,13 @@ const styles = {
   removeLocationBtn: { background: "#ff4444", color: "white", border: "none", padding: "6px 12px", borderRadius: "4px", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" },
   locationDetails: { fontSize: "14px", color: "#555" },
   locationWarning: { background: "#FFF3CD", border: "1px solid #FFEEBA", color: "#856404", padding: "10px", borderRadius: "6px", marginTop: "10px", fontSize: "14px" },
+  
+  // Top facilities styles
+  topFacilitiesSection: { marginBottom: "30px", padding: "20px", background: "linear-gradient(135deg, #f5f7fa, #c3cfe2)", borderRadius: "12px" },
+  topFacilitiesContainer: { display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center" },
+  topFacilityBadge: { background: "linear-gradient(135deg, #667eea, #764ba2)", color: "white", padding: "8px 16px", borderRadius: "20px", fontSize: "14px", fontWeight: "500", boxShadow: "0 2px 8px rgba(102, 126, 234, 0.3)" },
+  topFacilityEmpty: { color: "#666", fontSize: "14px", fontStyle: "italic" },
+  
   checkboxGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "12px" },
   checkboxLabel: { display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "14px", color: "#555", padding: "8px", borderRadius: "6px" },
   checkbox: { width: "18px", height: "18px", cursor: "pointer" },
