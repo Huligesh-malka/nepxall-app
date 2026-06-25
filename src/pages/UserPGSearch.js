@@ -924,9 +924,6 @@ function UserPGSearch() {
           <h2 style={{ fontSize:20, fontWeight:800, color:"#0F172A", margin:"0 0 2px", letterSpacing:"-0.01em" }}>
             {tab === "all" ? "All Properties" : tabs.find(t => t.id===tab)?.label}
           </h2>
-          <p style={{ fontSize:12, color:"#64748B", margin:0 }}>
-            {loading ? "Searching…" : `${displayed.length} found${total > 0 && !loading ? ` · ${total} total` : ""}`}
-          </p>
         </div>
         {hasFilters && !loading && (
           <div style={{ display:"flex", alignItems:"center", gap:6, background:"#EEF2FF", border:"1px solid #C7D2FE", borderRadius:20, padding:"5px 12px", fontSize:11, fontWeight:700, color:"#4F46E5" }}>
