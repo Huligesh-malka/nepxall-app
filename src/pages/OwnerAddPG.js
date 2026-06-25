@@ -133,7 +133,6 @@ const initialForm = {
   loud_music_restricted: false,
   lock_in_period: false,
   min_stay_months: "0",
-  // NEW: Minimum stay fields
   min_stay_available: false,
   min_stay_days: "",
   notice_period: "1",
@@ -169,7 +168,6 @@ const initialRoomRates = {
   price_4bhk: "",
   co_living_single_room: "",
   co_living_double_room: "",
-  // NEW: Coliving sharing types
   coliving_three_sharing: "",
   coliving_four_sharing: "",
 };
@@ -209,6 +207,7 @@ function OwnerAddPG() {
   const [userLocation, setUserLocation] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(initialLocation);
   const [photos, setPhotos] = useState([]);
+  const [coverPhotoIndex, setCoverPhotoIndex] = useState(0);
   const [roomRates, setRoomRates] = useState(initialRoomRates);
   const [bhkConfig, setBhkConfig] = useState(initialBhkConfig);
   const [form, setForm] = useState(initialForm);
@@ -381,10 +380,23 @@ function OwnerAddPG() {
       return;
     }
     setPhotos(prev => [...prev, ...files]);
+    // Set cover photo to first uploaded if no cover set
+    if (photos.length === 0 && files.length > 0) {
+      setCoverPhotoIndex(0);
+    }
   };
 
   const removePhoto = (index) => {
     setPhotos(prev => prev.filter((_, i) => i !== index));
+    if (coverPhotoIndex >= index && coverPhotoIndex > 0) {
+      setCoverPhotoIndex(coverPhotoIndex - 1);
+    } else if (coverPhotoIndex === index && coverPhotoIndex === photos.length - 1) {
+      setCoverPhotoIndex(Math.max(0, coverPhotoIndex - 1));
+    }
+  };
+
+  const setCoverPhoto = (index) => {
+    setCoverPhotoIndex(index);
   };
 
   const removeHostelLocation = () => {
@@ -395,7 +407,7 @@ function OwnerAddPG() {
   const getMissingFieldsList = () => {
     const missing = [];
     if (!form.pg_name?.trim()) missing.push("Property Name");
-    if (!selectedLocation.address?.trim()) missing.push("Property Location (Address)");
+    if (!selectedLocation.address?.trim()) missing.push("Property Location");
     if (!form.contact_person?.trim()) missing.push("Contact Person");
     if (!form.contact_phone?.trim()) missing.push("Contact Phone");
     if (photos.length === 0) missing.push("Property Photos (at least 1)");
@@ -508,7 +520,7 @@ function OwnerAddPG() {
         });
       }
       
-      // Co-living rates (including new sharing types)
+      // Co-living rates
       if (isCoLiving) {
         appendIfValue(formData, "co_living_single_room", roomRates.co_living_single_room);
         appendIfValue(formData, "co_living_double_room", roomRates.co_living_double_room);
@@ -516,7 +528,7 @@ function OwnerAddPG() {
         appendIfValue(formData, "coliving_four_sharing", roomRates.coliving_four_sharing);
       }
       
-      // Facilities (booleans) - convert to "true"/"false" strings
+      // Facilities (booleans)
       const facilities = [
         "food_available", "ac_available", "wifi_available", "tv",
         "parking_available", "bike_parking", "laundry_available",
@@ -556,7 +568,7 @@ function OwnerAddPG() {
       formData.append("girls_only", form.girls_only ? "true" : "false");
       formData.append("co_living_allowed", form.co_living_allowed ? "true" : "false");
       
-      // NEW: Minimum stay fields
+      // Minimum stay fields
       formData.append("min_stay_available", form.min_stay_available ? "true" : "false");
       appendIfValue(formData, "min_stay_days", form.min_stay_days);
       
@@ -565,6 +577,7 @@ function OwnerAddPG() {
       appendIfValue(formData, "min_stay_months", form.min_stay_months);
       formData.append("notice_period", form.notice_period);
       
+      // Deposit & Maintenance
       appendIfValue(formData, "security_deposit", form.security_deposit);
       appendIfValue(formData, "maintenance_amount", form.maintenance_amount);
       appendIfValue(formData, "total_rooms", form.total_rooms);
@@ -575,9 +588,11 @@ function OwnerAddPG() {
       appendIfValue(formData, "contact_email", form.contact_email);
       formData.append("contact_phone", form.contact_phone);
       
+      // Add cover photo index
+      formData.append("cover_photo_index", coverPhotoIndex.toString());
+      
       photos.forEach(photo => formData.append("photos", photo));
       
-      // Use the correct API endpoint - /pg/add
       const response = await api.post("/pg/add", formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -587,11 +602,11 @@ function OwnerAddPG() {
       if (response.data && response.data.success) {
         alert(`✅ ${isToLet ? 'House/Flat' : 'Property'} Created Successfully!`);
         navigate("/owner/dashboard");
-        // Reset form
         setForm({ ...initialForm, owner_id: user.uid });
         setRoomRates(initialRoomRates);
         setBhkConfig(initialBhkConfig);
         setPhotos([]);
+        setCoverPhotoIndex(0);
         setSelectedLocation(initialLocation);
         setUserLocation(null);
         setValidationErrors({});
@@ -672,27 +687,32 @@ function OwnerAddPG() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h2 style={styles.title}>➕ Add New Property</h2>
+        <h2 style={styles.title}>🏠 Add New Property</h2>
         <div style={styles.premiumBanner}>
-            
+          ⭐ List your property and reach thousands of potential tenants!
           <br />
-          <span style={{ fontSize: "13px", opacity: 0.9 }}>
-
-          </span>
+          <span style={{ fontSize: "13px", opacity: 0.9 }}>Fill in all required fields (*) to create your listing</span>
         </div>
         
-        {/* Basic Information */}
+        {/* STEP 1: Basic Information */}
         <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>Basic Information</h3>
+          <h3 style={styles.sectionTitle}>📋 Step 1: Basic Information</h3>
           <div style={styles.grid}>
             <div style={styles.inputGroup}>
               <label>Property Name *</label>
-              <input name="pg_name" placeholder={isToLet ? "e.g., 2BHK Flat, Independent House" : "e.g., Royal PG, Cozy Coliving"} value={form.pg_name} onChange={handleChange} style={{...styles.input, ...getErrorStyle("pg_name")}} required />
+              <input 
+                name="pg_name" 
+                placeholder={isToLet ? "e.g., 2BHK Flat, Independent House" : "e.g., Royal PG, Cozy Coliving"} 
+                value={form.pg_name} 
+                onChange={handleChange} 
+                style={{...styles.input, ...getErrorStyle("pg_name")}} 
+                required 
+              />
             </div>
             <div style={styles.inputGroup}>
               <label>Property Category *</label>
               <select name="pg_category" value={form.pg_category} onChange={handleChange} style={styles.input}>
-                <option value="pg">PG/Hostel</option>
+                <option value="pg">PG / Hostel</option>
                 <option value="coliving">Co-Living Space</option>
                 <option value="to_let">House/Flat To Let</option>
               </select>
@@ -703,34 +723,38 @@ function OwnerAddPG() {
                 <select name="pg_type" value={form.pg_type} onChange={handleChange} style={styles.input}>
                   <option value="boys">Boys Only</option>
                   <option value="girls">Girls Only</option>
-                  <option value="coliving">Co-Living</option>
+                  <option value="coliving">Co-Living (Mixed)</option>
                 </select>
               </div>
             )}
+            {isToLet && (
+              <>
+                <div style={styles.inputGroup}>
+                  <label>BHK Type *</label>
+                  <select name="bhk_type" value={form.bhk_type} onChange={handleChange} style={styles.input}>
+                    <option value="1">1 BHK</option>
+                    <option value="2">2 BHK</option>
+                    <option value="3">3 BHK</option>
+                    <option value="4">4 BHK</option>
+                    <option value="4+">4+ BHK</option>
+                  </select>
+                </div>
+                <div style={styles.inputGroup}>
+                  <label>Furnishing Type *</label>
+                  <select name="furnishing_type" value={form.furnishing_type} onChange={handleChange} style={styles.input}>
+                    <option value="unfurnished">Unfurnished</option>
+                    <option value="semi_furnished">Semi-Furnished</option>
+                    <option value="fully_furnished">Fully Furnished</option>
+                  </select>
+                </div>
+              </>
+            )}
           </div>
-          {isToLet && (
-            <div style={styles.grid}>
-              <div style={styles.inputGroup}>
-                <label>BHK Type *</label>
-                <select name="bhk_type" value={form.bhk_type} onChange={handleChange} style={styles.input}>
-                  <option value="1">1 BHK</option><option value="2">2 BHK</option><option value="3">3 BHK</option><option value="4">4 BHK</option><option value="4+">4+ BHK</option>
-                </select>
-              </div>
-              <div style={styles.inputGroup}>
-                <label>Furnishing Type *</label>
-                <select name="furnishing_type" value={form.furnishing_type} onChange={handleChange} style={styles.input}>
-                  <option value="unfurnished">Unfurnished</option>
-                  <option value="semi_furnished">Semi-Furnished</option>
-                  <option value="fully_furnished">Fully Furnished</option>
-                </select>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Location */}
         <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>Location *</h3>
+          <h3 style={styles.sectionTitle}>📍 Location *</h3>
           <div style={styles.locationButtons}>
             <button type="button" onClick={() => setShowMap(true)} style={styles.mapButton}>🗺️ Select on OpenStreetMap</button>
             <button type="button" onClick={() => setManualEditMode(true)} style={styles.manualAddressButton}>📝 Enter Address Manually</button>
@@ -757,43 +781,54 @@ function OwnerAddPG() {
           )}
         </div>
 
-        {/* BHK Configuration */}
-        {isToLet && (
-          <div style={styles.section}>
-            <h3 style={styles.sectionTitle}>🏠 BHK Configuration</h3>
-            <div style={styles.grid}>
-              {[1,2,3,4].map(bhk => parseInt(form.bhk_type) >= bhk && (
-                <React.Fragment key={bhk}>
-                  <div style={styles.inputGroup}>
-                    <label>{bhk} BHK - Bedrooms</label>
-                    <input type="number" name={`bedrooms_${bhk}bhk`} placeholder={`e.g., ${bhk}`} value={bhkConfig[`bedrooms_${bhk}bhk`]} onChange={handleBhkConfigChange} style={styles.input} min="1" />
-                  </div>
-                  <div style={styles.inputGroup}>
-                    <label>{bhk} BHK - Bathrooms</label>
-                    <input type="number" name={`bathrooms_${bhk}bhk`} placeholder={`e.g., ${bhk}`} value={bhkConfig[`bathrooms_${bhk}bhk`]} onChange={handleBhkConfigChange} style={styles.input} min="1" />
-                  </div>
-                </React.Fragment>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Room Rates */}
+        {/* Photos */}
         <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>{isToLet ? "💰 Rental Amount (₹/Month)" : isCoLiving ? "💰 Co-Living Rates (₹/Month)" : "💰 Room Rates (₹/Month)"}</h3>
+          <h3 style={styles.sectionTitle}>📷 Photos & Cover Image *</h3>
+          <p style={styles.note}>Upload at least 1 photo. Maximum 10 photos allowed. Select which photo should be the cover image.</p>
+          <div style={styles.fileUpload}>
+            <label htmlFor="photo-upload" style={styles.fileUploadLabel}>📁 Choose Photos</label>
+            <input id="photo-upload" type="file" accept="image/*" multiple onChange={handlePhotoUpload} style={styles.fileInput} />
+          </div>
+          {photos.length > 0 && (
+            <>
+              <div style={styles.photoPreview}>
+                {photos.map((photo, idx) => (
+                  <div key={idx} style={{...styles.photoItem, ...(idx === coverPhotoIndex ? styles.coverPhotoItem : {})}}>
+                    <span style={styles.photoName}>{photo.name.length > 20 ? photo.name.substring(0,20)+"..." : photo.name}</span>
+                    <button 
+                      type="button" 
+                      onClick={() => setCoverPhoto(idx)} 
+                      style={idx === coverPhotoIndex ? styles.coverPhotoBtnActive : styles.coverPhotoBtn}
+                      title="Set as cover photo"
+                    >
+                      {idx === coverPhotoIndex ? "⭐" : "☆"}
+                    </button>
+                    <button type="button" onClick={() => removePhoto(idx)} style={styles.removePhotoBtn}>✕</button>
+                  </div>
+                ))}
+              </div>
+              <p style={styles.photoCount}>📸 {photos.length} photo{photos.length > 1 ? 's' : ''} uploaded • ⭐ {coverPhotoIndex + 1} is cover photo</p>
+            </>
+          )}
+          {validationErrors.photos && <p style={{ color: "#f44336", fontSize: 12, marginTop: 5 }}>⚠️ At least one photo is required</p>}
+        </div>
+
+        {/* Room Types & Prices */}
+        <div style={styles.section}>
+          <h3 style={styles.sectionTitle}>🛏️ Room Types & Prices</h3>
           {isToLet ? (
             <div style={styles.grid}>
-              <div style={styles.inputGroup}><label>1 BHK Rent *</label><input type="number" name="price_1bhk" placeholder="₹" value={roomRates.price_1bhk} onChange={handleRateChange} style={styles.input} min="0" required /></div>
-              {parseInt(form.bhk_type) >= 2 && <div style={styles.inputGroup}><label>2 BHK Rent</label><input type="number" name="price_2bhk" placeholder="₹" value={roomRates.price_2bhk} onChange={handleRateChange} style={styles.input} min="0" /></div>}
-              {parseInt(form.bhk_type) >= 3 && <div style={styles.inputGroup}><label>3 BHK Rent</label><input type="number" name="price_3bhk" placeholder="₹" value={roomRates.price_3bhk} onChange={handleRateChange} style={styles.input} min="0" /></div>}
-              {parseInt(form.bhk_type) >= 4 && <div style={styles.inputGroup}><label>4 BHK Rent</label><input type="number" name="price_4bhk" placeholder="₹" value={roomRates.price_4bhk} onChange={handleRateChange} style={styles.input} min="0" /></div>}
+              <div style={styles.inputGroup}><label>1 BHK Rent (₹/Month) *</label><input type="number" name="price_1bhk" placeholder="e.g., 15000" value={roomRates.price_1bhk} onChange={handleRateChange} style={styles.input} min="0" required /></div>
+              {parseInt(form.bhk_type) >= 2 && <div style={styles.inputGroup}><label>2 BHK Rent (₹/Month)</label><input type="number" name="price_2bhk" placeholder="e.g., 25000" value={roomRates.price_2bhk} onChange={handleRateChange} style={styles.input} min="0" /></div>}
+              {parseInt(form.bhk_type) >= 3 && <div style={styles.inputGroup}><label>3 BHK Rent (₹/Month)</label><input type="number" name="price_3bhk" placeholder="e.g., 35000" value={roomRates.price_3bhk} onChange={handleRateChange} style={styles.input} min="0" /></div>}
+              {parseInt(form.bhk_type) >= 4 && <div style={styles.inputGroup}><label>4 BHK Rent (₹/Month)</label><input type="number" name="price_4bhk" placeholder="e.g., 45000" value={roomRates.price_4bhk} onChange={handleRateChange} style={styles.input} min="0" /></div>}
             </div>
           ) : isCoLiving ? (
             <div style={styles.ratesGrid}>
               <div style={styles.inputGroup}><label>Co-Living Single Room *</label><input type="number" name="co_living_single_room" placeholder="₹" value={roomRates.co_living_single_room} onChange={handleRateChange} style={styles.input} min="0" required /></div>
               <div style={styles.inputGroup}><label>Co-Living Double Room</label><input type="number" name="co_living_double_room" placeholder="₹" value={roomRates.co_living_double_room} onChange={handleRateChange} style={styles.input} min="0" /></div>
-              <div style={styles.inputGroup}><label>Co-Living 3 Sharing (NEW)</label><input type="number" name="coliving_three_sharing" placeholder="₹" value={roomRates.coliving_three_sharing} onChange={handleRateChange} style={styles.input} min="0" /></div>
-              <div style={styles.inputGroup}><label>Co-Living 4 Sharing (NEW)</label><input type="number" name="coliving_four_sharing" placeholder="₹" value={roomRates.coliving_four_sharing} onChange={handleRateChange} style={styles.input} min="0" /></div>
+              <div style={styles.inputGroup}><label>Co-Living 3 Sharing</label><input type="number" name="coliving_three_sharing" placeholder="₹" value={roomRates.coliving_three_sharing} onChange={handleRateChange} style={styles.input} min="0" /></div>
+              <div style={styles.inputGroup}><label>Co-Living 4 Sharing</label><input type="number" name="coliving_four_sharing" placeholder="₹" value={roomRates.coliving_four_sharing} onChange={handleRateChange} style={styles.input} min="0" /></div>
             </div>
           ) : (
             <div style={styles.ratesGrid}>
@@ -807,212 +842,89 @@ function OwnerAddPG() {
           )}
         </div>
 
-        {/* Facilities & Amenities */}
+        {/* Deposit & Maintenance */}
         <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>🏠 Facilities & Amenities (Select Available)</h3>
-          <div style={styles.checkboxGrid}>
-            {!isToLet && (
-              <>
-                <label style={styles.checkboxLabel}><input type="checkbox" name="food_available" checked={form.food_available} onChange={handleChange} style={styles.checkbox} /> 🍽️ Food Available</label>
-                {form.food_available && (
-                  <div style={{ gridColumn: "1 / -1" }}>
-                    <label style={{ marginRight: 10 }}>Food Type:</label>
-                    <select name="food_type" value={form.food_type} onChange={handleChange} style={{...styles.input, width: 150, display: "inline-block"}}>
-                      <option value="veg">Vegetarian</option><option value="non_veg">Non-Vegetarian</option><option value="both">Both</option>
-                    </select>
-                    <label style={{ marginLeft: 20, marginRight: 10 }}>Meals per Day:</label>
-                    <input type="number" name="meals_per_day" placeholder="e.g., 3" value={form.meals_per_day} onChange={handleChange} style={{...styles.input, width: 100, display: "inline-block"}} min="1" max="4" />
-                  </div>
-                )}
-              </>
-            )}
-            <div style={{ gridColumn: "1 / -1", marginTop: 10 }}><h4>🛏️ Room Furnishings:</h4></div>
-            {["cupboard_available","table_chair_available","dining_table_available","attached_bathroom","balcony_available","wall_mounted_clothes_hook","bed_with_mattress","fan_light","kitchen_room"].map(key => (
-              <label key={key} style={styles.checkboxLabel}>
-                <input type="checkbox" name={key} checked={form[key]} onChange={handleChange} style={styles.checkbox} />
-                {key === "cupboard_available" && "👔 Cupboard/Wardrobe"}
-                {key === "table_chair_available" && "💺 Study Table & Chair"}
-                {key === "dining_table_available" && "🍽️ Dining Table"}
-                {key === "attached_bathroom" && "🚽 Attached Bathroom"}
-                {key === "balcony_available" && "🌿 Balcony"}
-                {key === "wall_mounted_clothes_hook" && "🪝 Wall-mounted Clothes Hook"}
-                {key === "bed_with_mattress" && "🛌 Bed with Mattress"}
-                {key === "fan_light" && "💡 Fan & Light"}
-                {key === "kitchen_room" && "🍳 Kitchen Room"}
-              </label>
-            ))}
-            <div style={{ gridColumn: "1 / -1", marginTop: 10 }}><h4>🏢 Building Facilities:</h4></div>
-            {["ac_available","wifi_available","tv","parking_available","bike_parking","laundry_available","washing_machine","refrigerator","microwave","geyser","power_backup","lift_elevator","cctv","security_guard","gym","housekeeping","water_purifier","fire_safety","study_room","common_tv_lounge","balcony_open_space","water_24x7"].map(key => (
-              <label key={key} style={styles.checkboxLabel}>
-                <input type="checkbox" name={key} checked={form[key]} onChange={handleChange} style={styles.checkbox} />
-                {key === "ac_available" && "❄️ Air Conditioner"}
-                {key === "wifi_available" && "📶 Wi-Fi / Internet"}
-                {key === "tv" && "📺 Television"}
-                {key === "parking_available" && "🚗 Car Parking"}
-                {key === "bike_parking" && "🏍️ Bike Parking"}
-                {key === "laundry_available" && "🧺 Laundry Service"}
-                {key === "washing_machine" && "🧼 Washing Machine"}
-                {key === "refrigerator" && "🧊 Refrigerator"}
-                {key === "microwave" && "🍳 Microwave"}
-                {key === "geyser" && "🚿 Geyser"}
-                {key === "power_backup" && "🔋 Power Backup"}
-                {key === "lift_elevator" && "⬆️ Lift / Elevator"}
-                {key === "cctv" && "📹 CCTV Surveillance"}
-                {key === "security_guard" && "🛡️ Security Guard"}
-                {key === "gym" && "🏋️ Gym / Fitness"}
-                {key === "housekeeping" && "🧹 Housekeeping"}
-                {key === "water_purifier" && "💧 Water Purifier (RO)"}
-                {key === "fire_safety" && "🔥 Fire Safety System"}
-                {key === "study_room" && "📚 Study Room"}
-                {key === "common_tv_lounge" && "📺 Common TV / Lounge"}
-                {key === "balcony_open_space" && "🌿 Balcony / Open Space"}
-                {key === "water_24x7" && "💦 24×7 Water Supply"}
-              </label>
-            ))}
-            {isCoLiving && (
-              <>
-                <div style={{ gridColumn: "1 / -1", marginTop: 10 }}><h4>🤝 Co-Living Inclusions (click to edit):</h4></div>
-                {[
-                  { key: "co_living_fully_furnished", label: "🛋️ Fully Furnished" },
-                  { key: "co_living_food_included", label: "🍽️ Food Included" },
-                  { key: "co_living_wifi_included", label: "📶 Wi-Fi Included" },
-                  { key: "co_living_housekeeping", label: "🧹 Housekeeping" },
-                  { key: "co_living_power_backup", label: "🔋 Power Backup" },
-                  { key: "co_living_maintenance", label: "🔧 Maintenance" }
-                ].map(item => (
-                  <label key={item.key} style={{...styles.checkboxLabel, color: "#2E7D32"}}>
-                    <input type="checkbox" name={item.key} checked={form[item.key]} onChange={handleChange} style={styles.checkbox} />
-                    {item.label}
-                  </label>
-                ))}
-              </>
-            )}
-            <div style={{ gridColumn: "1 / -1", marginTop: 10 }}>
-              <label style={{ marginRight: 10 }}>💧 Water Source:</label>
-              <select name="water_type" value={form.water_type} onChange={handleChange} style={{...styles.input, width: 150, display: "inline-block"}}>
-                <option value="borewell">Borewell</option><option value="kaveri">Kaveri</option><option value="both">Both</option><option value="municipal">Municipal</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Rules & Restrictions */}
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>📜 Rules & Restrictions</h3>
-          <div style={styles.checkboxGrid}>
-            <div style={{ gridColumn: "1 / -1", marginBottom: 10 }}><h4>👥 Allowed For:</h4>
-              <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-                <label style={styles.checkboxLabel}><input type="checkbox" name="boys_only" checked={form.boys_only} onChange={handleChange} style={styles.checkbox} /> 👨 Boys Only</label>
-                <label style={styles.checkboxLabel}><input type="checkbox" name="girls_only" checked={form.girls_only} onChange={handleChange} style={styles.checkbox} /> 👩 Girls Only</label>
-                <label style={styles.checkboxLabel}><input type="checkbox" name="co_living_allowed" checked={form.co_living_allowed} onChange={handleChange} style={styles.checkbox} /> 🤝 Co-Living (Mixed)</label>
-              </div>
-            </div>
-            {["visitor_allowed","visitor_time_restricted","couple_allowed","family_allowed","smoking_allowed","drinking_allowed","pets_allowed","late_night_entry_allowed","outside_food_allowed","parties_allowed","loud_music_restricted","lock_in_period","agreement_mandatory","id_proof_mandatory","office_going_only","students_only","subletting_allowed"].map(rule => (
-              <label key={rule} style={styles.checkboxLabel}>
-                <input type="checkbox" name={rule} checked={form[rule]} onChange={handleChange} style={styles.checkbox} />
-                {rule === "visitor_allowed" && "👥 Visitors Allowed"}
-                {rule === "visitor_time_restricted" && "⏰ Visitor Time Restricted"}
-                {rule === "couple_allowed" && "❤️ Couples Allowed"}
-                {rule === "family_allowed" && "👨‍👩‍👧‍👦 Family Allowed"}
-                {rule === "smoking_allowed" && "🚬 Smoking Allowed"}
-                {rule === "drinking_allowed" && "🍺 Drinking Allowed"}
-                {rule === "pets_allowed" && "🐕 Pets Allowed"}
-                {rule === "late_night_entry_allowed" && "🌙 Late Night Entry"}
-                {rule === "outside_food_allowed" && "🍕 Outside Food Allowed"}
-                {rule === "parties_allowed" && "🎉 Parties Allowed"}
-                {rule === "loud_music_restricted" && "🔇 Loud Music Restricted"}
-                {rule === "lock_in_period" && "🔒 Lock-in Period"}
-                {rule === "agreement_mandatory" && "📝 Agreement Mandatory"}
-                {rule === "id_proof_mandatory" && "🆔 ID Proof Mandatory"}
-                {rule === "office_going_only" && "💼 Office-Going Only"}
-                {rule === "students_only" && "🎓 Students Only"}
-                {rule === "subletting_allowed" && "🔄 Sub-letting Allowed"}
-              </label>
-            ))}
-            
-            {/* NEW: Minimum Stay Section */}
-            <div style={{ gridColumn: "1 / -1", marginTop: 15, padding: "15px", background: "#f0f8ff", borderRadius: "8px", border: "1px solid #b0d4ff" }}>
-              <h4 style={{ margin: "0 0 10px 0", color: "#1976d2" }}>⏱️ Minimum Stay Options (NEW)</h4>
-              <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", alignItems: "center" }}>
-                <label style={styles.checkboxLabel}>
-                  <input type="checkbox" name="min_stay_available" checked={form.min_stay_available} onChange={handleChange} style={styles.checkbox} />
-                  Enable Minimum Stay Requirement
-                </label>
-                {form.min_stay_available && (
-                  <div style={{ ...styles.inputGroup, width: "200px" }}>
-                    <label>Minimum Stay Days</label>
-                    <input 
-                      type="number" 
-                      name="min_stay_days" 
-                      placeholder="e.g., 30, 60, 90" 
-                      value={form.min_stay_days} 
-                      onChange={handleChange} 
-                      style={styles.input} 
-                      min="1"
-                    />
-                    <small style={{ fontSize: "11px", color: "#666" }}>Minimum number of days tenant must stay</small>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          <div style={{...styles.grid, marginTop: 15}}>
-            {form.visitor_time_restricted && <div style={styles.inputGroup}><label>Visitors Allowed Till</label><input type="time" name="visitors_allowed_till" value={form.visitors_allowed_till} onChange={handleChange} style={styles.input} /></div>}
-            {!form.late_night_entry_allowed && <div style={styles.inputGroup}><label>Entry Curfew Time</label><input type="time" name="entry_curfew_time" value={form.entry_curfew_time} onChange={handleChange} style={styles.input} /></div>}
-            {form.lock_in_period && <div style={styles.inputGroup}><label>Minimum Stay (Months)</label><input type="number" name="min_stay_months" value={form.min_stay_months} onChange={handleChange} style={styles.input} min="1" placeholder="e.g., 6" /></div>}
-          </div>
-        </div>
-
-        {/* Additional Details */}
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>💰 Additional Details & Charges</h3>
+          <h3 style={styles.sectionTitle}>💰 Deposit & Maintenance</h3>
           <div style={styles.grid}>
-            <div style={styles.inputGroup}><label>Security Deposit (₹)</label><input type="number" name="security_deposit" placeholder="e.g., 10000" value={form.security_deposit} onChange={handleChange} style={styles.input} min="0" /></div>
-            <div style={styles.inputGroup}><label>Maintenance Charges (₹/Month)</label><input type="number" name="maintenance_amount" placeholder="e.g., 1000" value={form.maintenance_amount} onChange={handleChange} style={styles.input} min="0" /></div>
-            <div style={styles.inputGroup}><label>Notice Period</label><select name="notice_period" value={form.notice_period} onChange={handleChange} style={styles.input}><option value="1">1 Month</option><option value="2">2 Months</option><option value="3">3 Months</option></select></div>
-            <div style={styles.inputGroup}><label>Total {isToLet ? "Properties" : "Rooms"}</label><input type="number" name="total_rooms" placeholder={isToLet ? "e.g., 1" : "e.g., 10"} value={form.total_rooms} onChange={handleChange} style={styles.input} min="1" /></div>
-            <div style={styles.inputGroup}><label>Available {isToLet ? "Properties" : "Rooms"}</label><input type="number" name="available_rooms" placeholder={isToLet ? "e.g., 1" : "e.g., 5"} value={form.available_rooms} onChange={handleChange} style={styles.input} min="0" /></div>
-          </div>
-          <div style={styles.inputGroup}>
-            <label>Description *</label>
-            <textarea name="description" placeholder={isToLet ? "Describe your house/flat, bedrooms, bathrooms, nearby facilities..." : "Describe your property, amenities, nearby facilities..."} value={form.description} onChange={handleChange} style={{...styles.textarea, ...getErrorStyle("description")}} rows="4" required />
+            <div style={styles.inputGroup}>
+              <label>Security Deposit (₹)</label>
+              <input 
+                type="number" 
+                name="security_deposit" 
+                placeholder="e.g., 10000" 
+                value={form.security_deposit} 
+                onChange={handleChange} 
+                style={styles.input} 
+                min="0" 
+              />
+              <small style={{ fontSize: "11px", color: "#666" }}>Refundable security deposit amount</small>
+            </div>
+            <div style={styles.inputGroup}>
+              <label>Maintenance Charges (₹/Month)</label>
+              <input 
+                type="number" 
+                name="maintenance_amount" 
+                placeholder="e.g., 1000" 
+                value={form.maintenance_amount} 
+                onChange={handleChange} 
+                style={styles.input} 
+                min="0" 
+              />
+              <small style={{ fontSize: "11px", color: "#666" }}>Monthly maintenance fee</small>
+            </div>
           </div>
         </div>
 
         {/* Contact Information */}
         <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>📞 Contact Information</h3>
+          <h3 style={styles.sectionTitle}>📞 Contact Details</h3>
           <div style={styles.grid}>
-            <div style={styles.inputGroup}><label>Contact Person *</label><input name="contact_person" placeholder="e.g., Owner/Manager Name" value={form.contact_person} onChange={handleChange} style={{...styles.input, ...getErrorStyle("contact_person")}} required /></div>
-            <div style={styles.inputGroup}><label>Contact Email</label><input type="email" name="contact_email" placeholder="contact@example.com" value={form.contact_email} onChange={handleChange} style={{...styles.input, ...getErrorStyle("contact_email")}} /></div>
-            <div style={styles.inputGroup}><label>Contact Phone *</label><input type="tel" name="contact_phone" placeholder="Enter 10-digit phone number" value={form.contact_phone} onChange={handleChange} style={{...styles.input, ...getErrorStyle("contact_phone")}} required pattern="[0-9]{10,15}" /></div>
-          </div>
-        </div>
-
-        {/* Photo Upload */}
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>📷 Property Photos *</h3>
-          <p style={styles.note}>Upload at least 1 photo. Maximum 10 photos allowed.</p>
-          <div style={styles.fileUpload}>
-            <label htmlFor="photo-upload" style={styles.fileUploadLabel}>📁 Choose Photos</label>
-            <input id="photo-upload" type="file" accept="image/*" multiple onChange={handlePhotoUpload} style={styles.fileInput} />
-          </div>
-          {photos.length > 0 && (
-            <div style={styles.photoPreview}>
-              {photos.map((photo, idx) => (
-                <div key={idx} style={styles.photoItem}>
-                  <span style={styles.photoName}>{photo.name.length > 20 ? photo.name.substring(0,20)+"..." : photo.name}</span>
-                  <button type="button" onClick={() => removePhoto(idx)} style={styles.removePhotoBtn}>✕</button>
-                </div>
-              ))}
+            <div style={styles.inputGroup}>
+              <label>Contact Person *</label>
+              <input 
+                name="contact_person" 
+                placeholder="e.g., Owner/Manager Name" 
+                value={form.contact_person} 
+                onChange={handleChange} 
+                style={{...styles.input, ...getErrorStyle("contact_person")}} 
+                required 
+              />
             </div>
-          )}
-          {validationErrors.photos && <p style={{ color: "#f44336", fontSize: 12, marginTop: 5 }}>⚠️ At least one photo is required</p>}
+            <div style={styles.inputGroup}>
+              <label>Contact Email</label>
+              <input 
+                type="email" 
+                name="contact_email" 
+                placeholder="contact@example.com" 
+                value={form.contact_email} 
+                onChange={handleChange} 
+                style={{...styles.input, ...getErrorStyle("contact_email")}} 
+              />
+            </div>
+            <div style={styles.inputGroup}>
+              <label>Contact Phone *</label>
+              <input 
+                type="tel" 
+                name="contact_phone" 
+                placeholder="Enter 10-digit phone number" 
+                value={form.contact_phone} 
+                onChange={handleChange} 
+                style={{...styles.input, ...getErrorStyle("contact_phone")}} 
+                required 
+                pattern="[0-9]{10,15}" 
+              />
+            </div>
+          </div>
         </div>
 
+        {/* Create Listing Button */}
         <button onClick={handleSubmit} disabled={isSubmitDisabled} style={{...styles.submitBtn, ...(isSubmitDisabled ? styles.submitBtnDisabled : {})}}>
-          {loading ? "Creating Property..." : `➕ Create ${isToLet ? 'House/Flat' : 'Property'}`}
+          {loading ? "⏳ Creating Property..." : `🏠 Create ${isToLet ? 'House/Flat' : 'Property'} Listing`}
         </button>
+        
+        <p style={{ textAlign: "center", marginTop: "15px", fontSize: "13px", color: "#888" }}>
+          By clicking "Create Listing", you agree to our Terms of Service and Privacy Policy
+        </p>
       </div>
 
       {/* Map Modal */}
@@ -1084,7 +996,7 @@ const styles = {
   mapButton: { padding: "12px 20px", background: "#4CAF50", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "500", display: "inline-flex", alignItems: "center", gap: "8px", flex: "1", minWidth: "200px" },
   manualAddressButton: { padding: "12px 20px", background: "#2196F3", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "500", display: "inline-flex", alignItems: "center", gap: "8px", flex: "1", minWidth: "200px" },
   locationPreview: { background: "#f8f9fa", padding: "15px", borderRadius: "8px", marginTop: "10px", borderLeft: "4px solid #4CAF50" },
-  locationHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" },
+  locationHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "10px" },
   locationActionButtons: { display: "flex", gap: "10px" },
   editLocationBtn: { background: "#2196F3", color: "white", border: "none", padding: "6px 12px", borderRadius: "4px", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" },
   removeLocationBtn: { background: "#ff4444", color: "white", border: "none", padding: "6px 12px", borderRadius: "4px", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" },
@@ -1098,10 +1010,13 @@ const styles = {
   fileInput: { display: "none" },
   photoPreview: { display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "10px" },
   photoItem: { display: "flex", alignItems: "center", gap: "10px", background: "#f8f9fa", padding: "8px 12px", borderRadius: "6px", fontSize: "14px", border: "1px solid #e9ecef" },
+  coverPhotoItem: { background: "#fff3e0", border: "2px solid #FFD700" },
   photoName: { maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  coverPhotoBtn: { background: "none", border: "none", cursor: "pointer", fontSize: "18px", padding: "2px 6px", color: "#999" },
+  coverPhotoBtnActive: { background: "none", border: "none", cursor: "pointer", fontSize: "18px", padding: "2px 6px", color: "#FFD700" },
   removePhotoBtn: { background: "#ff4444", color: "white", border: "none", borderRadius: "50%", width: "24px", height: "24px", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", justifyContent: "center" },
   photoCount: { fontSize: "14px", color: "#666", marginTop: "10px" },
-  submitBtn: { width: "100%", padding: "16px", background: "linear-gradient(135deg, #667eea, #764ba2)", color: "white", border: "none", borderRadius: "10px", fontSize: "16px", fontWeight: "600", cursor: "pointer", transition: "all 0.3s", marginTop: "10px" },
+  submitBtn: { width: "100%", padding: "16px", background: "linear-gradient(135deg, #667eea, #764ba2)", color: "white", border: "none", borderRadius: "10px", fontSize: "18px", fontWeight: "600", cursor: "pointer", transition: "all 0.3s", marginTop: "10px" },
   submitBtnDisabled: { opacity: "0.6", cursor: "not-allowed" },
   mapModalOverlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.8)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 },
   mapModal: { background: "white", borderRadius: "12px", width: "95%", maxWidth: "1000px", maxHeight: "95vh", overflow: "hidden", boxShadow: "0 20px 40px rgba(0,0,0,0.3)" },
