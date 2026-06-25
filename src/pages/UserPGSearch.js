@@ -157,7 +157,7 @@ const BudgetModal = ({ min, max, onChange, onClose }) => {
 };
 
 /* ─── CONTACT MODAL ─── */
-const ContactModal = ({ pg, onClose, onSubmit }) => {
+const ContactModal = ({ pg, onClose, onSubmit, onCreateBooking }) => {
   const [roomType, setRoomType] = useState("");
   const [loading, setLoading] = useState(false);
   const config = TYPE_CONFIG[pg?.pg_category] || TYPE_CONFIG.pg;
@@ -207,6 +207,33 @@ Thank you!`;
     return message;
   }, [pg, roomType, roomOptions]);
 
+  // Handle any contact action (Call, WhatsApp, or Book Now)
+  const handleContactAction = async (actionType) => {
+    // First, create booking if user is logged in
+    if (onCreateBooking) {
+      setLoading(true);
+      try {
+        // Create booking with selected room type or first available
+        const bookingRoomType = roomType || (roomOptions.length > 0 ? roomOptions[0].value : "Flexible");
+        await onCreateBooking({ roomType: bookingRoomType });
+      } catch (error) {
+        console.error("Error creating booking:", error);
+        // Continue with the action even if booking fails
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // Then perform the action
+    if (actionType === 'call') {
+      window.location.href = `tel:${pg.contact_phone}`;
+    } else if (actionType === 'whatsapp') {
+      const message = generateWhatsAppMessage();
+      window.open(`https://wa.me/${pg.contact_phone}?text=${encodeURIComponent(message)}`, "_blank");
+    }
+    // Book Now action is handled separately via the onSubmit prop
+  };
+
   if (!pg) return null;
   
   return (
@@ -248,22 +275,31 @@ Thank you!`;
           </div>
 
           <div style={{ display:"flex", gap:8 }}>
-            <button onClick={() => window.location.href = `tel:${pg.contact_phone}`}
-              style={{ flex:1, padding:13, background:"#F0FDF4", color:"#059669", border:"1px solid #BBF7D0", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
-              <Phone size={14} /> Call
+            <button 
+              onClick={() => handleContactAction('call')}
+              disabled={loading}
+              style={{ flex:1, padding:13, background: loading ? "#CBD5E1" : "#F0FDF4", color: loading ? "#94A3B8" : "#059669", border: loading ? "1px solid #CBD5E1" : "1px solid #BBF7D0", borderRadius:12, fontSize:13, fontWeight:700, cursor: loading ? "not-allowed" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+              {loading ? <div style={{ width:14, height:14, border:"2px solid rgba(0,0,0,0.2)", borderTop:"2px solid #059669", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} /> : <Phone size={14} />}
+              Call
             </button>
             <button 
-              onClick={() => {
-                const message = generateWhatsAppMessage();
-                window.open(`https://wa.me/${pg.contact_phone}?text=${encodeURIComponent(message)}`, "_blank");
-              }}
-              style={{ flex:1, padding:13, background:"#F0FDF4", color:"#059669", border:"1px solid #BBF7D0", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
-              <MessageCircle size={14} /> WhatsApp
+              onClick={() => handleContactAction('whatsapp')}
+              disabled={loading}
+              style={{ flex:1, padding:13, background: loading ? "#CBD5E1" : "#F0FDF4", color: loading ? "#94A3B8" : "#059669", border: loading ? "1px solid #CBD5E1" : "1px solid #BBF7D0", borderRadius:12, fontSize:13, fontWeight:700, cursor: loading ? "not-allowed" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+              {loading ? <div style={{ width:14, height:14, border:"2px solid rgba(0,0,0,0.2)", borderTop:"2px solid #059669", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} /> : <MessageCircle size={14} />}
+              WhatsApp
             </button>
             <button
               disabled={!roomType || loading}
-              onClick={async () => { setLoading(true); try { await onSubmit({ roomType }); } finally { setLoading(false); } }}
-              style={{ flex:2, padding:13, background: roomType ? `linear-gradient(135deg,${config.color},${config.color}CC)` : "#CBD5E1", color:"#fff", border:"none", borderRadius:12, fontSize:13, fontWeight:700, cursor: roomType ? "pointer" : "not-allowed", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+              onClick={async () => { 
+                setLoading(true); 
+                try { 
+                  await onSubmit({ roomType }); 
+                } finally { 
+                  setLoading(false); 
+                } 
+              }}
+              style={{ flex:2, padding:13, background: (roomType && !loading) ? `linear-gradient(135deg,${config.color},${config.color}CC)` : "#CBD5E1", color:"#fff", border:"none", borderRadius:12, fontSize:13, fontWeight:700, cursor: (roomType && !loading) ? "pointer" : "not-allowed", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
               {loading ? <div style={{ width:14, height:14, border:"2px solid rgba(255,255,255,0.4)", borderTop:"2px solid #fff", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} /> : <><Check size={14} /> Book Now</>}
             </button>
           </div>
@@ -729,7 +765,31 @@ function UserPGSearch() {
     setContactPG(pg);
   };
 
+  // Updated: This now handles creating a booking without closing the modal
+  const handleCreateBooking = async (data) => {
+    try {
+      if (!user) { 
+        notify("Please login to continue", true);
+        navigate("/login"); 
+        return;
+      }
+      const token = await user.getIdToken(true);
+      await api.post(`/bookings/${contactPG.id}`, { room_type: data.roomType }, { headers: { Authorization: `Bearer ${token}` } });
+      // Don't close modal or notify - let the action continue
+      return true;
+    } catch(err) {
+      if (err.response?.data?.message?.includes("already")) {
+        // User already has a booking - that's fine, continue with the action
+        return true;
+      }
+      console.error("Booking error:", err);
+      notify(err.response?.data?.message || "Could not create booking", true);
+      return false;
+    }
+  };
+
   const handleBookSubmit = async (data) => {
+    // This is only for the "Book Now" button
     try {
       if (!user) { navigate("/register"); return; }
       const token = await user.getIdToken(true);
@@ -1027,7 +1087,12 @@ function UserPGSearch() {
       {/* ── MODALS ── */}
       {showBudget && <BudgetModal min={minB} max={maxB} onChange={(a,b) => { setMinB(a); setMaxB(b); notify(`Budget: ₹${fmt(a)} – ₹${fmt(b)}`); }} onClose={() => setShowBudget(false)} />}
       {quickView  && <QuickView pg={quickView} onClose={() => setQuickView(null)} onContact={handleContact} onFav={(id,fav) => { const nf=new Set(favorites); fav?nf.add(id):nf.delete(id); setFavorites(nf); saveFavs(nf); }} isFav={favorites.has(quickView.id)} />}
-      {contactPG  && <ContactModal pg={contactPG} onClose={() => setContactPG(null)} onSubmit={handleBookSubmit} />}
+      {contactPG  && <ContactModal 
+        pg={contactPG} 
+        onClose={() => setContactPG(null)} 
+        onSubmit={handleBookSubmit}
+        onCreateBooking={handleCreateBooking}
+      />}
       {showCompare && <CompareModal ids={compareSet} allPGs={allPGs} onClose={() => { setShowCompare(false); setCompareSet(new Set()); setCompareMode(false); }} />}
 
       {/* ── MOBILE STICKY CTA ── */}
