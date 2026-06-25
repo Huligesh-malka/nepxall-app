@@ -383,8 +383,6 @@ export default function PGDetails() {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={S.eyebrow}>
             {isToLet ? "House · Flat" : isCoLiving ? "Co-Living" : "PG · Hostel"}
-            <span style={S.eyebrowDot}>·</span>
-            <span>{pg.area || pg.city}</span>
           </div>
           <h1 style={S.title}>{pg.pg_name}</h1>
           
