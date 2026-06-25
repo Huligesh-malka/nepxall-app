@@ -1,12 +1,17 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
-  Search, Filter, MapPin, Utensils, Snowflake, Navigation, X,
-  Phone, MessageCircle, Wifi, Car, Shield, Users,
-  Bed, Check, Heart, Eye, Clock, Info, Leaf, Sparkles,
-  Building, Plus, BarChart, Coins, Rocket, Award,
-  ChevronDown, SlidersHorizontal
+  Search, Filter, MapPin, Home, Utensils, Snowflake, Navigation, X,
+  Phone, MessageCircle, Star, Wifi, Car, Shield, Users, Calendar,
+  Bed, Check, Heart, Eye, Clock, Lock, Briefcase, GraduationCap,
+  Bookmark, Info, Leaf, Flame, Tv, Wind, Sparkles, Dumbbell,
+  Building, Key, Sofa, Sliders, TrendingUp, Plus, Minus, BarChart,
+  BadgePercent, Coins, Rocket, Megaphone, Crown, Gem, FileText,
+  Headphones, Train, Bus, School, Building2, ShoppingBag, TreePine,
+  WashingMachine, Fan, Stethoscope, ChevronDown, ChevronRight,
+  SlidersHorizontal, Zap, Award, Coffee, ArrowUpRight, Grid3x3,
+  LayoutList, MapIcon, Bell, Share2
 } from "lucide-react";
 import api from "../api/api";
 
@@ -957,8 +962,7 @@ function UserPGSearch() {
   const toggleFavorite = (pgId, e) => {
     e.stopPropagation();
     const nf = new Set(favorites);
-    if (nf.has(pgId)) { nf.delete(pgId); showNotification("Removed from saved"); }
-    else { nf.add(pgId); showNotification("✓ Saved to favourites"); }
+    nf.has(pgId) ? (nf.delete(pgId), showNotification("Removed from saved")) : (nf.add(pgId), showNotification("✓ Saved to favourites"));
     setFavorites(nf); saveFavorites(nf);
   };
 
@@ -1015,7 +1019,8 @@ function UserPGSearch() {
     return filtered;
   }, [allPGs, filters, userLocation]);
 
-  const filteredPGs = React.useMemo(() => {
+  // FIXED: Changed from useCallback with immediate invocation to useMemo
+  const filteredPGs = useMemo(() => {
     const f = applyFilters();
     return activeTab === "all" ? f : f.filter(pg => pg.pg_category === activeTab);
   }, [applyFilters, activeTab]);
