@@ -172,7 +172,43 @@ const ContactModal = ({ pg, onClose, onSubmit }) => {
     return (map[pg.pg_category] || []).filter(([f]) => pg[f] > 0).map(([f, label]) => ({ value: label, price: pg[f] }));
   }, [pg]);
 
+  // Generate detailed WhatsApp message
+  const generateWhatsAppMessage = useCallback(() => {
+    if (!pg) return "";
+    
+    const roomTypeText = roomType || "Flexible";
+    const priceText = roomType 
+      ? roomOptions.find(opt => opt.value === roomType)?.price 
+      : priceRange(pg).min || effRent(pg);
+    
+    const amenities = [];
+    if (pg.wifi_available) amenities.push("✅ WiFi");
+    if (pg.ac_available) amenities.push("✅ AC");
+    if (pg.parking_available) amenities.push("✅ Parking");
+    if (pg.food_available) amenities.push(`✅ Food (${pg.food_type || 'Available'})`);
+    
+    const message = `Hi 👋,
+
+I found your property "${pg.pg_name}" on Nepxall.
+
+I'm looking for accommodation and I'm interested in your property.
+
+Could you please let me know:
+🏠 Is this property currently available?
+💰 Current rent: ₹${fmt(priceText)}/month
+🛏 Room sharing options: ${roomTypeText}
+${amenities.length > 0 ? `🔧 Amenities: ${amenities.join(', ')}` : ''}
+📍 Exact location: ${pg.area}${pg.city ? `, ${pg.city}` : ''}
+${pg.min_stay_months > 0 ? `📅 Minimum stay: ${pg.min_stay_months} months` : ''}
+📅 Earliest move-in date: 
+
+Thank you!`;
+    
+    return message;
+  }, [pg, roomType, roomOptions]);
+
   if (!pg) return null;
+  
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(10,22,40,0.7)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:3000, padding:20, backdropFilter:"blur(4px)" }}>
       <div style={{ background:"#fff", borderRadius:24, width:"100%", maxWidth:440, boxShadow:"0 24px 64px rgba(0,0,0,0.2)", position:"relative", overflow:"hidden" }}>
@@ -216,7 +252,11 @@ const ContactModal = ({ pg, onClose, onSubmit }) => {
               style={{ flex:1, padding:13, background:"#F0FDF4", color:"#059669", border:"1px solid #BBF7D0", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
               <Phone size={14} /> Call
             </button>
-            <button onClick={() => window.open(`https://wa.me/${pg.contact_phone}?text=Hi, I'm interested in ${pg.pg_name}`, "_blank")}
+            <button 
+              onClick={() => {
+                const message = generateWhatsAppMessage();
+                window.open(`https://wa.me/${pg.contact_phone}?text=${encodeURIComponent(message)}`, "_blank");
+              }}
               style={{ flex:1, padding:13, background:"#F0FDF4", color:"#059669", border:"1px solid #BBF7D0", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
               <MessageCircle size={14} /> WhatsApp
             </button>
