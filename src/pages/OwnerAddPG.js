@@ -188,7 +188,7 @@ function OwnerAddPG() {
   const [bhkConfig, setBhkConfig] = useState(initialBhkConfig);
   const [form, setForm] = useState(initialForm);
   const [manualEditMode, setManualEditMode] = useState(false);
-  
+  const [currentStep, setCurrentStep] = useState(1);
   const [validationErrors, setValidationErrors] = useState({});
   
   const mapRef = useRef(null);
@@ -245,22 +245,15 @@ function OwnerAddPG() {
         50% { transform: translateY(-4px); }
         100% { transform: translateY(0px); }
       }
-      @keyframes shimmer {
-        0% { background-position: -200% center; }
-        100% { background-position: 200% center; }
+      @keyframes slideIn {
+        from { opacity: 0; transform: translateX(20px); }
+        to { opacity: 1; transform: translateX(0); }
       }
-      .trendy-card {
-        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-      }
-      .trendy-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 20px 60px rgba(108, 92, 231, 0.25);
-      }
-      .input-glow:focus {
-        box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.2), 0 0 20px rgba(108, 92, 231, 0.1);
+      .step-content {
+        animation: slideIn 0.4s ease-out;
       }
       .checkbox-modern {
-        accent-color: #6c5ce7;
+        accent-color: #6366f1;
         width: 18px;
         height: 18px;
         cursor: pointer;
@@ -270,15 +263,25 @@ function OwnerAddPG() {
         transform: scale(1.1);
       }
       .btn-gradient {
-        background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
         transition: all 0.3s ease;
       }
       .btn-gradient:hover:not(:disabled) {
         transform: translateY(-2px);
-        box-shadow: 0 10px 30px rgba(108, 92, 231, 0.4);
+        box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
       }
       .badge-pulse {
         animation: float 3s ease-in-out infinite;
+      }
+      .step-circle {
+        transition: all 0.3s ease;
+      }
+      .step-circle.active {
+        transform: scale(1.1);
+        box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+      }
+      .step-circle.completed {
+        background: #10b981;
       }
     `;
     document.head.appendChild(style);
@@ -462,6 +465,32 @@ function OwnerAddPG() {
     return missing;
   };
 
+  const validateStep = (step) => {
+    const errors = {};
+    if (step === 1) {
+      if (!form.pg_name?.trim()) errors.pg_name = true;
+      if (!isToLet) {
+        if (!form.total_beds?.trim()) errors.total_beds = true;
+        if (!form.available_beds?.trim()) errors.available_beds = true;
+      }
+    } else if (step === 2) {
+      if (!selectedLocation.address?.trim()) errors.address = true;
+    } else if (step === 3) {
+      if (photos.length === 0) errors.photos = true;
+    } else if (step === 5) {
+      if (!form.contact_person?.trim()) errors.contact_person = true;
+      if (!form.contact_phone?.trim()) errors.contact_phone = true;
+      if (form.contact_email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
+        errors.contact_email = true;
+      }
+      if (form.contact_phone?.trim() && !/^[0-9]{10,15}$/.test(form.contact_phone.replace(/\D/g, ''))) {
+        errors.contact_phone = true;
+      }
+    }
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const validateForm = () => {
     const errors = {};
     if (!form.pg_name?.trim()) errors.pg_name = true;
@@ -489,6 +518,18 @@ function OwnerAddPG() {
     if (value !== "" && value !== null && value !== undefined && value !== 0) {
       fd.append(key, value.toString());
     }
+  };
+
+  const handleNextStep = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => Math.min(prev + 1, 5));
+    } else {
+      alert("Please fill all required fields in this step.");
+    }
+  };
+
+  const handlePrevStep = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
   const handleSubmit = async () => {
@@ -647,6 +688,7 @@ function OwnerAddPG() {
         setSelectedLocation(initialLocation);
         setUserLocation(null);
         setValidationErrors({});
+        setCurrentStep(1);
       } else {
         alert(`❌ Failed: ${response.data?.message || "Unknown error"}`);
       }
@@ -659,7 +701,7 @@ function OwnerAddPG() {
     }
   };
 
-  const getErrorStyle = (fieldName) => validationErrors[fieldName] ? { border: "2px solid #ff6b6b", backgroundColor: "#fff5f5" } : {};
+  const getErrorStyle = (fieldName) => validationErrors[fieldName] ? { border: "2px solid #ef4444", backgroundColor: "#fef2f2" } : {};
 
   // Manual Address Modal Component
   const ManualAddressModal = () => {
@@ -687,7 +729,7 @@ function OwnerAddPG() {
       <div style={styles.manualModalOverlay}>
         <div style={styles.manualModal}>
           <div style={styles.manualHeader}>
-            <h3 style={{ margin: 0, color: "#2d3436" }}>📝 Enter Address Manually</h3>
+            <h3 style={{ margin: 0, color: "#1e293b" }}>📝 Enter Address Manually</h3>
             <button onClick={() => setManualEditMode(false)} style={styles.closeBtn}>✕</button>
           </div>
           <div style={styles.manualForm}>
@@ -714,7 +756,7 @@ function OwnerAddPG() {
   };
 
   if (authLoading) {
-    return <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh"><CircularProgress sx={{ color: "#6c5ce7" }} /></Box>;
+    return <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh"><CircularProgress sx={{ color: "#6366f1" }} /></Box>;
   }
   if (!user) return <Navigate to="/login" replace />;
   if (role !== "owner") return <Navigate to="/" replace />;
@@ -722,388 +764,444 @@ function OwnerAddPG() {
   const isSubmitDisabled = loading;
   const topFacilities = getTopFacilities();
 
+  // Step indicators
+  const steps = [
+    { number: 1, label: "Basic Info", icon: "📋" },
+    { number: 2, label: "Location", icon: "📍" },
+    { number: 3, label: "Photos", icon: "📷" },
+    { number: 4, label: "Facilities", icon: "🏠" },
+    { number: 5, label: "Contact", icon: "📞" }
+  ];
+
   return (
     <div style={styles.container}>
-      <div style={{...styles.card, ...styles.cardTrendy}} className="trendy-card">
+      <div style={styles.card} className="trendy-card">
         <div style={styles.headerBadge}>
           <span style={styles.badgeIcon}>🏠</span>
           <span style={styles.badgeText}>New Listing</span>
         </div>
         <h2 style={styles.title}>✨ Add Your Property</h2>
-        <div style={styles.premiumBanner}>
-          <span style={{ fontSize: "20px", marginRight: "10px" }}>⭐</span>
-          <div>
-            <strong>List your property</strong> and reach thousands of potential tenants!
-            <br />
-            <span style={{ fontSize: "13px", opacity: 0.9 }}>Fill in all required fields (*) to create your listing</span>
-          </div>
-        </div>
-        
-        {/* Basic Information */}
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>📋</span> Basic Information</h3>
-          <div style={styles.grid}>
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Property Name <span style={{ color: "#ff6b6b" }}>*</span></label>
-              <input 
-                name="pg_name" 
-                placeholder={isToLet ? "e.g., 2BHK Flat, Independent House" : "e.g., Royal PG, Cozy Coliving"} 
-                value={form.pg_name} 
-                onChange={handleChange} 
-                style={{...styles.input, ...styles.inputGlow, ...getErrorStyle("pg_name")}} 
-                required 
-              />
-            </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Property Category <span style={{ color: "#ff6b6b" }}>*</span></label>
-              <select name="pg_category" value={form.pg_category} onChange={handleChange} style={{...styles.input, ...styles.inputGlow, ...styles.select}}>
-                <option value="pg">🏢 PG / Hostel</option>
-                <option value="coliving">🤝 Co-Living Space</option>
-                <option value="to_let">🏠 House/Flat To Let</option>
-              </select>
-            </div>
-            {!isToLet && (
-              <>
-                <div style={styles.inputGroup}>
-                  <label style={styles.label}>Property Type <span style={{ color: "#ff6b6b" }}>*</span></label>
-                  <select name="pg_type" value={form.pg_type} onChange={handleChange} style={{...styles.input, ...styles.inputGlow, ...styles.select}}>
-                    <option value="boys">👦 Boys Only</option>
-                    <option value="girls">👧 Girls Only</option>
-                    <option value="coliving">👫 Co-Living (Mixed)</option>
-                  </select>
-                </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.label}>Total Beds <span style={{ color: "#ff6b6b" }}>*</span></label>
-                  <input 
-                    type="number" 
-                    name="total_beds" 
-                    placeholder="e.g., 50" 
-                    value={form.total_beds} 
-                    onChange={handleChange} 
-                    style={{...styles.input, ...styles.inputGlow, ...getErrorStyle("total_beds")}} 
-                    min="1"
-                    required 
-                  />
-                </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.label}>Available Beds <span style={{ color: "#ff6b6b" }}>*</span></label>
-                  <input 
-                    type="number" 
-                    name="available_beds" 
-                    placeholder="e.g., 20" 
-                    value={form.available_beds} 
-                    onChange={handleChange} 
-                    style={{...styles.input, ...styles.inputGlow, ...getErrorStyle("available_beds")}} 
-                    min="0"
-                    required 
-                  />
-                </div>
-              </>
-            )}
-            {isToLet && (
-              <>
-                <div style={styles.inputGroup}>
-                  <label style={styles.label}>BHK Type <span style={{ color: "#ff6b6b" }}>*</span></label>
-                  <select name="bhk_type" value={form.bhk_type} onChange={handleChange} style={{...styles.input, ...styles.inputGlow, ...styles.select}}>
-                    <option value="1">1 BHK</option>
-                    <option value="2">2 BHK</option>
-                    <option value="3">3 BHK</option>
-                    <option value="4">4 BHK</option>
-                    <option value="4+">4+ BHK</option>
-                  </select>
-                </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.label}>Furnishing Type <span style={{ color: "#ff6b6b" }}>*</span></label>
-                  <select name="furnishing_type" value={form.furnishing_type} onChange={handleChange} style={{...styles.input, ...styles.inputGlow, ...styles.select}}>
-                    <option value="unfurnished">🪑 Unfurnished</option>
-                    <option value="semi_furnished">🛋️ Semi-Furnished</option>
-                    <option value="fully_furnished">🛏️ Fully Furnished</option>
-                  </select>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
 
-        {/* Location */}
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>📍</span> Property Location <span style={{ color: "#ff6b6b" }}>*</span></h3>
-          <div style={styles.locationButtons}>
-            <button type="button" onClick={() => setShowMap(true)} style={{...styles.mapButton, ...styles.btnGradient}}>🗺️ Select on OpenStreetMap</button>
-            <button type="button" onClick={() => setManualEditMode(true)} style={{...styles.manualAddressButton, ...styles.btnGradient}}>📝 Enter Address Manually</button>
-          </div>
-          {selectedLocation.address ? (
-            <div style={{...styles.locationPreview, ...(validationErrors.address ? { borderLeftColor: "#ff6b6b", backgroundColor: "#fff5f5" } : {})}}>
-              <div style={styles.locationHeader}>
-                <h4 style={{ margin: 0, color: "#2d3436" }}>📍 Selected Location</h4>
-                <div style={styles.locationActionButtons}>
-                  <button type="button" onClick={() => setManualEditMode(true)} style={styles.editLocationBtn}>✏️ Edit</button>
-                  <button type="button" onClick={removeHostelLocation} style={styles.removeLocationBtn}>🗑️ Remove</button>
+        {/* Step Progress Bar */}
+        <div style={styles.stepProgress}>
+          {steps.map((step, idx) => (
+            <React.Fragment key={step.number}>
+              <div style={styles.stepItem}>
+                <div 
+                  style={{
+                    ...styles.stepCircle,
+                    ...(currentStep === step.number ? styles.stepCircleActive : {}),
+                    ...(currentStep > step.number ? styles.stepCircleCompleted : {})
+                  }}
+                  className="step-circle"
+                >
+                  {currentStep > step.number ? "✓" : step.number}
                 </div>
-              </div>
-              <div style={styles.locationDetails}>
-                <p><strong>Address:</strong> {selectedLocation.address}</p>
-                {selectedLocation.area && <p><strong>Area:</strong> {selectedLocation.area}</p>}
-                {selectedLocation.city && <p><strong>City:</strong> {selectedLocation.city}</p>}
-                {selectedLocation.state && <p><strong>State:</strong> {selectedLocation.state}</p>}
-                {selectedLocation.pincode && <p><strong>Pincode:</strong> {selectedLocation.pincode}</p>}
-              </div>
-            </div>
-          ) : (
-            <div style={styles.locationWarning}>⚠️ Please select a location using the map or enter manually</div>
-          )}
-        </div>
-
-        {/* Photos */}
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>📷</span> Photos & Cover Image <span style={{ color: "#ff6b6b" }}>*</span></h3>
-          <p style={styles.note}>Upload at least 1 photo. Maximum 10 photos allowed. Select which photo should be the cover image.</p>
-          <div style={styles.fileUpload}>
-            <label htmlFor="photo-upload" style={{...styles.fileUploadLabel, ...styles.btnGradient}}>📁 Choose Photos</label>
-            <input id="photo-upload" type="file" accept="image/*" multiple onChange={handlePhotoUpload} style={styles.fileInput} />
-          </div>
-          {photos.length > 0 && (
-            <>
-              <div style={styles.photoPreview}>
-                {photos.map((photo, idx) => (
-                  <div key={idx} style={{...styles.photoItem, ...(idx === coverPhotoIndex ? styles.coverPhotoItem : {})}}>
-                    <span style={styles.photoName}>{photo.name.length > 20 ? photo.name.substring(0,20)+"..." : photo.name}</span>
-                    <button 
-                      type="button" 
-                      onClick={() => setCoverPhoto(idx)} 
-                      style={idx === coverPhotoIndex ? styles.coverPhotoBtnActive : styles.coverPhotoBtn}
-                      title="Set as cover photo"
-                    >
-                      {idx === coverPhotoIndex ? "⭐" : "☆"}
-                    </button>
-                    <button type="button" onClick={() => removePhoto(idx)} style={styles.removePhotoBtn}>✕</button>
-                  </div>
-                ))}
-              </div>
-              <p style={styles.photoCount}>📸 {photos.length} photo{photos.length > 1 ? 's' : ''} uploaded • ⭐ {coverPhotoIndex + 1} is cover photo</p>
-            </>
-          )}
-          {validationErrors.photos && <p style={{ color: "#ff6b6b", fontSize: 12, marginTop: 5 }}>⚠️ At least one photo is required</p>}
-        </div>
-
-        {/* Top Facilities Preview */}
-        {topFacilities.length > 0 && (
-          <div style={styles.topFacilitiesSection}>
-            <h3 style={{...styles.sectionTitle, color: "#fff", margin: 0, fontSize: "16px"}}>⭐ Top Facilities</h3>
-            <div style={styles.topFacilitiesContainer}>
-              {topFacilities.map((facility, index) => (
-                <span key={index} style={styles.topFacilityBadge} className="badge-pulse">
-                  {facility}
+                <span style={{
+                  ...styles.stepLabel,
+                  ...(currentStep === step.number ? styles.stepLabelActive : {}),
+                  ...(currentStep > step.number ? styles.stepLabelCompleted : {})
+                }}>
+                  {step.label}
                 </span>
-              ))}
-              {topFacilities.length < 5 && (
-                <span style={styles.topFacilityEmpty}>
-                  + {5 - topFacilities.length} more facilities available (select below)
-                </span>
+              </div>
+              {idx < steps.length - 1 && (
+                <div style={{
+                  ...styles.stepLine,
+                  ...(currentStep > step.number ? styles.stepLineCompleted : {})
+                }} />
               )}
-            </div>
-          </div>
-        )}
-
-        {/* Room Types & Prices */}
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>🛏️</span> Room Types & Prices</h3>
-          {isToLet ? (
-            <div style={styles.grid}>
-              <div style={styles.inputGroup}><label style={styles.label}>1 BHK Rent (₹/Month) <span style={{ color: "#ff6b6b" }}>*</span></label><input type="number" name="price_1bhk" placeholder="e.g., 15000" value={roomRates.price_1bhk} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" required /></div>
-              {parseInt(form.bhk_type) >= 2 && <div style={styles.inputGroup}><label style={styles.label}>2 BHK Rent (₹/Month)</label><input type="number" name="price_2bhk" placeholder="e.g., 25000" value={roomRates.price_2bhk} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>}
-              {parseInt(form.bhk_type) >= 3 && <div style={styles.inputGroup}><label style={styles.label}>3 BHK Rent (₹/Month)</label><input type="number" name="price_3bhk" placeholder="e.g., 35000" value={roomRates.price_3bhk} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>}
-              {parseInt(form.bhk_type) >= 4 && <div style={styles.inputGroup}><label style={styles.label}>4 BHK Rent (₹/Month)</label><input type="number" name="price_4bhk" placeholder="e.g., 45000" value={roomRates.price_4bhk} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>}
-            </div>
-          ) : isCoLiving ? (
-            <div style={styles.ratesGrid}>
-              <div style={styles.inputGroup}><label style={styles.label}>Co-Living Single Room <span style={{ color: "#ff6b6b" }}>*</span></label><input type="number" name="co_living_single_room" placeholder="₹" value={roomRates.co_living_single_room} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" required /></div>
-              <div style={styles.inputGroup}><label style={styles.label}>Co-Living Double Room</label><input type="number" name="co_living_double_room" placeholder="₹" value={roomRates.co_living_double_room} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
-              <div style={styles.inputGroup}><label style={styles.label}>Co-Living 3 Sharing</label><input type="number" name="coliving_three_sharing" placeholder="₹" value={roomRates.coliving_three_sharing} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
-              <div style={styles.inputGroup}><label style={styles.label}>Co-Living 4 Sharing</label><input type="number" name="coliving_four_sharing" placeholder="₹" value={roomRates.coliving_four_sharing} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
-            </div>
-          ) : (
-            <div style={styles.ratesGrid}>
-              <div style={styles.inputGroup}><label style={styles.label}>Single Sharing</label><input type="number" name="single_sharing" placeholder="₹" value={roomRates.single_sharing} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
-              <div style={styles.inputGroup}><label style={styles.label}>Double Sharing</label><input type="number" name="double_sharing" placeholder="₹" value={roomRates.double_sharing} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
-              <div style={styles.inputGroup}><label style={styles.label}>Triple Sharing</label><input type="number" name="triple_sharing" placeholder="₹" value={roomRates.triple_sharing} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
-              <div style={styles.inputGroup}><label style={styles.label}>Four Sharing</label><input type="number" name="four_sharing" placeholder="₹" value={roomRates.four_sharing} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
-              <div style={styles.inputGroup}><label style={styles.label}>Single Room</label><input type="number" name="single_room" placeholder="₹" value={roomRates.single_room} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
-              <div style={styles.inputGroup}><label style={styles.label}>Double Room</label><input type="number" name="double_room" placeholder="₹" value={roomRates.double_room} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
-            </div>
-          )}
+            </React.Fragment>
+          ))}
         </div>
 
-        {/* Deposit & Maintenance */}
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>💰</span> Deposit & Maintenance</h3>
-          <div style={styles.grid}>
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Security Deposit (₹)</label>
-              <input 
-                type="number" 
-                name="security_deposit" 
-                placeholder="e.g., 10000" 
-                value={form.security_deposit} 
-                onChange={handleChange} 
-                style={{...styles.input, ...styles.inputGlow}} 
-                min="0" 
-              />
-              <small style={styles.helperText}>Refundable security deposit amount</small>
-            </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Maintenance Charges (₹/Month)</label>
-              <input 
-                type="number" 
-                name="maintenance_amount" 
-                placeholder="e.g., 1000" 
-                value={form.maintenance_amount} 
-                onChange={handleChange} 
-                style={{...styles.input, ...styles.inputGlow}} 
-                min="0" 
-              />
-              <small style={styles.helperText}>Monthly maintenance fee</small>
-            </div>
-          </div>
-        </div>
-
-        {/* Facilities & Amenities */}
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>🏠</span> Facilities & Amenities</h3>
-          <p style={styles.note}>Select facilities available at your property. Top 5 will be shown prominently.</p>
-          
-          {!isToLet && (
-            <div style={styles.facilityGroup}>
-              <h4 style={styles.facilityGroupTitle}>🍽️ Food Options</h4>
-              <div style={styles.checkboxGrid}>
-                <label style={styles.checkboxLabel}>
-                  <input type="checkbox" name="food_available" checked={form.food_available} onChange={handleChange} className="checkbox-modern" /> 
-                  Food Available
-                </label>
-                {form.food_available && (
-                  <div style={{ gridColumn: "1 / -1", display: "flex", gap: "15px", flexWrap: "wrap", padding: "12px 16px", background: "rgba(108, 92, 231, 0.06)", borderRadius: "10px", border: "1px solid rgba(108, 92, 231, 0.1)" }}>
-                    <div>
-                      <label style={{ marginRight: 10, fontSize: "13px", color: "#555" }}>Food Type:</label>
-                      <select name="food_type" value={form.food_type} onChange={handleChange} style={{...styles.input, width: 150, display: "inline-block", ...styles.inputGlow}}>
-                        <option value="veg">Vegetarian</option>
-                        <option value="non_veg">Non-Vegetarian</option>
-                        <option value="both">Both</option>
+        <div className="step-content">
+          {/* Step 1: Basic Information */}
+          {currentStep === 1 && (
+            <div style={styles.section}>
+              <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>📋</span> Basic Information</h3>
+              <div style={styles.grid}>
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Property Name <span style={{ color: "#ef4444" }}>*</span></label>
+                  <input 
+                    name="pg_name" 
+                    placeholder={isToLet ? "e.g., 2BHK Flat, Independent House" : "e.g., Royal PG, Cozy Coliving"} 
+                    value={form.pg_name} 
+                    onChange={handleChange} 
+                    style={{...styles.input, ...styles.inputGlow, ...getErrorStyle("pg_name")}} 
+                    required 
+                  />
+                </div>
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Property Category <span style={{ color: "#ef4444" }}>*</span></label>
+                  <select name="pg_category" value={form.pg_category} onChange={handleChange} style={{...styles.input, ...styles.inputGlow, ...styles.select}}>
+                    <option value="pg">🏢 PG / Hostel</option>
+                    <option value="coliving">🤝 Co-Living Space</option>
+                    <option value="to_let">🏠 House/Flat To Let</option>
+                  </select>
+                </div>
+                {!isToLet && (
+                  <>
+                    <div style={styles.inputGroup}>
+                      <label style={styles.label}>Property Type <span style={{ color: "#ef4444" }}>*</span></label>
+                      <select name="pg_type" value={form.pg_type} onChange={handleChange} style={{...styles.input, ...styles.inputGlow, ...styles.select}}>
+                        <option value="boys">👦 Boys Only</option>
+                        <option value="girls">👧 Girls Only</option>
+                        <option value="coliving">👫 Co-Living (Mixed)</option>
                       </select>
                     </div>
-                    <div>
-                      <label style={{ marginRight: 10, fontSize: "13px", color: "#555" }}>Meals/Day:</label>
-                      <input type="number" name="meals_per_day" placeholder="e.g., 3" value={form.meals_per_day} onChange={handleChange} style={{...styles.input, width: 100, display: "inline-block", ...styles.inputGlow}} min="1" max="4" />
+                    <div style={styles.inputGroup}>
+                      <label style={styles.label}>Total Beds <span style={{ color: "#ef4444" }}>*</span></label>
+                      <input 
+                        type="number" 
+                        name="total_beds" 
+                        placeholder="e.g., 50" 
+                        value={form.total_beds} 
+                        onChange={handleChange} 
+                        style={{...styles.input, ...styles.inputGlow, ...getErrorStyle("total_beds")}} 
+                        min="1"
+                        required 
+                      />
                     </div>
-                  </div>
+                    <div style={styles.inputGroup}>
+                      <label style={styles.label}>Available Beds <span style={{ color: "#ef4444" }}>*</span></label>
+                      <input 
+                        type="number" 
+                        name="available_beds" 
+                        placeholder="e.g., 20" 
+                        value={form.available_beds} 
+                        onChange={handleChange} 
+                        style={{...styles.input, ...styles.inputGlow, ...getErrorStyle("available_beds")}} 
+                        min="0"
+                        required 
+                      />
+                    </div>
+                  </>
+                )}
+                {isToLet && (
+                  <>
+                    <div style={styles.inputGroup}>
+                      <label style={styles.label}>BHK Type <span style={{ color: "#ef4444" }}>*</span></label>
+                      <select name="bhk_type" value={form.bhk_type} onChange={handleChange} style={{...styles.input, ...styles.inputGlow, ...styles.select}}>
+                        <option value="1">1 BHK</option>
+                        <option value="2">2 BHK</option>
+                        <option value="3">3 BHK</option>
+                        <option value="4">4 BHK</option>
+                        <option value="4+">4+ BHK</option>
+                      </select>
+                    </div>
+                    <div style={styles.inputGroup}>
+                      <label style={styles.label}>Furnishing Type <span style={{ color: "#ef4444" }}>*</span></label>
+                      <select name="furnishing_type" value={form.furnishing_type} onChange={handleChange} style={{...styles.input, ...styles.inputGlow, ...styles.select}}>
+                        <option value="unfurnished">🪑 Unfurnished</option>
+                        <option value="semi_furnished">🛋️ Semi-Furnished</option>
+                        <option value="fully_furnished">🛏️ Fully Furnished</option>
+                      </select>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
           )}
 
-          <div style={styles.facilityGroup}>
-            <h4 style={styles.facilityGroupTitle}>🛏️ Room Furnishings</h4>
-            <div style={styles.checkboxGrid}>
-              {roomFurnishings.map(item => (
-                <label key={item.key} style={styles.checkboxLabel}>
-                  <input type="checkbox" name={item.key} checked={form[item.key]} onChange={handleChange} className="checkbox-modern" />
-                  {item.label}
-                </label>
-              ))}
+          {/* Step 2: Location */}
+          {currentStep === 2 && (
+            <div style={styles.section}>
+              <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>📍</span> Property Location <span style={{ color: "#ef4444" }}>*</span></h3>
+              <div style={styles.locationButtons}>
+                <button type="button" onClick={() => setShowMap(true)} style={{...styles.mapButton, ...styles.btnGradient}}>🗺️ Select on OpenStreetMap</button>
+                <button type="button" onClick={() => setManualEditMode(true)} style={{...styles.manualAddressButton, ...styles.btnGradient}}>📝 Enter Address Manually</button>
+              </div>
+              {selectedLocation.address ? (
+                <div style={{...styles.locationPreview, ...(validationErrors.address ? { borderLeftColor: "#ef4444", backgroundColor: "#fef2f2" } : {})}}>
+                  <div style={styles.locationHeader}>
+                    <h4 style={{ margin: 0, color: "#1e293b" }}>📍 Selected Location</h4>
+                    <div style={styles.locationActionButtons}>
+                      <button type="button" onClick={() => setManualEditMode(true)} style={styles.editLocationBtn}>✏️ Edit</button>
+                      <button type="button" onClick={removeHostelLocation} style={styles.removeLocationBtn}>🗑️ Remove</button>
+                    </div>
+                  </div>
+                  <div style={styles.locationDetails}>
+                    <p><strong>Address:</strong> {selectedLocation.address}</p>
+                    {selectedLocation.area && <p><strong>Area:</strong> {selectedLocation.area}</p>}
+                    {selectedLocation.city && <p><strong>City:</strong> {selectedLocation.city}</p>}
+                    {selectedLocation.state && <p><strong>State:</strong> {selectedLocation.state}</p>}
+                    {selectedLocation.pincode && <p><strong>Pincode:</strong> {selectedLocation.pincode}</p>}
+                  </div>
+                </div>
+              ) : (
+                <div style={styles.locationWarning}>⚠️ Please select a location using the map or enter manually</div>
+              )}
             </div>
-          </div>
+          )}
 
-          <div style={styles.facilityGroup}>
-            <h4 style={styles.facilityGroupTitle}>🏢 Building Facilities</h4>
-            <div style={styles.checkboxGrid}>
-              {buildingFacilities.map(item => (
-                <label key={item.key} style={{...styles.checkboxLabel, fontWeight: form[item.key] ? "500" : "normal"}}>
-                  <input type="checkbox" name={item.key} checked={form[item.key]} onChange={handleChange} className="checkbox-modern" />
-                  {item.label}
-                </label>
-              ))}
+          {/* Step 3: Photos */}
+          {currentStep === 3 && (
+            <div style={styles.section}>
+              <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>📷</span> Photos & Cover Image <span style={{ color: "#ef4444" }}>*</span></h3>
+              <p style={styles.note}>Upload at least 1 photo. Maximum 10 photos allowed. Select which photo should be the cover image.</p>
+              <div style={styles.fileUpload}>
+                <label htmlFor="photo-upload" style={{...styles.fileUploadLabel, ...styles.btnGradient}}>📁 Choose Photos</label>
+                <input id="photo-upload" type="file" accept="image/*" multiple onChange={handlePhotoUpload} style={styles.fileInput} />
+              </div>
+              {photos.length > 0 && (
+                <>
+                  <div style={styles.photoPreview}>
+                    {photos.map((photo, idx) => (
+                      <div key={idx} style={{...styles.photoItem, ...(idx === coverPhotoIndex ? styles.coverPhotoItem : {})}}>
+                        <span style={styles.photoName}>{photo.name.length > 20 ? photo.name.substring(0,20)+"..." : photo.name}</span>
+                        <button 
+                          type="button" 
+                          onClick={() => setCoverPhoto(idx)} 
+                          style={idx === coverPhotoIndex ? styles.coverPhotoBtnActive : styles.coverPhotoBtn}
+                          title="Set as cover photo"
+                        >
+                          {idx === coverPhotoIndex ? "⭐" : "☆"}
+                        </button>
+                        <button type="button" onClick={() => removePhoto(idx)} style={styles.removePhotoBtn}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  <p style={styles.photoCount}>📸 {photos.length} photo{photos.length > 1 ? 's' : ''} uploaded • ⭐ {coverPhotoIndex + 1} is cover photo</p>
+                </>
+              )}
+              {validationErrors.photos && <p style={{ color: "#ef4444", fontSize: 12, marginTop: 5 }}>⚠️ At least one photo is required</p>}
             </div>
-          </div>
+          )}
 
-          {isCoLiving && (
-            <div style={styles.facilityGroup}>
-              <h4 style={styles.facilityGroupTitle}>🤝 Co-Living Inclusions</h4>
-              <div style={styles.checkboxGrid}>
-                {[
-                  { key: "co_living_fully_furnished", label: "🛋️ Fully Furnished" },
-                  { key: "co_living_food_included", label: "🍽️ Food Included" },
-                  { key: "co_living_wifi_included", label: "📶 Wi-Fi Included" },
-                  { key: "co_living_housekeeping", label: "🧹 Housekeeping" },
-                  { key: "co_living_power_backup", label: "🔋 Power Backup" },
-                  { key: "co_living_maintenance", label: "🔧 Maintenance" }
-                ].map(item => (
-                  <label key={item.key} style={{...styles.checkboxLabel, color: "#2E7D32"}}>
-                    <input type="checkbox" name={item.key} checked={form[item.key]} onChange={handleChange} className="checkbox-modern" />
-                    {item.label}
-                  </label>
-                ))}
+          {/* Step 4: Facilities & Pricing */}
+          {currentStep === 4 && (
+            <div style={styles.section}>
+              {/* Top Facilities Preview */}
+              {topFacilities.length > 0 && (
+                <div style={styles.topFacilitiesSection}>
+                  <h3 style={{...styles.sectionTitle, color: "#fff", margin: 0, fontSize: "16px"}}>⭐ Top Facilities</h3>
+                  <div style={styles.topFacilitiesContainer}>
+                    {topFacilities.map((facility, index) => (
+                      <span key={index} style={styles.topFacilityBadge} className="badge-pulse">
+                        {facility}
+                      </span>
+                    ))}
+                    {topFacilities.length < 5 && (
+                      <span style={styles.topFacilityEmpty}>
+                        + {5 - topFacilities.length} more facilities available (select below)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Room Types & Prices */}
+              <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>🛏️</span> Room Types & Prices</h3>
+              {isToLet ? (
+                <div style={styles.grid}>
+                  <div style={styles.inputGroup}><label style={styles.label}>1 BHK Rent (₹/Month) <span style={{ color: "#ef4444" }}>*</span></label><input type="number" name="price_1bhk" placeholder="e.g., 15000" value={roomRates.price_1bhk} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" required /></div>
+                  {parseInt(form.bhk_type) >= 2 && <div style={styles.inputGroup}><label style={styles.label}>2 BHK Rent (₹/Month)</label><input type="number" name="price_2bhk" placeholder="e.g., 25000" value={roomRates.price_2bhk} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>}
+                  {parseInt(form.bhk_type) >= 3 && <div style={styles.inputGroup}><label style={styles.label}>3 BHK Rent (₹/Month)</label><input type="number" name="price_3bhk" placeholder="e.g., 35000" value={roomRates.price_3bhk} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>}
+                  {parseInt(form.bhk_type) >= 4 && <div style={styles.inputGroup}><label style={styles.label}>4 BHK Rent (₹/Month)</label><input type="number" name="price_4bhk" placeholder="e.g., 45000" value={roomRates.price_4bhk} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>}
+                </div>
+              ) : isCoLiving ? (
+                <div style={styles.ratesGrid}>
+                  <div style={styles.inputGroup}><label style={styles.label}>Co-Living Single Room <span style={{ color: "#ef4444" }}>*</span></label><input type="number" name="co_living_single_room" placeholder="₹" value={roomRates.co_living_single_room} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" required /></div>
+                  <div style={styles.inputGroup}><label style={styles.label}>Co-Living Double Room</label><input type="number" name="co_living_double_room" placeholder="₹" value={roomRates.co_living_double_room} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
+                  <div style={styles.inputGroup}><label style={styles.label}>Co-Living 3 Sharing</label><input type="number" name="coliving_three_sharing" placeholder="₹" value={roomRates.coliving_three_sharing} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
+                  <div style={styles.inputGroup}><label style={styles.label}>Co-Living 4 Sharing</label><input type="number" name="coliving_four_sharing" placeholder="₹" value={roomRates.coliving_four_sharing} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
+                </div>
+              ) : (
+                <div style={styles.ratesGrid}>
+                  <div style={styles.inputGroup}><label style={styles.label}>Single Sharing</label><input type="number" name="single_sharing" placeholder="₹" value={roomRates.single_sharing} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
+                  <div style={styles.inputGroup}><label style={styles.label}>Double Sharing</label><input type="number" name="double_sharing" placeholder="₹" value={roomRates.double_sharing} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
+                  <div style={styles.inputGroup}><label style={styles.label}>Triple Sharing</label><input type="number" name="triple_sharing" placeholder="₹" value={roomRates.triple_sharing} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
+                  <div style={styles.inputGroup}><label style={styles.label}>Four Sharing</label><input type="number" name="four_sharing" placeholder="₹" value={roomRates.four_sharing} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
+                  <div style={styles.inputGroup}><label style={styles.label}>Single Room</label><input type="number" name="single_room" placeholder="₹" value={roomRates.single_room} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
+                  <div style={styles.inputGroup}><label style={styles.label}>Double Room</label><input type="number" name="double_room" placeholder="₹" value={roomRates.double_room} onChange={handleRateChange} style={{...styles.input, ...styles.inputGlow}} min="0" /></div>
+                </div>
+              )}
+
+              {/* Deposit & Maintenance */}
+              <h3 style={{...styles.sectionTitle, marginTop: "24px"}}><span style={styles.sectionIcon}>💰</span> Deposit & Maintenance</h3>
+              <div style={styles.grid}>
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Security Deposit (₹)</label>
+                  <input 
+                    type="number" 
+                    name="security_deposit" 
+                    placeholder="e.g., 10000" 
+                    value={form.security_deposit} 
+                    onChange={handleChange} 
+                    style={{...styles.input, ...styles.inputGlow}} 
+                    min="0" 
+                  />
+                  <small style={styles.helperText}>Refundable security deposit amount</small>
+                </div>
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Maintenance Charges (₹/Month)</label>
+                  <input 
+                    type="number" 
+                    name="maintenance_amount" 
+                    placeholder="e.g., 1000" 
+                    value={form.maintenance_amount} 
+                    onChange={handleChange} 
+                    style={{...styles.input, ...styles.inputGlow}} 
+                    min="0" 
+                  />
+                  <small style={styles.helperText}>Monthly maintenance fee</small>
+                </div>
+              </div>
+
+              {/* Facilities & Amenities */}
+              <h3 style={{...styles.sectionTitle, marginTop: "24px"}}><span style={styles.sectionIcon}>🏠</span> Facilities & Amenities</h3>
+              <p style={styles.note}>Select facilities available at your property. Top 5 will be shown prominently.</p>
+              
+              {!isToLet && (
+                <div style={styles.facilityGroup}>
+                  <h4 style={styles.facilityGroupTitle}>🍽️ Food Options</h4>
+                  <div style={styles.checkboxGrid}>
+                    <label style={styles.checkboxLabel}>
+                      <input type="checkbox" name="food_available" checked={form.food_available} onChange={handleChange} className="checkbox-modern" /> 
+                      Food Available
+                    </label>
+                    {form.food_available && (
+                      <div style={{ gridColumn: "1 / -1", display: "flex", gap: "15px", flexWrap: "wrap", padding: "12px 16px", background: "rgba(99, 102, 241, 0.06)", borderRadius: "10px", border: "1px solid rgba(99, 102, 241, 0.1)" }}>
+                        <div>
+                          <label style={{ marginRight: 10, fontSize: "13px", color: "#475569" }}>Food Type:</label>
+                          <select name="food_type" value={form.food_type} onChange={handleChange} style={{...styles.input, width: 150, display: "inline-block", ...styles.inputGlow}}>
+                            <option value="veg">Vegetarian</option>
+                            <option value="non_veg">Non-Vegetarian</option>
+                            <option value="both">Both</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{ marginRight: 10, fontSize: "13px", color: "#475569" }}>Meals/Day:</label>
+                          <input type="number" name="meals_per_day" placeholder="e.g., 3" value={form.meals_per_day} onChange={handleChange} style={{...styles.input, width: 100, display: "inline-block", ...styles.inputGlow}} min="1" max="4" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div style={styles.facilityGroup}>
+                <h4 style={styles.facilityGroupTitle}>🛏️ Room Furnishings</h4>
+                <div style={styles.checkboxGrid}>
+                  {roomFurnishings.map(item => (
+                    <label key={item.key} style={styles.checkboxLabel}>
+                      <input type="checkbox" name={item.key} checked={form[item.key]} onChange={handleChange} className="checkbox-modern" />
+                      {item.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div style={styles.facilityGroup}>
+                <h4 style={styles.facilityGroupTitle}>🏢 Building Facilities</h4>
+                <div style={styles.checkboxGrid}>
+                  {buildingFacilities.map(item => (
+                    <label key={item.key} style={{...styles.checkboxLabel, fontWeight: form[item.key] ? "500" : "normal"}}>
+                      <input type="checkbox" name={item.key} checked={form[item.key]} onChange={handleChange} className="checkbox-modern" />
+                      {item.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {isCoLiving && (
+                <div style={styles.facilityGroup}>
+                  <h4 style={styles.facilityGroupTitle}>🤝 Co-Living Inclusions</h4>
+                  <div style={styles.checkboxGrid}>
+                    {[
+                      { key: "co_living_fully_furnished", label: "🛋️ Fully Furnished" },
+                      { key: "co_living_food_included", label: "🍽️ Food Included" },
+                      { key: "co_living_wifi_included", label: "📶 Wi-Fi Included" },
+                      { key: "co_living_housekeeping", label: "🧹 Housekeeping" },
+                      { key: "co_living_power_backup", label: "🔋 Power Backup" },
+                      { key: "co_living_maintenance", label: "🔧 Maintenance" }
+                    ].map(item => (
+                      <label key={item.key} style={{...styles.checkboxLabel, color: "#065f46"}}>
+                        <input type="checkbox" name={item.key} checked={form[item.key]} onChange={handleChange} className="checkbox-modern" />
+                        {item.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={styles.facilityGroup}>
+                <h4 style={styles.facilityGroupTitle}>💧 Water Source</h4>
+                <select name="water_type" value={form.water_type} onChange={handleChange} style={{...styles.input, maxWidth: "300px", ...styles.inputGlow, ...styles.select}}>
+                  <option value="borewell">Borewell</option>
+                  <option value="kaveri">Kaveri</option>
+                  <option value="both">Both</option>
+                  <option value="municipal">Municipal</option>
+                </select>
               </div>
             </div>
           )}
 
-          <div style={styles.facilityGroup}>
-            <h4 style={styles.facilityGroupTitle}>💧 Water Source</h4>
-            <select name="water_type" value={form.water_type} onChange={handleChange} style={{...styles.input, maxWidth: "300px", ...styles.inputGlow, ...styles.select}}>
-              <option value="borewell">Borewell</option>
-              <option value="kaveri">Kaveri</option>
-              <option value="both">Both</option>
-              <option value="municipal">Municipal</option>
-            </select>
-          </div>
+          {/* Step 5: Contact */}
+          {currentStep === 5 && (
+            <div style={styles.section}>
+              <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>📞</span> Contact Details</h3>
+              <div style={styles.grid}>
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Contact Person <span style={{ color: "#ef4444" }}>*</span></label>
+                  <input 
+                    name="contact_person" 
+                    placeholder="e.g., Owner/Manager Name" 
+                    value={form.contact_person} 
+                    onChange={handleChange} 
+                    style={{...styles.input, ...styles.inputGlow, ...getErrorStyle("contact_person")}} 
+                    required 
+                  />
+                </div>
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Contact Email</label>
+                  <input 
+                    type="email" 
+                    name="contact_email" 
+                    placeholder="contact@example.com" 
+                    value={form.contact_email} 
+                    onChange={handleChange} 
+                    style={{...styles.input, ...styles.inputGlow, ...getErrorStyle("contact_email")}} 
+                  />
+                </div>
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Contact Phone <span style={{ color: "#ef4444" }}>*</span></label>
+                  <input 
+                    type="tel" 
+                    name="contact_phone" 
+                    placeholder="Enter 10-digit phone number" 
+                    value={form.contact_phone} 
+                    onChange={handleChange} 
+                    style={{...styles.input, ...styles.inputGlow, ...getErrorStyle("contact_phone")}} 
+                    required 
+                    pattern="[0-9]{10,15}" 
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Contact Information */}
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}><span style={styles.sectionIcon}>📞</span> Contact Details</h3>
-          <div style={styles.grid}>
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Contact Person <span style={{ color: "#ff6b6b" }}>*</span></label>
-              <input 
-                name="contact_person" 
-                placeholder="e.g., Owner/Manager Name" 
-                value={form.contact_person} 
-                onChange={handleChange} 
-                style={{...styles.input, ...styles.inputGlow, ...getErrorStyle("contact_person")}} 
-                required 
-              />
-            </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Contact Email</label>
-              <input 
-                type="email" 
-                name="contact_email" 
-                placeholder="contact@example.com" 
-                value={form.contact_email} 
-                onChange={handleChange} 
-                style={{...styles.input, ...styles.inputGlow, ...getErrorStyle("contact_email")}} 
-              />
-            </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Contact Phone <span style={{ color: "#ff6b6b" }}>*</span></label>
-              <input 
-                type="tel" 
-                name="contact_phone" 
-                placeholder="Enter 10-digit phone number" 
-                value={form.contact_phone} 
-                onChange={handleChange} 
-                style={{...styles.input, ...styles.inputGlow, ...getErrorStyle("contact_phone")}} 
-                required 
-                pattern="[0-9]{10,15}" 
-              />
-            </div>
-          </div>
+        {/* Navigation Buttons */}
+        <div style={styles.navigation}>
+          {currentStep > 1 && (
+            <button onClick={handlePrevStep} style={{...styles.navButton, ...styles.navButtonBack}}>
+              ← Back
+            </button>
+          )}
+          {currentStep < 5 ? (
+            <button onClick={handleNextStep} style={{...styles.navButton, ...styles.btnGradient, ...styles.navButtonNext}}>
+              Next →
+            </button>
+          ) : (
+            <button onClick={handleSubmit} disabled={isSubmitDisabled} style={{...styles.navButton, ...styles.btnGradient, ...styles.navButtonNext, ...(isSubmitDisabled ? styles.submitBtnDisabled : {})}}>
+              {loading ? "⏳ Creating..." : `🏠 Create ${isToLet ? 'House/Flat' : 'Property'}`}
+            </button>
+          )}
         </div>
-
-        {/* Create Listing Button */}
-        <button onClick={handleSubmit} disabled={isSubmitDisabled} style={{...styles.submitBtn, ...styles.btnGradient, ...(isSubmitDisabled ? styles.submitBtnDisabled : {})}}>
-          {loading ? "⏳ Creating Property..." : `🏠 Create ${isToLet ? 'House/Flat' : 'Property'} Listing`}
-        </button>
         
-        <p style={{ textAlign: "center", marginTop: "15px", fontSize: "13px", color: "#888" }}>
+        <p style={{ textAlign: "center", marginTop: "15px", fontSize: "13px", color: "#94a3b8" }}>
           By clicking "Create Listing", you agree to our Terms of Service and Privacy Policy
         </p>
       </div>
@@ -1113,7 +1211,7 @@ function OwnerAddPG() {
         <div style={styles.mapModalOverlay}>
           <div style={{...styles.mapModal, ...styles.cardTrendy}}>
             <div style={styles.mapHeader}>
-              <h3 style={{ margin: 0, color: "#2d3436" }}>🗺️ Select Property Location</h3>
+              <h3 style={{ margin: 0, color: "#1e293b" }}>🗺️ Select Property Location</h3>
               <div style={styles.mapControls}>
                 <button onClick={getUserCurrentLocation} style={{...styles.currentLocationButton, ...styles.btnGradient}} disabled={gettingLocation || mapLoading}>{gettingLocation ? "📍 Getting Location..." : "📍 Use My Location"}</button>
                 <div style={styles.mapSearch}>
@@ -1127,7 +1225,7 @@ function OwnerAddPG() {
               {(mapLoading || gettingLocation) && (
                 <div style={styles.loadingOverlay}>
                   <div style={styles.spinner}></div>
-                  <p style={{ marginTop: "12px", color: "#555" }}>{gettingLocation ? "Getting your location..." : "Loading map..."}</p>
+                  <p style={{ marginTop: "12px", color: "#475569" }}>{gettingLocation ? "Getting your location..." : "Loading map..."}</p>
                 </div>
               )}
               <MapContainer center={[parseFloat(selectedLocation.lat) || 12.9716, parseFloat(selectedLocation.lng) || 77.5946]} zoom={13} style={styles.leafletMap} ref={mapRef}>
@@ -1136,7 +1234,7 @@ function OwnerAddPG() {
                 <LocationMarker onLocationSelect={handleLocationSelect} selectedLocation={selectedLocation} />
               </MapContainer>
               <div style={styles.locationPreview}>
-                <h4 style={{ margin: "0 0 8px 0", color: "#2d3436" }}>Selected Location Details:</h4>
+                <h4 style={{ margin: "0 0 8px 0", color: "#1e293b" }}>Selected Location Details:</h4>
                 {mapLoading ? <p>Fetching address details...</p> : (
                   <>
                     <p><strong>Coordinates:</strong> {selectedLocation.lat}, {selectedLocation.lng}</p>
@@ -1163,7 +1261,7 @@ function OwnerAddPG() {
 const styles = {
   container: { 
     minHeight: "100vh", 
-    background: "linear-gradient(135deg, #0c0d1e 0%, #1a1a2e 50%, #16213e 100%)", 
+    background: "linear-gradient(135deg, #e0e7ff 0%, #f0e6ff 50%, #fce7f3 100%)", 
     padding: "20px", 
     display: "flex", 
     justifyContent: "center", 
@@ -1171,15 +1269,15 @@ const styles = {
     fontFamily: "'Inter', -apple-system, sans-serif"
   },
   card: { 
-    background: "rgba(255, 255, 255, 0.08)",
+    background: "rgba(255, 255, 255, 0.85)",
     backdropFilter: "blur(20px)",
     WebkitBackdropFilter: "blur(20px)",
-    border: "1px solid rgba(255, 255, 255, 0.12)",
+    border: "1px solid rgba(255, 255, 255, 0.5)",
     width: "100%", 
-    maxWidth: "1200px", 
+    maxWidth: "900px", 
     padding: "35px", 
     borderRadius: "24px", 
-    boxShadow: "0 25px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08)", 
+    boxShadow: "0 25px 60px rgba(99, 102, 241, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.8)", 
     margin: "20px 0",
     position: "relative",
     overflow: "hidden"
@@ -1191,52 +1289,98 @@ const styles = {
     display: "inline-flex",
     alignItems: "center",
     gap: "8px",
-    background: "rgba(108, 92, 231, 0.2)",
+    background: "rgba(99, 102, 241, 0.12)",
     padding: "6px 16px",
     borderRadius: "20px",
     marginBottom: "16px",
-    border: "1px solid rgba(108, 92, 231, 0.2)"
+    border: "1px solid rgba(99, 102, 241, 0.15)"
   },
   badgeIcon: { fontSize: "16px" },
-  badgeText: { fontSize: "12px", fontWeight: "600", color: "#a29bfe", textTransform: "uppercase", letterSpacing: "0.5px" },
+  badgeText: { fontSize: "12px", fontWeight: "600", color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.5px" },
   title: { 
     textAlign: "center", 
-    marginBottom: "20px", 
-    color: "#fff", 
-    fontSize: "32px", 
+    marginBottom: "28px", 
+    color: "#1e293b", 
+    fontSize: "28px", 
     fontWeight: "700",
-    background: "linear-gradient(135deg, #a29bfe, #fd79a8)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-    backgroundClip: "text",
     letterSpacing: "-0.5px"
   },
-  premiumBanner: { 
-    background: "linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 165, 0, 0.1))",
-    border: "1px solid rgba(255, 215, 0, 0.2)",
-    color: "#ffd700", 
-    padding: "16px 20px", 
-    borderRadius: "12px", 
-    textAlign: "center", 
-    marginBottom: "30px", 
-    fontWeight: "500", 
-    fontSize: "15px",
-    backdropFilter: "blur(10px)",
+  stepProgress: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: "32px",
+    padding: "0 8px",
+    gap: "4px"
+  },
+  stepItem: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "6px",
+    flex: 1,
+    minWidth: "0"
+  },
+  stepCircle: {
+    width: "36px",
+    height: "36px",
+    borderRadius: "50%",
+    background: "#e2e8f0",
+    color: "#64748b",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: "10px",
-    flexWrap: "wrap"
+    fontSize: "14px",
+    fontWeight: "600",
+    transition: "all 0.3s ease",
+    border: "2px solid transparent"
+  },
+  stepCircleActive: {
+    background: "#6366f1",
+    color: "#fff",
+    border: "2px solid #6366f1",
+    transform: "scale(1.1)",
+    boxShadow: "0 0 20px rgba(99, 102, 241, 0.3)"
+  },
+  stepCircleCompleted: {
+    background: "#10b981",
+    color: "#fff",
+    border: "2px solid #10b981"
+  },
+  stepLabel: {
+    fontSize: "11px",
+    fontWeight: "500",
+    color: "#94a3b8",
+    textAlign: "center",
+    whiteSpace: "nowrap",
+    transition: "color 0.3s ease"
+  },
+  stepLabelActive: {
+    color: "#6366f1",
+    fontWeight: "600"
+  },
+  stepLabelCompleted: {
+    color: "#10b981"
+  },
+  stepLine: {
+    flex: 1,
+    height: "2px",
+    background: "#e2e8f0",
+    margin: "0 4px",
+    marginBottom: "20px",
+    transition: "background 0.3s ease"
+  },
+  stepLineCompleted: {
+    background: "#10b981"
   },
   section: { 
-    marginBottom: "32px", 
-    paddingBottom: "24px", 
-    borderBottom: "1px solid rgba(255, 255, 255, 0.06)" 
+    marginBottom: "8px", 
+    animation: "slideIn 0.4s ease-out"
   },
   sectionTitle: { 
     fontSize: "18px", 
     fontWeight: "600", 
-    color: "#e0e0e0", 
+    color: "#1e293b", 
     marginBottom: "18px", 
     display: "flex", 
     alignItems: "center", 
@@ -1245,7 +1389,7 @@ const styles = {
   sectionIcon: { fontSize: "20px" },
   note: { 
     fontSize: "14px", 
-    color: "rgba(255,255,255,0.6)", 
+    color: "#64748b", 
     marginBottom: "15px", 
     fontStyle: "italic" 
   },
@@ -1257,7 +1401,7 @@ const styles = {
   },
   ratesGrid: { 
     display: "grid", 
-    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", 
     gap: "16px" 
   },
   inputGroup: { 
@@ -1267,21 +1411,21 @@ const styles = {
   label: {
     fontSize: "13px",
     fontWeight: "500",
-    color: "rgba(255,255,255,0.8)",
+    color: "#334155",
     marginBottom: "6px",
     letterSpacing: "0.3px"
   },
   input: { 
     padding: "12px 16px", 
-    background: "rgba(255, 255, 255, 0.06)",
-    border: "1px solid rgba(255, 255, 255, 0.1)", 
+    background: "rgba(255, 255, 255, 0.8)",
+    border: "1px solid #e2e8f0", 
     borderRadius: "10px", 
     fontSize: "14px", 
     outline: "none", 
     transition: "all 0.3s ease", 
     width: "100%", 
     boxSizing: "border-box",
-    color: "#fff",
+    color: "#1e293b",
     backdropFilter: "blur(4px)"
   },
   inputGlow: {
@@ -1289,7 +1433,7 @@ const styles = {
   },
   select: {
     appearance: "none",
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='rgba(255,255,255,0.5)' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
     backgroundRepeat: "no-repeat",
     backgroundPosition: "right 12px center",
     paddingRight: "36px",
@@ -1297,8 +1441,8 @@ const styles = {
   },
   textarea: { 
     padding: "12px 16px", 
-    background: "rgba(255, 255, 255, 0.06)",
-    border: "1px solid rgba(255, 255, 255, 0.1)", 
+    background: "rgba(255, 255, 255, 0.8)",
+    border: "1px solid #e2e8f0", 
     borderRadius: "10px", 
     fontSize: "14px", 
     outline: "none", 
@@ -1306,12 +1450,12 @@ const styles = {
     resize: "vertical", 
     fontFamily: "inherit", 
     boxSizing: "border-box",
-    color: "#fff",
+    color: "#1e293b",
     transition: "all 0.3s ease"
   },
   helperText: { 
     fontSize: "11px", 
-    color: "rgba(255,255,255,0.4)", 
+    color: "#94a3b8", 
     marginTop: "4px" 
   },
   locationButtons: { 
@@ -1353,16 +1497,16 @@ const styles = {
     transition: "all 0.3s ease"
   },
   btnGradient: {
-    background: "linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%)",
+    background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
     transition: "all 0.3s ease",
-    boxShadow: "0 4px 15px rgba(108, 92, 231, 0.3)"
+    boxShadow: "0 4px 15px rgba(99, 102, 241, 0.3)"
   },
   locationPreview: { 
-    background: "rgba(255, 255, 255, 0.06)",
+    background: "rgba(255, 255, 255, 0.7)",
     padding: "16px 20px", 
     borderRadius: "12px", 
     marginTop: "10px", 
-    borderLeft: "4px solid #6c5ce7",
+    borderLeft: "4px solid #6366f1",
     backdropFilter: "blur(4px)"
   },
   locationHeader: { 
@@ -1378,9 +1522,9 @@ const styles = {
     gap: "8px" 
   },
   editLocationBtn: { 
-    background: "rgba(108, 92, 231, 0.2)", 
-    color: "#a29bfe", 
-    border: "1px solid rgba(108, 92, 231, 0.2)", 
+    background: "rgba(99, 102, 241, 0.1)", 
+    color: "#6366f1", 
+    border: "1px solid rgba(99, 102, 241, 0.2)", 
     padding: "6px 14px", 
     borderRadius: "6px", 
     cursor: "pointer", 
@@ -1391,9 +1535,9 @@ const styles = {
     transition: "all 0.2s"
   },
   removeLocationBtn: { 
-    background: "rgba(255, 107, 107, 0.15)", 
-    color: "#ff6b6b", 
-    border: "1px solid rgba(255, 107, 107, 0.2)", 
+    background: "rgba(239, 68, 68, 0.1)", 
+    color: "#ef4444", 
+    border: "1px solid rgba(239, 68, 68, 0.2)", 
     padding: "6px 14px", 
     borderRadius: "6px", 
     cursor: "pointer", 
@@ -1405,44 +1549,44 @@ const styles = {
   },
   locationDetails: { 
     fontSize: "14px", 
-    color: "rgba(255,255,255,0.75)" 
+    color: "#475569" 
   },
   locationWarning: { 
-    background: "rgba(255, 215, 0, 0.1)", 
-    border: "1px solid rgba(255, 215, 0, 0.2)", 
-    color: "#ffd700", 
+    background: "rgba(234, 179, 8, 0.1)", 
+    border: "1px solid rgba(234, 179, 8, 0.2)", 
+    color: "#854d0e", 
     padding: "12px 16px", 
     borderRadius: "8px", 
     marginTop: "10px", 
     fontSize: "14px" 
   },
   topFacilitiesSection: { 
-    marginBottom: "30px", 
-    padding: "20px 24px", 
-    background: "linear-gradient(135deg, rgba(108, 92, 231, 0.15), rgba(162, 155, 254, 0.08))",
-    borderRadius: "14px",
-    border: "1px solid rgba(108, 92, 231, 0.12)"
+    marginBottom: "24px", 
+    padding: "16px 20px", 
+    background: "linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.05))",
+    borderRadius: "12px",
+    border: "1px solid rgba(99, 102, 241, 0.1)"
   },
   topFacilitiesContainer: { 
     display: "flex", 
     flexWrap: "wrap", 
-    gap: "10px", 
+    gap: "8px", 
     alignItems: "center",
-    marginTop: "10px"
+    marginTop: "8px"
   },
   topFacilityBadge: { 
-    background: "linear-gradient(135deg, #6c5ce7, #a29bfe)", 
+    background: "linear-gradient(135deg, #6366f1, #8b5cf6)", 
     color: "white", 
-    padding: "6px 16px", 
+    padding: "4px 14px", 
     borderRadius: "20px", 
-    fontSize: "13px", 
+    fontSize: "12px", 
     fontWeight: "500", 
-    boxShadow: "0 4px 15px rgba(108, 92, 231, 0.3)",
+    boxShadow: "0 2px 10px rgba(99, 102, 241, 0.25)",
     letterSpacing: "0.3px"
   },
   topFacilityEmpty: { 
-    color: "rgba(255,255,255,0.4)", 
-    fontSize: "13px", 
+    color: "#94a3b8", 
+    fontSize: "12px", 
     fontStyle: "italic" 
   },
   facilityGroup: { 
@@ -1451,15 +1595,15 @@ const styles = {
   facilityGroupTitle: { 
     fontSize: "14px", 
     fontWeight: "600", 
-    color: "rgba(255,255,255,0.7)", 
-    marginBottom: "12px", 
+    color: "#475569", 
+    marginBottom: "10px", 
     paddingBottom: "6px", 
-    borderBottom: "1px solid rgba(255, 255, 255, 0.06)" 
+    borderBottom: "1px solid #e2e8f0" 
   },
   checkboxGrid: { 
     display: "grid", 
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", 
-    gap: "8px" 
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
+    gap: "6px" 
   },
   checkboxLabel: { 
     display: "flex", 
@@ -1467,11 +1611,11 @@ const styles = {
     gap: "10px", 
     cursor: "pointer", 
     fontSize: "14px", 
-    color: "rgba(255,255,255,0.7)", 
-    padding: "8px 12px", 
+    color: "#475569", 
+    padding: "6px 12px", 
     borderRadius: "8px", 
     transition: "all 0.2s",
-    background: "rgba(255, 255, 255, 0.03)"
+    background: "rgba(255, 255, 255, 0.3)"
   },
   fileUpload: { 
     marginBottom: "15px" 
@@ -1499,22 +1643,22 @@ const styles = {
     display: "flex", 
     alignItems: "center", 
     gap: "10px", 
-    background: "rgba(255, 255, 255, 0.06)", 
-    padding: "8px 14px", 
+    background: "rgba(255, 255, 255, 0.6)", 
+    padding: "6px 12px", 
     borderRadius: "8px", 
     fontSize: "13px", 
-    border: "1px solid rgba(255, 255, 255, 0.06)" 
+    border: "1px solid #e2e8f0" 
   },
   coverPhotoItem: { 
-    background: "rgba(255, 215, 0, 0.08)", 
-    border: "2px solid #ffd700" 
+    background: "rgba(250, 204, 21, 0.1)", 
+    border: "2px solid #facc15" 
   },
   photoName: { 
     maxWidth: "150px", 
     overflow: "hidden", 
     textOverflow: "ellipsis", 
     whiteSpace: "nowrap",
-    color: "rgba(255,255,255,0.7)"
+    color: "#475569"
   },
   coverPhotoBtn: { 
     background: "none", 
@@ -1522,7 +1666,7 @@ const styles = {
     cursor: "pointer", 
     fontSize: "18px", 
     padding: "2px 6px", 
-    color: "rgba(255,255,255,0.3)" 
+    color: "#cbd5e1" 
   },
   coverPhotoBtnActive: { 
     background: "none", 
@@ -1530,11 +1674,11 @@ const styles = {
     cursor: "pointer", 
     fontSize: "18px", 
     padding: "2px 6px", 
-    color: "#ffd700" 
+    color: "#facc15" 
   },
   removePhotoBtn: { 
-    background: "rgba(255, 107, 107, 0.15)", 
-    color: "#ff6b6b", 
+    background: "rgba(239, 68, 68, 0.1)", 
+    color: "#ef4444", 
     border: "none", 
     borderRadius: "50%", 
     width: "24px", 
@@ -1548,21 +1692,35 @@ const styles = {
   },
   photoCount: { 
     fontSize: "13px", 
-    color: "rgba(255,255,255,0.5)", 
+    color: "#94a3b8", 
     marginTop: "10px" 
   },
-  submitBtn: { 
-    width: "100%", 
-    padding: "16px", 
-    color: "white", 
-    border: "none", 
-    borderRadius: "12px", 
-    fontSize: "18px", 
-    fontWeight: "600", 
-    cursor: "pointer", 
-    transition: "all 0.3s ease", 
-    marginTop: "10px",
-    letterSpacing: "0.5px"
+  navigation: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "12px",
+    marginTop: "24px",
+    paddingTop: "20px",
+    borderTop: "1px solid #e2e8f0"
+  },
+  navButton: {
+    padding: "12px 32px",
+    border: "none",
+    borderRadius: "10px",
+    fontSize: "15px",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+    minWidth: "120px"
+  },
+  navButtonBack: {
+    background: "#f1f5f9",
+    color: "#475569",
+    border: "1px solid #e2e8f0"
+  },
+  navButtonNext: {
+    color: "white",
+    marginLeft: "auto"
   },
   submitBtnDisabled: { 
     opacity: "0.5", 
@@ -1575,7 +1733,7 @@ const styles = {
     left: 0, 
     right: 0, 
     bottom: 0, 
-    background: "rgba(0,0,0,0.85)", 
+    background: "rgba(0,0,0,0.5)", 
     display: "flex", 
     justifyContent: "center", 
     alignItems: "center", 
@@ -1583,19 +1741,19 @@ const styles = {
     backdropFilter: "blur(8px)"
   },
   mapModal: { 
-    background: "rgba(255, 255, 255, 0.06)",
+    background: "rgba(255, 255, 255, 0.95)",
     backdropFilter: "blur(20px)",
-    border: "1px solid rgba(255, 255, 255, 0.1)",
+    border: "1px solid rgba(255, 255, 255, 0.3)",
     borderRadius: "16px", 
     width: "95%", 
     maxWidth: "1000px", 
     maxHeight: "95vh", 
     overflow: "hidden", 
-    boxShadow: "0 30px 80px rgba(0,0,0,0.6)" 
+    boxShadow: "0 30px 80px rgba(0,0,0,0.2)" 
   },
   mapHeader: { 
     padding: "16px 24px", 
-    borderBottom: "1px solid rgba(255, 255, 255, 0.06)", 
+    borderBottom: "1px solid #e2e8f0", 
     display: "flex", 
     justifyContent: "space-between", 
     alignItems: "center", 
@@ -1632,13 +1790,13 @@ const styles = {
   searchInput: { 
     flex: "1", 
     padding: "10px 16px", 
-    background: "rgba(255, 255, 255, 0.06)",
-    border: "1px solid rgba(255, 255, 255, 0.1)", 
+    background: "rgba(255, 255, 255, 0.8)",
+    border: "1px solid #e2e8f0", 
     borderRadius: "8px", 
     fontSize: "14px", 
     outline: "none", 
     minWidth: "200px",
-    color: "#fff",
+    color: "#1e293b",
     transition: "all 0.3s ease"
   },
   searchButton: { 
@@ -1657,11 +1815,11 @@ const styles = {
     transition: "all 0.3s ease"
   },
   closeBtn: { 
-    background: "rgba(255, 255, 255, 0.06)", 
-    border: "1px solid rgba(255, 255, 255, 0.06)", 
+    background: "rgba(0,0,0,0.05)", 
+    border: "none", 
     fontSize: "20px", 
     cursor: "pointer", 
-    color: "rgba(255,255,255,0.5)", 
+    color: "#64748b", 
     width: "36px", 
     height: "36px", 
     display: "flex", 
@@ -1684,7 +1842,7 @@ const styles = {
     left: 0, 
     right: 0, 
     bottom: 0, 
-    background: "rgba(0,0,0,0.6)", 
+    background: "rgba(255,255,255,0.8)", 
     display: "flex", 
     flexDirection: "column", 
     justifyContent: "center", 
@@ -1693,8 +1851,8 @@ const styles = {
     backdropFilter: "blur(4px)"
   },
   spinner: { 
-    border: "4px solid rgba(255,255,255,0.1)", 
-    borderTop: "4px solid #a29bfe", 
+    border: "4px solid #e2e8f0", 
+    borderTop: "4px solid #6366f1", 
     borderRadius: "50%", 
     width: "40px", 
     height: "40px", 
@@ -1705,7 +1863,7 @@ const styles = {
     display: "flex", 
     gap: "12px", 
     justifyContent: "center", 
-    borderTop: "1px solid rgba(255, 255, 255, 0.06)",
+    borderTop: "1px solid #e2e8f0",
     flexWrap: "wrap"
   },
   confirmButton: { 
@@ -1740,7 +1898,7 @@ const styles = {
     left: 0, 
     right: 0, 
     bottom: 0, 
-    background: "rgba(0,0,0,0.85)", 
+    background: "rgba(0,0,0,0.5)", 
     display: "flex", 
     justifyContent: "center", 
     alignItems: "center", 
@@ -1748,19 +1906,19 @@ const styles = {
     backdropFilter: "blur(8px)"
   },
   manualModal: { 
-    background: "rgba(255, 255, 255, 0.06)",
+    background: "rgba(255, 255, 255, 0.95)",
     backdropFilter: "blur(20px)",
-    border: "1px solid rgba(255, 255, 255, 0.1)",
+    border: "1px solid rgba(255, 255, 255, 0.3)",
     borderRadius: "16px", 
     width: "90%", 
     maxWidth: "800px", 
     maxHeight: "90vh", 
     overflow: "auto", 
-    boxShadow: "0 30px 80px rgba(0,0,0,0.6)" 
+    boxShadow: "0 30px 80px rgba(0,0,0,0.2)" 
   },
   manualHeader: { 
     padding: "20px 24px", 
-    borderBottom: "1px solid rgba(255, 255, 255, 0.06)", 
+    borderBottom: "1px solid #e2e8f0", 
     display: "flex", 
     justifyContent: "space-between", 
     alignItems: "center" 
@@ -1773,7 +1931,7 @@ const styles = {
     display: "flex", 
     gap: "12px", 
     justifyContent: "center", 
-    borderTop: "1px solid rgba(255, 255, 255, 0.06)",
+    borderTop: "1px solid #e2e8f0",
     flexWrap: "wrap"
   },
   saveButton: { 
