@@ -1009,32 +1009,6 @@ function OwnerAddPG() {
           </div>
         </div>
 
-        {/* Additional Details */}
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>📝 Additional Details</h3>
-          <div style={styles.grid}>
-            <div style={styles.inputGroup}>
-              <label>Total {isToLet ? "Properties" : "Rooms"}</label>
-              <input type="number" name="total_rooms" placeholder={isToLet ? "e.g., 1" : "e.g., 10"} value={form.total_rooms} onChange={handleChange} style={styles.input} min="1" />
-            </div>
-            <div style={styles.inputGroup}>
-              <label>Available {isToLet ? "Properties" : "Rooms"}</label>
-              <input type="number" name="available_rooms" placeholder={isToLet ? "e.g., 1" : "e.g., 5"} value={form.available_rooms} onChange={handleChange} style={styles.input} min="0" />
-            </div>
-            <div style={styles.inputGroup}>
-              <label>Notice Period</label>
-              <select name="notice_period" value={form.notice_period} onChange={handleChange} style={styles.input}>
-                <option value="1">1 Month</option>
-                <option value="2">2 Months</option>
-                <option value="3">3 Months</option>
-              </select>
-            </div>
-          </div>
-          <div style={styles.inputGroup}>
-            <label>Description</label>
-            <textarea name="description" placeholder={isToLet ? "Describe your house/flat, bedrooms, bathrooms, nearby facilities..." : "Describe your property, amenities, nearby facilities..."} value={form.description} onChange={handleChange} style={styles.textarea} rows="4" />
-          </div>
-        </div>
 
         {/* Contact Information */}
         <div style={styles.section}>
