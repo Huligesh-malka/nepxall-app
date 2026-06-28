@@ -7,11 +7,8 @@ import {
 import {
   Send as SendIcon,
   VerifiedUser as VerifiedUserIcon,
-  ShieldOutlined,
   ArrowBackRounded,
   LockOutlined,
-  CheckCircle as CheckCircleIcon,
-  Favorite as FavoriteIcon,
 } from "@mui/icons-material";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -38,26 +35,6 @@ const BRAND = {
 // ===== ANIMATED SCENE COMPONENT =====
 const AnimatedScene = () => {
   const containerRef = useRef(null);
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-
-  useEffect(() => {
-    if (containerRef.current) {
-      setDimensions({
-        width: containerRef.current.offsetWidth,
-        height: containerRef.current.offsetHeight,
-      });
-    }
-    const handleResize = () => {
-      if (containerRef.current) {
-        setDimensions({
-          width: containerRef.current.offsetWidth,
-          height: containerRef.current.offsetHeight,
-        });
-      }
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   return (
     <Box
@@ -287,19 +264,22 @@ const AnimatedScene = () => {
             <path d="M70,52 L70,70 Q70,72 68,72" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="2" fill="none" />
           </g>
 
-          {/* Walk animation */}
-          <animateTransform attributeName="transform" type="translate" values="0,0; 30,0; 60,0; 90,0; 60,0; 30,0; 0,0" dur="4.2s" repeatCount="indefinite" />
+          {/* Walk animation - moves from left to right and pauses at PG */}
+          <animateTransform attributeName="transform" type="translate" values="0,0; 30,0; 60,0; 90,0; 90,0; 60,0; 30,0; 0,0" dur="4.2s" repeatCount="indefinite" />
         </g>
       </svg>
 
       <style>{`
         @keyframes walkCycle {
           0% { transform: translateX(0); }
-          15% { transform: translateX(10px); }
-          30% { transform: translateX(20px); }
-          45% { transform: translateX(30px); }
-          55% { transform: translateX(35px); }
-          70% { transform: translateX(30px); }
+          10% { transform: translateX(10px); }
+          20% { transform: translateX(20px); }
+          30% { transform: translateX(30px); }
+          40% { transform: translateX(40px); }
+          50% { transform: translateX(45px); }
+          55% { transform: translateX(45px); }
+          65% { transform: translateX(40px); }
+          75% { transform: translateX(30px); }
           85% { transform: translateX(15px); }
           100% { transform: translateX(0); }
         }
@@ -605,94 +585,6 @@ const PhoneLogin = () => {
 
               {/* Animated Scene */}
               <AnimatedScene />
-
-              {/* Title - matches image */}
-              <Typography
-                sx={{
-                  fontSize: { xs: 24, sm: 28 },
-                  fontWeight: 700,
-                  letterSpacing: "-0.02em",
-                  mb: 0.5,
-                  textAlign: "center",
-                }}
-              >
-                Find your <span style={{
-                  background: `linear-gradient(90deg, ${BRAND.accent} 0%, #4CAF50 100%)`,
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                }}>perfect PG</span>
-              </Typography>
-
-              <Typography
-                sx={{
-                  color: BRAND.textDim,
-                  fontSize: 14,
-                  mb: 2,
-                  textAlign: "center",
-                }}
-              >
-                Comfortable stays. Verified owners.
-              </Typography>
-
-              {/* Feature Tags */}
-              <Box sx={{ display: "flex", gap: 1.5, justifyContent: "center", flexWrap: "wrap", mb: 3 }}>
-                {[
-                  { icon: <CheckCircleIcon />, label: "Verified PGs" },
-                  { icon: <ShieldOutlined />, label: "Safe & Secure" },
-                  { icon: <FavoriteIcon />, label: "Loved by Students" },
-                ].map((feature, idx) => (
-                  <Box
-                    key={feature.label}
-                    sx={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 0.8,
-                      padding: "4px 12px",
-                      borderRadius: "999px",
-                      background: alpha(BRAND.accent, 0.08),
-                      border: `1px solid ${alpha(BRAND.accent, 0.15)}`,
-                    }}
-                  >
-                    <Box sx={{ color: BRAND.accent, display: "flex", fontSize: 14 }}>
-                      {feature.icon}
-                    </Box>
-                    <Typography sx={{ fontSize: 11, fontWeight: 500, color: BRAND.text }}>
-                      {feature.label}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-
-              {/* Step indicator */}
-              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 2, mb: 2 }}>
-                <Typography
-                  sx={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: BRAND.textDim,
-                    letterSpacing: "0.05em",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  STEP {step} OF 2
-                </Typography>
-                <Box sx={{ display: "flex", gap: 0.8 }}>
-                  {[1, 2].map((s) => (
-                    <Box
-                      key={s}
-                      sx={{
-                        width: s === step ? 32 : 20,
-                        height: 4,
-                        borderRadius: 2,
-                        bgcolor: s <= step ? BRAND.accent : alpha(BRAND.text, 0.12),
-                        transition: "all 0.4s ease",
-                      }}
-                    />
-                  ))}
-                </Box>
-              </Box>
-
-              <Box sx={{ borderTop: `1px solid ${BRAND.border}`, pt: 3 }} />
 
               <AnimatePresence mode="wait">
                 {step === 1 && (
