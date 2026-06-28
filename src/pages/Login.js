@@ -19,20 +19,21 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const BRAND = {
-  bg: "#0A0B10",
-  surface: "#13141B",
-  surfaceHi: "#1B1D27",
-  border: "rgba(255,255,255,0.08)",
-  text: "#EDEEF2",
-  textDim: "#8A8FA3",
-  accent: "#7CFFB2",
-  accent2: "#FF7A59",
-  accent3: "#7CA8FF",
+  bg: "#0B0C12",
+  surface: "#17191F",
+  surfaceHi: "#20232B",
+  border: "rgba(99,244,163,0.35)",
+  text: "#FFFFFF",
+  textDim: "#8E94A4",
+  accent: "#63F4A3",
+  accentTop: "#7DF6AF",
+  accentBottom: "#63F4A3",
+  accentGlow: "rgba(99,244,163,0.25)",
   danger: "#FF5A6E",
   cardBg: "rgba(255,255,255,0.03)",
 };
 
-// ===== ANIMATED SCENE COMPONENT - WALKING BOY (Second Image Style) =====
+// ===== ANIMATED 3D SCENE - Pixar Style =====
 const AnimatedScene = () => {
   const containerRef = useRef(null);
 
@@ -41,206 +42,260 @@ const AnimatedScene = () => {
       ref={containerRef}
       sx={{
         width: "100%",
-        height: 180,
-        borderRadius: "16px",
+        height: 200,
+        borderRadius: "20px",
         overflow: "hidden",
         background: `linear-gradient(180deg, #0F1923 0%, #1A2A3A 40%, #2D4A5E 70%, #3D5A6B 100%)`,
         position: "relative",
-        border: `1px solid ${alpha(BRAND.accent, 0.1)}`,
-        boxShadow: `inset 0 0 60px ${alpha("#000", 0.3)}`,
-        mb: 2,
+        border: `1px solid ${BRAND.border}`,
+        boxShadow: `inset 0 0 60px ${alpha("#000", 0.4)}, 0 0 40px ${BRAND.accentGlow}`,
+        mb: 2.5,
       }}
     >
-      {/* Ground */}
+      {/* Ground with soft shadow */}
       <Box
         sx={{
           position: "absolute",
           bottom: 0,
           left: 0,
           right: 0,
-          height: "25%",
-          background: `linear-gradient(180deg, ${alpha("#2D4A5E", 0.8)} 0%, #1A2A3A 100%)`,
-          borderTop: `2px solid ${alpha(BRAND.accent, 0.15)}`,
+          height: "28%",
+          background: `linear-gradient(180deg, ${alpha("#2D4A5E", 0.6)} 0%, #1A2A3A 100%)`,
+          borderTop: `2px solid ${alpha(BRAND.accent, 0.2)}`,
+        }}
+      />
+
+      {/* Soft glow behind building */}
+      <Box
+        sx={{
+          position: "absolute",
+          bottom: "30%",
+          right: "15%",
+          width: "40%",
+          height: "50%",
+          background: `radial-gradient(ellipse, ${alpha(BRAND.accent, 0.1)} 0%, transparent 70%)`,
+          borderRadius: "50%",
+          filter: "blur(20px)",
+        }}
+      />
+
+      {/* Soft glow behind character */}
+      <Box
+        sx={{
+          position: "absolute",
+          bottom: "20%",
+          left: "15%",
+          width: "30%",
+          height: "40%",
+          background: `radial-gradient(ellipse, ${alpha("#63F4A3", 0.08)} 0%, transparent 70%)`,
+          borderRadius: "50%",
+          filter: "blur(20px)",
         }}
       />
 
       {/* Stars */}
-      <Box sx={{ position: "absolute", top: 10, left: 0, right: 0, px: 3 }}>
-        {[...Array(10)].map((_, i) => (
+      <Box sx={{ position: "absolute", top: 15, left: 0, right: 0, px: 3 }}>
+        {[...Array(15)].map((_, i) => (
           <Box
             key={i}
             sx={{
               position: "absolute",
-              width: 2,
-              height: 2,
+              width: 2 + Math.random() * 2,
+              height: 2 + Math.random() * 2,
               borderRadius: "50%",
               bgcolor: "#fff",
-              opacity: 0.3 + Math.random() * 0.5,
-              top: Math.random() * 70,
+              opacity: 0.2 + Math.random() * 0.5,
+              top: Math.random() * 60,
               left: Math.random() * 95,
-              animation: `twinkle ${2 + Math.random() * 3}s ease-in-out infinite`,
-              animationDelay: `${Math.random() * 2}s`,
+              animation: `twinkle ${2 + Math.random() * 4}s ease-in-out infinite`,
+              animationDelay: `${Math.random() * 3}s`,
+              boxShadow: `0 0 4px ${alpha("#fff", 0.2)}`,
             }}
           />
         ))}
       </Box>
 
-      {/* PG Building */}
+      {/* PG Building - 3D Pixar Style */}
       <svg
         style={{
           position: "absolute",
-          bottom: "20%",
-          right: "8%",
-          width: "35%",
-          height: "75%",
+          bottom: "22%",
+          right: "6%",
+          width: "38%",
+          height: "72%",
+          filter: "drop-shadow(0 10px 30px rgba(0,0,0,0.5))",
         }}
         viewBox="0 0 200 250"
       >
-        <rect x="20" y="50" width="160" height="160" rx="4" fill="#2C3E50" stroke={alpha(BRAND.accent, 0.2)} strokeWidth="1.5" />
-        <polygon points="10,50 100,5 190,50" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.15)} strokeWidth="1.5" />
-        <rect x="140" y="10" width="16" height="35" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
-        <rect x="136" y="8" width="24" height="6" rx="2" fill="#2C3E50" />
+        {/* Building body with rounded corners */}
+        <rect x="20" y="50" width="160" height="155" rx="6" fill="#2C3E50" stroke={alpha(BRAND.accent, 0.3)} strokeWidth="2" />
+        <rect x="22" y="52" width="156" height="151" rx="5" fill="#34495E" />
+        
+        {/* Roof with rounded edges */}
+        <polygon points="10,50 100,5 190,50" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.2)} strokeWidth="2" />
+        <polygon points="12,50 100,8 188,50" fill="#243342" />
+        
+        {/* Chimney with soft edges */}
+        <rect x="140" y="10" width="16" height="35" rx="2" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.15)} strokeWidth="1" />
+        <rect x="137" y="8" width="22" height="6" rx="3" fill="#2C3E50" />
 
-        {/* PG Sign */}
-        <rect x="55" y="20" width="90" height="22" rx="4" fill={alpha(BRAND.accent, 0.15)} stroke={BRAND.accent} strokeWidth="1.5" />
-        <text x="100" y="36" textAnchor="middle" fill={BRAND.accent} fontSize="14" fontWeight="700" fontFamily="'Geist', sans-serif" letterSpacing="2">PG</text>
-        <rect x="55" y="20" width="90" height="22" rx="4" fill={alpha(BRAND.accent, 0.05)}>
-          <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2s" repeatCount="indefinite" />
+        {/* PG Sign - Glowing neon */}
+        <rect x="55" y="22" width="90" height="24" rx="6" fill={alpha(BRAND.accent, 0.15)} stroke={BRAND.accent} strokeWidth="2" />
+        <rect x="55" y="22" width="90" height="24" rx="6" fill={alpha(BRAND.accent, 0.05)}>
+          <animate attributeName="opacity" values="0.3;0.9;0.3" dur="2.5s" repeatCount="indefinite" />
         </rect>
+        <text x="100" y="39" textAnchor="middle" fill={BRAND.accent} fontSize="15" fontWeight="700" fontFamily="'Geist', sans-serif" letterSpacing="3" filter="drop-shadow(0 0 10px rgba(99,244,163,0.5))">PG</text>
 
-        {/* Windows */}
-        {[[45, 80], [45, 130], [120, 80], [120, 130]].map(([x, y], i) => (
+        {/* Windows - Warm glowing */}
+        {[[45, 85], [45, 135], [120, 85], [120, 135]].map(([x, y], i) => (
           <g key={i}>
-            <rect x={x} y={y} width="28" height="28" rx="2" fill={alpha("#FFD700", 0.15)} stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
-            <line x1={x + 14} y1={y} x2={x + 14} y2={y + 28} stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
-            <line x1={x} y1={y + 14} x2={x + 28} y2={y + 14} stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
-            <rect x={x + 2} y={y + 2} width={24} height={24} rx="1" fill={alpha("#FFD700", 0.05)}>
-              <animate attributeName="opacity" values="0.3;0.7;0.3" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
+            <rect x={x} y={y} width="30" height="30" rx="4" fill={alpha("#FFD983", 0.12)} stroke={alpha(BRAND.accent, 0.15)} strokeWidth="1.5" />
+            <rect x={x + 2} y={y + 2} width="26" height="26" rx="3" fill={alpha("#FFD983", 0.05)}>
+              <animate attributeName="opacity" values="0.3;0.8;0.3" dur={`${2.5 + i * 0.3}s`} repeatCount="indefinite" />
+            </rect>
+            {/* Window cross */}
+            <line x1={x + 15} y1={y} x2={x + 15} y2={y + 30} stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1.5" />
+            <line x1={x} y1={y + 15} x2={x + 30} y2={y + 15} stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1.5" />
+            {/* Warm glow */}
+            <rect x={x + 4} y={y + 4} width={22} height={22} rx="2" fill={alpha("#FFD983", 0.06)}>
+              <animate attributeName="opacity" values="0.2;0.5;0.2" dur={`${2 + i * 0.4}s`} repeatCount="indefinite" />
             </rect>
           </g>
         ))}
 
-        {/* Door */}
-        <rect x="80" y="160" width="40" height="50" rx="4" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.15)} strokeWidth="1.5" />
-        <path d="M90,210 A20,20 0 0,1 110,210" fill="none" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
-        <circle cx="110" cy="188" r="3" fill={BRAND.accent} opacity="0.3" />
-        <rect x="85" y="165" width="30" height="20" rx="2" fill={alpha("#FFD700", 0.05)}>
-          <animate attributeName="opacity" values="0.2;0.6;0.2" dur="3s" repeatCount="indefinite" />
+        {/* Door - Dark green with warm light */}
+        <rect x="80" y="160" width="40" height="45" rx="5" fill="#2E6E50" stroke={alpha(BRAND.accent, 0.2)} strokeWidth="2" />
+        <path d="M90,205 A20,20 0 0,1 110,205" fill="none" stroke={alpha(BRAND.accent, 0.15)} strokeWidth="1.5" />
+        <circle cx="112" cy="185" r="3.5" fill={BRAND.accent} opacity="0.4" />
+        {/* Door light glow */}
+        <rect x="85" y="165" width="30" height="18" rx="3" fill={alpha("#FFD983", 0.06)}>
+          <animate attributeName="opacity" values="0.15;0.5;0.15" dur="3s" repeatCount="indefinite" />
         </rect>
-        <rect x="72" y="210" width="56" height="6" rx="1" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.05)} strokeWidth="1" />
-        <rect x="76" y="216" width="48" height="6" rx="1" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.05)} strokeWidth="1" />
-        <ellipse cx="35" cy="205" rx="18" ry="12" fill="#1A4A3A" opacity="0.6" />
-        <ellipse cx="165" cy="205" rx="18" ry="12" fill="#1A4A3A" opacity="0.6" />
-        <ellipse cx="30" cy="200" rx="12" ry="8" fill="#2A5A4A" opacity="0.4" />
-        <ellipse cx="170" cy="200" rx="12" ry="8" fill="#2A5A4A" opacity="0.4" />
+
+        {/* Steps with 3D effect */}
+        <rect x="70" y="205" width="60" height="6" rx="2" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.05)} strokeWidth="1" />
+        <rect x="74" y="211" width="52" height="6" rx="2" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.05)} strokeWidth="1" />
+
+        {/* Bushes - Rounded 3D style */}
+        <ellipse cx="32" cy="205" rx="20" ry="14" fill="#1A4A3A" opacity="0.7" />
+        <ellipse cx="168" cy="205" rx="20" ry="14" fill="#1A4A3A" opacity="0.7" />
+        <ellipse cx="26" cy="198" rx="14" ry="10" fill="#2A5A4A" opacity="0.5" />
+        <ellipse cx="174" cy="198" rx="14" ry="10" fill="#2A5A4A" opacity="0.5" />
       </svg>
 
-      {/* WALKING Character with Trolley - Moving across screen */}
+      {/* Character - 3D Pixar Style Walking */}
       <svg
         style={{
           position: "absolute",
-          bottom: "18%",
-          left: "5%",
-          width: "22%",
-          height: "45%",
-          animation: "walkAcross 4.2s ease-in-out infinite",
+          bottom: "20%",
+          left: "2%",
+          width: "26%",
+          height: "48%",
+          animation: "walkAcross 4.5s ease-in-out infinite",
+          filter: "drop-shadow(0 8px 20px rgba(0,0,0,0.3))",
         }}
         viewBox="0 0 120 160"
       >
         <g>
-          {/* Shadow - pulsates while walking */}
-          <ellipse cx="60" cy="148" rx="25" ry="5" fill={alpha("#000", 0.2)}>
-            <animate attributeName="rx" values="25;22;25" dur="0.6s" repeatCount="indefinite" />
+          {/* Shadow with soft edge */}
+          <ellipse cx="60" cy="148" rx="28" ry="6" fill={alpha("#000", 0.25)}>
+            <animate attributeName="rx" values="28;24;28" dur="0.6s" repeatCount="indefinite" />
           </ellipse>
 
-          {/* Trolley Bag */}
+          {/* Trolley Bag - Green matching hoodie */}
           <g transform="translate(85, 95)">
-            <line x1="5" y1="0" x2="5" y2="-35" stroke={alpha("#8A8FA3", 0.4)} strokeWidth="3" strokeLinecap="round" />
-            <line x1="5" y1="-35" x2="-20" y2="-35" stroke={alpha("#8A8FA3", 0.4)} strokeWidth="3" strokeLinecap="round" />
-            <line x1="-20" y1="-35" x2="-20" y2="-15" stroke={alpha("#8A8FA3", 0.4)} strokeWidth="3" strokeLinecap="round" />
-            <rect x="-15" y="10" width="35" height="45" rx="4" fill="#2A5A4A" stroke={alpha(BRAND.accent, 0.15)} strokeWidth="1.5" />
-            <rect x="-12" y="14" width="8" height="8" rx="1" fill={alpha(BRAND.accent, 0.05)} />
-            <rect x="0" y="14" width="8" height="8" rx="1" fill={alpha(BRAND.accent, 0.05)} />
-            <rect x="-12" y="28" width="8" height="8" rx="1" fill={alpha(BRAND.accent, 0.05)} />
-            <rect x="0" y="28" width="8" height="8" rx="1" fill={alpha(BRAND.accent, 0.05)} />
-            {/* Wheels spinning */}
-            <g transform="translate(-5, 55)">
-              <circle cx="0" cy="0" r="6" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1.5" />
-              <circle cx="0" cy="0" r="2" fill="#3A5A6A" />
-              <line x1="0" y1="-5" x2="0" y2="5" stroke="#3A5A6A" strokeWidth="1">
-                <animateTransform attributeName="transform" type="rotate" from="0 0 0" to="360 0 0" dur="0.6s" repeatCount="indefinite" />
+            {/* Handle */}
+            <line x1="5" y1="0" x2="5" y2="-38" stroke={alpha("#8A8FA3", 0.5)} strokeWidth="3.5" strokeLinecap="round" />
+            <line x1="5" y1="-38" x2="-20" y2="-38" stroke={alpha("#8A8FA3", 0.5)} strokeWidth="3.5" strokeLinecap="round" />
+            <line x1="-20" y1="-38" x2="-20" y2="-18" stroke={alpha("#8A8FA3", 0.5)} strokeWidth="3.5" strokeLinecap="round" />
+            {/* Trolley body - rounded */}
+            <rect x="-16" y="8" width="38" height="48" rx="6" fill="#5DBE7A" stroke={alpha(BRAND.accent, 0.15)} strokeWidth="2" />
+            <rect x="-13" y="12" width="9" height="9" rx="2" fill={alpha(BRAND.accent, 0.06)} />
+            <rect x="0" y="12" width="9" height="9" rx="2" fill={alpha(BRAND.accent, 0.06)} />
+            <rect x="-13" y="26" width="9" height="9" rx="2" fill={alpha(BRAND.accent, 0.06)} />
+            <rect x="0" y="26" width="9" height="9" rx="2" fill={alpha(BRAND.accent, 0.06)} />
+            {/* Wheels with spin animation */}
+            <g transform="translate(-5, 56)">
+              <circle cx="0" cy="0" r="7" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.15)} strokeWidth="2" />
+              <circle cx="0" cy="0" r="3" fill="#3A5A6A" />
+              <line x1="0" y1="-6" x2="0" y2="6" stroke="#3A5A6A" strokeWidth="1.5">
+                <animateTransform attributeName="transform" type="rotate" from="0 0 0" to="360 0 0" dur="0.5s" repeatCount="indefinite" />
               </line>
             </g>
-            <g transform="translate(15, 55)">
-              <circle cx="0" cy="0" r="6" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1.5" />
-              <circle cx="0" cy="0" r="2" fill="#3A5A6A" />
-              <line x1="0" y1="-5" x2="0" y2="5" stroke="#3A5A6A" strokeWidth="1">
-                <animateTransform attributeName="transform" type="rotate" from="0 0 0" to="360 0 0" dur="0.6s" repeatCount="indefinite" />
+            <g transform="translate(15, 56)">
+              <circle cx="0" cy="0" r="7" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.15)} strokeWidth="2" />
+              <circle cx="0" cy="0" r="3" fill="#3A5A6A" />
+              <line x1="0" y1="-6" x2="0" y2="6" stroke="#3A5A6A" strokeWidth="1.5">
+                <animateTransform attributeName="transform" type="rotate" from="0 0 0" to="360 0 0" dur="0.5s" repeatCount="indefinite" />
               </line>
             </g>
           </g>
 
-          {/* Character - Walking */}
+          {/* Character Body */}
           <g>
             {/* Body - Green Hoodie */}
-            <rect x="35" y="50" width="40" height="55" rx="8" fill="#2D7A4A" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
-            <rect x="40" y="75" width="30" height="12" rx="4" fill="none" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
-            <line x1="55" y1="50" x2="55" y2="105" stroke={alpha(BRAND.accent, 0.08)} strokeWidth="1.5" />
-            <path d="M35,50 Q55,30 75,50" fill="#2D7A4A" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
+            <rect x="33" y="48" width="44" height="58" rx="10" fill="#5DBE7A" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1.5" />
+            {/* Hoodie pocket */}
+            <rect x="38" y="75" width="34" height="14" rx="5" fill="none" stroke={alpha(BRAND.accent, 0.12)} strokeWidth="1.5" />
+            {/* Hoodie zipper line */}
+            <line x1="55" y1="48" x2="55" y2="106" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="2" />
+            {/* Hood */}
+            <path d="M33,48 Q55,28 77,48" fill="#5DBE7A" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1.5" />
 
-            {/* Legs - Walking animation */}
-            <rect x="38" y="105" width="12" height="30" rx="3" fill="#1A2A3A">
-              <animate attributeName="x" values="38;42;38" dur="0.6s" repeatCount="indefinite" />
+            {/* Legs - Black jeans with walking animation */}
+            <rect x="36" y="106" width="14" height="32" rx="4" fill="#1A1A1A">
+              <animate attributeName="x" values="36;42;36" dur="0.6s" repeatCount="indefinite" />
             </rect>
-            <rect x="58" y="105" width="12" height="30" rx="3" fill="#1A2A3A">
-              <animate attributeName="x" values="58;54;58" dur="0.6s" repeatCount="indefinite" />
+            <rect x="58" y="106" width="14" height="32" rx="4" fill="#1A1A1A">
+              <animate attributeName="x" values="58;52;58" dur="0.6s" repeatCount="indefinite" />
             </rect>
 
-            {/* Shoes - Walking animation */}
-            <ellipse cx="42" cy="138" rx="10" ry="4" fill="#EDEEF2" stroke={alpha(BRAND.accent, 0.05)} strokeWidth="1">
-              <animate attributeName="cx" values="42;46;42" dur="0.6s" repeatCount="indefinite" />
+            {/* Shoes - White sneakers with walking */}
+            <ellipse cx="41" cy="140" rx="12" ry="5" fill="#FFFFFF" stroke={alpha(BRAND.accent, 0.08)} strokeWidth="1.5">
+              <animate attributeName="cx" values="41;46;41" dur="0.6s" repeatCount="indefinite" />
             </ellipse>
-            <ellipse cx="64" cy="138" rx="10" ry="4" fill="#EDEEF2" stroke={alpha(BRAND.accent, 0.05)} strokeWidth="1">
-              <animate attributeName="cx" values="64;60;64" dur="0.6s" repeatCount="indefinite" />
+            <ellipse cx="65" cy="140" rx="12" ry="5" fill="#FFFFFF" stroke={alpha(BRAND.accent, 0.08)} strokeWidth="1.5">
+              <animate attributeName="cx" values="65;60;65" dur="0.6s" repeatCount="indefinite" />
             </ellipse>
 
-            {/* Left Arm - holding trolley */}
-            <line x1="35" y1="60" x2="20" y2="85" stroke="#2D7A4A" strokeWidth="8" strokeLinecap="round" />
-            <circle cx="20" cy="87" r="5" fill="#D4A574" />
+            {/* Left Arm - Holding trolley */}
+            <line x1="33" y1="58" x2="18" y2="88" stroke="#5DBE7A" strokeWidth="9" strokeLinecap="round" />
+            <circle cx="18" cy="90" r="6" fill="#D4A574" />
 
-            {/* Right Arm - Swinging while walking */}
-            <line x1="75" y1="60" x2="88" y2="80" stroke="#2D7A4A" strokeWidth="8" strokeLinecap="round">
-              <animate attributeName="x2" values="88;92;88" dur="0.6s" repeatCount="indefinite" />
-              <animate attributeName="y2" values="80;76;80" dur="0.6s" repeatCount="indefinite" />
+            {/* Right Arm - Swinging */}
+            <line x1="77" y1="58" x2="92" y2="82" stroke="#5DBE7A" strokeWidth="9" strokeLinecap="round">
+              <animate attributeName="x2" values="92;96;92" dur="0.6s" repeatCount="indefinite" />
+              <animate attributeName="y2" values="82;78;82" dur="0.6s" repeatCount="indefinite" />
             </line>
-            <circle cx="88" cy="82" r="5" fill="#D4A574">
-              <animate attributeName="cx" values="88;92;88" dur="0.6s" repeatCount="indefinite" />
-              <animate attributeName="cy" values="82;78;82" dur="0.6s" repeatCount="indefinite" />
+            <circle cx="92" cy="84" r="6" fill="#D4A574">
+              <animate attributeName="cx" values="92;96;92" dur="0.6s" repeatCount="indefinite" />
+              <animate attributeName="cy" values="84;80;84" dur="0.6s" repeatCount="indefinite" />
             </circle>
 
-            {/* Head */}
-            <ellipse cx="55" cy="38" rx="22" ry="26" fill="#D4A574" stroke={alpha(BRAND.accent, 0.05)} strokeWidth="1" />
-            <ellipse cx="55" cy="28" rx="24" ry="16" fill="#1A1A1A" />
-            <path d="M33,30 Q45,20 55,22 Q65,20 77,30" fill="#1A1A1A" />
+            {/* Head - 3D Pixar style */}
+            <ellipse cx="55" cy="36" rx="24" ry="28" fill="#D4A574" stroke={alpha(BRAND.accent, 0.05)} strokeWidth="1" />
+            <ellipse cx="55" cy="26" rx="26" ry="18" fill="#1A1A1A" />
+            <path d="M31,28 Q45,18 55,20 Q65,18 79,28" fill="#1A1A1A" />
 
-            {/* Eyes */}
-            <ellipse cx="47" cy="38" rx="4" ry="4.5" fill="#fff" />
-            <ellipse cx="63" cy="38" rx="4" ry="4.5" fill="#fff" />
-            <circle cx="48" cy="38" r="2.5" fill="#2C3E50" />
-            <circle cx="64" cy="38" r="2.5" fill="#2C3E50" />
-            <circle cx="49" cy="37" r="1" fill="#fff" />
-            <circle cx="65" cy="37" r="1" fill="#fff" />
+            {/* Eyes - Friendly expression */}
+            <ellipse cx="46" cy="36" rx="5" ry="5.5" fill="#FFFFFF" />
+            <ellipse cx="64" cy="36" rx="5" ry="5.5" fill="#FFFFFF" />
+            <circle cx="47" cy="36" r="3" fill="#2C3E50" />
+            <circle cx="65" cy="36" r="3" fill="#2C3E50" />
+            <circle cx="48" cy="35" r="1.5" fill="#FFFFFF" />
+            <circle cx="66" cy="35" r="1.5" fill="#FFFFFF" />
 
             {/* Eyebrows */}
-            <path d="M43,33 Q47,31 51,33" stroke="#1A1A1A" strokeWidth="1.5" fill="none" />
-            <path d="M59,33 Q63,31 67,33" stroke="#1A1A1A" strokeWidth="1.5" fill="none" />
+            <path d="M41,30 Q46,28 51,30" stroke="#1A1A1A" strokeWidth="2" fill="none" strokeLinecap="round" />
+            <path d="M59,30 Q64,28 69,30" stroke="#1A1A1A" strokeWidth="2" fill="none" strokeLinecap="round" />
 
-            {/* Smile */}
-            <path d="M48,46 Q55,52 62,46" stroke="#1A1A1A" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+            {/* Smile - Friendly */}
+            <path d="M47,46 Q55,53 63,46" stroke="#1A1A1A" strokeWidth="2" fill="none" strokeLinecap="round" />
 
-            {/* Backpack straps */}
-            <path d="M40,52 L40,70 Q40,72 42,72" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="2" fill="none" />
-            <path d="M70,52 L70,70 Q70,72 68,72" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="2" fill="none" />
+            {/* Backpack - Black with straps */}
+            <rect x="30" y="50" width="8" height="30" rx="3" fill="#1A1A1A" opacity="0.6" />
+            <path d="M38,54 L42,72" stroke="#1A1A1A" strokeWidth="2.5" fill="none" />
+            <path d="M72,54 L68,72" stroke="#1A1A1A" strokeWidth="2.5" fill="none" />
           </g>
         </g>
       </svg>
@@ -248,19 +303,18 @@ const AnimatedScene = () => {
       <style>{`
         @keyframes walkAcross {
           0% { transform: translateX(0); }
-          10% { transform: translateX(10px); }
-          20% { transform: translateX(20px); }
-          30% { transform: translateX(30px); }
-          40% { transform: translateX(40px); }
-          50% { transform: translateX(45px); }
-          55% { transform: translateX(45px); }
-          65% { transform: translateX(40px); }
-          75% { transform: translateX(30px); }
-          85% { transform: translateX(15px); }
+          12% { transform: translateX(12px); }
+          25% { transform: translateX(25px); }
+          38% { transform: translateX(38px); }
+          50% { transform: translateX(48px); }
+          55% { transform: translateX(50px); }
+          65% { transform: translateX(42px); }
+          78% { transform: translateX(30px); }
+          88% { transform: translateX(15px); }
           100% { transform: translateX(0); }
         }
         @keyframes twinkle {
-          0%, 100% { opacity: 0.2; }
+          0%, 100% { opacity: 0.15; }
           50% { opacity: 0.8; }
         }
       `}</style>
@@ -487,7 +541,8 @@ const PhoneLogin = () => {
         <Alert
           severity="success"
           sx={{
-            bgcolor: BRAND.surfaceHi, color: BRAND.text,
+            bgcolor: BRAND.surfaceHi,
+            color: BRAND.text,
             border: `1px solid ${alpha(BRAND.accent, 0.3)}`,
             "& .MuiAlert-icon": { color: BRAND.accent },
           }}
@@ -511,7 +566,23 @@ const PhoneLogin = () => {
           p: 2,
         }}
       >
-        {/* Aurora blobs */}
+        {/* Soft gradient background */}
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "80%",
+            height: "80%",
+            background: `radial-gradient(ellipse, ${alpha(BRAND.accent, 0.03)} 0%, transparent 70%)`,
+            borderRadius: "50%",
+            filter: "blur(60px)",
+            pointerEvents: "none",
+          }}
+        />
+
+        {/* Aurora blobs - softer */}
         <Box className="aurora aurora-1" />
         <Box className="aurora aurora-2" />
         <Box className="aurora aurora-3" />
@@ -522,90 +593,105 @@ const PhoneLogin = () => {
             position: "relative",
             zIndex: 2,
             width: "100%",
-            maxWidth: 400,
+            maxWidth: 420,
           }}
         >
           <motion.div
-            initial={{ opacity: 0, y: 24, scale: 0.98 }}
+            initial={{ opacity: 0, y: 30, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           >
             <Box
               sx={{
                 position: "relative",
-                borderRadius: "24px",
-                p: { xs: 3, sm: 3.5 },
-                background: `linear-gradient(180deg, ${alpha("#ffffff", 0.04)} 0%, ${alpha("#ffffff", 0.01)} 100%)`,
+                borderRadius: "32px",
+                p: { xs: 3, sm: 4 },
+                background: `linear-gradient(180deg, ${alpha("#ffffff", 0.05)} 0%, ${alpha("#ffffff", 0.02)} 100%)`,
                 border: `1px solid ${BRAND.border}`,
                 backdropFilter: "blur(20px)",
                 WebkitBackdropFilter: "blur(20px)",
                 boxShadow: `
-                  inset 0 1px 0 ${alpha("#ffffff", 0.06)},
-                  0 30px 80px -20px ${alpha("#000", 0.6)}
+                  inset 0 1px 0 ${alpha("#ffffff", 0.08)},
+                  0 30px 80px -20px ${alpha("#000", 0.7)},
+                  0 0 40px ${alpha(BRAND.accent, 0.05)}
                 `,
                 overflow: "hidden",
               }}
             >
-              {/* Glow border */}
+              {/* Glow border - neon accent */}
               <Box sx={{
                 position: "absolute",
                 inset: -1,
-                borderRadius: "24px",
+                borderRadius: "32px",
                 padding: "1px",
-                background: `linear-gradient(140deg, ${alpha(BRAND.accent, 0.3)} 0%, transparent 40%, transparent 60%, ${alpha(BRAND.accent3, 0.2)} 100%)`,
+                background: `linear-gradient(140deg, ${alpha(BRAND.accent, 0.4)} 0%, transparent 40%, transparent 60%, ${alpha(BRAND.accent, 0.2)} 100%)`,
                 WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
                 WebkitMaskComposite: "xor",
                 maskComposite: "exclude",
                 pointerEvents: "none",
               }} />
 
-              {/* PG Label at top */}
+              {/* PG Label */}
               <Box sx={{ display: "flex", justifyContent: "center", mb: 1.5 }}>
                 <Typography
                   sx={{
-                    fontSize: 28,
+                    fontSize: 32,
                     fontWeight: 700,
-                    letterSpacing: "4px",
+                    letterSpacing: "6px",
                     color: BRAND.accent,
-                    textShadow: `0 0 30px ${alpha(BRAND.accent, 0.3)}`,
+                    textShadow: `0 0 40px ${alpha(BRAND.accent, 0.3)}, 0 0 80px ${alpha(BRAND.accent, 0.1)}`,
                   }}
                 >
                   PG
                 </Typography>
               </Box>
 
-              {/* Animated Scene - Walking Boy */}
+              {/* 3D Animated Scene */}
               <AnimatedScene />
 
-              {/* Step indicator */}
-              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1, mb: 2 }}>
-                <Typography
+              {/* Step indicator - Green pill style */}
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1.5, mb: 2 }}>
+                <Box
                   sx={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: BRAND.textDim,
-                    letterSpacing: "0.05em",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 1,
+                    px: 1.5,
+                    py: 0.5,
+                    borderRadius: "999px",
+                    bgcolor: alpha(BRAND.accent, 0.12),
+                    border: `1px solid ${alpha(BRAND.accent, 0.2)}`,
                   }}
                 >
-                  STEP {step} OF 2
-                </Typography>
-                <Box sx={{ display: "flex", gap: 0.6 }}>
+                  <Typography
+                    sx={{
+                      fontSize: 10,
+                      fontWeight: 600,
+                      color: BRAND.accent,
+                      letterSpacing: "0.08em",
+                    }}
+                  >
+                    STEP {step} OF 2
+                  </Typography>
+                </Box>
+                <Box sx={{ display: "flex", gap: 0.8 }}>
                   {[1, 2].map((s) => (
                     <Box
                       key={s}
                       sx={{
-                        width: s === step ? 28 : 16,
-                        height: 3,
+                        width: s === step ? 36 : 20,
+                        height: 4,
                         borderRadius: 2,
-                        bgcolor: s <= step ? BRAND.accent : alpha(BRAND.text, 0.12),
-                        transition: "all 0.4s ease",
+                        bgcolor: s <= step ? BRAND.accent : alpha(BRAND.text, 0.1),
+                        boxShadow: s === step ? `0 0 12px ${alpha(BRAND.accent, 0.4)}` : "none",
+                        transition: "all 0.5s cubic-bezier(0.22, 1, 0.36, 1)",
                       }}
                     />
                   ))}
                 </Box>
               </Box>
 
-              <Box sx={{ borderTop: `1px solid ${BRAND.border}`, pt: 2.5 }} />
+              <Box sx={{ borderTop: `1px solid ${alpha(BRAND.border, 0.5)}`, pt: 2.5 }} />
 
               <AnimatePresence mode="wait">
                 {step === 1 && (
@@ -617,49 +703,51 @@ const PhoneLogin = () => {
                     transition={{ duration: 0.35 }}
                   >
                     <Typography sx={{
-                      fontSize: 18,
-                      fontWeight: 600,
+                      fontSize: 22,
+                      fontWeight: 700,
                       letterSpacing: "-0.02em",
                       mb: 0.5,
+                      color: BRAND.text,
                     }}>
                       Enter your number
                     </Typography>
                     <Typography sx={{
                       color: BRAND.textDim,
-                      fontSize: 13,
+                      fontSize: 14,
                       mb: 2.5,
                     }}>
                       We'll send a one-time code via SMS.
                     </Typography>
 
-                    {/* Phone Input */}
+                    {/* Phone Input - Premium style */}
                     <Box sx={{
                       display: "flex",
                       alignItems: "center",
-                      border: `1px solid ${error ? BRAND.danger : BRAND.border}`,
-                      borderRadius: "12px",
-                      bgcolor: alpha("#fff", 0.02),
-                      transition: "all 0.2s ease",
+                      border: `1px solid ${error ? BRAND.danger : alpha(BRAND.accent, 0.2)}`,
+                      borderRadius: "18px",
+                      bgcolor: alpha(BRAND.surfaceHi, 0.6),
+                      transition: "all 0.3s ease",
                       mb: error ? 1.5 : 2.5,
                       "&:focus-within": {
                         borderColor: BRAND.accent,
-                        boxShadow: `0 0 0 3px ${alpha(BRAND.accent, 0.1)}`,
+                        boxShadow: `0 0 0 4px ${alpha(BRAND.accent, 0.12)}`,
+                        bgcolor: alpha(BRAND.surfaceHi, 0.8),
                       },
                     }}>
                       <Box sx={{
                         display: "flex",
                         alignItems: "center",
                         gap: 0.5,
-                        px: 1.5,
-                        py: 1.5,
-                        borderRight: `1px solid ${BRAND.border}`,
+                        px: 1.8,
+                        py: 1.6,
+                        borderRight: `1px solid ${alpha(BRAND.border, 0.5)}`,
                         color: BRAND.textDim,
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: 500,
                       }}>
-                        <span style={{ fontSize: 16 }}>🇮🇳</span>
+                        <span style={{ fontSize: 18 }}>🇮🇳</span>
                         <span style={{ fontFamily: "'Geist Mono', monospace" }}>+91</span>
-                        <span style={{ color: BRAND.textDim, fontSize: 10 }}>▼</span>
+                        <span style={{ color: BRAND.textDim, fontSize: 11 }}>▼</span>
                       </Box>
                       <input
                         value={phone}
@@ -673,35 +761,37 @@ const PhoneLogin = () => {
                           border: "none",
                           outline: "none",
                           color: BRAND.text,
-                          fontSize: 15,
-                          padding: "14px 16px",
+                          fontSize: 16,
+                          padding: "16px 18px",
                           fontFamily: "'Geist', sans-serif",
+                          letterSpacing: "0.02em",
                         }}
                       />
                     </Box>
 
                     {error && <ErrorBanner msg={error} onClose={() => setError("")} />}
 
+                    {/* Continue Button - Premium gradient */}
                     <PremiumButton
                       onClick={sendOtp}
                       disabled={loading || phone.replace(/\D/g, "").length !== 10}
                       loading={loading}
                     >
                       Continue
-                      <SendIcon sx={{ fontSize: 16 }} />
+                      <SendIcon sx={{ fontSize: 18 }} />
                     </PremiumButton>
 
                     <Typography sx={{
                       mt: 2.5,
                       color: BRAND.textDim,
-                      fontSize: 11,
+                      fontSize: 12,
                       textAlign: "center",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      gap: 0.6,
+                      gap: 0.8,
                     }}>
-                      <LockOutlined sx={{ fontSize: 12 }} />
+                      <LockOutlined sx={{ fontSize: 13 }} />
                       Secure & private. We respect your privacy.
                     </Typography>
                   </motion.div>
@@ -716,25 +806,26 @@ const PhoneLogin = () => {
                     transition={{ duration: 0.35 }}
                   >
                     <Typography sx={{
-                      fontSize: 18,
-                      fontWeight: 600,
+                      fontSize: 22,
+                      fontWeight: 700,
                       letterSpacing: "-0.02em",
                       mb: 0.5,
+                      color: BRAND.text,
                     }}>
                       Enter verification code
                     </Typography>
                     <Typography sx={{
                       color: BRAND.textDim,
-                      fontSize: 13,
+                      fontSize: 14,
                       mb: 2.5,
                     }}>
                       We sent a 6-digit code to{" "}
-                      <span style={{ color: BRAND.text, fontWeight: 500 }}>
+                      <span style={{ color: BRAND.text, fontWeight: 600 }}>
                         +91 {phone}
                       </span>
                     </Typography>
 
-                    {/* OTP Input */}
+                    {/* OTP Input - Premium style */}
                     <Box
                       onPaste={handleOtpPaste}
                       sx={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 0.8, mb: 2.5 }}
@@ -751,21 +842,21 @@ const PhoneLogin = () => {
                           autoFocus={i === 0}
                           style={{
                             width: "100%",
-                            aspectRatio: "1 / 1.2",
-                            borderRadius: "10px",
-                            border: `1px solid ${otp[i] ? alpha(BRAND.accent, 0.5) : BRAND.border}`,
-                            background: otp[i] ? alpha(BRAND.accent, 0.06) : alpha("#fff", 0.02),
+                            aspectRatio: "1 / 1.15",
+                            borderRadius: "14px",
+                            border: `1px solid ${otp[i] ? alpha(BRAND.accent, 0.5) : alpha(BRAND.border, 0.5)}`,
+                            background: otp[i] ? alpha(BRAND.accent, 0.06) : alpha(BRAND.surfaceHi, 0.4),
                             color: BRAND.text,
-                            fontSize: 22,
+                            fontSize: 24,
                             fontWeight: 600,
                             textAlign: "center",
                             fontFamily: "'Geist Mono', monospace",
                             outline: "none",
                             transition: "all 0.2s ease",
-                            boxShadow: otp[i] ? `0 0 0 3px ${alpha(BRAND.accent, 0.1)}` : "none",
+                            boxShadow: otp[i] ? `0 0 0 4px ${alpha(BRAND.accent, 0.1)}` : "none",
                           }}
                           onFocus={(e) => e.target.style.borderColor = BRAND.accent}
-                          onBlur={(e) => e.target.style.borderColor = otp[i] ? alpha(BRAND.accent, 0.5) : BRAND.border}
+                          onBlur={(e) => e.target.style.borderColor = otp[i] ? alpha(BRAND.accent, 0.5) : alpha(BRAND.border, 0.5)}
                         />
                       ))}
                     </Box>
@@ -778,7 +869,7 @@ const PhoneLogin = () => {
                       loading={loading}
                     >
                       Verify
-                      <VerifiedUserIcon sx={{ fontSize: 16 }} />
+                      <VerifiedUserIcon sx={{ fontSize: 18 }} />
                     </PremiumButton>
 
                     <Box sx={{
@@ -789,11 +880,11 @@ const PhoneLogin = () => {
                     }}>
                       <Button
                         onClick={backToPhone}
-                        startIcon={<ArrowBackRounded sx={{ fontSize: 15 }} />}
+                        startIcon={<ArrowBackRounded sx={{ fontSize: 16 }} />}
                         sx={{
                           color: BRAND.textDim,
                           textTransform: "none",
-                          fontSize: 12.5,
+                          fontSize: 13,
                           "&:hover": { color: BRAND.text, bgcolor: "transparent" },
                         }}
                       >
@@ -803,7 +894,7 @@ const PhoneLogin = () => {
                       {otpTimer > 0 ? (
                         <Typography sx={{
                           color: BRAND.textDim,
-                          fontSize: 12.5,
+                          fontSize: 13,
                           fontFamily: "'Geist Mono', monospace",
                         }}>
                           Resend in <span style={{ color: BRAND.text }}>{otpTimer}s</span>
@@ -815,7 +906,7 @@ const PhoneLogin = () => {
                           sx={{
                             color: BRAND.accent,
                             textTransform: "none",
-                            fontSize: 12.5,
+                            fontSize: 13,
                             fontWeight: 600,
                             "&:hover": { bgcolor: "transparent", textDecoration: "underline" },
                           }}
@@ -837,39 +928,40 @@ const PhoneLogin = () => {
   );
 };
 
-/* ============ Components ============ */
+/* ============ Premium Components ============ */
 
 const PremiumButton = ({ onClick, disabled, loading, children }) => (
   <motion.button
-    whileHover={!disabled ? { y: -2, scale: 1.01 } : {}}
-    whileTap={!disabled ? { scale: 0.98 } : {}}
+    whileHover={!disabled ? { y: -3, scale: 1.01 } : {}}
+    whileTap={!disabled ? { scale: 0.97 } : {}}
     onClick={onClick}
     disabled={disabled}
     style={{
       width: "100%",
       border: "none",
-      borderRadius: "12px",
-      padding: "13px 20px",
+      borderRadius: "20px",
+      padding: "16px 24px",
       background: disabled
         ? alpha(BRAND.text, 0.08)
-        : `linear-gradient(135deg, ${BRAND.accent} 0%, #4CAF50 100%)`,
-      color: disabled ? BRAND.textDim : BRAND.bg,
-      fontSize: 15,
+        : `linear-gradient(180deg, ${BRAND.accentTop} 0%, ${BRAND.accentBottom} 100%)`,
+      color: disabled ? BRAND.textDim : "#0B0C12",
+      fontSize: 16,
       fontWeight: 600,
       cursor: disabled ? "not-allowed" : "pointer",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      gap: 8,
+      gap: 10,
       boxShadow: disabled
         ? "none"
-        : `0 8px 30px -8px ${alpha(BRAND.accent, 0.5)}`,
-      transition: "all 0.2s ease",
+        : `0 8px 32px -8px ${alpha(BRAND.accent, 0.5)}, inset 0 1px 0 ${alpha("#ffffff", 0.2)}`,
+      transition: "all 0.25s ease",
       fontFamily: "inherit",
+      letterSpacing: "0.01em",
     }}
   >
     {loading ? (
-      <CircularProgress size={18} sx={{ color: BRAND.bg }} />
+      <CircularProgress size={20} sx={{ color: "#0B0C12" }} />
     ) : (
       children
     )}
@@ -882,12 +974,12 @@ const ErrorBanner = ({ msg, onClose }) => (
     animate={{ opacity: 1, y: 0 }}
     style={{
       marginBottom: 16,
-      padding: "8px 12px",
-      borderRadius: 10,
+      padding: "10px 14px",
+      borderRadius: 14,
       background: alpha(BRAND.danger, 0.08),
       border: `1px solid ${alpha(BRAND.danger, 0.25)}`,
       color: BRAND.danger,
-      fontSize: 12.5,
+      fontSize: 13,
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
@@ -901,7 +993,7 @@ const ErrorBanner = ({ msg, onClose }) => (
         border: "none",
         color: BRAND.danger,
         cursor: "pointer",
-        fontSize: 16,
+        fontSize: 18,
         lineHeight: 1,
         padding: "0 4px",
       }}
@@ -918,8 +1010,8 @@ const GlobalStyles = () => (
     .aurora {
       position: absolute;
       border-radius: 50%;
-      filter: blur(80px);
-      opacity: 0.4;
+      filter: blur(100px);
+      opacity: 0.3;
       pointer-events: none;
       z-index: 1;
     }
@@ -927,45 +1019,45 @@ const GlobalStyles = () => (
       width: 500px;
       height: 500px;
       background: radial-gradient(circle, ${BRAND.accent} 0%, transparent 60%);
-      top: -150px;
-      left: -100px;
-      animation: drift1 14s ease-in-out infinite;
+      top: -200px;
+      left: -150px;
+      animation: drift1 18s ease-in-out infinite;
     }
     .aurora-2 {
       width: 400px;
       height: 400px;
-      background: radial-gradient(circle, ${BRAND.accent3} 0%, transparent 60%);
-      bottom: -120px;
-      right: -80px;
-      animation: drift2 16s ease-in-out infinite;
+      background: radial-gradient(circle, ${alpha(BRAND.accent, 0.5)} 0%, transparent 60%);
+      bottom: -150px;
+      right: -100px;
+      animation: drift2 20s ease-in-out infinite;
     }
     .aurora-3 {
       width: 300px;
       height: 300px;
-      background: radial-gradient(circle, #4CAF50 0%, transparent 60%);
-      top: 30%;
-      left: 40%;
-      opacity: 0.15;
-      animation: drift3 20s ease-in-out infinite;
+      background: radial-gradient(circle, ${alpha(BRAND.accent, 0.3)} 0%, transparent 60%);
+      top: 40%;
+      left: 30%;
+      opacity: 0.12;
+      animation: drift3 22s ease-in-out infinite;
     }
     @keyframes drift1 {
       0%,100% { transform: translate(0,0) scale(1); }
-      50% { transform: translate(30px, 50px) scale(1.1); }
+      50% { transform: translate(40px, 60px) scale(1.1); }
     }
     @keyframes drift2 {
       0%,100% { transform: translate(0,0) scale(1); }
-      50% { transform: translate(-50px, -30px) scale(1.15); }
+      50% { transform: translate(-60px, -40px) scale(1.15); }
     }
     @keyframes drift3 {
       0%,100% { transform: translate(0,0); }
-      50% { transform: translate(-20px, 40px); }
+      50% { transform: translate(-30px, 50px); }
     }
     .grain {
       position: absolute;
       inset: 0;
       z-index: 1;
       pointer-events: none;
-      opacity: 0.04;
+      opacity: 0.03;
       background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
     }
   `}</style>
