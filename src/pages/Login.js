@@ -7,13 +7,9 @@ import {
 import {
   Send as SendIcon,
   VerifiedUser as VerifiedUserIcon,
-  Security as SecurityIcon,
   ShieldOutlined,
-  BoltOutlined,
-  AutoAwesomeOutlined,
   ArrowBackRounded,
   LockOutlined,
-  Home as HomeIcon,
   CheckCircle as CheckCircleIcon,
   Favorite as FavoriteIcon,
 } from "@mui/icons-material";
@@ -63,13 +59,12 @@ const AnimatedScene = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // SVG Scene with walking character and PG building
   return (
     <Box
       ref={containerRef}
       sx={{
         width: "100%",
-        height: 280,
+        height: 200,
         borderRadius: "16px",
         overflow: "hidden",
         background: `linear-gradient(180deg, #0F1923 0%, #1A2A3A 40%, #2D4A5E 70%, #3D5A6B 100%)`,
@@ -162,10 +157,8 @@ const AnimatedScene = () => {
         ].map(([x, y], i) => (
           <g key={i}>
             <rect x={x} y={y} width="28" height="28" rx="2" fill={alpha("#FFD700", 0.15)} stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
-            {/* Window cross */}
             <line x1={x + 14} y1={y} x2={x + 14} y2={y + 28} stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
             <line x1={x} y1={y + 14} x2={x + 28} y2={y + 14} stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
-            {/* Warm glow */}
             <rect x={x + 2} y={y + 2} width={24} height={24} rx="1" fill={alpha("#FFD700", 0.05)}>
               <animate attributeName="opacity" values="0.3;0.7;0.3" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
             </rect>
@@ -175,9 +168,7 @@ const AnimatedScene = () => {
         {/* Door */}
         <rect x="80" y="160" width="40" height="50" rx="4" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.15)} strokeWidth="1.5" />
         <path d="M90,210 A20,20 0 0,1 110,210" fill="none" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
-        {/* Door knob */}
         <circle cx="110" cy="188" r="3" fill={BRAND.accent} opacity="0.3" />
-        {/* Door light */}
         <rect x="85" y="165" width="30" height="20" rx="2" fill={alpha("#FFD700", 0.05)}>
           <animate attributeName="opacity" values="0.2;0.6;0.2" dur="3s" repeatCount="indefinite" />
         </rect>
@@ -211,19 +202,16 @@ const AnimatedScene = () => {
             <animate attributeName="rx" values="25;22;25" dur="0.6s" repeatCount="indefinite" />
           </ellipse>
 
-          {/* Trolley Bag - behind character */}
+          {/* Trolley Bag */}
           <g transform="translate(85, 95)">
-            {/* Handle */}
             <line x1="5" y1="0" x2="5" y2="-35" stroke={alpha("#8A8FA3", 0.4)} strokeWidth="3" strokeLinecap="round" />
             <line x1="5" y1="-35" x2="-20" y2="-35" stroke={alpha("#8A8FA3", 0.4)} strokeWidth="3" strokeLinecap="round" />
             <line x1="-20" y1="-35" x2="-20" y2="-15" stroke={alpha("#8A8FA3", 0.4)} strokeWidth="3" strokeLinecap="round" />
-            {/* Trolley body */}
             <rect x="-15" y="10" width="35" height="45" rx="4" fill="#2A5A4A" stroke={alpha(BRAND.accent, 0.15)} strokeWidth="1.5" />
             <rect x="-12" y="14" width="8" height="8" rx="1" fill={alpha(BRAND.accent, 0.05)} />
             <rect x="0" y="14" width="8" height="8" rx="1" fill={alpha(BRAND.accent, 0.05)} />
             <rect x="-12" y="28" width="8" height="8" rx="1" fill={alpha(BRAND.accent, 0.05)} />
             <rect x="0" y="28" width="8" height="8" rx="1" fill={alpha(BRAND.accent, 0.05)} />
-            {/* Trolley wheels */}
             <g transform="translate(-5, 55)">
               <circle cx="0" cy="0" r="6" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1.5" />
               <circle cx="0" cy="0" r="2" fill="#3A5A6A" />
@@ -240,32 +228,29 @@ const AnimatedScene = () => {
             </g>
           </g>
 
-          {/* Character Body - full with skin face */}
+          {/* Character */}
           <g>
             {/* Body - Green Hoodie */}
             <rect x="35" y="50" width="40" height="55" rx="8" fill="#2D7A4A" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
-            {/* Hoodie pocket */}
             <rect x="40" y="75" width="30" height="12" rx="4" fill="none" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
-            {/* Hoodie zipper */}
             <line x1="55" y1="50" x2="55" y2="105" stroke={alpha(BRAND.accent, 0.08)} strokeWidth="1.5" />
-            {/* Hood */}
             <path d="M35,50 Q55,30 75,50" fill="#2D7A4A" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
 
-            {/* Legs - Dark pants */}
+            {/* Legs */}
             <rect x="38" y="105" width="12" height="30" rx="3" fill="#1A2A3A" />
             <rect x="58" y="105" width="12" height="30" rx="3" fill="#1A2A3A" />
 
-            {/* Shoes - White sneakers */}
+            {/* Shoes */}
             <ellipse cx="42" cy="138" rx="10" ry="4" fill="#EDEEF2" stroke={alpha(BRAND.accent, 0.05)} strokeWidth="1" />
             <ellipse cx="64" cy="138" rx="10" ry="4" fill="#EDEEF2" stroke={alpha(BRAND.accent, 0.05)} strokeWidth="1" />
 
-            {/* Left Arm - extended to trolley */}
+            {/* Left Arm */}
             <g>
               <line x1="35" y1="60" x2="20" y2="85" stroke="#2D7A4A" strokeWidth="8" strokeLinecap="round" />
               <circle cx="20" cy="87" r="5" fill="#D4A574" />
             </g>
 
-            {/* Right Arm - swinging */}
+            {/* Right Arm */}
             <g>
               <line x1="75" y1="60" x2="88" y2="80" stroke="#2D7A4A" strokeWidth="8" strokeLinecap="round">
                 <animate attributeName="x2" values="88;92;88" dur="0.6s" repeatCount="indefinite" />
@@ -277,10 +262,8 @@ const AnimatedScene = () => {
               </circle>
             </g>
 
-            {/* Head - Skin tone */}
+            {/* Head */}
             <ellipse cx="55" cy="38" rx="22" ry="26" fill="#D4A574" stroke={alpha(BRAND.accent, 0.05)} strokeWidth="1" />
-            
-            {/* Hair - Dark */}
             <ellipse cx="55" cy="28" rx="24" ry="16" fill="#1A1A1A" />
             <path d="M33,30 Q45,20 55,22 Q65,20 77,30" fill="#1A1A1A" />
 
@@ -304,7 +287,7 @@ const AnimatedScene = () => {
             <path d="M70,52 L70,70 Q70,72 68,72" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="2" fill="none" />
           </g>
 
-          {/* Leg animation */}
+          {/* Walk animation */}
           <animateTransform attributeName="transform" type="translate" values="0,0; 30,0; 60,0; 90,0; 60,0; 30,0; 0,0" dur="4.2s" repeatCount="indefinite" />
         </g>
       </svg>
@@ -332,7 +315,6 @@ const AnimatedScene = () => {
 const PhoneLogin = () => {
   const { user, loading: authLoading, login } = useAuth();
   const theme = useTheme();
-  const isDesktop = useMediaQuery("(min-width:900px)");
   const isMobile = useMediaQuery("(max-width:600px)");
 
   // ===== State =====
@@ -570,6 +552,7 @@ const PhoneLogin = () => {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          p: 2,
         }}
       >
         {/* Aurora blobs */}
@@ -583,433 +566,358 @@ const PhoneLogin = () => {
             position: "relative",
             zIndex: 2,
             width: "100%",
-            maxWidth: 1200,
-            px: { xs: 2, sm: 3, md: 4 },
-            py: { xs: 3, sm: 4 },
-            display: "grid",
-            gridTemplateColumns: isDesktop ? "1.2fr 1fr" : "1fr",
-            gap: isDesktop ? 6 : 0,
-            alignItems: "center",
+            maxWidth: 440,
           }}
         >
-          {/* ===== LEFT — Brand Panel with Animated Scene ===== */}
-          {isDesktop && (
-            <Box sx={{ pr: 4 }}>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              >
-                {/* Logo */}
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 3 }}>
-                  <Box
-                    sx={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: "12px",
-                      background: `linear-gradient(135deg, ${BRAND.accent}, #4CAF50)`,
-                      display: "grid",
-                      placeItems: "center",
-                      boxShadow: `0 0 30px ${alpha(BRAND.accent, 0.3)}`,
-                    }}
-                  >
-                    <HomeIcon sx={{ color: BRAND.bg, fontSize: 22 }} />
-                  </Box>
-                  <Typography sx={{ fontWeight: 700, letterSpacing: "-0.02em", fontSize: 22 }}>
-                    PG<span style={{ color: BRAND.accent }}>Finder</span>
-                  </Typography>
-                </Box>
-
-                {/* Animated Scene */}
-                <AnimatedScene />
-
-                {/* Main Title - matches image */}
-                <Typography
-                  sx={{
-                    fontSize: { md: 44, lg: 52 },
-                    lineHeight: 1.05,
-                    fontWeight: 700,
-                    letterSpacing: "-0.03em",
-                    mb: 1.5,
-                  }}
-                >
-                  Find your
-                  <br />
-                  <span style={{
-                    background: `linear-gradient(90deg, ${BRAND.accent} 0%, #4CAF50 100%)`,
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                  }}>
-                    perfect PG
-                  </span>
-                </Typography>
-
-                {/* Subtitle */}
-                <Typography
-                  sx={{
-                    color: BRAND.textDim,
-                    fontSize: 16,
-                    mb: 3,
-                    lineHeight: 1.6,
-                  }}
-                >
-                  Comfortable stays. <br />
-                  Verified owners.
-                </Typography>
-
-                {/* Feature Tags - matches image */}
-                <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 3 }}>
-                  {[
-                    { icon: <CheckCircleIcon />, label: "Verified PGs" },
-                    { icon: <ShieldOutlined />, label: "Safe & Secure" },
-                    { icon: <FavoriteIcon />, label: "Loved by Students" },
-                  ].map((feature, idx) => (
-                    <motion.div
-                      key={feature.label}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.1 + idx * 0.1 }}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "6px 14px",
-                        borderRadius: "999px",
-                        background: alpha(BRAND.accent, 0.08),
-                        border: `1px solid ${alpha(BRAND.accent, 0.15)}`,
-                      }}
-                    >
-                      <Box sx={{ color: BRAND.accent, display: "flex", fontSize: 14 }}>
-                        {feature.icon}
-                      </Box>
-                      <Typography sx={{ fontSize: 12, fontWeight: 500, color: BRAND.text }}>
-                        {feature.label}
-                      </Typography>
-                    </motion.div>
-                  ))}
-                </Box>
-
-                {/* Step indicator - matches image */}
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  <Typography
-                    sx={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: BRAND.textDim,
-                      letterSpacing: "0.05em",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    STEP {step} OF 2
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 0.8 }}>
-                    {[1, 2].map((s) => (
-                      <Box
-                        key={s}
-                        sx={{
-                          width: s === step ? 32 : 20,
-                          height: 4,
-                          borderRadius: 2,
-                          bgcolor: s <= step ? BRAND.accent : alpha(BRAND.text, 0.12),
-                          transition: "all 0.4s ease",
-                        }}
-                      />
-                    ))}
-                  </Box>
-                </Box>
-              </motion.div>
-            </Box>
-          )}
-
-          {/* ===== RIGHT — Auth Card ===== */}
-          <Box sx={{
-            display: "grid",
-            placeItems: "center",
-            width: "100%",
-          }}>
-            <motion.div
-              initial={{ opacity: 0, y: 24, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              style={{ width: "100%", maxWidth: 440 }}
+          <motion.div
+            initial={{ opacity: 0, y: 24, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <Box
+              sx={{
+                position: "relative",
+                borderRadius: "24px",
+                p: { xs: 3, sm: 4 },
+                background: `linear-gradient(180deg, ${alpha("#ffffff", 0.04)} 0%, ${alpha("#ffffff", 0.01)} 100%)`,
+                border: `1px solid ${BRAND.border}`,
+                backdropFilter: "blur(20px)",
+                WebkitBackdropFilter: "blur(20px)",
+                boxShadow: `
+                  inset 0 1px 0 ${alpha("#ffffff", 0.06)},
+                  0 30px 80px -20px ${alpha("#000", 0.6)}
+                `,
+                overflow: "hidden",
+              }}
             >
-              <Box
+              {/* Glow border */}
+              <Box sx={{
+                position: "absolute",
+                inset: -1,
+                borderRadius: "24px",
+                padding: "1px",
+                background: `linear-gradient(140deg, ${alpha(BRAND.accent, 0.3)} 0%, transparent 40%, transparent 60%, ${alpha(BRAND.accent3, 0.2)} 100%)`,
+                WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+                WebkitMaskComposite: "xor",
+                maskComposite: "exclude",
+                pointerEvents: "none",
+              }} />
+
+              {/* Animated Scene */}
+              <AnimatedScene />
+
+              {/* Title - matches image */}
+              <Typography
                 sx={{
-                  position: "relative",
-                  borderRadius: "24px",
-                  p: { xs: 3, sm: 4 },
-                  background: `linear-gradient(180deg, ${alpha("#ffffff", 0.04)} 0%, ${alpha("#ffffff", 0.01)} 100%)`,
-                  border: `1px solid ${BRAND.border}`,
-                  backdropFilter: "blur(20px)",
-                  WebkitBackdropFilter: "blur(20px)",
-                  boxShadow: `
-                    inset 0 1px 0 ${alpha("#ffffff", 0.06)},
-                    0 30px 80px -20px ${alpha("#000", 0.6)}
-                  `,
-                  overflow: "hidden",
+                  fontSize: { xs: 24, sm: 28 },
+                  fontWeight: 700,
+                  letterSpacing: "-0.02em",
+                  mb: 0.5,
+                  textAlign: "center",
                 }}
               >
-                {/* Glow border */}
-                <Box sx={{
-                  position: "absolute",
-                  inset: -1,
-                  borderRadius: "24px",
-                  padding: "1px",
-                  background: `linear-gradient(140deg, ${alpha(BRAND.accent, 0.3)} 0%, transparent 40%, transparent 60%, ${alpha(BRAND.accent3, 0.2)} 100%)`,
-                  WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
-                  WebkitMaskComposite: "xor",
-                  maskComposite: "exclude",
-                  pointerEvents: "none",
-                }} />
+                Find your <span style={{
+                  background: `linear-gradient(90deg, ${BRAND.accent} 0%, #4CAF50 100%)`,
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}>perfect PG</span>
+              </Typography>
 
-                <AnimatePresence mode="wait">
-                  {step === 1 && (
-                    <motion.div
-                      key="step1"
-                      initial={{ opacity: 0, x: -16 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 16 }}
-                      transition={{ duration: 0.35 }}
-                    >
-                      {/* Mobile title - matches image */}
-                      {isMobile && (
-                        <>
-                          <Typography sx={{
-                            fontSize: 24,
-                            fontWeight: 700,
-                            letterSpacing: "-0.02em",
-                            mb: 0.5,
-                          }}>
-                            Find your perfect PG
-                          </Typography>
-                          <Typography sx={{
-                            color: BRAND.textDim,
-                            fontSize: 14,
-                            mb: 3,
-                          }}>
-                            Comfortable stays. Verified owners.
-                          </Typography>
-                        </>
-                      )}
+              <Typography
+                sx={{
+                  color: BRAND.textDim,
+                  fontSize: 14,
+                  mb: 2,
+                  textAlign: "center",
+                }}
+              >
+                Comfortable stays. Verified owners.
+              </Typography>
 
-                      <Typography sx={{
-                        fontSize: isMobile ? 20 : 24,
-                        fontWeight: 600,
-                        letterSpacing: "-0.02em",
-                        mb: 0.5,
-                      }}>
-                        Enter your mobile number
-                      </Typography>
-                      <Typography sx={{
-                        color: BRAND.textDim,
-                        fontSize: 14,
-                        mb: 3,
-                      }}>
-                        We'll send a one-time code via SMS
-                      </Typography>
-
-                      {/* Phone Input - matches image */}
-                      <Box sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        border: `1px solid ${error ? BRAND.danger : BRAND.border}`,
-                        borderRadius: "12px",
-                        bgcolor: alpha("#fff", 0.02),
-                        transition: "all 0.2s ease",
-                        mb: error ? 1.5 : 3,
-                        "&:focus-within": {
-                          borderColor: BRAND.accent,
-                          boxShadow: `0 0 0 3px ${alpha(BRAND.accent, 0.1)}`,
-                        },
-                      }}>
-                        <Box sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 0.5,
-                          px: 1.5,
-                          py: 1.5,
-                          borderRight: `1px solid ${BRAND.border}`,
-                          color: BRAND.textDim,
-                          fontSize: 14,
-                          fontWeight: 500,
-                        }}>
-                          <span style={{ fontSize: 18 }}>🇮🇳</span>
-                          <span style={{ fontFamily: "'Geist Mono', monospace" }}>+91</span>
-                          <span style={{ color: BRAND.textDim, fontSize: 12 }}>▼</span>
-                        </Box>
-                        <input
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-                          maxLength={10}
-                          placeholder="Enter mobile number"
-                          autoFocus
-                          style={{
-                            flex: 1,
-                            background: "transparent",
-                            border: "none",
-                            outline: "none",
-                            color: BRAND.text,
-                            fontSize: 16,
-                            padding: "14px 16px",
-                            fontFamily: "'Geist', sans-serif",
-                          }}
-                        />
-                      </Box>
-
-                      {error && <ErrorBanner msg={error} onClose={() => setError("")} />}
-
-                      {/* Continue Button - matches image */}
-                      <PremiumButton
-                        onClick={sendOtp}
-                        disabled={loading || phone.replace(/\D/g, "").length !== 10}
-                        loading={loading}
-                      >
-                        Continue
-                        <SendIcon sx={{ fontSize: 18 }} />
-                      </PremiumButton>
-
-                      {/* Privacy note - matches image */}
-                      <Typography sx={{
-                        mt: 3,
-                        color: BRAND.textDim,
-                        fontSize: 12,
-                        textAlign: "center",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 0.8,
-                      }}>
-                        <LockOutlined sx={{ fontSize: 14 }} />
-                        Secure & private. We respect your privacy.
-                      </Typography>
-                    </motion.div>
-                  )}
-
-                  {step === 2 && (
-                    <motion.div
-                      key="step2"
-                      initial={{ opacity: 0, x: 16 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -16 }}
-                      transition={{ duration: 0.35 }}
-                    >
-                      <Typography sx={{
-                        fontSize: isMobile ? 20 : 24,
-                        fontWeight: 600,
-                        letterSpacing: "-0.02em",
-                        mb: 0.5,
-                      }}>
-                        Enter verification code
-                      </Typography>
-                      <Typography sx={{
-                        color: BRAND.textDim,
-                        fontSize: 14,
-                        mb: 3,
-                      }}>
-                        We sent a 6-digit code to{" "}
-                        <span style={{ color: BRAND.text, fontWeight: 500 }}>
-                          +91 {phone}
-                        </span>
-                      </Typography>
-
-                      {/* OTP Input */}
-                      <Box
-                        onPaste={handleOtpPaste}
-                        sx={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 1, mb: 3 }}
-                      >
-                        {[0, 1, 2, 3, 4, 5].map((i) => (
-                          <input
-                            key={i}
-                            ref={(el) => (otpRefs.current[i] = el)}
-                            value={otp[i] || ""}
-                            onChange={(e) => handleOtpChange(i, e.target.value)}
-                            onKeyDown={(e) => handleOtpKey(i, e)}
-                            inputMode="numeric"
-                            maxLength={1}
-                            autoFocus={i === 0}
-                            style={{
-                              width: "100%",
-                              aspectRatio: "1 / 1.2",
-                              borderRadius: "12px",
-                              border: `1px solid ${otp[i] ? alpha(BRAND.accent, 0.5) : BRAND.border}`,
-                              background: otp[i] ? alpha(BRAND.accent, 0.06) : alpha("#fff", 0.02),
-                              color: BRAND.text,
-                              fontSize: 24,
-                              fontWeight: 600,
-                              textAlign: "center",
-                              fontFamily: "'Geist Mono', monospace",
-                              outline: "none",
-                              transition: "all 0.2s ease",
-                              boxShadow: otp[i] ? `0 0 0 3px ${alpha(BRAND.accent, 0.1)}` : "none",
-                            }}
-                            onFocus={(e) => e.target.style.borderColor = BRAND.accent}
-                            onBlur={(e) => e.target.style.borderColor = otp[i] ? alpha(BRAND.accent, 0.5) : BRAND.border}
-                          />
-                        ))}
-                      </Box>
-
-                      {error && <ErrorBanner msg={error} onClose={() => setError("")} />}
-
-                      <PremiumButton
-                        onClick={verifyOtp}
-                        disabled={loading || otp.length !== 6}
-                        loading={loading}
-                      >
-                        Verify
-                        <VerifiedUserIcon sx={{ fontSize: 18 }} />
-                      </PremiumButton>
-
-                      <Box sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        mt: 3,
-                      }}>
-                        <Button
-                          onClick={backToPhone}
-                          startIcon={<ArrowBackRounded sx={{ fontSize: 16 }} />}
-                          sx={{
-                            color: BRAND.textDim,
-                            textTransform: "none",
-                            fontSize: 13,
-                            "&:hover": { color: BRAND.text, bgcolor: "transparent" },
-                          }}
-                        >
-                          Change number
-                        </Button>
-
-                        {otpTimer > 0 ? (
-                          <Typography sx={{
-                            color: BRAND.textDim,
-                            fontSize: 13,
-                            fontFamily: "'Geist Mono', monospace",
-                          }}>
-                            Resend in <span style={{ color: BRAND.text }}>{otpTimer}s</span>
-                          </Typography>
-                        ) : (
-                          <Button
-                            onClick={resendOtp}
-                            disabled={isResending}
-                            sx={{
-                              color: BRAND.accent,
-                              textTransform: "none",
-                              fontSize: 13,
-                              fontWeight: 600,
-                              "&:hover": { bgcolor: "transparent", textDecoration: "underline" },
-                            }}
-                          >
-                            {isResending ? "Sending…" : "Resend code"}
-                          </Button>
-                        )}
-                      </Box>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+              {/* Feature Tags */}
+              <Box sx={{ display: "flex", gap: 1.5, justifyContent: "center", flexWrap: "wrap", mb: 3 }}>
+                {[
+                  { icon: <CheckCircleIcon />, label: "Verified PGs" },
+                  { icon: <ShieldOutlined />, label: "Safe & Secure" },
+                  { icon: <FavoriteIcon />, label: "Loved by Students" },
+                ].map((feature, idx) => (
+                  <Box
+                    key={feature.label}
+                    sx={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 0.8,
+                      padding: "4px 12px",
+                      borderRadius: "999px",
+                      background: alpha(BRAND.accent, 0.08),
+                      border: `1px solid ${alpha(BRAND.accent, 0.15)}`,
+                    }}
+                  >
+                    <Box sx={{ color: BRAND.accent, display: "flex", fontSize: 14 }}>
+                      {feature.icon}
+                    </Box>
+                    <Typography sx={{ fontSize: 11, fontWeight: 500, color: BRAND.text }}>
+                      {feature.label}
+                    </Typography>
+                  </Box>
+                ))}
               </Box>
 
-              <div id="recaptcha-container" style={{ display: "flex", justifyContent: "center", marginTop: 16 }} />
-            </motion.div>
-          </Box>
+              {/* Step indicator */}
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 2, mb: 2 }}>
+                <Typography
+                  sx={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: BRAND.textDim,
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  STEP {step} OF 2
+                </Typography>
+                <Box sx={{ display: "flex", gap: 0.8 }}>
+                  {[1, 2].map((s) => (
+                    <Box
+                      key={s}
+                      sx={{
+                        width: s === step ? 32 : 20,
+                        height: 4,
+                        borderRadius: 2,
+                        bgcolor: s <= step ? BRAND.accent : alpha(BRAND.text, 0.12),
+                        transition: "all 0.4s ease",
+                      }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+
+              <Box sx={{ borderTop: `1px solid ${BRAND.border}`, pt: 3 }} />
+
+              <AnimatePresence mode="wait">
+                {step === 1 && (
+                  <motion.div
+                    key="step1"
+                    initial={{ opacity: 0, x: -16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 16 }}
+                    transition={{ duration: 0.35 }}
+                  >
+                    <Typography sx={{
+                      fontSize: 20,
+                      fontWeight: 600,
+                      letterSpacing: "-0.02em",
+                      mb: 0.5,
+                    }}>
+                      Enter your mobile number
+                    </Typography>
+                    <Typography sx={{
+                      color: BRAND.textDim,
+                      fontSize: 14,
+                      mb: 3,
+                    }}>
+                      We'll send a one-time code via SMS
+                    </Typography>
+
+                    {/* Phone Input */}
+                    <Box sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      border: `1px solid ${error ? BRAND.danger : BRAND.border}`,
+                      borderRadius: "12px",
+                      bgcolor: alpha("#fff", 0.02),
+                      transition: "all 0.2s ease",
+                      mb: error ? 1.5 : 3,
+                      "&:focus-within": {
+                        borderColor: BRAND.accent,
+                        boxShadow: `0 0 0 3px ${alpha(BRAND.accent, 0.1)}`,
+                      },
+                    }}>
+                      <Box sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.5,
+                        px: 1.5,
+                        py: 1.5,
+                        borderRight: `1px solid ${BRAND.border}`,
+                        color: BRAND.textDim,
+                        fontSize: 14,
+                        fontWeight: 500,
+                      }}>
+                        <span style={{ fontSize: 18 }}>🇮🇳</span>
+                        <span style={{ fontFamily: "'Geist Mono', monospace" }}>+91</span>
+                        <span style={{ color: BRAND.textDim, fontSize: 12 }}>▼</span>
+                      </Box>
+                      <input
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                        maxLength={10}
+                        placeholder="Enter mobile number"
+                        autoFocus
+                        style={{
+                          flex: 1,
+                          background: "transparent",
+                          border: "none",
+                          outline: "none",
+                          color: BRAND.text,
+                          fontSize: 16,
+                          padding: "14px 16px",
+                          fontFamily: "'Geist', sans-serif",
+                        }}
+                      />
+                    </Box>
+
+                    {error && <ErrorBanner msg={error} onClose={() => setError("")} />}
+
+                    <PremiumButton
+                      onClick={sendOtp}
+                      disabled={loading || phone.replace(/\D/g, "").length !== 10}
+                      loading={loading}
+                    >
+                      Continue
+                      <SendIcon sx={{ fontSize: 18 }} />
+                    </PremiumButton>
+
+                    <Typography sx={{
+                      mt: 3,
+                      color: BRAND.textDim,
+                      fontSize: 12,
+                      textAlign: "center",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 0.8,
+                    }}>
+                      <LockOutlined sx={{ fontSize: 14 }} />
+                      Secure & private. We respect your privacy.
+                    </Typography>
+                  </motion.div>
+                )}
+
+                {step === 2 && (
+                  <motion.div
+                    key="step2"
+                    initial={{ opacity: 0, x: 16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -16 }}
+                    transition={{ duration: 0.35 }}
+                  >
+                    <Typography sx={{
+                      fontSize: 20,
+                      fontWeight: 600,
+                      letterSpacing: "-0.02em",
+                      mb: 0.5,
+                    }}>
+                      Enter verification code
+                    </Typography>
+                    <Typography sx={{
+                      color: BRAND.textDim,
+                      fontSize: 14,
+                      mb: 3,
+                    }}>
+                      We sent a 6-digit code to{" "}
+                      <span style={{ color: BRAND.text, fontWeight: 500 }}>
+                        +91 {phone}
+                      </span>
+                    </Typography>
+
+                    {/* OTP Input */}
+                    <Box
+                      onPaste={handleOtpPaste}
+                      sx={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 1, mb: 3 }}
+                    >
+                      {[0, 1, 2, 3, 4, 5].map((i) => (
+                        <input
+                          key={i}
+                          ref={(el) => (otpRefs.current[i] = el)}
+                          value={otp[i] || ""}
+                          onChange={(e) => handleOtpChange(i, e.target.value)}
+                          onKeyDown={(e) => handleOtpKey(i, e)}
+                          inputMode="numeric"
+                          maxLength={1}
+                          autoFocus={i === 0}
+                          style={{
+                            width: "100%",
+                            aspectRatio: "1 / 1.2",
+                            borderRadius: "12px",
+                            border: `1px solid ${otp[i] ? alpha(BRAND.accent, 0.5) : BRAND.border}`,
+                            background: otp[i] ? alpha(BRAND.accent, 0.06) : alpha("#fff", 0.02),
+                            color: BRAND.text,
+                            fontSize: 24,
+                            fontWeight: 600,
+                            textAlign: "center",
+                            fontFamily: "'Geist Mono', monospace",
+                            outline: "none",
+                            transition: "all 0.2s ease",
+                            boxShadow: otp[i] ? `0 0 0 3px ${alpha(BRAND.accent, 0.1)}` : "none",
+                          }}
+                          onFocus={(e) => e.target.style.borderColor = BRAND.accent}
+                          onBlur={(e) => e.target.style.borderColor = otp[i] ? alpha(BRAND.accent, 0.5) : BRAND.border}
+                        />
+                      ))}
+                    </Box>
+
+                    {error && <ErrorBanner msg={error} onClose={() => setError("")} />}
+
+                    <PremiumButton
+                      onClick={verifyOtp}
+                      disabled={loading || otp.length !== 6}
+                      loading={loading}
+                    >
+                      Verify
+                      <VerifiedUserIcon sx={{ fontSize: 18 }} />
+                    </PremiumButton>
+
+                    <Box sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mt: 3,
+                    }}>
+                      <Button
+                        onClick={backToPhone}
+                        startIcon={<ArrowBackRounded sx={{ fontSize: 16 }} />}
+                        sx={{
+                          color: BRAND.textDim,
+                          textTransform: "none",
+                          fontSize: 13,
+                          "&:hover": { color: BRAND.text, bgcolor: "transparent" },
+                        }}
+                      >
+                        Change number
+                      </Button>
+
+                      {otpTimer > 0 ? (
+                        <Typography sx={{
+                          color: BRAND.textDim,
+                          fontSize: 13,
+                          fontFamily: "'Geist Mono', monospace",
+                        }}>
+                          Resend in <span style={{ color: BRAND.text }}>{otpTimer}s</span>
+                        </Typography>
+                      ) : (
+                        <Button
+                          onClick={resendOtp}
+                          disabled={isResending}
+                          sx={{
+                            color: BRAND.accent,
+                            textTransform: "none",
+                            fontSize: 13,
+                            fontWeight: 600,
+                            "&:hover": { bgcolor: "transparent", textDecoration: "underline" },
+                          }}
+                        >
+                          {isResending ? "Sending…" : "Resend code"}
+                        </Button>
+                      )}
+                    </Box>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Box>
+
+            <div id="recaptcha-container" style={{ display: "flex", justifyContent: "center", marginTop: 16 }} />
+          </motion.div>
         </Box>
       </Box>
     </>
