@@ -32,7 +32,7 @@ const BRAND = {
   cardBg: "rgba(255,255,255,0.03)",
 };
 
-// ===== ANIMATED SCENE COMPONENT =====
+// ===== ANIMATED SCENE COMPONENT - STATIC BOY (First Image Style) =====
 const AnimatedScene = () => {
   const containerRef = useRef(null);
 
@@ -135,21 +135,21 @@ const AnimatedScene = () => {
         <ellipse cx="170" cy="200" rx="12" ry="8" fill="#2A5A4A" opacity="0.4" />
       </svg>
 
-      {/* Walking Character with Trolley */}
+      {/* STATIC Character with Trolley - No walking animation, just standing */}
       <svg
         style={{
           position: "absolute",
           bottom: "18%",
-          left: "5%",
+          left: "8%",
           width: "22%",
           height: "45%",
-          animation: "walkCycle 4.2s ease-in-out infinite",
         }}
         viewBox="0 0 120 160"
       >
         <g>
-          <ellipse cx="60" cy="148" rx="25" ry="5" fill={alpha("#000", 0.2)}>
-            <animate attributeName="rx" values="25;22;25" dur="0.6s" repeatCount="indefinite" />
+          {/* Shadow - subtle pulse */}
+          <ellipse cx="60" cy="148" rx="22" ry="4" fill={alpha("#000", 0.2)}>
+            <animate attributeName="rx" values="22;24;22" dur="2s" repeatCount="indefinite" />
           </ellipse>
 
           {/* Trolley Bag */}
@@ -165,72 +165,71 @@ const AnimatedScene = () => {
             <g transform="translate(-5, 55)">
               <circle cx="0" cy="0" r="6" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1.5" />
               <circle cx="0" cy="0" r="2" fill="#3A5A6A" />
-              <line x1="0" y1="-5" x2="0" y2="5" stroke="#3A5A6A" strokeWidth="1">
-                <animateTransform attributeName="transform" type="rotate" from="0 0 0" to="360 0 0" dur="0.8s" repeatCount="indefinite" />
-              </line>
             </g>
             <g transform="translate(15, 55)">
               <circle cx="0" cy="0" r="6" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1.5" />
               <circle cx="0" cy="0" r="2" fill="#3A5A6A" />
-              <line x1="0" y1="-5" x2="0" y2="5" stroke="#3A5A6A" strokeWidth="1">
-                <animateTransform attributeName="transform" type="rotate" from="0 0 0" to="360 0 0" dur="0.8s" repeatCount="indefinite" />
-              </line>
             </g>
           </g>
 
-          {/* Character */}
+          {/* Character - Static */}
           <g>
+            {/* Body - Green Hoodie */}
             <rect x="35" y="50" width="40" height="55" rx="8" fill="#2D7A4A" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
             <rect x="40" y="75" width="30" height="12" rx="4" fill="none" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
             <line x1="55" y1="50" x2="55" y2="105" stroke={alpha(BRAND.accent, 0.08)} strokeWidth="1.5" />
             <path d="M35,50 Q55,30 75,50" fill="#2D7A4A" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
+
+            {/* Legs */}
             <rect x="38" y="105" width="12" height="30" rx="3" fill="#1A2A3A" />
             <rect x="58" y="105" width="12" height="30" rx="3" fill="#1A2A3A" />
+
+            {/* Shoes */}
             <ellipse cx="42" cy="138" rx="10" ry="4" fill="#EDEEF2" stroke={alpha(BRAND.accent, 0.05)} strokeWidth="1" />
             <ellipse cx="64" cy="138" rx="10" ry="4" fill="#EDEEF2" stroke={alpha(BRAND.accent, 0.05)} strokeWidth="1" />
+
+            {/* Left Arm - holding trolley */}
             <line x1="35" y1="60" x2="20" y2="85" stroke="#2D7A4A" strokeWidth="8" strokeLinecap="round" />
             <circle cx="20" cy="87" r="5" fill="#D4A574" />
-            <line x1="75" y1="60" x2="88" y2="80" stroke="#2D7A4A" strokeWidth="8" strokeLinecap="round">
-              <animate attributeName="x2" values="88;92;88" dur="0.6s" repeatCount="indefinite" />
-              <animate attributeName="y2" values="80;76;80" dur="0.6s" repeatCount="indefinite" />
+
+            {/* Right Arm - slightly swinging */}
+            <line x1="75" y1="60" x2="88" y2="78" stroke="#2D7A4A" strokeWidth="8" strokeLinecap="round">
+              <animate attributeName="x2" values="88;89;88" dur="1.5s" repeatCount="indefinite" />
+              <animate attributeName="y2" values="78;77;78" dur="1.5s" repeatCount="indefinite" />
             </line>
-            <circle cx="88" cy="82" r="5" fill="#D4A574">
-              <animate attributeName="cx" values="88;92;88" dur="0.6s" repeatCount="indefinite" />
-              <animate attributeName="cy" values="82;78;82" dur="0.6s" repeatCount="indefinite" />
+            <circle cx="88" cy="80" r="5" fill="#D4A574">
+              <animate attributeName="cx" values="88;89;88" dur="1.5s" repeatCount="indefinite" />
+              <animate attributeName="cy" values="80;79;80" dur="1.5s" repeatCount="indefinite" />
             </circle>
+
+            {/* Head */}
             <ellipse cx="55" cy="38" rx="22" ry="26" fill="#D4A574" stroke={alpha(BRAND.accent, 0.05)} strokeWidth="1" />
             <ellipse cx="55" cy="28" rx="24" ry="16" fill="#1A1A1A" />
             <path d="M33,30 Q45,20 55,22 Q65,20 77,30" fill="#1A1A1A" />
+
+            {/* Eyes */}
             <ellipse cx="47" cy="38" rx="4" ry="4.5" fill="#fff" />
             <ellipse cx="63" cy="38" rx="4" ry="4.5" fill="#fff" />
             <circle cx="48" cy="38" r="2.5" fill="#2C3E50" />
             <circle cx="64" cy="38" r="2.5" fill="#2C3E50" />
             <circle cx="49" cy="37" r="1" fill="#fff" />
             <circle cx="65" cy="37" r="1" fill="#fff" />
+
+            {/* Eyebrows */}
             <path d="M43,33 Q47,31 51,33" stroke="#1A1A1A" strokeWidth="1.5" fill="none" />
             <path d="M59,33 Q63,31 67,33" stroke="#1A1A1A" strokeWidth="1.5" fill="none" />
+
+            {/* Smile */}
             <path d="M48,46 Q55,52 62,46" stroke="#1A1A1A" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+
+            {/* Backpack straps */}
             <path d="M40,52 L40,70 Q40,72 42,72" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="2" fill="none" />
             <path d="M70,52 L70,70 Q70,72 68,72" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="2" fill="none" />
           </g>
-          <animateTransform attributeName="transform" type="translate" values="0,0; 30,0; 60,0; 90,0; 90,0; 60,0; 30,0; 0,0" dur="4.2s" repeatCount="indefinite" />
         </g>
       </svg>
 
       <style>{`
-        @keyframes walkCycle {
-          0% { transform: translateX(0); }
-          10% { transform: translateX(10px); }
-          20% { transform: translateX(20px); }
-          30% { transform: translateX(30px); }
-          40% { transform: translateX(40px); }
-          50% { transform: translateX(45px); }
-          55% { transform: translateX(45px); }
-          65% { transform: translateX(40px); }
-          75% { transform: translateX(30px); }
-          85% { transform: translateX(15px); }
-          100% { transform: translateX(0); }
-        }
         @keyframes twinkle {
           0%, 100% { opacity: 0.2; }
           50% { opacity: 0.8; }
@@ -546,7 +545,7 @@ const PhoneLogin = () => {
                 </Typography>
               </Box>
 
-              {/* Animated Scene */}
+              {/* Animated Scene - Static Boy */}
               <AnimatedScene />
 
               {/* Step indicator */}
