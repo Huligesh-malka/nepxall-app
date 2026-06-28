@@ -32,7 +32,7 @@ const BRAND = {
   cardBg: "rgba(255,255,255,0.03)",
 };
 
-// ===== ANIMATED SCENE COMPONENT - STATIC BOY (First Image Style) =====
+// ===== ANIMATED SCENE COMPONENT - WALKING BOY (Second Image Style) =====
 const AnimatedScene = () => {
   const containerRef = useRef(null);
 
@@ -135,21 +135,22 @@ const AnimatedScene = () => {
         <ellipse cx="170" cy="200" rx="12" ry="8" fill="#2A5A4A" opacity="0.4" />
       </svg>
 
-      {/* STATIC Character with Trolley - No walking animation, just standing */}
+      {/* WALKING Character with Trolley - Moving across screen */}
       <svg
         style={{
           position: "absolute",
           bottom: "18%",
-          left: "8%",
+          left: "5%",
           width: "22%",
           height: "45%",
+          animation: "walkAcross 4.2s ease-in-out infinite",
         }}
         viewBox="0 0 120 160"
       >
         <g>
-          {/* Shadow - subtle pulse */}
-          <ellipse cx="60" cy="148" rx="22" ry="4" fill={alpha("#000", 0.2)}>
-            <animate attributeName="rx" values="22;24;22" dur="2s" repeatCount="indefinite" />
+          {/* Shadow - pulsates while walking */}
+          <ellipse cx="60" cy="148" rx="25" ry="5" fill={alpha("#000", 0.2)}>
+            <animate attributeName="rx" values="25;22;25" dur="0.6s" repeatCount="indefinite" />
           </ellipse>
 
           {/* Trolley Bag */}
@@ -162,17 +163,24 @@ const AnimatedScene = () => {
             <rect x="0" y="14" width="8" height="8" rx="1" fill={alpha(BRAND.accent, 0.05)} />
             <rect x="-12" y="28" width="8" height="8" rx="1" fill={alpha(BRAND.accent, 0.05)} />
             <rect x="0" y="28" width="8" height="8" rx="1" fill={alpha(BRAND.accent, 0.05)} />
+            {/* Wheels spinning */}
             <g transform="translate(-5, 55)">
               <circle cx="0" cy="0" r="6" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1.5" />
               <circle cx="0" cy="0" r="2" fill="#3A5A6A" />
+              <line x1="0" y1="-5" x2="0" y2="5" stroke="#3A5A6A" strokeWidth="1">
+                <animateTransform attributeName="transform" type="rotate" from="0 0 0" to="360 0 0" dur="0.6s" repeatCount="indefinite" />
+              </line>
             </g>
             <g transform="translate(15, 55)">
               <circle cx="0" cy="0" r="6" fill="#1A2A3A" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1.5" />
               <circle cx="0" cy="0" r="2" fill="#3A5A6A" />
+              <line x1="0" y1="-5" x2="0" y2="5" stroke="#3A5A6A" strokeWidth="1">
+                <animateTransform attributeName="transform" type="rotate" from="0 0 0" to="360 0 0" dur="0.6s" repeatCount="indefinite" />
+              </line>
             </g>
           </g>
 
-          {/* Character - Static */}
+          {/* Character - Walking */}
           <g>
             {/* Body - Green Hoodie */}
             <rect x="35" y="50" width="40" height="55" rx="8" fill="#2D7A4A" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
@@ -180,26 +188,34 @@ const AnimatedScene = () => {
             <line x1="55" y1="50" x2="55" y2="105" stroke={alpha(BRAND.accent, 0.08)} strokeWidth="1.5" />
             <path d="M35,50 Q55,30 75,50" fill="#2D7A4A" stroke={alpha(BRAND.accent, 0.1)} strokeWidth="1" />
 
-            {/* Legs */}
-            <rect x="38" y="105" width="12" height="30" rx="3" fill="#1A2A3A" />
-            <rect x="58" y="105" width="12" height="30" rx="3" fill="#1A2A3A" />
+            {/* Legs - Walking animation */}
+            <rect x="38" y="105" width="12" height="30" rx="3" fill="#1A2A3A">
+              <animate attributeName="x" values="38;42;38" dur="0.6s" repeatCount="indefinite" />
+            </rect>
+            <rect x="58" y="105" width="12" height="30" rx="3" fill="#1A2A3A">
+              <animate attributeName="x" values="58;54;58" dur="0.6s" repeatCount="indefinite" />
+            </rect>
 
-            {/* Shoes */}
-            <ellipse cx="42" cy="138" rx="10" ry="4" fill="#EDEEF2" stroke={alpha(BRAND.accent, 0.05)} strokeWidth="1" />
-            <ellipse cx="64" cy="138" rx="10" ry="4" fill="#EDEEF2" stroke={alpha(BRAND.accent, 0.05)} strokeWidth="1" />
+            {/* Shoes - Walking animation */}
+            <ellipse cx="42" cy="138" rx="10" ry="4" fill="#EDEEF2" stroke={alpha(BRAND.accent, 0.05)} strokeWidth="1">
+              <animate attributeName="cx" values="42;46;42" dur="0.6s" repeatCount="indefinite" />
+            </ellipse>
+            <ellipse cx="64" cy="138" rx="10" ry="4" fill="#EDEEF2" stroke={alpha(BRAND.accent, 0.05)} strokeWidth="1">
+              <animate attributeName="cx" values="64;60;64" dur="0.6s" repeatCount="indefinite" />
+            </ellipse>
 
             {/* Left Arm - holding trolley */}
             <line x1="35" y1="60" x2="20" y2="85" stroke="#2D7A4A" strokeWidth="8" strokeLinecap="round" />
             <circle cx="20" cy="87" r="5" fill="#D4A574" />
 
-            {/* Right Arm - slightly swinging */}
-            <line x1="75" y1="60" x2="88" y2="78" stroke="#2D7A4A" strokeWidth="8" strokeLinecap="round">
-              <animate attributeName="x2" values="88;89;88" dur="1.5s" repeatCount="indefinite" />
-              <animate attributeName="y2" values="78;77;78" dur="1.5s" repeatCount="indefinite" />
+            {/* Right Arm - Swinging while walking */}
+            <line x1="75" y1="60" x2="88" y2="80" stroke="#2D7A4A" strokeWidth="8" strokeLinecap="round">
+              <animate attributeName="x2" values="88;92;88" dur="0.6s" repeatCount="indefinite" />
+              <animate attributeName="y2" values="80;76;80" dur="0.6s" repeatCount="indefinite" />
             </line>
-            <circle cx="88" cy="80" r="5" fill="#D4A574">
-              <animate attributeName="cx" values="88;89;88" dur="1.5s" repeatCount="indefinite" />
-              <animate attributeName="cy" values="80;79;80" dur="1.5s" repeatCount="indefinite" />
+            <circle cx="88" cy="82" r="5" fill="#D4A574">
+              <animate attributeName="cx" values="88;92;88" dur="0.6s" repeatCount="indefinite" />
+              <animate attributeName="cy" values="82;78;82" dur="0.6s" repeatCount="indefinite" />
             </circle>
 
             {/* Head */}
@@ -230,6 +246,19 @@ const AnimatedScene = () => {
       </svg>
 
       <style>{`
+        @keyframes walkAcross {
+          0% { transform: translateX(0); }
+          10% { transform: translateX(10px); }
+          20% { transform: translateX(20px); }
+          30% { transform: translateX(30px); }
+          40% { transform: translateX(40px); }
+          50% { transform: translateX(45px); }
+          55% { transform: translateX(45px); }
+          65% { transform: translateX(40px); }
+          75% { transform: translateX(30px); }
+          85% { transform: translateX(15px); }
+          100% { transform: translateX(0); }
+        }
         @keyframes twinkle {
           0%, 100% { opacity: 0.2; }
           50% { opacity: 0.8; }
@@ -545,7 +574,7 @@ const PhoneLogin = () => {
                 </Typography>
               </Box>
 
-              {/* Animated Scene - Static Boy */}
+              {/* Animated Scene - Walking Boy */}
               <AnimatedScene />
 
               {/* Step indicator */}
